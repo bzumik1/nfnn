@@ -1,0 +1,493 @@
+{
+  "source": "edited",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor search of pairing a payment, GET /api/admin/donations/donors?query=: a query blank after trimming finds nobody; otherwise every donor record that is not erased whose name, with the Czech accented letters folded to plain ones and lowercased, contains the query folded the same way, or whose variable symbol starts with the trimmed query, both matched literally (a percent sign or an underscore is no wildcard), ordered by name and then donor id, at most 20, each as donorId, name, type, variableSymbol and companyIdentifier. The server orders names by the database collation and the browser by the Czech one; the cases keep to names both order alike.",
+  "cases": [
+    {
+      "name": "Donor records found by a part of the name without accents or by the start of the symbol, never an erased one",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          { "alias": "jana", "registeredAt": "2026-01-15T10:00:00Z", "erasedAt": null, "name": "Jana Nováková", "variableSymbol": "7700001001" },
+          { "alias": "petr", "registeredAt": "2026-02-01T08:00:00Z", "erasedAt": null, "name": "Petr Svoboda", "variableSymbol": "7700001002" },
+          {
+            "alias": "firma",
+            "registeredAt": "2026-03-10T09:30:00Z",
+            "erasedAt": null,
+            "name": "Pekárna U Nováků s.r.o.",
+            "type": "COMPANY",
+            "companyIdentifier": "25596641",
+            "variableSymbol": "7700001003"
+          },
+          { "alias": "smazany", "registeredAt": "2026-04-01T10:00:00Z", "erasedAt": "2026-09-01T10:00:00Z", "variableSymbol": "7700001004" }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Jana Nováková",
+              "type": "PERSON",
+              "variableSymbol": "7700001001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:petr",
+              "name": "Petr Svoboda",
+              "type": "PERSON",
+              "variableSymbol": "7700001002",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-01T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:firma",
+              "name": "Pekárna U Nováků s.r.o.",
+              "type": "COMPANY",
+              "variableSymbol": "7700001003",
+              "companyIdentifier": "25596641",
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-10T09:30:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-04": [
+            {
+              "donorId": "donor:smazany",
+              "name": "Vymazaný dárce",
+              "type": "PERSON",
+              "variableSymbol": "7700001004",
+              "companyIdentifier": null,
+              "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-01T10:00:00Z",
+              "erasedAt": "2026-09-01T10:00:00Z"
+            }
+          ]
+        },
+        "queries": [
+          { "query": "" },
+          { "query": "   " },
+          { "query": "nov" },
+          { "query": "NOVÁ" },
+          { "query": "u nováků" },
+          { "query": "7700001" },
+          { "query": "7700001002" },
+          { "query": "001002" },
+          { "query": "vymaz" },
+          { "query": "zzz" },
+          { "query": "%" },
+          { "query": "_" }
+        ]
+      },
+      "expected": {
+        "answers": [
+          { "items": [] },
+          { "items": [] },
+          {
+            "items": [
+              { "donorId": "donor:jana", "name": "Jana Nováková", "type": "PERSON", "variableSymbol": "7700001001", "companyIdentifier": null },
+              {
+                "donorId": "donor:firma",
+                "name": "Pekárna U Nováků s.r.o.",
+                "type": "COMPANY",
+                "variableSymbol": "7700001003",
+                "companyIdentifier": "25596641"
+              }
+            ]
+          },
+          {
+            "items": [
+              { "donorId": "donor:jana", "name": "Jana Nováková", "type": "PERSON", "variableSymbol": "7700001001", "companyIdentifier": null },
+              {
+                "donorId": "donor:firma",
+                "name": "Pekárna U Nováků s.r.o.",
+                "type": "COMPANY",
+                "variableSymbol": "7700001003",
+                "companyIdentifier": "25596641"
+              }
+            ]
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:firma",
+                "name": "Pekárna U Nováků s.r.o.",
+                "type": "COMPANY",
+                "variableSymbol": "7700001003",
+                "companyIdentifier": "25596641"
+              }
+            ]
+          },
+          {
+            "items": [
+              { "donorId": "donor:jana", "name": "Jana Nováková", "type": "PERSON", "variableSymbol": "7700001001", "companyIdentifier": null },
+              {
+                "donorId": "donor:firma",
+                "name": "Pekárna U Nováků s.r.o.",
+                "type": "COMPANY",
+                "variableSymbol": "7700001003",
+                "companyIdentifier": "25596641"
+              },
+              { "donorId": "donor:petr", "name": "Petr Svoboda", "type": "PERSON", "variableSymbol": "7700001002", "companyIdentifier": null }
+            ]
+          },
+          { "items": [{ "donorId": "donor:petr", "name": "Petr Svoboda", "type": "PERSON", "variableSymbol": "7700001002", "companyIdentifier": null }] },
+          { "items": [] },
+          { "items": [] },
+          { "items": [] },
+          { "items": [] },
+          { "items": [] }
+        ]
+      }
+    },
+    {
+      "name": "At most twenty donor records, by name",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          { "alias": "d01", "registeredAt": "2026-02-11T10:00:00Z", "erasedAt": null },
+          { "alias": "d02", "registeredAt": "2026-03-12T10:00:00Z", "erasedAt": null },
+          { "alias": "d03", "registeredAt": "2026-04-13T10:00:00Z", "erasedAt": null },
+          { "alias": "d04", "registeredAt": "2026-05-14T10:00:00Z", "erasedAt": null },
+          { "alias": "d05", "registeredAt": "2026-06-15T10:00:00Z", "erasedAt": null },
+          { "alias": "d06", "registeredAt": "2026-07-16T10:00:00Z", "erasedAt": null },
+          { "alias": "d07", "registeredAt": "2026-08-17T10:00:00Z", "erasedAt": null },
+          { "alias": "d08", "registeredAt": "2026-09-18T10:00:00Z", "erasedAt": null },
+          { "alias": "d09", "registeredAt": "2026-01-19T10:00:00Z", "erasedAt": null },
+          { "alias": "d10", "registeredAt": "2026-02-10T10:00:00Z", "erasedAt": null },
+          { "alias": "d11", "registeredAt": "2026-03-11T10:00:00Z", "erasedAt": null },
+          { "alias": "d12", "registeredAt": "2026-04-12T10:00:00Z", "erasedAt": null },
+          { "alias": "d13", "registeredAt": "2026-05-13T10:00:00Z", "erasedAt": null },
+          { "alias": "d14", "registeredAt": "2026-06-14T10:00:00Z", "erasedAt": null },
+          { "alias": "d15", "registeredAt": "2026-07-15T10:00:00Z", "erasedAt": null },
+          { "alias": "d16", "registeredAt": "2026-08-16T10:00:00Z", "erasedAt": null },
+          { "alias": "d17", "registeredAt": "2026-09-17T10:00:00Z", "erasedAt": null },
+          { "alias": "d18", "registeredAt": "2026-01-18T10:00:00Z", "erasedAt": null },
+          { "alias": "d19", "registeredAt": "2026-02-19T10:00:00Z", "erasedAt": null },
+          { "alias": "d20", "registeredAt": "2026-03-10T10:00:00Z", "erasedAt": null },
+          { "alias": "d21", "registeredAt": "2026-04-11T10:00:00Z", "erasedAt": null },
+          { "alias": "d22", "registeredAt": "2026-05-12T10:00:00Z", "erasedAt": null }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:d18",
+              "name": "Dárce d18",
+              "type": "PERSON",
+              "variableSymbol": "4000000018",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-18T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d09",
+              "name": "Dárce d09",
+              "type": "PERSON",
+              "variableSymbol": "4000000009",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-19T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:d10",
+              "name": "Dárce d10",
+              "type": "PERSON",
+              "variableSymbol": "4000000010",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-10T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d01",
+              "name": "Dárce d01",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-11T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d19",
+              "name": "Dárce d19",
+              "type": "PERSON",
+              "variableSymbol": "4000000019",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-19T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:d20",
+              "name": "Dárce d20",
+              "type": "PERSON",
+              "variableSymbol": "4000000020",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-10T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d11",
+              "name": "Dárce d11",
+              "type": "PERSON",
+              "variableSymbol": "4000000011",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-11T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d02",
+              "name": "Dárce d02",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-12T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-04": [
+            {
+              "donorId": "donor:d21",
+              "name": "Dárce d21",
+              "type": "PERSON",
+              "variableSymbol": "4000000021",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-11T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d12",
+              "name": "Dárce d12",
+              "type": "PERSON",
+              "variableSymbol": "4000000012",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-12T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d03",
+              "name": "Dárce d03",
+              "type": "PERSON",
+              "variableSymbol": "4000000003",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-13T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-05": [
+            {
+              "donorId": "donor:d22",
+              "name": "Dárce d22",
+              "type": "PERSON",
+              "variableSymbol": "4000000022",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-05-12T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d13",
+              "name": "Dárce d13",
+              "type": "PERSON",
+              "variableSymbol": "4000000013",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-05-13T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d04",
+              "name": "Dárce d04",
+              "type": "PERSON",
+              "variableSymbol": "4000000004",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-05-14T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-06": [
+            {
+              "donorId": "donor:d14",
+              "name": "Dárce d14",
+              "type": "PERSON",
+              "variableSymbol": "4000000014",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-06-14T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d05",
+              "name": "Dárce d05",
+              "type": "PERSON",
+              "variableSymbol": "4000000005",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-06-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-07": [
+            {
+              "donorId": "donor:d15",
+              "name": "Dárce d15",
+              "type": "PERSON",
+              "variableSymbol": "4000000015",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-07-15T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d06",
+              "name": "Dárce d06",
+              "type": "PERSON",
+              "variableSymbol": "4000000006",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-07-16T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-08": [
+            {
+              "donorId": "donor:d16",
+              "name": "Dárce d16",
+              "type": "PERSON",
+              "variableSymbol": "4000000016",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-08-16T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d07",
+              "name": "Dárce d07",
+              "type": "PERSON",
+              "variableSymbol": "4000000007",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-08-17T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-09": [
+            {
+              "donorId": "donor:d17",
+              "name": "Dárce d17",
+              "type": "PERSON",
+              "variableSymbol": "4000000017",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-09-17T10:00:00Z",
+              "erasedAt": null
+            },
+            {
+              "donorId": "donor:d08",
+              "name": "Dárce d08",
+              "type": "PERSON",
+              "variableSymbol": "4000000008",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-09-18T10:00:00Z",
+              "erasedAt": null
+            }
+          ]
+        },
+        "queries": [{ "query": "darce" }, { "query": "d1" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "items": [
+              { "donorId": "donor:d01", "name": "Dárce d01", "type": "PERSON", "variableSymbol": "4000000001", "companyIdentifier": null },
+              { "donorId": "donor:d02", "name": "Dárce d02", "type": "PERSON", "variableSymbol": "4000000002", "companyIdentifier": null },
+              { "donorId": "donor:d03", "name": "Dárce d03", "type": "PERSON", "variableSymbol": "4000000003", "companyIdentifier": null },
+              { "donorId": "donor:d04", "name": "Dárce d04", "type": "PERSON", "variableSymbol": "4000000004", "companyIdentifier": null },
+              { "donorId": "donor:d05", "name": "Dárce d05", "type": "PERSON", "variableSymbol": "4000000005", "companyIdentifier": null },
+              { "donorId": "donor:d06", "name": "Dárce d06", "type": "PERSON", "variableSymbol": "4000000006", "companyIdentifier": null },
+              { "donorId": "donor:d07", "name": "Dárce d07", "type": "PERSON", "variableSymbol": "4000000007", "companyIdentifier": null },
+              { "donorId": "donor:d08", "name": "Dárce d08", "type": "PERSON", "variableSymbol": "4000000008", "companyIdentifier": null },
+              { "donorId": "donor:d09", "name": "Dárce d09", "type": "PERSON", "variableSymbol": "4000000009", "companyIdentifier": null },
+              { "donorId": "donor:d10", "name": "Dárce d10", "type": "PERSON", "variableSymbol": "4000000010", "companyIdentifier": null },
+              { "donorId": "donor:d11", "name": "Dárce d11", "type": "PERSON", "variableSymbol": "4000000011", "companyIdentifier": null },
+              { "donorId": "donor:d12", "name": "Dárce d12", "type": "PERSON", "variableSymbol": "4000000012", "companyIdentifier": null },
+              { "donorId": "donor:d13", "name": "Dárce d13", "type": "PERSON", "variableSymbol": "4000000013", "companyIdentifier": null },
+              { "donorId": "donor:d14", "name": "Dárce d14", "type": "PERSON", "variableSymbol": "4000000014", "companyIdentifier": null },
+              { "donorId": "donor:d15", "name": "Dárce d15", "type": "PERSON", "variableSymbol": "4000000015", "companyIdentifier": null },
+              { "donorId": "donor:d16", "name": "Dárce d16", "type": "PERSON", "variableSymbol": "4000000016", "companyIdentifier": null },
+              { "donorId": "donor:d17", "name": "Dárce d17", "type": "PERSON", "variableSymbol": "4000000017", "companyIdentifier": null },
+              { "donorId": "donor:d18", "name": "Dárce d18", "type": "PERSON", "variableSymbol": "4000000018", "companyIdentifier": null },
+              { "donorId": "donor:d19", "name": "Dárce d19", "type": "PERSON", "variableSymbol": "4000000019", "companyIdentifier": null },
+              { "donorId": "donor:d20", "name": "Dárce d20", "type": "PERSON", "variableSymbol": "4000000020", "companyIdentifier": null }
+            ]
+          },
+          {
+            "items": [
+              { "donorId": "donor:d10", "name": "Dárce d10", "type": "PERSON", "variableSymbol": "4000000010", "companyIdentifier": null },
+              { "donorId": "donor:d11", "name": "Dárce d11", "type": "PERSON", "variableSymbol": "4000000011", "companyIdentifier": null },
+              { "donorId": "donor:d12", "name": "Dárce d12", "type": "PERSON", "variableSymbol": "4000000012", "companyIdentifier": null },
+              { "donorId": "donor:d13", "name": "Dárce d13", "type": "PERSON", "variableSymbol": "4000000013", "companyIdentifier": null },
+              { "donorId": "donor:d14", "name": "Dárce d14", "type": "PERSON", "variableSymbol": "4000000014", "companyIdentifier": null },
+              { "donorId": "donor:d15", "name": "Dárce d15", "type": "PERSON", "variableSymbol": "4000000015", "companyIdentifier": null },
+              { "donorId": "donor:d16", "name": "Dárce d16", "type": "PERSON", "variableSymbol": "4000000016", "companyIdentifier": null },
+              { "donorId": "donor:d17", "name": "Dárce d17", "type": "PERSON", "variableSymbol": "4000000017", "companyIdentifier": null },
+              { "donorId": "donor:d18", "name": "Dárce d18", "type": "PERSON", "variableSymbol": "4000000018", "companyIdentifier": null },
+              { "donorId": "donor:d19", "name": "Dárce d19", "type": "PERSON", "variableSymbol": "4000000019", "companyIdentifier": null }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

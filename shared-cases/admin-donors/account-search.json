@@ -1,0 +1,684 @@
+{
+  "source": "edited",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the account list of /sprava/darci, GET /api/admin/donors?query=&page=&limit= (limit 20 by default): every account, erased ones and administrators included, whose name or e-mail, with the Czech accented letters folded and lowercased, contains the trimmed query folded the same way, or whose variable symbol starts with it (a blank query finds every account), ordered by name and then e-mail, the page-th page of limit accounts, each the account row of the copy as it is, and hasMore when an account follows the page. The server orders names by the database collation and the browser by the Czech one; the cases keep to names both order alike.",
+  "cases": [
+    {
+      "name": "Accounts found by name or e-mail without accents or by the start of the symbol, erased ones too, by name then e-mail, a page at a time",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null,
+            "name": "Jana Nováková",
+            "variableSymbol": "7700001001",
+            "account": { "email": "jana.novakova@example.cz", "emailVerified": true }
+          },
+          {
+            "alias": "petr",
+            "registeredAt": "2026-02-01T08:00:00Z",
+            "erasedAt": null,
+            "name": "Petr Svoboda",
+            "variableSymbol": "7700001002",
+            "account": { "email": "petr@example.org", "emailVerified": false }
+          },
+          {
+            "alias": "firma",
+            "registeredAt": "2026-03-10T09:30:00Z",
+            "erasedAt": null,
+            "name": "Pekárna U Nováků s.r.o.",
+            "type": "COMPANY",
+            "companyIdentifier": "25596641",
+            "variableSymbol": "7700001003",
+            "account": { "email": "pekarna@example.cz", "emailVerified": true }
+          },
+          { "alias": "bezuctu", "registeredAt": "2026-03-11T09:30:00Z", "erasedAt": null, "name": "Karel Bez Účtu", "variableSymbol": "7700001005" },
+          {
+            "alias": "smazany",
+            "registeredAt": "2026-04-01T10:00:00Z",
+            "erasedAt": "2026-09-01T10:00:00Z",
+            "variableSymbol": "7700001004",
+            "account": { "email": "vymazany@example.cz", "emailVerified": true }
+          },
+          {
+            "alias": "jana2",
+            "registeredAt": "2026-05-01T10:00:00Z",
+            "erasedAt": null,
+            "name": "Jana Nováková",
+            "variableSymbol": "7700001006",
+            "account": { "email": "a.novakova@example.cz", "emailVerified": true }
+          }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donors/accounts:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "type": "PERSON",
+              "name": "Jana Nováková",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "jana.novakova@example.cz",
+              "variableSymbol": "7700001001",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-15T10:00:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2026-02": [
+            {
+              "donorId": "donor:petr",
+              "type": "PERSON",
+              "name": "Petr Svoboda",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "petr@example.org",
+              "variableSymbol": "7700001002",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-01T08:00:00Z",
+              "emailVerified": false,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2026-03": [
+            {
+              "donorId": "donor:firma",
+              "type": "COMPANY",
+              "name": "Pekárna U Nováků s.r.o.",
+              "companyIdentifier": "25596641",
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "pekarna@example.cz",
+              "variableSymbol": "7700001003",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-10T09:30:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2026-04": [
+            {
+              "donorId": "donor:smazany",
+              "type": "PERSON",
+              "name": "Vymazaný dárce",
+              "companyIdentifier": null,
+              "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+              "email": "vymazany@example.cz",
+              "variableSymbol": "7700001004",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-01T10:00:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": "2026-09-01T10:00:00Z"
+            }
+          ],
+          "donors/accounts:2026-05": [
+            {
+              "donorId": "donor:jana2",
+              "type": "PERSON",
+              "name": "Jana Nováková",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "a.novakova@example.cz",
+              "variableSymbol": "7700001006",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-05-01T10:00:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2026-10": [
+            {
+              "donorId": "administrator",
+              "type": "PERSON",
+              "name": "Správce případů",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "spravce@example.cz",
+              "variableSymbol": "3999999999",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-10-20T10:00:00Z",
+              "emailVerified": true,
+              "administrator": true,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ]
+        },
+        "queries": [
+          {},
+          { "query": "novak" },
+          { "query": "NOVÁKOVÁ" },
+          { "query": "EXAMPLE.CZ" },
+          { "query": "@example.org" },
+          { "query": "7700001" },
+          { "query": "001003" },
+          { "query": "vymazany" },
+          { "query": "účtu" },
+          { "query": "", "page": 1, "limit": 2 },
+          { "query": "", "page": 3, "limit": 2 },
+          { "query": "a", "page": 0, "limit": 3 },
+          { "query": "zzz" }
+        ]
+      },
+      "expected": {
+        "answers": [
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:petr",
+                "type": "PERSON",
+                "name": "Petr Svoboda",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "petr@example.org",
+                "variableSymbol": "7700001002",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-02-01T08:00:00Z",
+                "emailVerified": false,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "administrator",
+                "type": "PERSON",
+                "name": "Správce případů",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "spravce@example.cz",
+                "variableSymbol": "3999999999",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-20T10:00:00Z",
+                "emailVerified": true,
+                "administrator": true,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:smazany",
+                "type": "PERSON",
+                "name": "Vymazaný dárce",
+                "companyIdentifier": null,
+                "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+                "email": "vymazany@example.cz",
+                "variableSymbol": "7700001004",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-04-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": "2026-09-01T10:00:00Z"
+              }
+            ],
+            "hasMore": false
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": false
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": false
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "administrator",
+                "type": "PERSON",
+                "name": "Správce případů",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "spravce@example.cz",
+                "variableSymbol": "3999999999",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-10-20T10:00:00Z",
+                "emailVerified": true,
+                "administrator": true,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:smazany",
+                "type": "PERSON",
+                "name": "Vymazaný dárce",
+                "companyIdentifier": null,
+                "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+                "email": "vymazany@example.cz",
+                "variableSymbol": "7700001004",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-04-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": "2026-09-01T10:00:00Z"
+              }
+            ],
+            "hasMore": false
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:petr",
+                "type": "PERSON",
+                "name": "Petr Svoboda",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "petr@example.org",
+                "variableSymbol": "7700001002",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-02-01T08:00:00Z",
+                "emailVerified": false,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": false
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:petr",
+                "type": "PERSON",
+                "name": "Petr Svoboda",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "petr@example.org",
+                "variableSymbol": "7700001002",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-02-01T08:00:00Z",
+                "emailVerified": false,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:smazany",
+                "type": "PERSON",
+                "name": "Vymazaný dárce",
+                "companyIdentifier": null,
+                "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+                "email": "vymazany@example.cz",
+                "variableSymbol": "7700001004",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-04-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": "2026-09-01T10:00:00Z"
+              }
+            ],
+            "hasMore": false
+          },
+          { "items": [], "hasMore": false },
+          {
+            "items": [
+              {
+                "donorId": "donor:smazany",
+                "type": "PERSON",
+                "name": "Vymazaný dárce",
+                "companyIdentifier": null,
+                "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+                "email": "vymazany@example.cz",
+                "variableSymbol": "7700001004",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-04-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": "2026-09-01T10:00:00Z"
+              }
+            ],
+            "hasMore": false
+          },
+          { "items": [], "hasMore": false },
+          {
+            "items": [
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:petr",
+                "type": "PERSON",
+                "name": "Petr Svoboda",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "petr@example.org",
+                "variableSymbol": "7700001002",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-02-01T08:00:00Z",
+                "emailVerified": false,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": true
+          },
+          { "items": [], "hasMore": false },
+          {
+            "items": [
+              {
+                "donorId": "donor:jana2",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a.novakova@example.cz",
+                "variableSymbol": "7700001006",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-05-01T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:jana",
+                "type": "PERSON",
+                "name": "Jana Nováková",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "jana.novakova@example.cz",
+                "variableSymbol": "7700001001",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-01-15T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:firma",
+                "type": "COMPANY",
+                "name": "Pekárna U Nováků s.r.o.",
+                "companyIdentifier": "25596641",
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "pekarna@example.cz",
+                "variableSymbol": "7700001003",
+                "preferredLocale": "cs",
+                "registeredAt": "2026-03-10T09:30:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              }
+            ],
+            "hasMore": true
+          },
+          { "items": [], "hasMore": false }
+        ]
+      }
+    }
+  ]
+}
