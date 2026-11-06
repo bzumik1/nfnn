@@ -18,7 +18,7 @@
         <tr>
             <td style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #374151;">
                 <span th:text="#{donors.registrationReminder.email.validity(${validHours})}">Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.</span>
-                <span th:text="#{donors.registrationReminder.email.ignore}">Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte; další připomínku už nepošleme.</span>
+                <span th:text="#{donors.registrationReminder.email.ignore(${expiryDays})}">Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte; další připomínku už nepošleme a nepotvrzenou registraci i s jejími údaji smažeme 30 dní po jejím založení.</span>
             </td>
         </tr>
     </table>

@@ -14,6 +14,8 @@ public interface DonorRepository {
 
     void delete(DonorId id);
 
+    int deleteUnconfirmedRegisteredBefore(Instant cutoff);
+
     Optional<Donor> findById(DonorId id);
 
     Optional<Donor> findByEmail(EmailAddress email);

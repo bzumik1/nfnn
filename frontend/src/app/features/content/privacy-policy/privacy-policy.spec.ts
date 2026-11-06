@@ -173,6 +173,14 @@ describe('Given the privacy policy page', () => {
     expect(retention).toContain('odhlášená zařízení ještě 400 dní');
   });
 
+  it('when it renders, then it says an unconfirmed registration is deleted with all its data 30 days after it was made', () => {
+    const retention = texts('#uchovavani li').find((item) => item.includes('nepotvrdíte'));
+
+    expect(retention).toBe(
+      'údaje z registrace, kterou nepotvrdíte odkazem z e‑mailu, 30 dní od registrace; pak ji i se všemi údaji smažeme,',
+    );
+  });
+
   it('when it renders, then it says a gift is assigned by the variable symbol and by a bank account the donor proved', () => {
     const donations = purposeText('Evidence darů a potvrzení o daru');
 

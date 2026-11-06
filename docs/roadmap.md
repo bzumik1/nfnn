@@ -107,6 +107,7 @@ Fáze 1:
 - Zrušení ročního potvrzení při odpárování daru (Jakub 5. 11. 2026: „Zrušit ho hned“; hotovo v kroku 1.26): když správce zruší přiřazení daru, který je na platném ročním potvrzení dárce, web toto potvrzení ve stejném kroku zruší a zapíše do historie změn. Ověření na `/overit` pak řekne „Potvrzení platilo ke dni vystavení“ a že platí jen novější potvrzení; zbyly-li dárci za ten rok další dary, stáhne si nové, které uvádí „Nahrazuje potvrzení č. …“. Konektor takové odpárování nesmí, jen správce v prohlížeči; dar s potvrzením o jednotlivém daru odpárovat dál nejde.
 - Jeden dar jen na jednom platném potvrzení (rozhodnuto 6. 11. 2026 na základě Jakubova pověření při auditu databáze, #467; hotovo v PR této úpravy): roční potvrzení uvádí všechny dary roku a při vystavení nahradí platná potvrzení o jednotlivých darech, které uvádí; potvrzení o daru, který už je na platném ročním potvrzení, web nevystaví a Moje dary u něj místo tlačítka řeknou, že je na ročním potvrzení. Text potvrzení se nemění. Připojená aplikace takové nahrazení neprovede.
 - Vydaná potvrzení vymazaného dárce zůstávají na serveru beze změny jako účetní doklad a e-mail o výmazu, zásady ochrany údajů i texty výmazu ve správě to říkají pravdivě, s platbami z banky, historií změn a zálohami (Jakub 29. 10. 2026; hotovo v kroku 1.11).
+- Smazání nepotvrzených registrací (schváleno 27. 10. 2026; lhůtu a postup rozhodl vedoucí auditu databáze 6. 11. 2026 z Jakubova pověření, #455; hotovo v #512): registrace, kterou nikdo nepotvrdí odkazem z e-mailu, se 30 dní po založení smaže i se všemi údaji a uvolní e-mail i variabilní symbol. Maže ji hodinová úloha připomínky registrace; připomínka o smazání předem říká a zásady ochrany údajů lhůtu uvádějí.
 
 Fáze 2 (až po lednových potvrzeních, včetně dat v zařízení):
 
@@ -209,7 +210,7 @@ Veřejný web a provoz:
 - Profilová fotka dárce (Jakub 30. 10. 2026, dobrovolná): v rozložení aplikace je účet vpravo nahoře jako kulatý obrázek, s fotkou, kterou dárce nahrál, jinak s iniciálami (například JZ). Fotku vidí jen dárce ve svém účtu a správci, dárce ji kdykoli smaže a zmizí i s výmazem dárce. Při stavbě se upraví zásady ochrany osobních údajů. Vzhled lišty a obrázku je ve v3, krok 2.1.
 - Jedna hláška „Web se právě aktualizuje“ při restartu serveru.
 - E-mail při docházejícím místě na disku.
-- Smazání registrací, které nikdo nepotvrdil do 30 dnů.
+- Mazání údajů z banky a potvrzení po zákonné lhůtě (audit databáze 6. 11. 2026, #455: zatím nic nemazat; rozhodnout s účetní do roku 2036): platby z banky (jméno, účet a zpráva z výpisu, i od plátců bez účtu), dary a zmrazená potvrzení vymazaných dárců zůstávají dnes navždy. Po skončení lhůty podle účetních a daňových předpisů je smaže nebo anonymizuje úloha, nebo popsaný ruční postup, podle data zaúčtování platby (`booked_on`) a vydání potvrzení (`issued_on`); vydané potvrzení dnes smazat ani změnit nejde (spoušť `issued_receipt_keeps_what_it_certifies`), takže to bude změna schématu.
 
 ### Možná později
 
