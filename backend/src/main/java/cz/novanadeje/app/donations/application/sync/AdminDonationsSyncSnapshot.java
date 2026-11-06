@@ -7,7 +7,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
-import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.report.YearOverview;
 
 import java.time.LocalDate;
@@ -16,7 +16,7 @@ import java.util.Optional;
 
 public record AdminDonationsSyncSnapshot(DonorReference subject, boolean administrator, LocalDate today, List<YearOverview> years, List<BankPayment> payments,
                                          List<Donation> donations, List<DonorRecord> donorRecords, List<SymbolClaim> symbolClaims,
-                                         List<DonationReceipt> receipts, Optional<BankImportState> importState,
+                                         List<ReceiptSummary> receipts, Optional<BankImportState> importState,
                                          Optional<ReportAdministrationView> report) {
 
     public AdminDonationsSyncSnapshot {

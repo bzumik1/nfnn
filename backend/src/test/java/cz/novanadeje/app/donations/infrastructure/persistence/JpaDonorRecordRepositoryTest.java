@@ -15,6 +15,8 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -224,6 +227,42 @@ class JpaDonorRecordRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given ten records, each with its own learned account, when one or all are read by id or searched, then each comes with its own account and ten take as many statements as one")
+    void should_read_the_accounts_of_every_record_in_one_statement_when_records_read_given_ten_records_with_accounts() {
+        List<DonorRecord> records = new ArrayList<>();
+        for (int index = 0; index < 10; index++) {
+            DonorRecord record = person("Dárce " + index, Long.toString(4_800_000_000L + index));
+            donorRecords.save(record);
+            SenderAccount account = new SenderAccount(Long.toString(1_000_000L + index), "0800");
+            BankPayment proof = payment(2000 + index, Optional.of(account), record.variableSymbol().value());
+            payments.saveAll(List.of(proof));
+            entityManager.flush();
+            donorRecords.saveSenderAccountLink(record.id(), learn(record, proof));
+            records.add(record);
+        }
+        flushAndClear();
+        Statistics statistics = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        try {
+            long oneById = statementsOf(statistics, () -> assertThat(donorRecords.findByIds(List.of(records.getFirst().id()))).hasSize(1));
+            long tenById = statementsOf(statistics, () -> assertThat(donorRecords.findByIds(records.stream().map(DonorRecord::id).toList()))
+                    .hasSize(10)
+                    .allSatisfy(record -> assertThat(record.senderAccountLinks()).singleElement()
+                            .satisfies(link -> assertThat(link.account().accountNumber())
+                                    .isEqualTo(Long.toString(1_000_000L + Long.parseLong(record.variableSymbol().value()) - 4_800_000_000L)))));
+            long oneSearched = statementsOf(statistics, () -> assertThat(donorRecords.searchByNameOrSymbol("dárce", 1)).hasSize(1));
+            long tenSearched = statementsOf(statistics, () -> assertThat(donorRecords.searchByNameOrSymbol("dárce", 20)).hasSize(10)
+                    .allSatisfy(record -> assertThat(record.senderAccountLinks()).hasSize(1)));
+
+            assertThat(tenById).as("statements for ten records by id").isEqualTo(oneById);
+            assertThat(tenSearched).as("statements for ten records found by name").isEqualTo(oneSearched);
+        } finally {
+            statistics.setStatisticsEnabled(false);
+            statistics.clear();
+        }
+    }
+
+    @Test
     @DisplayName("Given stored records, when searched by a part of the name or the start of the symbol, then the matches come by name, at most the limit, and like-wildcards are literal")
     void should_find_by_name_part_or_symbol_start_when_searched_given_stored_records() {
         donorRecords.save(person("Jana Nováková", "4821937560"));
@@ -352,6 +391,13 @@ class JpaDonorRecordRepositoryTest {
 
     private long accountRows() {
         return jdbc.sql("select count(*) from donor_sender_account").query(Long.class).single();
+    }
+
+    private long statementsOf(Statistics statistics, Runnable read) {
+        entityManager.clear();
+        statistics.clear();
+        read.run();
+        return statistics.getPrepareStatementCount();
     }
 
     private void flushAndClear() {

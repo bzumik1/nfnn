@@ -1,11 +1,11 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.DonorId;
-import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
 
 import java.util.List;
 
-public record AdminAccountsSyncSnapshot(DonorId subject, boolean administrator, List<DonorAccountView> accounts, List<AdminActionEntry> actions) {
+public record AdminAccountsSyncSnapshot(DonorId subject, boolean administrator, List<DonorAccountView> accounts, List<AdminActionSummary> actions) {
 
     public AdminAccountsSyncSnapshot {
         if (subject == null || accounts == null || actions == null) {

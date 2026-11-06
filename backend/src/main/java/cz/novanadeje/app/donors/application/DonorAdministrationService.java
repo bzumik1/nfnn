@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -35,7 +37,13 @@ public class DonorAdministrationService {
         }
         String trimmed = query == null ? "" : query.trim();
         List<Donor> found = donors.search(trimmed, page * limit, limit + 1);
-        return new DonorSearchResult(found.stream().limit(limit).map(this::view).toList(), found.size() > limit);
+        List<Donor> shown = found.stream().limit(limit).toList();
+        List<DonorId> ids = shown.stream().map(Donor::id).toList();
+        Set<DonorId> enabled = secondFactors.findDonorsWithEnabledFactorAmong(ids);
+        Map<DonorId, Integer> counts = passkeys.countByDonors(ids);
+        return new DonorSearchResult(shown.stream()
+                .map(donor -> new DonorAccountView(donor, enabled.contains(donor.id()), counts.getOrDefault(donor.id(), 0)))
+                .toList(), found.size() > limit);
     }
 
     public DonorAccountView view(DonorId donorId) {

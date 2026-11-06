@@ -23,7 +23,11 @@ interface AdminActionJpaRepository extends JpaRepository<AdminActionJpaEntity, U
 
     List<AdminActionJpaEntity> findByActionInOrderByPerformedAtAscIdAsc(Collection<String> actions);
 
-    List<AdminActionJpaEntity> findAllByOrderByPerformedAtDescIdDesc();
+    @Query("""
+            select new cz.novanadeje.app.shared.infrastructure.audit.AdminActionSummaryRow(a.id, a.adminId, a.action, a.subjectId, a.performedAt, a.client)
+            from AdminActionJpaEntity a
+            order by a.performedAt desc, a.id desc""")
+    List<AdminActionSummaryRow> findAllSummariesNewestFirst();
 
     long countByAdminIdAndActionAndPerformedAtGreaterThanEqual(UUID adminId, String action, Instant since);
 }

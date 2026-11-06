@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -112,8 +113,8 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public List<DonationReceipt> findAllNewestFirst() {
-        return jpa.findAllByOrderByIssuedAtDescNumberDesc().stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+    public List<ReceiptSummary> findAllSummariesNewestFirst() {
+        return jpa.findAllSummariesNewestFirst().stream().map(IssuedReceiptSummaryRow::toSummary).toList();
     }
 
     @Override

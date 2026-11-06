@@ -39,6 +39,6 @@ public class AdminAccountsSyncService {
         List<DonorAccountView> accounts = donors.findAll().stream()
                 .map(donor -> new DonorAccountView(donor, enabled.contains(donor.id()), counts.getOrDefault(donor.id(), 0)))
                 .toList();
-        return new AdminAccountsSyncSnapshot(subject, true, accounts, trail.findAllNewestFirst());
+        return new AdminAccountsSyncSnapshot(subject, true, accounts, trail.findAllSummariesNewestFirst());
     }
 }
