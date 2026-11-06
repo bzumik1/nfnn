@@ -3,7 +3,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join, resolve, sep } from 'node:path';
-import { SESSION_FLAG } from './ui';
+import { HOME_SCREEN_SCRIPT, SESSION_FLAG } from './ui';
 import type { RouteTarget } from '../fixtures';
 
 type UrlMatcher = string | RegExp | ((url: URL) => boolean);
@@ -20,6 +20,7 @@ interface Answer {
 interface PageState {
   textScale: number;
   rememberedSession: boolean;
+  fromHomeScreen: boolean;
 }
 
 export const BLANK_PATH = '/__blank';
@@ -106,6 +107,7 @@ function pageScript(page: PageState): string {
   const session = page.rememberedSession
     ? `localStorage.setItem(${JSON.stringify(SESSION_FLAG)}, '1');`
     : '';
+  const homeScreen = page.fromHomeScreen ? HOME_SCREEN_SCRIPT : '';
   return `<script>window.${ERRORS_GLOBAL} = [];
 addEventListener('error', (event) => window.${ERRORS_GLOBAL}.push(String(event.message)));
 addEventListener('unhandledrejection', (event) => window.${ERRORS_GLOBAL}.push(String(event.reason && event.reason.message || event.reason)));
@@ -117,7 +119,7 @@ for (const type of ${JSON.stringify(LOGGED_EVENTS)}) {
     window.${EVENTS_GLOBAL}.push(Math.round(performance.now()) + ' ' + type + ' ' + name);
   }, true);
 }
-${session}</script>`;
+${session}${homeScreen}</script>`;
 }
 
 export class RouteHost {
@@ -126,7 +128,7 @@ export class RouteHost {
   private readonly appShell: string;
   private handlers: { matches: (url: URL) => boolean; handler: Handler }[] = [];
   private open = 0;
-  private page: PageState = { textScale: 100, rememberedSession: false };
+  private page: PageState = { textScale: 100, rememberedSession: false, fromHomeScreen: false };
 
   readonly routes: RouteTarget = {
     route: async (matcher: UrlMatcher, handler: Handler) => {
@@ -164,11 +166,15 @@ export class RouteHost {
 
   reset(textScale: number): void {
     this.handlers = [];
-    this.page = { textScale, rememberedSession: false };
+    this.page = { textScale, rememberedSession: false, fromHomeScreen: false };
   }
 
   rememberSession(): void {
     this.page.rememberedSession = true;
+  }
+
+  openFromHomeScreen(): void {
+    this.page.fromHomeScreen = true;
   }
 
   inFlight(): number {

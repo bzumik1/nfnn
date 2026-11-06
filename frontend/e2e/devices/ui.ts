@@ -11,6 +11,7 @@ export interface Target {
 export interface Ui {
   routes: Routes;
   rememberSession(): Promise<void>;
+  openFromHomeScreen(): Promise<void>;
   goto(path: string): Promise<void>;
   isVisible(target: Target): Promise<boolean>;
   waitVisible(target: Target): Promise<void>;
@@ -22,6 +23,9 @@ export interface Ui {
 
 export const SESSION_FLAG = 'nfnn.donor-session';
 
+export const HOME_SCREEN_SCRIPT =
+  "Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });";
+
 export function playwrightUi(page: Page): Ui {
   const shown = ({ css, text }: Target) => {
     const all = page.locator(css);
@@ -31,6 +35,9 @@ export function playwrightUi(page: Page): Ui {
     routes: page,
     rememberSession: async () => {
       await page.addInitScript((flag) => localStorage.setItem(flag, '1'), SESSION_FLAG);
+    },
+    openFromHomeScreen: async () => {
+      await page.addInitScript(HOME_SCREEN_SCRIPT);
     },
     goto: async (path) => {
       await page.goto(path);

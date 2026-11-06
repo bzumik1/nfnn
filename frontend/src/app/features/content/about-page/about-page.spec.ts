@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { aboutPhoto } from '../testing/about-fixtures';
 import { publicPeople } from '../testing/people-fixtures';
 import { AboutPage } from './about-page';
+import { HomeScreenApp } from '../../../core/layout/home-screen-app';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
 
 describe('Given the About page', () => {
@@ -86,5 +87,42 @@ describe('Given the About page', () => {
     const section = root().querySelector('#o-nas')!;
     expect(section.querySelector('figure')).toBeNull();
     expect(section.querySelector('img')?.getAttribute('src')).toBe('/images/about-720.webp');
+  });
+});
+
+describe('Given the About page', () => {
+  async function openIn(onTouchScreen: boolean): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [AboutPage],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: HomeScreenApp, useValue: { onTouchScreen } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(AboutPage);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/content/home').flush({ news: [], projects: [] });
+    http
+      .match('/api/donations/payment-details')
+      .forEach((request) => request.flush(foundationPaymentDetails()));
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('when it opens in the app from the home screen of an iPhone or iPad, then its contact section ends with the rows of the foundation instead of a footer', async () => {
+    const contact = (await openIn(true)).querySelector('#kontakt');
+
+    expect(contact?.querySelector('.ui-container')?.lastElementChild?.localName).toBe(
+      'app-foundation-links',
+    );
+  });
+
+  it('when it opens in a browser, then it leaves the foundation to the footer of the site', async () => {
+    expect((await openIn(false)).querySelector('app-foundation-links')).toBeNull();
   });
 });

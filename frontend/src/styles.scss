@@ -64,6 +64,10 @@ html.footer-in-view body {
   background: var(--color-surface-inverse-strong);
 }
 
+html.contact-end-in-view body {
+  background: var(--color-surface-inverse);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;

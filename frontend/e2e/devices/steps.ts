@@ -138,6 +138,14 @@ export const STEPS: Step[] = [
   { id: 'home', title: 'the home page', open: (ui) => publicPage(ui, '/') },
   { id: 'about', title: 'the About tab', open: (ui) => publicPage(ui, '/o-nas') },
   {
+    id: 'about-home-screen',
+    title: 'the About tab in the app opened from the home screen',
+    open: async (ui) => {
+      await ui.openFromHomeScreen();
+      await publicPage(ui, '/o-nas');
+    },
+  },
+  {
     id: 'donate',
     title: 'the Přispět tab with 1 000 Kč chosen',
     open: async (ui) => {

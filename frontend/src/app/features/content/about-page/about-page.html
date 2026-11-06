@@ -1,3 +1,7 @@
 <app-about [photo]="aboutPhoto()" [people]="people()" />
 <app-stats-bar />
-<app-contact-form />
+<app-contact-form>
+  @if (homeScreenApp) {
+    <app-foundation-links />
+  }
+</app-contact-form>

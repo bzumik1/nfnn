@@ -345,6 +345,7 @@ export function webDriverUi(
   return {
     routes: host.routes,
     rememberSession: async () => host.rememberSession(),
+    openFromHomeScreen: async () => host.openFromHomeScreen(),
     goto: (path) => driver.navigate(new URL(path, baseUrl).href),
     isVisible: async (target) => !!(await find(target)),
     waitVisible: async (target) => {
