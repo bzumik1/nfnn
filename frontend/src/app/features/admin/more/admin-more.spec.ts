@@ -48,6 +48,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
         title: 'Občas',
         links: [
           ['Hromadná potvrzení', '/sprava/hromadna-potvrzeni'],
+          ['Ověřit potvrzení', '/sprava/overit'],
           ['Fotka v sekci O nás', '/sprava/o-nas'],
           ['Lidé fondu', '/sprava/lide-fondu'],
           ['Správci', '/sprava/spravci'],

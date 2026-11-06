@@ -1,4 +1,5 @@
 import { Location } from '@angular/common';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By, Meta } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
@@ -10,6 +11,7 @@ import {
   type VerificationStep,
 } from './receipt-verifier';
 import { ProofInput } from './proof-input';
+import { VERIFICATION_CONTEXT } from './verification-context';
 import { VerificationPage } from './verification-page';
 
 const SINGLE: SignedReceipt = {
@@ -533,5 +535,76 @@ describe('Given the verification page', () => {
     await settle();
 
     expect(verifier.calls).toEqual([FRAGMENT, '1234']);
+  });
+
+  it('when it opens without a code while the focus is on nothing, then the empty page focuses its heading', async () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    await open('/overit');
+
+    expect(document.activeElement).toBe(heading());
+  });
+});
+
+@Component({
+  selector: 'app-test-register',
+  template: '<p class="test-register">{{ receipt().number }}</p>',
+})
+class TestRegister {
+  readonly receipt = input.required<SignedReceipt>();
+}
+
+describe('Given the verification page in another context, as the administration shows it', () => {
+  let harness: RouterTestingHarness;
+  let verifier: FakeVerifier;
+
+  beforeEach(() => {
+    verifier = new FakeVerifier();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'sprava/overit', component: VerificationPage }]),
+        { provide: ReceiptVerifier, useValue: verifier },
+        {
+          provide: VERIFICATION_CONTEXT,
+          useValue: { path: '/sprava/overit', standalonePage: false, registerLine: TestRegister },
+        },
+      ],
+    });
+  });
+
+  async function open(url: string, outcome: VerificationOutcome): Promise<HTMLElement> {
+    verifier.answer = () => Promise.resolve(outcome);
+    harness = await RouterTestingHarness.create(url);
+    for (let round = 0; round < 3; round++) {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+    return harness.routeNativeElement as HTMLElement;
+  }
+
+  it('when it opens with the code of a signed receipt, then it verifies it, drops the code from its own address and shows the register line of the context for the receipt', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, {
+      state: 'signed',
+      receipt: YEARLY,
+      status: 'replaced',
+    });
+
+    expect(verifier.calls).toEqual([FRAGMENT]);
+    expect(TestBed.inject(Location).path(true)).toBe('/sprava/overit');
+    expect(root.querySelector('.test-register')?.textContent).toBe('2027-000007');
+    expect(root.querySelector('.verify-domain')).toBeNull();
+  });
+
+  it('when the code cannot be verified, then no register line is shown', async () => {
+    const root = await open(`/sprava/overit#${FRAGMENT}`, { state: 'invalid' });
+
+    expect(root.querySelector('.test-register')).toBeNull();
+  });
+
+  it('when it opens without a code, then it shows no note about the public address', async () => {
+    const root = await open('/sprava/overit', { state: 'empty' });
+
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Ověření potvrzení o daru');
+    expect(root.querySelector('.verify-domain')).toBeNull();
   });
 });

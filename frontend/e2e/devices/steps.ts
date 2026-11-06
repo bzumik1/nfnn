@@ -7,9 +7,15 @@ import {
   project,
   servePaymentDetails,
 } from '../baseline/screen-mocks';
+import { mockAdministrationCopy } from '../administration-copy';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
 import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
-import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
+import {
+  serveReceiptKeys,
+  serveReceiptStatus,
+  SINGLE_RECEIPT,
+  SINGLE_RECEIPT_ROW,
+} from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
 
@@ -335,6 +341,19 @@ export const STEPS: Step[] = [
       await mockYearlyReceipts(ui.routes, { donors: FOUR_DONORS, erasedDonors: 1 });
       await adminPage(ui, '/sprava/hromadna-potvrzeni');
       await ui.waitVisible({ css: '.donors-table tbody tr' });
+    },
+  },
+  {
+    id: 'admin-verify-receipt',
+    title: 'a receipt verified in the administration, with its state in the copy',
+    open: async (ui) => {
+      await mockAdministrationCopy(ui.routes, {
+        donations: [{ id: 'receipts:2026', rows: [SINGLE_RECEIPT_ROW] }],
+      });
+      await serveReceiptKeys(ui.routes);
+      await serveReceiptStatus(ui.routes, 'active');
+      await adminPage(ui, `/sprava/overit#${SINGLE_RECEIPT.fragment}`);
+      await ui.waitVisible({ css: 'main', text: 'Kopie správy ho vede jako platné.' });
     },
   },
   {

@@ -1,4 +1,8 @@
-<section class="ui-panel-page" aria-labelledby="verify-title">
+<section
+  [class.ui-panel-page]="context.standalonePage"
+  [class.verify-embedded]="!context.standalonePage"
+  aria-labelledby="verify-title"
+>
   <div class="ui-panel verify-panel">
     @switch (page().state) {
       @case ('checking') {
@@ -46,6 +50,9 @@
       @default {
         @if (outcome(); as final) {
           <app-verification-result [outcome]="final" [scanned]="scanned()" (retry)="retry()" />
+          @if (final.state === 'signed' && context.registerLine; as registerLine) {
+            <ng-container *ngComponentOutlet="registerLine; inputs: { receipt: final.receipt }" />
+          }
           <button
             type="button"
             class="ui-button ui-button--block verify-another"
@@ -57,9 +64,11 @@
         }
       }
     }
-    <p class="verify-domain" i18n="@@donor.verify.domain">
-      Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
-      prohlížeče.
-    </p>
+    @if (context.standalonePage) {
+      <p class="verify-domain" i18n="@@donor.verify.domain">
+        Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním
+        řádku prohlížeče.
+      </p>
+    }
   </div>
 </section>

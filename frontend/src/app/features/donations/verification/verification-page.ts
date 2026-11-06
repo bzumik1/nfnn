@@ -1,4 +1,4 @@
-import { Location } from '@angular/common';
+import { DOCUMENT, Location, NgComponentOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -15,15 +15,14 @@ import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { type FoundProof, ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
+import { VERIFICATION_CONTEXT } from './verification-context';
 import { type FinalOutcome, VerificationResult } from './verification-result';
 
 type PageState = { readonly state: 'checking' } | { readonly state: 'empty' } | FinalOutcome;
 
-const PAGE_PATH = '/overit';
-
 @Component({
   selector: 'app-verification-page',
-  imports: [ProofInput, VerificationResult],
+  imports: [ProofInput, VerificationResult, NgComponentOutlet],
   templateUrl: './verification-page.html',
   styleUrl: './verification-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +33,8 @@ export class VerificationPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  protected readonly context = inject(VERIFICATION_CONTEXT);
   private fragment: string | null = null;
   protected readonly scanned = signal(false);
   private run = 0;
@@ -55,7 +56,7 @@ export class VerificationPage {
         this.fragment = fragment;
         this.scanned.set(false);
         if (fragment !== null) {
-          this.location.replaceState(PAGE_PATH, '', this.location.getState());
+          this.location.replaceState(this.context.path, '', this.location.getState());
         }
         this.verify();
       });
@@ -95,11 +96,21 @@ export class VerificationPage {
         if (run !== this.run || this.destroyRef.destroyed) {
           return;
         }
+        const focusLost = this.focusLost();
         this.page.set(outcome);
-        if (outcome.state !== 'empty') {
+        if (outcome.state !== 'empty' || focusLost) {
           this.focusHeading();
         }
       });
+  }
+
+  private focusLost(): boolean {
+    const active = this.document.activeElement;
+    return (
+      active === null ||
+      active === this.document.body ||
+      (active instanceof HTMLHeadingElement && this.host.nativeElement.contains(active))
+    );
   }
 
   private focusHeading(): void {
