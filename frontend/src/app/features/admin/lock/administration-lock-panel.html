@@ -139,6 +139,7 @@
       <button
         type="submit"
         class="ui-button ui-button--primary ui-button--block lock-unlock"
+        appNeedsConnection
         [disabled]="busy() || !online()"
       >
         @if (busy()) {
