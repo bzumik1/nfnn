@@ -30,10 +30,12 @@ class AdminReportController {
 
     private final ReportSettingsService settings;
     private final MonthlyReportService reports;
+    private final ReportSendRateLimiter sendRateLimiter;
 
-    AdminReportController(ReportSettingsService settings, MonthlyReportService reports) {
+    AdminReportController(ReportSettingsService settings, MonthlyReportService reports, ReportSendRateLimiter sendRateLimiter) {
         this.settings = settings;
         this.reports = reports;
+        this.sendRateLimiter = sendRateLimiter;
     }
 
     @GetMapping
@@ -53,6 +55,7 @@ class AdminReportController {
 
     @PostMapping("/send")
     SendReportResponse send(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SendReportRequest request) {
+        sendRateLimiter.check(jwt.getSubject());
         ManualReportDelivery delivery = reports.resend(admin(jwt), parseMonth(request.month()));
         return new SendReportResponse(delivery.month().toString(), delivery.recipients().values(), delivery.sentAt());
     }

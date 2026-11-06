@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.mail.MessagingException;
@@ -79,6 +80,14 @@ public class AdminReportStepDefinitions {
         api.post(REPORT + "/send", Map.of("month", month));
     }
 
+    @Given("{string} sent the monthly report for {string} again {int} times")
+    public void sentTheMonthlyReportForAgainTimes(String alias, String month, int count) {
+        for (int index = 0; index < count; index++) {
+            sendsTheMonthlyReportForAgain(alias, month);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The sending answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        }
+    }
+
     @When("{string} asks for the donations overview")
     public void asksForTheDonationsOverview(String alias) {
         sessions.actAs(alias);
@@ -143,6 +152,12 @@ public class AdminReportStepDefinitions {
                 .query(String.class)
                 .list();
         assertThat(recorded).singleElement().asString().contains(details);
+    }
+
+    @Then("{int} admin actions {string} by {string} are recorded")
+    public void adminActionsByAreRecorded(int count, String action, String alias) {
+        assertThat(jdbc.sql("select count(*) from admin_action where action = ? and admin_id = ?").param(action).param(scenarioDonors.idOf(alias))
+                .query(Long.class).single()).isEqualTo(count);
     }
 
     @Then("no admin action {string} is recorded")
