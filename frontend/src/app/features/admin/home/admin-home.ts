@@ -607,7 +607,7 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
         {
           path: ADMIN_MORE_PATH,
           label: $localize`:@@admin.home.sections.more.row:Lidé fondu, správci, zálohy, nastavení…`,
-          icon: 'more',
+          icon: 'foundation',
         },
       ],
     },

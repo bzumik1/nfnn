@@ -65,7 +65,7 @@ div.ui-list__row {
   overflow-wrap: anywhere;
 }
 
-.ui-list__row:not(:has(.ui-list__meta)) > .ui-list__title {
+.ui-list__row:has(.ui-list__state):not(:has(.ui-list__meta)) > .ui-list__title {
   grid-row: 1 / span 2;
 }
 
