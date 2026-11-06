@@ -212,9 +212,11 @@ test.describe('Given an administrator who signs in with the password and has a p
     await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
     await page.locator('#login-email').fill('jana@example.cz');
     await page.locator('#login-password').fill('correct horse battery');
+    const stored = context.waitForEvent('request', (request) => request.url().endsWith(RECORD));
     await page.getByRole('dialog').locator('.ui-button--block').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['password']);
+    await stored;
+    expect(administrationWraps(await idbDump())).toEqual(['password']);
 
     await page.goto('/sprava/prehledy');
     await expect(page.getByRole('heading', { level: 1, name: LOCKED })).toBeVisible();
