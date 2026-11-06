@@ -28,7 +28,7 @@
 html {
   touch-action: manipulation;
   scroll-behavior: smooth;
-  scroll-padding-top: calc(env(safe-area-inset-top) + var(--header-height) + var(--space-4));
+  scroll-padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
 }
 
 html.follows-system-text-size {
@@ -143,6 +143,19 @@ body {
 html.has-window-controls {
   --window-controls-inset-inline: var(--window-controls-room-inline);
   --window-controls-inset-block: var(--window-controls-room-block);
+}
+
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --safe-area-top: calc(env(safe-area-inset-top) + var(--home-screen-top-clearance));
+      --full-screen-height: 100lvh;
+    }
+
+    body {
+      min-height: var(--full-screen-height);
+    }
+  }
 }
 
 .skip-link {

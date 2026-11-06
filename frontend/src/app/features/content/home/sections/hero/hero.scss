@@ -3,7 +3,7 @@
 .hero {
   position: relative;
   min-height: 100vh;
-  min-height: 100svh;
+  min-height: var(--full-screen-height);
   overflow: hidden;
   display: flex;
   align-items: flex-end;
@@ -45,7 +45,7 @@
   z-index: 2;
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: calc(var(--header-height) + env(safe-area-inset-top))
+  padding: calc(var(--header-height) + var(--safe-area-top))
     max(var(--space-8), env(safe-area-inset-right)) calc(var(--tab-bar-clearance) + var(--space-10))
     max(var(--space-8), env(safe-area-inset-left));
   width: 100%;

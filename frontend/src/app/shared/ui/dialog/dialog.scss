@@ -147,7 +147,7 @@
   }
 
   .dialog--sheet .dialog-panel--tall {
-    height: calc(100dvh - env(safe-area-inset-top) - var(--sheet-top-gap));
+    height: calc(100dvh - var(--safe-area-top) - var(--sheet-top-gap));
     max-height: none;
     padding: var(--sheet-close-inset) max(var(--sheet-inset-inline), env(safe-area-inset-right))
       calc(var(--space-8) + env(safe-area-inset-bottom))
@@ -225,7 +225,7 @@
     max-width: none;
     min-height: 0;
     height: 100%;
-    padding: env(safe-area-inset-top) 0 0;
+    padding: var(--safe-area-top) 0 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -234,7 +234,7 @@
   }
 
   .dialog-close {
-    top: calc(var(--dialog-close-inset) + env(safe-area-inset-top));
+    top: calc(var(--dialog-close-inset) + var(--safe-area-top));
     z-index: 1;
     background: color-mix(in srgb, var(--color-surface-inverse) 60%, transparent);
     color: var(--color-on-inverse);

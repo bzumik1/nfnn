@@ -87,3 +87,17 @@ test.describe('Given a visitor on an iPhone, whose Safari tints its status bar f
     await expect(page.locator('meta[name="theme-color"]')).toHaveCount(0);
   });
 });
+
+test.describe('Given the app opened from an iPhone home screen, whose web view starts under the status bar only when the page asks for it', () => {
+  test('when a page opens, then it asks iOS to lay the page under the status bar', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+    await expect(
+      page.locator('meta[name="apple-mobile-web-app-status-bar-style"]'),
+    ).toHaveAttribute('content', 'black-translucent');
+  });
+});
