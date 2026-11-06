@@ -4,6 +4,8 @@ Web of Nadační fond Nová naděje (nfnn.cz): public site, donor portal with PD
 
 Before building, read the sections you touch (grep them: `api-contract.md` is too large to read whole) and update them in the same PR: `docs/requirements.md` (client decisions, Czech), `docs/roadmap.md` (versions and backlog, Czech: a feature moves when it ships or Jakub decides on it), `docs/api-contract.md` (HTTP and MCP contract), `docs/system-overview.md` (how each context works today), `docs/security-overview.md` (how authentication, connected applications and the connector are secured), `docs/frontend-overview.md` (what the Angular app contains), `deploy/README.md` (server, Czech).
 
+Domain words follow `docs/glossary.md` (the Czech UI word, the English name in code, the words to avoid): when Jakub or a text uses an _Avoid_ word, or a term in another sense, say so and name the glossary term; a term settled in a thread goes into the glossary in the PR that uses it.
+
 ## Layout
 
 | Path | What |
