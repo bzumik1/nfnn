@@ -229,33 +229,5 @@
     "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's account sheet*",
     "reason": "Jakub 2026-11-05 (thread Otevřít přehled rovnou po kliknutí na účet): the account sheet was a needless step, so the header's account link opens Můj přehled at once; on phones the overview lists the other sections, Správa, Přidat na plochu, Odhlásit se and the foundation's links, on wide screens the side panel holds Přidat na plochu and Odhlásit se",
     "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open the donor's overview, then nothing is cut off, stacked, covered or too small"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given a signed-in donor at the dashboard top bar > when they sign out, then they land on the home page and the notice says they signed out",
-    "reason": "2.24 retired this top bar test for an account sheet test that this PR removes with the sheet; the account opens Můj přehled now (Jakub 2026-11-05)",
-    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the area opens > then on a computer the side panel ends with Odhlásit se, which ends the session, opens the home page and says the donor was signed out"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when a donor without the administrator role sees it > then it shows their name and no link to the administration",
-    "reason": "2.24 retired this top bar test for an account sheet test that this PR removes with the sheet; the account opens Můj přehled now (Jakub 2026-11-05)",
-    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens on a phone, where no side panel shows > then the rows under the page title lead to every other section of the account, after the receipt and the questions that need the donor"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator linked to a person of the foundation with a portrait sees it > then the portrait of that person stands beside their name, hidden from the screen reader",
-    "reason": "2.24 retired this top bar test for an account sheet test that this PR removes with the sheet; the account opens Můj přehled now (Jakub 2026-11-05)",
-    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when an administrator linked to a person of the foundation with a portrait is signed in, then the account link shows that portrait"
-  },
-  {
-    "kind": "retired",
-    "suite": "frontend-vitest",
-    "test": "src/app/features/donors/dashboard/top-bar/top-bar.spec.ts > Given the dashboard top bar > when an administrator sees it in the donor area > then it offers the administration",
-    "reason": "2.24 retired this top bar test for an account sheet test that this PR removes with the sheet; the account opens Můj přehled now (Jakub 2026-11-05)",
-    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens on a phone, where no side panel shows > then an administrator also finds Správa there, under its own heading"
   }
 ]
