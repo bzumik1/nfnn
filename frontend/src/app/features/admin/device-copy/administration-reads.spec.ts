@@ -169,6 +169,29 @@ describe('Given the administration pages reading through the copy on this device
       expect(refresh).toHaveBeenCalledTimes(2);
     });
 
+    it('and a refresh after a change failed, then the server answers for a minute without another refresh, and the copy is refreshed again after it', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+      reads.changed();
+      refresh.mockResolvedValue('failed');
+      for (const attempt of [1, 2]) {
+        const answer = firstValueFrom(reads.paymentList('unpaired'));
+        await vi.waitFor(() =>
+          http
+            .expectOne((request) => request.url === '/api/admin/donations/payments')
+            .flush(SERVER_LIST),
+        );
+        expect(await answer, `attempt ${attempt}`).toEqual(SERVER_LIST);
+      }
+      expect(refresh).toHaveBeenCalledTimes(2);
+
+      vi.setSystemTime(Date.now() + REFRESH_AFTER_MS);
+      refresh.mockResolvedValue('unchanged');
+      const fromCopy = await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh).toHaveBeenCalledTimes(3);
+      expect(fromCopy.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
     it('and the account is not in the copy, then the server is asked for it', async () => {
       const answer = firstValueFrom(reads.account('donor-9'));
       await vi.waitFor(() =>

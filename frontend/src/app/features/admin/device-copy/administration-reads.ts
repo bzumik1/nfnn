@@ -47,6 +47,7 @@ export class AdministrationReads {
   private readonly connectivity = inject(Connectivity);
   private changedSince = true;
   private checkedAt = Number.NEGATIVE_INFINITY;
+  private failedAt = Number.NEGATIVE_INFINITY;
 
   private readonly payments = this.copy.rows<CopyPaymentRow>('donations', 'payments');
   private readonly donations = this.copy.rows<CopyDonationRow>('donations', 'donations');
@@ -166,14 +167,19 @@ export class AdministrationReads {
     ) {
       return 'kept';
     }
+    if (Date.now() - this.failedAt < REFRESH_AFTER_MS) {
+      return changed ? 'outdated' : 'kept';
+    }
     const outcome = await this.download.refresh();
     if (outcome === 'stored' || outcome === 'unchanged') {
       this.checkedAt = Date.now();
+      this.failedAt = Number.NEGATIVE_INFINITY;
       if (this.changedSince === changed) {
         this.changedSince = false;
       }
       return 'fresh';
     }
+    this.failedAt = Date.now();
     return changed ? 'outdated' : 'kept';
   }
 
