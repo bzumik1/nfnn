@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 
 :host {
   display: block;
@@ -19,9 +20,17 @@
     transform var(--duration-base);
   cursor: pointer;
 
-  &:hover {
-    box-shadow: var(--shadow-card-hover);
-    transform: translateY(-4px);
+  @media (hover: hover) {
+    &:hover {
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-4px);
+    }
+  }
+}
+
+.news-card:has(.news-link:active) {
+  @include pressed.look {
+    @include pressed.shrinks;
   }
 }
 
@@ -142,6 +151,10 @@
 .news-link {
   color: inherit;
   text-decoration: none;
+
+  &:active {
+    background-image: none;
+  }
 
   &::after {
     content: '';

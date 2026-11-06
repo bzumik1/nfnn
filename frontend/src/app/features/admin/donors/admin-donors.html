@@ -76,25 +76,22 @@
       }
       @case ('ready') {
         @if (results().length > 0) {
-          <table class="ui-table">
-            <thead>
-              <tr>
-                <th i18n="@@admin.donors.col.donor">Dárce</th>
-                <th i18n="@@admin.donors.col.email">E-mail</th>
-                <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
-                <th i18n="@@admin.donors.col.registered">Registrace</th>
-                <th i18n="@@admin.donors.col.account">Stav účtu</th>
-              </tr>
-            </thead>
-            <tbody>
+          @if (rows()) {
+            <ul class="ui-list donor-rows">
               @for (item of results(); track item.donorId) {
-                <tr>
-                  <td data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
-                    <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
-                      item.name
-                    }}</a>
-                    <span class="muted">
-                      {{ typeLabel(item) }}
+                <li>
+                  <a class="ui-list__row" [routerLink]="['/sprava/darci', item.donorId]">
+                    <span class="ui-list__title">{{ item.name }}</span>
+                    <span class="ui-list__meta">
+                      <ng-container i18n="@@admin.donors.row.symbol"
+                        >VS {{ item.variableSymbol }}</ng-container
+                      >
+                      ·
+                      @if (item.erasedAt) {
+                        <ng-container i18n="@@admin.donors.email.erased">vymazán</ng-container>
+                      } @else {
+                        <span class="email">{{ item.email }}</span>
+                      }
                       @if (item.companyIdentifier) {
                         ·
                         <ng-container i18n="@@admin.donors.company"
@@ -102,56 +99,131 @@
                         >
                       }
                     </span>
-                  </td>
-                  <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
-                    @if (item.erasedAt) {
-                      <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
-                    } @else {
-                      <span class="email">{{ item.email }}</span>
+                    @if (
+                      item.erasedAt ||
+                      item.administrator ||
+                      item.secondFactorEnabled ||
+                      !item.emailVerified
+                    ) {
+                      <span class="ui-list__extra tags">
+                        @if (item.erasedAt) {
+                          <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                            >Údaje vymazány</span
+                          >
+                        }
+                        @if (item.administrator) {
+                          <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
+                            >Správce</span
+                          >
+                        }
+                        @if (item.secondFactorEnabled) {
+                          <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
+                            >Dvoufaktorové ověření</span
+                          >
+                        }
+                        @if (!item.emailVerified && !item.erasedAt) {
+                          <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
+                            >E-mail neověřen</span
+                          >
+                        }
+                      </span>
                     }
-                  </td>
-                  <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
-                    <span class="ui-mono">{{ item.variableSymbol }}</span>
-                  </td>
-                  <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
-                    {{ registeredOn(item) }}
-                  </td>
-                  <td data-label="Stav účtu" i18n-data-label="@@admin.donors.col.account">
-                    <span class="tags">
-                      @if (item.erasedAt) {
-                        <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
-                          >Údaje vymazány</span
-                        >
-                      }
-                      @if (item.administrator) {
-                        <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
-                          >Správce</span
-                        >
-                      }
-                      @if (item.secondFactorEnabled) {
-                        <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
-                          >Dvoufaktorové ověření</span
-                        >
-                      }
-                      @if (!item.emailVerified && !item.erasedAt) {
-                        <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
-                          >E-mail neověřen</span
-                        >
-                      }
-                      @if (
-                        !item.erasedAt &&
-                        !item.administrator &&
-                        !item.secondFactorEnabled &&
-                        item.emailVerified
-                      ) {
-                        <span class="muted" i18n="@@admin.donors.tag.plain">běžný účet</span>
-                      }
-                    </span>
-                  </td>
-                </tr>
+                    <svg
+                      class="ui-list__chevron"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </a>
+                </li>
               }
-            </tbody>
-          </table>
+            </ul>
+          } @else {
+            <table class="ui-table">
+              <thead>
+                <tr>
+                  <th i18n="@@admin.donors.col.donor">Dárce</th>
+                  <th i18n="@@admin.donors.col.email">E-mail</th>
+                  <th i18n="@@admin.donors.col.symbol">Variabilní symbol</th>
+                  <th i18n="@@admin.donors.col.registered">Registrace</th>
+                  <th i18n="@@admin.donors.col.account">Stav účtu</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of results(); track item.donorId) {
+                  <tr>
+                    <td data-label="Dárce" i18n-data-label="@@admin.donors.col.donor">
+                      <a class="admin-name" [routerLink]="['/sprava/darci', item.donorId]">{{
+                        item.name
+                      }}</a>
+                      <span class="muted">
+                        {{ typeLabel(item) }}
+                        @if (item.companyIdentifier) {
+                          ·
+                          <ng-container i18n="@@admin.donors.company"
+                            >IČO {{ item.companyIdentifier }}</ng-container
+                          >
+                        }
+                      </span>
+                    </td>
+                    <td data-label="E-mail" i18n-data-label="@@admin.donors.col.email">
+                      @if (item.erasedAt) {
+                        <span class="muted" i18n="@@admin.donors.email.erased">vymazán</span>
+                      } @else {
+                        <span class="email">{{ item.email }}</span>
+                      }
+                    </td>
+                    <td data-label="Variabilní symbol" i18n-data-label="@@admin.donors.col.symbol">
+                      <span class="ui-mono">{{ item.variableSymbol }}</span>
+                    </td>
+                    <td data-label="Registrace" i18n-data-label="@@admin.donors.col.registered">
+                      {{ registeredOn(item) }}
+                    </td>
+                    <td data-label="Stav účtu" i18n-data-label="@@admin.donors.col.account">
+                      <span class="tags">
+                        @if (item.erasedAt) {
+                          <span class="tag tag--off" i18n="@@admin.donors.tag.erased"
+                            >Údaje vymazány</span
+                          >
+                        }
+                        @if (item.administrator) {
+                          <span class="tag tag--admin" i18n="@@admin.donors.tag.administrator"
+                            >Správce</span
+                          >
+                        }
+                        @if (item.secondFactorEnabled) {
+                          <span class="tag tag--on" i18n="@@admin.donors.tag.secondFactor"
+                            >Dvoufaktorové ověření</span
+                          >
+                        }
+                        @if (!item.emailVerified && !item.erasedAt) {
+                          <span class="tag tag--warn" i18n="@@admin.donors.tag.unverified"
+                            >E-mail neověřen</span
+                          >
+                        }
+                        @if (
+                          !item.erasedAt &&
+                          !item.administrator &&
+                          !item.secondFactorEnabled &&
+                          item.emailVerified
+                        ) {
+                          <span class="muted" i18n="@@admin.donors.tag.plain">běžný účet</span>
+                        }
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
         }
       }
     }

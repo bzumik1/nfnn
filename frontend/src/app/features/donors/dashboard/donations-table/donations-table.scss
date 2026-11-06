@@ -28,8 +28,10 @@ tbody tr {
   border-top: 1px solid var(--color-divider);
   transition: background var(--duration-fast);
 
-  &:hover {
-    background: var(--color-surface-alt);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--color-surface-alt);
+    }
   }
 }
 
@@ -147,8 +149,10 @@ tr.is-verification td.amount {
     gap: var(--space-1-5) var(--space-3);
     padding: var(--space-3-5) var(--space-5);
 
-    &:hover {
-      background: none;
+    @media (hover: hover) {
+      &:hover {
+        background: none;
+      }
     }
   }
 
@@ -205,4 +209,41 @@ tr.is-verification td.amount {
 
 @include bp.container-down(donations-table, phone) {
   @include table-as-cards;
+}
+
+.donation-rows {
+  border-top: 1px solid var(--color-divider);
+
+  .ui-list__row {
+    padding-inline: var(--space-5);
+  }
+
+  .donation-amount {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+  }
+
+  .is-verification .donation-amount {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+  }
+
+  .pairing-tag {
+    margin: var(--space-1) 0 0;
+    white-space: normal;
+  }
+
+  .donation-receipt {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-1-5);
+    margin-top: var(--space-2);
+  }
+
+  .receipt-saved,
+  .row-receipt-error {
+    max-width: none;
+  }
 }

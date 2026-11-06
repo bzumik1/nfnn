@@ -14,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
@@ -106,6 +107,7 @@ export class AdminActions {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly rows = inject(CompactLayout).listsAsRows;
   protected readonly items = signal<AdminActionResponse[]>([]);
   protected readonly hasMore = signal(false);
   protected readonly loadingMore = signal(false);

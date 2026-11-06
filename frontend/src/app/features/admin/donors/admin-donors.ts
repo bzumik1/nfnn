@@ -24,6 +24,7 @@ import {
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { formatBankTime } from '../../donations/donation-date';
 import { AdminApi, DonorAccountResponse } from '../admin-api';
 
@@ -58,6 +59,7 @@ export class AdminDonors {
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly queries = new Subject<string>();
+  protected readonly rows = inject(CompactLayout).listsAsRows;
 
   protected readonly query = signal('');
   protected readonly state = signal<SearchState>('idle');

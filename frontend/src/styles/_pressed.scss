@@ -1,0 +1,38 @@
+@mixin look {
+  @media (forced-colors: none) {
+    @content;
+  }
+
+  @media (forced-colors: active) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+@mixin when-pressed {
+  &:active:not(:disabled, [aria-disabled='true']) {
+    @include look {
+      @content;
+    }
+  }
+}
+
+@mixin tints {
+  background-image: linear-gradient(var(--color-pressed), var(--color-pressed));
+}
+
+@mixin darkens {
+  background-image: none;
+  filter: brightness(var(--pressed-brightness));
+}
+
+@mixin shrinks {
+  background-image: none;
+  transform: scale(var(--pressed-scale));
+  transition-duration: var(--duration-fast);
+
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+    filter: brightness(var(--pressed-brightness));
+  }
+}

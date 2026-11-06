@@ -99,8 +99,10 @@
   cursor: pointer;
   overflow-wrap: anywhere;
 
-  &:hover {
-    border-color: var(--color-accent);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--color-accent);
+    }
   }
 }
 
