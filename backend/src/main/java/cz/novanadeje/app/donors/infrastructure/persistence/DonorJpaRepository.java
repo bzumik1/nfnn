@@ -30,7 +30,8 @@ interface DonorJpaRepository extends JpaRepository<DonorJpaEntity, UUID> {
     @Query("select d from DonorJpaEntity d where lower(function('translate', d.name, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "'))"
             + " like concat('%', :query, '%') escape '!'"
             + " or lower(function('translate', d.email, '" + AccentFolding.ACCENTED + "', '" + AccentFolding.PLAIN + "')) like concat('%', :query, '%') escape '!'"
-            + " or d.variableSymbol like concat(:query, '%') escape '!' order by d.name, d.email")
+            + " or d.variableSymbol like concat(:query, '%') escape '!'"
+            + " order by collate(d.name as ucs_basic), collate(d.email as ucs_basic)")
     List<DonorJpaEntity> search(@Param("query") String query, Pageable page);
 
     @Modifying(flushAutomatically = true)

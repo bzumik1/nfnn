@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/admin-donors/account-search.schema.json",
+  "title": "Account search cases: the rows and the device copy give the accounts of /sprava/darci for each query",
+  "type": "object",
+  "required": ["source", "logic", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "../defs/source.schema.json" },
+    "logic": { "type": "string", "minLength": 1 },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["name", "input", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "input": {
+          "type": "object",
+          "$ref": "../defs/rows.schema.json",
+          "required": ["chunks", "queries"],
+          "properties": {
+            "chunks": { "$ref": "../defs/admin-copy.schema.json#/$defs/chunks" },
+            "queries": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "query": { "type": "string", "maxLength": 200 },
+                  "page": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+                  "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+                }
+              }
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        "expected": {
+          "type": "object",
+          "required": ["answers"],
+          "additionalProperties": false,
+          "properties": {
+            "answers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["items", "hasMore"],
+                "additionalProperties": false,
+                "properties": {
+                  "items": { "type": "array", "items": { "$ref": "../defs/admin-copy.schema.json#/$defs/accountRow" } },
+                  "hasMore": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,8 @@ record AdminReceiptListResponse(List<AdminReceiptItemResponse> items, long total
 
     record AdminReceiptItemResponse(UUID id, UUID donorId, ReceiptStatus status, ReceiptKind kind, String number, UUID donationId, Integer year,
                                     LocalDate issuedOn, Instant issuedAt, Instant supersededAt, Instant withdrawnAt,
-                                    ReceiptWithdrawalReason withdrawalReason, String locale, int giftCount, long totalAmountMinor) {
+                                    ReceiptWithdrawalReason withdrawalReason, String locale, int giftCount, long totalAmountMinor,
+                                    String keyId) {
 
         static AdminReceiptItemResponse from(DonationReceipt receipt) {
             return new AdminReceiptItemResponse(receipt.id().value(), receipt.donor().value(), receipt.status(), receipt.kind(),
@@ -30,7 +31,8 @@ record AdminReceiptListResponse(List<AdminReceiptItemResponse> items, long total
                     receipt.issuedOn(), receipt.issuedAt(), receipt.supersededAt().orElse(null),
                     receipt.withdrawal().map(ReceiptWithdrawal::at).orElse(null), receipt.withdrawal().map(ReceiptWithdrawal::reason).orElse(null),
                     receipt.locale().tag(),
-                    receipt.frozen().document().lines().size(), receipt.frozen().document().total().amountMinor());
+                    receipt.frozen().document().lines().size(), receipt.frozen().document().total().amountMinor(),
+                    receipt.frozen().verification().keyId().value());
         }
     }
 }

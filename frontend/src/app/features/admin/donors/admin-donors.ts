@@ -26,7 +26,8 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { formatDonationDate, pragueDay } from '../../donations/donation-date';
-import { AdminApi, DonorAccountResponse } from '../admin-api';
+import { DonorAccountResponse } from '../admin-api';
+import { AdministrationReads } from '../device-copy/administration-reads';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
 
@@ -49,7 +50,7 @@ const QUERY_PARAM = 'q';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonors {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -114,7 +115,7 @@ export class AdminDonors {
       return of<Outcome>({ state: 'idle', items: [], hasMore: false });
     }
     this.state.set('searching');
-    return this.api.donors(query).pipe(
+    return this.reads.accountList(query).pipe(
       map((response): Outcome => ({
         state: 'ready',
         items: response.items,

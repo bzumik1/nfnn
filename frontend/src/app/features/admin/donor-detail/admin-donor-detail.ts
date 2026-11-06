@@ -5,12 +5,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
   linkedSignal,
   PendingTasks,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,6 +22,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { from, Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
@@ -49,6 +52,7 @@ import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { AdminReceiptDownloads } from './admin-receipt-downloads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { AdministrationReads, type BankAccountsSource } from '../device-copy/administration-reads';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -129,6 +133,8 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 export class AdminDonorDetail {
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
+  private readonly connectivity = inject(Connectivity);
   private readonly receiptKeys = inject(ReceiptKeysApi);
   private readonly document = inject(DOCUMENT);
   private readonly hostname = this.document.location.hostname;
@@ -156,6 +162,7 @@ export class AdminDonorDetail {
   protected readonly account = signal<DonorAccountResponse | null>(null);
   protected readonly donationsState = signal<LoadState>('loading');
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
+  protected readonly bankAccountsSource = signal<BankAccountsSource>('server');
   protected readonly cardNotice = signal<CardNotice | null>(null);
   protected readonly busy = signal(false);
   protected readonly changedMeanwhile = signal<{
@@ -249,6 +256,17 @@ export class AdminDonorDetail {
     this.pdfs.whenReceiptReplaced((receiptId) => this.receiptReplaced(receiptId));
     this.loadAccount();
     this.loadDonations();
+    let wasOffline = this.connectivity.offline();
+    effect(() => {
+      const offline = this.connectivity.offline();
+      untracked(() => {
+        if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
+          this.bankAccountsSource.set('pending');
+          this.readCard();
+        }
+        wasOffline = offline;
+      });
+    });
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     this.showSectionOnWideScreens();
   }
@@ -311,8 +329,8 @@ export class AdminDonorDetail {
 
   protected loadAccount(): void {
     this.accountState.set('loading');
-    this.api
-      .donor(this.donorId)
+    this.reads
+      .account(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (account) => {
@@ -324,8 +342,9 @@ export class AdminDonorDetail {
   }
 
   private refreshAccount(onLoaded?: () => void): void {
-    this.api
-      .donor(this.donorId)
+    this.reads.changed();
+    this.reads
+      .account(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (account) => {
@@ -339,15 +358,23 @@ export class AdminDonorDetail {
 
   protected loadDonations(onLoaded?: () => void): void {
     this.donationsState.set('loading');
-    this.api
-      .donorDonations(this.donorId)
+    if (onLoaded !== undefined) {
+      this.reads.changed();
+    }
+    let loaded = onLoaded;
+    this.reads
+      .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (detail) => {
+        next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);
+          this.bankAccountsSource.set(bankAccounts);
           this.donationsState.set('ready');
           this.loadWithdrawnKeysFor(detail);
-          onLoaded?.();
+          if (bankAccounts !== 'pending') {
+            loaded?.();
+            loaded = undefined;
+          }
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
       });
@@ -402,12 +429,38 @@ export class AdminDonorDetail {
   }
 
   private refreshDonations(): void {
-    this.api
-      .donorDonations(this.donorId)
+    this.reads.changed();
+    this.readCard();
+  }
+
+  protected reloadBankAccounts(): void {
+    this.bankAccountsSource.set('pending');
+    this.cardNotice.set(null);
+    this.focusAfterRender(() => this.byId(this.ids.accounts.id));
+    this.readCard(true);
+  }
+
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
+  }
+
+  private readCard(retried = false): void {
+    this.reads
+      .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (detail) => {
+        next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);
+          this.bankAccountsSource.set(bankAccounts);
+          if (retried && bankAccounts === 'server') {
+            this.cardNotice.set({
+              card: 'accounts',
+              notice: {
+                kind: 'status',
+                text: $localize`:@@admin.donorDetail.accounts.reloaded:Bankovní účty dárce jsme načetli.`,
+              },
+            });
+          }
           this.loadWithdrawnKeysFor(detail);
         },
         error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
