@@ -204,3 +204,48 @@ test.describe('Given an address of a section of the old one-page home', () => {
     await expect(page).toHaveURL('about:blank');
   });
 });
+
+test.describe('Given a visitor on a phone with the tab bar at the bottom', () => {
+  const nearEdge = 4;
+
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/aktuality');
+  });
+
+  test('when they point just inside the top or bottom edge of the bar above any tab, then that tab is under the finger', async ({
+    page,
+  }) => {
+    const bar = await tabs(page).boundingBox();
+    expect(bar).not.toBeNull();
+    const links = tabs(page).getByRole('link');
+
+    for (const name of ['O nás', 'Aktuality', 'Pomáháme', 'Přispět']) {
+      const tab = await links.filter({ hasText: name }).boundingBox();
+      expect(tab).not.toBeNull();
+      const x = tab!.x + tab!.width / 2;
+      for (const y of [bar!.y + nearEdge, bar!.y + bar!.height - nearEdge]) {
+        const hit = await page.evaluate(
+          ([px, py]) => document.elementFromPoint(px, py)?.closest('a')?.textContent?.trim(),
+          [x, y],
+        );
+        expect(hit, `${name} at ${y - bar!.y} px from the top of the bar`).toBe(name);
+      }
+    }
+  });
+
+  test('when they tap Pomáháme just inside the top edge of the bar, then Pomáháme opens', async ({
+    page,
+  }) => {
+    const bar = await tabs(page).boundingBox();
+    const tab = await tabs(page).getByRole('link', { name: 'Pomáháme' }).boundingBox();
+
+    await page.mouse.click(tab!.x + tab!.width / 2, bar!.y + nearEdge);
+
+    await expect(page).toHaveURL('/projekty');
+    await expect(tabs(page).getByRole('link', { name: 'Pomáháme' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+});
