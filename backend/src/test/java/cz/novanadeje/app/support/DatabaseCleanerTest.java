@@ -56,6 +56,30 @@ class DatabaseCleanerTest {
         assertThatThrownBy(() -> jdbc.sql("delete from admin_action").update()).hasMessageContaining("admin_action is append-only");
     }
 
+    @Test
+    @DisplayName("Given an issued receipt, which the database keeps as issued, when every table is emptied, then no receipt is left and the table keeps refusing a delete afterwards")
+    void should_empty_issued_receipts_and_keep_them_as_issued_when_emptied_given_an_issued_receipt() {
+        insertIssuedReceipt("0190a000-0000-7000-8000-000000000008", "2026-000001");
+
+        new DatabaseCleaner(jdbc).emptyAllTables();
+
+        assertThat(jdbc.sql("select count(*) from issued_receipt").query(Long.class).single()).isZero();
+        insertIssuedReceipt("0190a000-0000-7000-8000-000000000009", "2026-000002");
+        assertThatThrownBy(() -> jdbc.sql("delete from issued_receipt").update()).hasMessageContaining("an issued receipt keeps what it certifies");
+    }
+
+    private void insertIssuedReceipt(String id, String number) {
+        jdbc.sql("insert into donor_record (donor_id, type, name, street, city, postal_code, variable_symbol, preferred_locale, registered_at, updated_at) "
+                + "values ('0190a000-0000-7000-8000-000000000007', 'PERSON', 'Dárce', 'Ulice 1', 'Město', '110 00', '1000000001', 'cs', "
+                + "'2026-01-10T10:00:00Z', '2026-01-10T10:00:00Z') on conflict do nothing").update();
+        jdbc.sql("insert into receipt_signing_key (key_id, public_key, registered_at, status, seal) "
+                + "values ('0a1b2c3d', decode(repeat('ab', 32), 'hex'), '2026-01-10T10:00:00Z', 'active', 'seal') on conflict do nothing").update();
+        jdbc.sql("insert into issued_receipt (id, donor_id, kind, receipt_year, number, issued_on, issued_at, locale, fingerprint, status, schema_version, "
+                + "frozen, signing_key_id, proof, status_sha256) values ('" + id + "', '0190a000-0000-7000-8000-000000000007', 'YEARLY', 2025, '" + number
+                + "', '2026-01-10', '2026-01-10T10:00:00Z', 'cs', repeat('5', 64), 'ACTIVE', 1, '{}', '0a1b2c3d', decode(repeat('cd', 65), 'hex'), "
+                + "repeat('" + number.charAt(number.length() - 1) + "', 64))").update();
+    }
+
     private Map<String, Long> rowCounts() {
         List<String> tables = jdbc.sql("select tablename from pg_tables where schemaname = 'public' and tablename not like 'databasechangelog%'")
                 .query(String.class).list();
