@@ -300,6 +300,24 @@ describe('Given the download of the administration into its copy on this device'
       ]);
     });
 
+    it('and only the summary changed, such as the day or the first receipt year, then no chunk is downloaded and the copy is stored with the new summary', async () => {
+      const newer = { today: '2027-01-01', receiptsAvailableFrom: 2026, byYear: [] };
+      await answer('/api/admin/donations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: newer,
+        chunks: [{ id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 }],
+      });
+      await answer('/api/admin/donors/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
+      });
+
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored.map((stored) => stored.summary)).toEqual([{ donations: newer }]);
+    });
+
     it('and the payments are as the copy holds them after all, then nothing is downloaded and the copy is stored only without the chunk the server no longer lists', async () => {
       await manifests();
 
@@ -337,6 +355,33 @@ describe('Given the download of the administration into its copy on this device'
       expect(http.match(() => true)).toHaveLength(0);
       expect(vault.stored).toEqual([]);
       expect(download.checkedAt()).not.toBeNull();
+    });
+  });
+
+  describe('when a refresh is asked to start after a change while another refresh runs', () => {
+    it('then it waits for the running one and reads the manifests again, and a third caller joins the waiting one', async () => {
+      vault.open('unlocked', {
+        chunks: [
+          {
+            id: 'donations/payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            rows: PAYMENTS,
+          },
+          { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+        ],
+        summary: { donations: SUMMARY },
+        storedAt: '2026-11-05T08:00:00.000Z',
+      });
+      await flush();
+
+      const afterChange = download.refresh(true);
+      const alsoAfterChange = download.refresh(true);
+      await manifests();
+      await manifests();
+
+      expect(await afterChange).toBe('unchanged');
+      expect(await alsoAfterChange).toBe('unchanged');
+      expect(http.match(() => true)).toHaveLength(0);
     });
   });
 

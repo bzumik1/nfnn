@@ -27,7 +27,6 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
 import { DonorAccountResponse } from '../admin-api';
 import { AdministrationReads } from '../device-copy/administration-reads';
-import { CopyAge } from '../device-copy/copy-age';
 
 type SearchState = 'idle' | 'searching' | 'ready' | 'error';
 
@@ -45,7 +44,7 @@ const PRAGUE_DATE_LENGTH = '17. 10. 2026'.length;
 
 @Component({
   selector: 'app-admin-donors',
-  imports: [RouterLink, CopyAge],
+  imports: [RouterLink],
   templateUrl: './admin-donors.html',
   styleUrl: './admin-donors.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

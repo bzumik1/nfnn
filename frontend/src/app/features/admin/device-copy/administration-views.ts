@@ -99,12 +99,13 @@ const PLAIN = 'aacdeeeillnooorrstuuuyzaacdeeeillnooorrstuuuyz';
 const AMOUNT_SPACES = /[ \t\n\v\f\r\u00a0\u202f]+/g;
 const CROWNS = /^(\d{1,12})(?:[.,](\d{1,2}))?(?:kc|czk)?$/;
 const HELLERS_PER_CROWN = 100;
-const NAMES = new Intl.Collator('cs');
+const INSTANT_FRACTION = /^(.*:\d{2})(?:\.(\d{1,9}))?Z$/;
+const NANOSECOND_DIGITS = 9;
 
 export function paymentList(
   rows: DonationsCopyRows,
   pairing: PairingFilter,
-  query: PaymentQuery & { readonly year?: number },
+  query: PaymentQuery,
 ): AdminPaymentListResponse {
   const text = plainQuery(query.text);
   const filter = (item: AdminPaymentResponse): boolean => matches(item, query, text);
@@ -182,7 +183,7 @@ export function donorRecordSearch(
     )
     .sort(
       (first, second) =>
-        NAMES.compare(first.name, second.name) || byText(first.donorId, second.donorId),
+        byCodePoints(first.name, second.name) || byText(first.donorId, second.donorId),
     )
     .slice(0, DONOR_RECORD_SEARCH_LIMIT)
     .map((record): AdminDonorResponse => ({
@@ -211,7 +212,7 @@ export function accountSearch(
     )
     .sort(
       (first, second) =>
-        NAMES.compare(first.name, second.name) || NAMES.compare(first.email, second.email),
+        byCodePoints(first.name, second.name) || byCodePoints(first.email, second.email),
     );
   const start = page * limit;
   return { items: found.slice(start, start + limit), hasMore: found.length > start + limit };
@@ -247,7 +248,7 @@ export function donorCard(
     .sort(
       (first, second) =>
         byText(second.receivedAt, first.receivedAt) ||
-        byText(second.recordedAt, first.recordedAt) ||
+        byInstant(second.recordedAt, first.recordedAt) ||
         byText(second.id, first.id),
     );
   const received = gifts.filter((gift) => gift.status === 'RECEIVED');
@@ -286,7 +287,7 @@ export function donorCard(
     receipts: receipts
       .sort(
         (first, second) =>
-          byText(second.issuedAt, first.issuedAt) || byText(second.number, first.number),
+          byInstant(second.issuedAt, first.issuedAt) || byText(second.number, first.number),
       )
       .map((receipt): AdminReceiptResponse => ({
         id: receipt.id,
@@ -383,6 +384,30 @@ function newestBookingFirst(first: AdminPaymentResponse, second: AdminPaymentRes
 
 function byText(first: string, second: string): number {
   return first < second ? -1 : first > second ? 1 : 0;
+}
+
+function byInstant(first: string, second: string): number {
+  return byText(fixedWidth(first), fixedWidth(second));
+}
+
+function fixedWidth(instant: string): string {
+  const fraction = INSTANT_FRACTION.exec(instant);
+  return fraction === null
+    ? instant
+    : `${fraction[1]}.${(fraction[2] ?? '').padEnd(NANOSECOND_DIGITS, '0')}Z`;
+}
+
+function byCodePoints(first: string, second: string): number {
+  let index = 0;
+  while (index < first.length && index < second.length) {
+    const left = first.codePointAt(index) ?? 0;
+    const right = second.codePointAt(index) ?? 0;
+    if (left !== right) {
+      return left < right ? -1 : 1;
+    }
+    index += left > 0xffff ? 2 : 1;
+  }
+  return Math.sign(first.length - second.length);
 }
 
 function yearOf(day: string): number {

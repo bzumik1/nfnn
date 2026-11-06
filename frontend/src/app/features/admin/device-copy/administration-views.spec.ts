@@ -140,6 +140,38 @@ describe('Given receipts of a donor in the copy', () => {
     ],
   };
 
+  function withPayment(held: DonationsCopyRows): DonationsCopyRows {
+    const base = held;
+    return {
+      ...base,
+      payments: [
+        {
+          id: 'payment',
+          version: '0123456789abcdef',
+          bankTransactionId: 1,
+          bookedOn: '2026-03-01',
+          amountMinor: 5000,
+          currency: 'CZK',
+          variableSymbol: null,
+          counterpartyAccount: null,
+          counterpartyName: null,
+          messageForRecipient: null,
+          importedAt: '2026-03-01T12:00:00Z',
+          unpairedByAdminAt: null,
+          accountVerification: false,
+        },
+      ],
+      donations: [
+        {
+          ...base.donations[0],
+          paymentId: 'payment',
+          pairedBy: 'MANUAL',
+          source: 'BANK_TRANSFER',
+        },
+      ],
+    };
+  }
+
   it("when the device opens the donor card, then the gift names its active receipt and the card lists the donor's receipts newest first with the key and the gift's day", () => {
     const card = donorCard(rows, 'jana', { today: '2026-10-20', receiptsAvailableFrom: 2026 });
 
@@ -152,41 +184,87 @@ describe('Given receipts of a donor in the copy', () => {
     ]);
   });
 
-  it('when the device lists the paired payments, then a gift with any receipt says a receipt was issued', () => {
-    const paired = paymentList(
+  it('when two receipts were issued within one second, then the card orders them by the instant, however many digits of the second the server wrote', () => {
+    const card = donorCard(
       {
         ...rows,
-        payments: [
-          {
-            id: 'payment',
-            version: '0123456789abcdef',
-            bankTransactionId: 1,
-            bookedOn: '2026-03-01',
-            amountMinor: 5000,
-            currency: 'CZK',
-            variableSymbol: null,
-            counterpartyAccount: null,
-            counterpartyName: null,
-            messageForRecipient: null,
-            importedAt: '2026-03-01T12:00:00Z',
-            unpairedByAdminAt: null,
-            accountVerification: false,
-          },
+        receipts: [
+          receipt({
+            id: 'whole',
+            number: '2026-000004',
+            status: 'REPLACED',
+            issuedAt: '2026-03-07T10:00:00Z',
+          }),
+          receipt({
+            id: 'half',
+            number: '2026-000005',
+            status: 'ACTIVE',
+            issuedAt: '2026-03-07T10:00:00.5Z',
+          }),
+          receipt({
+            id: 'micro',
+            number: '2026-000006',
+            status: 'REPLACED',
+            issuedAt: '2026-03-07T10:00:00.120001Z',
+          }),
         ],
-        donations: [
+      },
+      'jana',
+      { today: '2026-10-20', receiptsAvailableFrom: 2026 },
+    );
+
+    expect(card?.receipts.map((item) => item.number)).toEqual([
+      '2026-000005',
+      '2026-000006',
+      '2026-000004',
+    ]);
+  });
+
+  it("when the donor also has a yearly receipt, then it is listed without a gift and never becomes the gift's receipt number", () => {
+    const card = donorCard(
+      {
+        ...rows,
+        receipts: [
           {
-            ...rows.donations[0],
-            paymentId: 'payment',
-            pairedBy: 'MANUAL',
-            source: 'BANK_TRANSFER',
+            ...receipt({
+              id: 'yearly',
+              number: '2026-000007',
+              status: 'ACTIVE',
+              issuedAt: '2027-01-05T10:00:00Z',
+            }),
+            kind: 'YEARLY',
+            donationId: null,
+            year: 2026,
           },
         ],
       },
-      'paired',
-      {},
+      'jana',
+      { today: '2027-01-05', receiptsAvailableFrom: 2026 },
     );
 
+    expect(card?.donations.items[0].receiptNumber).toBeNull();
+    expect(
+      card?.receipts.map((item) => [item.number, item.kind, item.year, item.donationReceivedOn]),
+    ).toEqual([['2026-000007', 'YEARLY', 2026, null]]);
+  });
+
+  it('when the device lists the paired payments, then a gift with any receipt says a receipt was issued', () => {
+    const paired = paymentList(withPayment(rows), 'paired', {});
+
     expect(paired.items[0].donation?.receiptIssued).toBe(true);
+  });
+
+  it("when the gift's only receipt was replaced, then the paired payment still says a receipt was issued and the card names no receipt number", () => {
+    const replacedOnly = withPayment({ ...rows, receipts: [rows.receipts[0]] });
+
+    const paired = paymentList(replacedOnly, 'paired', {});
+    const card = donorCard(replacedOnly, 'jana', {
+      today: '2026-10-20',
+      receiptsAvailableFrom: 2026,
+    });
+
+    expect(paired.items[0].donation?.receiptIssued).toBe(true);
+    expect(card?.donations.items[0].receiptNumber).toBeNull();
   });
 });
 

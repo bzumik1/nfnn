@@ -4,12 +4,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
   linkedSignal,
   PendingTasks,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -19,6 +21,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { from, Observable, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { TrackedForm } from '../../../core/updates/tracked-form';
@@ -49,7 +52,6 @@ import { AdminReceiptDownloads } from './admin-receipt-downloads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AdministrationReads, type BankAccountsSource } from '../device-copy/administration-reads';
-import { CopyAge } from '../device-copy/copy-age';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -112,7 +114,6 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     RouterLink,
     TrackedForm,
     NeedsConnection,
-    CopyAge,
   ],
   providers: [AdminReceiptDownloads],
   templateUrl: './admin-donor-detail.html',
@@ -123,6 +124,7 @@ export class AdminDonorDetail {
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(AdminApi);
   private readonly reads = inject(AdministrationReads);
+  private readonly connectivity = inject(Connectivity);
   private readonly receiptKeys = inject(ReceiptKeysApi);
   private readonly hostname = inject(DOCUMENT).location.hostname;
   private readonly pendingTasks = inject(PendingTasks);
@@ -202,6 +204,16 @@ export class AdminDonorDetail {
     this.pdfs.whenReceiptReplaced((receiptId) => this.receiptReplaced(receiptId));
     this.loadAccount();
     this.loadDonations();
+    let wasOffline = this.connectivity.offline();
+    effect(() => {
+      const offline = this.connectivity.offline();
+      untracked(() => {
+        if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
+          this.readCard();
+        }
+        wasOffline = offline;
+      });
+    });
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
@@ -308,6 +320,15 @@ export class AdminDonorDetail {
 
   private refreshDonations(): void {
     this.reads.changed();
+    this.readCard();
+  }
+
+  protected reloadBankAccounts(): void {
+    this.bankAccountsSource.set('pending');
+    this.readCard();
+  }
+
+  private readCard(): void {
     this.reads
       .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))

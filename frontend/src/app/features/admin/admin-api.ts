@@ -115,6 +115,7 @@ export interface PaymentQuery {
   from?: string;
   to?: string;
   donorId?: string;
+  year?: number;
   offset?: number;
   limit?: number;
 }
@@ -741,6 +742,7 @@ export class AdminApi {
       ['from', query.from],
       ['to', query.to],
       ['donorId', query.donorId],
+      ['year', query.year],
       ['offset', query.offset],
       ['limit', query.limit],
     ];

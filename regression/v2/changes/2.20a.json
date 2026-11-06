@@ -72,19 +72,19 @@
     "contract": "docs/api-contract.md, Issued receipts in the administration"
   },
   {
-    "path": "GET /api/admin/donations/receipts*",
-    "scenario": "donations/donor_device_sync: *",
+    "path": "GET /api/admin/donations/sync",
+    "scenario": "donors/admin_device_sync: *",
     "kind": "added",
-    "field": "$.items[*].keyId",
-    "reason": "2.20a: every receipt of the administration's list names the verification key its proof was signed with, as the receipts chunk of the copy lists it, so the donor card computed on the device names it",
-    "contract": "docs/api-contract.md, Issued receipts in the administration"
+    "field": "$.summary.receiptsAvailableFrom",
+    "reason": "2.20a: the summary of the administration copy names the first year whose gifts may get a receipt, so the donor card the device computes says which gifts can get one and which yearly receipts may be issued; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Device sync of the administration"
   },
   {
-    "path": "GET /api/admin/donations/receipts*",
-    "scenario": "donors/connected_apps: *",
+    "path": "GET /api/admin/donations/sync/chunks*",
+    "scenario": "donors/admin_device_sync: *",
     "kind": "added",
-    "field": "$.items[*].keyId",
-    "reason": "2.20a: every receipt of the administration's list names the verification key its proof was signed with, as the receipts chunk of the copy lists it, so the donor card computed on the device names it",
-    "contract": "docs/api-contract.md, Issued receipts in the administration"
+    "field": "$.summary.receiptsAvailableFrom",
+    "reason": "2.20a: the summary of the administration copy names the first year whose gifts may get a receipt, so the donor card the device computes says which gifts can get one and which yearly receipts may be issued; the fields before it answer as they did",
+    "contract": "docs/api-contract.md, Device sync of the administration"
   }
 ]

@@ -383,7 +383,15 @@
           { "pairing": "paired", "query": "pekarna u" },
           { "pairing": "paired", "query": "1 500" },
           { "pairing": "paired", "offset": 1, "limit": 2 },
-          { "pairing": "paired", "year": 2026, "query": "7700001002" }
+          { "pairing": "paired", "year": 2026, "query": "7700001002" },
+          { "query": "45,50", "pairing": "paired" },
+          { "query": "45.5 czk", "pairing": "paired" },
+          { "query": "45,5Kč", "pairing": "paired" },
+          { "query": "45,51", "pairing": "paired" },
+          { "query": "26000000009" },
+          { "pairing": "paired", "query": "1500 CZK" },
+          { "pairing": "paired", "query": "1 500,00 Kč" },
+          { "from": "2026-03-04" }
         ]
       },
       "expected": {
@@ -986,6 +994,208 @@
                   "receiptIssued": false
                 },
                 "version": "24be2af6798c854b"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2026, 2025, 2024],
+            "items": [
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-02-20",
+                "amountMinor": 4550,
+                "currency": "CZK",
+                "variableSymbol": "7700001001",
+                "counterpartyAccount": "1234567/0800",
+                "counterpartyName": "NOVAKOVA JANA",
+                "messageForRecipient": "Dar",
+                "importedAt": "2026-02-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:1",
+                  "donorId": "donor:jana",
+                  "donorName": "Jana Nováková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-02-20T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "6e343c54f1e8656a"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2026, 2025, 2024],
+            "items": [
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-02-20",
+                "amountMinor": 4550,
+                "currency": "CZK",
+                "variableSymbol": "7700001001",
+                "counterpartyAccount": "1234567/0800",
+                "counterpartyName": "NOVAKOVA JANA",
+                "messageForRecipient": "Dar",
+                "importedAt": "2026-02-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:1",
+                  "donorId": "donor:jana",
+                  "donorName": "Jana Nováková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-02-20T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "6e343c54f1e8656a"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2026, 2025, 2024],
+            "items": [
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-02-20",
+                "amountMinor": 4550,
+                "currency": "CZK",
+                "variableSymbol": "7700001001",
+                "counterpartyAccount": "1234567/0800",
+                "counterpartyName": "NOVAKOVA JANA",
+                "messageForRecipient": "Dar",
+                "importedAt": "2026-02-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:1",
+                  "donorId": "donor:jana",
+                  "donorName": "Jana Nováková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-02-20T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "6e343c54f1e8656a"
+              }
+            ],
+            "total": 1
+          },
+          { "year": null, "availableYears": [2026, 2025, 2024], "items": [], "total": 0 },
+          {
+            "year": null,
+            "availableYears": [],
+            "items": [
+              {
+                "id": "payment:p6",
+                "bankTransactionId": 26000000009,
+                "bookedOn": "2026-05-05",
+                "amountMinor": 99900,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-05-05T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": null,
+                "version": "584f462c75e71153"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2026, 2025, 2024],
+            "items": [
+              {
+                "id": "payment:p4",
+                "bankTransactionId": 26000000007,
+                "bookedOn": "2026-04-01",
+                "amountMinor": 150000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900244444/0800",
+                "counterpartyName": "PEKARNA U NOVAKU",
+                "messageForRecipient": null,
+                "importedAt": "2026-04-01T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:2",
+                  "donorId": "donor:firma",
+                  "donorName": "Pekárna U Nováků s.r.o.",
+                  "pairedBy": "MANUAL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-04-01T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "bd98111b75a61f65"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2026, 2025, 2024],
+            "items": [
+              {
+                "id": "payment:p4",
+                "bankTransactionId": 26000000007,
+                "bookedOn": "2026-04-01",
+                "amountMinor": 150000,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900244444/0800",
+                "counterpartyName": "PEKARNA U NOVAKU",
+                "messageForRecipient": null,
+                "importedAt": "2026-04-01T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:2",
+                  "donorId": "donor:firma",
+                  "donorName": "Pekárna U Nováků s.r.o.",
+                  "pairedBy": "MANUAL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-04-01T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "bd98111b75a61f65"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [],
+            "items": [
+              {
+                "id": "payment:p6",
+                "bankTransactionId": 26000000009,
+                "bookedOn": "2026-05-05",
+                "amountMinor": 99900,
+                "currency": "CZK",
+                "variableSymbol": null,
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-05-05T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": null,
+                "version": "584f462c75e71153"
               }
             ],
             "total": 1

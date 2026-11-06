@@ -135,7 +135,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     );
     await context.setOffline(true);
     await expect(
-      page.getByText(/Offline · údaje z \d+\. \d+\. \d{4} \d+:\d{2} · nemusí být aktuální/),
+      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
     const dialog = page.getByRole('dialog');

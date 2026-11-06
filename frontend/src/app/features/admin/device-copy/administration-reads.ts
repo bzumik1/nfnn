@@ -1,6 +1,9 @@
+import { HttpHeaders } from '@angular/common/http';
 import { computed, inject, Injectable } from '@angular/core';
 import { catchError, concat, defer, from, map, type Observable, of, switchMap } from 'rxjs';
-import { Connectivity } from '../../../core/connectivity/connectivity';
+import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
+import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import {
   AdminApi,
   type AdminDonorDetailResponse,
@@ -30,14 +33,14 @@ import {
 
 export const REFRESH_AFTER_MS = 60_000;
 
-export type BankAccountsSource = 'server' | 'pending' | 'unavailable';
+export type BankAccountsSource = 'server' | 'pending' | 'offline' | 'failed';
 
 export interface DonorCardRead {
   readonly detail: AdminDonorDetailResponse;
   readonly bankAccounts: BankAccountsSource;
 }
 
-type Freshness = 'fresh' | 'kept' | 'outdated';
+const SHOWN_COPY = 'device-copy:administration';
 
 @Injectable({ providedIn: 'root' })
 export class AdministrationReads {
@@ -45,7 +48,11 @@ export class AdministrationReads {
   private readonly copy = inject(AdministrationCopy);
   private readonly download = inject(AdministrationCopyDownload);
   private readonly connectivity = inject(Connectivity);
-  private changedSince = true;
+  private readonly shown = inject(ShownAnswers);
+  private readonly vault = inject(DeviceVault);
+  private checkedCopy: OpenedCopy | null = null;
+  private changes = 0;
+  private freshFor = -1;
   private checkedAt = Number.NEGATIVE_INFINITY;
   private failedAt = Number.NEGATIVE_INFINITY;
 
@@ -57,21 +64,25 @@ export class AdministrationReads {
   private readonly receipts = this.copy.rows<CopyReceiptRow>('donations', 'receipts');
   private readonly accounts = this.copy.rows<CopyAccountRow>('donors', 'accounts');
 
-  readonly fromCopyOffline = computed(() => this.copy.opened() && this.connectivity.offline());
-  readonly copyTime = computed(() => latest(this.download.checkedAt(), this.copy.storedAt()));
+  private readonly copyTime = computed(() =>
+    latest(this.download.checkedAt(), this.copy.storedAt()),
+  );
 
   changed(): void {
-    this.changedSince = true;
+    this.changes += 1;
   }
 
   paymentList(
     pairing: PairingFilter,
-    query: PaymentQuery & { readonly year?: number } = {},
+    query: PaymentQuery = {},
   ): Observable<AdminPaymentListResponse> {
     return this.read(
       () => {
         const rows = this.donationsRows();
-        return rows === null ? null : paymentList(rows, pairing, query);
+        if (rows === null || (pairing === 'paired' && this.holdsErasedBankGifts(rows))) {
+          return null;
+        }
+        return paymentList(rows, pairing, query);
       },
       () => this.api.payments(pairing, query),
     );
@@ -108,7 +119,12 @@ export class AdministrationReads {
     return this.fromCopy(() => {
       const rows = this.donationsRows();
       const summary = this.copy.summary();
-      if (rows === null || summary?.receiptsAvailableFrom === undefined) {
+      const record = rows?.donorRecords.find((candidate) => candidate.donorId === donorId);
+      if (
+        rows === null ||
+        record?.erasedAt !== null ||
+        summary?.receiptsAvailableFrom === undefined
+      ) {
         return null;
       }
       return donorCard(rows, donorId, {
@@ -126,16 +142,17 @@ export class AdministrationReads {
           bankAccounts,
         });
         if (this.connectivity.offline()) {
-          return of(held('unavailable'));
+          return of(held('offline'));
         }
         return concat(
           of(held('pending')),
           server.pipe(
-            map((detail): DonorCardRead => ({
-              detail: { ...card, bankAccounts: detail.bankAccounts },
-              bankAccounts: 'server',
-            })),
-            catchError(() => of(held('unavailable'))),
+            map((detail): DonorCardRead => ({ detail, bankAccounts: 'server' })),
+            catchError((failure: unknown) =>
+              of(
+                held(isUnreachable(failure) || this.connectivity.offline() ? 'offline' : 'failed'),
+              ),
+            ),
           ),
         );
       }),
@@ -152,35 +169,63 @@ export class AdministrationReads {
   private fromCopy<Answer>(local: () => Answer | null): Observable<Answer | null> {
     return defer(() =>
       this.copy.opened()
-        ? from(this.freshness()).pipe(
-            map((freshness) => (freshness === 'outdated' ? null : local())),
-          )
+        ? from(this.copyAnswers()).pipe(map((fromCopy) => (fromCopy ? this.held(local()) : null)))
         : of(null),
     );
   }
 
-  private async freshness(): Promise<Freshness> {
-    const changed = this.changedSince;
-    if (
-      this.connectivity.offline() ||
-      (!changed && Date.now() - this.checkedAt < REFRESH_AFTER_MS)
-    ) {
-      return 'kept';
+  private held<Answer>(answer: Answer | null): Answer | null {
+    const time = this.copyTime();
+    if (answer !== null && time !== null) {
+      this.shown.record(SHOWN_COPY, new HttpHeaders(), Date.parse(time));
+    }
+    return answer;
+  }
+
+  private async copyAnswers(): Promise<boolean> {
+    if (this.connectivity.offline()) {
+      return true;
+    }
+    this.forgetAnotherCopy();
+    const changes = this.changes;
+    const changed = changes !== this.freshFor;
+    if (!changed && Date.now() - this.checkedAt < REFRESH_AFTER_MS) {
+      return true;
     }
     if (Date.now() - this.failedAt < REFRESH_AFTER_MS) {
-      return changed ? 'outdated' : 'kept';
+      return false;
     }
-    const outcome = await this.download.refresh();
+    const outcome = await this.download.refresh(changed && changes > 0);
     if (outcome === 'stored' || outcome === 'unchanged') {
       this.checkedAt = Date.now();
       this.failedAt = Number.NEGATIVE_INFINITY;
-      if (this.changedSince === changed) {
-        this.changedSince = false;
-      }
-      return 'fresh';
+      this.freshFor = Math.max(this.freshFor, changes);
+      return true;
     }
     this.failedAt = Date.now();
-    return changed ? 'outdated' : 'kept';
+    return this.connectivity.offline();
+  }
+
+  private forgetAnotherCopy(): void {
+    const opened = this.vault.administration();
+    if (opened !== this.checkedCopy) {
+      this.checkedCopy = opened;
+      this.checkedAt = Number.NEGATIVE_INFINITY;
+      this.failedAt = Number.NEGATIVE_INFINITY;
+      this.freshFor = -1;
+    }
+  }
+
+  private holdsErasedBankGifts(rows: DonationsCopyRows): boolean {
+    if (this.connectivity.offline()) {
+      return false;
+    }
+    const erased = new Set(
+      rows.donorRecords.flatMap((record) => (record.erasedAt === null ? [] : [record.donorId])),
+    );
+    return rows.donations.some(
+      (donation) => donation.paymentId !== null && erased.has(donation.donorId),
+    );
   }
 
   private donationsRows(): DonationsCopyRows | null {

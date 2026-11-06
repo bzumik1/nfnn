@@ -26,6 +26,7 @@ import {
   TEST_KEY,
 } from '../../donations/verification/testing/verification-fixtures';
 import { Connectivity } from '../../../core/connectivity/connectivity';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
@@ -1582,15 +1583,41 @@ describe('Given an administrator on a donor card with the administration copy on
     expect(accountsCard()).toContain('2900233333/2010');
   });
 
-  it('when the device is offline, then the card comes from the copy, says how old it is and that the bank accounts wait for a connection', async () => {
+  it('when the device is offline, then the card comes from the copy and the bank accounts come once it is online again', async () => {
     await open(true);
 
     expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
-    expect(fixture.nativeElement.querySelector('app-copy-age')?.textContent).toContain(
-      'Offline · údaje z 20. 10. 2026 12:30',
+    expect(accountsCard()).toContain('Bankovní účty dárce ukážeme, až budete online.');
+    expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T10:30:00.000Z'));
+
+    offline.set(false);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
     );
-    expect(accountsCard()).toContain(
-      'Bankovní účty dárce ukážeme, až se zařízení spojí se serverem.',
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+  });
+
+  it('when the server cannot give the bank accounts, then the card says so and asks again on Zkusit znovu', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 500, statusText: 'Error' }),
     );
+    await settle();
+
+    const alert = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"] .ui-load-state--error',
+    ) as HTMLElement;
+    expect(alert.textContent).toContain('Bankovní účty dárce se nepodařilo načíst.');
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
   });
 });

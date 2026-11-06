@@ -44,6 +44,7 @@ export class AdministrationCopyDownload {
     readonly copy: OpenedCopy;
     readonly outcome: Promise<AdministrationDownloadOutcome>;
   } | null = null;
+  private queued: Promise<AdministrationDownloadOutcome> | null = null;
 
   readonly firstDownload = this.progress.asReadonly();
   readonly checkedAt = this.checked.asReadonly();
@@ -58,12 +59,23 @@ export class AdministrationCopyDownload {
     });
   }
 
-  refresh(): Promise<AdministrationDownloadOutcome> {
+  refresh(startingNow = false): Promise<AdministrationDownloadOutcome> {
     const opened = this.vault.administration();
     if (opened === null) {
       return Promise.resolve('no-copy');
     }
-    return this.synced(opened);
+    const running = this.running?.copy === opened ? this.running.outcome : null;
+    if (!startingNow || running === null) {
+      return this.synced(opened);
+    }
+    if (this.queued === null) {
+      const next = (): Promise<AdministrationDownloadOutcome> => {
+        this.queued = null;
+        return this.refresh();
+      };
+      this.queued = running.then(next, next);
+    }
+    return this.queued;
   }
 
   private synced(opened: OpenedCopy): Promise<AdministrationDownloadOutcome> {

@@ -18,6 +18,7 @@ import { AdminPayments } from './admin-payments';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
 import { Connectivity } from '../../../core/connectivity/connectivity';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
@@ -902,9 +903,10 @@ describe('Given an administrator on the bank payments page', () => {
   });
 });
 
-describe('Given an administrator on the bank payments page with the administration copy on an offline device', () => {
+describe('Given an administrator on the bank payments page with the administration copy on the device', () => {
   let fixture: ComponentFixture<unknown>;
   let http: HttpTestingController;
+  let refresh: ReturnType<typeof vi.fn<(startingNow?: boolean) => Promise<string>>>;
   const payment = unpairedPayment();
   const record = {
     donorId: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -921,8 +923,9 @@ describe('Given an administrator on the bank payments page with the administrati
     Object.entries(payment).filter(([field]) => field !== 'donation'),
   );
 
-  beforeEach(async () => {
+  async function openPage(deviceOffline: boolean): Promise<void> {
     localStorage.clear();
+    refresh = vi.fn<(startingNow?: boolean) => Promise<string>>().mockResolvedValue('unchanged');
     const contents: CopyContents = {
       chunks: [
         { id: 'donations/payments:2026-10', rowsSha256: 'a', rows: [paymentRow] },
@@ -946,10 +949,10 @@ describe('Given an administrator on the bank payments page with the administrati
         provideHttpClientTesting(),
         provideRouter([{ path: 'sprava/platby', component: AdminPayments }]),
         { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
-        { provide: Connectivity, useValue: { offline: signal(true).asReadonly() } },
+        { provide: Connectivity, useValue: { offline: signal(deviceOffline).asReadonly() } },
         {
           provide: AdministrationCopyDownload,
-          useValue: { refresh: vi.fn(), checkedAt: signal<string | null>(null).asReadonly() },
+          useValue: { refresh, checkedAt: signal<string | null>(null).asReadonly() },
         },
       ],
     }).compileComponents();
@@ -961,9 +964,15 @@ describe('Given an administrator on the bank payments page with the administrati
       .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
     const harness = await RouterTestingHarness.create('/sprava/platby');
     fixture = harness.fixture;
-    await fixture.whenStable();
-    fixture.detectChanges();
-  });
+    await settle();
+  }
+
+  async function settle(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+  }
 
   afterEach(() => http.verify());
 
@@ -983,25 +992,60 @@ describe('Given an administrator on the bank payments page with the administrati
     return found;
   }
 
-  it('when the page opens, then it lists the payments of the copy without asking the server and says how old they are', () => {
-    expect(text('tbody tr')).toContain('500 Kč');
-    expect(text('tbody tr')).toContain('Nováková Jana');
-    expect(text('app-copy-age')).toBe('Offline · údaje z 20. 10. 2026 12:30 · nemusí být aktuální');
+  describe('when the device is offline', () => {
+    beforeEach(() => openPage(true));
+
+    it('when the page opens, then it lists the payments of the copy without asking the server and gives the offline label the time of the copy', () => {
+      expect(text('tbody tr')).toContain('500 Kč');
+      expect(text('tbody tr')).toContain('Nováková Jana');
+      expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T10:30:00.000Z'));
+    });
+
+    it('when a payment is to be paired, then the donor is found in the copy and pairing needs a connection', async () => {
+      button('Přiřadit dárci').click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
+      expect(dialog.querySelector('.pair-result')?.textContent).toContain('Jana Nováková');
+      (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const pair = button('Přiřadit dárci Jana Nováková');
+      expect(pair.getAttribute('aria-disabled')).toBe('true');
+      pair.click();
+      http.expectNone((request) => request.url.endsWith('/pair'));
+    });
   });
 
-  it('when a payment is to be paired, then the donor is found in the copy and pairing needs a connection', async () => {
-    button('Přiřadit dárci').click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+  describe('when the device is online', () => {
+    beforeEach(() => openPage(false));
 
-    const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
-    expect(dialog.querySelector('.pair-result')?.textContent).toContain('Jana Nováková');
-    (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
-    await fixture.whenStable();
-    fixture.detectChanges();
-    const pair = button('Přiřadit dárci Jana Nováková');
-    expect(pair.getAttribute('aria-disabled')).toBe('true');
-    pair.click();
-    http.expectNone((request) => request.url.endsWith('/pair'));
+    it('then the page refreshes the copy once and lists the payments from it', () => {
+      expect(text('tbody tr')).toContain('Nováková Jana');
+      expect(refresh.mock.calls).toEqual([[false]]);
+    });
+
+    it('and the live stream says the payments changed, then the copy is refreshed by a refresh that starts after the change', async () => {
+      (TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates).hint('payments');
+      await settle();
+
+      expect(refresh.mock.calls).toEqual([[false], [true]]);
+    });
+
+    it('and a payment is paired, then the list is read again from a refresh that starts after the pairing', async () => {
+      button('Přiřadit dárci').click();
+      await settle();
+      const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
+      (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
+      await settle();
+      button('Přiřadit dárci Jana Nováková').click();
+      http
+        .expectOne((request) => request.url.endsWith('/pair'))
+        .flush({ donationId: 'd1', changedYearlyReceipts: [] });
+      await settle();
+
+      expect(refresh.mock.calls.at(-1)).toEqual([true]);
+    });
   });
 });

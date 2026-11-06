@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import { firstValueFrom, toArray } from 'rxjs';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
@@ -55,6 +57,28 @@ const ACCOUNT = {
   erasedAt: null,
 };
 const SERVER_LIST = { year: null, availableYears: [], items: [], total: 0 };
+const ERASED_RECORD = {
+  ...RECORD,
+  donorId: 'donor-2',
+  name: 'Vymazaný dárce',
+  variableSymbol: '7700001002',
+  erasedAt: '2026-09-01T10:00:00Z',
+};
+const ERASED_GIFT = {
+  id: 'donation-2',
+  donorId: 'donor-2',
+  paymentId: 'payment-2',
+  receivedAt: '2026-03-02',
+  amountMinor: 20000,
+  currency: 'CZK',
+  status: 'RECEIVED',
+  source: 'BANK',
+  purpose: 'GENERAL',
+  pairedBy: 'VARIABLE_SYMBOL',
+  bankAccountId: null,
+  symbolClaimId: null,
+  recordedAt: '2026-03-02T12:00:00Z',
+};
 const BANK_ACCOUNT = { id: 'link-1', accountNumber: '1234567/0800', version: 'abcdef0123456789' };
 
 function contents(
@@ -76,17 +100,22 @@ describe('Given the administration pages reading through the copy on this device
   let reads: AdministrationReads;
   let opened: ReturnType<typeof signal<OpenedCopy | null>>;
   let offline: ReturnType<typeof signal<boolean>>;
-  let refresh: ReturnType<typeof vi.fn<() => Promise<AdministrationDownloadOutcome>>>;
+  let refresh: ReturnType<
+    typeof vi.fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>
+  >;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-20T09:00:00Z') });
     opened = signal<OpenedCopy | null>(null);
     offline = signal(false);
-    refresh = vi.fn<() => Promise<AdministrationDownloadOutcome>>().mockResolvedValue('unchanged');
+    refresh = vi
+      .fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>()
+      .mockResolvedValue('unchanged');
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: DeviceVault, useValue: { administration: opened.asReadonly() } },
         { provide: Connectivity, useValue: { offline: offline.asReadonly() } },
         {
@@ -104,9 +133,20 @@ describe('Given the administration pages reading through the copy on this device
     vi.useRealTimers();
   });
 
-  function open(held: CopyContents): void {
+  function withErasedDonor(held: CopyContents): CopyContents {
+    return {
+      ...held,
+      chunks: [
+        ...held.chunks,
+        { id: 'donations/donor-records:2026-02', rowsSha256: 'd', rows: [ERASED_RECORD] },
+        { id: 'donations/donations:2026-03', rowsSha256: 'e', rows: [ERASED_GIFT] },
+      ],
+    };
+  }
+
+  function open(held: CopyContents, copyId = 'copy-1'): void {
     const store = {
-      copyId: 'copy-1',
+      copyId,
       contents: signal(held).asReadonly(),
     } as unknown as AccountStore;
     opened.set({
@@ -142,15 +182,26 @@ describe('Given the administration pages reading through the copy on this device
       expect(refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('and a minute passed, then the copy is refreshed again, and kept when that refresh fails', async () => {
+    it('and a minute passed, then the copy is refreshed again, and the server answers when that refresh fails', async () => {
       await firstValueFrom(reads.paymentList('unpaired'));
       vi.setSystemTime(Date.now() + REFRESH_AFTER_MS);
       refresh.mockResolvedValue('failed');
 
-      const answer = await firstValueFrom(reads.accountList('jana'));
+      const answer = firstValueFrom(reads.accountList('jana'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donors')
+          .flush({ items: [], hasMore: false }),
+      );
 
       expect(refresh).toHaveBeenCalledTimes(2);
-      expect(answer.items.map((item) => item.email)).toEqual(['jana@example.cz']);
+      expect((await answer).items).toEqual([]);
+    });
+
+    it('then an answer from the copy tells the offline label the time of the copy', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
     });
 
     it('and something changed, then the copy is refreshed at once, and the server answers when that refresh fails', async () => {
@@ -204,21 +255,66 @@ describe('Given the administration pages reading through the copy on this device
     it('then a donor card shows the copy at once without bank accounts, and then with the bank accounts of the server', async () => {
       const cards = firstValueFrom(reads.donorCard('donor-1').pipe(toArray()));
       await vi.waitFor(() =>
-        http
-          .expectOne('/api/admin/donations/donors/donor-1')
-          .flush({ bankAccounts: [BANK_ACCOUNT] }),
+        http.expectOne('/api/admin/donations/donors/donor-1').flush({
+          donor: RECORD,
+          yearlyReceiptsAvailableThrough: 2025,
+          bankAccounts: [BANK_ACCOUNT],
+        }),
       );
 
       const [held, completed] = await cards;
       expect(held.bankAccounts).toBe('pending');
       expect(held.detail.donor.name).toBe('Jana Nováková');
       expect(held.detail.bankAccounts).toEqual([]);
-      expect(completed.bankAccounts).toBe('server');
-      expect(completed.detail.bankAccounts).toEqual([BANK_ACCOUNT]);
-      expect(completed.detail.yearlyReceiptsAvailableThrough).toBe(2025);
+      expect(held.detail.yearlyReceiptsAvailableThrough).toBe(2025);
+      expect(completed).toEqual({
+        detail: {
+          donor: RECORD,
+          yearlyReceiptsAvailableThrough: 2025,
+          bankAccounts: [BANK_ACCOUNT],
+        },
+        bankAccounts: 'server',
+      });
     });
 
-    it("and the server cannot give the bank accounts, then the card stays the copy's and says the bank accounts are unavailable", async () => {
+    it('and something changed, then the refresh asked for is one that starts after the change, and a change during that refresh asks for another', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh).toHaveBeenLastCalledWith(false);
+      reads.changed();
+      let finish: (outcome: AdministrationDownloadOutcome) => void = () => undefined;
+      refresh.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+
+      const duringRefresh = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
+      reads.changed();
+      finish('unchanged');
+      await duringRefresh;
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh.mock.calls).toEqual([[false], [true], [true]]);
+    });
+
+    it('and another copy opens, then its first read refreshes it again', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+      open(contents(), 'copy-2');
+
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh).toHaveBeenCalledTimes(2);
+    });
+
+    it("and the server cannot give the bank accounts, then the card stays the copy's and says loading them failed", async () => {
+      const cards = firstValueFrom(reads.donorCard('donor-1').pipe(toArray()));
+      await vi.waitFor(() =>
+        http
+          .expectOne('/api/admin/donations/donors/donor-1')
+          .flush(null, { status: 500, statusText: 'Error' }),
+      );
+
+      expect((await cards).map((card) => card.bankAccounts)).toEqual(['pending', 'failed']);
+    });
+
+    it('and the server is unreachable for the bank accounts, then the card says they come once the device is online', async () => {
       const cards = firstValueFrom(reads.donorCard('donor-1').pipe(toArray()));
       await vi.waitFor(() =>
         http
@@ -226,7 +322,7 @@ describe('Given the administration pages reading through the copy on this device
           .flush(null, { status: 503, statusText: 'Unavailable' }),
       );
 
-      expect((await cards).map((card) => card.bankAccounts)).toEqual(['pending', 'unavailable']);
+      expect((await cards).map((card) => card.bankAccounts)).toEqual(['pending', 'offline']);
     });
   });
 
@@ -236,13 +332,44 @@ describe('Given the administration pages reading through the copy on this device
       offline.set(true);
     });
 
-    it('then nothing is refreshed, the pages say they show the copy, and a donor card comes without bank accounts', async () => {
+    it('then nothing is refreshed, the offline label gets the time of the copy, and a donor card comes without bank accounts', async () => {
       const cards = await firstValueFrom(reads.donorCard('donor-1').pipe(toArray()));
 
       expect(refresh).not.toHaveBeenCalled();
-      expect(reads.fromCopyOffline()).toBe(true);
-      expect(reads.copyTime()).toBe('2026-10-20T08:00:00.000Z');
-      expect(cards.map((card) => card.bankAccounts)).toEqual(['unavailable']);
+      expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+      expect(cards.map((card) => card.bankAccounts)).toEqual(['offline']);
+    });
+  });
+
+  describe('when the copy holds an erased donor, whose receipts and payer details stay off devices', () => {
+    beforeEach(() => open(withErasedDonor(contents())));
+
+    it('then online the paired payments and the erased donor card come from the server, the unpaired payments and other cards from the copy', async () => {
+      const paired = firstValueFrom(reads.paymentList('paired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+      const card = firstValueFrom(reads.donorCard('donor-2').pipe(toArray()));
+      await vi.waitFor(() =>
+        http
+          .expectOne('/api/admin/donations/donors/donor-2')
+          .flush({ donor: ERASED_RECORD, bankAccounts: [] }),
+      );
+      const unpaired = await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(await paired).toEqual(SERVER_LIST);
+      expect((await card).map((read) => read.bankAccounts)).toEqual(['server']);
+      expect(unpaired.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
+    it('and the device is offline, then the paired payments come from the copy as it holds them', async () => {
+      offline.set(true);
+
+      const paired = await firstValueFrom(reads.paymentList('paired'));
+
+      expect(paired.total).toBe(0);
     });
   });
 
