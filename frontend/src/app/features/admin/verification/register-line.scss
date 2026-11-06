@@ -1,9 +1,9 @@
 .register {
   display: grid;
   gap: var(--space-2);
-  margin-top: var(--space-5);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
+  margin-block: var(--space-5);
+  padding-block: var(--space-5);
+  border-block: 1px solid var(--color-border);
 }
 
 .register__title {
@@ -11,8 +11,12 @@
   font-size: var(--text-lg);
 }
 
-.register__state,
-.register__text,
+.register__state {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.register__state p,
 .register__as-of {
   margin: 0;
 }
@@ -24,7 +28,7 @@
 
 .register__as-of {
   color: var(--color-text-soft);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .register__donor {

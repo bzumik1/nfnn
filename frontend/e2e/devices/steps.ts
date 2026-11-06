@@ -353,7 +353,7 @@ export const STEPS: Step[] = [
       await serveReceiptKeys(ui.routes);
       await serveReceiptStatus(ui.routes, 'active');
       await adminPage(ui, `/sprava/overit#${SINGLE_RECEIPT.fragment}`);
-      await ui.waitVisible({ css: 'main', text: 'Kopie správy ho vede jako platné.' });
+      await ui.waitVisible({ css: 'main', text: 'Otevřít kartu dárce' });
     },
   },
   {

@@ -18,6 +18,8 @@ export const LARGEST_FRAME_SIDE = 1_280;
 export const LARGEST_CENTRE_SIDE = 1_600;
 const CAMERA_SIZE = { width: { ideal: 1_920 }, height: { ideal: 1_080 } };
 const CAMERA_REFUSALS = ['NotAllowedError', 'SecurityError'];
+const CAMERA_GONE = ['NotFoundError', 'OverconstrainedError'];
+const FOCUS_WAIT_MS = 1_000;
 const LARGEST_PICTURE_SIDE = 2_400;
 const HAVE_CURRENT_DATA = 2;
 export const LARGEST_PICTURE_PIXELS = 50_000_000;
@@ -73,9 +75,13 @@ async function focusContinuously(stream: MediaStream): Promise<void> {
   for (const track of stream.getVideoTracks()) {
     const capabilities = (track.getCapabilities?.() ?? {}) as FocusCapabilities;
     if (capabilities.focusMode?.includes('continuous')) {
-      await track
-        .applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] })
+      const focused = track
+        .applyConstraints({
+          ...CAMERA_SIZE,
+          advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet],
+        })
         .catch(() => undefined);
+      await Promise.race([focused, new Promise((resolve) => setTimeout(resolve, FOCUS_WAIT_MS))]);
     }
   }
 }
@@ -89,7 +95,8 @@ function savedCamera(storage: Storage | null): string | null {
 }
 
 function saveCamera(storage: Storage | null, stream: MediaStream): void {
-  const deviceId = stream.getVideoTracks()[0]?.getSettings().deviceId;
+  const settings = stream.getVideoTracks()[0]?.getSettings();
+  const deviceId = settings?.facingMode === 'user' ? undefined : settings?.deviceId;
   try {
     if (deviceId) {
       storage?.setItem(SCAN_CAMERA_KEY, deviceId);
@@ -129,14 +136,24 @@ export async function openScanCamera(
       if (refused instanceof DOMException && CAMERA_REFUSALS.includes(refused.name)) {
         throw refused;
       }
-      if (saved !== null && index === 0) {
+      if (
+        saved !== null &&
+        index === 0 &&
+        refused instanceof DOMException &&
+        CAMERA_GONE.includes(refused.name)
+      ) {
         forgetCamera(storage);
       }
       failure = refused;
       continue;
     }
-    saveCamera(storage, stream);
-    await focusContinuously(stream);
+    try {
+      saveCamera(storage, stream);
+      await focusContinuously(stream);
+    } catch (broken: unknown) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw broken;
+    }
     return stream;
   }
   throw failure;

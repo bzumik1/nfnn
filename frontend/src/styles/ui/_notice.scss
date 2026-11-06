@@ -57,6 +57,11 @@
   color: var(--color-warning);
 }
 
+.ui-badge--danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
 .ui-badge--accent {
   background: var(--color-accent-bg);
   color: var(--color-accent);

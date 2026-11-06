@@ -10,7 +10,7 @@ export const ADMIN_VERIFICATION_PATH = '/sprava/overit';
 
 const ADMIN_VERIFICATION: VerificationContext = {
   path: ADMIN_VERIFICATION_PATH,
-  standalonePage: false,
+  audience: 'administration',
   registerLine: RegisterLine,
 };
 

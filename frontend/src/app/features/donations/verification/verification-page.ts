@@ -1,4 +1,4 @@
-import { DOCUMENT, Location, NgComponentOutlet } from '@angular/common';
+import { DOCUMENT, Location } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -22,7 +22,7 @@ type PageState = { readonly state: 'checking' } | { readonly state: 'empty' } | 
 
 @Component({
   selector: 'app-verification-page',
-  imports: [ProofInput, VerificationResult, NgComponentOutlet],
+  imports: [ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
   styleUrl: './verification-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,21 +96,17 @@ export class VerificationPage {
         if (run !== this.run || this.destroyRef.destroyed) {
           return;
         }
-        const focusLost = this.focusLost();
+        const focusOnHeading = this.focusOnHeading();
         this.page.set(outcome);
-        if (outcome.state !== 'empty' || focusLost) {
+        if (outcome.state !== 'empty' || focusOnHeading) {
           this.focusHeading();
         }
       });
   }
 
-  private focusLost(): boolean {
+  private focusOnHeading(): boolean {
     const active = this.document.activeElement;
-    return (
-      active === null ||
-      active === this.document.body ||
-      (active instanceof HTMLHeadingElement && this.host.nativeElement.contains(active))
-    );
+    return active instanceof HTMLHeadingElement && this.host.nativeElement.contains(active);
   }
 
   private focusHeading(): void {

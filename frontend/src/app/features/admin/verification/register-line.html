@@ -2,101 +2,166 @@
   <h2 id="register-title" class="register__title" i18n="@@admin.verify.register.title">
     V evidenci fondu
   </h2>
-  @switch (entry().state) {
-    @case ('active') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--success" i18n="@@admin.verify.register.active.badge"
-          >Platné</span
-        >
-      </p>
-      <p class="register__text" i18n="@@admin.verify.register.active.text">
-        Kopie správy ho vede jako platné.
-      </p>
-    }
-    @case ('replaced') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.replaced.badge"
-          >Nahrazené</span
-        >
-      </p>
-      <p class="register__text">
-        @if (newer(); as number) {
-          <span i18n="@@admin.verify.register.replaced.by"
-            >Fond ho nahradil potvrzením č. {{ number }}.</span
+  <div class="register__state" role="status">
+    @let current = view();
+    @switch (current.state) {
+      @case ('active') {
+        <p>
+          <span class="ui-badge ui-badge--success" i18n="@@admin.verify.register.active.badge"
+            >Platné</span
           >
+        </p>
+        @if (!current.confirmed) {
+          <p class="register__text" i18n="@@admin.verify.register.active.text">
+            Fond ho vede jako platné.
+          </p>
+        }
+      }
+      @case ('replaced') {
+        <p>
+          <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.replaced.badge"
+            >Nahrazené</span
+          >
+        </p>
+        <p class="register__text">
+          @if (day(); as day) {
+            @if (current.by; as number) {
+              <ng-container i18n="@@admin.verify.register.replaced.onBy"
+                >Fond ho {{ day }} nahradil potvrzením č. {{ number }}.</ng-container
+              >
+            } @else {
+              <ng-container i18n="@@admin.verify.register.replaced.on"
+                >Fond ho {{ day }} nahradil novějším potvrzením.</ng-container
+              >
+            }
+          } @else {
+            @if (current.by; as number) {
+              <ng-container i18n="@@admin.verify.register.replaced.by"
+                >Fond ho nahradil potvrzením č. {{ number }}.</ng-container
+              >
+            } @else {
+              <ng-container i18n="@@admin.verify.register.replaced.text"
+                >Fond ho nahradil novějším potvrzením.</ng-container
+              >
+            }
+          }
+        </p>
+        @if (!current.confirmed) {
+          <p class="register__text" i18n="@@admin.verify.register.replaced.next">
+            Platí to novější; najdete ho na kartě dárce.
+          </p>
+        }
+      }
+      @case ('outdated') {
+        <p>
+          <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.outdated.badge"
+            >Zastaralé</span
+          >
+        </p>
+        <p class="register__text">
+          @if (day(); as day) {
+            <ng-container i18n="@@admin.verify.register.outdated.on"
+              >Od vystavení se dary dárce změnily, proto ho fond {{ day }} zrušil.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@admin.verify.register.outdated.text"
+              >Od vystavení se dary dárce změnily, proto ho fond zrušil.</ng-container
+            >
+          }
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.outdated.next">
+          Na kartě dárce uvidíte, zda už má nové.
+        </p>
+      }
+      @case ('withdrawn') {
+        <p>
+          <span class="ui-badge ui-badge--danger" i18n="@@admin.verify.register.withdrawn.badge"
+            >Zrušené</span
+          >
+        </p>
+        <p class="register__text">
+          @if (day(); as day) {
+            <ng-container i18n="@@admin.verify.register.withdrawn.on"
+              >Fond ho {{ day }} zrušil.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@admin.verify.register.withdrawn.text"
+              >Fond ho zrušil.</ng-container
+            >
+          }
+        </p>
+        @if (!current.confirmed) {
+          <p class="register__text" i18n="@@admin.verify.register.withdrawn.next">
+            Nepovažujte ho za platné.
+          </p>
+        }
+      }
+      @case ('differs') {
+        <p>
+          <span class="ui-badge ui-badge--danger" i18n="@@admin.verify.register.differs.badge"
+            >Nesouhlasí</span
+          >
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.differs.text">
+          Fond vede potvrzení s tímto číslem, ale s jinými údaji (liší se, zda je roční, den
+          vystavení, počet darů nebo částka). Než ho budete brát jako platné, porovnejte ho s kartou
+          dárce a dejte vědět technikovi.
+        </p>
+      }
+      @case ('conflict') {
+        <p>
+          <span class="ui-badge ui-badge--danger" i18n="@@admin.verify.register.differs.badge"
+            >Nesouhlasí</span
+          >
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.conflict.text">
+          Údaje správy v tomto zařízení potvrzení s těmito údaji mají, fond ho ale podle odpovědi
+          výše nevede. Nepovažujte ho za platné a dejte vědět technikovi.
+        </p>
+      }
+      @case ('not-held') {
+        <p>
+          <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.notHeld.badge"
+            >Nenalezeno</span
+          >
+        </p>
+        @if (current.confirmed) {
+          <p class="register__text" i18n="@@admin.verify.register.notHeld.confirmed">
+            Ani údaje správy v tomto zařízení potvrzení s tímto číslem nemají.
+          </p>
         } @else {
-          <span i18n="@@admin.verify.register.replaced.text"
-            >Fond ho nahradil novějším potvrzením.</span
+          <p class="register__text" i18n="@@admin.verify.register.notHeld.text">
+            Údaje správy v tomto zařízení potvrzení s tímto číslem nemají. Mohlo vzniknout až po
+            jejich posledním stažení, nebo patří vymazanému dárci, jehož potvrzení se do zařízení
+            neukládají. Po připojení k internetu ho ověřte znovu.
+          </p>
+        }
+      }
+      @case ('stale') {
+        <p>
+          <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.stale.badge"
+            >Starší údaje</span
           >
-        }
-        @if (day(); as day) {
-          <span i18n="@@admin.verify.register.replaced.on"> Nahrazeno {{ day }}.</span>
-        }
-      </p>
+        </p>
+        <p class="register__text" i18n="@@admin.verify.register.stale.text">
+          Údaje správy v tomto zařízení říkají o potvrzení něco jiného než odpověď fondu výše,
+          nejspíš jsou starší. Platí odpověď fondu.
+        </p>
+      }
+      @default {
+        <p class="register__text" i18n="@@admin.verify.register.loading.text">
+          Údaje správy v tomto zařízení zatím nejsou k dispozici: buď se ještě stahují, nebo se
+          stažení nepovedlo. Stav v evidenci fondu ukážeme, jakmile budou.
+        </p>
+      }
     }
-    @case ('outdated') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.outdated.badge"
-          >Zastaralé</span
-        >
-      </p>
-      <p class="register__text">
-        <span i18n="@@admin.verify.register.outdated.text"
-          >Fond ho zrušil, protože se dary dárce od vystavení změnily.</span
-        >
-        @if (day(); as day) {
-          <span i18n="@@admin.verify.register.withdrawnOn"> Zrušeno {{ day }}.</span>
-        }
-      </p>
-    }
-    @case ('withdrawn') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.withdrawn.badge"
-          >Zrušené</span
-        >
-      </p>
-      <p class="register__text">
-        <span i18n="@@admin.verify.register.withdrawn.text">Fond toto potvrzení zrušil.</span>
-        @if (day(); as day) {
-          <span i18n="@@admin.verify.register.withdrawnOn"> Zrušeno {{ day }}.</span>
-        }
-      </p>
-    }
-    @case ('differs') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.differs.badge"
-          >Nesouhlasí</span
-        >
-      </p>
-      <p class="register__text" i18n="@@admin.verify.register.differs.text">
-        Fond vede potvrzení s tímto číslem s jinými údaji: jiný druh, den vystavení, počet darů nebo
-        částka. Porovnejte ho s kartou dárce a napište technikovi fondu.
-      </p>
-    }
-    @case ('not-held') {
-      <p class="register__state">
-        <span class="ui-badge ui-badge--warning" i18n="@@admin.verify.register.notHeld.badge"
-          >Nenalezeno</span
-        >
-      </p>
-      <p class="register__text" i18n="@@admin.verify.register.notHeld.text">
-        Kopie správy v tomto zařízení potvrzení s tímto číslem nemá. Mohlo vzniknout až po jejím
-        stažení, nebo patří vymazanému dárci, jehož potvrzení kopie nenese.
-      </p>
-    }
-    @default {
-      <p class="register__text" i18n="@@admin.verify.register.noCopy.text">
-        Kopie správy se do tohoto zařízení ještě stahuje. Stav v evidenci fondu ukážeme, až bude
-        stažená.
-      </p>
-    }
-  }
-  @if (storedAt(); as storedAt) {
+  </div>
+  @if (storedOn(); as storedOn) {
     <p class="register__as-of" i18n="@@admin.verify.register.asOf">
-      Podle kopie správy v tomto zařízení z {{ storedAt }}.
+      Podle údajů správy stažených do tohoto zařízení {{ storedOn }} v {{ storedTime() }}.
     </p>
   }
-  @if (donorId(); as donorId) {
+  @if (view().donorId; as donorId) {
     <a
       class="register__donor"
       [routerLink]="['/sprava/darci', donorId]"

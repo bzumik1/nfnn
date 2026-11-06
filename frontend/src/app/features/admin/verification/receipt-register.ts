@@ -1,4 +1,5 @@
 import type { SignedReceipt } from '../../donations/verification/receipt-proof';
+import type { SignedStatus } from '../../donations/verification/receipt-verifier';
 
 export interface AdminReceiptRow {
   readonly id: string;
@@ -33,6 +34,52 @@ export type RegisterEntry =
       readonly donorId: string;
       readonly on: string | null;
     };
+
+export type RegisterState =
+  | 'loading'
+  | 'active'
+  | 'replaced'
+  | 'withdrawn'
+  | 'outdated'
+  | 'differs'
+  | 'not-held'
+  | 'conflict'
+  | 'stale';
+
+export interface RegisterView {
+  readonly state: RegisterState;
+  readonly confirmed: boolean;
+  readonly donorId: string | null;
+  readonly on: string | null;
+  readonly by: string | null;
+}
+
+const KEPT: readonly SignedStatus[] = ['active', 'replaced', 'withdrawn', 'outdated'];
+
+export function registerView(
+  receipt: SignedReceipt,
+  rows: readonly AdminReceiptRow[] | null,
+  status: SignedStatus,
+): RegisterView {
+  const entry = registerEntry(receipt, rows);
+  const donorId = 'donorId' in entry ? entry.donorId : null;
+  const on = 'on' in entry ? entry.on : null;
+  const by = entry.state === 'replaced' ? entry.by : null;
+  if (entry.state === 'no-copy') {
+    return { state: 'loading', confirmed: false, donorId: null, on: null, by: null };
+  }
+  if (status === 'unknown') {
+    return entry.state === 'not-held' || entry.state === 'differs'
+      ? { state: entry.state, confirmed: true, donorId, on: null, by: null }
+      : { state: 'conflict', confirmed: false, donorId, on: null, by: null };
+  }
+  if (KEPT.includes(status)) {
+    return entry.state === status
+      ? { state: entry.state, confirmed: true, donorId, on, by }
+      : { state: 'stale', confirmed: false, donorId, on: null, by: null };
+  }
+  return { state: entry.state, confirmed: false, donorId, on, by };
+}
 
 export function registerEntry(
   receipt: SignedReceipt,

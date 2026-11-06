@@ -38,11 +38,18 @@
       >
         Fond toto potvrzení nahradil novějším
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.replaced.text">
-        Údaje v tomto kódu fond podepsal ke dni vystavení, později je ale nahradil novým potvrzením.
-        Platí to novější. Pokud ho nemáte, napište na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.replaced">
+          Údaje v tomto kódu fond podepsal ke dni vystavení, později je ale nahradil novým
+          potvrzením. Platí to novější; najdete ho na kartě dárce.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.replaced.text">
+          Údaje v tomto kódu fond podepsal ke dni vystavení, později je ale nahradil novým
+          potvrzením. Platí to novější. Pokud ho nemáte, napište na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
+        </p>
+      }
     }
     @case ('withdrawn') {
       <h1
@@ -53,11 +60,18 @@
       >
         Fond toto potvrzení zrušil
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.withdrawn.text">
-        Údaje v tomto kódu fond podepsal, potvrzení ale později zrušil, například když se dar
-        vracel. Nepovažujte ho za platné. Máte-li pochybnost, napište na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.withdrawn">
+          Údaje v tomto kódu fond podepsal, potvrzení ale později zrušil, například když se dar
+          vracel. Nepovažujte ho za platné.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.withdrawn.text">
+          Údaje v tomto kódu fond podepsal, potvrzení ale později zrušil, například když se dar
+          vracel. Nepovažujte ho za platné. Máte-li pochybnost, napište na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
+        </p>
+      }
     }
     @case ('outdated') {
       <h1
@@ -68,11 +82,18 @@
       >
         Potvrzení platilo ke dni vystavení
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.outdated.text">
-        Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily,
-        proto platí jen novější potvrzení. Pokud ho nemáte, napište na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.outdated">
+          Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily,
+          proto platí jen novější potvrzení; na kartě dárce uvidíte, zda už ho má.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.outdated.text">
+          Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily,
+          proto platí jen novější potvrzení. Pokud ho nemáte, napište na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
+        </p>
+      }
     }
     @case ('unrecorded') {
       <h1
@@ -83,11 +104,18 @@
       >
         Fond toto potvrzení ve své evidenci nevede
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unrecorded.text">
-        Kód nese podpis fondu, fond ale potvrzení s těmito údaji ve své evidenci nemá. Nepovažujte
-        ho za ověřené a napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
-        potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.unrecorded">
+          Kód nese podpis fondu, fond ale potvrzení s těmito údaji ve své evidenci nemá. Nepovažujte
+          ho za platné a pošlete jeho číslo technikovi.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unrecorded.text">
+          Kód nese podpis fondu, fond ale potvrzení s těmito údaji ve své evidenci nemá. Nepovažujte
+          ho za ověřené a napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
+          potvrzení.
+        </p>
+      }
     }
     @case ('invalid') {
       <h1
@@ -98,11 +126,18 @@
       >
         Neověřeno: podpis neodpovídá údajům
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.invalid.text">
-        Tento kód fond nepodepsal, nebo v něm někdo údaje změnil. Potvrzení nepovažujte za ověřené.
-        Máte-li pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
-        potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.invalid">
+          Tento kód fond nepodepsal, nebo v něm někdo údaje změnil. Nepovažujte ho za platné a
+          pošlete jeho číslo technikovi.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.invalid.text">
+          Tento kód fond nepodepsal, nebo v něm někdo údaje změnil. Potvrzení nepovažujte za
+          ověřené. Máte-li pochybnost, napište na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
+        </p>
+      }
     }
     @case ('revoked') {
       <h1
@@ -113,11 +148,18 @@
       >
         Neověřeno: fond tento klíč zneplatnil
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.revoked.write">
-        Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích
-        rukou. Potvrzení nepovažujte za ověřené a napište fondu na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.revoked">
+          Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích
+          rukou. Nepovažujte ho za platné a pošlete jeho číslo technikovi.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.revoked.write">
+          Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích
+          rukou. Potvrzení nepovažujte za ověřené a napište fondu na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
+        </p>
+      }
     }
     @case ('unknown-key-online') {
       <h1
@@ -128,11 +170,18 @@
       >
         Neověřeno: kód podepsal klíč, který fond nezveřejnil
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.onlineText">
-        Fond takový klíč mezi svými klíči nemá. Potvrzení nepovažujte za ověřené. Máte-li
-        pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
-        potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.unknownKey">
+          Fond takový klíč mezi svými klíči nemá. Nepovažujte ho za platné a pošlete jeho číslo
+          technikovi.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.onlineText">
+          Fond takový klíč mezi svými klíči nemá. Potvrzení nepovažujte za ověřené. Máte-li
+          pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
+          potvrzení.
+        </p>
+      }
     }
     @case ('unknown-key-offline') {
       <h1
@@ -198,11 +247,18 @@
       >
         Neověřeno: seznam klíčů fondu teď nejde použít
       </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.keysRefused.text">
-        Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit
-        nejde. Potvrzení zatím nepovažujte za ověřené a napište prosím na
-        <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
-      </p>
+      @if (administration) {
+        <p class="ui-panel__lead verify-lead" i18n="@@admin.verify.result.keysRefused">
+          Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit
+          nejde. Dejte prosím vědět technikovi.
+        </p>
+      } @else {
+        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.keysRefused.text">
+          Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit
+          nejde. Potvrzení zatím nepovažujte za ověřené a napište prosím na
+          <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
+        </p>
+      }
     }
     @case ('broken') {
       <h1
@@ -260,13 +316,28 @@
         >
       }
       @default {
-        <ng-container i18n="@@donor.verify.status.offline"
-          >Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo
-          nezrušil.</ng-container
-        >
+        @if (administration) {
+          <ng-container i18n="@@admin.verify.status.offline"
+            >Bez připojení se fondu nezeptáme. Jak potvrzení vedou údaje správy v tomto zařízení,
+            uvádíme hned pod tím.</ng-container
+          >
+        } @else {
+          <ng-container i18n="@@donor.verify.status.offline"
+            >Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo
+            nezrušil.</ng-container
+          >
+        }
       }
     }
   </p>
+}
+
+@if (signed(); as signed) {
+  @if (context.registerLine; as registerLine) {
+    <ng-container
+      *ngComponentOutlet="registerLine; inputs: { receipt: signed.receipt, status: signed.status }"
+    />
+  }
 }
 
 @if (retriable()) {

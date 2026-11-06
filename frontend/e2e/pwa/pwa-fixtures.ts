@@ -53,7 +53,11 @@ interface PwaOptions {
 
 interface PwaWorkerOptions {
   cameraShows: string | undefined;
-  cameraFrame: { readonly width: number; readonly height: number };
+  cameraFrame: {
+    readonly width: number;
+    readonly height: number;
+    readonly pixelsPerModule?: number;
+  };
   pwaDist: string;
 }
 
@@ -283,7 +287,10 @@ export const pwaTest = base.extend<PwaFixtures & PwaOptions, PwaWorkerFixtures &
       }
       const folder = mkdtempSync(join(tmpdir(), 'nfnn-pwa-camera-'));
       const video = join(folder, 'camera.y4m');
-      writeFileSync(video, qrCodeY4m(cameraShows, cameraFrame.width, cameraFrame.height));
+      writeFileSync(
+        video,
+        qrCodeY4m(cameraShows, cameraFrame.width, cameraFrame.height, cameraFrame.pixelsPerModule),
+      );
       try {
         await use({
           ...launchOptions,

@@ -1558,7 +1558,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         {
           id: 'receipts:2026',
           rows: [
-            { ...SINGLE_RECEIPT_ROW, status: 'REPLACED', supersededAt: '2026-11-20T10:00:00Z' },
+            { ...SINGLE_RECEIPT_ROW, status: 'REPLACED', supersededAt: '2026-11-05T10:00:00Z' },
           ],
         },
       ],
@@ -1570,9 +1570,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/overit');
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Ověření potvrzení o daru' }),
-    ).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Ověřit potvrzení' })).toBeFocused();
 
     expect(await violations(page)).toEqual([]);
 

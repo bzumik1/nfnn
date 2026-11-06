@@ -2,13 +2,13 @@ import { InjectionToken, type Type } from '@angular/core';
 
 export interface VerificationContext {
   readonly path: string;
-  readonly standalonePage: boolean;
+  readonly audience: 'public' | 'administration';
   readonly registerLine: Type<unknown> | null;
 }
 
 export const PUBLIC_VERIFICATION: VerificationContext = {
   path: '/overit',
-  standalonePage: true,
+  audience: 'public',
   registerLine: null,
 };
 

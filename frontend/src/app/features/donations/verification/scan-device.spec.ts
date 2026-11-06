@@ -8,23 +8,34 @@ import {
 
 class FakeVideoTrack {
   readonly applied: MediaTrackConstraints[] = [];
+  stopped = false;
+  focus: () => Promise<void> = () => Promise.resolve();
+  capabilities: () => object = () =>
+    this.focusModes === undefined ? {} : { focusMode: this.focusModes };
 
   constructor(
     private readonly deviceId: string,
     private readonly focusModes: readonly string[] | undefined,
+    private readonly facingMode?: string,
   ) {}
 
   getSettings(): MediaTrackSettings {
-    return { deviceId: this.deviceId };
+    return this.facingMode === undefined
+      ? { deviceId: this.deviceId }
+      : { deviceId: this.deviceId, facingMode: this.facingMode };
   }
 
   getCapabilities(): object {
-    return this.focusModes === undefined ? {} : { focusMode: this.focusModes };
+    return this.capabilities();
   }
 
   applyConstraints(constraints: MediaTrackConstraints): Promise<void> {
     this.applied.push(constraints);
-    return Promise.resolve();
+    return this.focus();
+  }
+
+  stop(): void {
+    this.stopped = true;
   }
 }
 
@@ -45,7 +56,10 @@ class FakeMedia {
     if (answer instanceof DOMException) {
       return Promise.reject(answer);
     }
-    return Promise.resolve({ getVideoTracks: () => [answer] } as unknown as MediaStream);
+    return Promise.resolve({
+      getVideoTracks: () => [answer],
+      getTracks: () => [answer],
+    } as unknown as MediaStream);
   }
 }
 
@@ -75,7 +89,13 @@ describe('Given a scan that opens the camera', () => {
 
     expect(device.asked.map(choiceOf)).toEqual([{ facingMode: { exact: 'environment' } }]);
     expect(storage.getItem(SCAN_CAMERA_KEY)).toBe('rear-1');
-    expect(track.applied).toEqual([{ advanced: [{ focusMode: 'continuous' }] }]);
+    expect(track.applied).toEqual([
+      {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        advanced: [{ focusMode: 'continuous' }],
+      },
+    ]);
   });
 
   it('when a camera worked before, then it asks for that camera first', async () => {
@@ -87,9 +107,9 @@ describe('Given a scan that opens the camera', () => {
     expect(device.asked.map(choiceOf)).toEqual([{ deviceId: { exact: 'saved-1' } }]);
   });
 
-  it('when the saved camera is gone and there is no rear camera, then it forgets the saved one and takes any camera', async () => {
+  it('when the saved camera is gone and there is no rear camera, then it forgets the saved one, takes the front camera and does not keep it', async () => {
     storage.setItem(SCAN_CAMERA_KEY, 'gone');
-    const track = new FakeVideoTrack('front-1', ['manual']);
+    const track = new FakeVideoTrack('front-1', ['manual'], 'user');
     const device = media((_video, attempt) =>
       attempt < 3 ? new DOMException('', 'OverconstrainedError') : track,
     );
@@ -101,8 +121,80 @@ describe('Given a scan that opens the camera', () => {
       { facingMode: { exact: 'environment' } },
       {},
     ]);
-    expect(storage.getItem(SCAN_CAMERA_KEY)).toBe('front-1');
+    expect(storage.getItem(SCAN_CAMERA_KEY)).toBeNull();
     expect(track.applied).toEqual([]);
+  });
+
+  it('when only a camera that tells no facing opens after the rear one is missing, then it keeps that camera', async () => {
+    const device = media((_video, attempt) =>
+      attempt < 2 ? new DOMException('', 'OverconstrainedError') : new FakeVideoTrack('usb-1', []),
+    );
+
+    await openScanCamera(device as unknown as MediaDevices, storage);
+
+    expect(storage.getItem(SCAN_CAMERA_KEY)).toBe('usb-1');
+  });
+
+  it('when the saved camera is busy for a moment, then it takes another one for this scan and keeps the saved one', async () => {
+    storage.setItem(SCAN_CAMERA_KEY, 'rear-1');
+    const device = media((_video, attempt) =>
+      attempt === 1
+        ? new DOMException('', 'NotReadableError')
+        : new FakeVideoTrack('front-1', [], 'user'),
+    );
+
+    await openScanCamera(device as unknown as MediaDevices, storage);
+
+    expect(storage.getItem(SCAN_CAMERA_KEY)).toBe('rear-1');
+  });
+
+  it('when the saved camera is gone and no other camera opens either, then it forgets the saved one', async () => {
+    storage.setItem(SCAN_CAMERA_KEY, 'gone');
+    const device = media(() => new DOMException('', 'NotFoundError'));
+
+    await expect(openScanCamera(device as unknown as MediaDevices, storage)).rejects.toMatchObject({
+      name: 'NotFoundError',
+    });
+    expect(storage.getItem(SCAN_CAMERA_KEY)).toBeNull();
+  });
+
+  it('when the camera refuses continuous focus, then the scan still gets the open camera', async () => {
+    const track = new FakeVideoTrack('rear-1', ['continuous']);
+    track.focus = () => Promise.reject(new DOMException('', 'OverconstrainedError'));
+    const device = media(() => track);
+
+    await expect(openScanCamera(device as unknown as MediaDevices, storage)).resolves.toBeDefined();
+    expect(track.stopped).toBe(false);
+  });
+
+  it('when asking the camera for focus never ends, then the scan gets the camera after a second', async () => {
+    vi.useFakeTimers();
+    try {
+      const track = new FakeVideoTrack('rear-1', ['continuous']);
+      track.focus = () => new Promise<void>(() => undefined);
+      const device = media(() => track);
+
+      const opened = openScanCamera(device as unknown as MediaDevices, storage);
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(opened).resolves.toBeDefined();
+      expect(track.stopped).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('when the opened camera fails while it is set up, then it turns the camera off and passes the failure on', async () => {
+    const track = new FakeVideoTrack('rear-1', ['continuous']);
+    track.capabilities = () => {
+      throw new Error('gone');
+    };
+    const device = media(() => track);
+
+    await expect(openScanCamera(device as unknown as MediaDevices, storage)).rejects.toThrow(
+      'gone',
+    );
+    expect(track.stopped).toBe(true);
   });
 
   it.each(['NotAllowedError', 'SecurityError'])(
