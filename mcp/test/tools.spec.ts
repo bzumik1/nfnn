@@ -932,7 +932,7 @@ describe('Given an administrator connected with the writing permission', () => {
       ],
       [
         'nfnn_update_report_settings',
-        settings,
+        { sendDay: settings.sendDay, sendHour: settings.sendHour, sections: settings.sections },
         'PUT',
         '/api/admin/donations/report/settings',
         settings,
@@ -973,7 +973,7 @@ describe('Given an administrator connected with the writing permission', () => {
       await client.callTool({ name, arguments: { ...args, expectedVersion: CURRENT_VERSION } });
       const requests = stack.backend.requests
         .slice(before)
-        .filter((request) => request.path.startsWith('/api/admin/'));
+        .filter((request) => request.path.startsWith('/api/admin/') && request.method !== 'GET');
       sent.push(
         requests.map((request) => [
           name,
@@ -1054,23 +1054,22 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(bodies).toContain('{"kind":"TEST_RESTORE"}');
   });
 
-  it('when the report settings change, then the whole settings reach the administration', async () => {
+  it('when the report settings change, then the day, the hour and the sections reach the administration with the recipients it holds now, whatever recipients the call names', async () => {
     const settings = {
-      recipients: ['info@nfnn.cz', 'pavel@example.cz'],
       sendDay: 5,
       sendHour: 9,
       sections: { donors: true, donations: true, unpairedPayments: false, bankImport: true },
     };
     const result = await client.callTool({
       name: 'nfnn_update_report_settings',
-      arguments: settings,
+      arguments: { ...settings, recipients: ['x@evil.example'] },
     });
     expect(result.isError).toBeFalsy();
     expect(textOf(result)).toContain('"sendDay":5');
     expect(textOf(result)).toContain('"sendHour":9');
     const put = stack.backend.requests.find((request) => request.method === 'PUT');
     expect(put?.path).toBe('/api/admin/donations/report/settings');
-    expect(JSON.parse(put?.body ?? '{}')).toEqual(settings);
+    expect(JSON.parse(put?.body ?? '{}')).toEqual({ recipients: ['info@nfnn.cz'], ...settings });
     expect(put?.authorization).toBe('Bearer api-token-write');
   });
 
@@ -1699,6 +1698,26 @@ describe('Given an administrator connected with the writing permission', () => {
     });
     expect(refused.isError).toBe(true);
     expect(textOf(refused)).toContain('RECEIPT_FIRST_YEAR: Rok musí být mezi 2000 a 2100.');
+  });
+
+  it('when a mail setting or the contact recipient is to be changed, then the tool refuses it and the administration gets nothing', async () => {
+    for (const name of [
+      'MAIL_HOST',
+      'MAIL_PORT',
+      'MAIL_USERNAME',
+      'MAIL_AUTH',
+      'MAIL_STARTTLS',
+      'MAIL_FROM',
+      'CONTACT_RECIPIENT',
+    ]) {
+      const refused = await client.callTool({
+        name: 'nfnn_change_settings',
+        arguments: { changes: [{ name, value: 'smtp.attacker.example' }] },
+      });
+
+      expect(refused.isError).toBe(true);
+    }
+    expect(stack.backend.requests.filter((request) => request.method === 'PUT')).toEqual([]);
   });
 
   it('when the remembered sign-in length is changed, then the administration gets it', async () => {

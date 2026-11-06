@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.report;
 
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
@@ -10,6 +11,7 @@ import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportRecipientsInBrowserOnly;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
@@ -92,7 +94,7 @@ class ReportSettingsServiceTest {
     @Test
     @DisplayName("Given an administrator, when the settings are changed, then they are saved with the time and the change is audited with its content")
     void should_save_and_audit_when_changed_given_administrator() {
-        SavedReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.none());
+        SavedReportSettings saved = service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.none());
 
         assertThat(saved.settings()).isEqualTo(CHANGED);
         assertThat(saved.changedAt()).isEqualTo(NOW);
@@ -108,9 +110,34 @@ class ReportSettingsServiceTest {
     }
 
     @Test
+    @DisplayName("Given a connected application, when it changes the recipients, then it is refused as donations/report-recipients-in-browser-only and nothing is saved or audited")
+    void should_refuse_when_changed_given_a_connected_application_changing_the_recipients() {
+        for (List<String> recipients : List.of(List.of("info@nfnn.cz", "x@evil.example"), List.of("x@evil.example"))) {
+            ReportSettings changed = new ReportSettings(ReportRecipients.parse(recipients), 1, 7, new ReportSections(true, true, true, true));
+
+            assertThatThrownBy(() -> service.change(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, changed, ExpectedVersion.none()))
+                    .isInstanceOfSatisfying(ReportRecipientsInBrowserOnly.class,
+                            refused -> assertThat(refused.code()).isEqualTo("donations/report-recipients-in-browser-only"));
+        }
+        verify(settings, never()).save(any(), any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a connected application, when it keeps the recipients, also in another case, and changes the day, the hour and the sections, then the change is saved")
+    void should_save_when_changed_given_a_connected_application_keeping_the_recipients() {
+        ReportSettings changed = new ReportSettings(ReportRecipients.parse(List.of("Info@NFNN.cz")), 5, 9, new ReportSections(false, true, false, true));
+
+        SavedReportSettings saved = service.change(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, changed, ExpectedVersion.none());
+
+        assertThat(saved.settings()).isEqualTo(changed);
+        verify(settings).save(changed, NOW);
+    }
+
+    @Test
     @DisplayName("Given settings changed, when the change answers, then its version is the one a later view of the saved settings gives")
     void should_answer_the_saved_version_when_changed_given_settings_changed() {
-        SavedReportSettings saved = service.change(ADMIN, CHANGED, ExpectedVersion.of(service.view().settingsVersion()));
+        SavedReportSettings saved = service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.of(service.view().settingsVersion()));
         when(settings.current()).thenReturn(CHANGED);
         when(settings.lastChangedAt()).thenReturn(Optional.of(NOW));
 
@@ -122,7 +149,7 @@ class ReportSettingsServiceTest {
     void should_refuse_and_keep_settings_when_changed_given_another_version() {
         String stored = service.view().settingsVersion();
 
-        assertThatThrownBy(() -> service.change(ADMIN, CHANGED, ExpectedVersion.of("0000000000000000")))
+        assertThatThrownBy(() -> service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.of("0000000000000000")))
                 .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
                     assertThat(refusal.extensions()).containsEntry("version", stored);
                     assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(ReportSettingsRow.class, row -> {

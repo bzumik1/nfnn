@@ -1,10 +1,12 @@
 package cz.novanadeje.app.donations.application.report;
 
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportRecipientsInBrowserOnly;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
@@ -60,12 +62,15 @@ public class ReportSettingsService {
     }
 
     @Transactional
-    public SavedReportSettings change(UUID adminId, ReportSettings changed, ExpectedVersion expected) {
+    public SavedReportSettings change(UUID adminId, AdministrationChannel channel, ReportSettings changed, ExpectedVersion expected) {
         settings.lockForChange();
         StoredReportSettings current = new StoredReportSettings(settings.current(), settings.lastChangedAt());
         String version = rows.reportSettingsVersion(current);
         if (!expected.admits(version)) {
             throw new ChangedMeanwhile(version, rows.reportSettings(current, reportLog.sentReportsNewestFirst()));
+        }
+        if (!channel.mayChangeReportRecipients() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
+            throw new ReportRecipientsInBrowserOnly();
         }
         Instant now = clock.instant();
         settings.save(changed, now);
