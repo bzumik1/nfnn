@@ -176,7 +176,9 @@
           { "query": "", "page": 2, "limit": 2 },
           { "query": "", "page": 3, "limit": 2 },
           { "query": "a", "page": 0, "limit": 3 },
-          { "query": "zzz" }
+          { "query": "zzz" },
+          { "query": " " },
+          { "query": "novak " }
         ]
       },
       "expected": {
@@ -714,6 +716,8 @@
             ],
             "hasMore": true
           },
+          { "items": [], "hasMore": false },
+          { "items": [], "hasMore": false },
           { "items": [], "hasMore": false }
         ]
       }

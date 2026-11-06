@@ -101,6 +101,11 @@ const CROWNS = /^(\d{1,12})(?:[.,](\d{1,2}))?(?:kc|czk)?$/;
 const HELLERS_PER_CROWN = 100;
 const INSTANT_FRACTION = /^(.*:\d{2})(?:\.(\d{1,9}))?Z$/;
 const NANOSECOND_DIGITS = 9;
+const SPACE = 0x20;
+const JAVA_WHITESPACE = new Set([
+  0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x1680, 0x2000, 0x2001, 0x2002,
+  0x2003, 0x2004, 0x2005, 0x2006, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x205f, 0x3000,
+]);
 
 export function paymentList(
   rows: DonationsCopyRows,
@@ -170,7 +175,7 @@ export function donorRecordSearch(
   records: readonly CopyDonorRecordRow[],
   query: string,
 ): AdminDonorSearchResponse {
-  const trimmed = query.trim();
+  const trimmed = javaTrim(query);
   if (trimmed === '') {
     return { items: [] };
   }
@@ -202,7 +207,7 @@ export function accountSearch(
   page = 0,
   limit = ACCOUNT_SEARCH_LIMIT,
 ): DonorAccountListResponse {
-  const folded = foldAccents(query.trim());
+  const folded = foldAccents(javaTrim(query));
   const found = accounts
     .filter(
       (account) =>
@@ -320,8 +325,26 @@ export function foldAccents(text: string): string {
 }
 
 function plainQuery(text: string | undefined): string | null {
-  const trimmed = text?.trim() ?? '';
-  return trimmed === '' ? null : plain(trimmed);
+  if (text === undefined || javaBlank(text)) {
+    return null;
+  }
+  return plain(javaTrim(text));
+}
+
+function javaBlank(text: string): boolean {
+  return [...text].every((letter) => JAVA_WHITESPACE.has(letter.codePointAt(0) ?? 0));
+}
+
+function javaTrim(text: string): string {
+  let start = 0;
+  let end = text.length;
+  while (start < end && text.charCodeAt(start) <= SPACE) {
+    start += 1;
+  }
+  while (end > start && text.charCodeAt(end - 1) <= SPACE) {
+    end -= 1;
+  }
+  return text.slice(start, end);
 }
 
 function plain(value: string): string {

@@ -88,7 +88,10 @@
           { "query": "vymaz" },
           { "query": "zzz" },
           { "query": "%" },
-          { "query": "_" }
+          { "query": "_" },
+          { "query": " " },
+          { "query": "nov " },
+          { "query": " " }
         ]
       },
       "expected": {
@@ -144,6 +147,9 @@
             ]
           },
           { "items": [{ "donorId": "donor:petr", "name": "Petr Svoboda", "type": "PERSON", "variableSymbol": "7700001002", "companyIdentifier": null }] },
+          { "items": [] },
+          { "items": [] },
+          { "items": [] },
           { "items": [] },
           { "items": [] },
           { "items": [] },
