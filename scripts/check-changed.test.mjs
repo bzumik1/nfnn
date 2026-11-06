@@ -1,97 +1,125 @@
 import { strict as assert } from 'node:assert';
-import { readFileSync } from 'node:fs';
-import { describe, it } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, describe, it } from 'node:test';
 
 import {
   BACKEND_SUITE_LOCK,
   areasOf,
-  backendInputsOf,
+  changedFiles,
   commandsFor,
+  droppedEnvNames,
+  filteredEnv,
+  main,
   parseChangedFiles,
+  quote,
+  readRules,
+  run,
   summaryLines,
 } from './check-changed.mjs';
 
 const root = new URL('..', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
-const BACKEND_INPUTS = backendInputsOf(read('backend/build.gradle.kts'));
-const OPTIONS = {
-  backendInputs: BACKEND_INPUTS,
-  changedFilesList: '/tmp/changed.txt',
-  flock: true,
-};
+const RULES = readRules();
+const SCRATCH = '/tmp/check changed';
+const OPTIONS = { scratch: SCRATCH, lock: 'flock', dropped: [] };
 const commandLines = (areas, options = OPTIONS) =>
-  commandsFor(areas, options).map(({ cwd, command }) => `${cwd}: ${command}`);
+  commandsFor(new Set(areas), options).map(({ cwd, command }) => `${cwd}: ${command}`);
+const areas = (files) => [...areasOf(files, RULES).areas].sort();
+const folders = [];
+after(() => folders.forEach((folder) => rmSync(folder, { recursive: true, force: true })));
 
-describe('Given the backend build file', () => {
-  it('when its declared test inputs are read, then the shared cases, the baseline and the single files outside backend/ are listed', () => {
-    assert.ok(BACKEND_INPUTS.folders.includes('shared-cases/'));
-    assert.ok(BACKEND_INPUTS.folders.includes('regression/'));
-    assert.ok(BACKEND_INPUTS.files.includes('frontend/ngsw-config.json'));
-    assert.ok(BACKEND_INPUTS.files.includes('deploy/backup/revoke-restored-credentials.sql'));
+describe('Given the rules the backend tests carry', () => {
+  it('when the build file is read, then the shared cases, the baseline and the single files outside backend/ are its test inputs', () => {
+    assert.ok(RULES.backendInputs.folders.includes('shared-cases/'));
+    assert.ok(RULES.backendInputs.folders.includes('regression/'));
+    assert.ok(RULES.backendInputs.files.includes('frontend/ngsw-config.json'));
+    assert.ok(RULES.backendInputs.files.includes('deploy/backup/revoke-restored-credentials.sql'));
+  });
+
+  it('when SharedCaseFilesTest is read, then its searched folders are the ones it walks', () => {
+    assert.ok(RULES.sharedCaseFolders.includes('frontend/src/'));
+    assert.ok(RULES.sharedCaseFolders.includes('mcp/test/'));
+    assert.ok(RULES.sharedCaseFolders.includes('deploy/'));
   });
 });
 
 describe('Given the files a branch changed', () => {
-  const areas = (files) => areasOf(files, BACKEND_INPUTS);
-
   it('when only docs/, .claude/ and Markdown changed, then the change is docs-only and no area is affected', () => {
-    const result = areas(['docs/roadmap.md', '.claude/rules/testing.md', 'frontend/README.md']);
+    const result = areasOf(
+      ['docs/roadmap.md', '.claude/rules/testing.md', 'frontend/README.md'],
+      RULES,
+    );
     assert.equal(result.docsOnly, true);
     assert.deepEqual([...result.areas], []);
   });
 
   it('when a file under backend/ changed, then the backend is affected', () => {
-    assert.deepEqual([...areas(['backend/src/main/java/A.java']).areas], ['backend']);
+    assert.deepEqual(areas(['backend/src/main/java/A.java']), ['backend']);
   });
 
-  it('when a file under frontend/ changed, then the frontend is affected', () => {
-    assert.deepEqual([...areas(['frontend/src/app/app.ts']).areas], ['frontend']);
+  it('when a frontend source changed, then the frontend is affected and the shared-case copies are checked', () => {
+    assert.deepEqual(areas(['frontend/src/app/app.ts']), ['frontend', 'shared-case copies']);
   });
 
-  it('when a frontend file the backend tests read changed, then the frontend and the backend are affected', () => {
-    assert.deepEqual([...areas(['frontend/ngsw-config.json']).areas].sort(), [
-      'backend',
+  it('when a frontend file the backend tests declare as input changed, then the backend runs instead of the copy check alone', () => {
+    assert.deepEqual(areas(['frontend/ngsw-config.json']), ['backend', 'frontend']);
+  });
+
+  it('when the screens spec changed, then the backend is affected, whose BaselineDataSetsTest reads it', () => {
+    assert.deepEqual(areas(['frontend/e2e/baseline/screens.spec.ts']), ['backend', 'frontend']);
+  });
+
+  it('when a connector source changed, then the connector is affected and the shared-case copies are checked', () => {
+    assert.deepEqual(areas(['mcp/src/server.ts']), ['mcp', 'shared-case copies']);
+  });
+
+  it('when a file under scripts/ changed, then the scripts are affected and the shared-case copies are checked', () => {
+    assert.deepEqual(areas(['scripts/compare-v2.mjs']), ['scripts', 'shared-case copies']);
+  });
+
+  it('when a shared case changed, then the backend, the frontend and the scripts are affected, all of which read it', () => {
+    assert.deepEqual(areas(['shared-cases/qr/payment.json']), ['backend', 'frontend', 'scripts']);
+  });
+
+  it('when a file under regression/ changed, then the backend and the connector are affected, whose tests read it', () => {
+    assert.deepEqual(areas(['regression/v2/changes/pr-500.json']), ['backend', 'mcp']);
+  });
+
+  it('when a file under test-cases/ changed, then the backend is affected', () => {
+    assert.deepEqual(areas(['test-cases/backup-key-words.json']), ['backend']);
+  });
+
+  it('when the outage Worker changed, then the frontend is affected, whose lint tests it', () => {
+    assert.deepEqual(areas(['deploy/cloudflare/nfnn-fallback-worker.mjs']), [
       'frontend',
+      'shared-case copies',
     ]);
-  });
-
-  it('when a file under mcp/ changed, then the connector is affected', () => {
-    assert.deepEqual([...areas(['mcp/src/server.ts']).areas], ['mcp']);
-  });
-
-  it('when a file under scripts/ changed, then the scripts are affected', () => {
-    assert.deepEqual([...areas(['scripts/compare-v2.mjs']).areas], ['scripts']);
-  });
-
-  it('when a shared case changed, then the backend and the frontend are affected, both of which run it', () => {
-    assert.deepEqual([...areas(['shared-cases/qr/payment.json']).areas].sort(), [
-      'backend',
-      'frontend',
-    ]);
-  });
-
-  it('when a file under regression/ or test-cases/ changed, then the backend is affected, whose tests read them', () => {
-    assert.deepEqual([...areas(['regression/v2/changes/pr-500.json']).areas], ['backend']);
-    assert.deepEqual([...areas(['test-cases/backup-key-words.json']).areas], ['backend']);
   });
 
   it('when a file outside every area changed, then it is listed as checked only by CI', () => {
-    const result = areas(['deploy/compose.yml', '.github/workflows/pr-check.yml', 'docs/a.md']);
-    assert.deepEqual([...result.areas], []);
-    assert.equal(result.docsOnly, false);
-    assert.deepEqual(result.ciOnly, ['deploy/compose.yml', '.github/workflows/pr-check.yml']);
+    const result = areasOf(
+      ['.github/workflows/pr-check.yml', 'docker-compose.yml', 'docs/a.md'],
+      RULES,
+    );
+    assert.deepEqual(result.ciOnly, ['.github/workflows/pr-check.yml', 'docker-compose.yml']);
+    assert.deepEqual([...result.areas], ['shared-case copies']);
+  });
+
+  it('when docs change beside code, then the copy check covers them as CI does', () => {
+    assert.deepEqual(areas(['docs/roadmap.md', 'docker-compose.yml']), ['shared-case copies']);
   });
 
   it('when a Markdown file sits under backend/, then it counts as docs, as CI counts it', () => {
-    assert.deepEqual([...areas(['backend/HELP.md']).areas], []);
+    assert.deepEqual(areas(['backend/HELP.md']), []);
   });
 });
 
 describe('Given the output of git', () => {
   it('when name-status and untracked lists are parsed, then every path is kept with its status and untracked files count as added', () => {
-    const nameStatus = 'M\0backend/a.java\0D\0frontend/old.ts\0';
-    const untracked = 'mcp/new.ts\0';
-    assert.deepEqual(parseChangedFiles(nameStatus, untracked), [
+    assert.deepEqual(parseChangedFiles('M\0backend/a.java\0D\0frontend/old.ts\0', 'mcp/new.ts\0'), [
       { status: 'M', path: 'backend/a.java' },
       { status: 'D', path: 'frontend/old.ts' },
       { status: 'A', path: 'mcp/new.ts' },
@@ -99,23 +127,154 @@ describe('Given the output of git', () => {
   });
 });
 
-describe('Given the affected areas', () => {
-  it('when the backend is affected, then the full suite runs recording under the suite lock, then the v2 comparison of the changed files', () => {
-    assert.deepEqual(commandLines(new Set(['backend'])), [
-      `backend: API_TRANSCRIPTS=record flock ${BACKEND_SUITE_LOCK} ./gradlew test`,
-      '.: node scripts/compare-v2.mjs --changed=/tmp/changed.txt',
+function repository() {
+  const folder = mkdtempSync(join(tmpdir(), 'check-changed-test-'));
+  folders.push(folder);
+  const git = (...args) =>
+    execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], {
+      cwd: folder,
+      stdio: 'pipe',
+    });
+  const write = (path, text = 'x\n') => {
+    mkdirSync(join(folder, path, '..'), { recursive: true });
+    writeFileSync(join(folder, path), text);
+  };
+  git('init', '-q', '-b', 'main');
+  return { folder, git, write };
+}
+
+describe('Given a git repository with a branch off its base', () => {
+  const { folder, git, write } = repository();
+  ['backend/a.java', 'frontend/old.ts', 'mcp/moved.ts', 'scripts/kept.mjs'].forEach((path) =>
+    write(path),
+  );
+  git('add', '.');
+  git('commit', '-q', '-m', 'base');
+  git('branch', 'base');
+  write('scripts/kept.mjs', 'changed\n');
+  git('commit', '-q', '-am', 'committed');
+  write('backend/a.java', 'staged\n');
+  git('add', 'backend/a.java');
+  git('rm', '-q', 'frontend/old.ts');
+  git('mv', 'mcp/moved.ts', 'mcp/renamed.ts');
+  write('shared-cases/new.json');
+
+  it('when the changes are read from a subdirectory, then committed, staged, deleted, renamed and untracked files are listed from the root', () => {
+    const { files } = changedFiles(join(folder, 'backend'), 'base');
+    assert.deepEqual(files.map(({ status, path }) => `${status} ${path}`).sort(), [
+      'A mcp/renamed.ts',
+      'A shared-cases/new.json',
+      'D frontend/old.ts',
+      'D mcp/moved.ts',
+      'M backend/a.java',
+      'M scripts/kept.mjs',
     ]);
   });
 
-  it('when flock is missing, then the backend suite runs without the lock', () => {
+  it('when the base is unknown, then main says to fetch it', () => {
+    const lines = [];
     assert.equal(
-      commandLines(new Set(['backend']), { ...OPTIONS, flock: false })[0],
-      'backend: API_TRANSCRIPTS=record ./gradlew test',
+      main([], {
+        directory: folder,
+        baseRef: 'origin/main',
+        rules: RULES,
+        log: (line) => lines.push(line),
+      }),
+      2,
+    );
+    assert.match(lines.join('\n'), /git fetch origin main/);
+  });
+
+  it('when main lists the commands, then the areas come in run order and nothing runs', () => {
+    const lines = [];
+    const code = main([], {
+      directory: folder,
+      baseRef: 'base',
+      rules: RULES,
+      env: {},
+      lock: 'none',
+      log: (line) => lines.push(line),
+    });
+    assert.equal(code, 0);
+    const output = lines.join('\n');
+    assert.match(
+      output,
+      /Areas in run order: scripts, mcp, frontend, backend, inventory, v2 comparison\./,
+    );
+    assert.match(output, /Neither flock nor shlock is installed/);
+    assert.match(output, /Run them in order with: node scripts\/check-changed\.mjs --run/);
+  });
+});
+
+describe('Given a repository with only a docs change', () => {
+  const { folder, git, write } = repository();
+  write('docs/a.md');
+  git('add', '.');
+  git('commit', '-q', '-m', 'base');
+  git('branch', 'base');
+  write('docs/a.md', 'changed\n');
+
+  it('when main runs, then it says CI runs only its gate and nothing local is needed', () => {
+    const lines = [];
+    assert.equal(
+      main(['--run'], {
+        directory: folder,
+        baseRef: 'base',
+        rules: RULES,
+        log: (line) => lines.push(line),
+      }),
+      0,
+    );
+    assert.match(lines.join('\n'), /CI runs only its gate, and nothing local is needed/);
+  });
+});
+
+describe('Given the affected areas', () => {
+  it('when the backend is affected, then the full suite records under the lock, then the inventory is collected into the scratch folder and the v2 comparison reads both', () => {
+    const at = (name) => quote(`${SCRATCH}/${name}`);
+    assert.deepEqual(commandLines(['backend']), [
+      `backend: flock -n ${BACKEND_SUITE_LOCK} true || echo "Waiting for the backend suite lock"; flock ${BACKEND_SUITE_LOCK} env API_TRANSCRIPTS=record ./gradlew test`,
+      `frontend: npx ng test --watch=false --reporters=default --reporters=json --output-file=${at('frontend-vitest.json')}`,
+      `frontend: npx playwright test --list --project='*' --reporter=json > ${at('frontend-playwright.json')}`,
+      `mcp: npx vitest run --reporter=json --outputFile=${at('mcp-vitest.json')}`,
+      `.: node scripts/test-inventory.mjs --frontendVitest=${at('frontend-vitest.json')} --playwright=${at('frontend-playwright.json')} --mcpVitest=${at('mcp-vitest.json')} --out=${at('test-inventory.json')}`,
+      `.: node scripts/compare-v2.mjs --changed=${at('changed-files.txt')} --inventory=${at('test-inventory.json')}`,
+    ]);
+  });
+
+  it('when the inventory is written, then it never goes to its tracked default path', () => {
+    assert.ok(
+      !commandLines(['backend']).some((line) => line.includes('regression/v2/test-inventory.json')),
+    );
+  });
+
+  it('when only shlock is installed, then the suite waits for the lock in a loop, removes it at the end and keeps Gradle exit code', () => {
+    assert.equal(
+      commandLines(['backend'], { ...OPTIONS, lock: 'shlock' })[0],
+      `backend: until shlock -f ${BACKEND_SUITE_LOCK} -p $$; do echo "Waiting for the backend suite lock"; sleep 30; done; trap 'rm -f ${BACKEND_SUITE_LOCK}' EXIT; env API_TRANSCRIPTS=record ./gradlew test`,
+    );
+  });
+
+  it('when no lock tool is installed, then the suite runs unlocked', () => {
+    assert.equal(
+      commandLines(['backend'], { ...OPTIONS, lock: 'none' })[0],
+      'backend: env API_TRANSCRIPTS=record ./gradlew test',
+    );
+  });
+
+  it('when secrets are in the environment, then the printed suite unsets them', () => {
+    assert.equal(
+      commandLines(['backend'], {
+        ...OPTIONS,
+        lock: 'none',
+        dropped: ['FIO_TOKEN', 'MAIL_HOST'],
+      })[0],
+      'backend: env -u FIO_TOKEN -u MAIL_HOST API_TRANSCRIPTS=record ./gradlew test',
     );
   });
 
   it('when the frontend is affected, then its whole chain runs in order, e2e and the web app tests included', () => {
-    assert.deepEqual(commandLines(new Set(['frontend'])), [
+    assert.deepEqual(commandLines(['frontend']), [
       'frontend: npm run format:check',
       'frontend: npm run lint',
       'frontend: npm run lint:styles',
@@ -127,25 +286,95 @@ describe('Given the affected areas', () => {
   });
 
   it('when the connector is affected, then its check and build run', () => {
-    assert.deepEqual(commandLines(new Set(['mcp'])), ['mcp: npm run check', 'mcp: npm run build']);
+    assert.deepEqual(commandLines(['mcp']), ['mcp: npm run check', 'mcp: npm run build']);
   });
 
   it('when the scripts are affected, then their tests run', () => {
-    assert.deepEqual(commandLines(new Set(['scripts'])), ['.: node --test scripts/*.test.mjs']);
+    assert.deepEqual(commandLines(['scripts']), ['.: node --test scripts/*.test.mjs']);
+  });
+
+  it('when only the shared-case copies are checked, then SharedCaseFilesTest runs again on its own', () => {
+    assert.deepEqual(commandLines(['shared-case copies']), [
+      'backend: ./gradlew test --tests "*SharedCaseFilesTest" -PnoCucumber --rerun',
+    ]);
   });
 
   it('when every area is affected, then the quick ones come first and the v2 comparison last', () => {
-    const areas = commandsFor(new Set(['backend', 'frontend', 'mcp', 'scripts']), OPTIONS).map(
-      ({ area }) => area,
-    );
+    const order = commandsFor(
+      new Set(['backend', 'frontend', 'mcp', 'scripts', 'shared-case copies']),
+      OPTIONS,
+    ).map(({ area }) => area);
     assert.deepEqual(
-      [...new Set(areas)],
-      ['scripts', 'mcp', 'frontend', 'backend', 'v2 comparison'],
+      [...new Set(order)],
+      ['scripts', 'mcp', 'frontend', 'shared-case copies', 'backend', 'inventory', 'v2 comparison'],
     );
   });
 
   it('when no area is affected, then no command runs', () => {
     assert.deepEqual(commandsFor(new Set(), OPTIONS), []);
+  });
+});
+
+describe('Given an environment with settings recording refuses', () => {
+  const env = {
+    PATH: '/bin',
+    MAIL_HOST: 'smtp',
+    APP_SITE_PUBLIC_URL: 'x',
+    SPRING_APPLICATION_JSON: '{}',
+    SPRING_DATASOURCE_PASSWORD: 'p',
+    SPRING_PROFILES_ACTIVE: 'dev',
+    JWT_SECRET: 's',
+    SETTINGS_KEY: 's',
+    BACKUP_KEY: 's',
+    DB_PASSWORD: 's',
+    RECEIPT_SIGNING_KEY: 's',
+    FIO_TOKEN: 't',
+    HOME: '/home',
+  };
+
+  it('when the names to drop are read, then every refused one is listed and the others stay', () => {
+    assert.deepEqual(droppedEnvNames(env), [
+      'APP_SITE_PUBLIC_URL',
+      'BACKUP_KEY',
+      'DB_PASSWORD',
+      'FIO_TOKEN',
+      'JWT_SECRET',
+      'MAIL_HOST',
+      'RECEIPT_SIGNING_KEY',
+      'SETTINGS_KEY',
+      'SPRING_APPLICATION_JSON',
+      'SPRING_DATASOURCE_PASSWORD',
+    ]);
+    assert.deepEqual(Object.keys(filteredEnv(env)).sort(), [
+      'HOME',
+      'PATH',
+      'SPRING_PROFILES_ACTIVE',
+    ]);
+  });
+});
+
+describe('Given steps to run', () => {
+  const { folder } = repository();
+  const node = (script) => `node -e ${quote(script)}`;
+
+  it('when one fails, then the later ones are not run and the step that filters the environment sees no refused setting', () => {
+    const results = run(
+      [
+        {
+          area: 'a',
+          cwd: '.',
+          command: node('process.exit(process.env.MAIL_HOST ? 1 : 0)'),
+          filtersEnv: true,
+        },
+        { area: 'a', cwd: '.', command: node('process.exit(process.env.MAIL_HOST ? 3 : 0)') },
+        { area: 'a', cwd: '.', command: node('process.exit(0)') },
+      ],
+      { root: folder, env: { ...process.env, MAIL_HOST: 'smtp' }, log: () => {} },
+    );
+    assert.deepEqual(
+      results.map(({ outcome }) => outcome),
+      ['pass', 'FAIL', 'not run'],
+    );
   });
 });
 
@@ -170,8 +399,12 @@ describe('Given CLAUDE.md "Done means"', () => {
     assert.ok(chain('backend').endsWith('./gradlew test'));
   });
 
-  it('when the section is read, then it points to this script', () => {
-    assert.ok(doneMeans.includes('node scripts/check-changed.mjs --run'));
+  it('when the section is read, then it points to this script and leaves the comparison with main to CI', () => {
+    assert.ok(
+      doneMeans.includes(
+        '`node scripts/check-changed.mjs --run` runs these for the changed areas; the comparison with `main` stays CI',
+      ),
+    );
   });
 });
 
