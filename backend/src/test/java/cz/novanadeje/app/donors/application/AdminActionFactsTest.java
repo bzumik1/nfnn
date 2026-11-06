@@ -102,6 +102,8 @@ class AdminActionFactsTest {
                         "SEND_MONTHLY_REPORT", Map.of("month", "2026-09", "recipients", "jana@example.cz")),
                 arguments("SEND_MONTHLY_REPORT", "Monthly report for 2026-09 sent by hand to jana@example.cz, petr@example.cz",
                         "SEND_MONTHLY_REPORT", Map.of("month", "2026-09", "recipients", "jana@example.cz, petr@example.cz")),
+                arguments("REQUEST_HISTORY_IMPORT", "Vyžádáno načtení starších plateb z banky od 2026-01-01",
+                        "REQUEST_HISTORY_IMPORT", Map.of("on", "2026-01-01")),
                 arguments("CHANGE_RECEIPT_SIGNATURE", "Nahrán obrázek podpisu na potvrzení o daru: 600 × 200 px, SHA-256 ab12",
                         "CHANGE_RECEIPT_SIGNATURE", Map.of("width", "600", "height", "200")),
                 arguments("CHANGE_RECEIPT_SIGNATURE", "Signature image for receipts uploaded: 600x200 px, SHA-256 ab12",

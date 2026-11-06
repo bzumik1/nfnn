@@ -1085,6 +1085,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: { kind: 'TRANSPORT', message: null, attemptedAt: '2026-10-18T09:00:00Z' },
             consecutiveFailures: 3,
             reportedOutage: 'TRANSPORT',
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );
@@ -1147,6 +1149,56 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  for (const [name, run, expected] of [
+    [
+      'queued',
+      { status: 'QUEUED', failure: null, finishedAt: null },
+      'Fio přijímá jeden dotaz za 30 sekund.',
+    ],
+    [
+      'locked',
+      { status: 'HISTORY_LOCKED', failure: 'HISTORY_LOCKED', finishedAt: '2026-11-05T10:00:30Z' },
+      'historie ve Fio byla zamčená',
+    ],
+  ] as const) {
+    test(`when an administrator opens the administration with a ${name} run of older payments, then the part for older payments breaks no rule`, async ({
+      page,
+    }) => {
+      await page.clock.install({ time: new Date('2026-11-05T10:00:05Z') });
+      await page.route(
+        (url) => url.pathname === '/api/admin/donations/import-state',
+        (route) =>
+          route.fulfill({
+            json: {
+              coveredFrom: '2026-08-08',
+              coveredTo: '2026-11-05',
+              lastAttemptedAt: '2026-11-05T09:00:00Z',
+              lastSucceededAt: '2026-11-05T09:00:00Z',
+              lastFailure: null,
+              consecutiveFailures: 0,
+              reportedOutage: null,
+              historyImport: {
+                from: '2026-01-01',
+                to: '2026-11-05',
+                needsUnlockedHistory: true,
+                requestedAt: '2026-11-05T10:00:00Z',
+                startsAt: '2026-11-05T10:00:20Z',
+                added: null,
+                ...run,
+              },
+              defaultHistoryFrom: '2026-01-01',
+            },
+          }),
+      );
+      await signIn(page, administrator);
+      await page.getByRole('link', { name: 'Správa' }).click();
+      const part = page.getByRole('region', { name: 'Starší platby z banky' });
+      await expect(part).toContainText(expected);
+
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+
   test('when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule', async ({
     page,
   }) => {
@@ -1162,6 +1214,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: null,
             consecutiveFailures: 0,
             reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );

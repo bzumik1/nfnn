@@ -35,7 +35,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device holds the donor record of "Jana" as the administration reads it, with its bank accounts
     And the administration device's chunk "receipts:2026" holds every receipt the administration lists
     And the administration device's chunk "symbol-claims" holds every older-symbol answer the administration lists
-    And the administration device's chunk "import-state" holds the import state the administration reads
+    And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments
     And the administration device's chunk "report-settings" holds the monthly report settings and the sent reports the administration reads
     And the administration device's summary lists the years "2026, 2025"
     And the administration device's summary of every year is the administration's overview of that year

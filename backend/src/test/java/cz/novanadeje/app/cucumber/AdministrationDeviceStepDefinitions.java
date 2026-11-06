@@ -374,10 +374,13 @@ public class AdministrationDeviceStepDefinitions {
         assertThat(chunk(id).get("rows").valueStream().map(row -> fields(row, SYMBOL_CLAIM_FIELDS)).toList()).containsExactlyElementsOf(listed);
     }
 
-    @Then("the administration device's chunk {string} holds the import state the administration reads")
-    public void theAdministrationDevicesChunkHoldsTheImportState(String id) {
+    @Then("the administration device's chunk {string} holds the stored import state the administration reads, without the run of older payments")
+    public void theAdministrationDevicesChunkHoldsTheStoredImportState(String id) {
         api.get("/api/admin/donations/import-state");
-        assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(api.lastResponseJson());
+        ObjectNode expected = ((ObjectNode) api.lastResponseJson()).deepCopy();
+        expected.remove("historyImport");
+        expected.remove("defaultHistoryFrom");
+        assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(expected);
     }
 
     @Then("the administration device's chunk {string} holds the monthly report settings and the sent reports the administration reads")

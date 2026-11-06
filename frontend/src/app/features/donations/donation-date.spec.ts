@@ -1,4 +1,10 @@
-import { formatBankTime, formatDonationDate, pragueDay, pragueHour } from './donation-date';
+import {
+  formatBankClock,
+  formatBankTime,
+  formatDonationDate,
+  pragueDay,
+  pragueHour,
+} from './donation-date';
 
 describe('Given a date the donations API sends', () => {
   it('when it is formatted, then it reads as day, month and year with leading zeros', () => {
@@ -19,6 +25,13 @@ describe('Given the time the bank data was last updated', () => {
 
   it('when it is just before midnight in UTC, then it reads as the next Prague day', () => {
     expect(formatBankTime('2025-12-31T23:30:00Z')).toBe('01. 01. 2026 00:30');
+  });
+});
+
+describe('Given the moment a bank request starts', () => {
+  it('when only its time is formatted, then it reads as the Prague hour, minute and second', () => {
+    expect(formatBankClock('2026-11-05T10:00:20Z')).toBe('11:00:20');
+    expect(formatBankClock('2026-07-05T07:09:05.123Z')).toBe('09:09:05');
   });
 });
 

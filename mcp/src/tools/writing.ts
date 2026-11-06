@@ -202,6 +202,21 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_import_history',
+    {
+      title: 'Načíst starší platby',
+      description:
+        "Downloads the bank payments from a day (YYYY-MM-DD) to today in one run on the server's import thread, without restarting the server. Payments older than 89 days come only within 10 minutes of unlocking the history in Fio internet banking (Nastavení > API, the lock icon); otherwise the run ends HISTORY_LOCKED. Repeatable: payments already stored are skipped, so it also closes a gap. Answers the queued run; nfnn_status shows its outcome under historyImport. Audited as REQUEST_HISTORY_IMPORT.",
+      inputSchema: z.object({ from: DAY }),
+      annotations: { ...WRITING, idempotentHint: true },
+    },
+    async ({ from }, ctx) =>
+      answerChange(deps, ctx, 'nfnn_import_history', async ({ apiToken }) =>
+        text(await backend.post('/api/admin/donations/import/history', apiToken, { from })),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_request_backup',
     {
       title: 'Vyžádat zálohu',

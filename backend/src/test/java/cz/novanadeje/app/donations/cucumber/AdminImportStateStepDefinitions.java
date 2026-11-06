@@ -50,6 +50,12 @@ public class AdminImportStateStepDefinitions {
         assertThat(state.get("lastFailure").isNull()).isTrue();
         assertThat(state.get("consecutiveFailures").asInt()).isZero();
         assertThat(state.get("reportedOutage").isNull()).isTrue();
+        assertThat(state.get("historyImport").isNull()).isTrue();
+    }
+
+    @Then("the import state names no run of older payments")
+    public void theImportStateNamesNoRunOfOlderPayments() {
+        assertThat(api.lastResponseJson().get("historyImport").isNull()).isTrue();
     }
 
     private static JsonNode at(JsonNode node, String path) {

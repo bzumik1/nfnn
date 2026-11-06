@@ -2,6 +2,7 @@ package cz.novanadeje.app.support;
 
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
+import java.time.Clock;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -35,8 +36,8 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
-    public SynchronousBankImportRequests synchronousBankImportRequests(ImportBankPaymentsService imports, BankImportProperties properties) {
-        return new SynchronousBankImportRequests(imports, properties);
+    public SynchronousBankImportRequests synchronousBankImportRequests(ImportBankPaymentsService imports, BankImportProperties properties, Clock clock) {
+        return new SynchronousBankImportRequests(imports, properties, clock);
     }
 
     @Bean

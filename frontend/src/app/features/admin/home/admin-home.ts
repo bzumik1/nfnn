@@ -26,7 +26,6 @@ import {
   AdminOverviewResponse,
   AdministratorResponse,
   BackupRunResponse,
-  ImportFailureKind,
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
@@ -40,6 +39,8 @@ import {
   unpublishedKeysSentence,
 } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
+import { HistoryImport } from './history-import/history-import';
+import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS } from './import-failure-labels';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -54,8 +55,6 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-
-type NextStepLink = 'settings' | 'logs' | null;
 
 interface UnpairedSummary {
   readonly count: number;
@@ -74,50 +73,9 @@ interface SinceFigure {
   readonly query: Record<string, string> | null;
 }
 
-interface NextStep {
-  readonly text: string;
-  readonly link: NextStepLink;
-}
-
-const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
-  RATE_LIMITED: {
-    text: $localize`:@@admin.home.import.next.rateLimited:Banka teď odmítá příliš časté dotazy. Web to zkusí znovu sám, nic dělat nemusíte.`,
-    link: null,
-  },
-  HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut restartujte backend (v ZimaOS restart aplikace).`,
-    link: null,
-  },
-  UNAUTHORIZED: {
-    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
-    link: 'settings',
-  },
-  TRANSPORT: {
-    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
-    link: null,
-  },
-  INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
-    link: 'logs',
-  },
-  UNEXPECTED: {
-    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
-    link: 'logs',
-  },
-};
-
-const FAILURE_LABELS: Record<ImportFailureKind, string> = {
-  RATE_LIMITED: $localize`:@@admin.home.import.failure.rateLimited:Fio odmítlo příliš častý dotaz`,
-  HISTORY_LOCKED: $localize`:@@admin.home.import.failure.historyLocked:Historie starší než 90 dní je ve Fio zamčená`,
-  UNAUTHORIZED: $localize`:@@admin.home.import.failure.unauthorized:Fio odmítlo token (chybí, ještě neplatí nebo vypršel)`,
-  TRANSPORT: $localize`:@@admin.home.import.failure.transport:Fio nebylo dostupné`,
-  INVALID_RESPONSE: $localize`:@@admin.home.import.failure.invalidResponse:Fio poslalo odpověď, které web nerozumí`,
-  UNEXPECTED: $localize`:@@admin.home.import.failure.unexpected:Neočekávaná chyba`,
-};
-
 @Component({
   selector: 'app-admin-home',
-  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows],
+  imports: [NeedsConnection, RouterLink, CopyButton, HistoryImport, AdminSectionRows],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -237,7 +195,7 @@ export class AdminHome {
   protected readonly lastAttempt = computed(() => time(this.importState()?.lastAttemptedAt));
   protected readonly lastFailure = computed(() => {
     const failure = this.importState()?.lastFailure;
-    return failure ? FAILURE_LABELS[failure.kind] : null;
+    return failure ? IMPORT_FAILURE_LABELS[failure.kind] : null;
   });
   protected readonly lastFailureMessage = computed(
     () => this.importState()?.lastFailure?.message ?? null,
@@ -247,11 +205,11 @@ export class AdminHome {
   );
   protected readonly outage = computed(() => {
     const state = this.importState();
-    return state?.reportedOutage ? FAILURE_LABELS[state.reportedOutage] : null;
+    return state?.reportedOutage ? IMPORT_FAILURE_LABELS[state.reportedOutage] : null;
   });
   protected readonly nextStep = computed(() => {
     const state = this.importState();
-    return state?.reportedOutage ? NEXT_STEPS[state.reportedOutage] : null;
+    return state?.reportedOutage ? IMPORT_NEXT_STEPS[state.reportedOutage] : null;
   });
   protected readonly neverAttempted = computed(
     () => this.state() === 'ready' && this.importState()?.lastAttemptedAt == null,
@@ -472,6 +430,14 @@ export class AdminHome {
 
   protected amount(tally: TallyResponse): string {
     return `${formatMinorUnits(tally.totalMinor)}\u00a0Kč`;
+  }
+
+  protected historyFinished(state: ImportStateResponse): void {
+    this.importState.set(state);
+    const run = state.historyImport;
+    if (run?.status === 'COMPLETED' && (run.added ?? 0) > 0) {
+      this.loadUnpaired();
+    }
   }
 
   protected load(): void {
