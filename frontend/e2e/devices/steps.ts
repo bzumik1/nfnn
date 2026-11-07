@@ -382,6 +382,14 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
   },
   {
+    id: 'admin-backups',
+    title: 'the backups, their key and their schedule in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/zalohy');
+      await ui.waitVisible({ css: '#backup-time' });
+    },
+  },
+  {
     id: 'admin-more',
     title: 'the occasional and technical sections of the administration',
     open: (ui) => adminPage(ui, '/sprava/vice'),
