@@ -36,7 +36,7 @@ describe('Given a Czech account of a bank the site names itself', () => {
     expect(element.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       '2000145399/0800 · Česká spořitelna',
     );
-    expect(element.querySelector('.bank')?.textContent).toBe('· Česká spořitelna');
+    expect(element.querySelector('.bank')?.textContent).toBe('·\u00a0Česká spořitelna');
     http.expectNone(BANK_CODES_URL);
   });
 });
@@ -47,7 +47,7 @@ describe('Given an account whose bank code the site does not name itself', () =>
 
     http.expectOne(BANK_CODES_URL).flush({
       fetchedAt: '2026-11-09T04:40:00Z',
-      items: [{ code: '4000', name: 'Max banka a.s.' }],
+      items: [{ code: '4000', name: 'Max banka' }],
     });
     fixture.detectChanges();
 

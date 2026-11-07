@@ -68,7 +68,7 @@ export function bankNameOf(accountNumber: string): string | null {
 const BRANCH_MARKER =
   /,|\s(?:pobočka|organizační složka|odštěpný závod|Filiale|Prague Branch|Czech Branch|v likvidaci)\b/;
 const TRAILING_LEGAL_FORM =
-  /\s+(?:a\.\s?s\.|s\.\s?r\.\s?o\.|S\.A\.|N\.V\.|p\.l\.c\.|plc|AG|eG|UAB|Ltd\.?|Limited|Aktiengesellschaft)$/i;
+  /\s+(?:a\.\s?s\.|A\.\s?S\.|s\.\s?r\.\s?o\.|S\.A\.|SA|S\.p\.A\.|N\.V\.|B\.V\.|p\.l\.c\.|plc|PLC|AG|eG|SE|GmbH|AB|UAB|d\.d\.|Co\.|Ltd\.?|Limited|Aktiengesellschaft|spořitelní družstvo)$/;
 
 export function shortBankName(name: string): string {
   const trimmed = name.trim();

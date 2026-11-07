@@ -89,7 +89,7 @@ A bank account a donor proved by a payment with their own symbol, from which pay
 _Avoid_: „účet“ alone (it is also the donor's account on the site)
 
 **Bank code list**\
-UI the bank's name beside an account („2000145399/0800 · Česká spořitelna“) · Code: `BankCode`, `BankCodeList` (`donations/domain/bankcode`, tables `bank_code`, `bank_code_list_state`), `CZECH_BANK_CODES` and `BankNames` in the browser.\
+UI „název banky“ beside an account („2000145399/0800 · Česká spořitelna“); docs „číselník ČNB Kódy bank ČR“ · Code: `BankCode`, `BankCodeList` (`donations/domain/bankcode`, tables `bank_code`, `bank_code_list_state`), `CZECH_BANK_CODES` and `BankNames` in the browser.\
 The ČNB list „Kódy bank ČR“ of four-digit Czech bank codes and the banks they belong to; the server downloads it, the browser shows a short name of the bank (without the legal form) beside a Czech account number.
 
 **Turning pairing from an account off and on**\
