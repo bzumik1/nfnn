@@ -61,6 +61,11 @@ const SIGNED_IN_PAGES = [
   '/sprava/zalohy',
   '/sprava/upozorneni',
   '/sprava/logy',
+  '/sprava/logy/soubory',
+  '/sprava/logy/soubor?nazev=backend.log',
+  '/sprava/logy/urovne',
+  '/sprava/logy/stav',
+  '/sprava/logy/vlakna',
   '/sprava/nastaveni',
   '/sprava/historie',
   '/sprava/vice',
@@ -267,7 +272,7 @@ test.describe('Given the site built with another theme', () => {
 
     for (const path of SIGNED_IN_PAGES) {
       await page.goto(path);
-      await expect(page).toHaveURL(new RegExp(`${path}$`));
+      await expect(page).toHaveURL(new RegExp(`${path.replace(/[.?]/g, '\\$&')}$`));
       await expect(page.locator('h1').first()).toBeVisible();
 
       expect(await lookOfTheReferenceTheme(page), path).toEqual([]);

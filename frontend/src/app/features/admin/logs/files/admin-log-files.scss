@@ -1,0 +1,20 @@
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 720px;
+}
+
+.groups {
+  margin-top: var(--space-4);
+}
+
+.file-name {
+  font-weight: var(--weight-medium);
+}
+
+.empty {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}

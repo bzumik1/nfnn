@@ -391,6 +391,21 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
   },
   {
+    id: 'admin-logs',
+    title: 'the logs hub',
+    open: (ui) => adminPage(ui, '/sprava/logy'),
+  },
+  {
+    id: 'admin-log-file',
+    title: 'a log file',
+    open: (ui) => adminPage(ui, '/sprava/logy/soubor?nazev=backend.log'),
+  },
+  {
+    id: 'admin-server-state',
+    title: 'the server state',
+    open: (ui) => adminPage(ui, '/sprava/logy/stav'),
+  },
+  {
     id: 'admin-more',
     title: 'the occasional and technical sections of the administration',
     open: (ui) => adminPage(ui, '/sprava/vice'),
