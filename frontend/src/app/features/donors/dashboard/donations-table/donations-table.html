@@ -163,5 +163,8 @@
     <p class="ui-callout ui-callout--danger row-receipt-error" role="alert">
       {{ message }}
     </p>
+    @if (donations.offersDiagnostics()) {
+      <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+    }
   }
 </ng-template>

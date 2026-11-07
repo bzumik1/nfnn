@@ -1,4 +1,4 @@
-import { saveBlob } from '../file-download';
+import { saveBlob } from '../../../core/files/file-download';
 
 export type Handoff = 'shared' | 'dismissed' | 'refused' | 'opened' | 'downloaded';
 

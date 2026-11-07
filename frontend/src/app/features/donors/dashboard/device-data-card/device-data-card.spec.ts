@@ -189,7 +189,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       await settle();
 
       expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-        'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+        'Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.',
       );
     });
 
@@ -198,7 +198,7 @@ describe('Given the card "Data v tomto zařízení"', () => {
       await settle();
 
       expect(normalized(root().querySelector('[role="alert"]:not(:empty)')?.textContent)).toBe(
-        'Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz.',
+        'Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.',
       );
     });
   });

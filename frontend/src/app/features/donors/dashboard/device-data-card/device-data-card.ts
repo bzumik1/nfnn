@@ -109,12 +109,12 @@ function reloadNotice(outcome: SyncOutcome): Notice {
     case 'mismatch':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz.`,
+        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.`,
       };
     case 'no-copy':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.`,
+        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.`,
       };
   }
 }

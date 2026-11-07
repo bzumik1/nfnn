@@ -23,6 +23,7 @@ import {
 import { Connectivity } from '../connectivity/connectivity';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
+import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
@@ -75,6 +76,7 @@ export class AuthStore {
   private readonly device = inject(SESSION_DEVICE);
   private readonly administrationAccess = inject(AdministrationAccess);
   private readonly connectivity = inject(Connectivity);
+  private readonly diagnostics = inject(DiagnosticEvents);
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private readonly currentSession = signal<SessionKind | null>(null);
@@ -432,6 +434,10 @@ export class AuthStore {
   }
 
   private adopt(response: AuthResponse): Donor {
+    const previous = this.currentDonor();
+    if (previous !== null && previous.id !== response.user.id) {
+      this.diagnostics.clear();
+    }
     this.adoptions++;
     this.accessToken = response.accessToken;
     this.currentDonor.set(response.user);
@@ -447,6 +453,9 @@ export class AuthStore {
   }
 
   private forget(): void {
+    if (this.currentDonor() !== null) {
+      this.diagnostics.clear();
+    }
     this.administrationAccess.ended();
     this.accessToken = null;
     this.currentDonor.set(null);
