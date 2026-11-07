@@ -167,6 +167,11 @@ function expectSlidOffTheScreen(film: SheetFilm, from: number): void {
   expect(last.blur).toBeLessThan(0.5);
 }
 
+async function phoneThatAnimates(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
 async function pageUsableAgain(page: Page): Promise<void> {
   await expect(page.locator('dialog')).toHaveCount(0);
   expect(await page.locator('[inert]').count()).toBe(0);
@@ -438,7 +443,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test('when they close the sheet with its button on a phone, then it slides down off the screen with its veil before it goes, and the page can be used again', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await phoneThatAnimates(page);
     await sheetSettled(page);
     const opened = (await page.locator('.dialog-panel').boundingBox())!.y;
     await filmSheet(page);
@@ -454,7 +459,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test('when a finger pulls the sheet far enough down on a phone and lets go, then it slides on from where the finger left it off the screen', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await phoneThatAnimates(page);
     const panel = page.locator('.dialog-panel');
     const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
     await sheetSettled(page);
@@ -482,7 +487,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test('when they go back with the sheet open on a phone, then it slides down off the screen and takes no new entry', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await phoneThatAnimates(page);
     await sheetSettled(page);
     const opened = (await page.locator('.dialog-panel').boundingBox())!.y;
     const entries = await dialogEntries(page);
@@ -501,7 +506,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test('when they press the close button twice and go back while the sheet slides away, then it closes once and the page before the payments is one step back', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await phoneThatAnimates(page);
     await sheetSettled(page);
 
     await page.evaluate(() => {
