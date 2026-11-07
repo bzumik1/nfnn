@@ -459,6 +459,7 @@ describe('Given an administrator and two people of the foundation', () => {
     );
     expect(button(fixture, 'Odebrat podpis')).toBeTruthy();
     expect(text(fixture, '.person-row:first-child .person-signatures')).toContain('Podpis na webu');
+    expect(element<HTMLImageElement>(fixture, '.signature-preview').classList).toContain('ui-ink');
   });
 
   it('when the signature file is not an image, then the page says so and nothing is uploaded', async () => {
@@ -857,6 +858,14 @@ describe('Given an administrator and people of the foundation with signatures', 
     );
     expect(eva.querySelector('.person-badges')?.textContent).not.toContain('Podpis na webu');
     expect(adam.querySelector('.person-signatures')).toBeNull();
+  });
+
+  it("when the list shows, then the web signature is drawn as the theme's ink, as under the founders' note on the home page", () => {
+    receiptPreview(PERSON_ID).flush(noReceiptSignature());
+    fixture.detectChanges();
+    const [eva] = previews();
+
+    expect(eva.querySelector('.person-signature-ink')?.classList).toContain('ui-ink');
   });
 
   it('when the receipt signature is a drawing, then the list draws it labelled with their name from one request', async () => {
