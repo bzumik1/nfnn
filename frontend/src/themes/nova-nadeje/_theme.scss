@@ -252,6 +252,7 @@
   --radius-field: 12px;
   --radius-xl: 14px;
   --radius-card: 16px;
+  --radius-qr-ground: max(0px, calc(var(--radius-card) - 2px - var(--space-2-5)));
   --radius-group: 22px;
   --radius-media: 20px;
   --radius-dialog: 24px;

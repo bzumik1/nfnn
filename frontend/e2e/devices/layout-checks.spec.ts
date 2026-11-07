@@ -288,6 +288,37 @@ test.describe('Given a page checked as on a phone', () => {
     ).toEqual(['no text cut off by its box']);
   });
 
+  test('when a QR code sits in the middle of its frame, then the centring check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="width: 200px; padding: 10px; background: #123"><app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code></div>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a QR code leans to one side of its frame, then it is off centre', async ({ page }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="width: 280px; padding: 10px; background: #123"><app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code></div>',
+      ),
+    ).toEqual(['every QR code in the middle of its frame']);
+  });
+
+  test('when a QR code stands on a bare page with no frame, then the centring check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code>',
+      ),
+    ).toEqual([]);
+  });
+
   test('when a modal dialog is open, then only its controls are checked', async ({ page }) => {
     await page.setViewportSize(VIEWPORT);
     await page.setContent(
