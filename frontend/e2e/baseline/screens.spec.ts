@@ -2,6 +2,7 @@ import { Locator, Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  bankAccountItem,
   connectionRequest,
   donor,
   mockConnectApi,
@@ -453,6 +454,30 @@ const SCREENS_SINCE_V2: Screen[] = [
       await unfoldPaymentQr(page, '.send-gift');
     },
     ready: (page) => paymentDrawn(page, [SEND_GIFT_QR, SEND_GIFT_BANK]),
+  },
+  {
+    name: 'donor-bank-accounts-listed',
+    open: async (page) => {
+      await mockDonorApi(page, donorWithDonations);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({ donationCount: 2, totalAmountMinor: 150000 }),
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000002',
+                  accountNumber: '19-2000145399/8030',
+                }),
+              ],
+            },
+          }),
+      );
+      await rememberedSession(page, donor);
+      await page.goto('/darce/ucty');
+    },
+    ready: (page) => elementsShown(page, ['.accounts-list']),
   },
   {
     name: 'admin-donors-recent',
