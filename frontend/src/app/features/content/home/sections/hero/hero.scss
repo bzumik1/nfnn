@@ -17,15 +17,15 @@
 
 .hero-top-shade {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 160px;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
-    transparent 100%
-  );
+  inset: 0;
+  background:
+    var(--hero-top-scrim),
+    linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
+        transparent 100%
+      )
+      top / 100% 160px no-repeat;
   z-index: 1;
 }
 

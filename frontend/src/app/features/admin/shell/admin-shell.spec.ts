@@ -61,6 +61,7 @@ describe('Given an administrator anywhere in the administration', () => {
           { path: 'sprava/darci', component: Page },
           { path: 'sprava/darci/:id', component: Page },
           { path: 'sprava/platby', component: Page },
+          { path: 'sprava/aktuality/nova', component: Page, data: { tabBar: false } },
         ]),
       ],
     }).compileComponents();
@@ -168,12 +169,10 @@ describe('Given an administrator anywhere in the administration', () => {
     expect(currentLinks()).toEqual(['Dárci']);
   });
 
-  it('when it opens, then the app header offers the account and the site tabs stay at the bottom, as everywhere in the app', () => {
+  it('when it opens on a computer, then the app header offers the account and the side panel leads without the site tabs', () => {
     expect(element('header.app-header a.brand')?.getAttribute('href')).toBe('/');
-    const tabs = element('nav[aria-label="Hlavní sekce"]');
-    expect(
-      Array.from(tabs?.querySelectorAll('a') ?? []).map((link) => clean(link.textContent)),
-    ).toEqual(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
+    expect(element('#admin-nav')).not.toBeNull();
+    expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
     expect(element('app-dashboard-top-bar')).toBeNull();
   });
 
@@ -200,6 +199,20 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(fixture.nativeElement.querySelector('main#obsah')?.previousElementSibling).toBeNull();
       expect(element('button.side-nav-toggle')).toBeNull();
     });
+
+    it('then the site tabs stay at the bottom, as everywhere in the app', () => {
+      const tabs = element('nav[aria-label="Hlavní sekce"]');
+      expect(
+        Array.from(tabs?.querySelectorAll('a') ?? []).map((link) => clean(link.textContent)),
+      ).toEqual(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
+    });
+
+    it('and a full-screen editor opens, then the site tabs give way to it', async () => {
+      await router.navigateByUrl('/sprava/aktuality/nova');
+      await settle();
+
+      expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
+    });
   });
 
   describe('when the administration is locked', () => {
@@ -213,7 +226,15 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('main#obsah h1')).toBeNull();
     });
 
-    it('then the header and the tabs stay, so the administrator can still leave', () => {
+    it('then the header and the side panel stay, so the administrator can still leave', () => {
+      expect(element('header.app-header')).not.toBeNull();
+      expect(element('#admin-nav')).not.toBeNull();
+    });
+
+    it('and the window is a phone, then the header and the tabs stay, so the administrator can still leave', async () => {
+      compact.set(true);
+      await settle();
+
       expect(element('header.app-header')).not.toBeNull();
       expect(element('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
     });

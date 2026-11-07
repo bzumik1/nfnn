@@ -205,7 +205,9 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await expect(
       dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
     ).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await expect(
+      dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
+    ).toBeFocused();
     await dialog.getByRole('button', { name: 'Smazat data a odhlásit' }).click();
 
     await expect(page).toHaveURL(/\/$/);

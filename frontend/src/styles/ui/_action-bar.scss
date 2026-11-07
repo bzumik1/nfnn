@@ -33,6 +33,22 @@ html.is-offline:has(.ui-action-bar) {
   );
 }
 
+html:has(app-tab-bar) {
+  &:has(.ui-action-bar) {
+    scroll-padding-bottom: calc(
+      var(--action-bar-height) + var(--tab-bar-clearance) + var(--space-6)
+    );
+  }
+
+  .ui-action-bar {
+    bottom: var(--tab-bar-clearance);
+  }
+
+  &.is-offline .ui-action-bar {
+    bottom: calc(var(--tab-bar-clearance) + var(--offline-pill-height) + var(--space-4));
+  }
+}
+
 .ui-action-bar .ui-notice {
   margin: var(--space-2-5) 0 0;
   padding: var(--space-2) var(--space-3);

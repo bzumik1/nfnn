@@ -287,9 +287,22 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private showModal(): void {
     const dialog = this.element().nativeElement;
     dialog.showModal();
-    if (this.modality.lastPressByPointer() && dialog.querySelector('[autofocus]') === null) {
-      dialog.focus({ preventScroll: true });
+    if (this.modality.lastPressByPointer()) {
+      this.focusTitle(dialog);
     }
+  }
+
+  private focusTitle(dialog: HTMLDialogElement): void {
+    const [titleId] = this.labelledBy().split(/\s+/);
+    const title = this.document.getElementById(titleId);
+    if (title === null || !dialog.contains(title)) {
+      dialog.focus({ preventScroll: true });
+      return;
+    }
+    if (!title.hasAttribute('tabindex')) {
+      title.setAttribute('tabindex', '-1');
+    }
+    title.focus({ preventScroll: true });
   }
 
   private follow(suspended: boolean): void {
