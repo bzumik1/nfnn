@@ -1,0 +1,113 @@
+@use 'pressed';
+
+.ui-groups {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.ui-group-title {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-slight);
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  outline: none;
+}
+
+.ui-group-note {
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+.ui-group-note--status {
+  color: var(--color-success);
+}
+
+.ui-group-note--alert {
+  color: var(--color-danger);
+}
+
+.ui-group-note--warning {
+  color: var(--color-warning);
+}
+
+label.ui-list__row {
+  cursor: pointer;
+}
+
+.ui-list--inset .ui-list__row--action {
+  color: var(--color-accent);
+}
+
+.ui-switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: var(--switch-width);
+  height: var(--switch-height);
+  margin-block: 0;
+  margin-inline-end: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-switch-off);
+  cursor: pointer;
+  transition: background var(--duration-base);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: var(--switch-thumb-inset);
+    inset-inline-start: var(--switch-thumb-inset);
+    aspect-ratio: 1;
+    border-radius: var(--radius-round);
+    background: var(--color-switch-thumb);
+    box-shadow: var(--shadow-switch-thumb);
+    transition: translate var(--duration-base);
+  }
+
+  &:checked {
+    background: var(--color-switch-on);
+
+    &::before {
+      translate: calc(var(--switch-width) - var(--switch-height)) 0;
+    }
+  }
+
+  &:dir(rtl):checked::before {
+    translate: calc(var(--switch-height) - var(--switch-width)) 0;
+  }
+
+  @include pressed.when-pressed {
+    @include pressed.darkens;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &::before {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    border: 1px solid CanvasText;
+    background: Canvas;
+
+    &::before {
+      background: CanvasText;
+    }
+
+    &:checked {
+      background: Highlight;
+
+      &::before {
+        background: HighlightText;
+      }
+    }
+  }
+}

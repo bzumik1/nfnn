@@ -285,7 +285,7 @@ UI „Měsíční e-mail“ (route `/sprava/prehledy`), also „měsíční repo
 The e-mail with the previous month's donors, donations, unpaired payments and import status, sent to the report's recipients, who also receive the alerts.
 
 **Alert**\
-UI „upozornění“ (e-mailem; „Upozornění na telefon“ for push) · Code: `OperationalAlert`, `MonitoredArea` `BANK_IMPORT`, `BACKUPS`, `MAIL`, `PushSubscription`, `PushMessageKind`.\
+UI „upozornění“ (e-mailem; on a device the page and section „Upozornění“, formerly „Upozornění na telefon“, Jakub 2026-11-07) · Code: `OperationalAlert`, `MonitoredArea` `BANK_IMPORT`, `BACKUPS`, `MAIL`, `PushSubscription`, `PushMessageKind`.\
 A message to the administrators that an import, backups or mail stopped working or works again, sent once per outage and once on recovery.\
 _Avoid_: notification for these (security e-mails to a donor are not alerts)
 

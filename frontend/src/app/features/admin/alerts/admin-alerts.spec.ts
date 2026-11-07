@@ -121,8 +121,36 @@ describe('Given an administrator on the alerts page', () => {
     return found;
   }
 
-  function checkboxes(within: HTMLElement): HTMLInputElement[] {
-    return Array.from(within.querySelectorAll('input[type="checkbox"]'));
+  function switches(within: HTMLElement): HTMLInputElement[] {
+    return Array.from(within.querySelectorAll('input[type="checkbox"][role="switch"]'));
+  }
+
+  function described(element: HTMLElement): string {
+    return (element.getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function sheet(): HTMLElement {
+    const found = fixture.nativeElement.querySelector('dialog') as HTMLElement | null;
+    if (found === null) {
+      throw new Error('No sheet is open');
+    }
+    return found;
+  }
+
+  async function openOtherDevice(name: string): Promise<void> {
+    const row = Array.from(
+      section('Další zařízení').querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.querySelector('.ui-list__title')?.textContent?.trim() === name);
+    if (row === undefined) {
+      throw new Error(`No device row named ${name}`);
+    }
+    row.click();
+    await settle();
   }
 
   function status(): string {
@@ -262,12 +290,12 @@ describe('Given an administrator on the alerts page', () => {
       .flush(adminPush({ subscriptions: [pushSubscription()] }));
     await settle();
 
-    expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
+    expect(switches(section('Toto zařízení')).map((box) => box.checked)).toEqual([
       true,
       true,
       true,
     ]);
-    expect(button('Poslat zkušební upozornění na všechna moje zařízení')).toBeTruthy();
+    expect(button('Poslat zkušební upozornění')).toBeTruthy();
   });
 
   it('when the subscribe took over a device of an older session, then the list read again drops it', async () => {
@@ -384,15 +412,26 @@ describe('Given an administrator on the alerts page', () => {
       expect(sectionText('Toto zařízení')).toContain('Naposledy doručeno 3. 11. 2026 10:05.');
     });
 
-    it('then the test alert stands on its own and names every device', () => {
-      expect(sectionText('Zkušební upozornění')).toContain(
-        'Poslat zkušební upozornění na všechna moje zařízení',
+    it('then the test alert stands on its own and its row says where it goes and what to check when it does not come', () => {
+      expect(described(button('Poslat zkušební upozornění'))).toBe(
+        'Přijde na všechna vaše zařízení, na kterých upozornění máte zapnutá. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit.',
       );
       expect(sectionText('Toto zařízení')).not.toContain('zkušební');
     });
 
+    it('then each switch of this device is named by its area and says what it reports', () => {
+      const [bank, backups, mail] = switches(section('Toto zařízení'));
+
+      expect(bank.labels?.[0]?.textContent).toContain('Import plateb z banky');
+      expect(described(bank)).toBe(
+        'Když se platby z banky přestanou stahovat a když se zase stahují.',
+      );
+      expect(described(backups)).toBe('Když záloha selže nebo chybí a když je zase v pořádku.');
+      expect(described(mail)).toBe('Když server e-mail neodešle a když zase odesílá.');
+    });
+
     it('then it shows the switches of this device and lists the other one with its delivery', () => {
-      expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
+      expect(switches(section('Toto zařízení')).map((box) => box.checked)).toEqual([
         true,
         true,
         true,
@@ -400,26 +439,31 @@ describe('Given an administrator on the alerts page', () => {
       expect(sectionText('Další zařízení')).toContain('Apple, zapnuto 30. 10. 2026');
       expect(sectionText('Další zařízení')).toContain('Zatím nic nedoručeno.');
       expect(sectionText('Další zařízení')).toContain('Nedoručeno 3× po sobě.');
-      expect(checkboxes(section('Další zařízení')).map((box) => box.checked)).toEqual([
-        true,
-        false,
-        true,
-      ]);
+      expect(sectionText('Další zařízení')).toContain('2 ze 3');
+      expect(switches(section('Další zařízení'))).toEqual([]);
+    });
+
+    it('and the other device is opened, then a sheet shows its switches and its removal', async () => {
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+
+      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe('Apple, zapnuto 30. 10. 2026');
+      expect(switches(sheet()).map((box) => box.checked)).toEqual([true, false, true]);
+      expect(button('Odebrat zařízení Apple, zapnuto 30. 10. 2026')).toBeTruthy();
     });
 
     it('and a switch changes, then the three switches are put and the change confirmed', async () => {
-      const mail = checkboxes(section('Toto zařízení'))[2];
+      const mail = switches(section('Toto zařízení'))[2];
       mail.checked = false;
       mail.dispatchEvent(new Event('change'));
       await settle();
 
-      const switches = checkboxes(section('Toto zařízení'));
-      expect(switches.every((box) => box.getAttribute('aria-disabled') === 'true')).toBe(true);
-      expect(switches.some((box) => box.disabled)).toBe(false);
-      switches[0].checked = false;
-      switches[0].dispatchEvent(new Event('change'));
+      const thisDevice = switches(section('Toto zařízení'));
+      expect(thisDevice.every((box) => box.getAttribute('aria-disabled') === 'true')).toBe(true);
+      expect(thisDevice.some((box) => box.disabled)).toBe(false);
+      thisDevice[0].checked = false;
+      thisDevice[0].dispatchEvent(new Event('change'));
       await settle();
-      expect(switches[0].checked).toBe(true);
+      expect(thisDevice[0].checked).toBe(true);
       const request = http.expectOne({
         method: 'PUT',
         url: `${PUSH_URL}/subscriptions/push-this-device/alerts`,
@@ -434,7 +478,7 @@ describe('Given an administrator on the alerts page', () => {
       await settle();
 
       expect(status()).toContain('Uloženo pro toto zařízení: Odesílání e-mailů – vypnuto.');
-      expect(checkboxes(section('Toto zařízení')).map((box) => box.checked)).toEqual([
+      expect(switches(section('Toto zařízení')).map((box) => box.checked)).toEqual([
         true,
         true,
         false,
@@ -442,7 +486,8 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and saving a switch fails, then the switch goes back and the failure is shown', async () => {
-      const backups = checkboxes(section('Další zařízení'))[1];
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      const backups = switches(sheet())[1];
       backups.checked = true;
       backups.dispatchEvent(new Event('change'));
       await settle();
@@ -453,11 +498,11 @@ describe('Given an administrator on the alerts page', () => {
 
       expect(alerts()).toContain('Změnu se nepodařilo uložit.');
       expect(status()).not.toContain('Uloženo');
-      expect(checkboxes(section('Další zařízení'))[1].checked).toBe(false);
+      expect(switches(sheet())[1].checked).toBe(false);
     });
 
     it('and a test alert is sent, then the counts are reported in Czech', async () => {
-      button('Poslat zkušební upozornění na všechna moje zařízení').click();
+      button('Poslat zkušební upozornění').click();
       await settle();
 
       expect(button('Posíláme zkušební upozornění…').disabled).toBe(true);
@@ -466,13 +511,11 @@ describe('Given an administrator on the alerts page', () => {
         .flush({ delivered: 1, failed: 0, removed: 0 });
       await settle();
 
-      expect(status()).toBe(
-        'Zkušební upozornění jsme předali k doručení na 1 zařízení. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit.',
-      );
+      expect(status()).toBe('Zkušební upozornění jsme předali k doručení na 1 zařízení.');
     });
 
     it('and the test alert reaches no device, then the page says what to do', async () => {
-      button('Poslat zkušební upozornění na všechna moje zařízení').click();
+      button('Poslat zkušební upozornění').click();
       await settle();
       http
         .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
@@ -486,7 +529,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and a test alert finds gone devices, then the counts name them and the list is read again', async () => {
-      button('Poslat zkušební upozornění na všechna moje zařízení').click();
+      button('Poslat zkušební upozornění').click();
       await settle();
       http
         .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
@@ -494,7 +537,7 @@ describe('Given an administrator on the alerts page', () => {
       await settle();
 
       expect(status()).toBe(
-        'Zkušební upozornění jsme předali k doručení na 1 zařízení. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit. Na 2 zařízení se ho předat nepodařilo. 2 zařízení už upozornění nepřijímala, a tak jsme je odebrali.',
+        'Zkušební upozornění jsme předali k doručení na 1 zařízení. Na 2 zařízení se ho předat nepodařilo. 2 zařízení už upozornění nepřijímala, a tak jsme je odebrali.',
       );
       http
         .expectOne({ method: 'GET', url: PUSH_URL })
@@ -502,7 +545,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the test is refused by the rate limit, then the refusal is shown', async () => {
-      button('Poslat zkušební upozornění na všechna moje zařízení').click();
+      button('Poslat zkušební upozornění').click();
       await settle();
       const limited = problem(
         429,
@@ -533,6 +576,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is being removed, then its button names the running removal', async () => {
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
       await settle();
 
@@ -547,7 +591,8 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and a switch of the other device is saved, then the line names that device', async () => {
-      const bank = checkboxes(section('Další zařízení'))[0];
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      const bank = switches(sheet())[0];
       bank.checked = false;
       bank.dispatchEvent(new Event('change'));
       await settle();
@@ -567,7 +612,8 @@ describe('Given an administrator on the alerts page', () => {
       );
     });
 
-    it('and the other device is removed, then it leaves the list', async () => {
+    it('and the other device is removed, then the sheet closes and it leaves the list', async () => {
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
       button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
       await settle();
       http
@@ -576,6 +622,7 @@ describe('Given an administrator on the alerts page', () => {
       await settle();
 
       expect(push.unsubscribe).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
       expect(status()).toContain('Zařízení Apple jsme odebrali');
       expect(sectionText('Další zařízení')).toContain(
         'Na jiném zařízení upozornění zapnutá nemáte.',

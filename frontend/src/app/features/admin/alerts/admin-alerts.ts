@@ -26,6 +26,7 @@ import {
   BrowserPushSubscriptionState,
   SERVICE_WORKER_PUSH,
 } from '../../../core/push/service-worker-push';
+import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import {
@@ -63,6 +64,12 @@ const AREA_LABELS: Record<PushAlertArea, string> = {
   mail: $localize`:@@admin.alerts.area.mail:Odesílání e-mailů`,
 };
 
+const AREA_DESCRIPTIONS: Record<PushAlertArea, string> = {
+  bankImport: $localize`:@@admin.alerts.area.bankImport.description:Když se platby z banky přestanou stahovat a když se zase stahují.`,
+  backups: $localize`:@@admin.alerts.area.backups.description:Když záloha selže nebo chybí a když je zase v pořádku.`,
+  mail: $localize`:@@admin.alerts.area.mail.description:Když server e-mail neodešle a když zase odesílá.`,
+};
+
 const AREA_ROUTES: Record<PushAlertArea, string> = {
   bankImport: '/sprava',
   backups: '/sprava/zalohy',
@@ -78,7 +85,7 @@ const SERVICE_NAMES: Record<PushService, string> = {
 
 @Component({
   selector: 'app-admin-alerts',
-  imports: [LiveNotice, NeedsConnection, RouterLink],
+  imports: [Dialog, LiveNotice, NeedsConnection, RouterLink],
   templateUrl: './admin-alerts.html',
   styleUrl: './admin-alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -98,6 +105,7 @@ export class AdminAlerts {
 
   protected readonly areas = ALERT_AREAS;
   protected readonly areaLabels = AREA_LABELS;
+  protected readonly areaDescriptions = AREA_DESCRIPTIONS;
   protected readonly state = signal<LoadState>('loading');
   protected readonly loadError = signal('');
   protected readonly view = signal<AdminPushResponse | null>(null);
@@ -109,6 +117,8 @@ export class AdminAlerts {
   protected readonly removing = signal<string | null>(null);
   protected readonly deviceNotice = signal<Notice | null>(null);
   protected readonly othersNotice = signal<Notice | null>(null);
+  protected readonly sheetNotice = signal<Notice | null>(null);
+  private readonly openedId = signal<string | null>(null);
   protected readonly testNotice = signal<Notice | null>(null);
   protected readonly browserState = signal<BrowserPushSubscriptionState>('unknown');
 
@@ -129,6 +139,9 @@ export class AdminAlerts {
   );
   protected readonly others = computed(
     () => this.view()?.subscriptions.filter((item) => !item.current) ?? [],
+  );
+  protected readonly openedDevice = computed(
+    () => this.others().find((item) => item.id === this.openedId()) ?? null,
   );
   protected readonly deviceSession = computed(() => this.view()?.deviceSession === true);
   protected readonly hasDevices = computed(() => (this.view()?.subscriptions.length ?? 0) > 0);
@@ -166,6 +179,19 @@ export class AdminAlerts {
       : $localize`:@@admin.alerts.others.removeLabel:Odebrat zařízení ${this.serviceName(item)}:service:, zapnuto ${this.since(item)}:since:`;
   }
 
+  protected switchesOn(item: PushSubscriptionResponse): number {
+    return ALERT_AREAS.filter((area) => item.alerts[area]).length;
+  }
+
+  protected openDevice(item: PushSubscriptionResponse): void {
+    this.sheetNotice.set(null);
+    this.openedId.set(item.id);
+  }
+
+  protected closeDevice(): void {
+    this.openedId.set(null);
+  }
+
   protected lastDelivery(item: PushSubscriptionResponse): string | null {
     return item.lastDeliveredAt ? formatBankTime(item.lastDeliveredAt) : null;
   }
@@ -200,7 +226,7 @@ export class AdminAlerts {
       return;
     }
     const on = input.checked;
-    const notice = item.current ? this.deviceNotice : this.othersNotice;
+    const notice = item.current ? this.deviceNotice : this.sheetNotice;
     const device = item.current
       ? THIS_DEVICE_TEXT
       : `${this.serviceName(item)} (${this.since(item)})`;
@@ -305,12 +331,14 @@ export class AdminAlerts {
     }
     this.removing.set(item.id);
     this.othersNotice.set(null);
+    this.sheetNotice.set(null);
     this.api
       .removePushSubscription(item.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.removing.set(null);
+          this.openedId.set(null);
           this.replaceSubscriptions((items) => items.filter((other) => other.id !== item.id));
           this.othersNotice.set({
             kind: 'status',
@@ -320,7 +348,7 @@ export class AdminAlerts {
         },
         error: (failure: unknown) => {
           this.removing.set(null);
-          this.othersNotice.set({
+          this.sheetNotice.set({
             kind: 'alert',
             text: describeProblem(
               failure,
@@ -460,7 +488,7 @@ const OFF_TEXT = $localize`:@@admin.alerts.switches.off:vypnuto`;
 function testOutcome({ delivered, failed, removed }: PushTestResponse): string {
   const parts = [
     delivered > 0
-      ? $localize`:@@admin.alerts.test.delivered:Zkušební upozornění jsme předali k doručení na ${delivered}:count: zařízení. Pokud do minuty nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu Nerušit.`
+      ? $localize`:@@admin.alerts.test.deliveredShort:Zkušební upozornění jsme předali k doručení na ${delivered}:count: zařízení.`
       : $localize`:@@admin.alerts.test.noneDelivered:Zkušební upozornění se nepodařilo předat na žádné zařízení. Zapněte upozornění znovu na zařízení, kde je chcete dostávat.`,
   ];
   if (failed > 0) {

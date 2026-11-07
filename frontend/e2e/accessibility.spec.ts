@@ -1939,14 +1939,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/upozorneni');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Upozornění na telefon' }),
+      page.getByRole('heading', { level: 1, name: 'Upozornění', exact: true }),
     ).toBeFocused();
-    await expect(page.getByRole('checkbox')).toHaveCount(6);
+    await expect(page.getByRole('switch')).toHaveCount(3);
     expect(await violations(page)).toEqual([]);
 
-    await page
-      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
-      .click();
+    await page.getByRole('button', { name: /^Apple, zapnuto/ }).click();
+    const sheet = page.getByRole('dialog', { name: /^Apple, zapnuto/ });
+    await expect(sheet.getByRole('switch')).toHaveCount(3);
+    expect(await violations(page)).toEqual([]);
+    await sheet.press('Escape');
+    await expect(sheet).toBeHidden();
+
+    await page.getByRole('button', { name: 'Poslat zkušební upozornění' }).click();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
     );
