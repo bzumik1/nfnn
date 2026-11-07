@@ -176,13 +176,11 @@ td {
   overflow-wrap: anywhere;
 }
 
-.row-actions {
-  text-align: right;
-  white-space: nowrap;
-
-  .ui-button + .ui-button {
-    margin-left: var(--space-2);
-  }
+.row-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 .restoring {
@@ -231,8 +229,8 @@ td {
     margin-bottom: var(--space-0-5);
   }
 
-  .row-actions {
-    text-align: left;
+  .row-buttons {
+    justify-content: flex-start;
   }
 
   .run {

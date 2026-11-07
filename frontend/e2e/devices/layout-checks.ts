@@ -58,8 +58,18 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     return `${tag}${label ? ` "${label.slice(0, 40)}"` : ''} at ${where}`;
   };
 
+  const clippedAway = (element: Element): boolean => {
+    for (let node: Element | null = element; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.clip === 'rect(0px, 0px, 0px, 0px)' || style.clipPath === 'inset(50%)') {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const shown = (element: Element): boolean => {
-    if (element.closest('[inert]')) {
+    if (element.closest('[inert]') || clippedAway(element)) {
       return false;
     }
     const box = element.getBoundingClientRect();
