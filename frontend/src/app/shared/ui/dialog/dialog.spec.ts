@@ -11,6 +11,15 @@ import { DialogHistory } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { FakeDialogHistory } from './testing/fake-dialog-history';
 
+const realMatchMedia = window.matchMedia;
+
+function deviceAsksForLessMotion(less: boolean): void {
+  window.matchMedia = ((query: string) => ({
+    matches: less && query === '(prefers-reduced-motion: reduce)',
+    media: query,
+  })) as typeof window.matchMedia;
+}
+
 @Component({
   imports: [Dialog],
   template: `
@@ -567,13 +576,17 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
         { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
       ],
     });
+    deviceAsksForLessMotion(false);
     fixture = TestBed.createComponent(PulledHost);
     document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
     await fixture.whenStable();
   });
 
-  afterEach(() => fixture.nativeElement.remove());
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
 
   it('when the content is at its top and the finger moves down, then the sheet follows it and the content does not scroll', async () => {
     const move = await pull(160);
@@ -588,6 +601,8 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
     fixture.detectChanges();
 
     expect(panel().inert).toBe(true);
+    expect(panel().style.translate).toBe('0 100%');
+    expect(panel().classList).not.toContain('dialog-panel--dragging');
     await settle();
     expect(fixture.componentInstance.dismissals).toBe(1);
   });
@@ -695,6 +710,148 @@ describe('Given a sheet whose content the visitor pulls with a finger', () => {
 
     expect(fixture.componentInstance.dismissals).toBe(1);
     expect(question()).toBeNull();
+  });
+});
+
+describe('Given a sheet on a phone that the visitor closes', () => {
+  let fixture: ComponentFixture<PresentedHost>;
+  let history: FakeDialogHistory;
+
+  const native = () => fixture.nativeElement.querySelector('dialog') as HTMLDialogElement | null;
+  const panel = () => fixture.nativeElement.querySelector('.dialog-panel') as HTMLElement;
+  const closeButton = () => panel().querySelector('.dialog-close') as HTMLButtonElement;
+  const host = () => fixture.componentInstance;
+  const render = (): void => {
+    fixture.detectChanges();
+  };
+  const settle = async (): Promise<void> => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    await fixture.whenStable();
+  };
+  const expectSliding = (): void => {
+    expect(native()?.open).toBe(true);
+    expect(native()?.classList).toContain('dialog--leaving');
+    expect(panel().style.translate).toBe('0 100%');
+    expect(panel().inert).toBe(true);
+    expect(host().dismissals).toBe(0);
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [PresentedHost],
+      providers: [
+        { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+      ],
+    });
+    history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+    deviceAsksForLessMotion(false);
+    fixture = TestBed.createComponent(PresentedHost);
+    host().presentation.set('sheet');
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+    fixture.nativeElement.remove();
+  });
+
+  it('when the close button is pressed, then it slides down out of reach first and asks to be dismissed only once it is down', async () => {
+    closeButton().click();
+    render();
+
+    expectSliding();
+    await settle();
+    expect(host().dismissals).toBe(1);
+    expect(native()).toBeNull();
+  });
+
+  it('when the close button is pressed twice, then it asks to be dismissed once', async () => {
+    closeButton().click();
+    render();
+    closeButton().click();
+    await settle();
+
+    expect(host().dismissals).toBe(1);
+  });
+
+  it('when the visitor goes back, then it slides down and asks for no new history entry', async () => {
+    history.listener?.close();
+    render();
+
+    expectSliding();
+    await settle();
+    expect(host().dismissals).toBe(1);
+    expect(history.opened).toBe(1);
+  });
+
+  it('when the visitor goes back while it slides down, then it asks to be dismissed once and for no new history entry', async () => {
+    closeButton().click();
+    render();
+    history.listener?.close();
+    await settle();
+
+    expect(host().dismissals).toBe(1);
+    expect(history.opened).toBe(1);
+  });
+
+  it('when Esc is pressed, then the browser is kept from hiding it and it slides down', async () => {
+    const cancel = new Event('cancel', { cancelable: true });
+    native()!.dispatchEvent(cancel);
+    render();
+
+    expect(cancel.defaultPrevented).toBe(true);
+    expectSliding();
+    await settle();
+    expect(host().dismissals).toBe(1);
+  });
+
+  it('when the browser closes it while it slides down, then it asks to be dismissed at once and only once', async () => {
+    closeButton().click();
+    render();
+    native()!.close();
+    native()!.dispatchEvent(new Event('close'));
+
+    expect(host().dismissals).toBe(1);
+    await settle();
+    expect(host().dismissals).toBe(1);
+  });
+
+  describe('when the page keeps it open after it slid down', () => {
+    beforeEach(() => host().busy.set(true));
+
+    it('then it comes back up and can be pressed again', async () => {
+      closeButton().click();
+      await settle();
+
+      expect(host().dismissals).toBe(1);
+      expect(native()?.open).toBe(true);
+      expect(native()?.classList).not.toContain('dialog--leaving');
+      expect(panel().style.translate).toBe('');
+      expect(panel().inert).toBe(false);
+    });
+
+    it('and it was closed by going back, then it asks for its history entry again', async () => {
+      history.listener?.close();
+      await settle();
+
+      expect(host().dismissals).toBe(1);
+      expect(history.opened).toBe(2);
+      expect(history.listener).not.toBeNull();
+    });
+  });
+
+  it('when the visitor asks for less motion, then it asks to be dismissed at once without sliding', () => {
+    deviceAsksForLessMotion(true);
+
+    closeButton().click();
+
+    expect(host().dismissals).toBe(1);
   });
 });
 

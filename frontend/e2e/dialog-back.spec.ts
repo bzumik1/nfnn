@@ -106,6 +106,73 @@ async function fingerTo(
   });
 }
 
+interface SheetFrame {
+  top: number;
+  veil: number;
+  blur: number;
+}
+
+interface SheetFilm {
+  frames: SheetFrame[];
+  viewportHeight: number;
+}
+
+async function filmSheet(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const record = window as unknown as { sheetFilm: SheetFilm };
+    const panel = document.querySelector<HTMLElement>('.dialog-panel')!;
+    const dialog = document.querySelector<HTMLElement>('dialog')!;
+    const alphaOf = (color: string): number => {
+      const alpha = color.includes('/')
+        ? color.split('/')[1]
+        : color.startsWith('rgba')
+          ? color.split(',').at(-1)
+          : undefined;
+      return alpha === undefined ? (color === 'transparent' ? 0 : 1) : parseFloat(alpha);
+    };
+    const blurOf = (filter: string): number =>
+      parseFloat(filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? '0');
+    record.sheetFilm = { frames: [], viewportHeight: innerHeight };
+    const shoot = (): void => {
+      if (!panel.isConnected) {
+        return;
+      }
+      const style = getComputedStyle(dialog);
+      record.sheetFilm.frames.push({
+        top: panel.getBoundingClientRect().top,
+        veil: alphaOf(style.backgroundColor),
+        blur: blurOf(style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter')),
+      });
+      requestAnimationFrame(shoot);
+    };
+    shoot();
+  });
+}
+
+function sheetFilm(page: Page): Promise<SheetFilm> {
+  return page.evaluate(() => (window as unknown as { sheetFilm: SheetFilm }).sheetFilm);
+}
+
+function expectSlidOffTheScreen(film: SheetFilm, from: number): void {
+  const tops = film.frames.map((frame) => frame.top);
+  const last = film.frames.at(-1)!;
+  const between = tops.filter((top) => top > from + 1 && top < film.viewportHeight - 1);
+  expect(between.length).toBeGreaterThanOrEqual(3);
+  tops.slice(1).forEach((top, index) => expect(top).toBeGreaterThanOrEqual(tops[index] - 0.5));
+  expect(last.top).toBeGreaterThanOrEqual(film.viewportHeight - 2);
+  expect(film.frames.some((frame) => frame.veil > 0 && frame.veil < film.frames[0].veil)).toBe(
+    true,
+  );
+  expect(last.veil).toBeLessThan(0.05);
+  expect(last.blur).toBeLessThan(0.5);
+}
+
+async function pageUsableAgain(page: Page): Promise<void> {
+  await expect(page.locator('dialog')).toHaveCount(0);
+  expect(await page.locator('[inert]').count()).toBe(0);
+  await openPairing(page);
+}
+
 async function openPairing(page: Page): Promise<void> {
   await page
     .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
@@ -366,6 +433,107 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await stepBack(page);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
+  });
+
+  test('when they close the sheet with its button on a phone, then it slides down off the screen with its veil before it goes, and the page can be used again', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await sheetSettled(page);
+    const opened = (await page.locator('.dialog-panel').boundingBox())!.y;
+    await filmSheet(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    expectSlidOffTheScreen(await sheetFilm(page), opened);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when a finger pulls the sheet far enough down on a phone and lets go, then it slides on from where the finger left it off the screen', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerTo(content, 'touchmove', x, y + 200);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 150);
+    const released = (await panel.boundingBox())!.y;
+    await filmSheet(page);
+
+    await fingerTo(content, 'touchend', x, y + 200, false);
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    const film = await sheetFilm(page);
+    expect(film.frames[0].top).toBeCloseTo(released, 0);
+    expectSlidOffTheScreen(film, released);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they go back with the sheet open on a phone, then it slides down off the screen and takes no new entry', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await sheetSettled(page);
+    const opened = (await page.locator('.dialog-panel').boundingBox())!.y;
+    const entries = await dialogEntries(page);
+    await filmSheet(page);
+
+    await stepBack(page);
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    expectSlidOffTheScreen(await sheetFilm(page), opened);
+    expect(await dialogEntries(page)).toBe(entries);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they press the close button twice and go back while the sheet slides away, then it closes once and the page before the payments is one step back', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await sheetSettled(page);
+
+    await page.evaluate(() => {
+      const close = document.querySelector<HTMLButtonElement>('dialog .dialog-close')!;
+      close.click();
+      close.click();
+      history.back();
+    });
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    expect(await page.locator('[inert]').count()).toBe(0);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when the visitor asks for less motion and closes the sheet on a phone, then it goes at once', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await sheetSettled(page);
+    await filmSheet(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    const film = await sheetFilm(page);
+    const opened = film.frames[0].top;
+    expect(film.frames.filter((frame) => frame.top > opened + 1)).toHaveLength(0);
+    await pageUsableAgain(page);
   });
 
   test('when they reload the page with the dialog open, then one step back leaves the payments', async ({
