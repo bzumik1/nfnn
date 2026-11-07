@@ -164,10 +164,18 @@
   --duration-slow: 0.25s;
   --duration-entrance: 0.6s;
   --duration-sheet: 0.2s;
+  --ease-sheet: ease-in;
   --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;
   --pressed-opacity: 0.5;
+  --color-switch-on: var(--color-accent-fill);
+  --color-switch-off: var(--color-border-field);
+  --color-switch-thumb: var(--color-surface);
+  --shadow-switch-thumb: 0 2px 0 var(--color-border-field);
+  --switch-width: 48px;
+  --switch-height: 28px;
+  --switch-thumb-inset: 3px;
 
   --radius-xs: 0;
   --radius-sm: 2px;
@@ -176,6 +184,7 @@
   --radius-field: 2px;
   --radius-xl: 3px;
   --radius-card: 4px;
+  --radius-qr-ground: max(0px, calc(var(--radius-card) - 2px - var(--space-2-5)));
   --radius-group: 0;
   --radius-media: 4px;
   --radius-dialog: 6px;
@@ -266,7 +275,7 @@
   --home-screen-top-clearance: 15px;
   --safe-area-top: env(safe-area-inset-top);
   --full-screen-height: 100svh;
-  --scroll-edge-fade: 15px;
+  --scroll-edge-fade: 25px;
   --touch-target-size: 45px;
   --list-row-min-height: 55px;
   --list-group-title-top: 0rem;

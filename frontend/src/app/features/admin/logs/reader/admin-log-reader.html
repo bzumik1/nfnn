@@ -1,0 +1,162 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title file-title ui-mono" tabindex="-1">{{ file }}</h1>
+
+  <section class="ui-card" aria-labelledby="logs-window-title">
+    <h2 id="logs-window-title" class="ui-card__title" i18n="@@admin.logs.window.title">Výpis</h2>
+    <div class="ui-card__body">
+      <form
+        #searchForm="ngForm"
+        class="search-form"
+        appFocusFirstInvalid
+        (ngSubmit)="find(searchForm)"
+        novalidate
+      >
+        <app-form-field
+          label="Hledat"
+          i18n-label="@@admin.logs.search.label"
+          hint="Text nebo regulární výraz; velikost písmen nerozhoduje. Najde se nejvýš 50 nejnovějších řádků, starší načtete tlačítkem."
+          i18n-hint="@@admin.logs.search.hint"
+          [messages]="searchMessages"
+        >
+          <input
+            appFormControl
+            id="log-search"
+            name="pattern"
+            type="search"
+            enterkeyhint="search"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="200"
+            [(ngModel)]="pattern"
+            required
+          />
+        </app-form-field>
+        <button
+          appNeedsConnection
+          type="submit"
+          class="ui-button"
+          [disabled]="searchState() === 'loading'"
+        >
+          @if (searchState() === 'loading') {
+            <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.logs.search.submit">Hledat</ng-container>
+          }
+        </button>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button ui-button--quiet"
+          [disabled]="searchState() === 'loading'"
+          (click)="findBrowserErrors()"
+          i18n="@@admin.logs.search.browserErrors"
+        >
+          Chyby z prohlížečů
+        </button>
+      </form>
+      @if (searchState() === 'error') {
+        <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>
+      }
+      <div role="status">
+        @if (search()) {
+          @if (matches().length === 0) {
+            <p class="ui-card__intro" i18n="@@admin.logs.search.none">Nic takového v logu není.</p>
+          } @else {
+            <p class="ui-card__intro" i18n="@@admin.logs.search.count">
+              {matches().length, plural,
+                one {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
+                few {
+                  {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i s
+                  okolím.
+                }
+                other {
+                  {{ matches().length }} řádků, nejnovější první. Kliknutím zobrazíte řádek i s
+                  okolím.
+                }
+              }
+            </p>
+          }
+        }
+      </div>
+      @if (search(); as result) {
+        <div class="matches">
+          @if (matches().length > 0) {
+            <ul class="match-list">
+              @for (match of matches(); track match.offset) {
+                <li>
+                  <button appNeedsConnection type="button" class="match" (click)="showMatch(match)">
+                    {{ match.line }}
+                  </button>
+                </li>
+              }
+            </ul>
+            @if (result.moreOlder) {
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button"
+                [disabled]="searchState() === 'loading'"
+                (click)="olderMatches()"
+                i18n="@@admin.logs.search.older"
+              >
+                Načíst starší shody
+              </button>
+            }
+          }
+        </div>
+      }
+
+      <div class="pager">
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          [disabled]="windowState() === 'loading' || !window()?.hasOlder"
+          (click)="older()"
+          i18n="@@admin.logs.window.older"
+        >
+          ← Starší
+        </button>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          [disabled]="windowState() === 'loading' || !window()?.hasNewer"
+          (click)="newer()"
+          i18n="@@admin.logs.window.newer"
+        >
+          Novější →
+        </button>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          [disabled]="windowState() === 'loading'"
+          (click)="toEnd()"
+          i18n="@@admin.logs.window.end"
+        >
+          Na konec
+        </button>
+        <span class="range" aria-live="polite">{{ windowRange() }}</span>
+      </div>
+      <div role="status">
+        @if (windowState() === 'loading') {
+          <p class="ui-card__intro" i18n="@@admin.logs.window.loading">Načítáme výpis…</p>
+        }
+      </div>
+      @if (windowState() === 'error') {
+        <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
+      }
+      @if (window(); as window) {
+        <div class="window-copy">
+          <app-copy-button
+            [value]="window.text"
+            what="výpis logu"
+            i18n-what="@@admin.logs.window.copyWhat"
+          />
+        </div>
+        <pre class="log-text" tabindex="0">{{ window.text }}</pre>
+      }
+    </div>
+  </section>
+</div>

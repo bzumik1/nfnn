@@ -6,6 +6,7 @@
   [class.dialog--sheet]="look() === 'sheet'"
   [class.dialog--full]="look() === 'full'"
   [class.dialog--viewer]="look() === 'viewer'"
+  [class.dialog--leaving]="leaving()"
   [attr.data-presentation]="look()"
   [attr.role]="alert() ? 'alertdialog' : null"
   [style.--dialog-pull]="pull()"

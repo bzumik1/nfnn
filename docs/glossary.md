@@ -88,6 +88,10 @@ UI „bankovní účet“ (page „Bankovní účty“) · Code: `SenderAccount`
 A bank account a donor proved by a payment with their own symbol, from which payments without a symbol then pair to them; the donor never types it in.\
 _Avoid_: „účet“ alone (it is also the donor's account on the site)
 
+**Bank code list**\
+UI „název banky“ beside an account („2000145399/0800 · Česká spořitelna“); docs „číselník ČNB Kódy bank ČR“ · Code: `BankCode`, `BankCodeList` (`donations/domain/bankcode`, tables `bank_code`, `bank_code_list_state`), `CZECH_BANK_CODES` and `BankNames` in the browser.\
+The ČNB list „Kódy bank ČR“ of four-digit Czech bank codes and the banks they belong to; the server downloads it, the browser shows a short name of the bank (without the legal form) beside a Czech account number.
+
 **Turning pairing from an account off and on**\
 UI administration „Vypnout párování“ / „Zapnout párování“; donor „Znovu přiřazovat platby z účtu“, status „Nepřiřazujeme“ · Code: `POST …/bank-accounts/{id}/disconnect|reconnect`, status `DISCONNECTED`.\
 Stopping pairing from a sender account (the donations stay) or starting it again (only new payments pair, after the next payment with the symbol).\
@@ -285,7 +289,7 @@ UI „Měsíční e-mail“ (route `/sprava/prehledy`), also „měsíční repo
 The e-mail with the previous month's donors, donations, unpaired payments and import status, sent to the report's recipients, who also receive the alerts.
 
 **Alert**\
-UI „upozornění“ (e-mailem; „Upozornění na telefon“ for push) · Code: `OperationalAlert`, `MonitoredArea` `BANK_IMPORT`, `BACKUPS`, `MAIL`, `PushSubscription`, `PushMessageKind`.\
+UI „upozornění“ (e-mailem; on a device the page and section „Upozornění“, formerly „Upozornění na telefon“, Jakub 2026-11-07) · Code: `OperationalAlert`, `MonitoredArea` `BANK_IMPORT`, `BACKUPS`, `MAIL`, `PushSubscription`, `PushMessageKind`.\
 A message to the administrators that an import, backups or mail stopped working or works again, sent once per outage and once on recovery.\
 _Avoid_: notification for these (security e-mails to a donor are not alerts)
 

@@ -8,6 +8,13 @@
 
 <app-device-data-card />
 
+<section class="ui-card ui-card--padded diagnostics-card" aria-labelledby="diagnostics-title">
+  <h2 id="diagnostics-title" class="ui-card__title" i18n="@@donor.details.diagnostics.title">
+    Když web nefunguje
+  </h2>
+  <app-diagnostics-download source="account-page" />
+</section>
+
 @if (isAdmin()) {
   <app-connected-apps-card (sessionEnded)="donations.sendToSignIn()" />
 }

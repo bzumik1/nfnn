@@ -119,6 +119,9 @@ app:
       on-demand-cooldown: PT30S
     pairing:
       excluded-accounts: ${PAIRING_EXCLUDED_ACCOUNTS:}
+    bank-codes:
+      source: https://www.cnb.cz/cs/platebni-styk/.galleries/ucty_kody_bank/download/kody_bank_CR.csv
+      cron: "0 40 5 * * *"
     report:
       cron: "0 0 * * * *"
       recipient: ${REPORT_RECIPIENT:${CONTACT_RECIPIENT:info@nfnn.cz}}

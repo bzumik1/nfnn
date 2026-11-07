@@ -2052,6 +2052,24 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(secondRowButton)).toBe('Stáhnout PDF, dar z 10. 1. 2026, 1 000 Kč');
     });
 
+    it('then a gift whose PDF fails to draw offers the diagnostic file in its row', async () => {
+      receiptEnvironment.autoDraw = false;
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(secondRowButton);
+      receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
+      await settle();
+      receiptEnvironment.last().say({ kind: 'ready' });
+      receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
+      await settle();
+
+      expect(
+        text(`${yearSection(2026)} tbody tr:nth-child(2) app-diagnostics-download button`),
+      ).toBe('Stáhnout diagnostický soubor');
+      expect(element('.payments-card > .ui-card__bar app-diagnostics-download')).toBeNull();
+    });
+
     it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
@@ -2490,6 +2508,21 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(button('.yearly-pdf').disabled).toBe(false);
       });
 
+      it('then a drawing that fails offers the diagnostic file under its line', async () => {
+        await downloadYear(2025);
+        receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+        await settle();
+        receiptEnvironment.last().say({ kind: 'ready' });
+        receiptEnvironment.last().say({ kind: 'failed', reason: 'drawing', name: 'Other' });
+        await settle();
+
+        expect(text('.yearly-card app-diagnostics-download button')).toBe(
+          'Stáhnout diagnostický soubor',
+        );
+        expect(text('.yearly-card .receipt-error')).toContain('info@nfnn.cz');
+        expect(element('.yearly-card app-diagnostics-download a')).toBeNull();
+      });
+
       it('then a theme whose receipt colours would not show stops the drawing with a line that says whom to tell', async () => {
         vi.spyOn(receiptEnvironment, 'style').mockImplementation(() => {
           throw new ReceiptStyleRefused('--receipt-color-text has too little contrast');
@@ -2518,6 +2551,7 @@ describe('Given a signed-in donor in the donor area', () => {
 
         expect(restart).toHaveBeenCalledWith('rok-2025');
         expect(element('.yearly-card [role="alert"]')?.textContent?.trim() ?? '').toBe('');
+        expect(element('app-diagnostics-download')).toBeNull();
       });
 
       it('then drawing tools still missing after that reload say that they could not be loaded and what to try next', async () => {
@@ -2531,6 +2565,7 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(text('.yearly-card [role="alert"]')).toBe(
           'Nástroje pro PDF se nepodařilo načíst ani po obnovení stránky. Zkontrolujte prosím připojení nebo blokování skriptů, zkuste jiný prohlížeč, nebo nám napište na info@nfnn.cz.',
         );
+        expect(element('.yearly-card app-diagnostics-download')).not.toBeNull();
       });
 
       it('then drawing tools missing in a browser that cannot reload the page for the download ask the donor to reload it', async () => {
@@ -2836,6 +2871,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.yearly-card [role="alert"]')).toBe(
         'Potvrzení s těmito údaji nejde vytisknout. Napište nám prosím na info@nfnn.cz.',
       );
+      expect(element('app-diagnostics-download')).toBeNull();
       expect(savedFiles).toEqual([]);
     });
 
@@ -2989,6 +3025,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.',
       );
       expect(receiptEnvironment.workers).toHaveLength(0);
+      expect(element('app-diagnostics-download')).toBeNull();
     });
 
     it('then an access token that expires during a download is refreshed and the PDF is still saved', async () => {
@@ -3209,6 +3246,7 @@ describe('Given a signed-in donor in the donor area', () => {
         'Přihlášení a zabezpečení',
         'Přihlášená zařízení',
         'Data v tomto zařízení',
+        'Když web nefunguje',
         'Smazání účtu',
       ]);
       expect(texts('app-account-card .account-row dt')).toEqual([
@@ -3219,6 +3257,20 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       expect(element('app-connected-apps-card')).toBeNull();
       http.expectNone('/api/donors/me/connections');
+    });
+
+    it('then a section offers the diagnostic file of this device for a message about trouble with the site', async () => {
+      await open('/darce/udaje');
+      http.expectOne(PASSKEYS_URL).flush({ items: [] });
+      http.expectOne(DEVICES_URL).flush({ items: [] });
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(element('.diagnostics-card')?.getAttribute('aria-labelledby')).toBe(
+        'diagnostics-title',
+      );
+      expect(text('.diagnostics-card app-diagnostics-download button')).toBe(
+        'Stáhnout diagnostický soubor',
+      );
     });
 
     it('then a last section says how to ask for deleting the account, what goes and what stays', async () => {

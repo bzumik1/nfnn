@@ -87,6 +87,7 @@ export interface ReceiptError {
   readonly scope: ReceiptScope;
   readonly key: string;
   readonly message: string;
+  readonly offersDiagnostics?: true;
 }
 
 const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.`;
@@ -185,6 +186,7 @@ export class DonorDonations implements GiftFeed {
   );
 
   readonly receiptError = signal<ReceiptError | null>(null);
+  readonly offersDiagnostics = computed(() => this.receiptError()?.offersDiagnostics === true);
   private readonly refusedAsOnYearlyReceipt = signal<ReadonlySet<string>>(new Set());
   private readonly onYearlyReceipts = computed(() => {
     const onReceipt = new Set(
@@ -750,12 +752,18 @@ export class DonorDonations implements GiftFeed {
           key,
           message:
             restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
+          ...(restart === 'reloaded-already' ? { offersDiagnostics: true } : {}),
         });
       }
       return;
     }
     this.restart.abandoned(downloadName(key));
-    this.receiptError.set({ scope, key, message: DRAWING_FAILURE_TEXTS[failure.reason] });
+    this.receiptError.set({
+      scope,
+      key,
+      message: DRAWING_FAILURE_TEXTS[failure.reason],
+      ...(failure.reason === 'unprintable' ? {} : { offersDiagnostics: true }),
+    });
   }
 
   private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {

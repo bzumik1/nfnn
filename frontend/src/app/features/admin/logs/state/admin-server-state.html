@@ -1,0 +1,260 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.state.heading">Stav serveru</h1>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.logs.health.loading">
+        Zjišťujeme stav serveru…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.logs.health.failed">Stav serveru se nepodařilo zjistit.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.logs.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (diagnostics(); as diagnostics) {
+        <div class="ui-groups groups">
+          @if (health(); as health) {
+            <section class="verdict" aria-labelledby="state-verdict-title">
+              <ul class="ui-list ui-list--inset">
+                <li>
+                  <div class="ui-list__row">
+                    <span class="ui-list__lead"><app-health-icon [kind]="health.kind" /></span>
+                    <h2 id="state-verdict-title" class="ui-list__title">
+                      {{ verdict(health.kind) }}
+                    </h2>
+                    <span class="ui-list__meta" i18n="@@admin.logs.state.asOf"
+                      >k {{ time(diagnostics.now) }}</span
+                    >
+                    @if (health.findings.length > 0) {
+                      <ul class="ui-list__extra findings">
+                        @for (finding of health.findings; track finding) {
+                          <li>{{ finding }}</li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                </li>
+              </ul>
+              <div class="refresh">
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button"
+                  [disabled]="refreshing()"
+                  (click)="refresh()"
+                >
+                  @if (refreshing()) {
+                    <ng-container i18n="@@admin.logs.diagnostics.refreshing"
+                      >Obnovujeme…</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.logs.diagnostics.refresh"
+                      >Obnovit stav</ng-container
+                    >
+                  }
+                </button>
+                @if (refreshFailed()) {
+                  <p
+                    class="ui-notice ui-notice--alert"
+                    role="alert"
+                    i18n="@@admin.logs.state.refreshFailed"
+                  >
+                    Stav serveru se nepodařilo obnovit.
+                  </p>
+                }
+              </div>
+            </section>
+          }
+
+          <section class="application" aria-labelledby="state-application-title">
+            <h2
+              id="state-application-title"
+              class="ui-group-title"
+              i18n="@@admin.logs.state.application"
+            >
+              Aplikace
+            </h2>
+            <ul class="ui-list ui-list--inset">
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.memory">Paměť</span>
+                  <span class="ui-list__meta" i18n="@@admin.logs.state.heap.meta"
+                    >{{ size(diagnostics.jvm.heapUsedBytes) }} z
+                    {{ size(diagnostics.jvm.heapMaxBytes) }}, mimo heap
+                    {{ size(diagnostics.jvm.nonHeapUsedBytes) }}</span
+                  >
+                  <span class="ui-list__value">{{ heapShare(diagnostics) }}</span>
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.threads">Vlákna</span>
+                  <span class="ui-list__meta" i18n="@@admin.logs.state.threads.meta"
+                    >nejvíc {{ diagnostics.jvm.peakThreads }}, z toho
+                    {{ diagnostics.jvm.daemonThreads }} na pozadí</span
+                  >
+                  <span class="ui-list__value">{{ diagnostics.jvm.liveThreads }}</span>
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.load">Zatížení</span>
+                  <span class="ui-list__meta" i18n="@@admin.logs.state.load.meta">
+                    {diagnostics.jvm.availableProcessors, plural,
+                      one {na 1 jádře}
+                      other {na {{ diagnostics.jvm.availableProcessors }} jádrech}
+                    }
+                  </span>
+                  <span class="ui-list__value">{{
+                    loadAverage(diagnostics.jvm.systemLoadAverage)
+                  }}</span>
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.gc"
+                    >Úklid paměti</span
+                  >
+                  <span class="ui-list__meta" i18n="@@admin.logs.state.gc.meta"
+                    >celkem {{ diagnostics.jvm.gcTimeMillis }} ms</span
+                  >
+                  <span class="ui-list__value">{{ diagnostics.jvm.gcCount }}×</span>
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.java">Java</span>
+                  <span class="ui-list__value ui-mono">{{ diagnostics.jvm.javaVersion }}</span>
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.diagnostics.startedAt"
+                    >Běží od</span
+                  >
+                  <span class="ui-list__meta">{{ time(diagnostics.jvm.startedAt) }}</span>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="database" aria-labelledby="state-database-title">
+            <h2
+              id="state-database-title"
+              class="ui-group-title"
+              i18n="@@admin.logs.diagnostics.database"
+            >
+              Databáze
+            </h2>
+            <ul class="ui-list ui-list--inset">
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.state.database.answers"
+                    >Odpovídá</span
+                  >
+                  @if (diagnostics.database.reachable) {
+                    <span class="ui-list__value" i18n="@@admin.logs.state.database.up"
+                      >za {{ diagnostics.database.pingMillis }} ms</span
+                    >
+                  } @else {
+                    <span class="ui-list__meta" i18n="@@admin.logs.state.database.down"
+                      >pokus trval {{ diagnostics.database.pingMillis }} ms</span
+                    >
+                    <span class="ui-list__value danger" i18n="@@admin.logs.state.database.no"
+                      >ne</span
+                    >
+                  }
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.state.database.connections"
+                    >Spojení</span
+                  >
+                  <span class="ui-list__meta" i18n="@@admin.logs.state.database.connections.meta"
+                    >volná {{ diagnostics.database.idleConnections }} z
+                    {{ diagnostics.database.maxConnections }}</span
+                  >
+                  <span class="ui-list__value" i18n="@@admin.logs.state.database.connections.value"
+                    >{{ diagnostics.database.activeConnections }} v práci</span
+                  >
+                </div>
+              </li>
+              <li>
+                <div class="ui-list__row">
+                  <span class="ui-list__title" i18n="@@admin.logs.state.database.waiting"
+                    >Čekající vlákna</span
+                  >
+                  <span class="ui-list__value">{{ diagnostics.database.waitingThreads }}</span>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="disks" aria-labelledby="state-disks-title">
+            <h2 id="state-disks-title" class="ui-group-title" i18n="@@admin.logs.diagnostics.disks">
+              Složky
+            </h2>
+            <ul class="ui-list ui-list--inset">
+              @for (disk of diagnostics.disks; track disk.path) {
+                <li>
+                  <div class="ui-list__row">
+                    <span class="ui-list__title ui-mono">{{ disk.path }}</span>
+                    @if (disk.mounted) {
+                      <span class="ui-list__meta" i18n="@@admin.logs.state.disk.free"
+                        >{{ size(disk.freeBytes) }} volných z {{ size(disk.totalBytes) }}</span
+                      >
+                      <span class="ui-list__value" i18n="@@admin.logs.state.disk.share"
+                        >{{ freeShare(disk) }} volno</span
+                      >
+                    } @else {
+                      <span class="ui-list__value danger" i18n="@@admin.logs.state.disk.missing"
+                        >není připojená</span
+                      >
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          </section>
+
+          @if (diagnostics.logLevelOverrides.length > 0) {
+            <section class="overrides" aria-labelledby="state-overrides-title">
+              <h2
+                id="state-overrides-title"
+                class="ui-group-title"
+                i18n="@@admin.logs.diagnostics.overrides"
+              >
+                Dočasné úrovně
+              </h2>
+              <ul class="ui-list ui-list--inset">
+                @for (override of diagnostics.logLevelOverrides; track override.logger) {
+                  <li>
+                    <div class="ui-list__row">
+                      <span class="ui-list__title ui-mono">{{ override.logger }}</span>
+                      <span class="ui-list__meta" i18n="@@admin.logs.state.overrideUntil"
+                        >do {{ time(override.until) }}</span
+                      >
+                      <span class="ui-list__value">{{ override.level }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+</div>

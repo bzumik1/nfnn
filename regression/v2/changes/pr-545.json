@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/bank-account/bank-account.spec.ts > Given a Czech account of a bank on the ČNB list > when it renders, then it shows only the number in figures, followed by the short name of the bank",
+    "reason": "PR #545 lets the server's ČNB list name banks the site has no short name for, so the case of a bank the site names itself also proves that the server is not asked",
+    "replacement": "src/app/features/donations/bank-account/bank-account.spec.ts > Given a Czech account of a bank the site names itself > when it renders, then it shows only the number in figures, followed by the short name of the bank, and asks the server for nothing",
+    "contract": "docs/frontend-overview.md, donations (bank-names.ts, bank-account/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/bank-account/bank-account.spec.ts > Given an account whose bank code is not on the list > when it renders, then it shows only the number",
+    "reason": "PR #545: a code the site does not name is now looked up in the server's ČNB list first, so the number alone shows only when the server does not know the bank either",
+    "replacement": "src/app/features/donations/bank-account/bank-account.spec.ts > Given an account whose bank code the site does not name itself > when the server does not know the bank either, then it shows only the number",
+    "contract": "docs/frontend-overview.md, donations (bank-names.ts, bank-account/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the bank code of an account is not on the ČNB list, then its row names no bank",
+    "reason": "PR #545: the card names a bank the site does not know from the server's ČNB list, so the row names no bank only when the server does not list it either",
+    "replacement": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when the site does not name the bank of an account itself > then a row whose bank the server does not list names no bank",
+    "contract": "docs/frontend-overview.md, donors (bank-accounts-card/)"
+  }
+]

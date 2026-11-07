@@ -106,6 +106,103 @@ async function fingerTo(
   });
 }
 
+interface SheetLeave {
+  slideFrom: number | null;
+  slideTo: string | null;
+  slideDuration: number;
+  slideEndedAt: number | null;
+  veilAtEnd: number | null;
+  blurAtEnd: number | null;
+  removedAt: number | null;
+}
+
+async function watchSheetLeave(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>('.dialog-panel')!;
+    const dialog = document.querySelector<HTMLElement>('dialog')!;
+    const alphaOf = (color: string): number => {
+      const alpha = color.includes('/')
+        ? color.split('/')[1]
+        : color.startsWith('rgba')
+          ? color.split(',').at(-1)
+          : undefined;
+      return alpha === undefined ? (color === 'transparent' ? 0 : 1) : parseFloat(alpha);
+    };
+    const blurOf = (filter: string): number =>
+      parseFloat(filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? '0');
+    const downOf = (translate: unknown): number => {
+      const parts = String(translate ?? 'none')
+        .trim()
+        .split(/\s+/);
+      return parts.length > 1 ? parseFloat(parts[1]) : 0;
+    };
+    const record: SheetLeave = {
+      slideFrom: null,
+      slideTo: null,
+      slideDuration: 0,
+      slideEndedAt: null,
+      veilAtEnd: null,
+      blurAtEnd: null,
+      removedAt: null,
+    };
+    (window as unknown as { sheetLeave: SheetLeave }).sheetLeave = record;
+    panel.addEventListener('transitionrun', (event) => {
+      if (event.target !== panel || event.propertyName !== 'translate') {
+        return;
+      }
+      const slide = panel
+        .getAnimations()
+        .find((animation) => (animation as CSSTransition).transitionProperty === 'translate');
+      const keyframes = (slide?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      record.slideFrom = downOf(keyframes[0]?.['translate']);
+      record.slideTo = String(keyframes.at(-1)?.['translate'] ?? '');
+      record.slideDuration = Number(slide?.effect?.getTiming().duration ?? 0);
+    });
+    panel.addEventListener('transitionend', (event) => {
+      if (event.target !== panel || event.propertyName !== 'translate') {
+        return;
+      }
+      record.slideEndedAt = performance.now();
+      const style = getComputedStyle(dialog);
+      record.veilAtEnd = alphaOf(style.backgroundColor);
+      record.blurAtEnd = blurOf(
+        style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter'),
+      );
+    });
+    new MutationObserver((_, observer) => {
+      if (!dialog.isConnected) {
+        record.removedAt = performance.now();
+        observer.disconnect();
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+}
+
+function sheetLeave(page: Page): Promise<SheetLeave> {
+  return page.evaluate(() => (window as unknown as { sheetLeave: SheetLeave }).sheetLeave);
+}
+
+function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
+  expect(Math.abs(leave.slideFrom! - from)).toBeLessThan(2);
+  expect(leave.slideTo).toMatch(/ 100%$/);
+  expect(leave.slideDuration).toBeGreaterThanOrEqual(100);
+  expect(leave.slideEndedAt).not.toBeNull();
+  expect(leave.removedAt!).toBeGreaterThanOrEqual(leave.slideEndedAt!);
+  expect(leave.veilAtEnd!).toBeLessThan(0.05);
+  expect(leave.blurAtEnd!).toBeLessThan(0.5);
+}
+
+async function phoneThatAnimates(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
+async function pageUsableAgain(page: Page): Promise<void> {
+  await expect(page.locator('dialog')).toHaveCount(0);
+  expect(await page.locator('[inert]').count()).toBe(0);
+  await openPairing(page);
+}
+
 async function openPairing(page: Page): Promise<void> {
   await page
     .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
@@ -366,6 +463,101 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await stepBack(page);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
+  });
+
+  test('when they close the sheet with its button on a phone, then it slides down off the screen with its veil before it goes, and the page can be used again', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+    await watchSheetLeave(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), 0);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when a finger pulls the sheet far enough down on a phone and lets go, then it slides on from where the finger left it off the screen', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerTo(content, 'touchmove', x, y + 200);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 150);
+    const released = (await panel.boundingBox())!.y;
+    await watchSheetLeave(page);
+
+    await fingerTo(content, 'touchend', x, y + 200, false);
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), released - opened);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they go back with the sheet open on a phone, then it slides down off the screen and takes no new entry', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+    const entries = await dialogEntries(page);
+    await watchSheetLeave(page);
+
+    await stepBack(page);
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), 0);
+    expect(await dialogEntries(page)).toBe(entries);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they press the close button twice and go back while the sheet slides away, then it closes once and the page before the payments is one step back', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+
+    await page.evaluate(() => {
+      const close = document.querySelector<HTMLButtonElement>('dialog .dialog-close')!;
+      close.click();
+      close.click();
+      history.back();
+    });
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    expect(await page.locator('[inert]').count()).toBe(0);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when the visitor asks for less motion and closes the sheet on a phone, then it goes at once', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await sheetSettled(page);
+    await watchSheetLeave(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expect((await sheetLeave(page)).slideFrom).toBeNull();
+    await pageUsableAgain(page);
   });
 
   test('when they reload the page with the dialog open, then one step back leaves the payments', async ({

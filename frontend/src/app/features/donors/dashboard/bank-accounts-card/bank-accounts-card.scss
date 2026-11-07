@@ -204,6 +204,10 @@
   }
 }
 
+.account-meta > .account-bank {
+  white-space: normal;
+}
+
 .account-total {
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);

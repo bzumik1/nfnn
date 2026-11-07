@@ -1939,14 +1939,19 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/upozorneni');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Upozornění na telefon' }),
+      page.getByRole('heading', { level: 1, name: 'Upozornění', exact: true }),
     ).toBeFocused();
-    await expect(page.getByRole('checkbox')).toHaveCount(6);
+    await expect(page.getByRole('switch')).toHaveCount(3);
     expect(await violations(page)).toEqual([]);
 
-    await page
-      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
-      .click();
+    await page.getByRole('button', { name: /^Apple, zapnuto/ }).click();
+    const sheet = page.getByRole('dialog', { name: /^Apple, zapnuto/ });
+    await expect(sheet.getByRole('switch')).toHaveCount(3);
+    expect(await violations(page)).toEqual([]);
+    await sheet.press('Escape');
+    await expect(sheet).toBeHidden();
+
+    await page.getByRole('button', { name: 'Poslat zkušební upozornění' }).click();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       /^Zkušební upozornění jsme předali k doručení na 2 zařízení\./,
     );
@@ -2318,7 +2323,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator reads the logs, searches, raises a level and opens the thread dump, then the page breaks no rule', async ({
+  test('when an administrator walks the logs hub, a file, its search, the levels, the server state and the thread dump, then no page breaks a rule', async ({
     page,
   }) => {
     await routeLogsApi(page);
@@ -2329,17 +2334,32 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/logy');
     await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeFocused();
-    await expect(page.locator('.log-text').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Bez poruchy/ })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
+    await page.goto('/sprava/logy/soubory');
+    await expect(page.getByRole('heading', { level: 2, name: 'Aplikace' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/logy/soubor?nazev=backend.log');
+    await expect(page.locator('.log-text')).toBeVisible();
     await page.getByLabel('Hledat', { exact: true }).fill('fio');
     await page.getByRole('button', { name: 'Hledat', exact: true }).click();
     await expect(page.locator('.match')).toHaveCount(2);
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/logy/urovne');
     await page.getByLabel('Logger').fill('not a logger!');
     await page.getByRole('button', { name: 'Nastavit' }).click();
     await expect(page.getByLabel('Logger')).toHaveAttribute('aria-invalid', 'true');
-    await page.getByRole('button', { name: 'Zobrazit výpis vláken' }).click();
-    await expect(page.locator('#logs-threads .log-text')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/logy/stav');
+    await expect(page.getByRole('heading', { level: 2, name: 'Bez poruchy' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/logy/vlakna');
+    await expect(page.locator('.dump')).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

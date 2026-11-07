@@ -183,6 +183,8 @@
 
 .qr-image {
   width: 200px;
+  border-radius: var(--radius-qr-ground);
+  overflow: hidden;
   transition: opacity var(--duration-base) ease;
 }
 
@@ -438,7 +440,8 @@
 
 .qr[role='region'] .qr-image,
 .qr[role='region'] .qr-placeholder {
-  width: min(260px, 100%);
+  width: 260px;
+  max-width: 100%;
 }
 
 .qr[role='region'] .qr-placeholder {

@@ -24,6 +24,7 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { TrackedForm } from '../../../core/updates/tracked-form';
+import { BankAccount } from '../../donations/bank-account/bank-account';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
@@ -109,6 +110,7 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
 @Component({
   selector: 'app-admin-donor-detail',
   imports: [
+    BankAccount,
     CopyButton,
     Dialog,
     DownloadProgress,

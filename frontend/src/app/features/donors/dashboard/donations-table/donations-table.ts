@@ -6,6 +6,7 @@ import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
 import { DonorDonations } from '../donor-donations';
 import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 const STATUS_LABELS: Record<DonationStatus, string> = {
   RECEIVED: $localize`:@@donor.dashboard.payments.status.received:Přijato`,
@@ -20,7 +21,7 @@ export function donationStatusLabel(status: DonationStatus): string {
 
 @Component({
   selector: 'app-donations-table',
-  imports: [DownloadProgress, NgTemplateOutlet],
+  imports: [DiagnosticsDownload, DownloadProgress, NgTemplateOutlet],
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

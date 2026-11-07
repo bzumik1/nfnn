@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import jsQR from 'jsqr';
 import { expect, test } from './fixtures';
 import { openSection } from './donor-session';
 import {
@@ -34,6 +35,28 @@ async function servePaymentDetails(page: Page, asked: string[]): Promise<void> {
       await route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS });
     },
   );
+}
+
+async function decodedQrText(page: Page, png: Buffer): Promise<string | undefined> {
+  const { width, height, rgba } = await page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext('2d')!;
+    context.drawImage(bitmap, 0, 0);
+    const image = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    return { width: image.width, height: image.height, rgba: Array.from(image.data) };
+  }, png.toString('base64'));
+  return jsQR(Uint8ClampedArray.from(rgba), width, height, { inversionAttempts: 'dontInvert' })
+    ?.data;
+}
+
+async function enlargedText(page: Page, percent: number): Promise<void> {
+  await page.addInitScript((scale) => {
+    const style = document.createElement('style');
+    style.textContent = `html { font-size: ${scale}%; }`;
+    document.addEventListener('DOMContentLoaded', () => document.head.append(style));
+  }, percent);
 }
 
 test.describe('Given a visitor on the Přispět page', () => {
@@ -96,7 +119,9 @@ test.describe('Given a visitor on the Přispět page', () => {
     for await (const chunk of stream) {
       chunks.push(chunk as Buffer);
     }
-    expect(Buffer.concat(chunks).subarray(1, 4).toString('ascii')).toBe('PNG');
+    const png = Buffer.concat(chunks);
+    expect(png.subarray(1, 4).toString('ascii')).toBe('PNG');
+    expect(await decodedQrText(page, png)).toBe(PAYMENT_QR_500_SPAYD);
     await expect(page.locator('#prispet').getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       'QR kód qr-platba-nova-nadeje.png je uložený. Najdete ho ve stažených souborech.',
     );
@@ -390,6 +415,59 @@ test.describe('Given a visitor on the Přispět page', () => {
         const qrTop = (await page.locator('#prispet .qr').boundingBox())!.y;
         expect(bankTop).toBeLessThan(qrTop);
       });
+    });
+  });
+});
+
+test.describe('Given the QR payment drawn as small as the Přispět page draws it', () => {
+  for (const appearance of ['light', 'dark'] as const) {
+    test.describe(`on a computer screen of one pixel per point in the ${appearance} appearance`, () => {
+      test.use({
+        viewport: { width: 1280, height: 800 },
+        deviceScaleFactor: 1,
+        colorScheme: appearance,
+      });
+
+      test('when a bank app reads the picture of the code as the page shows it, then it gives the SPAYD text of the payment back', async ({
+        page,
+      }) => {
+        await servePaymentDetails(page, []);
+        await page.goto('/prispet');
+        const qrCode = page.locator('#prispet app-qr-code');
+        await expect(qrCode.getByRole('img', { name: QR_NAME })).toBeVisible();
+
+        const picture = await qrCode.screenshot({ animations: 'disabled' });
+
+        expect(await decodedQrText(page, picture)).toBe(PAYMENT_QR_500_SPAYD);
+      });
+    });
+  }
+
+  test.describe('on the narrowest phone with the largest text in the dark appearance', () => {
+    test.use({
+      viewport: { width: 320, height: 568 },
+      deviceScaleFactor: 2,
+      colorScheme: 'dark',
+    });
+
+    test('when a bank app reads the unfolded code and the code opened large, then both give the SPAYD text of the payment back', async ({
+      page,
+    }) => {
+      await enlargedText(page, 200);
+      await servePaymentDetails(page, []);
+      await page.goto('/prispet');
+      await showQr(page);
+      const qrCode = page.locator('#prispet app-qr-code');
+      await expect(qrCode.getByRole('img', { name: QR_NAME })).toBeVisible();
+
+      const unfolded = await qrCode.screenshot({ animations: 'disabled' });
+      await page.locator('#prispet button.zoomable').click();
+      const enlarged = page.locator('dialog[open] app-qr-code.zoom-qr');
+      await expect(enlarged.getByRole('img')).toBeVisible();
+      const opened = await enlarged.screenshot({ animations: 'disabled' });
+
+      expect(await decodedQrText(page, unfolded)).toBe(PAYMENT_QR_500_SPAYD);
+      expect(await decodedQrText(page, opened)).toBe(PAYMENT_QR_500_SPAYD);
     });
   });
 });
