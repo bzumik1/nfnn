@@ -176,6 +176,7 @@
   --radius-field: 2px;
   --radius-xl: 3px;
   --radius-card: 4px;
+  --radius-qr-ground: max(0px, calc(var(--radius-card) - 2px - var(--space-2-5)));
   --radius-group: 0;
   --radius-media: 4px;
   --radius-dialog: 6px;
