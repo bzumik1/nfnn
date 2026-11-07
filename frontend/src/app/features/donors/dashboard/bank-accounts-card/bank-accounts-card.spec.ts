@@ -127,14 +127,35 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
 
-  it('when the bank code of an account is not on the ČNB list, then its row names no bank', async () => {
-    await respond([bankAccount({ accountNumber: '2000145399/9999' })]);
+  describe('when the site does not name the bank of an account itself', () => {
+    beforeEach(async () => {
+      await respond([
+        bankAccount({ id: 'a-1', accountNumber: '1234567890/4000' }),
+        bankAccount({ id: 'a-2', accountNumber: '2000145399/9999' }),
+      ]);
+      http.expectOne('/api/donations/bank-codes').flush({
+        fetchedAt: '2026-11-09T04:40:00Z',
+        items: [{ code: '4000', name: 'Max banka' }],
+      });
+      await settle();
+    });
 
-    expect(texts('.account-meta > li')).toEqual([
-      'ověřeno 12. 3. 2026',
-      '14 darů bez symbolu',
-      '7 400 Kč',
-    ]);
+    it('then a row names the bank the server lists', () => {
+      expect(texts('.account:nth-child(1) .account-meta > li')).toEqual([
+        'Max banka',
+        'ověřeno 12. 3. 2026',
+        '14 darů bez symbolu',
+        '7 400 Kč',
+      ]);
+    });
+
+    it('then a row whose bank the server does not list names no bank', () => {
+      expect(texts('.account:nth-child(2) .account-meta > li')).toEqual([
+        'ověřeno 12. 3. 2026',
+        '14 darů bez symbolu',
+        '7 400 Kč',
+      ]);
+    });
   });
 
   it('when an account has one gift without a symbol, then the count uses the singular', async () => {
