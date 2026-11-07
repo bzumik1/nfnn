@@ -331,6 +331,7 @@
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 22px;
+  --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
   --launch-icon-size: 128px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(

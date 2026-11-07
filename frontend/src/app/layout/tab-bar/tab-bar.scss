@@ -1,5 +1,3 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: contents;
 }
@@ -59,7 +57,7 @@
   border-radius: var(--radius-pill);
   color: var(--color-on-tab-bar);
   font-family: var(--font-sans);
-  font-size: var(--text-2xs);
+  font-size: var(--text-tab-label);
   font-weight: var(--weight-medium);
   line-height: var(--leading-snug);
   text-align: center;
@@ -80,12 +78,6 @@
 
 .tab-label {
   overflow-wrap: normal;
-}
-
-@include bp.container-down(tab-bar, tabs) {
-  .tab-bar-list {
-    grid-template-columns: repeat(2, minmax(min-content, 1fr));
-  }
 }
 
 .tab--current {
