@@ -237,6 +237,13 @@
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
   --pressed-opacity: 0.35;
+  --color-switch-on: var(--color-accent-fill);
+  --color-switch-off: color-mix(in srgb, #787880 32%, transparent);
+  --color-switch-thumb: #ffffff;
+  --shadow-switch-thumb: 0 3px 8px rgb(0 0 0 / 0.15), 0 1px 1px rgb(0 0 0 / 0.16);
+  --switch-width: 51px;
+  --switch-height: 31px;
+  --switch-thumb-inset: 2px;
 
   --radius-xs: 2px;
   --radius-sm: 8px;

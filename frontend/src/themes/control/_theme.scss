@@ -168,6 +168,13 @@
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;
   --pressed-opacity: 0.5;
+  --color-switch-on: var(--color-accent-fill);
+  --color-switch-off: var(--color-border-field);
+  --color-switch-thumb: var(--color-surface);
+  --shadow-switch-thumb: 0 2px 0 var(--color-border-field);
+  --switch-width: 48px;
+  --switch-height: 28px;
+  --switch-thumb-inset: 3px;
 
   --radius-xs: 0;
   --radius-sm: 2px;

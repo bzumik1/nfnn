@@ -343,6 +343,15 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/upozorneni'),
   },
   {
+    id: 'admin-alerts-other-device',
+    title: 'the sheet of another device with its alert switches in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/upozorneni');
+      await ui.click({ css: 'section[aria-labelledby="alerts-others-title"] button.ui-list__row' });
+      await ui.waitVisible(DIALOG);
+    },
+  },
+  {
     id: 'admin-yearly-receipts',
     title: 'the bulk receipts in the administration',
     open: async (ui) => {

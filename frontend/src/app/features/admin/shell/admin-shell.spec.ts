@@ -142,7 +142,7 @@ describe('Given an administrator anywhere in the administration', () => {
           ['Správci', '/sprava/spravci'],
           ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],
-          ['Upozornění na telefon', '/sprava/upozorneni'],
+          ['Upozornění', '/sprava/upozorneni'],
           ['Historie změn', '/sprava/historie'],
         ],
       },

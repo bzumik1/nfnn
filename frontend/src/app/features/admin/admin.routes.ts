@@ -141,7 +141,7 @@ export const adminRoutes: Routes = [
       {
         path: 'upozorneni',
         data: { parent: ADMIN_MORE_PATH },
-        title: $localize`:@@admin.alerts.pageTitle:Upozornění na telefon | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.alerts.pageTitle:Upozornění | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./alerts/admin-alerts').then((m) => m.AdminAlerts),
       },
       {
