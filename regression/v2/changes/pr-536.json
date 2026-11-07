@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen, then the sheet hands its history entry to that page, one level deeper, and closes",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen, then the sheet keeps its step for coming back, closes and opens that page after it",
+    "reason": "#536 (Jakub 2026-11-07): a section opened from the account sheet keeps the sheet's step in the site's own history, so Back from it opens the sheet again instead of the page under it; the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, App shell (the account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the sheet kept no history entry of its own, then a chosen section opens as a new entry over the page under it",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen, then the sheet keeps its step for coming back, closes and opens that page after it",
+    "reason": "#536 (Jakub 2026-11-07): a section opened from the account sheet keeps the sheet's step in the site's own history, so Back from it opens the sheet again instead of the page under it; the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, App shell (the account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back, as its swipe does, then the page the sheet was opened on returns",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back, as its swipe does, then the account sheet opens again over the page it was opened on",
+    "reason": "#536 (Jakub 2026-11-07): a section opened from the account sheet keeps the sheet's step in the site's own history, so Back from it opens the sheet again instead of the page under it; the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, App shell (the account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět, then the page the sheet was opened on returns",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět on Moje dary, then the account sheet opens again as they left it",
+    "reason": "#536 (Jakub 2026-11-07): a section opened from the account sheet keeps the sheet's step in the site's own history, so Back from it opens the sheet again instead of the page under it; the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, App shell (the account sheet)"
+  }
+]
