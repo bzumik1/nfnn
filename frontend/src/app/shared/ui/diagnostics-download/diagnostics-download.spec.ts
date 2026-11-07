@@ -3,14 +3,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Diagnostics, PreparedDiagnostics } from '../../../core/diagnostics/diagnostics';
+import type { DiagnosticSource } from '../../../core/diagnostics/diagnostics-schema';
 import { DiagnosticsDownload } from './diagnostics-download';
 
 @Component({
   imports: [DiagnosticsDownload],
-  template: `<app-diagnostics-download source="receipt-pdf" />`,
+  template: `<app-diagnostics-download [source]="source()" />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-class Host {}
+class Host {
+  readonly source = signal<DiagnosticSource>('account-page');
+}
 
 const PREPARED: PreparedDiagnostics = {
   blob: new Blob(['{}'], { type: 'application/json' }),
@@ -57,6 +60,11 @@ describe('Given the offer of a diagnostic file', () => {
     return fixture.nativeElement.querySelector(`[role="${role}"]`)?.textContent?.trim() ?? '';
   }
 
+  async function under(source: DiagnosticSource): Promise<void> {
+    fixture.componentInstance.source.set(source);
+    await fixture.whenStable();
+  }
+
   it('when it is shown, then it says what the file holds, that nothing is sent by itself and where to send it', () => {
     expect(text()).toContain(
       'Když nám píšete o potížích s webem, přiložte prosím diagnostický soubor. Je v něm jen stav webu v tomto zařízení, žádné vaše údaje ani hesla, a sám se nikam neodesílá.',
@@ -82,7 +90,7 @@ describe('Given the offer of a diagnostic file', () => {
     button().click();
     await fixture.whenStable();
 
-    expect(diagnostics.prepare).toHaveBeenCalledWith('receipt-pdf');
+    expect(diagnostics.prepare).toHaveBeenCalledWith('account-page');
     expect(button().disabled).toBe(false);
     expect(button().getAttribute('aria-disabled')).toBe('true');
     expect(button().textContent?.trim()).toBe('Připravujeme soubor…');
@@ -103,6 +111,41 @@ describe('Given the offer of a diagnostic file', () => {
     );
     expect(diagnostics.save).toHaveBeenCalledWith(PREPARED);
     expect(button().textContent?.trim()).toBe('Stáhnout diagnostický soubor');
+  });
+
+  describe('when it stands under a receipt PDF failure, whose line already gives the address', () => {
+    beforeEach(() => under('receipt-pdf'));
+
+    it('then it asks to attach the file without naming the address again', () => {
+      expect(text()).toContain(
+        'K e‑mailu nám prosím přiložte diagnostický soubor. Je v něm jen stav webu v tomto zařízení, žádné vaše údaje ani hesla, a sám se nikam neodesílá.',
+      );
+      expect(text()).not.toContain('info@nfnn.cz');
+      expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    });
+
+    it('then the file of a receipt failure is prepared and its saved line names no address either', async () => {
+      button().click();
+
+      await vi.waitFor(() =>
+        expect(region('status')).toBe(
+          'Soubor nfnn-diagnostika-2026-11-06-1403.json je ve stažených souborech. Přiložte ho prosím k e‑mailu.',
+        ),
+      );
+      expect(diagnostics.prepare).toHaveBeenCalledWith('receipt-pdf');
+    });
+
+    it('and the device shares files, then the line before the second tap names no address either', async () => {
+      diagnostics.needsSecondTap.mockReturnValue(true);
+
+      button().click();
+
+      await vi.waitFor(() =>
+        expect(region('status')).toBe(
+          'Soubor je připravený. Klepnutím na Sdílet diagnostický soubor ho pošlete e‑mailem.',
+        ),
+      );
+    });
   });
 
   describe('when the device shares files instead of saving them, as an iPhone does', () => {

@@ -129,7 +129,12 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
       has: page.getByRole('heading', { name: 'Když web nefunguje' }),
     });
     const sent: string[] = [];
-    page.on('request', (request) => sent.push(new URL(request.url()).pathname));
+    page.on('request', (request) => {
+      const carried = `${request.url()} ${request.postData() ?? ''}`;
+      if (request.method() !== 'GET' || /nfnn-diagnosti/.test(carried)) {
+        sent.push(`${request.method()} ${new URL(request.url()).pathname}`);
+      }
+    });
 
     const { name, text } = await delivered(page, card, testInfo, { secondTap: true });
 
@@ -145,7 +150,7 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
       session: { account: 'donor', kind: 'BROWSER', administrationUnlocked: null },
     });
     expectNoPersonalData(text);
-    expect(sent.filter((path) => path.startsWith('/api/'))).toEqual([]);
+    expect(sent).toEqual([]);
   });
 });
 

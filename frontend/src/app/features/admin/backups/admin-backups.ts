@@ -18,7 +18,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { saveBlob } from '../../donations/file-download';
+import { saveBlob } from '../../../core/files/file-download';
 import { RESTORE_MAX_POLLS, SetupApi } from '../../operations/setup/setup-api';
 import {
   AdminApi,

@@ -7,6 +7,7 @@ import { Connectivity } from '../connectivity/connectivity';
 import { APP_REVISION } from '../errors/app-revision';
 import { platformOf } from '../errors/client-platform';
 import { errorNameOf } from '../errors/error-vocabulary';
+import { saveBlob, type SavedFile } from '../files/file-download';
 import { SESSION_STORAGE } from '../reload/reload-guard';
 import {
   BOOT_LAST_ATTEMPT_KEY,
@@ -35,10 +36,7 @@ const APPLE_TOUCH_DEVICE = /iPad|iPhone|iPod/;
 const DESKTOP_SAFARI_ON_IPAD = /Macintosh/;
 const JSON_TYPE = 'application/json';
 
-export interface PreparedDiagnostics {
-  readonly blob: Blob;
-  readonly fileName: string;
-}
+export type PreparedDiagnostics = SavedFile;
 
 export type DiagnosticsShareOutcome = 'shared' | 'dismissed' | 'failed';
 
@@ -154,15 +152,7 @@ export class Diagnostics {
   }
 
   save(prepared: PreparedDiagnostics): void {
-    const url = URL.createObjectURL(prepared.blob);
-    const link = this.document.createElement('a');
-    link.setAttribute('href', url);
-    link.download = prepared.fileName;
-    link.hidden = true;
-    this.document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
+    saveBlob(prepared);
   }
 
   needsSecondTap(prepared: PreparedDiagnostics): boolean {

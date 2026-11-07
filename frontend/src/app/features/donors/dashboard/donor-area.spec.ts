@@ -2519,6 +2519,8 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(text('.yearly-card app-diagnostics-download button')).toBe(
           'Stáhnout diagnostický soubor',
         );
+        expect(text('.yearly-card .receipt-error')).toContain('info@nfnn.cz');
+        expect(element('.yearly-card app-diagnostics-download a')).toBeNull();
       });
 
       it('then a theme whose receipt colours would not show stops the drawing with a line that says whom to tell', async () => {

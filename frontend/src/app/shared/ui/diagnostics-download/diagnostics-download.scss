@@ -15,6 +15,12 @@ p {
   margin-block-start: var(--space-2);
 }
 
+.diagnostics-download-button {
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+
 a {
   color: var(--color-accent);
 }

@@ -34,7 +34,7 @@ import { RepositoryGiftFeed } from '../gift-arrival/repository-gift-feed';
 import { ibanHalves } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
-import { saveBlob } from '../file-download';
+import { saveBlob } from '../../../core/files/file-download';
 import { spayd } from '../spayd';
 import {
   deviceShares,
