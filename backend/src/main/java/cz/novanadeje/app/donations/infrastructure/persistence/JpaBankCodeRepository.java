@@ -25,14 +25,15 @@ class JpaBankCodeRepository implements BankCodeRepository {
     }
 
     @Override
-    public void replaceAll(BankCodeList list) {
-        codes.deleteAllInBatch();
-        codes.saveAll(list.banks().stream().map(BankCodeJpaEntity::fromDomain).toList());
+    public BankCodeListState state() {
+        return states.findById(BankCodeListStateJpaEntity.SINGLETON_ID).map(BankCodeListStateJpaEntity::toDomain).orElseGet(BankCodeListState::none);
     }
 
     @Override
-    public BankCodeListState state() {
-        return states.findById(BankCodeListStateJpaEntity.SINGLETON_ID).map(BankCodeListStateJpaEntity::toDomain).orElseGet(BankCodeListState::none);
+    public void store(BankCodeList list, BankCodeListState state) {
+        codes.deleteAllInBatch();
+        codes.saveAll(list.banks().stream().map(BankCodeJpaEntity::fromDomain).toList());
+        save(state);
     }
 
     @Override

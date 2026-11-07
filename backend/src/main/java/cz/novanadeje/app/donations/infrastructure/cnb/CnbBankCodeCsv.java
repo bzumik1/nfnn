@@ -18,7 +18,7 @@ final class CnbBankCodeCsv {
 
     static final String HEADER = "Kód platebního styku;Poskytovatel platebních služeb;BIC kód (SWIFT);Systém CERTIS";
 
-    private static final char BYTE_ORDER_MARK = '﻿';
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
     private static final Pattern LINE_END = Pattern.compile("\r?\n");
     private static final int FIELDS = 4;
 

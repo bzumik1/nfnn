@@ -2,13 +2,13 @@ package cz.novanadeje.app.donations.application.bankcode;
 
 import cz.novanadeje.app.donations.domain.bankcode.BankCodeListState;
 import cz.novanadeje.app.donations.domain.bankcode.BankCodeRepository;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
 
-@Component
+@Service
 public class BankCodeListRecorder {
 
     private final BankCodeRepository repository;
@@ -28,8 +28,7 @@ public class BankCodeListRecorder {
     public BankCodeRefresh recordFetched(BankCodeFetch.Fetched fetched) {
         Instant now = clock.instant();
         BankCodeListState state = repository.state();
-        repository.replaceAll(fetched.list());
-        repository.save(fetched.lastModified().map(value -> state.fetched(now, value)).orElseGet(() -> state.fetched(now)));
+        repository.store(fetched.list(), fetched.lastModified().map(value -> state.fetched(now, value)).orElseGet(() -> state.fetched(now)));
         return BankCodeRefresh.fetched(fetched.list().banks().size());
     }
 

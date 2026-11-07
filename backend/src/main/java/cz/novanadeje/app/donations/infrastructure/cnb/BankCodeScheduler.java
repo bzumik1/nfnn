@@ -37,15 +37,11 @@ class BankCodeScheduler {
 
     @EventListener(ApplicationReadyEvent.class)
     void refreshSoonAfterStart() {
-        taskScheduler.schedule(this::refreshIfDue, clock.instant().plus(DELAY_AFTER_START));
+        taskScheduler.schedule(this::refresh, clock.instant().plus(DELAY_AFTER_START));
     }
 
     @Scheduled(cron = "${app.donations.bank-codes.cron}", zone = FoundationZone.ID)
     void refresh() {
-        guarded(() -> logOutcome(service.refresh()));
-    }
-
-    private void refreshIfDue() {
         guarded(() -> {
             if (service.isDue()) {
                 logOutcome(service.refresh());

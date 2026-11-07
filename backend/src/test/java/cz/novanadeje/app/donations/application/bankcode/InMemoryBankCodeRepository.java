@@ -18,13 +18,14 @@ class InMemoryBankCodeRepository implements BankCodeRepository {
     }
 
     @Override
-    public void replaceAll(BankCodeList list) {
-        banks = list.banks();
+    public BankCodeListState state() {
+        return state;
     }
 
     @Override
-    public BankCodeListState state() {
-        return state;
+    public void store(BankCodeList list, BankCodeListState newState) {
+        banks = list.banks();
+        state = newState;
     }
 
     @Override

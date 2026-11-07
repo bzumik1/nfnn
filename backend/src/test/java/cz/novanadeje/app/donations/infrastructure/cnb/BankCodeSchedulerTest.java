@@ -90,8 +90,20 @@ class BankCodeSchedulerTest {
     }
 
     @Test
-    @DisplayName("Given an unchanged source, when the weekly refresh runs, then it logs that the list is unchanged")
-    void should_log_unchanged_when_weekly_refresh_runs_given_unchanged_source() {
+    @DisplayName("Given the list was checked within 7 days, when the daily check runs, then the source is not asked")
+    void should_not_refresh_when_daily_check_runs_given_not_due() {
+        when(service.isDue()).thenReturn(false);
+
+        scheduler.refresh();
+
+        verify(service, never()).refresh();
+        assertThat(lines.list).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a refresh is due and the source is unchanged, when the daily check runs, then it logs that the list is unchanged")
+    void should_log_unchanged_when_daily_check_runs_given_due_and_unchanged_source() {
+        when(service.isDue()).thenReturn(true);
         when(service.refresh()).thenReturn(BankCodeRefresh.unchanged());
 
         scheduler.refresh();
@@ -101,8 +113,9 @@ class BankCodeSchedulerTest {
     }
 
     @Test
-    @DisplayName("Given the source fails, when the weekly refresh runs, then it warns with the reason only and survives")
-    void should_warn_with_reason_when_weekly_refresh_runs_given_failing_source() {
+    @DisplayName("Given a refresh is due and the source fails, when the daily check runs, then it warns with the reason only and survives")
+    void should_warn_with_reason_when_daily_check_runs_given_failing_source() {
+        when(service.isDue()).thenReturn(true);
         when(service.refresh()).thenThrow(new BankCodeSourceUnavailable("refused list"));
 
         scheduler.refresh();
@@ -113,8 +126,9 @@ class BankCodeSchedulerTest {
     }
 
     @Test
-    @DisplayName("Given an unexpected failure, when the weekly refresh runs, then it logs the failure's class only and survives")
-    void should_log_class_only_when_weekly_refresh_runs_given_unexpected_failure() {
+    @DisplayName("Given a refresh is due and it fails unexpectedly, when the daily check runs, then it logs the failure's class only and survives")
+    void should_log_class_only_when_daily_check_runs_given_unexpected_failure() {
+        when(service.isDue()).thenReturn(true);
         when(service.refresh()).thenThrow(new IllegalStateException("whatever the database said"));
 
         scheduler.refresh();

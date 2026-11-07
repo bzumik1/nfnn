@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.net.URI;
 
 @ConfigurationProperties("app.donations.bank-codes")
-public record BankCodeProperties(URI source, String cron) {
+public record BankCodeProperties(URI source) {
 
     public BankCodeProperties {
         if (source == null || !"https".equals(source.getScheme()) || source.getHost() == null || source.getHost().isBlank()) {

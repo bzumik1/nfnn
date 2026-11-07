@@ -20,7 +20,7 @@ public class FakeBankCodeSource implements BankCodeSource {
 
     @Override
     public BankCodeFetch fetch(BankCodeListState known) {
-        askedIfModifiedSince.add(known.ifModifiedSince());
+        askedIfModifiedSince.add(known.sourceLastModified());
         String reason = failure.get();
         if (reason != null) {
             throw new BankCodeSourceUnavailable(reason);
@@ -30,7 +30,7 @@ public class FakeBankCodeSource implements BankCodeSource {
             throw new BankCodeSourceUnavailable("status 404");
         }
         Optional<String> modified = Optional.ofNullable(lastModified.get());
-        if (modified.isPresent() && modified.equals(known.ifModifiedSince())) {
+        if (modified.isPresent() && modified.equals(known.sourceLastModified())) {
             return new BankCodeFetch.Unchanged();
         }
         return new BankCodeFetch.Fetched(list, modified);

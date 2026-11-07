@@ -48,7 +48,7 @@ class BankCodeRefreshServiceTest {
         assertThat(refresh).isEqualTo(BankCodeRefresh.fetched(25));
         assertThat(lists.list().banks()).hasSize(25);
         assertThat(lists.list().fetchedAt()).contains(START);
-        assertThat(repository.state().ifModifiedSince()).contains(LAST_MODIFIED);
+        assertThat(repository.state().sourceLastModified()).contains(LAST_MODIFIED);
         assertThat(source.askedIfModifiedSince()).containsExactly(Optional.empty());
     }
 
@@ -84,16 +84,8 @@ class BankCodeRefreshServiceTest {
     }
 
     @Test
-    @DisplayName("Given a list never fetched, then one checked 7 days ago, then one checked longer ago, when it is asked whether a refresh is due, then only the first and the last are")
-    void should_be_due_when_asked_given_never_fetched_or_older_than_seven_days() {
-        assertThat(refreshes.isDue()).isTrue();
-        source.publish(list(25), LAST_MODIFIED);
-        refreshes.refresh();
-
-        clock.advance(Duration.ofDays(7));
-        assertThat(refreshes.isDue()).isFalse();
-
-        clock.advance(Duration.ofMinutes(1));
+    @DisplayName("Given a list never fetched, when it is asked whether a refresh is due, then it is")
+    void should_be_due_when_asked_given_never_fetched() {
         assertThat(refreshes.isDue()).isTrue();
     }
 

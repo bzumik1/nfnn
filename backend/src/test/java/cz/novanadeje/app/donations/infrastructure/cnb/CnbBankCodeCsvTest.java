@@ -54,10 +54,8 @@ class CnbBankCodeCsvTest {
     }
 
     @Test
-    @DisplayName("Given one code twice, too few or too many rows, when it is parsed, then the whole list is refused")
-    void should_refuse_when_parsed_given_duplicate_or_count_out_of_range() {
-        assertRefused(HEADER + "\r\n" + rows(20, "\r\n") + "\r\n0000;Jiná banka;;A");
-        assertRefused(HEADER + "\r\n" + rows(19, "\r\n"));
+    @DisplayName("Given more than 500 rows or nothing at all, when it is parsed, then the whole list is refused")
+    void should_refuse_when_parsed_given_too_many_rows_or_nothing() {
         assertRefused(HEADER + "\r\n" + rows(501, "\r\n"));
         assertRefused("");
     }

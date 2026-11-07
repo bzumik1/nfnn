@@ -19,7 +19,7 @@ class BankCodeListStateTest {
     @DisplayName("Given a list never fetched, when it is asked whether a refresh is due, then it is")
     void should_be_due_when_asked_given_never_fetched() {
         assertThat(BankCodeListState.none().isDue(NOW)).isTrue();
-        assertThat(BankCodeListState.none().ifModifiedSince()).isEmpty();
+        assertThat(BankCodeListState.none().sourceLastModified()).isEmpty();
     }
 
     @Test
@@ -39,7 +39,7 @@ class BankCodeListStateTest {
         BankCodeListState checked = fetched.unchanged(NOW);
 
         assertThat(checked.fetchedAt()).contains(NOW.minus(Duration.ofDays(8)));
-        assertThat(checked.ifModifiedSince()).contains(LAST_MODIFIED);
+        assertThat(checked.sourceLastModified()).contains(LAST_MODIFIED);
         assertThat(checked.checkedAt()).contains(NOW);
         assertThat(checked.isDue(NOW)).isFalse();
     }
@@ -51,14 +51,14 @@ class BankCodeListStateTest {
 
         assertThat(state.fetchedAt()).contains(NOW);
         assertThat(state.checkedAt()).contains(NOW);
-        assertThat(state.ifModifiedSince()).isEmpty();
+        assertThat(state.sourceLastModified()).isEmpty();
     }
 
     @Test
     @DisplayName("Given a last modification longer than 64 characters or with a non-ASCII or control character, when a list is fetched, then it is not kept")
     void should_drop_last_modified_when_fetched_given_unusable_header() {
         for (String unusable : new String[]{"x".repeat(65), "Pá, 25 zář 2026", "Fri,\r\n25 Sep", "", " "}) {
-            assertThat(BankCodeListState.none().fetched(NOW, unusable).ifModifiedSince()).isEmpty();
+            assertThat(BankCodeListState.none().fetched(NOW, unusable).sourceLastModified()).isEmpty();
         }
     }
 

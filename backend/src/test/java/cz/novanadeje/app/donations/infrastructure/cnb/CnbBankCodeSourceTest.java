@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,7 +22,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,9 +138,36 @@ class CnbBankCodeSourceTest {
         assertThat(askedIfModifiedSince).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given the production settings and a name lookup that stalls, when the list is fetched, then it is unavailable as a timeout within the timeout")
+    void should_time_out_when_fetched_given_stalled_lookup() {
+        CountDownLatch release = new CountDownLatch(1);
+        CnbBankCodeSource stalled = new CnbBankCodeSource(HttpClient.newHttpClient(), URI.create("https://www.cnb.cz" + PATH), false,
+                Duration.ofMillis(500), host -> {
+                    awaitUpTo(release, Duration.ofSeconds(5));
+                    return new InetAddress[]{InetAddress.getLoopbackAddress()};
+                });
+        long started = System.nanoTime();
+
+        try {
+            assertThatThrownBy(() -> stalled.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("timeout");
+            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(3_000));
+        } finally {
+            release.countDown();
+        }
+    }
+
     private CnbBankCodeSource localSource(Duration timeout) {
         return new CnbBankCodeSource(HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build(),
                 URI.create("http://127.0.0.1:" + port() + PATH), true, timeout);
+    }
+
+    private static void awaitUpTo(CountDownLatch latch, Duration limit) {
+        try {
+            latch.await(limit.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException cancelled) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private int port() {

@@ -15,7 +15,7 @@
             </column>
         </createTable>
         <sql>alter table bank_code add constraint ck_bank_code_code check (code ~ '^[0-9]{4}$')</sql>
-        <sql>alter table bank_code add constraint ck_bank_code_name check (length(name) between 1 and 120 and name = btrim(name))</sql>
+        <sql>alter table bank_code add constraint ck_bank_code_name check (length(name) between 1 and 120 and name = btrim(name) and name !~ '[[:cntrl:]]')</sql>
     </changeSet>
 
     <changeSet id="029-track-bank-code-list-fetches" author="nfnn">
@@ -28,6 +28,8 @@
             <column name="checked_at" type="timestamp with time zone"/>
         </createTable>
         <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_singleton check (id = 1)</sql>
+        <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_source_last_modified check (source_last_modified ~ '^[ -~]{1,64}$' and btrim(source_last_modified) &lt;&gt; '')</sql>
+        <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_last_modified_after_fetch check (source_last_modified is null or fetched_at is not null)</sql>
     </changeSet>
 
 </databaseChangeLog>

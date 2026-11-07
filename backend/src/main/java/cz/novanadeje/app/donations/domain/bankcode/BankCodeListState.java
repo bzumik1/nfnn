@@ -4,16 +4,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
-public record BankCodeListState(Optional<Instant> fetchedAt, Optional<String> ifModifiedSince, Optional<Instant> checkedAt) {
+public record BankCodeListState(Optional<Instant> fetchedAt, Optional<String> sourceLastModified, Optional<Instant> checkedAt) {
 
     public static final Duration REFRESH_INTERVAL = Duration.ofDays(7);
     public static final int MAX_LAST_MODIFIED_LENGTH = 64;
 
     public BankCodeListState {
-        if (fetchedAt == null || ifModifiedSince == null || checkedAt == null) {
+        if (fetchedAt == null || sourceLastModified == null || checkedAt == null) {
             throw new IllegalArgumentException("A bank code list state names what it does not know as empty");
         }
-        if (ifModifiedSince.filter(value -> !isUsableLastModified(value)).isPresent()) {
+        if (sourceLastModified.filter(value -> !isUsableLastModified(value)).isPresent()) {
             throw new IllegalArgumentException("A source's last modification is printable ASCII of at most " + MAX_LAST_MODIFIED_LENGTH + " characters");
         }
     }
@@ -35,7 +35,7 @@ public record BankCodeListState(Optional<Instant> fetchedAt, Optional<String> if
     }
 
     public BankCodeListState unchanged(Instant at) {
-        return new BankCodeListState(fetchedAt, ifModifiedSince, Optional.of(at));
+        return new BankCodeListState(fetchedAt, sourceLastModified, Optional.of(at));
     }
 
     private static boolean isUsableLastModified(String value) {

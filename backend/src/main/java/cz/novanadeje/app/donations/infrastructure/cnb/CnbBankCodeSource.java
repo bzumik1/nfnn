@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -38,6 +39,7 @@ class CnbBankCodeSource implements BankCodeSource {
     private final URI source;
     private final boolean privateAddressesAllowed;
     private final Duration timeout;
+    private final HostResolver resolver;
 
     @Autowired
     CnbBankCodeSource(BankCodeProperties properties) {
@@ -45,18 +47,23 @@ class CnbBankCodeSource implements BankCodeSource {
     }
 
     CnbBankCodeSource(HttpClient http, URI source, boolean privateAddressesAllowed, Duration timeout) {
+        this(http, source, privateAddressesAllowed, timeout, InetAddress::getAllByName);
+    }
+
+    CnbBankCodeSource(HttpClient http, URI source, boolean privateAddressesAllowed, Duration timeout, HostResolver resolver) {
         this.http = http;
         this.source = source;
         this.privateAddressesAllowed = privateAddressesAllowed;
         this.timeout = timeout;
+        this.resolver = resolver;
     }
 
     @Override
     public BankCodeFetch fetch(BankCodeListState known) {
         long deadline = System.nanoTime() + timeout.toNanos();
-        requireSafeTarget();
-        HttpRequest.Builder request = HttpRequest.newBuilder(source).timeout(timeout).GET();
-        known.ifModifiedSince().ifPresent(lastModified -> request.header("If-Modified-Since", lastModified));
+        requireSafeTarget(deadline);
+        HttpRequest.Builder request = HttpRequest.newBuilder(source).timeout(Duration.ofNanos(remaining(deadline))).GET();
+        known.sourceLastModified().ifPresent(lastModified -> request.header("If-Modified-Since", lastModified));
         HttpResponse<InputStream> response = send(request.build());
         try (InputStream body = response.body()) {
             if (response.statusCode() == NOT_MODIFIED) {
@@ -79,24 +86,43 @@ class CnbBankCodeSource implements BankCodeSource {
         }
     }
 
-    private void requireSafeTarget() {
+    private void requireSafeTarget(long deadline) {
         if (privateAddressesAllowed) {
             return;
         }
         if (!"https".equals(source.getScheme())) {
             throw new BankCodeSourceUnavailable("not https");
         }
-        InetAddress[] addresses;
-        try {
-            addresses = InetAddress.getAllByName(source.getHost());
-        } catch (UnknownHostException unknown) {
-            throw new BankCodeSourceUnavailable("unknown host");
-        }
-        for (InetAddress address : addresses) {
+        for (InetAddress address : resolveBounded(source.getHost(), deadline)) {
             if (!PublicAddresses.isPublic(address)) {
                 throw new BankCodeSourceUnavailable("non-public address");
             }
         }
+    }
+
+    private InetAddress[] resolveBounded(String host, long deadline) {
+        FutureTask<InetAddress[]> lookup = new FutureTask<>(() -> resolver.resolve(host));
+        Thread.ofVirtual().name("bank-code-lookup").start(lookup);
+        try {
+            return lookup.get(remaining(deadline), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException slow) {
+            lookup.cancel(true);
+            throw new BankCodeSourceUnavailable("timeout");
+        } catch (ExecutionException failed) {
+            throw new BankCodeSourceUnavailable(failed.getCause() instanceof UnknownHostException ? "unknown host" : "unreachable");
+        } catch (InterruptedException interrupted) {
+            lookup.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new BankCodeSourceUnavailable("interrupted");
+        }
+    }
+
+    private static long remaining(long deadline) {
+        long remaining = deadline - System.nanoTime();
+        if (remaining <= 0) {
+            throw new BankCodeSourceUnavailable("timeout");
+        }
+        return remaining;
     }
 
     private HttpResponse<InputStream> send(HttpRequest request) {

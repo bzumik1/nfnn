@@ -34,7 +34,7 @@ class BankCodeListStateJpaEntity {
         BankCodeListStateJpaEntity entity = new BankCodeListStateJpaEntity();
         entity.id = SINGLETON_ID;
         entity.fetchedAt = state.fetchedAt().orElse(null);
-        entity.sourceLastModified = state.ifModifiedSince().orElse(null);
+        entity.sourceLastModified = state.sourceLastModified().orElse(null);
         entity.checkedAt = state.checkedAt().orElse(null);
         return entity;
     }
