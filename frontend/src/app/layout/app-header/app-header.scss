@@ -91,9 +91,7 @@
 }
 
 .app-header--deeper {
-  --scroll-edge-height: calc(
-    var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade)
-  );
+  --scroll-edge-height: calc(var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade));
 }
 
 .edge-title {
