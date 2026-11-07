@@ -28,6 +28,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const SLIDE_GRACE_MS = 1000;
 
 type SheetExit = 'open' | 'sliding' | 'down';
 
@@ -373,8 +374,11 @@ export class Dialog implements AfterViewInit, OnDestroy {
     afterNextRender(
       () => {
         const panel = this.panel().nativeElement;
-        const slide = longestTransitionMs(getComputedStyle(panel).transitionDuration);
-        this.slideTimer = setTimeout(() => this.slidDown(), slide);
+        const longest = longestTransitionMs(getComputedStyle(panel).transitionDuration);
+        const slide = panel.getAnimations?.().find(slidesPanel);
+        const slidDown = (): void => this.slidDown();
+        (slide?.finished ?? Promise.resolve()).then(slidDown, slidDown);
+        this.slideTimer = setTimeout(slidDown, longest + SLIDE_GRACE_MS);
       },
       { injector: this.injector },
     );
@@ -433,6 +437,10 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function slidesPanel(animation: Animation): boolean {
+  return 'transitionProperty' in animation && animation.transitionProperty === 'translate';
 }
 
 function longestTransitionMs(durations: string): number {
