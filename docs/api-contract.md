@@ -505,6 +505,7 @@ The connector is a separate Node 26 container (`mcp/`, TypeScript, MCP TypeScrip
 | `GET` | `/api/donations/me/receipts/{id}` | donor | One issued receipt of the caller with its frozen data; 404 `donations/receipt-not-found` for an unknown or another donor's id. |
 | `GET` | `/api/donations/me/receipt-images/{sha256}` | donor | The signature or portrait image a receipt of the caller shows, by the digest in its frozen data: a scan as `image/png`, a vector as its canonical JSON (`application/json`), a portrait as `image/jpeg`, each with `X-Content-Type-Options: nosniff`; `Cache-Control: private, no-store` (1.19); 404 `donations/receipt-image-not-found` for any other digest. |
 | `GET` | `/api/donations/me/bank-accounts` | donor | The caller's bank accounts: the accounts the foundation pairs their payments without a symbol from, with the donations paired through each and the question about an older variable symbol. See "Donor's bank accounts". |
+| `GET` | `/api/donations/bank-codes` | donor | The ČNB list of Czech bank codes the server keeps, for the browser to name a bank it has no short name for. See "Bank codes". |
 | `POST` | `/api/donations/me/bank-accounts/{id}/disconnect` | donor | Stops pairing later payments without a symbol from that account to the caller; 204. Donations paired before stay. |
 | `POST` | `/api/donations/me/bank-accounts/{id}/reconnect` | donor | Connects a disconnected account again once a payment with the caller's symbol arrives from it; 204. |
 | `POST` | `/api/donations/me/bank-accounts/{id}/symbol-claim/confirm` | donor | Answers "yes" to the account's question about an older variable symbol (body `{"variableSymbol": "…"}`): stores the answer and pairs the payments with that symbol from the account; 200 with the count and the yearly receipts that changed. See "Older variable symbol confirmation". |
@@ -927,6 +928,23 @@ Configuration (`application.yml`, `app.donations.*`):
 
 | `pairing.excluded-accounts` | `PAIRING_EXCLUDED_ACCOUNTS` | empty | comma-separated Czech accounts written `number/bank code` (`2400000002/2010,19-2000145399/0800`) that are never learned (pairing rule 7); an entry that is not a Czech account stops the startup |
 | `import.on-demand-cooldown` | — | `PT30S` | how long after the last attempt (successful or not) a donor's bank check does not ask the bank; Fio allows one request per token per 30 seconds |
+
+#### Bank codes
+
+Jakub, 7 November 2026: the server downloads the ČNB list "Kódy bank ČR" regularly and serves it, so a bank code that appears after the browser's own table of short names (`features/donations/czech-banks.ts`) still gets a name beside an account.
+
+`GET /api/donations/bank-codes` (any signed-in donor or administrator; 401 without a token; `no-store`):
+
+```json
+{ "fetchedAt": "2026-11-09T04:40:00Z", "items": [ { "code": "0100", "name": "Komerční banka, a.s." }, { "code": "0800", "name": "Česká spořitelna, a.s." } ] }
+```
+
+- `items` sorted by `code` (four digits), `name` the ČNB's text trimmed, legal form included (the browser shortens it); `fetchedAt` the last download that brought a list (a `304` does not move it). Before the first download: `{"fetchedAt": null, "items": []}`.
+- The download (`donations/infrastructure/cnb/CnbBankCodeSource`): `GET` of `app.donations.bank-codes.source` (default `https://www.cnb.cz/cs/platebni-styk/.galleries/ucty_kody_bank/download/kody_bank_CR.csv`; not https or without a host stops the startup), https only, every resolved address public (`PublicAddresses`), no redirects, 10 s to connect and to answer, at most 64 KB, `If-Modified-Since` with the stored `Last-Modified`. `CnbBankCodeCsv` reads UTF-8 with or without a BOM, CRLF or LF, `;`-separated, with exactly the header `Kód platebního styku;Poskytovatel platebních služeb;BIC kód (SWIFT);Systém CERTIS`, and refuses the whole list on another header, a malformed row, a duplicate code, a code that is not four digits, a name that is empty, over 120 characters or holds a control character, or fewer than 20 or more than 500 banks: a stale list stays rather than a broken one replacing it.
+- When (`BankCodeScheduler`, the scheduler thread): `app.donations.bank-codes.cron`, default `0 40 5 * * MON` in the foundation's zone (`-` turns it off, as every test does), and once 2 minutes after the backend is ready when the list was never downloaded or last checked more than 7 days ago. A failure leaves the stored list and the check time, so the next start or Monday tries again.
+- Logs (`donations.infrastructure.cnb.BankCodeScheduler`): INFO `Bank code list fetched: <n> codes` or `Bank code list unchanged at the source`; WARN `Bank code list could not be fetched: <reason>; keeping the stored list until the next run` (`status <n>`, `timeout`, `unreachable`, `too large`, `refused list`, `not https`, `non-public address`, `unknown host`, `interrupted`); ERROR `Bank code list refresh failed unexpectedly: <exception class>; …`. Never the body.
+- Tables `bank_code` (`code` primary key, `name`) and the singleton `bank_code_list_state` (`fetched_at`, `source_last_modified`, `checked_at`), replaced in one short transaction after the download (`BankCodeListRecorder`); public data, restored like any other table.
+- The connector has no tool for it: it is no data of the administration.
 
 #### Donor's bank accounts
 

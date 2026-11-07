@@ -64,3 +64,18 @@ export function bankNameOf(accountNumber: string): string | null {
   const bankCode = bankCodeOf(accountNumber);
   return bankCode === null ? null : (CZECH_BANK_CODES.names[bankCode] ?? null);
 }
+
+const BRANCH_MARKER =
+  /,|\s(?:pobočka|organizační složka|odštěpný závod|Filiale|Prague Branch|Czech Branch|v likvidaci)\b/;
+const TRAILING_LEGAL_FORM =
+  /\s+(?:a\.\s?s\.|s\.\s?r\.\s?o\.|S\.A\.|N\.V\.|p\.l\.c\.|plc|AG|eG|UAB|Ltd\.?|Limited|Aktiengesellschaft)$/i;
+
+export function shortBankName(name: string): string {
+  const trimmed = name.trim();
+  let short = trimmed.split(BRANCH_MARKER)[0].trim();
+  for (let stripped = short.replace(TRAILING_LEGAL_FORM, ''); stripped !== short;) {
+    short = stripped;
+    stripped = short.replace(TRAILING_LEGAL_FORM, '');
+  }
+  return short === '' ? trimmed : short;
+}

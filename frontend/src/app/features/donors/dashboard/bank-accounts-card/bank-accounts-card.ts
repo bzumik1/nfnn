@@ -48,7 +48,7 @@ import {
   SymbolClaimConfirmation,
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
-import { bankNameOf } from '../../../donations/czech-banks';
+import { BankNames } from '../../../donations/bank-names';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -141,6 +141,7 @@ export class BankAccountsCard {
   private readonly live = inject(LiveUpdates);
   private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthStore);
+  private readonly bankNames = inject(BankNames);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -222,6 +223,11 @@ export class BankAccountsCard {
   private liveWatch: Subscription | undefined;
 
   constructor() {
+    effect(() => {
+      for (const account of this.accounts()) {
+        this.bankNames.require(account.accountNumber);
+      }
+    });
     this.fetch();
     effect(() => {
       if (this.newlyVerifiedId() !== null) {
@@ -350,7 +356,7 @@ export class BankAccountsCard {
   }
 
   protected bankName(account: BankAccountItem): string | null {
-    return bankNameOf(account.accountNumber);
+    return this.bankNames.nameOf(account.accountNumber);
   }
 
   protected formatDate(isoDate: string): string {
