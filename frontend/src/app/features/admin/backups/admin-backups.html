@@ -235,34 +235,36 @@
                       {{ size(item.sizeBytes) }}
                     </td>
                     <td class="row-actions">
-                      <button
-                        appNeedsConnection
-                        type="button"
-                        class="ui-button"
-                        [disabled]="downloading() !== null"
-                        [attr.aria-label]="downloadLabel(item)"
-                        (click)="download(item)"
-                      >
-                        @if (downloading() === item.fileName) {
-                          <ng-container i18n="@@admin.backups.download.busy"
-                            >Stahujeme…</ng-container
-                          >
-                        } @else {
-                          <ng-container i18n="@@admin.backups.download.start"
-                            >Stáhnout</ng-container
-                          >
-                        }
-                      </button>
-                      <button
-                        type="button"
-                        class="ui-button ui-button--danger-outline"
-                        [disabled]="actionsDisabled()"
-                        [attr.aria-label]="restoreLabel(item)"
-                        (click)="askRestore(item)"
-                        i18n="@@admin.backups.restore.start"
-                      >
-                        Obnovit…
-                      </button>
+                      <div class="row-buttons">
+                        <button
+                          appNeedsConnection
+                          type="button"
+                          class="ui-button"
+                          [disabled]="downloading() !== null"
+                          [attr.aria-label]="downloadLabel(item)"
+                          (click)="download(item)"
+                        >
+                          @if (downloading() === item.fileName) {
+                            <ng-container i18n="@@admin.backups.download.busy"
+                              >Stahujeme…</ng-container
+                            >
+                          } @else {
+                            <ng-container i18n="@@admin.backups.download.start"
+                              >Stáhnout</ng-container
+                            >
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="ui-button ui-button--danger-outline"
+                          [disabled]="actionsDisabled()"
+                          [attr.aria-label]="restoreLabel(item)"
+                          (click)="askRestore(item)"
+                          i18n="@@admin.backups.restore.start"
+                        >
+                          Obnovit…
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 }
