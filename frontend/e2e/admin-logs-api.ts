@@ -78,9 +78,19 @@ export function logsApi(): Record<string, unknown> {
         maxConnections: 10,
       },
       disks: [
-        { path: '/logs', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
-        { path: '/backups', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
-        { path: '/restore', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
+        { path: '/logs', mounted: true, freeBytes: 120_000_000_000, totalBytes: 250_000_000_000 },
+        {
+          path: '/backups',
+          mounted: true,
+          freeBytes: 120_000_000_000,
+          totalBytes: 250_000_000_000,
+        },
+        {
+          path: '/restore',
+          mounted: true,
+          freeBytes: 120_000_000_000,
+          totalBytes: 250_000_000_000,
+        },
       ],
       logLevelOverrides: [],
     },
@@ -94,12 +104,13 @@ export async function routeLogsApi(page: RouteTarget): Promise<void> {
     (route) => route.fulfill({ json: api['files'] }),
   );
   await page.route(
-    (url) => url.pathname === `${LOGS}/backend.log`,
+    (url) => url.pathname.startsWith(`${LOGS}/`) && !url.pathname.endsWith('/search'),
     (route) => {
-      const from = new URL(route.request().url()).searchParams.get('from');
+      const url = new URL(route.request().url());
+      const from = url.searchParams.get('from');
       return route.fulfill({
         json: {
-          name: 'backend.log',
+          name: decodeURIComponent(url.pathname.slice(LOGS.length + 1)),
           sizeBytes: 52000,
           from: from === null ? 32000 : Number(from),
           to: from === null ? 52000 : Number(from) + 20000,
