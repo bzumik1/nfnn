@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.AdminDeviceSyncTest > Given two hundred donors, each with a linked bank account and half of them with an older-symbol answer, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms",
+    "replacement": "donations.interfaces.rest.AdminDeviceSyncTest > Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms",
+    "reason": "#465: the timed manifest of the administration's donations sync now also holds 2 000 receipts, a tenth of the yearly ones listing 300 gifts, so the 100 ms budget covers reading the receipts, and the test's name says so",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  }
+]

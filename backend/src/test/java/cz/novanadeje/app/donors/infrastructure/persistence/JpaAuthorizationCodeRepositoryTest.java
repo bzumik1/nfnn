@@ -74,6 +74,48 @@ class JpaAuthorizationCodeRepositoryTest {
         assertThat(codes.findBySecretHash(secret.hash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
     }
 
+    @Test
+    @DisplayName("Given a used and an unused code that expired before the cutoff and one that expires after it, when those expired before the cutoff are deleted, then only the later one stays")
+    void should_delete_only_codes_expired_before_cutoff_when_deleted() {
+        AuthorizationCode used = issue(jana, NOW.minus(Duration.ofDays(31)));
+        AuthorizationCode abandoned = issue(jana, NOW.minus(Duration.ofDays(31)));
+        AuthorizationCode recent = issue(jana, NOW.minus(Duration.ofDays(30)));
+        flushAndClear();
+        codes.markUsed(used.id(), NOW.minus(Duration.ofDays(31)).plusSeconds(10));
+
+        int deleted = codes.deleteExpiredBefore(NOW.minus(Duration.ofDays(30)));
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(codes.findBySecretHash(used.secretHash())).isEmpty();
+        assertThat(codes.findBySecretHash(abandoned.secretHash())).isEmpty();
+        assertThat(codes.findBySecretHash(recent.secretHash())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given codes of two donors, when one donor's are deleted, then only the other donor's stay")
+    void should_delete_only_the_donors_codes_when_deleted_given_two_donors() {
+        Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Petr Svoboda", null,
+                new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"), new PasswordHash("$hash"),
+                new VariableSymbol("4821937561"), LocaleCode.CS, NOW);
+        donors.save(petr);
+        AuthorizationCode janas = issue(jana, NOW);
+        AuthorizationCode petrs = issue(petr.id(), NOW);
+        flushAndClear();
+
+        codes.deleteAllOfWithoutWaiting(jana);
+
+        assertThat(codes.findBySecretHash(janas.secretHash())).isEmpty();
+        assertThat(codes.findBySecretHash(petrs.secretHash())).isPresent();
+    }
+
+    private AuthorizationCode issue(DonorId donor, Instant at) {
+        AuthorizationCode code = AuthorizationCode.issue(LinkSecret.generate(), donor, new ClientId("https://claude.ai/oauth/mcp-oauth-client-metadata"),
+                URI.create("https://claude.ai/api/mcp/auth_callback"), new CodeChallenge(CHALLENGE, "S256"), Set.of(OAuthScope.ADMIN_READ),
+                "https://nfnn.cz/mcp", true, at, Duration.ofMinutes(5));
+        codes.save(code);
+        return code;
+    }
+
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();

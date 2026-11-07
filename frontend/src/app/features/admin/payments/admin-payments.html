@@ -245,7 +245,9 @@
                             }
                           }
                         </span>
-                        <span class="ui-list__value">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+                        <span class="ui-list__value ui-figures"
+                          >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+                        >
                         @if (rowState(item); as state) {
                           <span class="ui-list__state">
                             <span class="ui-badge" [class]="state.badge">{{ state.text }}</span>
@@ -302,7 +304,7 @@
                     <td
                       data-label="Částka"
                       i18n-data-label="@@admin.payments.col.amount"
-                      class="amount"
+                      class="amount ui-figures"
                     >
                       {{ crowns(item.amountMinor) }}&nbsp;Kč
                       @if (item.accountVerification) {
@@ -315,13 +317,13 @@
                     </td>
                     <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
                       <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
-                      @if (item.counterpartyAccount) {
-                        <span class="sender-account">{{ item.counterpartyAccount }}</span>
+                      @if (item.counterpartyAccount; as account) {
+                        <app-bank-account class="sender-account" [account]="account" />
                       }
                     </td>
                     <td data-label="VS a zpráva" i18n-data-label="@@admin.payments.col.symbol">
                       @if (item.variableSymbol) {
-                        <span class="symbol">{{ item.variableSymbol }}</span>
+                        <span class="symbol ui-figures">{{ item.variableSymbol }}</span>
                       } @else {
                         <span class="muted" i18n="@@admin.payments.noSymbol">bez VS</span>
                       }
@@ -482,8 +484,8 @@
           } @else {
             <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
           }
-          @if (payment.counterpartyAccount) {
-            <span class="muted">{{ payment.counterpartyAccount }}</span>
+          @if (payment.counterpartyAccount; as account) {
+            <app-bank-account class="muted" [account]="account" />
           }
         </dd>
       </div>
@@ -491,7 +493,7 @@
         <dt i18n="@@admin.payments.col.symbol">VS a zpráva</dt>
         <dd>
           @if (payment.variableSymbol) {
-            <span class="symbol">{{ payment.variableSymbol }}</span>
+            <span class="symbol ui-figures">{{ payment.variableSymbol }}</span>
           } @else {
             <span class="muted" i18n="@@admin.payments.noSymbol">bez VS</span>
           }
@@ -640,8 +642,8 @@
           } @else {
             <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
           }
-          @if (payment.counterpartyAccount) {
-            <span class="muted">{{ payment.counterpartyAccount }}</span>
+          @if (payment.counterpartyAccount; as account) {
+            <app-bank-account class="muted" [account]="account" />
           }
         </dd>
       </div>
@@ -649,7 +651,7 @@
         <dt i18n="@@admin.payments.col.symbol">VS a zpráva</dt>
         <dd>
           @if (payment.variableSymbol) {
-            <span class="symbol">{{ payment.variableSymbol }}</span>
+            <span class="symbol ui-figures">{{ payment.variableSymbol }}</span>
           } @else {
             <span class="muted" i18n="@@admin.payments.noSymbol">bez VS</span>
           }

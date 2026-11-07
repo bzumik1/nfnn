@@ -29,7 +29,10 @@ class AdminCurrentDeviceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void unlock(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AdministrationUnlockRequest request, HttpServletRequest http) {
         unlockRateLimiter.check(http.getRemoteAddr());
-        devices.unlock(DonorId.of(jwt.getSubject()), request.password(), request.secondFactorCode());
+        DonorId adminId = DonorId.of(jwt.getSubject());
+        request.passkeyProof().ifPresentOrElse(
+                passkey -> devices.unlockWithPasskey(adminId, passkey),
+                () -> devices.unlock(adminId, request.password(), request.secondFactorCode()));
     }
 
     @PostMapping("/administration-copy")

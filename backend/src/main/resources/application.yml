@@ -8,6 +8,15 @@ spring:
     username: ${DB_USERNAME:novanadeje}
     password: ${DB_PASSWORD:novanadeje}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 10000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      data-source-properties:
+        logServerErrorDetail: false
+        options: -c lock_timeout=10s -c statement_timeout=30s -c idle_in_transaction_session_timeout=2min
   jpa:
     open-in-view: false
     hibernate:
@@ -80,6 +89,9 @@ management:
       enabled: false
 
 app:
+  database:
+    migration:
+      lock-timeout: PT2M
   build:
     revision: ${APP_REVISION:dev}
   site:
@@ -107,6 +119,9 @@ app:
       on-demand-cooldown: PT30S
     pairing:
       excluded-accounts: ${PAIRING_EXCLUDED_ACCOUNTS:}
+    bank-codes:
+      source: https://www.cnb.cz/cs/platebni-styk/.galleries/ucty_kody_bank/download/kody_bank_CR.csv
+      cron: "0 40 5 * * *"
     report:
       cron: "0 0 * * * *"
       recipient: ${REPORT_RECIPIENT:${CONTACT_RECIPIENT:info@nfnn.cz}}

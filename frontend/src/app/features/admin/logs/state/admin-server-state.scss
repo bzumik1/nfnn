@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 720px;
+}
+
+.groups {
+  margin-top: var(--space-4);
+}
+
+h2.ui-list__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.findings {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-4-5);
+  color: var(--color-text-secondary);
+}
+
+.refresh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+
+  .ui-notice {
+    margin: 0;
+  }
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.ui-list__value {
+  white-space: normal;
+}

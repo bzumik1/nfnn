@@ -56,7 +56,7 @@ export const secondFactorRecovery = {
   currency: 'CZK',
   usableFrom: '2026-10-27',
   spayd:
-    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
+    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
 };
 
 export const secondFactorEnrolment = {
@@ -420,7 +420,7 @@ export const adminSettings = {
 };
 
 function sectionName(name: string): RegExp {
-  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
+  return new RegExp(`(^| )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
 }
 
 export async function openAccountItem(page: Page, name: string): Promise<void> {
@@ -448,4 +448,90 @@ export async function openSection(page: Page, name: string): Promise<void> {
   const tab = tabs.getByRole('link', { name, exact: true });
   await tab.click();
   await expect(tab).toHaveAttribute('aria-current', /^(page|true)$/);
+}
+
+export async function serveAdministrationCopy(
+  page: RouteTarget,
+  parts: { donations: Record<string, unknown[]>; donors: Record<string, unknown[]> },
+): Promise<void> {
+  for (const [part, chunks] of Object.entries(parts)) {
+    const served = await Promise.all(
+      Object.entries(chunks).map(async ([id, rows]) => ({
+        id,
+        rowsSha256: await rowsSha256(rows),
+        count: rows.length,
+        rows,
+      })),
+    );
+    const summary = part === 'donations' ? { summary: { today: '2026-11-06', byYear: [] } } : {};
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync`,
+      (route) =>
+        route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.map(({ id, rowsSha256, count }) => ({ id, rowsSha256, count })),
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync/chunks`,
+      (route) => {
+        const asked = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+        return route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.filter((chunk) => asked.includes(chunk.id)),
+            missing: asked.filter((id) => !served.some((chunk) => chunk.id === id)),
+          },
+        });
+      },
+    );
+  }
+}
+
+export function administrationCopyGift(
+  id: string,
+  donorId: string,
+  receivedAt: string,
+  amountMinor: number,
+) {
+  return {
+    id,
+    donorId,
+    paymentId: id,
+    receivedAt,
+    amountMinor,
+    currency: 'CZK',
+    status: 'RECEIVED',
+    source: 'BANK_TRANSFER',
+    purpose: 'GENERAL',
+    pairedBy: 'VARIABLE_SYMBOL',
+    bankAccountId: null,
+    symbolClaimId: null,
+    recordedAt: `${receivedAt}T09:00:00Z`,
+  };
+}
+
+const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
+
+export async function openUnlockedAdministrationPage(
+  page: Page,
+  path: string,
+  heading: string,
+): Promise<void> {
+  await Promise.all([
+    page
+      .goto(path)
+      .then(() => expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()),
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
+      { timeout: 10_000 },
+    ),
+  ]);
+  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
 }

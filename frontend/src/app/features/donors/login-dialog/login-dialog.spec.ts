@@ -426,7 +426,7 @@ describe('Given the sign-in dialog', () => {
           amountMinor: 100,
           currency: 'CZK',
           usableFrom: '2026-10-27',
-          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
+          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*MSG:OBNOVA K7MP4RXA',
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {

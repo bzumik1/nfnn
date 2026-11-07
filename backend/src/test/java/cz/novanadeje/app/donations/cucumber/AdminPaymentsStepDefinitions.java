@@ -117,13 +117,38 @@ public class AdminPaymentsStepDefinitions {
 
     @When("the exchanged API token unpairs payment {long}")
     public void theExchangedApiTokenUnpairsPayment(long transactionId) {
+        actAsTheExchangedApiToken();
+        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/unpair", null);
+    }
+
+    private void actAsTheExchangedApiToken() {
         JsonNode last = api.lastResponseJson();
         if (last != null && last.has("access_token")) {
             exchangedApiToken = last.get("access_token").asString();
         }
         api.forgetCredentials();
         api.authorize(exchangedApiToken);
-        api.post(PAYMENTS_PATH + "/" + paymentId(transactionId) + "/unpair", null);
+    }
+
+    @When("the exchanged API token asks for the paired payments of {int}")
+    public void theExchangedApiTokenAsksForThePairedPaymentsOf(int year) {
+        actAsTheExchangedApiToken();
+        api.get(PAYMENTS_PATH + "?pairing=paired&year=" + year);
+    }
+
+    @When("the exchanged API token asks for the paired payments with {string}")
+    public void theExchangedApiTokenAsksForThePairedPaymentsWith(String query) {
+        actAsTheExchangedApiToken();
+        api.get(PAYMENTS_PATH + "?pairing=paired&" + scenarioDonors.resolve(query));
+    }
+
+    @Then("paired payment {long} names no payer")
+    public void pairedPaymentNamesNoPayer(long transactionId) {
+        JsonNode item = listedItem(transactionId);
+        assertThat(item.get("donation").isNull()).isFalse();
+        for (String field : List.of("counterpartyAccount", "counterpartyName", "messageForRecipient")) {
+            assertThat(item.get(field).isNull()).as(field).isTrue();
+        }
     }
 
     @When("{string} searches donors for {string}")

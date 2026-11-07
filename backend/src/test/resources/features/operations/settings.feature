@@ -132,11 +132,31 @@ Feature: An administrator changes the settings of the site in the administration
     And the problem type ends with "operations/secret-settings-in-browser-only"
     When the connector exchanges the connector token for an API token
     And the exchanged API token changes the setting "MAIL_HOST" to "smtp.attacker.example"
-    Then the response status is 400
-    And the problem names the settings "MAIL_PASSWORD"
+    Then the response status is 403
+    And the problem type ends with "operations/secret-settings-in-browser-only"
     When the connector exchanges the connector token for an API token
     And the exchanged API token changes the setting "RECEIPT_FIRST_YEAR" to "2025"
     Then the response status is 202
+
+  Scenario Outline: On a site whose mail server takes no password a connected application still never changes where mail goes or whom it comes from
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token changes the setting "<setting>" to "<value>"
+    Then the response status is 403
+    And the problem type ends with "operations/secret-settings-in-browser-only"
+    And the backend does not restart
+    When "Jana" reads the settings
+    Then the setting "<setting>" reads "<running>"
+
+    Examples:
+      | setting           | value                    | running                    |
+      | MAIL_HOST         | smtp.attacker.example    | localhost                  |
+      | MAIL_PORT         | 2525                     | 1025                       |
+      | MAIL_USERNAME     | mallory                  |                            |
+      | MAIL_AUTH         | true                     | false                      |
+      | MAIL_STARTTLS     | false                    | false                      |
+      | MAIL_FROM         | info@attacker.example    | info@nfnn.cz               |
+      | CONTACT_RECIPIENT | inbox@attacker.example   | info@nfnn.cz               |
 
   Scenario: A connected application sends a test e-mail through the running server but never with a password
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"

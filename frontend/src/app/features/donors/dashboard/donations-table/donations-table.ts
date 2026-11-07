@@ -6,6 +6,7 @@ import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
 import { DonorDonations } from '../donor-donations';
 import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 const STATUS_LABELS: Record<DonationStatus, string> = {
   RECEIVED: $localize`:@@donor.dashboard.payments.status.received:Přijato`,
@@ -20,7 +21,7 @@ export function donationStatusLabel(status: DonationStatus): string {
 
 @Component({
   selector: 'app-donations-table',
-  imports: [DownloadProgress, NgTemplateOutlet],
+  imports: [DiagnosticsDownload, DownloadProgress, NgTemplateOutlet],
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,7 +51,10 @@ export class DonationsTable {
 
   protected missingReceipt(
     item: DonationItem,
-  ): 'refunded' | 'verification' | 'before-first-year' | null {
+  ): 'on-yearly-receipt' | 'refunded' | 'verification' | 'before-first-year' | null {
+    if (this.donations.onYearlyReceipt(item)) {
+      return 'on-yearly-receipt';
+    }
     if (item.receiptAvailable) {
       return null;
     }
@@ -64,6 +68,10 @@ export class DonationsTable {
     return firstYear !== null && Number(item.receivedAt.slice(0, 4)) < firstYear
       ? 'before-first-year'
       : null;
+  }
+
+  protected yearOf(item: DonationItem): string {
+    return item.receivedAt.slice(0, 4);
   }
 
   protected statusLabel(status: DonationStatus): string {

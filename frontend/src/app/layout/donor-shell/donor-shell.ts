@@ -6,6 +6,7 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   templateUrl: './donor-shell.html',
   styleUrl: './donor-shell.scss',
+  host: { class: 'ui-grouped' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DonorShell {

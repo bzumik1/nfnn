@@ -18,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
           cache: npm
@@ -47,7 +47,7 @@ jobs:
 
       - name: Keep the shots of v2 and of main with the crops of every difference
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: verejne-stranky-proti-v2
           path: |
@@ -70,16 +70,16 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: "25"
 
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Three devices of one donor and three of the administration converge on what a fresh download gives, over 300 seeds
         run: ./gradlew test --tests "*DonorDeviceSyncTest" --tests "*AdminDeviceSyncTest" -PnoCucumber
@@ -88,7 +88,7 @@ jobs:
 
       - name: Keep the test reports
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: konvergence-synchronizace
           path: backend/build/reports/
@@ -102,11 +102,11 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
           cache: npm
@@ -129,7 +129,7 @@ jobs:
 
       - name: Keep the Playwright report
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: hromadna-potvrzeni
           path: |
@@ -160,7 +160,7 @@ jobs:
               release) echo "Zkouška vydání (nasazená revize a latest)|provoz, schéma a obrazy|další řez s changesetem Liquibase nebo se změnou obrazů, compose, záloh či importu (2.3, 2.4, 2.9, 2.12, 2.17, 2.27)" ;;
               sync-convergence) echo "Konvergence synchronizace (300 semínek)|kopie dat v zařízení dárce a její synchronizace|další řez, který mění synchronizaci nebo kopii v zařízení (2.13, 2.17)" ;;
               bulk-receipts) echo "Hromadná potvrzení (300 potvrzení při čtvrtinovém výkonu)|kreslení potvrzení v prohlížeči a hromadná potvrzení|další řez, který mění kreslení potvrzení nebo hromadná potvrzení (2.19)" ;;
-              *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing.md" ;;
+              *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing-nightly.md" ;;
             esac
           }
           table="| Noční job | Výsledek | Oblast | Co čeká, dokud je červený |

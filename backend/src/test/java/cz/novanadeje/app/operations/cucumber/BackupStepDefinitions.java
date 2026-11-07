@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class BackupStepDefinitions {
 
     private static final String BACKUPS = "/api/admin/operations/backups";
+    private static final Pattern WAITING_REQUEST = Pattern.compile(".+\\.(backup|test-restore|restore)");
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -118,6 +120,39 @@ public class BackupStepDefinitions {
         api.post(BACKUPS + "/requests", Map.of("kind", "BACKUP"));
     }
 
+    @Given("{string} asked for a backup now")
+    public void askedForABackupNow(String alias) {
+        asksForABackupNow(alias);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The request answered %s", api.lastResponse().getBody()).isEqualTo(202);
+    }
+
+    @Given("{string} asked for a backup now {int} times, each taken by the backup container")
+    public void askedForABackupNowTimesEachTaken(String alias, int count) {
+        for (int index = 0; index < count; index++) {
+            askedForABackupNow(alias);
+            theBackupContainerTakesEveryWaitingRequest();
+        }
+    }
+
+    @When("the backup container takes every waiting request")
+    public void theBackupContainerTakesEveryWaitingRequest() {
+        try {
+            for (Path request : waitingRequests()) {
+                Files.delete(request);
+            }
+        } catch (IOException unreadable) {
+            throw new UncheckedIOException(unreadable);
+        }
+    }
+
+    private List<Path> waitingRequests() {
+        try (Stream<Path> files = Files.list(backups.resolve("requests"))) {
+            return files.filter(file -> WAITING_REQUEST.matcher(file.getFileName().toString()).matches()).toList();
+        } catch (IOException unreadable) {
+            throw new UncheckedIOException(unreadable);
+        }
+    }
+
     @When("{string} asks for a test restore now")
     public void asksForATestRestoreNow(String alias) {
         sessions.actAs(alias);
@@ -156,6 +191,11 @@ public class BackupStepDefinitions {
     @Then("a request file for the backup waits for the backup container")
     public void aRequestFileForTheBackupWaits() {
         assertThat(backups.resolve("requests").resolve(api.lastResponseJson().get("requestId").asString() + ".backup")).isEmptyFile();
+    }
+
+    @Then("no request waits for the backup container")
+    public void noRequestWaitsForTheBackupContainer() {
+        assertThat(waitingRequests()).isEmpty();
     }
 
     @Then("a request file for the test restore waits for the backup container")

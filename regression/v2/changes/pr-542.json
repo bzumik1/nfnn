@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/alerts/admin-alerts.spec.ts > Given an administrator on the alerts page > when this device is subscribed and another one too > then the test alert stands on its own and names every device",
+    "replacement": "src/app/features/admin/alerts/admin-alerts.spec.ts > Given an administrator on the alerts page > when this device is subscribed and another one too > then the test alert stands on its own and its row says where it goes and what to check when it does not come",
+    "reason": "PR #542 (Jakub 2026-11-07, the alerts page in grouped rows): the test alert is the short action row \"Poslat zkušební upozornění\", and where it goes and what to check when it does not arrive moved into the footnote that describes the row",
+    "contract": "docs/frontend-overview.md, admin pages, alerts/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/alerts/admin-alerts.spec.ts > Given an administrator on the alerts page > when this device is subscribed and another one too > and the other device is removed, then it leaves the list",
+    "replacement": "src/app/features/admin/alerts/admin-alerts.spec.ts > Given an administrator on the alerts page > when this device is subscribed and another one too > and the other device is removed, then the sheet closes and it leaves the list",
+    "reason": "PR #542 (Jakub 2026-11-07, the alerts page in grouped rows): another device is a row that opens a sheet with its switches and its removal, so removing it also closes the sheet",
+    "contract": "docs/frontend-overview.md, admin pages, alerts/"
+  }
+]

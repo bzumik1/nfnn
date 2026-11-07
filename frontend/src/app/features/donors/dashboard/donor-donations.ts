@@ -46,7 +46,9 @@ import {
   DonationSummaryResponse,
   DownloadedFile,
 } from '../../donations/donations-api';
+import { GiftFeed } from '../../donations/gift-arrival/gift-feed';
 import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { giftsOnActiveYearlyReceipts } from './yearly-receipt';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import {
   ReceiptPdf,
@@ -85,6 +87,7 @@ export interface ReceiptError {
   readonly scope: ReceiptScope;
   readonly key: string;
   readonly message: string;
+  readonly offersDiagnostics?: true;
 }
 
 const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.`;
@@ -95,6 +98,7 @@ const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsSt
 const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
+const RECEIPT_ON_YEARLY = $localize`:@@donor.dashboard.receipt.onYearly:Tento dar uvádí roční potvrzení za jeho rok, a tak k němu samostatné potvrzení nevystavujeme. Stáhněte si roční potvrzení.`;
 const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   'tools-missing': RECEIPT_TOOLS_MISSING,
   fonts: RECEIPT_DRAWING_FAILED,
@@ -111,6 +115,7 @@ const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
 const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
 const RECEIPT_SIGNING_PAUSED_PROBLEM = 'donations/receipt-signing-paused';
 const RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM = 'donations/receipt-signing-key-unpublished';
+const DONATION_ON_YEARLY_RECEIPT = 'donations/donation-on-yearly-receipt';
 const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
   [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
@@ -134,7 +139,7 @@ interface IncomingDonations {
 }
 
 @Injectable()
-export class DonorDonations {
+export class DonorDonations implements GiftFeed {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
   private readonly loginDialog = inject(LoginDialogService);
@@ -169,12 +174,29 @@ export class DonorDonations {
     this.checkingBank() ? 0 : (this.incoming()?.added ?? 0),
   );
 
+  readonly gifts = computed(() =>
+    this.state() === 'ready' ? (this.incoming()?.read.items ?? this.items()) : null,
+  );
+  readonly asking = this.checkingBank.asReadonly();
+  readonly listedHere = true;
+
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
   readonly accountsWithQuestion = computed(() =>
     this.bankAccounts().filter((account) => account.symbolOffer !== null),
   );
 
   readonly receiptError = signal<ReceiptError | null>(null);
+  readonly offersDiagnostics = computed(() => this.receiptError()?.offersDiagnostics === true);
+  private readonly refusedAsOnYearlyReceipt = signal<ReadonlySet<string>>(new Set());
+  private readonly onYearlyReceipts = computed(() => {
+    const onReceipt = new Set(
+      giftsOnActiveYearlyReceipts(this.items(), this.repository.view()?.receipts ?? []),
+    );
+    for (const id of this.refusedAsOnYearlyReceipt()) {
+      onReceipt.add(id);
+    }
+    return onReceipt;
+  });
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   private readonly receiptTasks = signal<ReadonlyMap<string, ReceiptTask>>(new Map());
   private readonly running = new Map<string, Subscription>();
@@ -233,6 +255,18 @@ export class DonorDonations {
         error: () => this.bankAccounts.set([]),
       });
     this.followLiveChanges();
+  }
+
+  requestGifts(): Observable<readonly DonationItem[]> {
+    return this.repository.fresh('sync').pipe(map((read) => read.items));
+  }
+
+  follow(): Observable<unknown> {
+    return EMPTY;
+  }
+
+  askBank(): void {
+    this.checkBank(false);
   }
 
   showIncoming(): void {
@@ -506,8 +540,12 @@ export class DonorDonations {
     this.download(yearlyKey(year), 'yearly', { year });
   }
 
+  onYearlyReceipt(item: DonationItem): boolean {
+    return item.receiptAvailable && this.onYearlyReceipts().has(item.id);
+  }
+
   downloadSingleReceipt(item: DonationItem): void {
-    if (!item.receiptAvailable) {
+    if (!item.receiptAvailable || this.onYearlyReceipt(item)) {
       return;
     }
     this.download(singleKey(item.id), 'single', { donationId: item.id });
@@ -547,7 +585,9 @@ export class DonorDonations {
       return;
     }
     this.checkingBank.set(true);
-    this.bankCheckOutcome.set(null);
+    if (byDonor) {
+      this.bankCheckOutcome.set(null);
+    }
     const known = new Set(this.items().map((item) => item.id));
     let asOfBefore: string | null | undefined;
     this.donations
@@ -568,6 +608,9 @@ export class DonorDonations {
           this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
             if (!byDonor) {
+              if (items !== null) {
+                this.dropOutdatedOutcome(outcomeOf(check, items, known));
+              }
               return;
             }
             if (items !== null) {
@@ -589,6 +632,13 @@ export class DonorDonations {
           this.bankCheckOutcome.set({ kind: 'failed' });
         },
       });
+  }
+
+  private dropOutdatedOutcome(latest: BankCheckOutcome): void {
+    const standing = this.bankCheckOutcome();
+    if (standing !== null && (latest.kind === 'found' || standing.kind !== 'none')) {
+      this.bankCheckOutcome.set(null);
+    }
   }
 
   private bankCheckEnded(): void {
@@ -702,12 +752,18 @@ export class DonorDonations {
           key,
           message:
             restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
+          ...(restart === 'reloaded-already' ? { offersDiagnostics: true } : {}),
         });
       }
       return;
     }
     this.restart.abandoned(downloadName(key));
-    this.receiptError.set({ scope, key, message: DRAWING_FAILURE_TEXTS[failure.reason] });
+    this.receiptError.set({
+      scope,
+      key,
+      message: DRAWING_FAILURE_TEXTS[failure.reason],
+      ...(failure.reason === 'unprintable' ? {} : { offersDiagnostics: true }),
+    });
   }
 
   private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {
@@ -730,6 +786,16 @@ export class DonorDonations {
         key,
         message: describeProblemWithoutFields(failure, PROBLEMS_SHOWN_WITH_DETAIL[shownWithDetail]),
       });
+      return;
+    }
+    if (scope === 'single' && problemTypeEndsWith(failure, DONATION_ON_YEARLY_RECEIPT)) {
+      this.receiptError.set({
+        scope,
+        key,
+        message: describeProblemWithoutFields(failure, RECEIPT_ON_YEARLY),
+      });
+      this.refusedAsOnYearlyReceipt.update((ids) => new Set(ids).add(donationIdOf(key)));
+      this.fetchDonations();
       return;
     }
     if (
@@ -779,4 +845,8 @@ function yearlyKey(year: number): string {
 
 function singleKey(donationId: string): string {
   return `single:${donationId}`;
+}
+
+function donationIdOf(key: string): string {
+  return key.replace(/^single:/, '');
 }

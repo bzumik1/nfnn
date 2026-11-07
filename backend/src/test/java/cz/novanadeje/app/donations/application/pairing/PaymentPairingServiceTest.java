@@ -249,7 +249,9 @@ class PaymentPairingServiceTest {
         when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
         when(payments.findUnpairedWithoutSymbolBySenderAccount(ACCOUNT)).thenReturn(List.of(byAccount));
 
-        PairingOutcome outcome = service.pairPaymentsOf(jana, NOW);
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.of(jana));
+
+        PairingOutcome outcome = service.pairPaymentsOf(jana.id(), NOW).orElseThrow();
 
         assertThat(outcome).isEqualTo(new PairingOutcome(1, 1, 0, 1, 0));
         List<Donation> saved = savedDonations(2);
@@ -269,7 +271,9 @@ class PaymentPairingServiceTest {
         when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
         when(payments.findUnpairedWithoutSymbolBySenderAccount(ACCOUNT)).thenReturn(List.of(payment(1003, Optional.of(ACCOUNT), null)));
 
-        PairingOutcome outcome = service.pairPaymentsOf(jana, NOW);
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.of(jana));
+
+        PairingOutcome outcome = service.pairPaymentsOf(jana.id(), NOW).orElseThrow();
 
         assertThat(outcome).isEqualTo(new PairingOutcome(1, 0, 0, 1, 1));
         savedDonations(1);
@@ -280,7 +284,9 @@ class PaymentPairingServiceTest {
     void should_pair_without_account_pass_when_donor_payments_paired_given_foreign_sender() {
         when(payments.findUnpairedByMatchingVariableSymbol(JANA_SYMBOL)).thenReturn(List.of(payment(1001, Optional.empty(), JANA_SYMBOL.value())));
 
-        PairingOutcome outcome = service.pairPaymentsOf(jana, NOW);
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.of(jana));
+
+        PairingOutcome outcome = service.pairPaymentsOf(jana.id(), NOW).orElseThrow();
 
         assertThat(outcome).isEqualTo(new PairingOutcome(1, 0, 0, 0, 0));
         verify(donorRecords, never()).findBySenderAccount(any());
@@ -293,8 +299,20 @@ class PaymentPairingServiceTest {
         BankPayment bySymbol = payment(1001, Optional.of(ACCOUNT), JANA_SYMBOL.value());
         when(payments.findUnpairedByMatchingVariableSymbol(JANA_SYMBOL)).thenReturn(List.of(bySymbol));
         doThrow(new DataIntegrityViolationException("uq_donation_bank_payment")).when(donations).save(any());
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.of(jana));
 
-        assertThatThrownBy(() -> service.pairPaymentsOf(jana, NOW)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> service.pairPaymentsOf(jana.id(), NOW)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Given a donor unknown to donations, when the donor's payments are paired, then nothing is paired and no payment is read")
+    void should_pair_nothing_when_donor_payments_paired_given_unknown_donor() {
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.empty());
+
+        assertThat(service.pairPaymentsOf(jana.id(), NOW)).isEmpty();
+
+        verify(lock).acquire();
+        verifyNoInteractions(payments, donations);
     }
 
     @Test
@@ -332,14 +350,16 @@ class PaymentPairingServiceTest {
     @DisplayName("Given unpaired payments, when they are paired for the import, for a registration or for a confirmed claim, then the pairing lock is taken before anything is read")
     void should_take_lock_before_any_read_when_paired_given_each_entry_point() {
         SymbolClaim claim = confirmed(jana, OLD_SYMBOL);
+        when(donorRecords.findById(jana.id())).thenReturn(Optional.of(jana));
         InOrder order = inOrder(lock, payments, donorRecords, claims, donations);
 
         service.pairUnpaired(NOW);
         order.verify(lock).acquire();
         order.verify(payments).findUnpairedOrderedByBooking();
 
-        service.pairPaymentsOf(jana, NOW);
+        service.pairPaymentsOf(jana.id(), NOW);
         order.verify(lock).acquire();
+        order.verify(donorRecords).findById(jana.id());
         order.verify(payments).findUnpairedByMatchingVariableSymbol(JANA_SYMBOL);
 
         service.pairConfirmedSymbol(claim, NOW);

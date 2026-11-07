@@ -8,6 +8,7 @@ import {
   Observable,
   of,
   share,
+  Subject,
   timeout,
   TimeoutError,
 } from 'rxjs';
@@ -17,7 +18,7 @@ export { PROBE_PATH } from './connectivity-probe-api';
 
 export const OFFLINE_AFTER_MS = 3_000;
 export const PROBE_EVERY_MS = 30_000;
-export const PROBE_TIMEOUT_MS = 10_000;
+export const PROBE_TIMEOUT_MS = 5_000;
 export const FRESH_ANSWER_MS = 15_000;
 
 export type OfflineCause = 'network' | 'server';
@@ -56,13 +57,15 @@ export class Connectivity {
   private probing: ReturnType<typeof setInterval> | null = null;
   private probeInFlight: Observable<boolean> | null = null;
   private serverClockAhead = 0;
+  private readonly lost = new Subject<void>();
 
   readonly offline = computed(() => this.offlineFor() !== null);
   readonly cause = this.offlineFor.asReadonly();
+  readonly wentOffline: Observable<void> = this.lost.asObservable();
 
   constructor() {
     const view = this.document.defaultView;
-    const wentOffline = () => this.doubt();
+    const wentOffline = () => this.browserWentOffline();
     const wentOnline = () => this.probeIfOffline();
     const visibilityChanged = () => {
       if (this.visible()) {
@@ -78,9 +81,11 @@ export class Connectivity {
       this.document.removeEventListener('visibilitychange', visibilityChanged);
       this.stopSettling();
       this.stopProbing();
+      this.lost.complete();
     });
     if (view?.navigator.onLine === false) {
-      setTimeout(() => this.doubt());
+      this.startOffline();
+      setTimeout(() => this.probe().subscribe());
     }
   }
 
@@ -150,6 +155,19 @@ export class Connectivity {
     }
   }
 
+  private browserWentOffline(): void {
+    this.startOffline();
+    this.probe().subscribe();
+  }
+
+  private startOffline(): void {
+    this.failingCause = 'network';
+    this.stopSettling();
+    if (this.offlineFor() === null) {
+      this.settled();
+    }
+  }
+
   private doubt(): void {
     if (this.offlineFor() === null && this.settling === null) {
       this.probe().subscribe();
@@ -158,13 +176,22 @@ export class Connectivity {
 
   private settled(): void {
     this.settling = null;
+    const wasOnline = this.offlineFor() === null;
     this.offlineFor.set(this.failingCause);
+    if (wasOnline) {
+      this.lost.next();
+    }
     this.stopProbing();
     this.probing = setInterval(() => {
       if (this.visible()) {
         this.probe().subscribe();
       }
     }, PROBE_EVERY_MS);
+  }
+
+  private gaveUpWaiting(): void {
+    this.startOffline();
+    this.offlineFor.set('network');
   }
 
   private probeIfOffline(): void {
@@ -180,7 +207,7 @@ export class Connectivity {
         map(() => true),
         catchError((failure: unknown) => {
           if (failure instanceof TimeoutError) {
-            this.failed('network');
+            this.gaveUpWaiting();
             return of(false);
           }
           return of(!isUnreachable(failure));

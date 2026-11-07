@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a backup is restored > then a dialog names the backup, what is lost, the receipts issued since and the safety backup, and cancelling posts nothing",
+    "reason": "PR #508 (issue #459): a restore keeps the erasures, credentials, roles and audit trail of the time after the backup, so the restore dialog gains a point saying what is kept, and the test names it too",
+    "replacement": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a backup is restored > then a dialog names the backup, what is lost, what is kept from after the backup, the receipts issued since and the safety backup, and cancelling posts nothing"
+  }
+]

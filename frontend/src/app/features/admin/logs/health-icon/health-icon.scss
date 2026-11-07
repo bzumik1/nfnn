@@ -1,0 +1,15 @@
+:host {
+  display: inline-flex;
+}
+
+:host(.health-icon--ok) {
+  color: var(--color-success);
+}
+
+:host(.health-icon--attention) {
+  color: var(--color-warning);
+}
+
+:host(.health-icon--failure) {
+  color: var(--color-danger);
+}

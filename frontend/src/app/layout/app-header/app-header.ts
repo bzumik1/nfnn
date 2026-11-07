@@ -1,10 +1,12 @@
 /// <reference types="@angular/localize" />
 
+import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -21,6 +23,7 @@ import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
+import { followScrollEdge } from './scroll-edge';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
@@ -46,9 +49,7 @@ export class AppHeader {
     const chrome = this.chrome();
     return this.compact() || chrome.backOnWide ? chrome.parent : null;
   });
-  protected readonly showsLogo = computed(
-    () => this.parent() === null || this.chrome().logoBesideBack,
-  );
+  protected readonly showsLogo = computed(() => this.parent() === null);
   protected readonly onDark = computed(() => this.chrome().head !== 'light');
   protected readonly onPhoto = computed(() => this.chrome().head === 'photo');
   protected readonly initials = computed(() => initialsOf(this.auth.donor()?.name ?? ''));
@@ -71,6 +72,12 @@ export class AppHeader {
   protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
 
   constructor() {
+    const document = inject(DOCUMENT);
+    let releaseScrollEdge: (() => void) | null = null;
+    afterNextRender(() => {
+      releaseScrollEdge = followScrollEdge(document, this.header().nativeElement);
+    });
+    inject(DestroyRef).onDestroy(() => releaseScrollEdge?.());
     effect(() => {
       if (this.auth.donor() !== null && this.auth.isAdmin()) {
         untracked(() => this.portraits.ask());

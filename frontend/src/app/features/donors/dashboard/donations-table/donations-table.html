@@ -8,7 +8,9 @@
             {{ item.purpose }}
             <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
           </span>
-          <span class="ui-list__value donation-amount">{{ crowns(item.amountMinor) }}&nbsp;Kč</span>
+          <span class="ui-list__value donation-amount ui-figures"
+            >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
+          >
           @if (item.status === 'REFUNDED') {
             <span class="ui-list__state">
               <span class="status-pill status-pill--refunded">{{ statusLabel(item.status) }}</span>
@@ -48,7 +50,7 @@
           <td
             data-label="Částka"
             i18n-data-label="@@donor.dashboard.payments.col.amount"
-            class="amount"
+            class="amount ui-figures"
           >
             {{ crowns(item.amountMinor) }}&nbsp;Kč
           </td>
@@ -104,7 +106,7 @@
 </ng-template>
 
 <ng-template #receiptPart let-item>
-  @if (item.receiptAvailable) {
+  @if (item.receiptAvailable && !donations.onYearlyReceipt(item)) {
     <button
       type="button"
       class="download-btn"
@@ -135,6 +137,11 @@
     />
   } @else {
     @switch (missingReceipt(item)) {
+      @case ('on-yearly-receipt') {
+        <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.onYearlyReceipt"
+          >Je na ročním potvrzení za rok {{ yearOf(item) }}</span
+        >
+      }
       @case ('refunded') {
         <span class="receipt-note" i18n="@@donor.dashboard.payments.noReceipt.refunded"
           >Vrácený dar potvrzení nemá</span
@@ -156,5 +163,8 @@
     <p class="ui-callout ui-callout--danger row-receipt-error" role="alert">
       {{ message }}
     </p>
+    @if (donations.offersDiagnostics()) {
+      <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+    }
   }
 </ng-template>

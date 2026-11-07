@@ -1,12 +1,12 @@
 @use 'breakpoints' as bp;
 
 :host {
-  --list-group-title-top: calc(var(--header-height) + env(safe-area-inset-top));
+  --list-group-title-top: calc(var(--header-height) + var(--safe-area-top));
 
   display: block;
   min-height: 100vh;
-  padding-top: calc(var(--header-height) + env(safe-area-inset-top));
-  background: var(--color-surface-alt);
+  padding-top: calc(var(--header-height) + var(--safe-area-top));
+  background: var(--color-surface-grouped);
 }
 
 .admin-content {

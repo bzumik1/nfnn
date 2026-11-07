@@ -20,6 +20,9 @@ interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity,
     @Query("select t from RefreshTokenJpaEntity t where t.secretHash = :secretHash")
     Optional<RefreshTokenJpaEntity> findForUpdateBySecretHash(@Param("secretHash") String secretHash);
 
+    @Query("select t.donorId from RefreshTokenJpaEntity t where t.secretHash = :secretHash")
+    Optional<UUID> findDonorIdBySecretHash(@Param("secretHash") String secretHash);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update RefreshTokenJpaEntity t set t.successorId = :successorId where t.id = :id")
     int recordSuccessor(@Param("id") UUID id, @Param("successorId") UUID successorId);
@@ -56,6 +59,10 @@ interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity,
     @Query("update RefreshTokenJpaEntity t set t.revokedAt = :at where t.donorId = :donorId and t.deviceId is null and t.clientId is null"
             + " and t.revokedAt is null")
     int revokeDevicelessBrowserTokensOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t.id from RefreshTokenJpaEntity t where t.revokedAt < :cutoff or t.expiresAt < :cutoff order by t.id")
+    List<UUID> lockSpentBeforeInIdOrder(@Param("cutoff") Instant cutoff);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from RefreshTokenJpaEntity t where t.revokedAt < :cutoff or t.expiresAt < :cutoff")

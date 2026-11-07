@@ -389,7 +389,7 @@ describe('Given an administrator on a donor card', () => {
     const accounts = section('Bankovní účty');
     const accountRow = accounts.querySelector('tbody tr') as HTMLElement;
     const accountText = (accountRow.textContent ?? '').replace(/\s+/g, ' ').trim();
-    expect(accountText).toContain('2900233333/2010');
+    expect(accountText).toContain('2900233333/2010 · Fio banka');
     expect(accountText).toContain('Páruje platby');
     expect(accountText).toContain('ověřen 17. 10. 2026');
     expect(accountText).toContain('2 dary');

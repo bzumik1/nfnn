@@ -1,7 +1,6 @@
 package cz.novanadeje.app.content.infrastructure.people;
 
 import cz.novanadeje.app.content.domain.media.MediaId;
-import cz.novanadeje.app.content.domain.media.MediaImage;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.people.Person;
@@ -26,7 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
@@ -80,8 +78,7 @@ class ContentFoundationPeopleTest {
     @DisplayName("Given a person with a portrait in several sizes, when the portrait for print is asked for twice, then it is cut from the largest size once and the same bytes come back")
     void should_prepare_largest_variant_once_when_asked_twice_given_portrait() {
         givenPeople();
-        when(media.findById(PORTRAIT)).thenReturn(Optional.of(new MediaImage(PORTRAIT, 1200, 800,
-                List.of(variant(480, 320), variant(960, 640)), AT)));
+        when(media.findLargestVariant(PORTRAIT)).thenReturn(Optional.of(variant(960, 640)));
 
         Optional<PrintPortrait> first = foundationPeople.printPortraitOf(WITH_PORTRAIT.value());
         Optional<PrintPortrait> second = foundationPeople.printPortraitOf(WITH_PORTRAIT.value());
@@ -89,14 +86,14 @@ class ContentFoundationPeopleTest {
         assertThat(first).isPresent();
         assertThat(second).isEqualTo(first);
         assertThat(decoded(first.get()).getWidth()).isEqualTo(PrintPortrait.SIDE);
-        verify(media, times(1)).findById(PORTRAIT);
+        verify(media, times(1)).findLargestVariant(PORTRAIT);
     }
 
     @Test
     @DisplayName("Given a person without a portrait, an unknown person or a portrait whose image is gone, when the portrait for print is asked for, then there is none")
     void should_answer_none_when_asked_given_no_portrait() {
         givenPeople();
-        when(media.findById(PORTRAIT)).thenReturn(Optional.empty());
+        when(media.findLargestVariant(PORTRAIT)).thenReturn(Optional.empty());
 
         assertThat(foundationPeople.printPortraitOf(WITHOUT_PORTRAIT.value())).isEmpty();
         assertThat(foundationPeople.printPortraitOf(PersonId.newId(AT.plusSeconds(9)).value())).isEmpty();
@@ -120,12 +117,12 @@ class ContentFoundationPeopleTest {
         CountDownLatch loading = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         AtomicInteger loads = new AtomicInteger();
-        MediaImage image = new MediaImage(PORTRAIT, 1200, 800, List.of(variant(960, 640)), AT);
-        when(media.findById(PORTRAIT)).thenAnswer(call -> {
+        MediaVariant largest = variant(960, 640);
+        when(media.findLargestVariant(PORTRAIT)).thenAnswer(call -> {
             loads.incrementAndGet();
             loading.countDown();
             release.await(5, TimeUnit.SECONDS);
-            return Optional.of(image);
+            return Optional.of(largest);
         });
         FutureTask<Optional<PrintPortrait>> first = new FutureTask<>(() -> foundationPeople.printPortraitOf(WITH_PORTRAIT.value()));
         FutureTask<Optional<PrintPortrait>> second = new FutureTask<>(() -> foundationPeople.printPortraitOf(WITH_PORTRAIT.value()));
@@ -147,7 +144,7 @@ class ContentFoundationPeopleTest {
             MediaId portrait = MediaId.newId(AT.plusSeconds(100 + index));
             PersonId person = PersonId.newId(AT.plusSeconds(200 + index));
             when(people.findById(person)).thenReturn(Optional.of(person(person, "Petr Vzorový", Optional.of(portrait))));
-            when(media.findById(portrait)).thenReturn(Optional.of(new MediaImage(portrait, 64, 64, List.of(variant(64, 64)), AT)));
+            when(media.findLargestVariant(portrait)).thenReturn(Optional.of(variant(64, 64)));
 
             assertThat(foundationPeople.printPortraitOf(person.value())).isPresent();
         }
@@ -159,8 +156,7 @@ class ContentFoundationPeopleTest {
     @DisplayName("Given a portrait whose stored image cannot be decoded, when the portrait for print is asked for, then there is none and a warning names only the image id")
     void should_answer_none_and_warn_when_asked_given_undecodable_portrait() {
         givenPeople();
-        when(media.findById(PORTRAIT)).thenReturn(Optional.of(new MediaImage(PORTRAIT, 1200, 800,
-                List.of(new MediaVariant(1200, 800, new byte[] {1, 2, 3, 4})), AT)));
+        when(media.findLargestVariant(PORTRAIT)).thenReturn(Optional.of(new MediaVariant(1200, 800, new byte[] {1, 2, 3, 4})));
         ListAppender<ILoggingEvent> log = new ListAppender<>();
         log.start();
         Logger logger = (Logger) LoggerFactory.getLogger(ContentFoundationPeople.class);

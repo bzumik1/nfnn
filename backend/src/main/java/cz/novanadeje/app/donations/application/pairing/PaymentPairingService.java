@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
@@ -122,8 +123,12 @@ public class PaymentPairingService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public PairingOutcome pairPaymentsOf(DonorRecord record, Instant now) {
+    public Optional<PairingOutcome> pairPaymentsOf(DonorReference donor, Instant now) {
         lock.acquire();
+        return donorRecords.findById(donor).map(record -> pairPaymentsOf(record, now));
+    }
+
+    private PairingOutcome pairPaymentsOf(DonorRecord record, Instant now) {
         Tally tally = new Tally();
         Set<SenderAccount> learned = new LinkedHashSet<>();
         for (BankPayment payment : payments.findUnpairedByMatchingVariableSymbol(record.variableSymbol())) {

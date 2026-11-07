@@ -26,6 +26,7 @@
           "/boot-guard.js",
           "/manifest.webmanifest",
           "/favicon.svg",
+          "/launch-icon.svg",
           "/images/logo.svg",
           "/images/logo-on-dark.svg",
           "/main-*.js",
@@ -67,10 +68,11 @@
         "/api/content/projects/*"
       ],
       "cacheConfig": {
-        "strategy": "freshness",
+        "strategy": "performance",
         "maxSize": 100,
         "maxAge": "30d",
-        "timeout": "5s"
+        "timeout": "5s",
+        "refreshAhead": "0u"
       }
     },
     {
@@ -80,7 +82,7 @@
         "strategy": "freshness",
         "maxSize": 1,
         "maxAge": "1d",
-        "timeout": "5s"
+        "timeout": "1s"
       }
     },
     {

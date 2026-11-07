@@ -196,6 +196,38 @@ Feature: An administrator connects an application such as Claude to the administ
       | ISSUE_RECEIPT |           |
       | ISSUE_RECEIPT | claude.ai |
 
+  Scenario: A connected application issues no yearly receipt that would replace a single receipt of its gifts, which the browser does
+    Given today is 2026-12-20
+    And a person of the foundation signs the receipts
+    And the bank account has these movements:
+      | id   | date       | amount  | account    | bankCode | name       | variableSymbol |
+      | 3001 | 2026-11-15 | 2500.00 | 2900233333 | 2010     | Novák Petr | {Petr}         |
+      | 3002 | 2026-12-01 | 500.00  | 2900233333 | 2010     | Novák Petr | {Petr}         |
+    And the application starts the import
+    And today is 2027-01-15
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token issues the receipt of the donation of "Petr" received on 2026-11-15
+    Then the response status is 200
+    And the issued receipt has number "2027-000001"
+    When the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 403
+    And the problem type ends with "donations/receipt-replacement-in-browser-only"
+    And 1 receipt is stored
+    And 1 receipt is active
+    When "Jana" issues in the administration the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    And 1 receipt is active
+    And receipt "2027-000001" is superseded
+    When the exchanged API token issues the yearly receipt of "Petr" for 2026
+    Then the response status is 200
+    And the issued receipt has number "2027-000002"
+    When the exchanged API token issues the receipt of the donation of "Petr" received on 2026-12-01
+    Then the response status is 409
+    And the problem type ends with "donations/donation-on-yearly-receipt"
+    And 2 receipts are stored
+
   Scenario: A connected application unpairs a gift no receipt lists, but unpairing a gift on a yearly receipt, which withdraws it, is left to the browser, after which it issues the new receipt that names the withdrawn one
     Given today is 2026-12-20
     And a person of the foundation signs the receipts

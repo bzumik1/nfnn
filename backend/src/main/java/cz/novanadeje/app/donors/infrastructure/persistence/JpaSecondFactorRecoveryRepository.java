@@ -39,4 +39,19 @@ class JpaSecondFactorRecoveryRepository implements SecondFactorRecoveryRepositor
     public boolean markUsed(UUID recoveryId, Instant at) {
         return jpa.markUsed(recoveryId, at) == 1;
     }
+
+    @Override
+    public int forgetCodesClosedAt(Instant now) {
+        return jpa.forgetCodesClosedAt(now);
+    }
+
+    @Override
+    public int deleteExpiredBefore(Instant cutoff) {
+        return jpa.deleteExpiredBefore(cutoff);
+    }
+
+    @Override
+    public void deleteAllOfWithoutWaiting(DonorId donorId) {
+        jpa.deleteUnlockedOf(donorId.value());
+    }
 }

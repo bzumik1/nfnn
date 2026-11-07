@@ -11,4 +11,8 @@ public interface AuthorizationCodeRepository {
     Optional<AuthorizationCode> findBySecretHash(String secretHash);
 
     boolean markUsed(UUID codeId, Instant at);
+
+    int deleteExpiredBefore(Instant cutoff);
+
+    void deleteAllOfWithoutWaiting(DonorId donorId);
 }

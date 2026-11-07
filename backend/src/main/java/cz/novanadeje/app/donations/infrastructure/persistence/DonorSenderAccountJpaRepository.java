@@ -8,12 +8,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 interface DonorSenderAccountJpaRepository extends JpaRepository<DonorSenderAccountJpaEntity, UUID> {
 
     List<DonorSenderAccountJpaEntity> findByDonorIdOrderByCreatedAtAscIdAsc(UUID donorId);
+
+    List<DonorSenderAccountJpaEntity> findByDonorIdInOrderByCreatedAtAscIdAsc(Collection<UUID> donorIds);
 
     List<DonorSenderAccountJpaEntity> findByAccountNumberAndBankCode(String accountNumber, String bankCode);
 

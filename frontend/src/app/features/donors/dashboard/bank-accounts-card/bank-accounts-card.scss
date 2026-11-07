@@ -62,8 +62,8 @@
   line-height: var(--leading-none);
 
   [aria-expanded='true'] > & {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
   }
 }
@@ -136,11 +136,9 @@
 }
 
 .account-number {
-  font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  overflow-wrap: anywhere;
 }
 
 .account-status {
@@ -206,6 +204,10 @@
   }
 }
 
+.account-meta > .account-bank {
+  white-space: normal;
+}
+
 .account-total {
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
@@ -229,9 +231,7 @@
 
 .account-hint strong,
 .accounts-nudge strong {
-  font-family: var(--font-mono);
   color: var(--color-text);
-  white-space: nowrap;
 }
 
 .account-hint--warning {
@@ -289,9 +289,9 @@
 }
 
 .add-account-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   margin-bottom: var(--space-3);
   padding-right: var(--space-8);
@@ -417,7 +417,6 @@
 }
 
 .bank-value {
-  font-family: var(--font-mono);
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   color: var(--color-text);
@@ -494,11 +493,6 @@
 
 .add-account-watch--verified .watch-title {
   color: var(--color-success);
-}
-
-.watch-account {
-  font-family: var(--font-mono);
-  white-space: nowrap;
 }
 
 .watch-detail {

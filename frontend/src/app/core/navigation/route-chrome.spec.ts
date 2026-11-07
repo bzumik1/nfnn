@@ -17,7 +17,7 @@ describe('Given the chrome a route asks for', () => {
           { path: '', pathMatch: 'full', component: Blank, data: { landing: true, head: 'photo' } },
           {
             path: 'darce',
-            data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
+            data: { head: 'light', parent: '/', backOnWide: false },
             children: [{ path: 'prehled', component: Blank }],
           },
           { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
@@ -40,7 +40,6 @@ describe('Given the chrome a route asks for', () => {
       landing: false,
       phoneFooter: false,
       backOnWide: true,
-      logoBesideBack: true,
     });
   });
 
@@ -64,7 +63,6 @@ describe('Given the chrome a route asks for', () => {
         head: 'light',
         parent: '/',
         backOnWide: false,
-        logoBesideBack: false,
       }),
     );
   });

@@ -1,0 +1,167 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.level.heading">
+    Úrovně logování
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.logs.level.intro">
+    Podrobnější logování (DEBUG, TRACE) zapněte jen na dobu hledání chyby: po uplynutí času i po
+    restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.logs.level.loading">Načítáme úrovně…</p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.logs.level.error">Úrovně logování se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.logs.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <section class="ui-card" aria-labelledby="logs-levels-title">
+        <h2 id="logs-levels-title" class="ui-card__title" i18n="@@admin.logs.level.title">
+          Úroveň logování
+        </h2>
+        <div class="ui-card__body">
+          <app-live-notice [notice]="levelNotice()" />
+          <form
+            #levelForm="ngForm"
+            class="level-form"
+            appFocusFirstInvalid
+            (ngSubmit)="setLevel(levelForm)"
+            novalidate
+          >
+            <app-form-field
+              label="Logger"
+              i18n-label="@@admin.logs.level.logger"
+              hint="ROOT, balíček nebo třída, třeba cz.novanadeje.app nebo org.hibernate.SQL."
+              i18n-hint="@@admin.logs.level.logger.hint"
+              [messages]="loggerMessages"
+            >
+              <input
+                appFormControl
+                id="log-level-logger"
+                name="logger"
+                type="text"
+                list="log-level-loggers"
+                enterkeyhint="next"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="200"
+                [pattern]="loggerPattern"
+                [(ngModel)]="logger"
+                required
+              />
+              <datalist id="log-level-loggers">
+                @for (entry of loggers(); track entry.logger) {
+                  <option [value]="entry.logger"></option>
+                }
+              </datalist>
+            </app-form-field>
+            <app-form-field label="Úroveň" i18n-label="@@admin.logs.level.level">
+              <select appFormControl id="log-level-level" name="level" [(ngModel)]="level">
+                @for (option of levels; track option) {
+                  <option [ngValue]="option">{{ option }}</option>
+                }
+              </select>
+            </app-form-field>
+            <app-form-field
+              label="Na kolik minut"
+              i18n-label="@@admin.logs.level.minutes"
+              [messages]="minutesMessages"
+            >
+              <input
+                appFormControl
+                id="log-level-minutes"
+                name="minutes"
+                type="number"
+                inputmode="numeric"
+                enterkeyhint="done"
+                min="1"
+                [max]="maxMinutes"
+                [(ngModel)]="minutes"
+                required
+              />
+            </app-form-field>
+            <button
+              appNeedsConnection
+              type="submit"
+              class="ui-button ui-button--primary"
+              [disabled]="levelState() === 'loading'"
+            >
+              @if (levelState() === 'loading') {
+                <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
+              } @else {
+                <ng-container i18n="@@admin.logs.level.submit">Nastavit</ng-container>
+              }
+            </button>
+          </form>
+
+          <table class="levels">
+            <thead>
+              <tr>
+                <th i18n="@@admin.logs.level.col.logger">Logger</th>
+                <th i18n="@@admin.logs.level.col.configured">Nastaveno</th>
+                <th i18n="@@admin.logs.level.col.effective">Platí</th>
+                <th i18n="@@admin.logs.level.col.override">Dočasně</th>
+                <th class="visually-hidden" i18n="@@admin.logs.level.col.actions">Akce</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of loggers(); track entry.logger) {
+                <tr [class.overridden]="entry.override !== null">
+                  <td data-label="Logger" i18n-data-label="@@admin.logs.level.col.logger">
+                    <span class="logger-name">{{ entry.logger }}</span>
+                  </td>
+                  <td data-label="Nastaveno" i18n-data-label="@@admin.logs.level.col.configured">
+                    @if (entry.configuredLevel; as configured) {
+                      {{ configured }}
+                    } @else {
+                      <span class="muted" i18n="@@admin.logs.level.inherited">zděděno</span>
+                    }
+                  </td>
+                  <td data-label="Platí" i18n-data-label="@@admin.logs.level.col.effective">
+                    {{ entry.effectiveLevel }}
+                  </td>
+                  <td data-label="Dočasně" i18n-data-label="@@admin.logs.level.col.override">
+                    @if (entry.override) {
+                      {{ describeOverride(entry) }}
+                    } @else {
+                      <span class="muted">–</span>
+                    }
+                  </td>
+                  <td class="row-actions">
+                    @if (entry.override) {
+                      <button
+                        appNeedsConnection
+                        type="button"
+                        class="ui-button"
+                        [disabled]="resetting() !== null"
+                        [attr.aria-label]="resetLabel(entry)"
+                        (click)="reset(entry)"
+                      >
+                        @if (resetting() === entry.logger) {
+                          <ng-container i18n="@@admin.logs.level.resetting">Vracíme…</ng-container>
+                        } @else {
+                          <ng-container i18n="@@admin.logs.level.resetNow">Vrátit</ng-container>
+                        }
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</div>

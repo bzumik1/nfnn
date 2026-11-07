@@ -5,11 +5,14 @@
   (dismissed)="closeDialog()"
 >
   <div class="logo">
-    <img
-      src="/images/logo.svg"
-      alt="Nová naděje – nadační fond"
-      i18n-alt="@@layout.header.logoAlt"
-    />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/images/logo-on-dark.svg" />
+      <img
+        src="/images/logo.svg"
+        alt="Nová naděje – nadační fond"
+        i18n-alt="@@layout.header.logoAlt"
+      />
+    </picture>
   </div>
 
   <h2 id="login-dialog-title" class="visually-hidden" i18n="@@donor.login.title">
@@ -94,7 +97,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.account">Číslo účtu</dt>
                 <dd>
-                  <span class="recovery-value">{{ instructions.accountNumber }}</span>
+                  <span class="recovery-value ui-figures">{{ instructions.accountNumber }}</span>
                   <app-copy-button
                     [value]="instructions.accountNumber"
                     what="číslo účtu"
@@ -105,7 +108,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.amount">Částka</dt>
                 <dd>
-                  <span class="recovery-value"
+                  <span class="recovery-value ui-figures"
                     >{{ amount(instructions) }}&nbsp;<ng-container
                       i18n="@@donor.login.recovery.currency"
                       >Kč</ng-container
@@ -116,7 +119,7 @@
               <div class="recovery-row">
                 <dt i18n="@@donor.login.recovery.message">Zpráva pro příjemce</dt>
                 <dd>
-                  <span class="recovery-value">{{ instructions.message }}</span>
+                  <span class="recovery-value ui-mono">{{ instructions.message }}</span>
                   <app-copy-button
                     [value]="instructions.message"
                     what="zprávu pro příjemce"

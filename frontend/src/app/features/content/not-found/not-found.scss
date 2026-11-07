@@ -32,3 +32,14 @@
     text-align: center;
   }
 }
+
+@include bp.height-down(hero-lead) {
+  .not-found {
+    padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
+  }
+
+  .actions {
+    margin-top: var(--space-6);
+    gap: var(--space-3);
+  }
+}

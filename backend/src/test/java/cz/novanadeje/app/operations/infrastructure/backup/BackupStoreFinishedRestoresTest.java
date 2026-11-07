@@ -88,6 +88,6 @@ class BackupStoreFinishedRestoresTest {
 
     private static BackupRun run(RunOutcome outcome, Optional<String> request) {
         return new BackupRun(outcome, STARTED, FINISHED, Optional.of("nfnn-2026-11-12_0300.dump.age"), Optional.of(1000L), Optional.of(37), request,
-                Optional.of(UUID.fromString("019a1c00-0000-7000-8000-00000000a001")), Optional.empty(), Optional.empty());
+                Optional.of(UUID.fromString("019a1c00-0000-7000-8000-00000000a001")), Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

@@ -1,8 +1,14 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { serviceWorkerBypassInterceptor } from './service-worker-bypass';
+import { mayComeFromServiceWorker, serviceWorkerBypassInterceptor } from './service-worker-bypass';
 
 describe('Given the service worker bypass interceptor', () => {
   let client: HttpClient;
@@ -69,5 +75,14 @@ describe('Given the service worker bypass interceptor', () => {
 
   it('when the app asks for a file outside the API, then the service worker may answer it', () => {
     expect(bypassOf('GET', '/receipt-fonts/body.ttf')).toBeNull();
+  });
+
+  it('when the app asks a public answer past the service worker on purpose, then that answer comes from the network', () => {
+    const pastTheWorker = new HttpRequest('GET', '/api/content/news', {
+      headers: new HttpHeaders({ 'ngsw-bypass': 'true' }),
+    });
+
+    expect(mayComeFromServiceWorker(pastTheWorker)).toBe(false);
+    expect(bypassOf('GET', '/api/content/news')).toBeNull();
   });
 });

@@ -1,7 +1,17 @@
+import { sharedCases } from '../../../../testing/shared-cases';
 import { handOver, imageFile, sharesImages, sharesPaymentFiles, spaydFile } from './bank-handoff';
 
-const SPAYD =
-  'SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE';
+const SPAYD = spaydOfCase('500 Kč without a variable symbol');
+
+function spaydOfCase(name: string): string {
+  const expected = sharedCases('payment/spayd.json').find(
+    (paymentCase) => paymentCase.name === name,
+  )?.expected;
+  if (expected === undefined || !('spayd' in expected)) {
+    throw new Error(`payment/spayd.json has no SPAYD text for the case ${name}`);
+  }
+  return expected.spayd;
+}
 
 interface Downloaded {
   readonly name: string;

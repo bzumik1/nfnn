@@ -39,7 +39,7 @@ Backend poběží na `http://localhost:8080`. JDK 25 si Gradle stáhne sám (too
 ```bash
 cd frontend
 npm ci
-npm start                   # dev server na http://localhost:4200, /api proxy na backend
+npm start                   # dev server na http://localhost:4200 (jiný port: NFNN_DEV_PORT=…), /api proxy na backend
 ```
 
 ## Testy

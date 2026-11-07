@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import cz.novanadeje.app.shared.domain.UuidV7;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,6 +15,9 @@ import java.util.UUID;
 class FormerSlugJpaEntity {
 
     @Id
+    private UUID id;
+
+    @Column(name = "slug", nullable = false)
     private String slug;
 
     @Column(name = "news_id")
@@ -29,6 +33,7 @@ class FormerSlugJpaEntity {
     }
 
     private FormerSlugJpaEntity(String slug, UUID newsId, UUID projectId, Instant replacedAt) {
+        this.id = UuidV7.generate(replacedAt);
         this.slug = slug;
         this.newsId = newsId;
         this.projectId = projectId;
@@ -41,6 +46,18 @@ class FormerSlugJpaEntity {
 
     static FormerSlugJpaEntity ofProject(String slug, UUID projectId, Instant replacedAt) {
         return new FormerSlugJpaEntity(slug, null, projectId, replacedAt);
+    }
+
+    FormerSlugJpaEntity leadingToNews(UUID newsId, Instant replacedAt) {
+        this.newsId = newsId;
+        this.replacedAt = replacedAt;
+        return this;
+    }
+
+    FormerSlugJpaEntity leadingToProject(UUID projectId, Instant replacedAt) {
+        this.projectId = projectId;
+        this.replacedAt = replacedAt;
+        return this;
     }
 
     Optional<UUID> newsId() {

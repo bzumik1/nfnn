@@ -6,9 +6,10 @@ import {
   PETR_DETAIL_PATH,
   project,
   servePaymentDetails,
+  serveRecentDonors,
 } from '../baseline/screen-mocks';
 import { administrator, donor, mockDonorApi, session } from '../donor-session';
-import { ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
+import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
 import type { Ui } from './ui';
@@ -104,6 +105,10 @@ async function donorPage(ui: Ui, path: string): Promise<void> {
 async function lockedAdministration(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await mockAdministration(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === ADMINISTRATION_COPY_RECORD_PATH,
+    (route) => route.fulfill({ status: 204 }),
+  );
   await ui.routes.route(
     (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
     (route) => route.fulfill({ status: 204 }),
@@ -285,6 +290,15 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/darci'),
   },
   {
+    id: 'admin-donors-recent',
+    title: 'the donors who gave last in the administration',
+    open: async (ui) => {
+      await serveRecentDonors(ui.routes);
+      await adminPage(ui, '/sprava/darci');
+      await ui.waitVisible({ css: '.recent-title' });
+    },
+  },
+  {
     id: 'admin-donor-detail',
     title: "a donor's card in the administration",
     open: (ui) => adminPage(ui, PETR_DETAIL_PATH),
@@ -329,6 +343,15 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/upozorneni'),
   },
   {
+    id: 'admin-alerts-other-device',
+    title: 'the sheet of another device with its alert switches in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/upozorneni');
+      await ui.click({ css: 'section[aria-labelledby="alerts-others-title"] button.ui-list__row' });
+      await ui.waitVisible(DIALOG);
+    },
+  },
+  {
     id: 'admin-yearly-receipts',
     title: 'the bulk receipts in the administration',
     open: async (ui) => {
@@ -366,6 +389,21 @@ export const STEPS: Step[] = [
     id: 'admin-settings',
     title: 'the settings in the administration',
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
+  },
+  {
+    id: 'admin-logs',
+    title: 'the logs hub',
+    open: (ui) => adminPage(ui, '/sprava/logy'),
+  },
+  {
+    id: 'admin-log-file',
+    title: 'a log file',
+    open: (ui) => adminPage(ui, '/sprava/logy/soubor?nazev=backend.log'),
+  },
+  {
+    id: 'admin-server-state',
+    title: 'the server state',
+    open: (ui) => adminPage(ui, '/sprava/logy/stav'),
   },
   {
     id: 'admin-more',

@@ -9,12 +9,10 @@
 }
 
 .last-gift-amount {
-  font-family: var(--font-serif);
   font-size: var(--text-4xl);
-  font-weight: var(--weight-extrabold);
+  font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-tight);
   color: var(--color-text);
-  font-variant-numeric: var(--numeric-figures);
 }
 
 .last-gift-date {
@@ -54,7 +52,7 @@
 
   dd {
     margin: var(--space-1) 0 0;
-    font-family: var(--font-serif);
+    font-family: var(--font-figures);
     font-size: var(--text-3xl);
     font-weight: var(--weight-bold);
     color: var(--color-text);
@@ -87,10 +85,6 @@
 .overview-question,
 .admin-refusal {
   margin: 0 0 var(--space-4);
-
-  .overview-account {
-    white-space: nowrap;
-  }
 
   a {
     color: inherit;

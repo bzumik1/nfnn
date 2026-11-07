@@ -1,0 +1,13 @@
+.launch-screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-surface);
+}
+
+.launch-screen__icon {
+  display: block;
+  width: var(--launch-icon-size);
+  height: var(--launch-icon-size);
+}

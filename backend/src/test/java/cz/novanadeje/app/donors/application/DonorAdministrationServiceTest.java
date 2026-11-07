@@ -7,9 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
-import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
-import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -24,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -39,7 +38,6 @@ class DonorAdministrationServiceTest {
     private static final DonorId JANA = DonorId.newId(NOW.minusSeconds(300));
     private static final DonorId PETR = DonorId.newId(NOW.minusSeconds(200));
     private static final PostalAddress ADDRESS = new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01");
-    private static final TotpSecret SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
 
     @Mock
     private DonorRepository donors;
@@ -61,9 +59,8 @@ class DonorAdministrationServiceTest {
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", Set.of(Role.DONOR, Role.ADMIN));
         Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", Set.of(Role.DONOR));
         when(donors.search("nov", 0, DonorAdministrationService.SEARCH_LIMIT + 1)).thenReturn(List.of(jana, petr));
-        when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(SecondFactor.reconstitute(JANA, SECRET, NOW.minusSeconds(100), NOW.minusSeconds(50), 1L)));
-        when(secondFactors.findByDonor(PETR)).thenReturn(Optional.of(SecondFactor.enrol(PETR, SECRET, NOW.minusSeconds(10))));
-        when(passkeys.countByDonor(JANA)).thenReturn(2);
+        when(secondFactors.findDonorsWithEnabledFactorAmong(List.of(JANA, PETR))).thenReturn(Set.of(JANA));
+        when(passkeys.countByDonors(List.of(JANA, PETR))).thenReturn(Map.of(JANA, 2));
 
         DonorSearchResult result = service.search("  nov ", 0, DonorAdministrationService.SEARCH_LIMIT);
 
@@ -77,7 +74,8 @@ class DonorAdministrationServiceTest {
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", Set.of(Role.DONOR));
         Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", Set.of(Role.DONOR));
         when(donors.search("", 1, 2)).thenReturn(List.of(jana, petr));
-        when(secondFactors.findByDonor(JANA)).thenReturn(Optional.empty());
+        when(secondFactors.findDonorsWithEnabledFactorAmong(List.of(JANA))).thenReturn(Set.of());
+        when(passkeys.countByDonors(List.of(JANA))).thenReturn(Map.of());
 
         DonorSearchResult result = service.search(null, 1, 1);
 

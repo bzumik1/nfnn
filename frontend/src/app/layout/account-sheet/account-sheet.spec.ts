@@ -62,21 +62,24 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   }
 
-  it('when it opens, then it names the donor and their variable symbol over the sections of the account', () => {
+  it('when it opens, then it is named Účet under the logo of the foundation, with the card of the donor leading to Údaje a zabezpečení above the sections', () => {
     const sheet = open();
 
-    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Jana Nováková');
-    expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Variabilní symbol 1234567890',
+    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(sheet.querySelector('#account-sheet-title img.account-logo')?.getAttribute('alt')).toBe(
+      '',
+    );
+    const profile = sheet.querySelector('a.account-profile')!;
+    expect(profile.getAttribute('href')).toBe('/darce/udaje');
+    expect(profile.querySelector('.account-name')?.textContent?.trim()).toBe('Jana Nováková');
+    expect(profile.querySelector('.account-profile-detail')?.textContent?.trim()).toBe(
+      'Údaje a zabezpečení',
     );
     expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
-    expect(rows(sheet)).toEqual([
-      'Můj přehled',
-      'Moje dary',
-      'Potvrzení o daru',
-      'Bankovní účty',
-      'Údaje a zabezpečení',
-    ]);
+    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+    expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Variabilní symbol pro vaše dary: 1234567890',
+    );
     expect(sheet.querySelector('.account-sign-out')?.textContent?.trim()).toBe('Odhlásit se');
   });
 
@@ -129,13 +132,16 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(open().querySelector('dialog')?.getAttribute('data-presentation')).toBe('centered');
   });
 
-  it('when no name is kept, then the sheet is named Účet and shows a person instead of initials', () => {
+  it('when no name is kept, then the card of the donor shows a person instead of initials and still leads to Údaje a zabezpečení', () => {
     donor.set(sampleDonor({ name: '' }));
 
     const sheet = open();
 
     expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
     expect(sheet.querySelector('.account-initials svg')).not.toBeNull();
+    expect(sheet.querySelector('a.account-profile')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Údaje a zabezpečení',
+    );
   });
 
   it('when the site already runs as an app or cannot be added, then the sheet offers no Přidat na plochu', () => {

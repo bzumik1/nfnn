@@ -1,12 +1,6 @@
 package cz.novanadeje.app.donations.application.report;
 
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
-import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
-import cz.novanadeje.app.donations.domain.donation.DonationRepository;
-import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
-import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
-import cz.novanadeje.app.donations.domain.report.DonorCounts;
-import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportMonthNotEnded;
@@ -33,23 +27,16 @@ public class MonthlyReportService {
 
     private static final Logger log = LoggerFactory.getLogger(MonthlyReportService.class);
 
-    private final DonorRecordRepository donorRecords;
-    private final DonationRepository donations;
-    private final BankPaymentRepository payments;
-    private final BankImportStateRepository importStates;
+    private final MonthlyReportFigures figures;
     private final MonthlyReportLog reportLog;
     private final ReportSettingsRepository settings;
     private final MonthlyReportSender sender;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public MonthlyReportService(DonorRecordRepository donorRecords, DonationRepository donations, BankPaymentRepository payments,
-                                BankImportStateRepository importStates, MonthlyReportLog reportLog, ReportSettingsRepository settings,
+    public MonthlyReportService(MonthlyReportFigures figures, MonthlyReportLog reportLog, ReportSettingsRepository settings,
                                 MonthlyReportSender sender, ApplicationEventPublisher events, Clock clock) {
-        this.donorRecords = donorRecords;
-        this.donations = donations;
-        this.payments = payments;
-        this.importStates = importStates;
+        this.figures = figures;
         this.reportLog = reportLog;
         this.settings = settings;
         this.sender = sender;
@@ -80,9 +67,9 @@ public class MonthlyReportService {
         Instant now = clock.instant();
         ReportSettings current = settings.current();
         reportLog.recordSending(month, now);
-        sender.send(compile(month), current);
+        sender.send(figures.compile(month), current);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
-                "Měsíční přehled za " + month + " ručně odeslán na " + String.join(", ", current.recipients().values()), now));
+                "Měsíční přehled za " + month + " ručně odeslán, počet příjemců " + current.recipients().count(), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
         return new ManualReportDelivery(month, current.recipients(), now);
     }
@@ -91,7 +78,7 @@ public class MonthlyReportService {
         if (!reportLog.recordSending(month, clock.instant())) {
             return MonthlyReportOutcome.alreadySent(month);
         }
-        sender.send(compile(month), current);
+        sender.send(figures.compile(month), current);
         return MonthlyReportOutcome.sent(month);
     }
 
@@ -100,13 +87,5 @@ public class MonthlyReportService {
         if (!month.completedBy(today)) {
             throw new ReportMonthNotEnded(month, today);
         }
-    }
-
-    private MonthlyReport compile(ReportMonth month) {
-        DonorCounts donors = DonorCounts.between(donorRecords.countRegisteredBefore(month.start()), donorRecords.countRegisteredBefore(month.end()));
-        return MonthlyReport.compile(month, donors,
-                donations.findReceivedOnBetween(month.firstDayOfYear(), month.lastDay()),
-                payments.findUnpairedBookedBetween(month.firstDayOfYear(), month.lastDay()),
-                importStates.current());
     }
 }

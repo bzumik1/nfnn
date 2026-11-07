@@ -2,7 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AdminAccountsSyncSnapshot;
 import cz.novanadeje.app.donors.application.DonorAccountView;
-import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
 import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,7 +44,7 @@ class AdminDonorsSyncProjection {
 
     record AuditRow(UUID id, UUID adminId, String action, UUID subjectId, Instant performedAt, String client) {
 
-        static AuditRow from(AdminActionEntry entry) {
+        static AuditRow from(AdminActionSummary entry) {
             return new AuditRow(entry.id(), entry.adminId(), entry.action(), entry.subjectId().orElse(null), entry.performedAt(), entry.client().orElse(null));
         }
     }

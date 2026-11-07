@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.report.AdministrationYears;
 import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.donations.domain.report.YearOverview;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -34,7 +35,7 @@ public class AdminOverviewService {
         this.clock = clock;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public OverviewView overview(Optional<Year> requested) {
         LocalDate today = FoundationCalendar.today(clock);
         List<Year> years = AdministrationYears.offeredYears(today, donations.findReceivedYearsNewestFirst(), payments.findBookedYearsNewestFirst());
@@ -48,7 +49,7 @@ public class AdminOverviewService {
         return year.atMonth(12).atEndOfMonth();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ActivitySince since(Instant from) {
         return new ActivitySince(from, tally(payments.findImportedSince(from)), tally(payments.findUnpairedImportedSince(from)),
                 donorRecords.countRegisteredSince(from));

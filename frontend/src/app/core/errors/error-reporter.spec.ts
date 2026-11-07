@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { Connectivity } from '../connectivity/connectivity';
+import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { ErrorReporter } from './error-reporter';
 import { ERROR_NAMES } from './error-vocabulary';
 
@@ -178,5 +179,32 @@ describe('Given the browser error reporter', () => {
     });
 
     expect(() => reporter.report('unexpected', 'global', new Error(CANARY))).not.toThrow();
+  });
+
+  describe('when a drawing failure with its reason repeats within 10 minutes and past the cap', () => {
+    beforeEach(() => {
+      for (let index = 0; index < 12; index++) {
+        reporter.report('pdf-render', 'global', new TypeError(CANARY), 'drawing');
+      }
+    });
+
+    it('then every one is listed for the diagnostic file with its closed values and reason', () => {
+      const listed = TestBed.inject(DiagnosticEvents).listed();
+
+      expect(listed).toHaveLength(12);
+      expect(listed[0]).toEqual({
+        secondsAgo: 0,
+        kind: 'pdf-render',
+        place: 'global',
+        name: 'TypeError',
+        detail: 'drawing',
+      });
+      expect(JSON.stringify(listed)).not.toContain('Kanárek');
+    });
+
+    it('then the reason never leaves the browser', () => {
+      expect(sentBodies()).toEqual([expect.not.objectContaining({ detail: expect.anything() })]);
+      expect(JSON.stringify(sentBodies())).not.toContain('drawing');
+    });
   });
 });

@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupLimits;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
+import cz.novanadeje.app.operations.domain.backup.BackupRequestPending;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -78,6 +79,19 @@ class BackupAdministrationServiceTest {
     }
 
     @Test
+    @DisplayName("Given a request still waiting for the backup container, when another backup or test restore is requested, then it is refused as operations/backup-request-pending and nothing is written or audited")
+    void should_refuse_when_requested_given_a_request_still_waiting() {
+        when(store.pendingRequests()).thenReturn(1);
+
+        for (BackupRequestKind kind : BackupRequestKind.values()) {
+            assertThatThrownBy(() -> service.request(ADMIN, kind)).isInstanceOfSatisfying(BackupRequestPending.class,
+                    refused -> assertThat(refused.code()).isEqualTo("operations/backup-request-pending"));
+        }
+        verify(store, never()).request(any(), any());
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
     @DisplayName("Given an administrator, when a backup is requested, then a request file is written and the request is audited")
     void should_write_request_and_audit_when_requested_given_an_administrator() {
         BackupRequest request = service.request(ADMIN, BackupRequestKind.BACKUP);
@@ -139,6 +153,6 @@ class BackupAdministrationServiceTest {
 
     private static BackupRun run(RunOutcome outcome, Instant finishedAt) {
         return new BackupRun(outcome, finishedAt.minusSeconds(2), finishedAt, Optional.of(FILE), Optional.of(1590L), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 }

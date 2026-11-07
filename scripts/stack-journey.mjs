@@ -324,7 +324,7 @@ class Journey {
   sql(statement) {
     return execFileSync(
       'docker',
-      ['exec', 'nfnn-postgres', 'psql', '-U', 'novanadeje', '-d', 'novanadeje', '-v', 'ON_ERROR_STOP=1', '-tA', '-c', statement],
+      ['exec', 'nfnn-postgres', 'psql', '-U', 'novanadeje_app', '-d', 'novanadeje', '-v', 'ON_ERROR_STOP=1', '-tA', '-c', statement],
       { encoding: 'utf8' },
     ).trim();
   }

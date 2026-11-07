@@ -1,0 +1,101 @@
+[
+  {
+    "path": "POST /api/admin/donors/administrators",
+    "scenario": "donors/admin_actions: *",
+    "kind": "body",
+    "field": "$.secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the grant's answer now names the factor as on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; turning it on sends its usual notice",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "POST /api/admin/donors/administrators",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "body",
+    "field": "$.secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the grant's answer now names the factor as on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; turning it on sends its usual notice",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "POST /api/admin/donors/administrators",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the grant's answer now names the factor as on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; turning it on sends its usual notice",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/confirm",
+    "scenario": "donors/admin_actions: A change made by an administrator who is no longer one still names the administrator*",
+    "kind": "body",
+    "field": "$.user.roles*",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; Petr turns the factor on before the grant, so the session it continues holds no ADMIN yet",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "GET /api/admin/donors/administrators",
+    "scenario": "donors/admin_administrators: An administrator makes a registered donor an administrator by e-mail*",
+    "kind": "body",
+    "field": "$*secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the new administrator is listed with the factor on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.chunks*secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the grantee's account row carries the factor as on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "path": "GET /api/admin/donors/{id}",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.secondFactorEnabled",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the grantee's account carries the factor as on",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "scenario": "donors/admin_administrators: The new administrator gets in only with two-factor authentication at the next sign-in*",
+    "kind": "removed",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the scenario where the factor came after the grant cannot happen any more and is replaced by 'The new administrator reaches the administration only from a session opened with the second factor'",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donors/admin_administrators.feature > An administrator manages who administers the site - The new administrator gets in only with two-factor authentication at the next sign-in",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; renamed because the factor now comes before the grant",
+    "replacement": "feature_classpath_features/donors/admin_administrators.feature > An administrator manages who administers the site - The new administrator reaches the administration only from a session opened with the second factor",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorServiceTest > Given a registered plain donor, when an administrator grants the role by e-mail, then the donor is saved as an administrator and the action is recorded",
+    "reason": "Security audit 2026-11-06 (PR #433): the administrator role is granted only to a donor who already holds a second factor (a confirmed authenticator app or a passkey), so the scenarios turn the grantee's authenticator app on before the grant; the granted donor now holds the authenticator app",
+    "replacement": "donors.application.AdministratorServiceTest > Given a registered plain donor with the authenticator app on, when an administrator grants the role by e-mail, then the donor is saved as an administrator and the action is recorded",
+    "contract": "docs/api-contract.md, Administrators (POST /api/admin/donors/administrators); docs/security-overview.md, Authorization and the administrator role"
+  }
+]

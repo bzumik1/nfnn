@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/figures.spec.ts > Given a phone with the text at twice its size > when a donor opens Účty, then each account number stands on one line",
+    "reason": "PR #529 names the bank beside the account: the same test also checks that the bank's name is not cut off at double text size, so its name says so",
+    "replacement": "e2e/figures.spec.ts > Given a phone with the text at twice its size > when a donor opens Účty, then each account number stands on one line and the name of its bank shows whole",
+    "contract": "docs/frontend-overview.md, donations (czech-banks.ts, bank-account/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when a verified account arrives, then its row shows the number, the status, the verification day and the gifts without a symbol",
+    "reason": "PR #529 names the bank as the first item of the line under the account number, so the test's name lists the bank too",
+    "replacement": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when a verified account arrives, then its row shows the number, the status, the bank, the verification day and the gifts without a symbol",
+    "contract": "docs/frontend-overview.md, donors (bank-accounts-card/)"
+  }
+]

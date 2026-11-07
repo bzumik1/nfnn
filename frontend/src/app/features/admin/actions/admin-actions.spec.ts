@@ -337,6 +337,25 @@ describe('Given an administrator on the history page', () => {
     expect(fixture.nativeElement.querySelector('.admin-more')).toBeNull();
   });
 
+  it('when changes share their time at the end of a page, then "Načíst starší" names the last one listed, so none of them is skipped', () => {
+    const sameMoment = adminAction({
+      id: '019a1c00-0000-7000-8000-00000000e000',
+      performedAt: granted.performedAt,
+    });
+    firstPage([paired, granted], true);
+
+    element<HTMLButtonElement>('.admin-more button').click();
+    fixture.detectChanges();
+
+    const request = http.expectOne((candidate) => candidate.url === LIST_URL);
+    expect(request.request.params.get('before')).toBe(granted.performedAt);
+    expect(request.request.params.get('beforeId')).toBe(granted.id);
+    request.flush({ items: [sameMoment], hasMore: false });
+    fixture.detectChanges();
+
+    expect(rows()).toHaveLength(3);
+  });
+
   it('when the next page cannot be loaded, then an alert says so and the button stays for another try', () => {
     firstPage([paired], true);
 

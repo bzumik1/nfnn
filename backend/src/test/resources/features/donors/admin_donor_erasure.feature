@@ -9,8 +9,10 @@ Feature: An administrator erases a donor's personal data
 
   Scenario: An administrator erases a donor who asked for it, the donor is told and the account cannot be used any more
     Given "Petr" enables the second factor
+    And "Petr" and "Jana" each hold a second-factor challenge, a used and an open recovery by payment and a connection code
     When "Jana" erases the donor "Petr"
     Then the response status is 204
+    And "Petr" holds no second-factor challenge, recovery by payment or connection code any more, while "Jana" keeps hers
     And the admin action "ERASE_DONOR" by "Jana" on "Petr" is recorded
     And e-mail 1 goes to the address of "Petr" with the subject "Vaše osobní údaje jsme vymazali – Nová naděje"
     And both parts of the last e-mail contain "Vydaná potvrzení o daru jsou účetní doklady"
@@ -46,6 +48,19 @@ Feature: An administrator erases a donor's personal data
     When a password reset is asked for "petr@example.cz"
     Then the response status is 202
     And 1 e-mail is sent to "petr@example.cz" with the subject "Vaše osobní údaje jsme vymazali – Nová naděje"
+
+  Scenario: A tab the donor left open cannot put the personal data back after the erasure
+    Given "Petr" keeps an access token that names no session
+    And "Jana" erased the donor "Petr"
+    When "Petr" saves the profile with the name "Petr Svoboda"
+    Then the response status is 401
+    And the problem type ends with "auth/session-ended"
+    When "Petr" saves the profile with the name "Petr Svoboda" with the token that names no session
+    Then the response status is 409
+    And the problem type ends with "donors/already-erased"
+    When "Jana" opens the donor "Petr"
+    Then the response status is 200
+    And the donor card carries no personal data of "Petr"
 
   Scenario: The former e-mail address can register again after the erasure
     Given "Jana" erased the donor "Petr"

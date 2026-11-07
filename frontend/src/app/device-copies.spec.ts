@@ -24,6 +24,12 @@ describe('Given the device copies of the app, loaded only when a session first n
       passwordChanged: vi.fn(async () => undefined),
       passwordRemoved: vi.fn(async () => undefined),
       passkeyAdded: vi.fn(async () => undefined),
+      diagnostics: vi.fn(() => ({
+        mode: 'stored',
+        donorCopy: 'open',
+        storedAge: 'under-1h',
+        administrationCopy: 'none',
+      })),
     };
     TestBed.configureTestingModule({
       providers: [
@@ -97,6 +103,22 @@ describe('Given the device copies of the app, loaded only when a session first n
       ).rejects.toThrow(TypeError);
 
       expect([...output].every((byte) => byte === 0)).toBe(true);
+    });
+  });
+
+  it('when the diagnostic file asks before any session needed a copy, then nothing is loaded and the state is unknown', async () => {
+    expect(await copies.diagnostics()).toBeNull();
+    expect(downloads).toBe(0);
+  });
+
+  it('when the diagnostic file asks after a session opened a copy, then it gets the state of the vault', async () => {
+    await copies.restored(JANA);
+
+    expect(await copies.diagnostics()).toEqual({
+      mode: 'stored',
+      donorCopy: 'open',
+      storedAge: 'under-1h',
+      administrationCopy: 'none',
     });
   });
 

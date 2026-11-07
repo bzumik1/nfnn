@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { IDBFactory } from 'fake-indexeddb';
+import { AdministrationAccess } from '../../auth/administration-access';
 import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
@@ -22,7 +23,7 @@ import {
 import { openIdbDeviceStorage } from './idb-device-storage';
 import { MemoryDeviceStorage } from './memory-device-storage';
 import { ChannelBus, NamedLocks } from './testing/fake-device';
-import { leaks, rawIndexedDbDump } from './testing/raw-scan';
+import { leaks, rawIndexedDbDump, textDump } from './testing/raw-scan';
 
 const JANA: DeviceAccount = {
   email: 'jana.kanarkova@example.cz',
@@ -649,6 +650,70 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect((await indexedDB.databases()).map((database) => database.name)).not.toContain(
         DEVICE_DATABASE,
       );
+    });
+  });
+
+  describe('when the diagnostic file asks for the state of the copies', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('and Jana has a stored copy open, then it gets closed values only: no e-mail, handle, salt, copy id, credential or data', async () => {
+      await vault.signedIn(JANA, { kind: 'prf', reading: prfReading() });
+      await vault.replaceContents(vault.opened()!.store, contentsOf(CANARY));
+      const copyId = vault.opened()!.store.copyId;
+      const storage = await rawStorage();
+      const salt = (await storage.deviceSalt()) ?? 'no salt';
+      storage.close();
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-05T10:30:00Z'));
+
+      const state = vault.diagnostics();
+
+      expect(state).toEqual({
+        mode: 'stored',
+        donorCopy: 'open',
+        storedAge: 'under-1h',
+        administrationCopy: 'none',
+      });
+      const dump = textDump(JSON.stringify(state));
+      for (const secret of [CANARY, JANA.email, JANA.userHandle, copyId, CREDENTIAL, salt]) {
+        expect(leaks(dump, secret), secret).toBe(false);
+      }
+    });
+
+    it('and her copy is locked, then it says so', async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'none' });
+
+      expect(vault.diagnostics()).toEqual({
+        mode: 'stored',
+        donorCopy: 'locked',
+        storedAge: null,
+        administrationCopy: 'none',
+      });
+    });
+
+    it('and nobody signed in, then it says nothing is open', () => {
+      expect(vault.diagnostics()).toEqual({
+        mode: null,
+        donorCopy: 'none',
+        storedAge: null,
+        administrationCopy: 'none',
+      });
+    });
+
+    it('and an administrator opens the administration and it locks again, then it says open and then locked', async () => {
+      const access = TestBed.inject(AdministrationAccess);
+      access.signedIn();
+      await vault.signedIn(
+        { ...JANA, administrator: true },
+        { kind: 'password', password: PASSWORD },
+      );
+
+      expect(vault.diagnostics().administrationCopy).toBe('open');
+      access.lock();
+      TestBed.tick();
+      expect(vault.diagnostics().administrationCopy).toBe('locked');
     });
   });
 

@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { browserEntries, stepBack } from './app-history';
 import { mockDonorApi, openAccountItem, signIn } from './donor-session';
 
 const article = {
@@ -25,6 +26,15 @@ async function publishedArticle(page: Page): Promise<void> {
     (route) =>
       route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
   );
+}
+
+async function settledPanel(page: Page) {
+  const panel = page.getByRole('dialog').locator('.dialog-panel');
+  await expect(panel).toBeVisible();
+  await panel.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+  return panel;
 }
 
 function tabs(page: Page) {
@@ -113,16 +123,27 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they go back with the browser, then the page the sheet was opened on returns', async ({
+  test('when the app steps back, as its swipe does, then the page the sheet was opened on returns', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
     await expect(page).toHaveURL('/darce/dary');
 
-    await page.goBack();
+    await stepBack(page);
 
     await expect(page).toHaveURL('/o-nas');
     await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site', async ({
+    page,
+  }) => {
+    const entries = await browserEntries(page);
+
+    await openAccountItem(page, 'Moje dary');
+
+    await expect(page).toHaveURL('/darce/dary');
+    expect(await browserEntries(page)).toBe(entries);
   });
 
   test('when they press Zpět, then the page the sheet was opened on returns', async ({ page }) => {
@@ -134,7 +155,7 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they choose the section already open, then the sheet closes and one Back leaves it', async ({
+  test('when they choose the section already open, then the sheet closes and one step back leaves it', async ({
     page,
   }) => {
     await openAccountItem(page, 'Moje dary');
@@ -148,9 +169,72 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await sheet.getByRole('link', { name: 'Moje dary' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL('/darce/dary');
-    await page.goBack();
+    await stepBack(page);
 
     await expect(page).toHaveURL('/o-nas');
+  });
+
+  test('when they press the account button, then the sheet holds the focus itself and its close button shows no focus ring', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+
+    await expect(sheet).toBeFocused();
+    await expect(sheet.getByRole('button', { name: 'Zavřít' })).not.toBeFocused();
+  });
+
+  test('when they open the sheet with the keyboard, then its close button takes the focus as before', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByRole('dialog').getByRole('button', { name: 'Zavřít' })).toBeFocused();
+  });
+
+  test('when the sheet has opened, then it rises almost to the top of the screen even though its list is short', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const panel = await settledPanel(page);
+
+    const box = await panel.boundingBox();
+
+    expect(box?.y).toBeLessThanOrEqual(16);
+    expect(box && Math.round(box.y + box.height)).toBe(page.viewportSize()?.height);
+  });
+
+  test('when they drag the tall sheet down by its grabber, then it closes', async ({ page }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await settledPanel(page);
+    const box = (await page.locator('.dialog-grabber').boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 400, { steps: 20 });
+    await page.mouse.up();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('when the sheet has opened, then its round close button stands on one row with the logo', async ({
+    page,
+  }) => {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    const sheet = page.getByRole('dialog');
+    await settledPanel(page);
+
+    const close = await sheet.getByRole('button', { name: 'Zavřít' }).boundingBox();
+    const name = await sheet.getByRole('heading', { level: 2 }).boundingBox();
+
+    expect(close?.width).toBe(40);
+    expect(close?.height).toBe(40);
+    expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
+      true,
+    );
   });
 });
 

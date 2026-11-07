@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="020-count-wrong-second-factor-codes" author="nfnn">
+        <createTable tableName="donor_second_factor_wrong_codes">
+            <column name="donor_id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donor_second_factor_wrong_codes" nullable="false"/>
+            </column>
+            <column name="window_started_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="wrong_codes" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paused_until" type="timestamp with time zone"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="donor_second_factor_wrong_codes" baseColumnNames="donor_id"
+                                 referencedTableName="donor" referencedColumnNames="id"
+                                 constraintName="fk_donor_second_factor_wrong_codes_donor" onDelete="CASCADE"/>
+        <sql>alter table donor_second_factor_wrong_codes add constraint ck_donor_second_factor_wrong_codes_count check (wrong_codes &gt;= 0)</sql>
+    </changeSet>
+</databaseChangeLog>

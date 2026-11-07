@@ -62,8 +62,8 @@ class MonthlyReportServiceTest {
     private final MonthlyReportSender sender = mock(MonthlyReportSender.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(FIRST_OF_OCTOBER_AT_SEVEN, ZoneId.of("Europe/Prague"));
-    private final MonthlyReportService service = new MonthlyReportService(donors, donations, payments, importStates, reportLog, settings, sender,
-            events, clock);
+    private final MonthlyReportService service = new MonthlyReportService(new MonthlyReportFigures(donors, donations, payments, importStates),
+            reportLog, settings, sender, events, clock);
 
     @BeforeEach
     void stubFacts() {
@@ -197,7 +197,7 @@ class MonthlyReportServiceTest {
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("SEND_MONTHLY_REPORT");
         assertThat(audited.getValue().subjectId()).isEmpty();
-        assertThat(audited.getValue().details()).isEqualTo("Měsíční přehled za 2026-09 ručně odeslán na pavel@example.cz, jakub@example.cz");
+        assertThat(audited.getValue().details()).isEqualTo("Měsíční přehled za 2026-09 ručně odeslán, počet příjemců 2");
         assertThat(audited.getValue().performedAt()).isEqualTo(FIRST_OF_OCTOBER_AT_SEVEN);
     }
 

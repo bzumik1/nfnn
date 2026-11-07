@@ -5,12 +5,16 @@ import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 
 import java.util.Optional;
 
-public record AdminPaymentView(BankPayment payment, Optional<PairedDonationView> donation, String version) {
+public record AdminPaymentView(BankPayment payment, Optional<PairedDonationView> donation, String version, boolean payerWithheld) {
 
     public AdminPaymentView {
         if (payment == null || donation == null || version == null) {
             throw new IllegalArgumentException("An admin payment view needs the payment, its donation (even when absent) and its version");
         }
+    }
+
+    public AdminPaymentView(BankPayment payment, Optional<PairedDonationView> donation, String version) {
+        this(payment, donation, version, false);
     }
 
     public boolean accountVerification() {

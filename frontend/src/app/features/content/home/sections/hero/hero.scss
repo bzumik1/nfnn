@@ -2,8 +2,8 @@
 
 .hero {
   position: relative;
-  height: 100vh;
-  min-height: 600px;
+  min-height: 100vh;
+  min-height: var(--full-screen-height);
   overflow: hidden;
   display: flex;
   align-items: flex-end;
@@ -45,7 +45,9 @@
   z-index: 2;
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 0 var(--space-8) calc(var(--tab-bar-clearance) + var(--space-10));
+  padding: calc(var(--header-height) + var(--safe-area-top))
+    max(var(--space-8), env(safe-area-inset-right)) calc(var(--tab-bar-clearance) + var(--space-10))
+    max(var(--space-8), env(safe-area-inset-left));
   width: 100%;
   animation: fadeInUp var(--duration-entrance) ease both;
 }
@@ -59,7 +61,7 @@
 }
 
 .hero-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-hero);
   font-weight: var(--weight-extrabold);
   color: var(--color-on-image);
@@ -83,11 +85,36 @@
 
 @include bp.down(tablet) {
   .hero-content {
-    padding: 0 var(--space-5) calc(var(--tab-bar-clearance) + var(--space-6));
+    padding-right: max(var(--space-5), env(safe-area-inset-right));
+    padding-bottom: calc(var(--tab-bar-clearance) + var(--space-6));
+    padding-left: max(var(--space-5), env(safe-area-inset-left));
   }
 
   .hero-btns {
     flex-direction: column;
     gap: var(--space-3);
+  }
+}
+
+@include bp.height-down(hero-lead) {
+  .hero-lead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+@include bp.height-down(short) {
+  .hero-content {
+    padding-bottom: calc(var(--tab-bar-clearance) + var(--space-4));
+  }
+
+  .hero-title {
+    font-size: var(--text-hero-short);
+    margin-bottom: 0;
   }
 }

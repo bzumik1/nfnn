@@ -5,7 +5,7 @@ import { Routes } from '@angular/router';
 import { AdministrationLockPanel } from './lock/administration-lock-panel';
 import { AdministrationLockService } from './lock/administration-lock-service';
 import { ADMINISTRATION_LOCK, type AdministrationLock } from './shell/administration-lock';
-import { ADMIN_HOME_PATH, ADMIN_MORE_PATH } from './shell/admin-sections';
+import { ADMIN_HOME_PATH, ADMIN_LOGS_PATH, ADMIN_MORE_PATH } from './shell/admin-sections';
 import { unsavedChangesGuard } from './unsaved-changes/unsaved-changes-guard';
 
 export const adminRoutes: Routes = [
@@ -141,7 +141,7 @@ export const adminRoutes: Routes = [
       {
         path: 'upozorneni',
         data: { parent: ADMIN_MORE_PATH },
-        title: $localize`:@@admin.alerts.pageTitle:Upozornění na telefon | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.alerts.pageTitle:Upozornění | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./alerts/admin-alerts').then((m) => m.AdminAlerts),
       },
       {
@@ -149,6 +149,38 @@ export const adminRoutes: Routes = [
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.logs.pageTitle:Logy a diagnostika | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./logs/admin-logs').then((m) => m.AdminLogs),
+      },
+      {
+        path: 'logy/soubory',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.files.pageTitle:Starší soubory logu | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/files/admin-log-files').then((m) => m.AdminLogFiles),
+      },
+      {
+        path: 'logy/soubor',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.reader.pageTitle:Soubor logu | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/reader/admin-log-reader').then((m) => m.AdminLogReader),
+      },
+      {
+        path: 'logy/urovne',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.levels.pageTitle:Úrovně logování | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/levels/admin-log-levels').then((m) => m.AdminLogLevels),
+      },
+      {
+        path: 'logy/stav',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.state.pageTitle:Stav serveru | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./logs/state/admin-server-state').then((m) => m.AdminServerState),
+      },
+      {
+        path: 'logy/vlakna',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.threads.pageTitle:Výpis vláken | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./logs/threads/admin-thread-dump').then((m) => m.AdminThreadDump),
       },
       {
         path: 'nastaveni',

@@ -56,7 +56,7 @@ public class DonorCredentialsService {
     @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword,
                                              RequestingDevice device) {
-        Donor donor = load(donorId);
+        Donor donor = lock(donorId);
         confirmations.confirm(donor, confirmation);
         RawPassword rawPassword = new RawPassword(newPassword);
         sessions.requireLasting(donor, device);
@@ -71,7 +71,7 @@ public class DonorCredentialsService {
 
     @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public AuthenticatedDonor removePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, RequestingDevice device) {
-        Donor donor = load(donorId);
+        Donor donor = lock(donorId);
         confirmations.confirm(donor, confirmation);
         if (passkeys.countByDonor(donorId) == 0) {
             throw new LastSignInMethod(donorId);
@@ -107,5 +107,9 @@ public class DonorCredentialsService {
 
     private Donor load(DonorId donorId) {
         return donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+    }
+
+    private Donor lock(DonorId donorId) {
+        return donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
     }
 }

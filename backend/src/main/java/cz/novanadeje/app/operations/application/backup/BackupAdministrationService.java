@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupHealth;
 import cz.novanadeje.app.operations.domain.backup.BackupLimits;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRequestKind;
+import cz.novanadeje.app.operations.domain.backup.BackupRequestPending;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -55,6 +56,9 @@ public class BackupAdministrationService {
 
     @Transactional
     public BackupRequest request(UUID adminId, BackupRequestKind kind) {
+        if (store.pendingRequests() > 0) {
+            throw new BackupRequestPending();
+        }
         Instant now = clock.instant();
         String id = UuidV7.generate(now).toString();
         store.request(kind, id);
