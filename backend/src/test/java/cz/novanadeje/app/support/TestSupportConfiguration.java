@@ -47,6 +47,12 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public FakeBankCodeSource fakeBankCodeSource() {
+        return new FakeBankCodeSource();
+    }
+
+    @Bean
+    @Primary
     public FakeCompanyRegistry fakeCompanyRegistry() {
         return new FakeCompanyRegistry();
     }

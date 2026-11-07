@@ -7,6 +7,7 @@ import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
 import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.BackupKeyWordDraws;
 import cz.novanadeje.app.support.ClientErrorCapWindows;
+import cz.novanadeje.app.support.FakeBankCodeSource;
 import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
@@ -85,6 +86,7 @@ public class CommonStepDefinitions {
         context.getBean(KeptAsideWithdrawnSeeds.class).reset();
         context.getBean(RecordingPushTransport.class).reset();
         context.getBean(RecordingPushRetryTimer.class).reset();
+        context.getBean(FakeBankCodeSource.class).reset();
     }
 
     @When("{int} second(s) pass(es)")
