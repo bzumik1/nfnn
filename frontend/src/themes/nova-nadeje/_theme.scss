@@ -233,6 +233,7 @@
   --duration-slow: 0.3s;
   --duration-entrance: 0.9s;
   --duration-sheet: var(--duration-slow);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;

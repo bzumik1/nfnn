@@ -124,7 +124,16 @@
       var(--color-backdrop) calc((1 - var(--dialog-pull)) * 100%),
       transparent
     );
-    transition: background-color var(--duration-base) ease;
+    backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
+    -webkit-backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
+    transition:
+      background-color var(--duration-base) ease,
+      backdrop-filter var(--duration-base) ease;
+  }
+
+  .dialog--sheet.dialog--leaving[open] {
+    transition-duration: var(--duration-sheet);
+    transition-timing-function: var(--ease-sheet);
   }
 
   .dialog--sheet .dialog-panel {
@@ -144,6 +153,10 @@
 
   .dialog--sheet .dialog-panel--dragging {
     transition: none;
+  }
+
+  .dialog--leaving .dialog-panel {
+    transition: translate var(--duration-sheet) var(--ease-sheet);
   }
 
   .dialog--sheet .dialog-panel--tall {
