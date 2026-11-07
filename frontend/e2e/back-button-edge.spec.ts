@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { mockDonorApi, session, signIn } from './donor-session';
 import { expect, test } from './fixtures';
 
 const paragraph =
@@ -93,6 +94,76 @@ for (const pose of poses) {
       await expect
         .poll(async () => (await link.boundingBox())!.y)
         .toBeGreaterThanOrEqual((await edge(page)).bottom);
+    });
+  });
+}
+
+interface Ground {
+  edge: string;
+  ground: string;
+  card: string;
+  blur: string;
+  mask: string;
+}
+
+function groundUnderEdge(page: Page): Promise<Ground> {
+  return page.getByRole('banner').evaluate((header) => {
+    const blur = getComputedStyle(header, '::after');
+    const area = document.querySelector('app-donor-area')!;
+    const card = document.querySelector('.profile-card')!;
+    return {
+      edge: header.style.getPropertyValue('--scroll-edge-tone'),
+      ground: getComputedStyle(area).backgroundColor,
+      card: getComputedStyle(card).backgroundColor,
+      blur: blur.backdropFilter || blur.getPropertyValue('-webkit-backdrop-filter'),
+      mask: blur.maskImage || blur.getPropertyValue('-webkit-mask-image'),
+    };
+  });
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`Given a donor on Údaje a zabezpečení in the ${colorScheme} appearance, where cards stand on a grouped ground`, () => {
+    test.use({ colorScheme });
+
+    test.beforeEach(async ({ page }) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await mockDonorApi(page);
+      await signIn(page);
+      await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto('/darce/udaje');
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Údaje a zabezpečení' }),
+      ).toBeVisible();
+    });
+
+    test('when a card scrolls up under the back button, then the edge takes the ground around the cards, not the card, and blurs what fades out under it, so it never shows as a band with readable text', async ({
+      page,
+    }) => {
+      await page.evaluate(() => window.scrollTo({ top: 140, behavior: 'instant' }));
+      await expect.poll(async () => (await edge(page)).shown).toBe(true);
+
+      const under = await groundUnderEdge(page);
+      expect(under.edge).toBe(under.ground);
+      expect(under.edge).not.toBe(under.card);
+      expect(under.blur).toMatch(/blur\(/);
+      expect(under.mask).toMatch(/gradient/);
+    });
+
+    test('when the device switches its appearance while the page is scrolled, then the edge takes the ground of the new appearance', async ({
+      page,
+    }) => {
+      await page.evaluate(() => window.scrollTo({ top: 140, behavior: 'instant' }));
+      await expect.poll(async () => (await edge(page)).shown).toBe(true);
+
+      await page.emulateMedia({ colorScheme: colorScheme === 'dark' ? 'light' : 'dark' });
+
+      await expect
+        .poll(async () => {
+          const under = await groundUnderEdge(page);
+          return under.edge === under.ground;
+        })
+        .toBe(true);
     });
   });
 }
