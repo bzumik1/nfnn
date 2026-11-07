@@ -22,17 +22,13 @@
 .app-header--deeper {
   --scroll-edge-tone: var(--color-surface);
 
-  &::before {
+  &::before,
+  &::after {
     content: '';
     position: fixed;
     inset: 0 0 auto;
     z-index: -1;
     height: calc(var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade));
-    background: linear-gradient(
-      to bottom,
-      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
-      transparent
-    );
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -41,16 +37,50 @@
       visibility var(--duration-fast);
   }
 
-  &.app-header--scrolled::before {
+  &::before {
+    background: linear-gradient(
+      to bottom,
+      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
+      transparent
+    );
+  }
+
+  &::after {
+    backdrop-filter: blur(var(--blur-bar));
+    mask-image: linear-gradient(
+      to bottom,
+      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade) / 3),
+      transparent
+    );
+  }
+
+  &.app-header--scrolled::before,
+  &.app-header--scrolled::after {
     opacity: 1;
     visibility: visible;
   }
 
-  @media (prefers-contrast: more) {
+  @media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {
     &::before {
       height: calc(var(--safe-area-top) + var(--header-height));
       background: var(--scroll-edge-tone);
       border-bottom: 1px solid var(--color-border);
+    }
+
+    &::after {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    &::before {
+      height: calc(var(--safe-area-top) + var(--header-height));
+      background: Canvas;
+      border-bottom: 1px solid CanvasText;
+    }
+
+    &::after {
+      display: none;
     }
   }
 }
