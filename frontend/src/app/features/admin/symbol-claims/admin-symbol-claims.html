@@ -78,7 +78,7 @@
                     }
                   </td>
                   <td data-label="Účet" i18n-data-label="@@admin.symbolClaims.col.account">
-                    <span class="ui-figures">{{ item.account }}</span>
+                    <app-bank-account [account]="item.account" />
                   </td>
                   <td
                     data-label="Variabilní symbol"

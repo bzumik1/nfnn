@@ -246,6 +246,11 @@ td.amount {
   white-space: nowrap;
 }
 
+.account-number {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
 .muted {
   display: block;
   color: var(--color-text-muted);

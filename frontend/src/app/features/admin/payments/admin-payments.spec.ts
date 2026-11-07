@@ -164,7 +164,7 @@ describe('Given an administrator on the bank payments page', () => {
     );
 
     expect(rows()).toEqual([
-      '10. 10. 2026 500 Kč Nováková Jana 2900233333/2010 1111111111 Dar pro fond Přiřadit dárci',
+      '10. 10. 2026 500 Kč Nováková Jana 2900233333/2010 · Fio banka 1111111111 Dar pro fond Přiřadit dárci',
       '12. 10. 2026 jen ručně Správce zrušil přiřazení, web ji proto sám nepřiřadí. 250,50 Kč — bez VS Přiřadit dárci',
     ]);
     expect(fixture.nativeElement.querySelector('.held-tag')?.getAttribute('title')).toBeNull();
@@ -517,6 +517,9 @@ describe('Given an administrator on the bank payments page', () => {
     it("then the dialog names the payment, searches by the first word of the sender's name at once and focuses the search", () => {
       expect(dialog().textContent).toContain('500\u00a0Kč z 10. 10. 2026');
       expect(dialog().textContent).toContain('Nováková Jana');
+      expect(rowText(dialog().querySelector('.pair-payment')!)).toContain(
+        '2900233333/2010 · Fio banka',
+      );
       const input = dialog().querySelector('#pair-search') as HTMLInputElement;
       expect(input.value).toBe('Nováková');
       expect(document.activeElement).toBe(input);
@@ -1061,6 +1064,7 @@ describe('Given an administrator on the bank payments page where lists show as r
       expect(text(sheet().querySelector('.pair-payment'))).toContain(
         'Dárce Jana Nováková podle variabilního symbolu',
       );
+      expect(text(sheet().querySelector('.pair-payment'))).toContain('2900233333/2010 · Fio banka');
       expect(sheet().querySelector('.pair-payment a')?.getAttribute('href')).toBe(
         '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
       );

@@ -317,10 +317,8 @@
                     </td>
                     <td data-label="Odesílatel" i18n-data-label="@@admin.payments.col.sender">
                       <span class="sender-name">{{ item.counterpartyName ?? '—' }}</span>
-                      @if (item.counterpartyAccount) {
-                        <span class="sender-account ui-figures">{{
-                          item.counterpartyAccount
-                        }}</span>
+                      @if (item.counterpartyAccount; as account) {
+                        <app-bank-account class="sender-account" [account]="account" />
                       }
                     </td>
                     <td data-label="VS a zpráva" i18n-data-label="@@admin.payments.col.symbol">
@@ -486,8 +484,8 @@
           } @else {
             <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
           }
-          @if (payment.counterpartyAccount) {
-            <span class="muted ui-figures">{{ payment.counterpartyAccount }}</span>
+          @if (payment.counterpartyAccount; as account) {
+            <app-bank-account class="muted" [account]="account" />
           }
         </dd>
       </div>
@@ -644,8 +642,8 @@
           } @else {
             <ng-container i18n="@@admin.payments.row.noName">Bez jména odesílatele</ng-container>
           }
-          @if (payment.counterpartyAccount) {
-            <span class="muted ui-figures">{{ payment.counterpartyAccount }}</span>
+          @if (payment.counterpartyAccount; as account) {
+            <app-bank-account class="muted" [account]="account" />
           }
         </dd>
       </div>
