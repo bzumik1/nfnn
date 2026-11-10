@@ -103,16 +103,21 @@ test.describe('Given an administrator on the logs hub', () => {
     await page.goto('/sprava/logy');
     await page.getByRole('link', { name: 'Úrovně logování' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Úrovně logování' })).toBeFocused();
-    await page.getByLabel('Logger').fill('cz.novanadeje.app');
-    await page.getByRole('button', { name: 'Nastavit' }).click();
+    await page.getByRole('button', { name: /^Aplikace cz\.novanadeje\.app/ }).click();
+    const sheet = page.getByRole('dialog', { name: 'Úroveň loggeru cz.novanadeje.app' });
+    await expect(sheet.getByRole('radio', { name: 'DEBUG' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await sheet.getByRole('button', { name: 'Nastavit na 30 min' }).click();
 
     await expect(page.getByRole('status').filter({ hasText: 'má úroveň DEBUG' })).toHaveText(
       'Logger cz.novanadeje.app má úroveň DEBUG do 23. 10. 2026 12:30.',
     );
-    await expect(page.locator('.levels tr.overridden')).toHaveCount(1);
+    await expect(page.locator('.overrides .ui-list__row')).toContainText('INFO → DEBUG');
 
     await page.getByRole('button', { name: 'Vrátit úroveň loggeru cz.novanadeje.app' }).click();
-    await expect(page.locator('.levels tr.overridden')).toHaveCount(0);
+    await expect(page.locator('.overrides')).toHaveCount(0);
     await expect(page.getByText('Logger cz.novanadeje.app má zase původní úroveň.')).toBeVisible();
   });
 
