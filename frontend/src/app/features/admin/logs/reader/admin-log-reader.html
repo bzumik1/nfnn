@@ -47,6 +47,7 @@
           i18n-aria-label="@@admin.logs.reader.filter.label"
         >
           <button
+            appNeedsConnection
             type="button"
             role="radio"
             [class.is-active]="filter() === 'all'"
