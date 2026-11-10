@@ -270,7 +270,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_publish_project',
     {
-      title: 'Zveřejnit projekt',
+      title: 'Zveřejnit příběh',
       description:
         'Puts a project on the site from the given day (YYYY-MM-DD); audited as PUBLISH_PROJECT.',
       inputSchema: z.object({ id: UUID, publishedOn: DAY, expectedVersion: EXPECTED_VERSION }),
@@ -297,7 +297,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_unpublish_project',
     {
-      title: 'Stáhnout projekt z webu',
+      title: 'Stáhnout příběh z webu',
       description:
         'Takes a project off the site (it becomes a draft again); audited as UNPUBLISH_PROJECT.',
       inputSchema: z.object({ id: UUID, expectedVersion: EXPECTED_VERSION }),
@@ -324,7 +324,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_set_project_order',
     {
-      title: 'Nastavit řazení projektů',
+      title: 'Nastavit řazení příběhů',
       description: `Chooses how the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first): ${PROJECT_ORDERS} Choosing the order already set changes nothing. Audited as CHANGE_PROJECT_ORDER.`,
       inputSchema: z.object({
         order: z.enum(['YEAR_THEN_CATEGORY', 'YEAR', 'CATEGORY_THEN_YEAR']),
@@ -478,7 +478,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_create_project',
     {
-      title: 'Založit projekt',
+      title: 'Založit příběh',
       description:
         'Creates a project of the given year and category as a draft (not on the site until nfnn_publish_project); audited as CREATE_PROJECT.',
       inputSchema: z.object(PROJECT),
@@ -493,7 +493,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_update_project',
     {
-      title: 'Upravit projekt',
+      title: 'Upravit příběh',
       description:
         'Replaces the texts, the year, the category and the photo of a project (the published date stays); send every field, read them with nfnn_project first. Audited as UPDATE_PROJECT.',
       inputSchema: z.object({ id: UUID, ...PROJECT, expectedVersion: EXPECTED_VERSION }),

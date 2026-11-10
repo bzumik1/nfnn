@@ -8,7 +8,7 @@
         Kde pomáháme
       </h1>
       <p class="ui-intro__lead" i18n="@@content.list.projects.lead">
-        Každý projekt je skutečný příběh skutečného dítěte. Nejnovější projekty jsou nahoře.
+        Za každým příběhem je skutečné dítě. Nejnovější příběhy jsou nahoře.
       </p>
     </div>
   </header>
@@ -16,12 +16,12 @@
   <div class="content ui-container">
     <p class="list-state" role="status">
       @if (state() === 'loading') {
-        <span i18n="@@content.list.projects.loading">Načítáme projekty…</span>
+        <span i18n="@@content.list.projects.loading">Načítáme příběhy…</span>
       } @else if (state() === 'ready' && empty()) {
         @if (pastLastPage()) {
           <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
         } @else {
-          <span i18n="@@content.list.projects.empty">Zatím tu žádný projekt není.</span>
+          <span i18n="@@content.list.projects.empty">Zatím tu žádný příběh není.</span>
         }
       }
     </p>

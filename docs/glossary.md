@@ -336,8 +336,9 @@ A dated post the administrator writes, with a title, address, tag, perex, Markdo
 _Avoid_: blog post
 
 **Project**\
-UI „projekt“ (tab „Pomáháme“) · Code: `content/domain/project/Project`, `ProjectCategory` `CHILDREN`, `ADULTS`, `ANIMALS`, `OTHER`.\
-A help the foundation gave, with a year and the category of whom it helped, ordered on the site as the administrator chose.
+UI „příběh“ (section „Pomáháme“ on the site and in the administration: „Nový příběh“, „Úprava příběhu“, „Zveřejnit příběh“, „Stáhnout příběh z webu“; Jakub 2026-11-10) · Code: `content/domain/project/Project`, `ProjectCategory` `CHILDREN`, `ADULTS`, `ANIMALS`, `OTHER`; the addresses `/projekty` and `/sprava/projekty` stay.\
+A help the foundation gave, with a year and the category of whom it helped, ordered on the site as the administrator chose.\
+_Avoid_: „projekt“ in the UI
 
 **Draft / publish / take off the site**\
 UI „koncept“, „zveřejnit“, „Stáhnout z webu“ · Code: `publishedOn` of `NewsArticle` and `Project`.\

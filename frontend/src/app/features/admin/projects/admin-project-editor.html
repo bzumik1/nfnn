@@ -6,21 +6,21 @@
   }
   <h1 #title class="ui-page-title" tabindex="-1">
     @if (isNew()) {
-      <ng-container i18n="@@admin.projectEditor.heading.new">Nový projekt</ng-container>
+      <ng-container i18n="@@admin.projectEditor.heading.new">Nový příběh</ng-container>
     } @else {
-      <ng-container i18n="@@admin.projectEditor.heading.edit">Úprava projektu</ng-container>
+      <ng-container i18n="@@admin.projectEditor.heading.edit">Úprava příběhu</ng-container>
     }
   </h1>
 
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state" role="status" i18n="@@admin.projectEditor.loading">
-        Načítáme projekt…
+        Načítáme příběh…
       </p>
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.projectEditor.error.text">Projekt se nepodařilo načíst.</p>
+        <p i18n="@@admin.projectEditor.error.text">Příběh se nepodařilo načíst.</p>
         <button
           appNeedsConnection
           type="button"
@@ -103,7 +103,7 @@
               <app-form-field
                 label="Rok"
                 i18n-label="@@admin.projectEditor.year"
-                hint="Rok, do kterého projekt patří. Jak web řadí projekty podle roku a kategorie, vyberete v seznamu projektů."
+                hint="Rok, do kterého příběh patří. Jak web řadí příběhy podle roku a kategorie, vyberete v seznamu příběhů."
                 i18n-hint="@@admin.projectEditor.year.hint"
                 [messages]="yearMessages"
               >
@@ -123,7 +123,7 @@
               <app-form-field
                 label="Kategorie"
                 i18n-label="@@admin.projectEditor.category"
-                hint="Komu projekt pomohl. Jak web řadí projekty podle kategorie a roku, vyberete v seznamu projektů."
+                hint="Koho se příběh týká. Jak web řadí příběhy podle kategorie a roku, vyberete v seznamu příběhů."
                 i18n-hint="@@admin.projectEditor.category.hint"
               >
                 <select
@@ -180,7 +180,7 @@
               <app-form-field
                 label="Krátký souhrn"
                 i18n-label="@@admin.projectEditor.perex"
-                hint="Ukáže se na kartě projektu, nejvíc 300 znaků."
+                hint="Ukáže se na kartě příběhu, nejvíc 300 znaků."
                 i18n-hint="@@admin.projectEditor.perex.hint"
                 [messages]="perexMessages"
               >
@@ -261,7 +261,7 @@
                   class="field-hint"
                   i18n="@@admin.projectEditor.image.hint"
                 >
-                  Ukáže se na kartě projektu a nahoře v jeho detailu. JPEG, PNG nebo WebP do 10 MB;
+                  Ukáže se na kartě příběhu a nahoře v jeho detailu. JPEG, PNG nebo WebP do 10 MB;
                   web si z fotky vyrobí zmenšené kopie.
                 </p>
                 <div role="status">
@@ -271,7 +271,7 @@
                     </p>
                   } @else if (coverUnsaved() && coverImage()) {
                     <p class="field-status" i18n="@@admin.projectEditor.image.uploaded">
-                      Fotka je nahraná. K projektu se připojí, až ho uložíte.
+                      Fotka je nahraná. K příběhu se připojí, až ho uložíte.
                     </p>
                   }
                 </div>
@@ -464,18 +464,18 @@
           </h2>
           <div class="ui-card__body">
             <p class="ui-card__intro" i18n="@@admin.projectEditor.delete.intro">
-              Smazaný projekt zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ho
+              Smazaný příběh zmizí z webu i ze správy spolu s fotkou a nejde vrátit. Chcete-li ho
               jen schovat, stáhněte ho z webu.
             </p>
             @if (confirmingDelete()) {
               <span
                 class="confirm"
                 role="group"
-                aria-label="Smazat projekt?"
+                aria-label="Smazat příběh?"
                 i18n-aria-label="@@admin.projectEditor.delete.confirm.label"
               >
                 <span i18n="@@admin.projectEditor.delete.confirm.question"
-                  >Opravdu smazat projekt „{{ projectTitle }}“?</span
+                  >Opravdu smazat příběh „{{ projectTitle }}“?</span
                 >
                 <button
                   appNeedsConnection
@@ -511,7 +511,7 @@
                 (click)="askDelete()"
                 i18n="@@admin.projectEditor.delete.open"
               >
-                Smazat projekt
+                Smazat příběh
               </button>
             }
             <app-live-notice class="card-notice" [notice]="deleteNotice()" />

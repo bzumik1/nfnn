@@ -138,7 +138,7 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
 
     await expect(page.getByText('Zatím tu žádná aktualita není.')).toBeVisible();
     await openSection(page, 'Pomáháme');
-    await expect(page.getByText('Zatím tu žádný projekt není.')).toBeVisible();
+    await expect(page.getByText('Zatím tu žádný příběh není.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Zpět na úvodní stránku' })).toHaveAttribute(
       'href',
       '/',

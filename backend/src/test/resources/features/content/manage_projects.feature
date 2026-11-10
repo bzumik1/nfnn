@@ -24,7 +24,7 @@ Feature: An administrator writes projects, the stories of the children the found
     When "Jana" asks for the admin actions
     Then the admin actions are:
       | action         | summary                          |
-      | CREATE_PROJECT | Napsán projekt „Dominik, 7 let“. |
+      | CREATE_PROJECT | Napsán příběh „Dominik, 7 let“. |
     When someone without a token asks for the projects
     Then the response status is 200
     And the project list has 0 items

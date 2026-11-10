@@ -21,7 +21,7 @@ export const ADMIN_DAILY: SideNavGroup = {
     { path: ADMIN_PAYMENTS_PATH, label: $localize`:@@admin.nav.payments:Platby z banky` },
     { path: '/sprava/darci', label: $localize`:@@admin.nav.donors:Dárci` },
     { path: '/sprava/aktuality', label: $localize`:@@admin.nav.news:Aktuality` },
-    { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Projekty` },
+    { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Pomáháme` },
   ],
 };
 

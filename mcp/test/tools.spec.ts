@@ -44,6 +44,33 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(description('nfnn_project')).toContain('live');
   });
 
+  it('when the tools are listed, then the Czech titles of the story tools say příběh, never projekt', async () => {
+    const { tools } = await client.listTools();
+    const title = (name: string) => tools.find((tool) => tool.name === name)?.title;
+    expect(
+      [
+        'nfnn_content',
+        'nfnn_project',
+        'nfnn_project_order',
+        'nfnn_create_project',
+        'nfnn_update_project',
+        'nfnn_publish_project',
+        'nfnn_unpublish_project',
+        'nfnn_set_project_order',
+      ].map(title),
+    ).toEqual([
+      'Aktuality a příběhy',
+      'Příběh',
+      'Řazení příběhů',
+      'Založit příběh',
+      'Upravit příběh',
+      'Zveřejnit příběh',
+      'Stáhnout příběh z webu',
+      'Nastavit řazení příběhů',
+    ]);
+    expect(tools.filter((tool) => /projekt/i.test(tool.title ?? ''))).toEqual([]);
+  });
+
   it('when the tools are listed, then every reading and writing tool is there with its annotations', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();
