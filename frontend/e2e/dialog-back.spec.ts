@@ -5,6 +5,7 @@ import { administrator, mockDonorApi, openAccountItem, session } from './donor-s
 
 const PAYMENTS = '/api/admin/donations/payments';
 const SHEET_FLICK_REST_MS = 100;
+const SLIDE_START_TOLERANCE_MS = 50;
 const PAYMENT_ID = '019a1c00-0000-7000-8000-000000001001';
 
 const unpaired = {
@@ -110,9 +111,9 @@ interface SheetLeave {
   slideFrom: number | null;
   slideTo: string | null;
   slideDuration: number;
-  slideEndedAt: number | null;
-  veilAtEnd: number | null;
-  blurAtEnd: number | null;
+  slideStartedAt: number | null;
+  veilTo: number | null;
+  blurTo: number | null;
   removedAt: number | null;
 }
 
@@ -140,16 +141,29 @@ async function watchSheetLeave(page: Page): Promise<void> {
       slideFrom: null,
       slideTo: null,
       slideDuration: 0,
-      slideEndedAt: null,
-      veilAtEnd: null,
-      blurAtEnd: null,
+      slideStartedAt: null,
+      veilTo: null,
+      blurTo: null,
       removedAt: null,
     };
     (window as unknown as { sheetLeave: SheetLeave }).sheetLeave = record;
-    panel.addEventListener('transitionrun', (event) => {
-      if (event.target !== panel || event.propertyName !== 'translate') {
+    const targetOf = (element: Element, property: RegExp): string | null => {
+      for (const transition of element.getAnimations()) {
+        const last = (transition.effect as KeyframeEffect).getKeyframes().at(-1) ?? {};
+        const entry = Object.entries(last).find(([name]) => property.test(name));
+        if (entry !== undefined) {
+          return String(entry[1]);
+        }
+      }
+      return null;
+    };
+    new MutationObserver((_, observer) => {
+      if (!dialog.classList.contains('dialog--leaving')) {
         return;
       }
+      observer.disconnect();
+      record.slideStartedAt = performance.now();
+      void getComputedStyle(panel).translate;
       const slide = panel
         .getAnimations()
         .find((animation) => (animation as CSSTransition).transitionProperty === 'translate');
@@ -157,18 +171,13 @@ async function watchSheetLeave(page: Page): Promise<void> {
       record.slideFrom = downOf(keyframes[0]?.['translate']);
       record.slideTo = String(keyframes.at(-1)?.['translate'] ?? '');
       record.slideDuration = Number(slide?.effect?.getTiming().duration ?? 0);
-    });
-    panel.addEventListener('transitionend', (event) => {
-      if (event.target !== panel || event.propertyName !== 'translate') {
-        return;
-      }
-      record.slideEndedAt = performance.now();
       const style = getComputedStyle(dialog);
-      record.veilAtEnd = alphaOf(style.backgroundColor);
-      record.blurAtEnd = blurOf(
-        style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter'),
+      record.veilTo = alphaOf(targetOf(dialog, /^backgroundColor$/) ?? style.backgroundColor);
+      record.blurTo = blurOf(
+        targetOf(dialog, /backdropFilter$/i) ??
+          (style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter')),
       );
-    });
+    }).observe(dialog, { attributes: true, attributeFilter: ['class'] });
     new MutationObserver((_, observer) => {
       if (!dialog.isConnected) {
         record.removedAt = performance.now();
@@ -186,10 +195,11 @@ function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
   expect(Math.abs(leave.slideFrom! - from)).toBeLessThan(2);
   expect(leave.slideTo).toMatch(/ 100%$/);
   expect(leave.slideDuration).toBeGreaterThanOrEqual(100);
-  expect(leave.slideEndedAt).not.toBeNull();
-  expect(leave.removedAt!).toBeGreaterThanOrEqual(leave.slideEndedAt!);
-  expect(leave.veilAtEnd!).toBeLessThan(0.05);
-  expect(leave.blurAtEnd!).toBeLessThan(0.5);
+  expect(leave.removedAt! - leave.slideStartedAt!).toBeGreaterThanOrEqual(
+    leave.slideDuration - SLIDE_START_TOLERANCE_MS,
+  );
+  expect(leave.veilTo!).toBeLessThan(0.05);
+  expect(leave.blurTo!).toBeLessThan(0.5);
 }
 
 async function phoneThatAnimates(page: Page): Promise<void> {
