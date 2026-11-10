@@ -93,18 +93,18 @@ describe('Given the edge at the top of a page', () => {
       expect(header.classList).not.toContain(SCROLL_EDGE_DARK);
     });
 
-    it('and translucent dark content comes up under it, then the edge still knows it is dark', async () => {
-      const glass = document.createElement('div');
+    it('and a light ground written as a color() value comes up under it, then the edge knows it is light', async () => {
+      const ground = fullWidth(document.createElement('div'));
       const style = vi
         .spyOn(window, 'getComputedStyle')
-        .mockReturnValue({ backgroundColor: 'color(srgb 0.05 0.07 0.12)', height: '' } as never);
-      underEdge = [glass, document.body];
+        .mockReturnValue({ backgroundColor: 'color(srgb 0.95 0.96 0.97)', height: '' } as never);
+      underEdge = [ground, document.body];
 
       scrollTo(900);
       await nextFrame();
       style.mockRestore();
 
-      expect(header.classList).toContain(SCROLL_EDGE_DARK);
+      expect(header.classList).not.toContain(SCROLL_EDGE_DARK);
     });
 
     it('and a card narrower than the page comes up under it, then the edge takes the ground around the card, so it never stands out as a band of the card', async () => {
