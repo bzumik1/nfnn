@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSection, problem } from './donor-session';
 
@@ -248,22 +248,122 @@ test.describe('Given a visitor paging through the news', () => {
     await expect(page.locator('.featured')).toHaveCount(1);
     await expect(page.locator('.news-card')).toHaveCount(9);
     await expect(page.getByText('Strana 1 z 2')).toBeVisible();
-    await expect(page.getByRole('link', { name: '← Novější' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Novější' })).toHaveCount(0);
     await page
       .getByRole('navigation', { name: 'Stránky aktualit' })
-      .getByRole('link', { name: 'Starší →' })
+      .getByRole('link', { name: 'Starší' })
       .click();
 
     await expect(page).toHaveURL('/aktuality?strana=2');
     await expect(page.locator('.news-card')).toHaveCount(2);
     await expect(page.getByRole('link', { name: 'Aktualita 12' })).toBeVisible();
-    await page.getByRole('link', { name: '← Novější' }).click();
+    await page.getByRole('link', { name: 'Novější' }).click();
 
     await expect(page).toHaveURL('/aktuality');
     await expect(page.locator('.news-card')).toHaveCount(9);
     expect(asked).toEqual(['0/10', '1/10', '0/10']);
   });
 });
+
+const PAGER_LISTS = [
+  { path: '/projekty?strana=2', api: '/api/content/projects', label: 'Stránky projektů' },
+  { path: '/aktuality?strana=2', api: '/api/content/news', label: 'Stránky aktualit' },
+  { path: '/projekty', api: '/api/content/projects', label: 'Stránky projektů' },
+];
+
+async function threePagesOf(page: Page, api: string): Promise<void> {
+  await page.route(
+    (url) => url.pathname === api,
+    (route) => {
+      const url = new URL(route.request().url());
+      const index = Number(url.searchParams.get('page'));
+      const size = Number(url.searchParams.get('size'));
+      const items = Array.from({ length: 25 }, (_, number) => ({
+        ...(api.endsWith('news') ? article : project),
+        id: `0199f3e0-0000-7000-8000-0000000f${String(number).padStart(4, '0')}`,
+        slug: `polozka-${number + 1}`,
+        title: `Položka ${number + 1}`,
+      })).slice(index * size, index * size + size);
+      return route.fulfill({
+        json: { items, page: index, size, total: 25, hasMore: (index + 1) * size < 25 },
+      });
+    },
+  );
+}
+
+async function pagerLayout(nav: Locator) {
+  return nav.evaluate((element) => {
+    const frame = element.getBoundingClientRect();
+    const parts = Array.from(element.querySelectorAll<HTMLElement>('a, .pages-position')).map(
+      (part) => {
+        const box = part.getBoundingClientRect();
+        return {
+          name: part.textContent!.replace(/\s+/g, ' ').trim(),
+          middle: box.top + box.height / 2,
+          centre: box.left + box.width / 2,
+          width: box.width,
+          height: box.height,
+          inside: box.left >= frame.left - 1 && box.right <= frame.right + 1,
+        };
+      },
+    );
+    return {
+      parts,
+      centre: frame.left + frame.width / 2,
+      overflows: element.scrollWidth > element.clientWidth + 1,
+      pastViewport: frame.right > document.documentElement.clientWidth + 1,
+    };
+  });
+}
+
+for (const { width, height, textPercent } of [
+  { width: 390, height: 844, textPercent: 100 },
+  { width: 375, height: 667, textPercent: 100 },
+  { width: 375, height: 667, textPercent: 200 },
+  { width: 320, height: 568, textPercent: 200 },
+  { width: 1280, height: 900, textPercent: 100 },
+]) {
+  test.describe(`Given a visitor ${width} px wide with text at ${textPercent} % at the end of a list`, () => {
+    test.use({ viewport: { width, height } });
+
+    for (const { path, api, label } of PAGER_LISTS) {
+      test(`when they reach the pages of ${path}, then the directions and the position share one row with the position in its middle`, async ({
+        page,
+      }) => {
+        await mockDonorApi(page);
+        await threePagesOf(page, api);
+        if (textPercent !== 100) {
+          await page.addInitScript((percent) => {
+            document.addEventListener('DOMContentLoaded', () => {
+              const style = document.createElement('style');
+              style.textContent = `html { font-size: ${percent}%; }`;
+              document.head.append(style);
+            });
+          }, textPercent);
+        }
+
+        await page.goto(path);
+        const nav = page.getByRole('navigation', { name: label });
+        await expect(nav.locator('.pages-position')).toBeVisible();
+        await nav.evaluate(() => document.fonts.ready);
+        const layout = await pagerLayout(nav);
+
+        expect(layout.overflows).toBe(false);
+        expect(layout.pastViewport).toBe(false);
+        const position = layout.parts.find((part) => part.name.startsWith('Strana'))!;
+        expect(Math.abs(position.centre - layout.centre)).toBeLessThanOrEqual(1);
+        for (const part of layout.parts) {
+          expect(part.inside, part.name).toBe(true);
+          expect(Math.abs(part.middle - position.middle), part.name).toBeLessThanOrEqual(1);
+        }
+        for (const direction of layout.parts.filter((part) => part !== position)) {
+          expect(direction.width, direction.name).toBeGreaterThanOrEqual(24);
+          expect(direction.height, direction.name).toBeGreaterThanOrEqual(24);
+        }
+      });
+    }
+  });
+}
 
 async function pretendBrowserThatShares(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -412,7 +512,7 @@ test.describe('Given a visitor whose connection drops while they page through Ak
     );
     await context.setOffline(true);
 
-    await page.getByRole('link', { name: 'Starší →' }).click();
+    await page.getByRole('link', { name: 'Starší' }).click();
 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
       'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',

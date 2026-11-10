@@ -61,17 +61,7 @@ app-featured-news ~ .older,
 }
 
 .pages {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
   margin-top: var(--space-14);
-}
-
-.pages-position {
-  color: var(--color-text-soft);
-  font-size: var(--text-md);
 }
 
 @include bp.down(tablet) {

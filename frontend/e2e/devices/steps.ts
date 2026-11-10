@@ -96,6 +96,27 @@ async function newsFeed(ui: Ui): Promise<void> {
   await ui.waitVisible({ css: '.story' });
 }
 
+const PAGED_PROJECTS = Array.from({ length: 10 }, (_, index) => ({
+  ...project,
+  id: `paged-${index}`,
+  slug: `projekt-${index + 11}`,
+  title: `Projekt ${index + 11}`,
+}));
+
+async function projectsMiddlePage(ui: Ui): Promise<void> {
+  await mockDonorApi(ui.routes);
+  await mockPublicContent(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: { items: PAGED_PROJECTS, page: 1, size: 10, total: 25, hasMore: true },
+      }),
+  );
+  await visit(ui, '/projekty?strana=2');
+  await ui.waitVisible({ css: 'nav.pages' });
+}
+
 async function donorPage(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await rememberedSession(ui, donor);
@@ -213,6 +234,11 @@ export const STEPS: Step[] = [
     id: 'project',
     title: 'a project',
     open: (ui) => publicPage(ui, `/projekty/${project.slug}`),
+  },
+  {
+    id: 'projects-page',
+    title: 'a middle page of the projects with its paging',
+    open: projectsMiddlePage,
   },
   {
     id: 'verify-receipt',
