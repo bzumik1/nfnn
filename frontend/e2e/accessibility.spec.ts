@@ -1920,6 +1920,61 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the installed app offers an administrator to turn the alerts on, then the sheet and its outcome break no rule', async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true }),
+    );
+    await fakePushDevice(page, { permission: 'default', permissionAnswer: 'granted' });
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname.startsWith('/api/admin/operations/push'),
+      (route) => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith('/subscriptions')) {
+          return route.fulfill({
+            status: 201,
+            json: {
+              id: 'push-this-phone',
+              service: 'apple',
+              alerts: { bankImport: true, backups: true, mail: true },
+              createdAt: '2026-11-10T09:00:00Z',
+              lastDeliveredAt: null,
+              failuresInARow: 0,
+              current: true,
+            },
+          });
+        }
+        if (path.endsWith('/test')) {
+          return route.fulfill({ json: { delivered: 1, failed: 0, removed: 0 } });
+        }
+        return route.fulfill({
+          json: {
+            publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
+            subscriptions: [],
+            openAlerts: [],
+          },
+        });
+      },
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session-app', '1'));
+    await page.goto('/sprava/vice');
+
+    const offer = page.getByRole('dialog', { name: 'Zapnout upozornění?' });
+    await expect(offer).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await offer.getByRole('button', { name: 'Zapnout' }).click();
+    await expect(page.getByRole('dialog', { name: 'Upozornění jsou zapnutá' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator manages the alerts of their devices, then the page with this device subscribed and another listed breaks no rule', async ({
     page,
   }) => {
