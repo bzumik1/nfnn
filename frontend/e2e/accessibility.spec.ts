@@ -1308,6 +1308,25 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator opens a sent monthly report, then its sendings break no rule', async ({
+    page,
+  }) => {
+    await mockAdministration(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+
+    await page.goto('/sprava/prehledy/2026-09');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Přehled za září 2026' }),
+    ).toBeFocused();
+    await expect(page.getByRole('heading', { level: 3, name: 'Banka' })).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator pairs a bank payment, then the payments page and the dialog break no rule', async ({
     page,
   }) => {

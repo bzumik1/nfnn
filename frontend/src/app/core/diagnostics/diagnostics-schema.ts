@@ -64,6 +64,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/o-nas',
   '/sprava/platby',
   '/sprava/prehledy',
+  '/sprava/prehledy/:param',
   '/sprava/projekty',
   '/sprava/projekty/:param',
   '/sprava/projekty/nova',

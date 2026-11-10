@@ -372,6 +372,43 @@ export interface SentReportResponse {
   sentAt: string;
 }
 
+export interface ReportDonorsResponse {
+  registered: number;
+  newInMonth: number;
+}
+
+export interface ReportDonationsResponse {
+  received: TallyResponse;
+  paired: TallyResponse;
+  receivedInYear: TallyResponse;
+}
+
+export interface ReportBankImportResponse {
+  lastSucceededAt: string | null;
+  lastFailure: { kind: ImportFailureKind; attemptedAt: string } | null;
+}
+
+export interface ReportContentResponse {
+  donors: ReportDonorsResponse | null;
+  donations: ReportDonationsResponse | null;
+  unpairedPayments: TallyResponse | null;
+  bankImport: ReportBankImportResponse | null;
+}
+
+export interface ReportDeliveryResponse {
+  sentAt: string;
+  byHand: boolean;
+  recipientCount: number;
+  content: ReportContentResponse;
+}
+
+export interface SentReportDetailResponse {
+  month: string;
+  firstSentAt: string;
+  deliveries: ReportDeliveryResponse[];
+  recomputed: ReportContentResponse | null;
+}
+
 export interface NextReportResponse {
   month: string;
   dueOn: string;
@@ -861,6 +898,12 @@ export class AdminApi {
       request,
       ifMatch(version),
     );
+  }
+
+  sentReport(month: string): Observable<SentReportDetailResponse> {
+    return this.http.get<SentReportDetailResponse>('/api/admin/donations/report/sent', {
+      params: { month },
+    });
   }
 
   sendReport(month: string): Observable<SendReportResponse> {
