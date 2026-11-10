@@ -8,6 +8,9 @@ import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.report.DonorCounts;
 import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
+import cz.novanadeje.app.donations.domain.report.ReportContent;
+import cz.novanadeje.app.donations.domain.report.ReportDeliveries;
+import cz.novanadeje.app.donations.domain.report.ReportDelivery;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportMonthNotEnded;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
@@ -58,12 +61,13 @@ class MonthlyReportServiceTest {
     private final BankPaymentRepository payments = mock(BankPaymentRepository.class);
     private final BankImportStateRepository importStates = mock(BankImportStateRepository.class);
     private final MonthlyReportLog reportLog = mock(MonthlyReportLog.class);
+    private final ReportDeliveries deliveries = mock(ReportDeliveries.class);
     private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
     private final MonthlyReportSender sender = mock(MonthlyReportSender.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(FIRST_OF_OCTOBER_AT_SEVEN, ZoneId.of("Europe/Prague"));
     private final MonthlyReportService service = new MonthlyReportService(new MonthlyReportFigures(donors, donations, payments, importStates),
-            reportLog, settings, sender, events, clock);
+            reportLog, deliveries, settings, sender, events, clock);
 
     @BeforeEach
     void stubFacts() {
@@ -214,7 +218,7 @@ class MonthlyReportServiceTest {
     void should_refuse_when_resent_given_month_not_ended() {
         assertThatThrownBy(() -> service.resend(ADMIN, ReportMonth.of(2026, 10))).isInstanceOf(ReportMonthNotEnded.class);
 
-        verifyNoInteractions(sender, events, reportLog);
+        verifyNoInteractions(sender, events, reportLog, deliveries);
     }
 
     @Test
@@ -225,6 +229,47 @@ class MonthlyReportServiceTest {
 
         assertThatThrownBy(() -> service.resend(ADMIN, SEPTEMBER)).isSameAs(refused);
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given the report set to leave on the 5th at 9:00 with the donors and the donations, when it goes out, then the sending is kept with those sections, the recipient count and the time")
+    void should_keep_scheduled_delivery_with_chosen_sections_when_due_report_sent() {
+        when(settings.current()).thenReturn(ON_THE_FIFTH);
+        clock.set(Instant.parse("2026-10-05T07:00:00Z"));
+
+        service.sendDueReport();
+
+        assertThat(keptDelivery()).isEqualTo(new ReportDelivery(SEPTEMBER, Instant.parse("2026-10-05T07:00:00Z"), false, 2,
+                ReportContent.of(sentReport(), ON_THE_FIFTH.sections())));
+        assertThat(keptDelivery().content().unpairedPayments()).isEmpty();
+        assertThat(keptDelivery().content().bankImport()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given September already sent, when an administrator sends it again, then that sending is kept as sent by hand")
+    void should_keep_delivery_by_hand_when_resent_given_month_already_sent() {
+        when(reportLog.recordSending(any(), any())).thenReturn(false);
+
+        service.resend(ADMIN, SEPTEMBER);
+
+        assertThat(keptDelivery()).isEqualTo(new ReportDelivery(SEPTEMBER, FIRST_OF_OCTOBER_AT_SEVEN, true, 1,
+                ReportContent.of(sentReport(), ReportSections.all())));
+    }
+
+    @Test
+    @DisplayName("Given September's report already recorded, when the due report is checked again, then no further sending is kept")
+    void should_keep_no_delivery_when_due_report_checked_given_month_already_recorded() {
+        when(reportLog.recordSending(any(), any())).thenReturn(false);
+
+        service.sendDueReport();
+
+        verifyNoInteractions(deliveries);
+    }
+
+    private ReportDelivery keptDelivery() {
+        ArgumentCaptor<ReportDelivery> kept = ArgumentCaptor.forClass(ReportDelivery.class);
+        verify(deliveries).record(kept.capture());
+        return kept.getValue();
     }
 
     private MonthlyReport sentReport() {

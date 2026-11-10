@@ -528,6 +528,15 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(textOf(await client.callTool({ name: 'nfnn_report', arguments: {} }))).toContain(
       'info@nfnn.cz',
     );
+    const sent = textOf(
+      await client.callTool({ name: 'nfnn_report', arguments: { month: '2026-10' } }),
+    );
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/donations/report/sent?month=2026-10',
+    );
+    expect(sent).toContain('"byHand":true');
+    expect(sent).toContain('"received":{"count":3,"total":850');
+    expect(sent).toContain('"recomputed":null');
     const content = textOf(await client.callTool({ name: 'nfnn_content', arguments: {} }));
     expect(content).toContain('"title":"Koncept"');
     expect(content).toContain('"bodyLength":22');

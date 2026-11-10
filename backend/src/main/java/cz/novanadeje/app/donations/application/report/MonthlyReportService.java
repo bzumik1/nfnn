@@ -1,7 +1,11 @@
 package cz.novanadeje.app.donations.application.report;
 
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
+import cz.novanadeje.app.donations.domain.report.MonthlyReport;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
+import cz.novanadeje.app.donations.domain.report.ReportContent;
+import cz.novanadeje.app.donations.domain.report.ReportDeliveries;
+import cz.novanadeje.app.donations.domain.report.ReportDelivery;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportMonthNotEnded;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
@@ -29,15 +33,17 @@ public class MonthlyReportService {
 
     private final MonthlyReportFigures figures;
     private final MonthlyReportLog reportLog;
+    private final ReportDeliveries deliveries;
     private final ReportSettingsRepository settings;
     private final MonthlyReportSender sender;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public MonthlyReportService(MonthlyReportFigures figures, MonthlyReportLog reportLog, ReportSettingsRepository settings,
-                                MonthlyReportSender sender, ApplicationEventPublisher events, Clock clock) {
+    public MonthlyReportService(MonthlyReportFigures figures, MonthlyReportLog reportLog, ReportDeliveries deliveries,
+                                ReportSettingsRepository settings, MonthlyReportSender sender, ApplicationEventPublisher events, Clock clock) {
         this.figures = figures;
         this.reportLog = reportLog;
+        this.deliveries = deliveries;
         this.settings = settings;
         this.sender = sender;
         this.events = events;
@@ -67,7 +73,7 @@ public class MonthlyReportService {
         Instant now = clock.instant();
         ReportSettings current = settings.current();
         reportLog.recordSending(month, now);
-        sender.send(figures.compile(month), current);
+        deliver(month, current, now, true);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
                 "Měsíční přehled za " + month + " ručně odeslán, počet příjemců " + current.recipients().count(), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
@@ -75,11 +81,18 @@ public class MonthlyReportService {
     }
 
     private MonthlyReportOutcome send(ReportMonth month, ReportSettings current) {
-        if (!reportLog.recordSending(month, clock.instant())) {
+        Instant now = clock.instant();
+        if (!reportLog.recordSending(month, now)) {
             return MonthlyReportOutcome.alreadySent(month);
         }
-        sender.send(figures.compile(month), current);
+        deliver(month, current, now, false);
         return MonthlyReportOutcome.sent(month);
+    }
+
+    private void deliver(ReportMonth month, ReportSettings current, Instant now, boolean byHand) {
+        MonthlyReport report = figures.compile(month);
+        deliveries.record(new ReportDelivery(month, now, byHand, current.recipients().count(), ReportContent.of(report, current.sections())));
+        sender.send(report, current);
     }
 
     private void requireEnded(ReportMonth month) {
