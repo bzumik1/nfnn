@@ -1,0 +1,51 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the reader opens, then it shows the tail of the file and lets the administrator page through it",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the reader opens, then the newest entries come first under their Prague day, each with its time, level, class and message",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when a rotated file is opened, then its own tail is read",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the file writes no level, then the level filter is not offered",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the file is gone, then the problem is shown",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the file is gone, then the problem is shown with a retry",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they search, then the newest matches are listed with a way to the older ones and a match opens its window",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they show only errors, then the backend is searched for error lines and the matches open their surroundings",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they ask for the browser error reports, then the search holds their pattern and the newest reports are listed",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they ask for the browser error reports, then the search holds their pattern and the reports are listed",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the pattern is not a valid expression, then the problem is shown at the search",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the pattern is not a valid expression, then the problem is shown at the search and no stale results stay",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-logs.spec.ts > Given an administrator on the logs hub > when they open backend.log from the hub, then its tail is shown and older lines and a search are reachable",
+    "replacement": "e2e/admin-logs.spec.ts > Given an administrator on the logs hub > when they open backend.log from the hub, then its newest entries come first, older ones load below and an error opens its surroundings",
+    "reason": "Logs reader (Jakub 2026-11-07, variant A of the logs redesign, part 2): the reader shows a file as entries newest first with Vše / Varování / Chyby, a sheet per entry and its surroundings instead of a text window with a pager, so its tests are named after what they now prove"
+  }
+]

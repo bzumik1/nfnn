@@ -2416,10 +2416,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/logy/soubor?nazev=backend.log');
-    await expect(page.locator('.log-text')).toBeVisible();
-    await page.getByLabel('Hledat', { exact: true }).fill('fio');
+    await expect(page.locator('.entry').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByLabel('Hledat v souboru').fill('fio');
     await page.getByRole('button', { name: 'Hledat', exact: true }).click();
-    await expect(page.locator('.match')).toHaveCount(2);
+    await expect(page.locator('.entry')).toHaveCount(2);
+    await page.locator('.entry').first().click();
+    await expect(page.getByRole('dialog', { name: 'Chyba v 10:00:38' })).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/logy/urovne');
