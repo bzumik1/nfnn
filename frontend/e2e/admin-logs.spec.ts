@@ -29,7 +29,7 @@ test.describe('Given an administrator on the logs hub', () => {
     await page.getByRole('button', { name: 'Načíst starší řádky' }).click();
     await expect(page.locator('.entry')).toHaveCount(80);
 
-    await page.getByRole('button', { name: 'Chyby', exact: true }).click();
+    await page.getByRole('radio', { name: 'Chyby', exact: true }).click();
     await expect(page.locator('.entry')).toHaveCount(2);
     await page.locator('.entry').first().click();
     const sheet = page.getByRole('dialog', { name: 'Chyba v 10:00:38' });
@@ -39,8 +39,8 @@ test.describe('Given an administrator on the logs hub', () => {
     );
     await sheet.getByRole('button', { name: 'Zobrazit okolí' }).click();
     await opened;
-    await expect(page.getByRole('button', { name: 'Vše', exact: true })).toHaveAttribute(
-      'aria-pressed',
+    await expect(page.getByRole('radio', { name: 'Vše', exact: true })).toHaveAttribute(
+      'aria-checked',
       'true',
     );
     await expect(page.locator('.entry.is-focused')).toBeFocused();

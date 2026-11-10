@@ -18,6 +18,7 @@ import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../../shared/ui/dialog/dialog';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
 import { formatDonationDate, pragueDay, pragueTime } from '../../../donations/donation-date';
 import { AdminApi, LogSearchResponse, LogWindowResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
@@ -54,7 +55,7 @@ export const BROWSER_ERRORS_PATTERN = 'Browser error';
 
 @Component({
   selector: 'app-admin-log-reader',
-  imports: [FormsModule, CopyButton, Dialog, LiveNotice, NeedsConnection, LevelIcon],
+  imports: [FormsModule, CopyButton, Dialog, LiveNotice, NeedsConnection, LevelIcon, RadioGroup],
   templateUrl: './admin-log-reader.html',
   styleUrl: './admin-log-reader.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

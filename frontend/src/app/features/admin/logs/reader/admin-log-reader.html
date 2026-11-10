@@ -42,14 +42,16 @@
       @if (filters) {
         <div
           class="ui-segmented"
-          role="group"
+          appRadioGroup
           aria-label="Které záznamy ukázat"
           i18n-aria-label="@@admin.logs.reader.filter.label"
         >
           <button
             type="button"
+            role="radio"
             [class.is-active]="filter() === 'all'"
-            [attr.aria-pressed]="filter() === 'all'"
+            [attr.aria-checked]="filter() === 'all'"
+            [tabindex]="filter() === 'all' ? 0 : -1"
             (click)="choose('all')"
             i18n="@@admin.logs.reader.filter.all"
           >
@@ -58,8 +60,10 @@
           <button
             appNeedsConnection
             type="button"
+            role="radio"
             [class.is-active]="filter() === 'warnings'"
-            [attr.aria-pressed]="filter() === 'warnings'"
+            [attr.aria-checked]="filter() === 'warnings'"
+            [tabindex]="filter() === 'warnings' ? 0 : -1"
             (click)="choose('warnings')"
             i18n="@@admin.logs.reader.filter.warnings"
           >
@@ -68,8 +72,10 @@
           <button
             appNeedsConnection
             type="button"
+            role="radio"
             [class.is-active]="filter() === 'errors'"
-            [attr.aria-pressed]="filter() === 'errors'"
+            [attr.aria-checked]="filter() === 'errors'"
+            [tabindex]="filter() === 'errors' ? 0 : -1"
             (click)="choose('errors')"
             i18n="@@admin.logs.reader.filter.errors"
           >

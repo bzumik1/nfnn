@@ -83,7 +83,7 @@ describe('Given an administrator reading a log file', () => {
       'Info 22:09:47 FioBankStatementSource Fio answered 2 movements',
     ]);
     expect(page.texts('.ui-segmented button')).toEqual(['Vše', 'Varování', 'Chyby']);
-    expect(page.element('.ui-segmented button').getAttribute('aria-pressed')).toBe('true');
+    expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
   });
 
   it('when they tap an entry, then a sheet shows its time, level, thread, class and the whole message to copy', async () => {
@@ -155,7 +155,7 @@ describe('Given an administrator reading a log file', () => {
     expect(page.texts('.entry')).toEqual([
       'Chyba 0:30:11 BackupWatchService Backup watch failed for request 01a1b3c4',
     ]);
-    expect(page.element('.ui-segmented button:nth-child(3)').getAttribute('aria-pressed')).toBe(
+    expect(page.element('.ui-segmented button:nth-child(3)').getAttribute('aria-checked')).toBe(
       'true',
     );
 
@@ -175,7 +175,7 @@ describe('Given an administrator reading a log file', () => {
       text: TAIL,
     });
 
-    expect(page.element('.ui-segmented button').getAttribute('aria-pressed')).toBe('true');
+    expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
     expect(page.texts('.entry')).toHaveLength(3);
     expect(page.element('.entry.is-focused').textContent).toContain('Backup watch failed');
   });
