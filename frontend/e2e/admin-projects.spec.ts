@@ -106,6 +106,10 @@ test.describe('Given an administrator managing the projects', () => {
 
     await expect(page).toHaveURL(`/sprava/projekty/${PROJECT_ID}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Úprava příběhu' })).toBeFocused();
+    await expect(page.getByRole('link', { name: '← Pomáháme' })).toHaveAttribute(
+      'href',
+      '/sprava/projekty',
+    );
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
     await expect(page.getByLabel('Rok')).toHaveValue('2024');
     await expect(

@@ -131,7 +131,7 @@ describe('Given an administrator anywhere in the administration', () => {
           ['Platby z banky', '/sprava/platby'],
           ['Dárci', '/sprava/darci'],
           ['Aktuality', '/sprava/aktuality'],
-          ['Projekty', '/sprava/projekty'],
+          ['Pomáháme', '/sprava/projekty'],
         ],
       },
       {
