@@ -123,6 +123,43 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     });
   }
 
+  for (const screen of SCREENS.filter((each) => each.width < 768 && each.height > 500)) {
+    test.describe(`when it opens offline on ${screen.name} (${screen.width} × ${screen.height})`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test('then the page still fills one screen and does not scroll, and the Offline pill stacks between the text and the tab bar', async ({
+        page,
+      }) => {
+        await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+        await page.goto('/');
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        const pill = page.getByRole('button', { name: /^Offline/ });
+        await expect(pill).toBeVisible({ timeout: 10_000 });
+
+        const layout = await heroLayout(page, FACE_IN_HERO_PHOTO);
+        const pillBox = (await pill.boundingBox())!;
+        const hero = (await page.locator('#uvod').boundingBox())!;
+
+        expect(layout.scrolls, 'the landing page scrolls').toBe(false);
+        expect(
+          hero.y + hero.height,
+          'the photo ends above the bottom of the screen',
+        ).toBeGreaterThanOrEqual(screen.height);
+        for (const { text, box } of layout.shown) {
+          expect(box.bottom, `"${text}" runs under the Offline pill`).toBeLessThanOrEqual(
+            pillBox.y,
+          );
+        }
+        if (layout.tabBarTop !== null) {
+          expect(
+            pillBox.y + pillBox.height,
+            'the Offline pill runs under the tab bar',
+          ).toBeLessThanOrEqual(layout.tabBarTop);
+        }
+      });
+    });
+  }
+
   test.describe('when a phone wider than a tablet lies on its side', () => {
     test.use({ viewport: { width: 956, height: 440 } });
 
