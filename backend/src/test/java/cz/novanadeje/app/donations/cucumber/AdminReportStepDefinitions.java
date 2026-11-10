@@ -105,6 +105,36 @@ public class AdminReportStepDefinitions {
         }
     }
 
+    @When("{string} opens the sent monthly report for {string}")
+    public void opensTheSentMonthlyReportFor(String alias, String month) {
+        sessions.actAs(alias);
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @When("someone without a token opens the sent monthly report for {string}")
+    public void someoneWithoutATokenOpensTheSentMonthlyReportFor(String month) {
+        api.forgetCredentials();
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @When("the exchanged API token opens the sent monthly report for {string}")
+    public void theExchangedApiTokenOpensTheSentMonthlyReportFor(String month) {
+        String token = api.lastResponseJson().get("access_token").asString();
+        api.forgetCredentials();
+        api.authorize(token);
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @Then("the sent monthly report leaves out {string}")
+    public void theSentMonthlyReportLeavesOut(String path) {
+        assertThat(at(api.lastResponseJson(), path).isNull()).as(path).isTrue();
+    }
+
+    @Then("the sent monthly report lists no sending")
+    public void theSentMonthlyReportListsNoSending() {
+        assertThat(api.lastResponseJson().get("deliveries")).isEmpty();
+    }
+
     @When("{string} asks for the donations overview")
     public void asksForTheDonationsOverview(String alias) {
         sessions.actAs(alias);
@@ -137,6 +167,7 @@ public class AdminReportStepDefinitions {
 
     @Then("the monthly report settings say:")
     @Then("the sent report says:")
+    @Then("the sent monthly report says:")
     @Then("the donations overview says:")
     @Then("the activity since then says:")
     public void theResponseSays(Map<String, String> expected) {

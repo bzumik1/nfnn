@@ -23,6 +23,7 @@ const READ_ONLY = {
 const YEAR = z.number().int().min(2000).max(2100);
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const LOG_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const DONATIONS_SHOWN = 20;
 const LOG_TIMES =
@@ -402,12 +403,17 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Měsíční přehled',
       description:
-        'The monthly report settings (recipients, send day, sections), the reports sent and the next one due.',
+        "The monthly report settings (recipients, send day, sections), the reports sent and the next one due. With `month` (YYYY-MM) one sent report instead: every sending of that month, newest first, with when it went out, whether an administrator sent it by hand, how many recipients it had and what it said (only the sections it carried: donors, donations, unpaired payments, bank import); a month sent before the sendings were kept has no sendings and `recomputed`, its figures counted from today's data without the bank import, which may differ from the e-mail that went out.",
+      inputSchema: z.object({ month: MONTH.optional() }),
       annotations: READ_ONLY,
     },
-    async (ctx) =>
+    async ({ month }, ctx) =>
       answer(deps, ctx, 'nfnn_report', async ({ apiToken }) =>
-        text(await backend.get('/api/admin/donations/report', apiToken)),
+        text(
+          month === undefined
+            ? await backend.get('/api/admin/donations/report', apiToken)
+            : await backend.get(`/api/admin/donations/report/sent?month=${month}`, apiToken),
+        ),
       ),
   );
 

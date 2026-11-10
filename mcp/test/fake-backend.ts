@@ -461,6 +461,32 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`:
       return [204, undefined];
+    case 'GET /api/admin/donations/report/sent':
+      return [
+        200,
+        {
+          month: '2026-10',
+          firstSentAt: '2026-11-01T06:00:00Z',
+          deliveries: [
+            {
+              sentAt: '2026-11-02T11:00:00Z',
+              byHand: true,
+              recipientCount: 1,
+              content: {
+                donors: { registered: 2, newInMonth: 2 },
+                donations: {
+                  received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+                  paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+                  receivedInYear: { count: 3, totalMinor: 85000, currency: 'CZK' },
+                },
+                unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+                bankImport: { lastSucceededAt: '2026-11-02T11:00:00Z', lastFailure: null },
+              },
+            },
+          ],
+          recomputed: null,
+        },
+      ];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
     case 'GET /api/admin/donations/receipt-signatory':

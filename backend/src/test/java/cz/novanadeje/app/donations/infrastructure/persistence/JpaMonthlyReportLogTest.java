@@ -70,6 +70,15 @@ class JpaMonthlyReportLogTest {
     }
 
     @Test
+    @DisplayName("Given September recorded, when September and October are looked up, then September comes with its time and October with nothing")
+    void should_find_recorded_month_only_when_looked_up_given_september_recorded() {
+        reportLog.recordSending(SEPTEMBER, NOW);
+
+        assertThat(reportLog.sentReportOf(SEPTEMBER)).contains(new SentReport(SEPTEMBER, NOW));
+        assertThat(reportLog.sentReportOf(ReportMonth.of(2026, 10))).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given the schema, when a month is stored on another day than its first, then the check constraint refuses it")
     void should_refuse_when_inserted_given_day_other_than_first() {
         assertThatThrownBy(() -> jdbc.sql("insert into donation_monthly_report (report_month, sent_at) values (date '2026-09-15', now())").update())

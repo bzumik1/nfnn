@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="030-keep-monthly-report-deliveries" author="nfnn">
+        <createTable tableName="donation_report_delivery">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_donation_report_delivery" nullable="false"/>
+            </column>
+            <column name="report_month" type="date">
+                <constraints nullable="false" foreignKeyName="fk_donation_report_delivery_month"
+                             referencedTableName="donation_monthly_report" referencedColumnNames="report_month"/>
+            </column>
+            <column name="sent_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="by_hand" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recipient_count" type="smallint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="includes_donors" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="registered_donors" type="bigint"/>
+            <column name="new_donors" type="bigint"/>
+            <column name="includes_donations" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="received_count" type="integer"/>
+            <column name="received_total_minor" type="bigint"/>
+            <column name="paired_count" type="integer"/>
+            <column name="paired_total_minor" type="bigint"/>
+            <column name="received_in_year_count" type="integer"/>
+            <column name="received_in_year_total_minor" type="bigint"/>
+            <column name="includes_unpaired_payments" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unpaired_count" type="integer"/>
+            <column name="unpaired_total_minor" type="bigint"/>
+            <column name="includes_bank_import" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bank_last_succeeded_at" type="timestamp with time zone"/>
+            <column name="bank_last_failure_at" type="timestamp with time zone"/>
+            <column name="bank_last_failure_kind" type="varchar(32)"/>
+        </createTable>
+        <createIndex tableName="donation_report_delivery" indexName="ix_donation_report_delivery_month_sent_at">
+            <column name="report_month"/>
+            <column name="sent_at"/>
+        </createIndex>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_recipient_count check (recipient_count between 1 and 10)</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_section check (includes_donors or includes_donations or includes_unpaired_payments or includes_bank_import)</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_donors check (
+            (includes_donors and registered_donors is not null and new_donors is not null and new_donors between 0 and registered_donors)
+            or (not includes_donors and registered_donors is null and new_donors is null))</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_donations check (
+            (includes_donations and received_count &gt;= 0 and received_total_minor &gt;= 0 and paired_count &gt;= 0 and paired_total_minor &gt;= 0
+                and received_in_year_count &gt;= 0 and received_in_year_total_minor &gt;= 0)
+            or (not includes_donations and received_count is null and received_total_minor is null and paired_count is null
+                and paired_total_minor is null and received_in_year_count is null and received_in_year_total_minor is null))</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_unpaired check (
+            (includes_unpaired_payments and unpaired_count &gt;= 0 and unpaired_total_minor &gt;= 0)
+            or (not includes_unpaired_payments and unpaired_count is null and unpaired_total_minor is null))</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_bank_import check (
+            includes_bank_import or (bank_last_succeeded_at is null and bank_last_failure_at is null and bank_last_failure_kind is null))</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_failure check ((bank_last_failure_at is null) = (bank_last_failure_kind is null))</sql>
+        <sql>alter table donation_report_delivery add constraint ck_donation_report_delivery_failure_kind check (
+            bank_last_failure_kind in ('RATE_LIMITED', 'HISTORY_LOCKED', 'UNAUTHORIZED', 'TRANSPORT', 'INVALID_RESPONSE', 'UNEXPECTED'))</sql>
+    </changeSet>
+
+</databaseChangeLog>
