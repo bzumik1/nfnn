@@ -87,6 +87,10 @@ async function centreOf(locator: Locator): Promise<Point> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
+function distance(from: Point, to: Point): number {
+  return Math.hypot(from.x - to.x, from.y - to.y);
+}
+
 async function slide(finger: Finger, from: Point, to: Point): Promise<void> {
   await finger.down(from);
   for (let step = 1; step <= 8; step++) {
@@ -177,9 +181,8 @@ test.describe('Given a visitor on a phone with the tab bar under the finger', ()
       await finger.move({ x: start.x + ((end.x - start.x) * step) / 8, y: start.y });
     }
 
-    const pill = await centreOf(bar(page).locator('.tab-bar-pill'));
-    expect(Math.abs(pill.x - end.x)).toBeLessThan(2);
-    expect(Math.abs(pill.y - end.y)).toBeLessThan(2);
+    const pill = bar(page).locator('.tab-bar-pill');
+    await expect.poll(async () => distance(await centreOf(pill), end)).toBeLessThan(2);
     await finger.up(end);
     await expect(page).toHaveURL('/prispet');
   });
@@ -199,8 +202,8 @@ test.describe('Given a visitor on a phone with the tab bar under the finger', ()
     await finger.move({ x: (start.x + offCentre.x) / 2, y: start.y });
     await finger.move(offCentre);
 
-    const pill = await centreOf(bar(page).locator('.tab-bar-pill'));
-    expect(Math.abs(pill.x - centre.x)).toBeLessThan(2);
+    const pill = bar(page).locator('.tab-bar-pill');
+    await expect.poll(async () => distance(await centreOf(pill), centre)).toBeLessThan(2);
     await finger.up(offCentre);
     await expect(page).toHaveURL('/aktuality');
   });
