@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,7 +106,7 @@ public class BankLogoAdminService {
 
     private BankLogo createAndLock(BankLogoSource source, BankLogoPrecondition precondition) {
         boolean inserted = logos.insertIfAbsent(source);
-        BankLogo locked = logos.lockForChange(source.bank()).orElseThrow(() -> new IllegalStateException("A bank logo row just inserted is missing"));
+        BankLogo locked = logos.lockForChange(source.bank()).orElseThrow(ChangedMeanwhile::andRemovedSince);
         if (!inserted) {
             admit(Optional.of(locked), precondition);
         }
@@ -145,7 +146,7 @@ public class BankLogoAdminService {
         return banks.findAll().stream().collect(Collectors.toMap(CzechBank::code, CzechBank::name));
     }
 
-    private <T> T inTransaction(java.util.function.Supplier<T> work) {
+    private <T> T inTransaction(Supplier<T> work) {
         return transaction.execute(status -> work.get());
     }
 }

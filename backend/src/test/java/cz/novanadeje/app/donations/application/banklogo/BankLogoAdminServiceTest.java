@@ -147,6 +147,59 @@ class BankLogoAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given another administrator's logo of the same bank that was inserted and removed again before the creation could lock it, when the creation is written, then it is refused as changed meanwhile without a current row and nothing is written")
+    void should_refuse_creation_without_current_when_written_given_concurrent_creation_removed_again() {
+        InMemoryBankLogoRepository racing = new InMemoryBankLogoRepository() {
+            @Override
+            public boolean insertIfAbsent(BankLogoSource source) {
+                return false;
+            }
+        };
+        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, versions, publisher,
+                new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
+        images.answer(NEW_WEBP);
+
+        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, BankLogoPrecondition.absent()))
+                .isInstanceOfSatisfying(ChangedMeanwhile.class, refused -> assertThat(refused.extensions()).isEmpty());
+
+        assertThat(racing.find(CSAS)).isEmpty();
+        assertThat(racing.images()).isEmpty();
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a stored logo removed by another administrator while a new source downloads, when the change over the version read is written, then it is not found and nothing is stored or audited")
+    void should_be_not_found_when_set_given_logo_removed_during_download() {
+        BankLogo old = storeOldLogo();
+        images.answer(NEW_WEBP);
+        images.whileFetching(() -> logos.delete(CSAS));
+
+        assertThatThrownBy(() -> service.set(ADMIN, SITE, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(old)))))
+                .isInstanceOf(BankLogoNotFound.class);
+
+        assertThat(logos.find(CSAS)).isEmpty();
+        assertThat(logos.images()).containsOnlyKeys(OLD_IMAGE.id());
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a stored logo whose address another administrator changes while it downloads again, when the refresh is written, then it answers the logo as stored and writes and audits nothing")
+    void should_answer_stored_row_and_write_nothing_when_refreshed_given_address_changed_during_download() {
+        storeOldLogo();
+        BankLogo theirs = BankLogo.from(SITE);
+        images.answer(NEW_WEBP);
+        images.whileFetching(() -> logos.put(theirs));
+
+        BankLogoAdminRow row = service.refresh(ADMIN, CSAS);
+
+        assertThat(row.sourceUrl()).isEqualTo(SITE.url());
+        assertThat(row.version()).isEqualTo(versions.of(theirs));
+        assertThat(logos.find(CSAS)).contains(theirs);
+        assertThat(logos.images()).containsOnlyKeys(OLD_IMAGE.id());
+        assertThat(events).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given no logo of a bank, when a version is named for it, then it is not found and nothing is fetched")
     void should_be_not_found_when_set_given_version_of_absent_logo() {
         assertThatThrownBy(() -> service.set(ADMIN, ARTWORK, BankLogoPrecondition.matching(ExpectedVersion.of("0123456789abcdef"))))
