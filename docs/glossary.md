@@ -92,6 +92,11 @@ _Avoid_: „účet“ alone (it is also the donor's account on the site)
 UI „název banky“ beside an account („2000145399/0800 · Česká spořitelna“); docs „číselník ČNB Kódy bank ČR“ · Code: `BankCode`, `BankCodeList` (`donations/domain/bankcode`, tables `bank_code`, `bank_code_list_state`), `CZECH_BANK_CODES` and `BankNames` in the browser.\
 The ČNB list „Kódy bank ČR“ of four-digit Czech bank codes and the banks they belong to; the server downloads it, the browser shows a short name of the bank (without the legal form) beside a Czech account number.
 
+**Bank logo**\
+UI „logo banky“ beside an account and in the administration · Code: `BankLogo`, `BankLogoSource`, `BankLogoImageId` (`donations/domain/banklogo`, tables `bank_logo`, `bank_logo_image`), `/api/donations/bank-logos`, connector `nfnn_bank_logos`, `nfnn_set_bank_logo_source`, `nfnn_refresh_bank_logo`.\
+The round icon of a bank (its official app icon or site icon) that the server downloads per bank code from an official address on an allow-list, keeps as a 128 px WebP and serves from nfnn.cz; its address is the logo's source („zdroj loga“).\
+_Avoid_: „ikona banky“, „favicon“
+
 **Turning pairing from an account off and on**\
 UI administration „Vypnout párování“ / „Zapnout párování“; donor „Znovu přiřazovat platby z účtu“, status „Nepřiřazujeme“ · Code: `POST …/bank-accounts/{id}/disconnect|reconnect`, status `DISCONNECTED`.\
 Stopping pairing from a sender account (the donations stay) or starting it again (only new payments pair, after the next payment with the symbol).\
