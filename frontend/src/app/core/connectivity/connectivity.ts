@@ -20,6 +20,7 @@ export const OFFLINE_AFTER_MS = 3_000;
 export const PROBE_EVERY_MS = 30_000;
 export const PROBE_TIMEOUT_MS = 5_000;
 export const FRESH_ANSWER_MS = 15_000;
+export const SLEEP_TOLERANCE_MS = 1_000;
 
 export type OfflineCause = 'network' | 'server';
 
@@ -140,7 +141,8 @@ export class Connectivity {
       return;
     }
     if (this.settling === null) {
-      this.settling = setTimeout(() => this.settled(), OFFLINE_AFTER_MS);
+      const since = Date.now();
+      this.settling = setTimeout(() => this.settleUnlessWoken(since), OFFLINE_AFTER_MS);
       if (this.probeInFlight === null) {
         this.probe().subscribe();
       }
@@ -174,6 +176,15 @@ export class Connectivity {
     }
   }
 
+  private settleUnlessWoken(since: number): void {
+    if (!sleptThrough(since, OFFLINE_AFTER_MS)) {
+      this.settled();
+      return;
+    }
+    this.settling = null;
+    this.failed(this.failingCause);
+  }
+
   private settled(): void {
     this.settling = null;
     const wasOnline = this.offlineFor() === null;
@@ -202,21 +213,30 @@ export class Connectivity {
 
   private probe(): Observable<boolean> {
     if (this.probeInFlight === null) {
-      this.probeInFlight = this.probeApi.probe().pipe(
-        timeout(PROBE_TIMEOUT_MS),
-        map(() => true),
-        catchError((failure: unknown) => {
-          if (failure instanceof TimeoutError) {
-            this.gaveUpWaiting();
-            return of(false);
-          }
-          return of(!isUnreachable(failure));
-        }),
+      this.probeInFlight = this.askServer(true).pipe(
         finalize(() => (this.probeInFlight = null)),
         share(),
       );
     }
     return this.probeInFlight;
+  }
+
+  private askServer(mayAskAgainAfterSleep: boolean): Observable<boolean> {
+    const since = Date.now();
+    return this.probeApi.probe().pipe(
+      timeout(PROBE_TIMEOUT_MS),
+      map(() => true),
+      catchError((failure: unknown) => {
+        if (!(failure instanceof TimeoutError)) {
+          return of(!isUnreachable(failure));
+        }
+        if (mayAskAgainAfterSleep && sleptThrough(since, PROBE_TIMEOUT_MS)) {
+          return this.askServer(false);
+        }
+        this.gaveUpWaiting();
+        return of(false);
+      }),
+    );
   }
 
   private visible(): boolean {
@@ -236,4 +256,8 @@ export class Connectivity {
       this.probing = null;
     }
   }
+}
+
+function sleptThrough(since: number, waited: number): boolean {
+  return Date.now() - since > waited + SLEEP_TOLERANCE_MS;
 }
