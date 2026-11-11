@@ -31,6 +31,7 @@ const CLICK_AFTER_DRAG_MS = 400;
 })
 export class TabBar {
   protected readonly star = FOUNDATION_STAR;
+  protected readonly starGlyphViewBox = '1238.5 130.6 553 553';
   private readonly router = inject(Router);
   protected readonly memory = inject(TabMemory);
   protected readonly keyboard = inject(SoftKeyboard);
