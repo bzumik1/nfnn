@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.banklogo;
 
 import cz.novanadeje.app.donations.application.banklogo.BankLogoUnavailable;
+import cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 
 import javax.imageio.IIOImage;
@@ -22,13 +23,13 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 final class BankLogoPictures {
 
     static final int SIDE = 128;
     static final int MAX_SOURCE_SIDE = 2048;
     static final long MAX_SOURCE_PIXELS = 4_000_000L;
-    static final int MAX_WEBP_BYTES = 64 * 1024;
     private static final int MAX_BITS_PER_SAMPLE = 8;
     private static final float QUALITY = 0.9f;
     private static final Semaphore ONE_AT_A_TIME = new Semaphore(1, true);
@@ -38,14 +39,48 @@ final class BankLogoPictures {
     private BankLogoPictures() {
     }
 
-    static byte[] toWebp(byte[] body, String contentType) {
+    static byte[] toWebp(byte[] body, String contentType, long deadline) {
         Format format = Format.of(body).filter(sniffed -> sniffed.mediaType.equals(mediaType(contentType)))
                 .orElseThrow(() -> new BankLogoUnavailable(BankLogoFailure.UNSUPPORTED_TYPE));
-        ONE_AT_A_TIME.acquireUninterruptibly();
+        acquireBefore(deadline);
         try {
-            return encode(square(decode(body, format)));
+            return encode(square(decode(body, format, deadline)));
         } finally {
             ONE_AT_A_TIME.release();
+        }
+    }
+
+    private static void acquireBefore(long deadline) {
+        try {
+            if (!ONE_AT_A_TIME.tryAcquire(HttpBankLogoSource.remaining(deadline), TimeUnit.NANOSECONDS)) {
+                throw new BankLogoUnavailable(BankLogoFailure.TIMEOUT);
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new BankLogoUnavailable(BankLogoFailure.INTERRUPTED);
+        }
+    }
+
+    private static BufferedImage readBefore(ImageReader reader, long deadline) throws IOException {
+        long remaining = HttpBankLogoSource.remaining(deadline);
+        Thread watchdog = Thread.ofVirtual().name("bank-logo-decode-deadline").start(() -> abortAfter(reader, remaining));
+        try {
+            BufferedImage image = reader.read(0);
+            if (System.nanoTime() - deadline >= 0) {
+                throw new BankLogoUnavailable(BankLogoFailure.TIMEOUT);
+            }
+            return image;
+        } finally {
+            watchdog.interrupt();
+        }
+    }
+
+    private static void abortAfter(ImageReader reader, long nanos) {
+        try {
+            TimeUnit.NANOSECONDS.sleep(nanos);
+            reader.abort();
+        } catch (InterruptedException finished) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -57,7 +92,7 @@ final class BankLogoPictures {
         return (parameters < 0 ? contentType : contentType.substring(0, parameters)).strip().toLowerCase(Locale.ROOT);
     }
 
-    private static BufferedImage decode(byte[] body, Format format) {
+    private static BufferedImage decode(byte[] body, Format format, long deadline) {
         Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName(format.readerName);
         if (!readers.hasNext()) {
             throw new IllegalStateException("No " + format.readerName + " reader is registered");
@@ -73,7 +108,7 @@ final class BankLogoPictures {
             if (bitsPerSample(reader) > MAX_BITS_PER_SAMPLE) {
                 throw new BankLogoUnavailable(BankLogoFailure.UNSUPPORTED_TYPE);
             }
-            return reader.read(0);
+            return readBefore(reader, deadline);
         } catch (BankLogoUnavailable refused) {
             throw refused;
         } catch (IOException | RuntimeException unreadable) {
@@ -122,8 +157,8 @@ final class BankLogoPictures {
             writer.write(null, new IIOImage(image, null, null), param);
             stream.flush();
             byte[] webp = out.toByteArray();
-            if (webp.length > MAX_WEBP_BYTES) {
-                throw new IllegalStateException("A 128 pixel WebP came out larger than " + MAX_WEBP_BYTES + " bytes");
+            if (webp.length > FetchedBankLogo.MAX_BYTES) {
+                throw new IllegalStateException("A 128 pixel WebP came out larger than " + FetchedBankLogo.MAX_BYTES + " bytes");
             }
             return webp;
         } catch (IOException failure) {

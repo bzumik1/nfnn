@@ -63,6 +63,18 @@ class BankLogoRefreshServiceTest {
     }
 
     @Test
+    @DisplayName("Given a due logo, when the due logos are listed and it is refreshed, then the listing and the read before the download are read-only and only the write after it may write")
+    void should_read_only_before_download_when_listed_and_refreshed_given_due_logo() {
+        storeOld();
+        images.answer(NEW_WEBP);
+
+        service.due();
+        service.refresh(CSAS);
+
+        assertThat(transactions.readOnlyFlags()).containsExactly(true, true, false);
+    }
+
+    @Test
     @DisplayName("Given a due logo whose source now serves another picture, when it is refreshed, then the new image replaces the old one outside any transaction for the fetch")
     void should_replace_image_when_refreshed_given_changed_picture() {
         storeOld();

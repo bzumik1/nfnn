@@ -15,7 +15,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,7 +35,7 @@ class BankLogoPicturesTest {
         graphics.fillRect(150, 0, 300, 300);
         graphics.dispose();
 
-        byte[] webp = BankLogoPictures.toWebp(encode(wide, "jpeg"), "image/jpeg");
+        byte[] webp = BankLogoPictures.toWebp(encode(wide, "jpeg"), "image/jpeg", later());
 
         assertThat(new String(webp, 0, 4, StandardCharsets.US_ASCII)).isEqualTo("RIFF");
         assertThat(new String(webp, 8, 4, StandardCharsets.US_ASCII)).isEqualTo("WEBP");
@@ -55,7 +57,7 @@ class BankLogoPicturesTest {
         graphics.fillOval(0, 0, 256, 256);
         graphics.dispose();
 
-        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(BankLogoPictures.toWebp(encode(round, "png"), "image/png; charset=binary")));
+        BufferedImage decoded = ImageIO.read(new ByteArrayInputStream(BankLogoPictures.toWebp(encode(round, "png"), "image/png; charset=binary", later())));
 
         assertThat(decoded.getColorModel().hasAlpha()).isTrue();
         assertThat(decoded.getRGB(0, 0) >>> 24).isLessThan(16);
@@ -69,7 +71,7 @@ class BankLogoPicturesTest {
             byte[] png = encode(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png");
             byte[] claimed = withHeaderSize(png, size[0], size[1]);
 
-            assertThatThrownBy(() -> BankLogoPictures.toWebp(claimed, "image/png"))
+            assertThatThrownBy(() -> BankLogoPictures.toWebp(claimed, "image/png", later()))
                     .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.IMAGE_TOO_LARGE));
         }
     }
@@ -79,7 +81,7 @@ class BankLogoPicturesTest {
     void should_refuse_when_converted_given_sixteen_bit_png() throws IOException {
         BufferedImage deep = new BufferedImage(32, 32, BufferedImage.TYPE_USHORT_GRAY);
 
-        assertThatThrownBy(() -> BankLogoPictures.toWebp(encode(deep, "png"), "image/png"))
+        assertThatThrownBy(() -> BankLogoPictures.toWebp(encode(deep, "png"), "image/png", later()))
                 .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.UNSUPPORTED_TYPE));
     }
 
@@ -89,7 +91,7 @@ class BankLogoPicturesTest {
         byte[] png = encode(new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB), "png");
         byte[] cut = Arrays.copyOf(png, 40);
 
-        assertThatThrownBy(() -> BankLogoPictures.toWebp(cut, "image/png"))
+        assertThatThrownBy(() -> BankLogoPictures.toWebp(cut, "image/png", later()))
                 .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.UNREADABLE_IMAGE));
     }
 
@@ -106,7 +108,7 @@ class BankLogoPicturesTest {
         };
 
         for (String type : new String[]{"image/png", "image/jpeg", "image/" + kind}) {
-            assertThatThrownBy(() -> BankLogoPictures.toWebp(body, type))
+            assertThatThrownBy(() -> BankLogoPictures.toWebp(body, type, later()))
                     .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.UNSUPPORTED_TYPE));
         }
     }
@@ -117,9 +119,46 @@ class BankLogoPicturesTest {
         byte[] png = encode(new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB), "png");
 
         for (String type : new String[]{"image/jpeg", "", "application/octet-stream"}) {
-            assertThatThrownBy(() -> BankLogoPictures.toWebp(png, type))
+            assertThatThrownBy(() -> BankLogoPictures.toWebp(png, type, later()))
                     .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.UNSUPPORTED_TYPE));
         }
+    }
+
+    @Test
+    @DisplayName("Given a deadline that has already passed, when a picture becomes a bank logo, then it is refused as timed out before decoding")
+    void should_time_out_before_decoding_when_converted_given_passed_deadline() throws IOException {
+        byte[] png = encode(new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB), "png");
+
+        assertThatThrownBy(() -> BankLogoPictures.toWebp(png, "image/png", System.nanoTime() - 1))
+                .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.TIMEOUT));
+    }
+
+    @Test
+    @DisplayName("Given a large noisy PNG and a deadline that runs out while it decodes, when it becomes a bank logo, then the decoding is cut short and refused as timed out")
+    void should_time_out_when_converted_given_deadline_during_decoding() throws IOException {
+        byte[] png = encode(noise(2000, 2000), "png");
+        BankLogoPictures.toWebp(png, "image/png", later());
+        long started = System.nanoTime();
+        BankLogoPictures.toWebp(png, "image/png", later());
+        long decoding = System.nanoTime() - started;
+
+        assertThatThrownBy(() -> BankLogoPictures.toWebp(png, "image/png", System.nanoTime() + decoding / 4))
+                .isInstanceOfSatisfying(BankLogoUnavailable.class, refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.TIMEOUT));
+    }
+
+    private static long later() {
+        return System.nanoTime() + Duration.ofSeconds(30).toNanos();
+    }
+
+    private static BufferedImage noise(int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        SplittableRandom random = new SplittableRandom(7);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                image.setRGB(x, y, random.nextInt(0x1000000));
+            }
+        }
+        return image;
     }
 
     static byte[] encode(BufferedImage image, String format) throws IOException {

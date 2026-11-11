@@ -76,7 +76,7 @@ class BankLogoTest {
     void should_replace_source_and_image_when_pointed_given_new_source() {
         StoredBankLogoImage newer = new StoredBankLogoImage(new BankLogoImageId(UUID.randomUUID()), "b".repeat(64));
 
-        BankLogo moved = BankLogo.from(ARTWORK).fetched(IMAGE, FETCHED).from(OTHER_ARTWORK, newer, FETCHED.plusSeconds(60));
+        BankLogo moved = BankLogo.from(ARTWORK).fetched(IMAGE, FETCHED).fetchedFrom(OTHER_ARTWORK, newer, FETCHED.plusSeconds(60));
 
         assertThat(moved.source()).isEqualTo(OTHER_ARTWORK);
         assertThat(moved.image()).contains(newer);
@@ -88,7 +88,7 @@ class BankLogoTest {
     void should_refuse_when_pointed_given_source_of_another_bank() {
         BankLogoSource kb = new BankLogoSource(new BankCode("0100"), "https://www.kb.cz/icon.png");
 
-        assertThatThrownBy(() -> BankLogo.from(ARTWORK).from(kb, IMAGE, FETCHED)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BankLogo.from(ARTWORK).fetchedFrom(kb, IMAGE, FETCHED)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

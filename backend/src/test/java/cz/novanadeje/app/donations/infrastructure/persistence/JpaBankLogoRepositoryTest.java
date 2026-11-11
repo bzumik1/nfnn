@@ -70,7 +70,7 @@ class JpaBankLogoRepositoryTest {
         StoredBankLogoImage image = image("1");
         repository.storeImage(image, WEBP);
         BankLogo locked = repository.lockForChange(CSAS).orElseThrow();
-        repository.save(locked.from(CSAS_SITE, image, NOW));
+        repository.save(locked.fetchedFrom(CSAS_SITE, image, NOW));
         flushAndClear();
 
         BankLogo stored = repository.find(CSAS).orElseThrow();

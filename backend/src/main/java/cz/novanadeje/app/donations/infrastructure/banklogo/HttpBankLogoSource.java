@@ -87,7 +87,7 @@ class HttpBankLogoSource implements BankLogoImages {
                 throw new BankLogoUnavailable(BankLogoFailure.TOO_LARGE);
             }
             byte[] bytes = readBounded(body, deadline);
-            return FetchedBankLogo.of(BankLogoPictures.toWebp(bytes, response.headers().firstValue("Content-Type").orElse("")));
+            return FetchedBankLogo.of(BankLogoPictures.toWebp(bytes, response.headers().firstValue("Content-Type").orElse(""), deadline));
         } catch (IOException unreadable) {
             throw new BankLogoUnavailable(BankLogoFailure.UNREACHABLE);
         }
@@ -118,7 +118,7 @@ class HttpBankLogoSource implements BankLogoImages {
         }
     }
 
-    private static long remaining(long deadline) {
+    static long remaining(long deadline) {
         long remaining = deadline - System.nanoTime();
         if (remaining <= 0) {
             throw new BankLogoUnavailable(BankLogoFailure.TIMEOUT);

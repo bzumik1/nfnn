@@ -17,22 +17,25 @@ public class BankLogoRefreshService {
     private final BankLogoRepository logos;
     private final BankLogoImages images;
     private final TransactionTemplate transaction;
+    private final TransactionTemplate reads;
     private final Clock clock;
 
     public BankLogoRefreshService(BankLogoRepository logos, BankLogoImages images, TransactionTemplate transaction, Clock clock) {
         this.logos = logos;
         this.images = images;
         this.transaction = transaction;
+        this.reads = new TransactionTemplate(transaction.getTransactionManager());
+        this.reads.setReadOnly(true);
         this.clock = clock;
     }
 
     public List<BankCode> due() {
         Instant now = clock.instant();
-        return transaction.execute(status -> logos.findAll().stream().filter(logo -> logo.isDue(now)).map(BankLogo::code).toList());
+        return reads.execute(status -> logos.findAll().stream().filter(logo -> logo.isDue(now)).map(BankLogo::code).toList());
     }
 
     public BankLogoCheck refresh(BankCode code) {
-        Optional<BankLogo> known = transaction.execute(status -> logos.find(code));
+        Optional<BankLogo> known = reads.execute(status -> logos.find(code));
         if (known.isEmpty() || !known.get().source().allowed()) {
             return BankLogoCheck.SKIPPED;
         }

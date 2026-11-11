@@ -22,7 +22,7 @@ final class BankLogoImageChanges {
         }
         StoredBankLogoImage image = new StoredBankLogoImage(new BankLogoImageId(UuidV7.generate(now)), fetched.sha256());
         logos.storeImage(image, fetched.webp());
-        BankLogo changed = locked.from(source, image, now);
+        BankLogo changed = locked.fetchedFrom(source, image, now);
         logos.save(changed);
         locked.image().map(StoredBankLogoImage::id).ifPresent(logos::deleteImage);
         return changed;

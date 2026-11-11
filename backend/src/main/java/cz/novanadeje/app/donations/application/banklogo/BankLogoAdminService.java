@@ -41,6 +41,7 @@ public class BankLogoAdminService {
     private final BankLogoVersions versions;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
+    private final TransactionTemplate reads;
     private final Clock clock;
 
     public BankLogoAdminService(BankLogoRepository logos, BankCodeRepository banks, BankLogoImages images, BankLogoVersions versions,
@@ -51,6 +52,8 @@ public class BankLogoAdminService {
         this.versions = versions;
         this.events = events;
         this.transaction = transaction;
+        this.reads = new TransactionTemplate(transaction.getTransactionManager());
+        this.reads.setReadOnly(true);
         this.clock = clock;
     }
 
@@ -61,10 +64,7 @@ public class BankLogoAdminService {
     }
 
     public BankLogoAdminRow set(UUID adminId, BankLogoSource source, BankLogoPrecondition precondition) {
-        inTransaction(() -> {
-            admit(logos.find(source.bank()), precondition);
-            return null;
-        });
+        reads.executeWithoutResult(status -> admit(logos.find(source.bank()), precondition));
         FetchedBankLogo fetched = images.fetch(source);
         return inTransaction(() -> {
             Optional<BankLogo> current = logos.lockForChange(source.bank());
@@ -78,7 +78,7 @@ public class BankLogoAdminService {
     }
 
     public BankLogoAdminRow refresh(UUID adminId, BankCode code) {
-        BankLogo known = inTransaction(() -> logos.find(code).orElseThrow(BankLogoNotFound::new));
+        BankLogo known = reads.execute(status -> logos.find(code).orElseThrow(BankLogoNotFound::new));
         if (!known.source().allowed()) {
             throw new BankLogoSourceInvalid();
         }

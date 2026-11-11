@@ -36,10 +36,10 @@ public record BankLogo(BankCode code, BankLogoSource source, Optional<StoredBank
     }
 
     public BankLogo fetched(StoredBankLogoImage fetched, Instant at) {
-        return from(source, fetched, at);
+        return fetchedFrom(source, fetched, at);
     }
 
-    public BankLogo from(BankLogoSource newSource, StoredBankLogoImage fetched, Instant at) {
+    public BankLogo fetchedFrom(BankLogoSource newSource, StoredBankLogoImage fetched, Instant at) {
         return new BankLogo(code, newSource, Optional.of(fetched), Optional.of(at), Optional.of(at), Optional.empty());
     }
 

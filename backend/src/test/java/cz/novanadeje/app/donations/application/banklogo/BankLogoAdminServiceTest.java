@@ -80,6 +80,20 @@ class BankLogoAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given a stored logo, when a new source is set or the logo downloaded again, then the check before the download reads in a read-only transaction and only the write after it may write")
+    void should_check_read_only_and_write_after_when_set_or_refreshed_given_stored_logo() {
+        BankLogo old = storeOldLogo();
+        images.answer(NEW_WEBP);
+
+        BankLogoAdminRow row = service.set(ADMIN, SITE, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(old))));
+        assertThat(transactions.readOnlyFlags()).containsExactly(true, false);
+
+        service.refresh(ADMIN, CSAS);
+        assertThat(transactions.readOnlyFlags()).containsExactly(true, false, true, false);
+        assertThat(row.sourceUrl()).isEqualTo(SITE.url());
+    }
+
+    @Test
     @DisplayName("Given a stored logo, when a new source cannot be fetched, then nothing is written or audited and the old image stays")
     void should_write_nothing_when_set_given_failing_fetch() {
         storeOldLogo();
@@ -324,14 +338,20 @@ class BankLogoAdminServiceTest {
     static final class Transactions implements PlatformTransactionManager {
 
         private int open;
+        private final List<Boolean> readOnly = new ArrayList<>();
 
         boolean isOpen() {
             return open > 0;
         }
 
+        List<Boolean> readOnlyFlags() {
+            return readOnly;
+        }
+
         @Override
         public TransactionStatus getTransaction(TransactionDefinition definition) {
             open++;
+            readOnly.add(definition.isReadOnly());
             return new SimpleTransactionStatus();
         }
 
