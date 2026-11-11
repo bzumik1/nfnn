@@ -1,0 +1,262 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.bankLogos.heading">Loga bank</h1>
+  <p class="ui-page-intro intro-lead" i18n="@@admin.bankLogos.intro">
+    Vedle čísel českých účtů web ukazuje kulaté logo banky. Server ho stáhne z adresy, kterou tu
+    zadáte, upraví ho na malý čtverec a posílá ho sám, takže prohlížeč dárce nekontaktuje banku ani
+    Apple. Banka bez loga má u svých účtů zkratku názvu.
+  </p>
+  <p class="ui-page-intro" i18n="@@admin.bankLogos.intro.sources">
+    Server přijme jen adresu ikony aplikace z App Store (is1-ssl.mzstatic.com až
+    is5-ssl.mzstatic.com) nebo obrázku z webu velkých bank (Česká spořitelna, ČSOB, KB, MONETA, Fio,
+    Air Bank, Raiffeisenbank, UniCredit, mBank), vždy přes https a bez části za otazníkem. Obrázek
+    musí být PNG nebo JPEG. Jednou týdně server loga stáhne znovu; když se to nepovede, ukazuje dál
+    dosavadní logo.
+  </p>
+
+  <app-live-notice #noticeRegion tabindex="-1" [notice]="notice()" />
+
+  <section class="ui-card" aria-labelledby="bank-logos-title">
+    <h2 id="bank-logos-title" class="ui-card__title" i18n="@@admin.bankLogos.list.title">
+      Banky s logem
+    </h2>
+    @switch (state()) {
+      @case ('loading') {
+        <p
+          class="ui-load-state ui-load-state--inset"
+          role="status"
+          i18n="@@admin.bankLogos.loading"
+        >
+          Načítáme loga bank…
+        </p>
+      }
+      @case ('error') {
+        <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+          <p i18n="@@admin.bankLogos.error.text">Loga bank se nepodařilo načíst.</p>
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button ui-button--small"
+            (click)="load()"
+            i18n="@@admin.bankLogos.error.retry"
+          >
+            Zkusit znovu
+          </button>
+        </div>
+      }
+      @case ('ready') {
+        @if (rows().length === 0) {
+          <p class="ui-card__empty" i18n="@@admin.bankLogos.empty">
+            Žádná banka zatím logo nemá. U čísel účtů se ukazují zkratky názvů bank.
+          </p>
+        } @else {
+          <div class="ui-card__body">
+            <ul class="ui-person-list">
+              @for (row of rows(); track row.key) {
+                @let item = row.item;
+                <li class="ui-person-row bank-row" [attr.data-code]="item.code">
+                  <app-bank-mark [src]="imageOf(item)" [name]="markName(item)" [size]="40" />
+                  <div class="bank-text">
+                    <p class="ui-person-row__name bank-title" [id]="titleId(item.code)">
+                      <span class="ui-figures">{{ item.code }}</span> · {{ bankName(item) }}
+                    </p>
+                    <p class="ui-person-row__meta bank-state">{{ stateLine(item) }}</p>
+                    @if (failureLine(item); as failure) {
+                      <p class="ui-person-row__note bank-failure">{{ failure }}</p>
+                    }
+                    @if (!item.sourceAllowed) {
+                      <p
+                        class="ui-person-row__note bank-not-allowed"
+                        i18n="@@admin.bankLogos.notAllowed"
+                      >
+                        Adresa už není povolená: logo se na webu neukazuje a server ho znovu
+                        nestahuje. Zadejte novou adresu, nebo logo odeberte.
+                      </p>
+                    }
+                  </div>
+                  <form
+                    #rowForm="ngForm"
+                    class="ui-person-row__detail bank-form"
+                    appFocusFirstInvalid
+                    (ngSubmit)="save(item, rowForm)"
+                    novalidate
+                  >
+                    <app-form-field
+                      label="Adresa loga"
+                      i18n-label="@@admin.bankLogos.source"
+                      [messages]="sourceMessages"
+                    >
+                      <input
+                        appFormControl
+                        [id]="sourceId(item.code)"
+                        [attr.aria-label]="sourceLabel(item)"
+                        name="sourceUrl"
+                        type="url"
+                        inputmode="url"
+                        enterkeyhint="send"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        maxlength="500"
+                        required
+                        [pattern]="sourcePattern"
+                        [ngModel]="item.sourceUrl"
+                      />
+                    </app-form-field>
+                    @if (rowError(item.code); as error) {
+                      <p class="form-error" role="alert">{{ error }}</p>
+                    }
+                    <div class="bank-actions">
+                      <button
+                        appNeedsConnection
+                        type="submit"
+                        class="ui-button ui-button--small ui-button--primary"
+                        [disabled]="busy() !== null"
+                        [attr.aria-busy]="isBusy(item.code, 'save')"
+                        [attr.aria-describedby]="titleId(item.code)"
+                      >
+                        @if (isBusy(item.code, 'save')) {
+                          <ng-container i18n="@@admin.bankLogos.busy">Stahujeme…</ng-container>
+                        } @else {
+                          <ng-container i18n="@@admin.bankLogos.save"
+                            >Uložit a stáhnout</ng-container
+                          >
+                        }
+                      </button>
+                      @if (item.sourceAllowed) {
+                        <button
+                          appNeedsConnection
+                          type="button"
+                          class="ui-button ui-button--small ui-button--quiet"
+                          [disabled]="busy() !== null"
+                          [attr.aria-busy]="isBusy(item.code, 'refresh')"
+                          [attr.aria-describedby]="titleId(item.code)"
+                          (click)="refresh(item)"
+                        >
+                          @if (isBusy(item.code, 'refresh')) {
+                            <ng-container i18n="@@admin.bankLogos.busy">Stahujeme…</ng-container>
+                          } @else {
+                            <ng-container i18n="@@admin.bankLogos.refresh"
+                              >Stáhnout znovu</ng-container
+                            >
+                          }
+                        </button>
+                      }
+                      <button
+                        [id]="removeId(item.code)"
+                        type="button"
+                        [attr.aria-describedby]="titleId(item.code)"
+                        class="ui-button ui-button--small ui-button--danger-outline"
+                        [disabled]="busy() !== null"
+                        (click)="askToRemove(item)"
+                        i18n="@@admin.bankLogos.remove.open"
+                      >
+                        Odebrat
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    }
+  </section>
+
+  <section class="ui-card add-card" aria-labelledby="bank-logo-add-title">
+    <h2 id="bank-logo-add-title" class="ui-card__title" i18n="@@admin.bankLogos.add.title">
+      Logo další banky
+    </h2>
+    <form
+      #addForm="ngForm"
+      class="add-form"
+      appFocusFirstInvalid
+      (ngSubmit)="add(addForm)"
+      novalidate
+    >
+      <p class="add-intro" i18n="@@admin.bankLogos.add.intro">
+        Kód banky je čtyřmístné číslo za lomítkem v čísle účtu. Logo jde nastavit i pro kód, který
+        seznam ČNB nezná.
+      </p>
+      <app-form-field
+        label="Kód banky"
+        i18n-label="@@admin.bankLogos.code"
+        [messages]="codeMessages"
+      >
+        <input
+          appFormControl
+          id="bank-logo-new-code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          enterkeyhint="next"
+          autocomplete="off"
+          maxlength="4"
+          required
+          [pattern]="codePattern"
+          [(ngModel)]="newCode"
+        />
+      </app-form-field>
+      <app-form-field
+        label="Adresa loga"
+        i18n-label="@@admin.bankLogos.source"
+        [messages]="sourceMessages"
+      >
+        <input
+          appFormControl
+          id="bank-logo-new-source"
+          name="sourceUrl"
+          type="url"
+          inputmode="url"
+          enterkeyhint="send"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="500"
+          required
+          [pattern]="sourcePattern"
+          [(ngModel)]="newSource"
+        />
+      </app-form-field>
+      @if (addError(); as error) {
+        <p class="form-error" role="alert">{{ error }}</p>
+      }
+      <button
+        appNeedsConnection
+        type="submit"
+        class="ui-button ui-button--primary add-submit"
+        [disabled]="busy() !== null"
+        [attr.aria-busy]="busy()?.action === 'add'"
+      >
+        @if (busy()?.action === 'add') {
+          <ng-container i18n="@@admin.bankLogos.busy">Stahujeme…</ng-container>
+        } @else {
+          <ng-container i18n="@@admin.bankLogos.add.submit">Přidat a stáhnout</ng-container>
+        }
+      </button>
+    </form>
+  </section>
+</div>
+
+@if (removing(); as item) {
+  <app-bank-logo-remove-dialog
+    class="remove-dialog"
+    [code]="item.code"
+    [busy]="busy()?.action === 'remove'"
+    [error]="removeError()"
+    (confirmed)="remove()"
+    (cancelled)="closeRemove()"
+  />
+}
+
+@if (stale(); as write) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="write.version !== null"
+    [canOverwrite]="write.sourceUrl !== null"
+    [busy]="busy() !== null"
+    (overwriteChosen)="overwrite()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="write.version !== null ? keepDraft() : reloadAfterChange()"
+  />
+}

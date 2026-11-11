@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
+import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import {
@@ -1576,6 +1577,61 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       .getByRole('button', { name: 'Vrátit přiřazení darů' })
       .click();
     await expect(page.locator('tbody tr').first()).toContainText('odpověď se změní na Ne');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator opens the bank logos and asks to remove one, then the page and the dialog break no rule', async ({
+    page,
+  }) => {
+    await mockBankLogos(page, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/bank-logos',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                code: '0800',
+                bankName: 'Česká spořitelna, a.s.',
+                sourceUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple/csas/512x512bb.jpg',
+                sourceAllowed: true,
+                version: '5e1c0a9f3b7d2486',
+                imageId: LOGO_IMAGE_ID,
+                imageSha256: 'a'.repeat(64),
+                fetchedAt: '2026-11-11T04:50:03Z',
+                checkedAt: '2026-11-11T04:50:03Z',
+                lastFailure: null,
+              },
+              {
+                code: '4000',
+                bankName: null,
+                sourceUrl: 'https://www.example.cz/logo.png',
+                sourceAllowed: false,
+                version: '2c3d4e5f60718293',
+                imageId: null,
+                imageSha256: null,
+                fetchedAt: null,
+                checkedAt: null,
+                lastFailure: 'timeout',
+              },
+            ],
+          },
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/loga-bank');
+    await expect(page.getByRole('heading', { level: 1, name: 'Loga bank' })).toBeFocused();
+    await expect(page.locator('[data-code]')).toHaveCount(2);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.locator('[data-code="0800"]').getByRole('button', { name: 'Odebrat' }).click();
+    await expect(page.getByRole('dialog', { name: 'Odebrat logo banky 0800?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

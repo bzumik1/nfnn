@@ -63,6 +63,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
           ['Nastavení', '/sprava/nastaveni'],
           ['Logy a diagnostika', '/sprava/logy'],
           ['Odpovědi o starších symbolech', '/sprava/starsi-symboly'],
+          ['Loga bank', '/sprava/loga-bank'],
         ],
       },
     ]);

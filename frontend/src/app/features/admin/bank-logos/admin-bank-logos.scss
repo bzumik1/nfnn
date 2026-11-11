@@ -1,0 +1,60 @@
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 1000px;
+}
+
+.intro-lead {
+  margin-bottom: var(--space-2);
+}
+
+.bank-row:last-child {
+  border-bottom: 0;
+}
+
+.bank-row app-bank-mark {
+  align-self: start;
+}
+
+.bank-text {
+  grid-column: 2 / -1;
+}
+
+.bank-not-allowed,
+.bank-failure {
+  color: var(--color-warning);
+}
+
+.bank-form {
+  max-width: 640px;
+}
+
+.bank-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.add-form {
+  padding: 0 var(--space-6) var(--space-6);
+  max-width: 640px;
+}
+
+.add-intro {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+  margin-bottom: var(--space-3-5);
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.add-submit {
+  margin-top: var(--space-2);
+}

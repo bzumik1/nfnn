@@ -78,6 +78,12 @@ export const adminRoutes: Routes = [
           import('./symbol-claims/admin-symbol-claims').then((m) => m.AdminSymbolClaims),
       },
       {
+        path: 'loga-bank',
+        data: { parent: ADMIN_MORE_PATH },
+        title: $localize`:@@admin.bankLogos.pageTitle:Loga bank | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./bank-logos/admin-bank-logos').then((m) => m.AdminBankLogos),
+      },
+      {
         path: 'prehledy',
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.report.pageTitle:Měsíční e-mail | Správa | Nová naděje – nadační fond`,

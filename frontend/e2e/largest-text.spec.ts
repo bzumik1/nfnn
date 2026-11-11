@@ -1,4 +1,6 @@
 import { Locator, Page } from '@playwright/test';
+import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
+import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
 import { expect, test } from './fixtures';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
@@ -140,6 +142,40 @@ for (const { width, height } of [
         expect(await headingsOffScreen(page)).toEqual([]);
       });
     }
+
+    test('when a signed-in donor opens Bankovní účty, then every account number stays within its card beside or under the logo of its bank', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({ id: 'a-1', accountNumber: '19-2000145399/0800' }),
+                bankAccountItem({ id: 'a-2', accountNumber: '2900233333/2010' }),
+              ],
+            },
+          }),
+      );
+      await mockBankLogos(page, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Bankovní účty');
+      await page.setViewportSize({ width, height });
+      const card = page.locator('.accounts-card');
+      const numbers = card.locator('.account-number');
+      await expect(numbers).toHaveCount(2);
+      await page.evaluate(() => document.fonts.ready);
+
+      const frame = (await card.boundingBox())!;
+      for (const number of await numbers.all()) {
+        const box = (await number.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(frame.x);
+        expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width);
+      }
+    });
 
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
       page,
