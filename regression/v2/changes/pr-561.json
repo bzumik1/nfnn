@@ -19,5 +19,13 @@
     "scenario": "donations/admin_bank_logos: *",
     "reason": "Jakub 2026-11-11: an administrator, or the connector's nfnn_refresh_bank_logo, downloads a bank's logo again from its stored address; v2 had no bank logos",
     "contract": "docs/api-contract.md, Bank logos; MCP connector"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > image_libraries_are_used_only_by_the_content_media_and_receipt_signature_adapters",
+    "reason": "PR #561 (approved by Jakub 2026-11-11) widens the image-library rule to the bank logo adapter, which decodes the downloaded PNG or JPEG and encodes the WebP, so the rule's name lists it",
+    "replacement": "architecture.AdapterLibraryRulesTest > image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters",
+    "contract": "docs/security-overview.md, Bank logos"
   }
 ]
