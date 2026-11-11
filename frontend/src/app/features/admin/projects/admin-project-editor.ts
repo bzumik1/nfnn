@@ -76,7 +76,7 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const NOT_FOUND = 'content/project-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
-const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`;
+const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava příběhu | Správa | Nová naděje – nadační fond`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @Component({
@@ -162,14 +162,14 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     maxlength: $localize`:@@admin.projectEditor.title.tooLong:Titulek může mít nejvíc ${MAX_TITLE_LENGTH}:max: znaků.`,
   };
   protected readonly yearMessages = {
-    required: $localize`:@@admin.projectEditor.year.required:Vyplňte prosím rok projektu.`,
+    required: $localize`:@@admin.projectEditor.year.required:Vyplňte prosím rok příběhu.`,
     min: $localize`:@@admin.projectEditor.year.min:Rok nemůže být před založením fondu, tedy před ${MIN_YEAR}:min:.`,
     max: $localize`:@@admin.projectEditor.year.max:Zadejte prosím rok nejvýše ${MAX_YEAR}:max:.`,
   };
   protected readonly slugMessages = {
     pattern: $localize`:@@admin.projectEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a pomlčky mezi slovy.`,
     maxlength: $localize`:@@admin.projectEditor.slug.tooLong:Adresa může mít nejvíc ${MAX_SLUG_LENGTH}:max: znaků.`,
-    taken: $localize`:@@admin.projectEditor.slug.taken:Tuto adresu už má jiný projekt nebo aktualita. Zvolte prosím jinou.`,
+    taken: $localize`:@@admin.projectEditor.slug.taken:Tuto adresu už má jiný příběh nebo aktualita. Zvolte prosím jinou.`,
   };
   protected readonly tagMessages = {
     maxlength: $localize`:@@admin.projectEditor.tag.tooLong:Štítek může mít nejvíc ${MAX_TAG_LENGTH}:max: znaků.`,
@@ -179,7 +179,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     maxlength: $localize`:@@admin.projectEditor.perex.tooLong:Krátký souhrn může mít nejvíc ${MAX_PEREX_LENGTH}:max: znaků.`,
   };
   protected readonly bodyMessages = {
-    required: $localize`:@@admin.projectEditor.body.required:Napište prosím text projektu.`,
+    required: $localize`:@@admin.projectEditor.body.required:Napište prosím text příběhu.`,
     maxlength: $localize`:@@admin.projectEditor.body.tooLong:Text může mít nejvíc ${MAX_BODY_LENGTH}:max: znaků.`,
   };
   protected readonly publishDateMessages = {
@@ -237,7 +237,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly focalShapes: readonly PreviewShape[] = [
     {
       shape: 'projectCard',
-      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Projektech`,
+      label: $localize`:@@admin.projectEditor.focalPoint.card:Karta v Pomáháme`,
     },
     {
       shape: 'storyTile',
@@ -255,11 +255,11 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly publishDateHint = computed(() => {
     switch (this.publishState()) {
       case 'live':
-        return $localize`:@@admin.projectEditor.publishDate.hint.live:Projekt je na webu, změny se ukážou hned. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.live:Příběh je na webu, změny se ukážou hned. Příběhy na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       case 'scheduled':
-        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se projekt dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.scheduled:Na web se příběh dostane ${this.publishedOn()}:date:, do té doby ho vidíte jen vy. Příběhy na stejném místě řazení ukazuje web od naposledy zveřejněného.`;
       default:
-        return $localize`:@@admin.projectEditor.publishDate.hint.draft:Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
+        return $localize`:@@admin.projectEditor.publishDate.hint.draft:Příběh zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.`;
     }
   });
   private readonly slugOrDraft = signal('');
@@ -268,7 +268,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const address =
       slug === ''
         ? $localize`:@@admin.projectEditor.slug.hint.empty:Doplní se z titulku; malá písmena bez diakritiky a pomlčky.`
-        : $localize`:@@admin.projectEditor.slug.hint:Projekt bude na nfnn.cz/projekty/${slug}:slug:. Můžete upravit.`;
+        : $localize`:@@admin.projectEditor.slug.hint:Příběh bude na nfnn.cz/projekty/${slug}:slug:. Můžete upravit.`;
     const saved = this.project();
     if (saved?.publishedOn == null || slug === saved.slug) {
       return address;
@@ -559,8 +559,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           this.notice.set({
             kind: 'status',
             text: project.live
-              ? $localize`:@@admin.projectEditor.published:Projekt je na webu s datem ${formatDonationDate(project.publishedOn ?? date)}:date:.`
-              : $localize`:@@admin.projectEditor.scheduled:Projekt se na webu ukáže ${on}:date:.`,
+              ? $localize`:@@admin.projectEditor.published:Příběh je na webu s datem ${formatDonationDate(project.publishedOn ?? date)}:date:.`
+              : $localize`:@@admin.projectEditor.scheduled:Příběh se na webu ukáže ${on}:date:.`,
           });
         },
         error: (failure: unknown) => {
@@ -573,7 +573,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.projectEditor.publish.failed:Projekt se nepodařilo zveřejnit. Zkuste to prosím znovu.`,
+              $localize`:@@admin.projectEditor.publish.failed:Příběh se nepodařilo zveřejnit. Zkuste to prosím znovu.`,
             ),
           });
         },
@@ -597,7 +597,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
           this.publishDate = todayIso();
           this.notice.set({
             kind: 'status',
-            text: $localize`:@@admin.projectEditor.unpublished:Projekt jsme z webu stáhli. Zůstává tu jako koncept.`,
+            text: $localize`:@@admin.projectEditor.unpublished:Příběh jsme z webu stáhli. Zůstává tu jako koncept.`,
           });
         },
         error: (failure: unknown) => {
@@ -610,7 +610,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.projectEditor.unpublish.failed:Projekt se nepodařilo stáhnout z webu. Zkuste to prosím znovu.`,
+              $localize`:@@admin.projectEditor.unpublish.failed:Příběh se nepodařilo stáhnout z webu. Zkuste to prosím znovu.`,
             ),
           });
         },
@@ -655,7 +655,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
             kind: 'alert',
             text: describeProblem(
               failure,
-              $localize`:@@admin.projectEditor.delete.failed:Projekt se nepodařilo smazat. Zkuste to prosím znovu.`,
+              $localize`:@@admin.projectEditor.delete.failed:Příběh se nepodařilo smazat. Zkuste to prosím znovu.`,
             ),
           });
           this.focusDeleteButton();
@@ -691,8 +691,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       this.notice.set({
         kind: 'status',
         text: discardedEdits
-          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi projektu.`
-          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav projektu. Zkontrolujte ho a rozhodněte znovu.`,
+          ? $localize`:@@admin.projectEditor.reloaded.discarded:Vaše úpravy jsme zahodili a načetli novější verzi příběhu.`
+          : $localize`:@@admin.projectEditor.reloaded:Načetli jsme aktuální stav příběhu. Zkontrolujte ho a rozhodněte znovu.`,
       });
       afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
     });
@@ -751,7 +751,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
       kind: 'alert',
       text: describeProblem(
         failure,
-        $localize`:@@admin.projectEditor.saved.failed:Projekt se nepodařilo uložit. Zkuste to prosím znovu.`,
+        $localize`:@@admin.projectEditor.saved.failed:Příběh se nepodařilo uložit. Zkuste to prosím znovu.`,
       ),
     });
   }
@@ -769,14 +769,14 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   private savedText(project: ProjectResponse, created: boolean): string {
     if (created) {
-      return $localize`:@@admin.projectEditor.saved.created:Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.`;
+      return $localize`:@@admin.projectEditor.saved.created:Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.`;
     }
     if (project.publishedOn === null) {
       return $localize`:@@admin.projectEditor.saved.updated:Změny jsme uložili.`;
     }
     return project.live
       ? $localize`:@@admin.projectEditor.saved.live:Změny jsme uložili a na webu už jsou.`
-      : $localize`:@@admin.projectEditor.saved.scheduled:Změny jsme uložili. Projekt se na webu ukáže ${formatDonationDate(project.publishedOn)}:date:.`;
+      : $localize`:@@admin.projectEditor.saved.scheduled:Změny jsme uložili. Příběh se na webu ukáže ${formatDonationDate(project.publishedOn)}:date:.`;
   }
 
   private previewProject(): ProjectResponse {

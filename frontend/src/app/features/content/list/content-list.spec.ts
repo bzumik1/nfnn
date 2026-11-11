@@ -63,7 +63,7 @@ describe('Given a visitor opening the list of projects', () => {
       '/projekty/zahrada-pro-deti',
     );
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
-      'Stránky projektů',
+      'Stránky příběhů',
     );
     expect(link(fixture, 'Starší')?.getAttribute('href')).toBe('/projekty?strana=2');
   });
@@ -88,6 +88,6 @@ describe('Given a visitor opening the list of projects', () => {
     http.expectOne('/api/content/projects?page=0&size=10').flush(page([], 0, 0));
     await settle(fixture);
 
-    expect(text(fixture, '.list-state')).toBe('Zatím tu žádný projekt není.');
+    expect(text(fixture, '.list-state')).toBe('Zatím tu žádný příběh není.');
   });
 });

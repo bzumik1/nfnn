@@ -119,13 +119,13 @@ export const adminRoutes: Routes = [
       {
         path: 'projekty',
         data: { parent: ADMIN_HOME_PATH },
-        title: $localize`:@@admin.projects.pageTitle:Projekty | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.projects.pageTitle:Pomáháme | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./projects/admin-projects').then((m) => m.AdminProjects),
       },
       {
         path: 'projekty/nova',
         data: { parent: '/sprava/projekty', tabBar: false },
-        title: $localize`:@@admin.projectEditor.pageTitle.new:Nový projekt | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.projectEditor.pageTitle.new:Nový příběh | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
         canDeactivate: [unsavedChangesGuard],
@@ -133,7 +133,7 @@ export const adminRoutes: Routes = [
       {
         path: 'projekty/:id',
         data: { parent: '/sprava/projekty', tabBar: false },
-        title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava příběhu | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
         canDeactivate: [unsavedChangesGuard],

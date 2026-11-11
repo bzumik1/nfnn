@@ -138,7 +138,7 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
 
     await expect(page.getByText('Zatím tu žádná aktualita není.')).toBeVisible();
     await openSection(page, 'Pomáháme');
-    await expect(page.getByText('Zatím tu žádný projekt není.')).toBeVisible();
+    await expect(page.getByText('Zatím tu žádný příběh není.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Zpět na úvodní stránku' })).toHaveAttribute(
       'href',
       '/',
@@ -266,9 +266,9 @@ test.describe('Given a visitor paging through the news', () => {
 });
 
 const PAGER_LISTS = [
-  { path: '/projekty?strana=2', api: '/api/content/projects', label: 'Stránky projektů' },
+  { path: '/projekty?strana=2', api: '/api/content/projects', label: 'Stránky příběhů' },
   { path: '/aktuality?strana=2', api: '/api/content/news', label: 'Stránky aktualit' },
-  { path: '/projekty', api: '/api/content/projects', label: 'Stránky projektů' },
+  { path: '/projekty', api: '/api/content/projects', label: 'Stránky příběhů' },
 ];
 
 async function threePagesOf(page: Page, api: string): Promise<void> {

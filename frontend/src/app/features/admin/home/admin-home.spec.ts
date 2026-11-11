@@ -986,7 +986,7 @@ describe('Given an administrator on the administration home', () => {
           'Platby z banky → /sprava/platby',
           'Dárci → /sprava/darci',
           'Aktuality → /sprava/aktuality',
-          'Projekty → /sprava/projekty',
+          'Pomáháme → /sprava/projekty',
         ],
         ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
       ]);

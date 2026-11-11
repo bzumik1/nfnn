@@ -55,7 +55,7 @@ export const contentRoutes: Routes = [
   },
   {
     path: 'projekty/:slug',
-    title: $localize`:@@content.projectDetail.pageTitle:Projekt | Nová naděje – nadační fond`,
+    title: $localize`:@@content.projectDetail.pageTitle:Příběh | Nová naděje – nadační fond`,
     data: { kind: 'project', parent: '/projekty' },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },

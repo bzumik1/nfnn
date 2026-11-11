@@ -297,7 +297,7 @@ test.describe('Given an administrator managing the news', () => {
     await expect(address).toBeFocused();
     await expect(address).toHaveAttribute('aria-invalid', 'true');
     await expect(
-      page.getByText('Tuto adresu už má jiná aktualita nebo projekt. Zvolte prosím jinou.'),
+      page.getByText('Tuto adresu už má jiná aktualita nebo příběh. Zvolte prosím jinou.'),
     ).toBeVisible();
   });
 

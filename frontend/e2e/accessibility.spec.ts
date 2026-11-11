@@ -379,7 +379,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/projekty');
-    await expect(page.getByText('Zatím tu žádný projekt není.')).toBeVisible();
+    await expect(page.getByText('Zatím tu žádný příběh není.')).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -2821,14 +2821,14 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 
     await page.goto('/sprava/projekty');
-    await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pomáháme' })).toBeFocused();
     await expect(page.locator('tbody tr')).toHaveCount(3);
     await expect(page.getByRole('radio', { name: 'Podle roku', exact: true })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/projekty/nova');
-    await expect(page.getByRole('heading', { level: 1, name: 'Nový projekt' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nový příběh' })).toBeFocused();
     await page.getByLabel('Rok').fill('2004');
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
     await expect(page.getByLabel('Titulek')).toHaveAttribute('aria-invalid', 'true');
@@ -2837,18 +2837,18 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto(`/sprava/projekty/${projectId}`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Úprava příběhu' })).toBeFocused();
     await expect(
       page.getByRole('button', { name: 'Fotka, klepnutím nastavíte bod výřezu' }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Náhled', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Stránka projektu' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Stránka příběhu' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
     await page.getByRole('button', { name: 'Upravit', exact: true }).click();
-    await page.getByRole('button', { name: 'Smazat projekt' }).click();
-    await expect(page.getByRole('group', { name: 'Smazat projekt?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Smazat příběh' }).click();
+    await expect(page.getByRole('group', { name: 'Smazat příběh?' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
