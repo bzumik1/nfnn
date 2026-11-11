@@ -614,6 +614,11 @@
   cursor: pointer;
 }
 
+.account-action {
+  max-width: 100%;
+  white-space: normal;
+}
+
 @include bp.down(tablet) {
   .account-action--apart {
     margin-top: var(--space-5);
