@@ -18,7 +18,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
-import { Dialog } from '../../../shared/ui/dialog/dialog';
+import { BankLogoRemoveDialog } from './bank-logo-remove-dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -75,7 +75,7 @@ const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
     FocusFirstInvalid,
     LiveNotice,
     NeedsConnection,
-    Dialog,
+    BankLogoRemoveDialog,
     ChangedMeanwhileDialog,
     BankMark,
   ],

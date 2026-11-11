@@ -51,6 +51,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/hromadna-potvrzeni',
   '/sprava/spravci',
   '/sprava/starsi-symboly',
+  '/sprava/loga-bank',
   '/sprava/prehledy',
   '/sprava/prehledy/2026-09',
   '/sprava/aktuality',
