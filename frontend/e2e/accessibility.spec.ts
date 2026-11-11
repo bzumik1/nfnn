@@ -2423,9 +2423,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/logy/urovne');
-    await page.getByLabel('Logger').fill('not a logger!');
-    await page.getByRole('button', { name: 'Nastavit' }).click();
-    await expect(page.getByLabel('Logger')).toHaveAttribute('aria-invalid', 'true');
+    await page.getByRole('button', { name: 'Jiný logger…' }).click();
+    await page.getByLabel('Logger', { exact: true }).fill('not a logger!');
+    await page.getByRole('button', { name: 'Nastavit na 30 min' }).click();
+    await expect(page.getByLabel('Logger', { exact: true })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/sprava/logy/stav');
