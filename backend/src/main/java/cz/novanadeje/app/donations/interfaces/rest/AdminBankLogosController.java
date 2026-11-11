@@ -80,7 +80,10 @@ class AdminBankLogosController {
         }
         Optional<String> noneMatching = present(ifNoneMatch);
         if (noneMatching.isPresent()) {
-            return ANY.equals(noneMatching.get()) ? BankLogoPrecondition.absent() : BankLogoPrecondition.matching(ExpectedVersion.of(ExpectedVersion.UNMATCHABLE));
+            if (!ANY.equals(noneMatching.get())) {
+                throw new VersionRequiredException();
+            }
+            return BankLogoPrecondition.absent();
         }
         if (jwt.hasClaim(SCOPE_CLAIM)) {
             return BankLogoPrecondition.anything();

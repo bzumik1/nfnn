@@ -99,6 +99,12 @@ public class BankLogosStepDefinitions {
         api.put(ADMIN_PATH + "/" + code, Map.of("sourceUrl", url));
     }
 
+    @When("{string} sets the logo of bank {string} to {string} with If-None-Match {string}")
+    public void setsTheLogoWithIfNoneMatch(String alias, String code, String url, String ifNoneMatch) {
+        sessions.actAs(alias);
+        api.put(ADMIN_PATH + "/" + code, Map.of("sourceUrl", url), Map.of(HttpHeaders.IF_NONE_MATCH, ifNoneMatch));
+    }
+
     @When("{string} refreshes the logo of bank {string}")
     public void refreshesTheLogo(String alias, String code) {
         sessions.actAs(alias);
@@ -148,6 +154,12 @@ public class BankLogosStepDefinitions {
     public void theExchangedApiTokenRefreshesTheLogo(String code) {
         actAsExchangedApiToken();
         api.post(ADMIN_PATH + "/" + code + "/refresh", Map.of());
+    }
+
+    @When("the exchanged API token removes the logo of bank {string} over the version {string}")
+    public void theExchangedApiTokenRemovesTheLogo(String code, String version) {
+        actAsExchangedApiToken();
+        api.delete(ADMIN_PATH + "/" + code, ApiClient.ifMatch(version));
     }
 
     @When("the exchanged API token asks for the bank logos in the administration")

@@ -88,6 +88,9 @@ Feature: An administrator sets where the server downloads each bank's logo, down
     When "Jana" sets the logo of bank "0800" to "https://www.csas.cz/content/dam/icon.png" without a version
     Then the response status is 428
     And the problem type ends with "shared/version-required"
+    When "Jana" sets the logo of bank "0800" to "https://www.csas.cz/content/dam/icon.png" with If-None-Match "0123456789abcdef"
+    Then the response status is 428
+    And the problem type ends with "shared/version-required"
     When "Jana" removes the logo of bank "0800" over the version "0123456789abcdef"
     Then the response status is 409
     And the logo address "https://www.csas.cz/content/dam/icon.png" was asked 0 times
@@ -180,6 +183,8 @@ Feature: An administrator sets where the server downloads each bank's logo, down
     Then the response status is 200
     When the exchanged API token refreshes the logo of bank "0800"
     Then the response status is 200
+    When the exchanged API token removes the logo of bank "0800" over the version "0123456789abcdef"
+    Then the response status is 403
     When the exchanged API token asks for the bank logos in the administration
     Then the administration lists these bank logos:
       | code | bankName               | sourceUrl                                | image | lastFailure |
