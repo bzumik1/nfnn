@@ -54,6 +54,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/historie',
   '/sprava/hromadna-potvrzeni',
   '/sprava/lide-fondu',
+  '/sprava/loga-bank',
   '/sprava/logy',
   '/sprava/logy/soubor',
   '/sprava/logy/soubory',
