@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="031-keep-bank-logo-images" author="nfnn">
+        <createTable tableName="bank_logo_image">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_logo_image" nullable="false"/>
+            </column>
+            <column name="sha256" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="webp" type="bytea">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table bank_logo_image add constraint ck_bank_logo_image_sha256 check (sha256 ~ '^[0-9a-f]{64}$')</sql>
+        <sql>alter table bank_logo_image add constraint ck_bank_logo_image_webp check (octet_length(webp) between 1 and 65536)</sql>
+    </changeSet>
+
+    <changeSet id="031-show-bank-logos" author="nfnn">
+        <createTable tableName="bank_logo">
+            <column name="code" type="varchar(4)">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_logo" nullable="false"/>
+            </column>
+            <column name="source_url" type="varchar(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="image_id" type="uuid">
+                <constraints foreignKeyName="fk_bank_logo_image" referencedTableName="bank_logo_image" referencedColumnNames="id"
+                             unique="true" uniqueConstraintName="uq_bank_logo_image_id"/>
+            </column>
+            <column name="fetched_at" type="timestamp with time zone"/>
+            <column name="checked_at" type="timestamp with time zone"/>
+            <column name="last_failure" type="varchar(32)"/>
+        </createTable>
+        <sql>alter table bank_logo add constraint ck_bank_logo_code check (code ~ '^[0-9]{4}$')</sql>
+        <sql>alter table bank_logo add constraint ck_bank_logo_source_url check (source_url ~ '^https://[!-~]+$')</sql>
+        <sql>alter table bank_logo add constraint ck_bank_logo_image_fetched check ((image_id is null) = (fetched_at is null))</sql>
+        <sql>alter table bank_logo add constraint ck_bank_logo_last_failure check (last_failure in ('status', 'redirected', 'timeout', 'unreachable', 'unknown-host',
+            'non-public-address', 'too-large', 'unsupported-type', 'image-too-large', 'unreadable-image', 'interrupted'))</sql>
+    </changeSet>
+
+    <changeSet id="031-seed-bank-logo-sources" author="nfnn">
+        <insert tableName="bank_logo">
+            <column name="code" value="0800"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/87/04/b8/8704b822-be3d-51cc-ce19-b3400b5c57c6/AppIcon-0-0-1x_U007epad-0-11-0-0-0-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="0300"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/c3/c7/33/c3c733ab-802e-fe15-67d2-3a1bfb8a4859/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="0100"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3d/c7/51/3dc75120-882c-557d-311a-0e75f8995522/AppIcon-Prod-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="0600"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/00/6c/21/006c2184-823a-7bfa-a087-058a710c6346/Default-AppIcon-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="2010"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/e0/5d/98/e05d980a-a716-d8b9-7a30-08da6c32f28c/AppIcon-0-0-1x_U007ephone-0-1-0-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="3030"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/09/23/d9/0923d92b-f66e-ea11-6621-0c0118260096/MyAir-0-0-1x_U007ephone-0-1-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="5500"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/ac/88/49/ac884952-ed76-6692-2a8a-62536c030a6d/AppIcon.appstore-0-0-1x_U007epad-0-11-0-sRGB-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="2700"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/31/99/b1/3199b19a-e059-703d-ed61-523a4b21a83a/AppIcon-0-0-1x_U007ephone-0-1-0-85-220.png/512x512bb.jpg"/>
+        </insert>
+        <insert tableName="bank_logo">
+            <column name="code" value="6210"/>
+            <column name="source_url" value="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/51/54/f2/5154f271-f035-fb5a-12bd-573cf1bddddf/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
