@@ -124,6 +124,27 @@ class BankLogoAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given another administrator creates the same bank's logo between the check and the insert, when a creation is written, then it is refused instead of overwriting theirs")
+    void should_refuse_creation_when_written_given_concurrent_creation() {
+        BankLogo theirs = BankLogo.from(SITE);
+        InMemoryBankLogoRepository racing = new InMemoryBankLogoRepository() {
+            @Override
+            public boolean insertIfAbsent(BankLogoSource source) {
+                put(theirs);
+                return false;
+            }
+        };
+        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, versions, publisher,
+                new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
+        images.answer(NEW_WEBP);
+
+        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, BankLogoPrecondition.absent())).isInstanceOf(ChangedMeanwhile.class);
+
+        assertThat(racing.find(CSAS)).contains(theirs);
+        assertThat(events).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given no logo of a bank, when a version is named for it, then it is not found and nothing is fetched")
     void should_be_not_found_when_set_given_version_of_absent_logo() {
         assertThatThrownBy(() -> service.set(ADMIN, ARTWORK, BankLogoPrecondition.matching(ExpectedVersion.of("0123456789abcdef"))))

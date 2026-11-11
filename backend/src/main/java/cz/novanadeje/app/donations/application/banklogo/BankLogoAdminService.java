@@ -67,7 +67,7 @@ public class BankLogoAdminService {
         return inTransaction(() -> {
             Optional<BankLogo> current = logos.lockForChange(source.bank());
             admit(current, precondition);
-            BankLogo locked = current.orElseGet(() -> createAndLock(source));
+            BankLogo locked = current.orElseGet(() -> createAndLock(source, precondition));
             Instant now = clock.instant();
             BankLogo changed = BankLogoImageChanges.apply(logos, locked, source, fetched, now);
             audit(adminId, SET_ACTION, "Logo banky " + source.bank().value() + " nastaveno z " + source.host() + ", obrázek " + fetched.sha256(), now);
@@ -99,9 +99,13 @@ public class BankLogoAdminService {
         audit(adminId, REMOVE_ACTION, "Logo banky " + code.value() + " odebráno", clock.instant());
     }
 
-    private BankLogo createAndLock(BankLogoSource source) {
-        logos.insertIfAbsent(source);
-        return logos.lockForChange(source.bank()).orElseThrow(() -> new IllegalStateException("A bank logo row just inserted is missing"));
+    private BankLogo createAndLock(BankLogoSource source, BankLogoPrecondition precondition) {
+        boolean inserted = logos.insertIfAbsent(source);
+        BankLogo locked = logos.lockForChange(source.bank()).orElseThrow(() -> new IllegalStateException("A bank logo row just inserted is missing"));
+        if (!inserted) {
+            admit(Optional.of(locked), precondition);
+        }
+        return locked;
     }
 
     private void admit(Optional<BankLogo> current, BankLogoPrecondition precondition) {
