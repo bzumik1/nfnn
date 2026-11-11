@@ -152,7 +152,7 @@ html.has-window-controls {
   @supports (-webkit-touch-callout: none) {
     :root {
       --safe-area-top: calc(env(safe-area-inset-top) + var(--home-screen-top-clearance));
-      --full-screen-height: 100lvh;
+      --full-screen-height: calc(100svh + env(safe-area-inset-top));
     }
 
     body {
