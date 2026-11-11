@@ -719,6 +719,21 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when they open the sign-in dialog without a connection, then what it says instead of the forms breaks no rule', async ({
+    page,
+    context,
+  }) => {
+    await openSignInDialog(page);
+    await page.route('**/api/**', (route) => route.abort('internetdisconnected'));
+    await context.setOffline(true);
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { level: 3, name: 'Jste offline' }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+    await context.setOffline(false);
+  });
+
   test('when they open the sign-in dialog and its company registration, then nothing in it breaks the rules', async ({
     page,
   }) => {
