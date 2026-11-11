@@ -1,5 +1,6 @@
 @use 'theme';
 @use 'breakpoints' as bp;
+@use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
 @use 'styles/launch-screen';
@@ -17,6 +18,7 @@
 @use 'styles/ui/person-list';
 @use 'styles/ui/list';
 @use 'styles/ui/group';
+@use 'styles/ui/pager';
 
 *,
 *::before,
@@ -179,15 +181,7 @@ html.has-window-controls {
 }
 
 .visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  @include visually-hidden.hides;
 }
 
 .real-img {

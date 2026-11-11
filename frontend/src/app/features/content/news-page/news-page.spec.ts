@@ -415,8 +415,8 @@ describe('Given a visitor opening Aktuality', () => {
       const nav = root.querySelector('nav.pages') as HTMLElement;
       expect(nav.getAttribute('aria-label')).toBe('Stránky aktualit');
       expect(text(nav, '.pages-position')).toBe('Strana 1 z 3');
-      expect(link(nav, 'Starší →')?.getAttribute('href')).toBe('/aktuality?strana=2');
-      expect(link(nav, '← Novější')).toBeUndefined();
+      expect(link(nav, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=2');
+      expect(link(nav, 'Novější')).toBeUndefined();
     });
   });
 
@@ -439,8 +439,14 @@ describe('Given a visitor opening Aktuality', () => {
 
     it('then both directions are offered', () => {
       expect(text(root, '.pages-position')).toBe('Strana 2 z 3');
-      expect(link(root, '← Novější')?.getAttribute('href')).toBe('/aktuality');
-      expect(link(root, 'Starší →')?.getAttribute('href')).toBe('/aktuality?strana=3');
+      expect(link(root, 'Novější')?.getAttribute('href')).toBe('/aktuality');
+      expect(link(root, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=3');
+    });
+
+    it('then each direction carries a chevron icon hidden from screen readers', () => {
+      for (const name of ['Novější', 'Starší']) {
+        expect(link(root, name)?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      }
     });
   });
 
