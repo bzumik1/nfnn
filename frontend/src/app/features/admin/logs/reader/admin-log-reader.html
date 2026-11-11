@@ -164,31 +164,46 @@
                       class="entry"
                       [class.level-error]="entry.level === 'ERROR'"
                       [class.level-warn]="entry.level === 'WARN'"
+                      [class.level-quiet]="entry.level === 'DEBUG' || entry.level === 'TRACE'"
                       [class.is-focused]="isFocused(entry)"
                       [attr.data-offset]="entry.offset"
                       (click)="open(entry)"
                     >
-                      @if (entry.level) {
-                        <span
-                          class="entry-level"
-                          [class.visually-hidden]="
-                            entry.level !== 'ERROR' && entry.level !== 'WARN'
-                          "
-                          >{{ levelLabel(entry.level) }}</span
-                        >
-                      }
                       <app-level-icon class="entry-icon" [level]="entry.level" />
-                      <span class="entry-time">{{ time(entry) }}</span>
-                      @if (entry.title) {
-                        <span class="entry-title">{{ entry.title }}</span>
-                      }
-                      <span class="entry-message">{{ entry.message }}</span>
-                      @if (entry.details.length > 0) {
-                        <span class="entry-more" i18n="@@admin.logs.reader.moreLines">
-                          {entry.details.length, plural,
-                            one {+ 1 řádek}
-                            few {+ {{ entry.details.length }} řádky}
-                            other {+ {{ entry.details.length }} řádků}
+                      <span class="entry-meta">
+                        @if (entry.level) {
+                          <span class="visually-hidden">{{ levelLabel(entry.level) }}</span>
+                        }
+                        @if (entry.title) {
+                          <span class="entry-title">{{ entry.title }}</span>
+                        }
+                        <span class="entry-time">{{ time(entry) }}</span>
+                      </span>
+                      <span class="entry-message">
+                        @for (segment of segments(entry.message); track $index) {
+                          @if (segment.kind === 'code') {
+                            <span class="code-run"
+                              >{{ segment.lead }}<code>{{ segment.text }}</code
+                              >{{ segment.trail }}</span
+                            >
+                          } @else {
+                            {{ segment.text }}
+                          }
+                        }
+                      </span>
+                      @if (summary(entry); as more) {
+                        <span class="entry-more">
+                          @if (more.exception) {
+                            <code class="entry-exception">{{ more.exception }}</code>
+                          }
+                          @if (more.lines > 0) {
+                            <span i18n="@@admin.logs.reader.moreLines">
+                              {more.lines, plural,
+                                one {+ 1 řádek}
+                                few {+ {{ more.lines }} řádky}
+                                other {+ {{ more.lines }} řádků}
+                              }
+                            </span>
                           }
                         </span>
                       }
@@ -259,7 +274,66 @@
         </div>
       }
     </dl>
-    <pre class="entry-text" tabindex="0">{{ entryText(entry) }}</pre>
+    <section class="sheet-section" aria-labelledby="log-entry-message-title">
+      <h3 id="log-entry-message-title" class="ui-group-title" i18n="@@admin.logs.reader.message">
+        Zpráva
+      </h3>
+      <p class="sheet-message">
+        @for (segment of segments(entry.message); track $index) {
+          @if (segment.kind === 'code') {
+            <span class="code-run"
+              >{{ segment.lead }}<code>{{ segment.text }}</code
+              >{{ segment.trail }}</span
+            >
+          } @else {
+            {{ segment.text }}
+          }
+        }
+      </p>
+    </section>
+    @if (exception(entry); as thrown) {
+      <section class="sheet-section" aria-labelledby="log-entry-exception-title">
+        <h3
+          id="log-entry-exception-title"
+          class="ui-group-title"
+          i18n="@@admin.logs.reader.exception"
+        >
+          Výjimka
+        </h3>
+        <p class="exception-head">
+          <span class="exception-package">{{ thrown.packageName }}</span
+          ><strong class="exception-name">{{ thrown.name }}</strong>
+          @if (thrown.message) {
+            <span class="exception-message">{{ thrown.message }}</span>
+          }
+        </p>
+        @if (thrown.frames.length > 0) {
+          <ol
+            class="frames"
+            tabindex="0"
+            aria-label="Výpis zásobníku"
+            i18n-aria-label="@@admin.logs.reader.frames"
+          >
+            @for (line of thrown.frames; track $index) {
+              <li>
+                @if (frame(line); as parts) {
+                  <span class="frame-at">at {{ parts.packageName }}</span
+                  ><span class="frame-method">{{ parts.method }}</span
+                  ><span class="frame-place">{{ parts.place }}</span>
+                  @if (parts.rest) {
+                    <span class="frame-rest">{{ parts.rest }}</span>
+                  }
+                } @else {
+                  {{ line }}
+                }
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    } @else if (details(entry); as text) {
+      <pre class="entry-details" tabindex="0">{{ text }}</pre>
+    }
     <div class="sheet-actions">
       <app-copy-button
         [value]="entry.raw"

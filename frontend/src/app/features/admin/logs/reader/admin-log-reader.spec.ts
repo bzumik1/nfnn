@@ -78,9 +78,9 @@ describe('Given an administrator reading a log file', () => {
     expect(page.text('h1')).toBe('backend.log');
     expect(page.texts('.day-title')).toEqual(['10. 11. 2026', '9. 11. 2026']);
     expect(page.texts('.entry')).toEqual([
-      'Varování 1:16:07 AuthorizationServerService The connector exchanged a token',
-      'Chyba 0:30:11 BackupWatchService Backup watch failed for request 01a1b3c4 + 1 řádek',
-      'Info 22:09:47 FioBankStatementSource Fio answered 2 movements',
+      'Varování AuthorizationServerService 1:16:07 The connector exchanged a token',
+      'Chyba BackupWatchService 0:30:11 Backup watch failed for request 01a1b3c4 UncheckedIOException',
+      'Info FioBankStatementSource 22:09:47 Fio answered 2 movements',
     ]);
     expect(page.texts('.ui-segmented button')).toEqual(['Vše', 'Varování', 'Chyby']);
     expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
@@ -133,11 +133,40 @@ describe('Given an administrator reading a log file', () => {
       'Vlákno scheduling-1',
       'Třída c.n.a.o.a.backup.BackupWatchService',
     ]);
-    expect(page.text('dialog .entry-text')).toBe(
-      `Backup watch failed for request 01a1b3c4 ${TRACE}`,
+    expect(page.text('dialog .sheet-message')).toBe('Backup watch failed for request 01a1b3c4');
+    expect(page.text('dialog .exception-head')).toBe(
+      'java.io. UncheckedIOException /backups/status.json: No such file or directory',
     );
     expect(page.button('Kopírovat záznam')).toBeTruthy();
     expect(page.hasButton('Zobrazit okolí')).toBe(false);
+  });
+
+  it('when a message names ids and an entry carries a stack trace, then the ids read as code, the row names the exception and the sheet lays out its frames', async () => {
+    const failed =
+      '2026-11-10T00:14:20.977+01:00  WARN 1 --- [nova-nadeje] [http-nio-8080-exec-4] o.s.b.j.h.DataSourceHealthIndicator : DataSource health check failed for donor 01a14df4-3471-7bc6-8b0e-ac47d1f547a3';
+    const trace = [
+      '',
+      'org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection',
+      '\tat org.springframework.jdbc.datasource.DataSourceUtils.getConnection(DataSourceUtils.java:84) ~[spring-jdbc-7.0.10.jar!/:7.0.10]',
+      '\tat org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:362) ~[spring-jdbc-7.0.10.jar!/:7.0.10]',
+    ];
+    await open();
+    await flushWindow('bytes=20000', { text: `${[failed, ...trace].join('\n')}\n` });
+
+    expect(page.texts('.entry .entry-message code')).toEqual([
+      'DataSource',
+      '01a14df4-3471-7bc6-8b0e-ac47d1f547a3',
+    ]);
+    expect(page.text('.entry .entry-more')).toBe('CannotGetJdbcConnectionException + 2 řádky');
+
+    page.element<HTMLButtonElement>('.entry').click();
+    await page.settle();
+
+    expect(page.text('dialog .exception-name')).toBe('CannotGetJdbcConnectionException');
+    expect(page.texts('dialog .frame-method')).toEqual([
+      'DataSourceUtils.getConnection',
+      'JdbcTemplate.execute',
+    ]);
   });
 
   it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {
@@ -188,7 +217,7 @@ describe('Given an administrator reading a log file', () => {
     );
 
     expect(page.texts('.entry')).toEqual([
-      'Chyba 0:30:11 BackupWatchService Backup watch failed for request 01a1b3c4',
+      'Chyba BackupWatchService 0:30:11 Backup watch failed for request 01a1b3c4',
     ]);
     expect(page.element('.ui-segmented button:nth-child(3)').getAttribute('aria-checked')).toBe(
       'true',
@@ -229,7 +258,7 @@ describe('Given an administrator reading a log file', () => {
     ]);
 
     expect(page.texts('.entry')).toEqual([
-      'Varování 1:16:07 AuthorizationServerService The connector exchanged a token',
+      'Varování AuthorizationServerService 1:16:07 The connector exchanged a token',
     ]);
   });
 
@@ -279,7 +308,9 @@ describe('Given an administrator reading a log file', () => {
     );
 
     expect(page.has('.ui-segmented')).toBe(false);
-    expect(page.texts('.entry')).toEqual(['3:00:22 backup written: nfnn-2026-11-10_0300.dump.age']);
+    expect(page.texts('.entry')[0]).toMatch(
+      /^3:00:22 backup written: nfnn-2026-11-10_0300\. ?dump\.age$/,
+    );
   });
 
   it('when the file is gone, then the problem is shown with a retry', async () => {

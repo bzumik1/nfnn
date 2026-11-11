@@ -275,6 +275,32 @@ const READABLE_PAIRS = [
   },
   { texts: ['--color-on-danger'], grounds: ['--color-danger-fill'], minimum: 4.5 },
   {
+    texts: ['--color-log-code'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-danger-bg',
+      '--color-accent-bg',
+    ],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-text', '--color-text-secondary', '--color-text-muted'],
+    grounds: ['--color-danger-bg'],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-log-warn', '--color-danger'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-accent-bg',
+    ],
+    minimum: 3,
+  },
+  {
     texts: ['--color-on-inverse', '--color-accent-on-inverse'],
     grounds: INVERSE_GROUNDS,
     minimum: 4.5,

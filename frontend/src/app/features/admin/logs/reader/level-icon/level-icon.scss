@@ -1,6 +1,6 @@
 :host {
   display: inline-flex;
-  color: var(--color-text-subtle);
+  color: var(--color-text-soft);
 }
 
 :host(.level-icon--error) {
@@ -8,9 +8,13 @@
 }
 
 :host(.level-icon--warn) {
-  color: var(--color-warning);
+  color: var(--color-log-warn);
 }
 
-:host(.level-icon--info) {
-  color: var(--color-text-muted);
+@media (forced-colors: active) {
+  :host,
+  :host(.level-icon--error),
+  :host(.level-icon--warn) {
+    color: CanvasText;
+  }
 }
