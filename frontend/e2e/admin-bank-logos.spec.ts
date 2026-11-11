@@ -96,7 +96,9 @@ test.describe('Given an administrator on the bank logos page', () => {
       'Poslední stažení se nepovedlo: adresa přesměrovává jinam.',
     );
 
-    await csasRow.getByLabel('Adresa loga').fill(NEW_SOURCE);
+    await csasRow
+      .getByRole('textbox', { name: 'Adresa loga 0800 · Česká spořitelna' })
+      .fill(NEW_SOURCE);
     await csasRow.getByRole('button', { name: 'Uložit a stáhnout' }).click();
     await expect(page.locator('app-live-notice').getByRole('status')).toHaveText(
       'Logo banky 0800 jsme stáhli z nové adresy a uložili.',

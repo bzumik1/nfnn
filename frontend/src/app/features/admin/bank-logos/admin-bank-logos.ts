@@ -25,6 +25,7 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { BankMark } from '../../donations/bank-logo/bank-mark';
+import { BankNames } from '../../donations/bank-names';
 import { bankLogoImageUrl } from '../../donations/bank-logos-api';
 import { shortBankName } from '../../donations/czech-banks';
 import { formatBankTime } from '../../donations/donation-date';
@@ -51,6 +52,7 @@ const FORBIDDEN = 'auth/forbidden';
 const SOURCE_INVALID = 'donations/bank-logo-source-invalid';
 const LOGO_NOT_FOUND = 'donations/bank-logo-not-found';
 const SOURCE_CONTROL = 'sourceUrl';
+const CODE_CONTROL = 'code';
 
 const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
   status: $localize`:@@admin.bankLogos.failure.status:server s obrázkem odpověděl chybou`,
@@ -85,6 +87,7 @@ const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
 })
 export class AdminBankLogos {
   private readonly api = inject(AdminApi);
+  private readonly bankNames = inject(BankNames);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -131,7 +134,9 @@ export class AdminBankLogos {
   }
 
   protected load(onLoaded?: () => void): void {
-    this.state.set('loading');
+    if (this.state() !== 'ready') {
+      this.state.set('loading');
+    }
     this.api
       .bankLogos()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -215,9 +220,11 @@ export class AdminBankLogos {
     }
     const code = this.newCode.trim();
     if (this.items().some((item) => item.code === code)) {
-      this.addError.set(
-        $localize`:@@admin.bankLogos.add.exists:Banka ${code}:code: už logo má. Adresu změňte v jejím řádku výše.`,
-      );
+      const control = form.controls[CODE_CONTROL];
+      control?.setErrors({
+        server: $localize`:@@admin.bankLogos.add.exists:Banka ${code}:code: už logo má. Adresu změňte v jejím řádku výše.`,
+      });
+      control?.markAsTouched();
       return;
     }
     this.write(code, this.newSource.trim(), null, true);
@@ -236,6 +243,7 @@ export class AdminBankLogos {
         next: (answer) => {
           this.busy.set(null);
           this.replace(answer);
+          this.bankNames.forgetLogos();
           this.announce(
             answer.imageId === item.imageId
               ? $localize`:@@admin.bankLogos.refresh.same:Logo banky ${item.code}:code: jsme stáhli znovu. Obrázek se nezměnil.`
@@ -281,6 +289,7 @@ export class AdminBankLogos {
           this.removing.set(null);
           this.items.update((items) => items.filter((each) => each.code !== item.code));
           this.forms.delete(item.code);
+          this.bankNames.forgetLogos();
           this.announce(
             $localize`:@@admin.bankLogos.remove.done:Logo banky ${item.code}:code: jsme odebrali. U jejích účtů se teď ukazuje zkratka názvu.`,
           );
@@ -291,6 +300,11 @@ export class AdminBankLogos {
           if (isChangedMeanwhile(failure)) {
             this.removing.set(null);
             this.stale.set({ code: item.code, sourceUrl: null, version: null, fromAddForm: false });
+            return;
+          }
+          if (problemTypeEndsWith(failure, LOGO_NOT_FOUND)) {
+            this.removing.set(null);
+            this.gone(item.code, failure);
             return;
           }
           this.removeError.set(
@@ -322,11 +336,12 @@ export class AdminBankLogos {
       this.newCode = '';
       this.newSource = '';
     }
-    this.load(() =>
+    this.load(() => {
       this.announce(
         $localize`:@@admin.bankLogos.reloaded:Načetli jsme aktuální loga bank. Zkontrolujte je a rozhodněte znovu.`,
-      ),
-    );
+      );
+      this.focusRowOrNotice(stale?.code);
+    });
   }
 
   protected rowError(code: string): string | null {
@@ -341,6 +356,15 @@ export class AdminBankLogos {
     return `bank-logo-remove-${code}`;
   }
 
+  protected titleId(code: string): string {
+    return `bank-title-${code}`;
+  }
+
+  protected sourceLabel(item: AdminBankLogoResponse): string {
+    const bank = this.bankName(item);
+    return $localize`:@@admin.bankLogos.source.label:Adresa loga ${item.code}:code: · ${bank}:bank:`;
+  }
+
   private write(
     code: string,
     sourceUrl: string,
@@ -348,6 +372,7 @@ export class AdminBankLogos {
     fromAddForm: boolean,
   ): void {
     this.clearRowError(code);
+    const previous = this.items().find((item) => item.code === code)?.sourceUrl;
     this.busy.set({ code, action: fromAddForm ? 'add' : 'save' });
     this.request(this.api.setBankLogoSource(code, sourceUrl, version)).subscribe({
       next: (answer) => {
@@ -367,11 +392,8 @@ export class AdminBankLogos {
           this.newSource = '';
           this.addForm()?.resetForm({ code: '', sourceUrl: '' });
         }
-        this.announce(
-          version === null
-            ? $localize`:@@admin.bankLogos.add.done:Logo banky ${code}:code: jsme stáhli a uložili.`
-            : $localize`:@@admin.bankLogos.save.done:Logo banky ${code}:code: jsme stáhli z nové adresy a uložili.`,
-        );
+        this.bankNames.forgetLogos();
+        this.announce(this.savedLine(code, created || fromAddForm, previous === sourceUrl));
       },
       error: (failure: unknown) => {
         this.busy.set(null);
@@ -403,14 +425,7 @@ export class AdminBankLogos {
     fromAddForm = false,
   ): void {
     if (problemTypeEndsWith(failure, LOGO_NOT_FOUND)) {
-      this.notice.set({
-        kind: 'alert',
-        text: describeProblem(
-          failure,
-          $localize`:@@admin.bankLogos.notFound:Logo banky mezitím někdo odebral.`,
-        ),
-      });
-      this.load();
+      this.gone(code, failure);
       return;
     }
     const text = describeProblem(
@@ -426,6 +441,36 @@ export class AdminBankLogos {
     } else {
       this.rowErrors.update((errors) => ({ ...errors, [code]: text }));
     }
+  }
+
+  private savedLine(code: string, created: boolean, unchanged: boolean): string {
+    if (created) {
+      return $localize`:@@admin.bankLogos.add.done:Logo banky ${code}:code: jsme stáhli a uložili.`;
+    }
+    return unchanged
+      ? $localize`:@@admin.bankLogos.save.unchanged:Logo banky ${code}:code: jsme znovu stáhli a uložili.`
+      : $localize`:@@admin.bankLogos.save.done:Logo banky ${code}:code: jsme stáhli z nové adresy a uložili.`;
+  }
+
+  private gone(code: string, failure: unknown): void {
+    this.notice.set({
+      kind: 'alert',
+      text: describeProblem(
+        failure,
+        $localize`:@@admin.bankLogos.notFound:Logo banky mezitím někdo odebral.`,
+      ),
+    });
+    this.load(() => this.focusRowOrNotice(code));
+  }
+
+  private focusRowOrNotice(code: string | undefined): void {
+    this.focusAfterRender(() => {
+      const field =
+        code === undefined
+          ? null
+          : this.host.nativeElement.querySelector<HTMLElement>(`#${this.sourceId(code)}`);
+      return field ?? this.noticeElement();
+    });
   }
 
   private request<T>(call: Observable<T>): Observable<T> {

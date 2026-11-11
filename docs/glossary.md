@@ -94,8 +94,12 @@ The ČNB list „Kódy bank ČR“ of four-digit Czech bank codes and the banks 
 
 **Bank logo**\
 UI „logo banky“ beside an account and in the administration · Code: `BankLogo`, `BankLogoSource`, `BankLogoImageId` (`donations/domain/banklogo`, tables `bank_logo`, `bank_logo_image`), `/api/donations/bank-logos`, connector `nfnn_bank_logos`, `nfnn_set_bank_logo_source`, `nfnn_refresh_bank_logo`.\
-The round icon of a bank (its official app icon or site icon) that the server downloads per bank code from an official address on an allow-list, keeps as a 128 px WebP and serves from nfnn.cz; its address is the logo's source („zdroj loga“).\
-_Avoid_: „ikona banky“, „favicon“
+The round icon of a bank (its official app icon or site icon) that the server downloads per bank code from an official address on an allow-list, keeps as a 128 px WebP and serves from nfnn.cz; the address it is downloaded from is the logo's address („adresa loga“, code `sourceUrl`, `BankLogoSource`).\
+_Avoid_: „ikona banky“, „favicon“, „zdroj loga“
+
+**Bank monogram**\
+UI „zkratka názvu banky“ (in the round mark of a bank without a logo) · Code: `bankMonogram` (`features/donations/bank-monogram.ts`), drawn by `BankMark`.\
+Two to four capitals of a bank's short name (`ČS`, `KB`, `ČSOB`) that stand in the round mark at 40 px when the bank has no logo or its logo cannot be loaded; the small 24 px mark shows a plain bank sign instead.
 
 **Turning pairing from an account off and on**\
 UI administration „Vypnout párování“ / „Zapnout párování“; donor „Znovu přiřazovat platby z účtu“, status „Nepřiřazujeme“ · Code: `POST …/bank-accounts/{id}/disconnect|reconnect`, status `DISCONNECTED`.\

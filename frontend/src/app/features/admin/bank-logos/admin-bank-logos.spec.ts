@@ -1,11 +1,13 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { DirtyForms } from '../../../core/updates/dirty-forms';
+import { BankNames } from '../../donations/bank-names';
 import { AdminBankLogoResponse } from '../admin-api';
 import { adminBankLogo } from '../testing/admin-fixtures';
 import { AdminBankLogos } from './admin-bank-logos';
@@ -137,6 +139,9 @@ describe('Given an administrator on the bank logos page', () => {
     await listed();
 
     expect(text('h1')).toBe('Loga bank');
+    expect(text('.ui-page-intro:not(.intro-lead)')).toContain(
+      'nebo obrázku z webu velkých bank (Česká spořitelna, ČSOB, KB, MONETA, Fio, Air Bank, Raiffeisenbank, UniCredit, mBank)',
+    );
     expect(normalized(row('0800').querySelector('.bank-title')!.textContent!)).toBe(
       '0800 · Česká spořitelna',
     );
@@ -170,6 +175,47 @@ describe('Given an administrator on the bank logos page', () => {
     expect(button(row('0800'), 'Stáhnout znovu')).toBeTruthy();
   });
 
+  it('when the list arrives, then the address field and every button of a row name the bank they act on', async () => {
+    await listed();
+
+    const title = element('#bank-title-0800');
+    expect(normalized(title.textContent!)).toBe('0800 · Česká spořitelna');
+    expect(element('#bank-logo-source-0800').getAttribute('aria-label')).toBe(
+      'Adresa loga 0800 · Česká spořitelna',
+    );
+    for (const name of ['Uložit a stáhnout', 'Stáhnout znovu', 'Odebrat']) {
+      expect(button(row('0800'), name).getAttribute('aria-describedby')).toBe('bank-title-0800');
+    }
+  });
+
+  it('when the session has ended, then the administrator is sent home to sign in', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const ended = problem(401, 'auth/unauthenticated', 'Přihlaste se', '');
+
+    http.expectOne(LIST_URL).flush(ended.body, ended.options);
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(TestBed.inject(AuthStore).signedIn()).toBe(false);
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+  });
+
+  it('when the role was taken away meanwhile, then the page goes to the overview', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const forbidden = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+    http.expectOne(LIST_URL).flush(forbidden.body, forbidden.options);
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.ui-load-state--error'),
+    ).toBeNull();
+  });
+
   it('when no bank has a logo, then the card says so and the form to add one stays', async () => {
     await listed([]);
 
@@ -194,6 +240,7 @@ describe('Given an administrator on the bank logos page', () => {
   it('when a new address is saved, then it goes with the version the page holds, the row shows the answer and the status says so', async () => {
     await listed();
 
+    const forget = vi.spyOn(TestBed.inject(BankNames), 'forgetLogos');
     await type('#bank-logo-source-0800', NEW_SOURCE);
     expect(TestBed.inject(DirtyForms).any()).toBe(true);
     await submit(row('0800'));
@@ -214,6 +261,19 @@ describe('Given an administrator on the bank logos page', () => {
     expect(text('.ui-notice--status')).toBe('Logo banky 0800 jsme stáhli z nové adresy a uložili.');
     expect(text('[data-code="0800"] .bank-state')).toBe('Staženo 11. 11. 2026 10:00.');
     expect(TestBed.inject(DirtyForms).any()).toBe(false);
+    expect(forget).toHaveBeenCalledOnce();
+  });
+
+  it('when the address is saved unchanged, then the status says the logo was downloaded and saved without calling the address new', async () => {
+    await listed();
+
+    await submit(row('0800'));
+    http
+      .expectOne({ method: 'PUT', url: `${LIST_URL}/0800` })
+      .flush({ ...csas, version: NEWER_VERSION });
+    await settle();
+
+    expect(text('.ui-notice--status')).toBe('Logo banky 0800 jsme znovu stáhli a uložili.');
   });
 
   it('when the address is empty or not https, then the field says so and nothing is sent', async () => {
@@ -269,6 +329,7 @@ describe('Given an administrator on the bank logos page', () => {
   it('when a logo is downloaded again, then the row shows the answer and the status says whether the picture changed', async () => {
     await listed();
 
+    const forget = vi.spyOn(TestBed.inject(BankNames), 'forgetLogos');
     button(row('0800'), 'Stáhnout znovu').click();
     await settle();
     const request = http.expectOne({ method: 'POST', url: `${LIST_URL}/0800/refresh` });
@@ -279,6 +340,7 @@ describe('Given an administrator on the bank logos page', () => {
     expect(text('.ui-notice--status')).toBe(
       'Logo banky 0800 jsme stáhli znovu. Obrázek se nezměnil.',
     );
+    expect(forget).toHaveBeenCalledOnce();
     expect(text('[data-code="0800"] .bank-state')).toBe(
       'Staženo 11. 11. 2026 5:50, naposledy zkontrolováno 12. 11. 2026 9:00.',
     );
@@ -299,9 +361,12 @@ describe('Given an administrator on the bank logos page', () => {
     await type('#bank-logo-new-code', '0800');
     await type('#bank-logo-new-source', NEW_SOURCE);
     await submit(element('.add-card'));
-    expect(text('.add-card [role="alert"]')).toBe(
+    expect(text('.add-card app-form-field .field-error')).toBe(
       'Banka 0800 už logo má. Adresu změňte v jejím řádku výše.',
     );
+    expect(element('#bank-logo-new-code').getAttribute('aria-invalid')).toBe('true');
+    expect(element('.add-card').querySelector('[role="alert"]')).toBeNull();
+    http.expectNone({ method: 'PUT', url: `${LIST_URL}/0800` });
 
     await type('#bank-logo-new-code', '0100');
     await submit(element('.add-card'));
@@ -352,6 +417,7 @@ describe('Given an administrator on the bank logos page', () => {
     });
 
     it('then confirming deletes it with its version, the row goes and the status says so', async () => {
+      const forget = vi.spyOn(TestBed.inject(BankNames), 'forgetLogos');
       button(dialog(), 'Odebrat logo').click();
       await settle();
 
@@ -365,6 +431,28 @@ describe('Given an administrator on the bank logos page', () => {
       expect(text('.ui-notice--status')).toBe(
         'Logo banky 0800 jsme odebrali. U jejích účtů se teď ukazuje zkratka názvu.',
       );
+      expect(forget).toHaveBeenCalledOnce();
+    });
+
+    it('then a logo someone else removed meanwhile closes the dialog, the page says so in an alert and reads the list again', async () => {
+      button(dialog(), 'Odebrat logo').click();
+      await settle();
+      const gone = problem(
+        404,
+        'donations/bank-logo-not-found',
+        'Logo banky nenalezeno',
+        'Pro tuto banku není nastavené žádné logo.',
+      );
+      http.expectOne({ method: 'DELETE', url: `${LIST_URL}/0800` }).flush(gone.body, gone.options);
+      await settle();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.remove-dialog')).toBeNull();
+      expect(text('.ui-notice--alert')).toBe(
+        'Logo banky nenalezeno. Pro tuto banku není nastavené žádné logo.',
+      );
+      await listed([fio, unknown]);
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+      expect(document.activeElement).toBe(element('app-live-notice'));
     });
 
     it('then a refusal other than a stale version stays in the dialog', async () => {
@@ -421,6 +509,8 @@ describe('Given an administrator on the bank logos page', () => {
         'Zahodit své úpravy a načíst novější verzi',
       ).click();
       await settle();
+      expect(row('0800')).toBeTruthy();
+      expect(text('.ui-card [role="status"]')).toBe('');
       await listed([{ ...csas, version: NEWER_VERSION }]);
 
       expect(
@@ -428,6 +518,7 @@ describe('Given an administrator on the bank logos page', () => {
       ).toBeNull();
       expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(csas.sourceUrl);
       expect(TestBed.inject(DirtyForms).any()).toBe(false);
+      expect(document.activeElement).toBe(element('#bank-logo-source-0800'));
     });
   });
 
@@ -447,11 +538,64 @@ describe('Given an administrator on the bank logos page', () => {
     expect(text('.ui-notice--alert')).toBe(
       'Logo banky nenalezeno. Pro tuto banku není nastavené žádné logo.',
     );
+    expect(row('0800')).toBeTruthy();
     await listed([]);
     expect(text('.ui-card__empty')).toContain('Žádná banka zatím logo nemá.');
+    expect(document.activeElement).toBe(element('app-live-notice'));
   });
 
-  it('when the logo was removed meanwhile, then the refusal without a version offers only to read the list again', async () => {
+  it('when a new address finds the logo changed and without a version in the refusal, then the sheet offers only to read the list again', async () => {
+    await listed([csas]);
+    await type('#bank-logo-source-0800', NEW_SOURCE);
+    await submit(row('0800'));
+    const refusal = problem(409, 'donations/changed-meanwhile', 'Mezitím se to změnilo', '');
+    http.expectOne({ method: 'PUT', url: `${LIST_URL}/0800` }).flush(refusal.body, refusal.options);
+    await settle();
+
+    const sheet = element('app-changed-meanwhile-dialog dialog');
+    expect(sheet.textContent).not.toContain('Uložit svou verzi');
+    button(sheet, 'Načíst aktuální stav').click();
+    await settle();
+    await listed([{ ...csas, version: NEWER_VERSION }]);
+
+    expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(csas.sourceUrl);
+  });
+
+  it('when a logo is added for a code someone else gave a logo meanwhile, then the sheet offers to save it over that newer version', async () => {
+    await listed([csas]);
+    await type('#bank-logo-new-code', '0100');
+    await type('#bank-logo-new-source', NEW_SOURCE);
+    await submit(element('.add-card'));
+    const refusal = problem(409, 'donations/changed-meanwhile', 'Mezitím se to změnilo', '');
+    const kb = adminBankLogo({
+      code: '0100',
+      bankName: 'Komerční banka, a.s.',
+      version: NEWER_VERSION,
+    });
+    http
+      .expectOne({ method: 'PUT', url: `${LIST_URL}/0100` })
+      .flush({ ...refusal.body, version: NEWER_VERSION, current: kb }, refusal.options);
+    await settle();
+
+    button(
+      element('app-changed-meanwhile-dialog dialog'),
+      'Uložit svou verzi místo novější',
+    ).click();
+    await settle();
+    const request = http.expectOne({ method: 'PUT', url: `${LIST_URL}/0100` });
+    expect(request.request.headers.get('If-Match')).toBe(`"${NEWER_VERSION}"`);
+    expect(request.request.headers.has('If-None-Match')).toBe(false);
+    expect(request.request.body).toEqual({ sourceUrl: NEW_SOURCE });
+    request.flush({ ...kb, sourceUrl: NEW_SOURCE, version: '0f0f0f0f0f0f0f0f' });
+    await settle();
+
+    expect(normalized(row('0100').querySelector('.bank-title')!.textContent!)).toBe(
+      '0100 · Komerční banka',
+    );
+    expect(text('.ui-notice--status')).toBe('Logo banky 0100 jsme stáhli a uložili.');
+  });
+
+  it('when a removal finds another version, then the refusal without a version offers only to read the list again', async () => {
     await listed([csas]);
     button(row('0800'), 'Odebrat').click();
     await settle();
