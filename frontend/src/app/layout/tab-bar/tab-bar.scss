@@ -89,7 +89,6 @@
 .tab-icon {
   width: var(--tab-icon-size);
   height: var(--tab-icon-size);
-  stroke-width: 1.75;
 }
 
 .tab-label {
@@ -107,10 +106,6 @@
   border-color: var(--color-tab-pill-rim);
   color: var(--color-tab-active);
   font-weight: var(--weight-bold);
-
-  .tab-icon {
-    stroke-width: 2.5;
-  }
 }
 
 @media (forced-colors: none) {
