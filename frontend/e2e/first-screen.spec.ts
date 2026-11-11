@@ -243,3 +243,81 @@ test.describe('Given Přispět on a phone on its side', () => {
     });
   }
 });
+
+interface HomeScreenViewport {
+  name: string;
+  visible: number;
+  smallViewport: number;
+  largeViewport: number;
+  dynamicViewport: number;
+  topInset: number;
+}
+
+const HOME_SCREEN_VIEWPORTS: HomeScreenViewport[] = [
+  {
+    name: 'added after the page asked for a black-translucent status bar',
+    visible: 956,
+    smallViewport: 894,
+    largeViewport: 956,
+    dynamicViewport: 956,
+    topInset: 62,
+  },
+  {
+    name: 'added before that, so iOS keeps its solid status bar',
+    visible: 894,
+    smallViewport: 894,
+    largeViewport: 956,
+    dynamicViewport: 894,
+    topInset: 0,
+  },
+];
+
+test.describe('Given the app opened from the home screen of an iPhone 18 Pro Max, whose viewport units the iOS 27.2 simulator measured in both status bar modes', () => {
+  for (const viewport of HOME_SCREEN_VIEWPORTS) {
+    test(`when it was ${viewport.name}, then a full-screen block is exactly as tall as what the app shows, so the landing page cannot scroll`, async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+
+      const height = await page.evaluate((measured) => {
+        const homeScreenRoot = [...document.styleSheets]
+          .flatMap((sheet) => [...sheet.cssRules])
+          .filter((rule): rule is CSSMediaRule => rule instanceof CSSMediaRule)
+          .filter((rule) => rule.conditionText.includes('display-mode: standalone'))
+          .flatMap((rule) => [...rule.cssRules])
+          .filter((rule): rule is CSSSupportsRule => rule instanceof CSSSupportsRule)
+          .flatMap((rule) => [...rule.cssRules])
+          .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule)
+          .find((rule) => rule.selectorText === ':root');
+        const expression = homeScreenRoot!.style.getPropertyValue('--full-screen-height').trim();
+        const resolved = expression
+          .replaceAll('env(safe-area-inset-top)', `${measured.topInset}px`)
+          .replace(
+            /(\d+(?:\.\d+)?)svh/g,
+            (_, n) => `${(Number(n) * measured.smallViewport) / 100}px`,
+          )
+          .replace(
+            /(\d+(?:\.\d+)?)lvh/g,
+            (_, n) => `${(Number(n) * measured.largeViewport) / 100}px`,
+          )
+          .replace(
+            /(\d+(?:\.\d+)?)dvh/g,
+            (_, n) => `${(Number(n) * measured.dynamicViewport) / 100}px`,
+          )
+          .replace(
+            /(\d+(?:\.\d+)?)vh/g,
+            (_, n) => `${(Number(n) * measured.largeViewport) / 100}px`,
+          );
+        const probe = document.createElement('div');
+        probe.style.cssText = `position: absolute; height: calc(${resolved});`;
+        document.body.append(probe);
+        const value = probe.getBoundingClientRect().height;
+        probe.remove();
+        return value;
+      }, viewport);
+
+      expect(height).toBeCloseTo(viewport.visible, 0);
+    });
+  }
+});
