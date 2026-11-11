@@ -1,10 +1,15 @@
 /// <reference types="@angular/localize" />
 
+import { Location } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  ElementRef,
   inject,
+  Injector,
   input,
   output,
   signal,
@@ -19,6 +24,7 @@ import { CompactLayout } from '../../core/layout/compact-layout';
 import { pathOf } from '../../core/navigation/app-tabs';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
 import { Dialog } from '../../shared/ui/dialog/dialog';
+import { AccountSection } from './account-section';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall } from '../../core/install/app-install';
@@ -63,7 +69,7 @@ export const ADMINISTRATION_ITEM: AccountItem = {
 
 @Component({
   selector: 'app-account-sheet',
-  imports: [Dialog],
+  imports: [Dialog, AccountSection],
   templateUrl: './account-sheet.html',
   styleUrl: './account-sheet.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +106,15 @@ export class AccountSheet {
     ),
     { initialValue: this.router.url },
   );
+  private readonly location = inject(Location);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly injector = inject(Injector);
+  protected readonly section = signal<AccountItem | null>(null);
+  protected readonly depth = computed(() => (this.section() === null ? 0 : 1));
+  protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
+  protected readonly discardAsked = signal(false);
+  private discarding = false;
+  private openedFrom: string | null = null;
   protected readonly contactUrl = '/o-nas#kontakt';
   protected readonly privacyUrl = '/zasady-ochrany-osobnich-udaju';
 
@@ -108,12 +123,98 @@ export class AccountSheet {
     return path === item.path || path.startsWith(`${item.path}/`);
   }
 
+  constructor() {
+    const followInSection = (event: MouseEvent): void => this.followInSection(event);
+    this.host.addEventListener('click', followInSection, true);
+    inject(DestroyRef).onDestroy(() =>
+      this.host.removeEventListener('click', followInSection, true),
+    );
+  }
+
   protected follow(event: MouseEvent, url: string): void {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    if (pressedAside(event)) {
       return;
     }
     event.preventDefault();
+    const item = sectionAt(url);
+    if (item !== null && this.compact() && this.router.url !== url) {
+      this.openedFrom = url;
+      this.show(item);
+      return;
+    }
     this.leaveFor(url);
+  }
+
+  protected back(): void {
+    this.location.back();
+  }
+
+  protected steppedBack(): void {
+    if (!this.discarding && this.sectionHasUnsavedInput()) {
+      this.discardAsked.set(true);
+      return;
+    }
+    this.discarding = false;
+    this.leaveSection();
+  }
+
+  protected keepWriting(): void {
+    this.discardAsked.set(false);
+  }
+
+  protected discard(): void {
+    this.discardAsked.set(false);
+    this.discarding = true;
+    this.location.back();
+  }
+
+  private sectionHasUnsavedInput(): boolean {
+    return this.host.querySelector('.account-section-body form.ng-dirty') !== null;
+  }
+
+  private leaveSection(): void {
+    const from = this.openedFrom;
+    this.section.set(null);
+    this.openedFrom = null;
+    afterNextRender(
+      () => {
+        if (from !== null) {
+          this.host.querySelector<HTMLElement>(`a[href="${from}"]`)?.focus();
+        }
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private followInSection(event: MouseEvent): void {
+    const link = (event.target as Element | null)?.closest?.('a[href]');
+    if (
+      this.section() === null ||
+      !(link instanceof HTMLAnchorElement) ||
+      link.closest('.account-section-body') === null ||
+      pressedAside(event)
+    ) {
+      return;
+    }
+    const url = link.getAttribute('href') ?? '';
+    if (!url.startsWith('/')) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const item = sectionAt(url);
+    if (item !== null) {
+      this.show(item);
+    } else {
+      this.leaveFor(url);
+    }
+  }
+
+  private show(item: AccountItem): void {
+    this.section.set(item);
+    afterNextRender(() => this.host.querySelector<HTMLElement>('#account-section-title')?.focus(), {
+      injector: this.injector,
+    });
   }
 
   protected addToHomeScreen(): void {
@@ -154,4 +255,12 @@ export class AccountSheet {
       void this.router.navigateByUrl(url);
     }
   }
+}
+
+function pressedAside(event: MouseEvent): boolean {
+  return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+}
+
+function sectionAt(url: string): AccountItem | null {
+  return ACCOUNT_ITEMS.find((item) => item.path === url) ?? null;
 }
