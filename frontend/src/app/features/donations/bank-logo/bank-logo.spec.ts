@@ -29,8 +29,15 @@ describe('Given the logos the server keeps', () => {
     expect(image?.getAttribute('width')).toBe('40');
   });
 
+  it('when an account of a bank with a logo renders, then only the mark inside is hidden from the screen reader, not the element a parent places', () => {
+    const element = host(render('2000145399/0800'));
+
+    expect(element.hasAttribute('aria-hidden')).toBe(false);
+    expect(element.querySelector('app-bank-mark')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
   it('when an account of a bank without a logo renders, then the monogram of its short name is shown', () => {
-    const element = host(render('2900233333/2010', 24));
+    const element = host(render('2900233333/2010'));
 
     expect(element.querySelector('img')).toBeNull();
     expect(element.querySelector('.bank-monogram')?.getAttribute('data-monogram')).toBe('FB');

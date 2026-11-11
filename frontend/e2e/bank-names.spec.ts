@@ -63,7 +63,7 @@ test.describe('Given a donor whose accounts are at a bank with a logo and at one
     const logo = withLogo.locator('app-bank-logo img');
     await expect(logo).toHaveAttribute('src', `/api/donations/bank-logos/images/${LOGO_IMAGE_ID}`);
     await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
-    await expect(withLogo.locator('app-bank-logo')).toHaveAttribute('aria-hidden', 'true');
+    await expect(withLogo.locator('app-bank-mark')).toHaveAttribute('aria-hidden', 'true');
 
     const withMonogram = page.locator('.account', { hasText: '2900233333/2010' });
     await expect(withMonogram.locator('app-bank-logo img')).toHaveCount(0);

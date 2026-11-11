@@ -41,7 +41,7 @@ describe('Given a bank with a logo', () => {
     const fixture = render({
       src: '/api/donations/bank-logos/images/a',
       name: 'Česká spořitelna',
-      size: 24,
+      size: 40,
     });
 
     host(fixture).querySelector('img')!.dispatchEvent(new Event('error'));
@@ -66,6 +66,13 @@ describe('Given a bank without a logo', () => {
     expect(host(fixture).querySelector('img')).toBeNull();
     expect(monogram(fixture)).toBe('KB');
     expect(host(fixture).textContent?.trim()).toBe('');
+  });
+
+  it('when the mark is small, then it shows the plain bank sign instead of letters too small to read', () => {
+    const fixture = render({ src: null, name: 'Komerční banka', size: 24 });
+
+    expect(monogram(fixture)).toBeNull();
+    expect(host(fixture).querySelector('svg.bank-sign')).not.toBeNull();
   });
 
   it('when its name is not known either, then the mark shows a plain bank sign', () => {

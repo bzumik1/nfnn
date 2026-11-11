@@ -7,7 +7,6 @@ import { BankMark, BankMarkSize } from './bank-mark';
   imports: [BankMark],
   template: '<app-bank-mark [src]="src()" [name]="name()" [size]="size()" />',
   styleUrl: './bank-logo.scss',
-  host: { 'aria-hidden': 'true' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BankLogo {

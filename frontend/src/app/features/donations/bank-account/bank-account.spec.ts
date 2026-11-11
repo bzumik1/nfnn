@@ -69,11 +69,11 @@ describe('Given an account whose bank code the site does not name itself', () =>
 });
 
 describe('Given an account shown in the administration', () => {
-  it('when it is a Czech account, then the small round logo of its bank comes before the number, and a foreign one gets none', () => {
+  it('when it is a Czech account, then the small round mark of its bank, without a logo the bank sign, comes before the number, and a foreign one gets none', () => {
     const czech = host(render('2000145399/0800'));
     const mark = czech.querySelector('app-bank-logo');
 
-    expect(mark?.querySelector('[data-monogram="ČS"]')).not.toBeNull();
+    expect(mark?.querySelector('svg.bank-sign')).not.toBeNull();
     expect(mark?.compareDocumentPosition(czech.querySelector('.ui-figures')!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );

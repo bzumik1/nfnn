@@ -22,7 +22,7 @@ export class BankMark {
   protected readonly failed = linkedSignal({ source: this.src, computation: () => false });
   protected readonly image = computed(() => (this.failed() ? null : this.src()));
   protected readonly monogram = computed(() => {
-    const name = this.name();
+    const name = this.size() === SMALL ? null : this.name();
     const monogram = name === null ? '' : bankMonogram(name);
     return monogram === '' ? null : monogram;
   });
