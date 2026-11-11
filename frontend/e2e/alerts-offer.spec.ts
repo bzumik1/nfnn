@@ -1,6 +1,12 @@
 import { Page } from '@playwright/test';
 import { createHash } from 'node:crypto';
-import { expect, test } from './fixtures';
+import {
+  ADMINISTRATION_LOCKED,
+  ADMINISTRATION_UNLOCK_PATH,
+  expect,
+  test,
+  unlockAdministration,
+} from './fixtures';
 import { administrator, mockDonorApi, session } from './donor-session';
 import { waitWhileNothingMayHappen } from './fixed-waits';
 import { deviceRecord, fakePushDevice, PushDeviceOptions } from './push-device';
@@ -9,10 +15,19 @@ const PUSH = '/api/admin/operations/push';
 const PUBLIC_KEY = `B${'E'.repeat(86)}`;
 const OWNER_KEY = 'nfnn.alerts.device-owner';
 const NOTHING_SHOWS_MS = 1500;
+const PAGE_TITLE = 'Občas a pro technika';
+
+test.use({ unlocksAdministration: false });
 
 interface Sent {
   readonly method: string;
   readonly path: string;
+}
+
+async function enterAdministration(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED })).toBeVisible();
+  await unlockAdministration(page);
+  await expect(page.getByRole('heading', { level: 1, name: PAGE_TITLE })).toBeVisible();
 }
 
 function ownerMarkOf(donorId: string): string {
@@ -31,6 +46,10 @@ async function openAdministration(
   }
   await fakePushDevice(page, options.device);
   await mockDonorApi(page);
+  await page.route(
+    (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
+    (route) => route.fulfill({ status: 204 }),
+  );
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
   );
@@ -72,7 +91,7 @@ async function openAdministration(
     { installed: options.installed, ownerMark: options.ownerMark, ownerKey: OWNER_KEY },
   );
   await page.goto('/sprava/vice');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await enterAdministration(page);
   return sent;
 }
 
@@ -121,7 +140,7 @@ test.describe('Given an administrator in the installed app on a phone without al
       .click();
     await expect(page.getByRole('dialog')).toBeHidden();
     await page.reload();
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await enterAdministration(page);
     await waitWhileNothingMayHappen(page, NOTHING_SHOWS_MS);
 
     await expect(page.getByRole('dialog')).toBeHidden();
