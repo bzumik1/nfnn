@@ -438,6 +438,7 @@ const SCREENS_SINCE_V2: Screen[] = [
     },
   },
   adminPage('admin-more', '/sprava/vice'),
+  adminPage('admin-backup-history', '/sprava/zalohy/historie'),
   adminPage('admin-log-files', '/sprava/logy/soubory'),
   adminPage('admin-log-file', '/sprava/logy/soubor?nazev=backend.log'),
   adminPage('admin-log-levels', '/sprava/logy/urovne'),

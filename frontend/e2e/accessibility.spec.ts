@@ -1908,15 +1908,25 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('#backup-key-word-2-error')).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
-    await page
-      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-23_0300.dump.age' })
-      .click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: /^Nejnovější záloha/ }).click();
+    await expect(page.getByRole('dialog').getByRole('heading', { level: 2 })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Obnovit web z této zálohy…' }).click();
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
+    ).toBeVisible();
     expect(await violations(page)).toEqual([]);
     await page.getByRole('dialog').getByRole('button', { name: 'Zrušit' }).click();
 
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
+    expect(await violations(page)).toEqual([]);
+
+    await page.goto('/sprava/zalohy/historie');
+    await expect(page.getByRole('heading', { level: 1, name: 'Všechny zálohy' })).toBeFocused();
+    expect(await violations(page)).toEqual([]);
+    await page.getByRole('button', { name: /^3:00/ }).first().click();
+    await expect(page.getByRole('dialog').getByRole('heading', { level: 2 })).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

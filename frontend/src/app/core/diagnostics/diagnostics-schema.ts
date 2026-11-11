@@ -73,6 +73,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/upozorneni',
   '/sprava/vice',
   '/sprava/zalohy',
+  '/sprava/zalohy/historie',
   '/zasady-ochrany-osobnich-udaju',
 ] as const;
 

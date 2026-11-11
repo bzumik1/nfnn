@@ -60,6 +60,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/o-nas',
   '/sprava/lide-fondu',
   '/sprava/zalohy',
+  '/sprava/zalohy/historie',
   '/sprava/upozorneni',
   '/sprava/logy',
   '/sprava/logy/soubory',
