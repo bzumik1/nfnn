@@ -82,7 +82,13 @@
         }
       </button>
     } @else {
-      <button type="button" class="sign-in" (click)="openLogin()" i18n="@@layout.header.nav.login">
+      <button
+        type="button"
+        class="sign-in ui-glass"
+        [class.ui-glass--on-dark]="onDark()"
+        (click)="openLogin()"
+        i18n="@@layout.header.nav.login"
+      >
         Přihlásit se
       </button>
     }

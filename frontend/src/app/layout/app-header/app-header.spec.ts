@@ -166,6 +166,19 @@ describe('Given the header of the app', () => {
     ]);
   });
 
+  it('when nobody is signed in, then Přihlásit se is the light glass on a light head, and the dark glass over the landing photo and a dark head', async () => {
+    const signIn = (header: HTMLElement) => {
+      const classes = header.querySelector('button.sign-in')!.classList;
+      return [classes.contains('ui-glass'), classes.contains('ui-glass--on-dark')];
+    };
+
+    expect(signIn(await openAt('/o-nas'))).toEqual([true, false]);
+    fixture.destroy();
+    expect(signIn(await openAt('/'))).toEqual([true, true]);
+    fixture.destroy();
+    expect(signIn(await openAt('/aktuality/clanek'))).toEqual([true, true]);
+  });
+
   it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {
     donor.set(sampleDonor({ name: 'Jana Marie Nováková' }));
     const header = await openAt('/o-nas');
