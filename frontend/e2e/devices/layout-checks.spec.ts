@@ -279,6 +279,17 @@ test.describe('Given a page checked as on a phone', () => {
     ).not.toContain('no control cut off by a box that hides its overflow');
   });
 
+  test('when visually hidden text keeps padding that makes its box wider than a pixel, then it is not counted as cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<table><tr><th style="position: absolute; width: 1px; height: 1px; padding: 10px 24px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap">Actions</th></tr></table>',
+      ),
+    ).toEqual([]);
+  });
+
   test('when a box hides text that does not fit, then the text is cut off', async ({ page }) => {
     expect(
       await failingChecks(
