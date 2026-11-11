@@ -195,83 +195,71 @@
           </div>
         </section>
 
-        @if (key(); as status) {
-          <app-backup-key-card [status]="status" (changed)="keyChanged($event)" />
-        }
-
         <section class="ui-card" aria-labelledby="backups-list-title">
           <h2 id="backups-list-title" class="ui-card__title" i18n="@@admin.backups.list.title">
             Zálohy na serveru
           </h2>
-          @if (backups().length === 0) {
+          @if (latest(); as item) {
+            <ul class="ui-list backups-list">
+              <li>
+                <button type="button" class="ui-list__row" (click)="openBackup(item)">
+                  <span class="ui-list__title" i18n="@@admin.backups.list.latest"
+                    >Nejnovější záloha</span
+                  >
+                  <span class="ui-list__meta"
+                    >{{ time(item.createdAt) }} · {{ kindName(item) }}</span
+                  >
+                  <span class="ui-list__value">{{ size(item.sizeBytes) }}</span>
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </li>
+              <li>
+                <a class="ui-list__row" [routerLink]="historyPath">
+                  <span class="ui-list__title" i18n="@@admin.backups.list.all">Všechny zálohy</span>
+                  <span class="ui-list__meta" i18n="@@admin.backups.list.allMeta"
+                    >Po dnech, nejnovější nahoře</span
+                  >
+                  <span class="ui-list__value">{{ backups().length }}</span>
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </a>
+              </li>
+            </ul>
+          } @else {
             <p class="ui-card__body ui-card__intro" i18n="@@admin.backups.list.none">
               Zatím žádná záloha.
             </p>
-          } @else {
-            <table>
-              <thead>
-                <tr>
-                  <th i18n="@@admin.backups.list.col.createdAt">Vytvořeno</th>
-                  <th i18n="@@admin.backups.list.col.kind">Druh</th>
-                  <th i18n="@@admin.backups.list.col.size">Velikost</th>
-                  <th class="visually-hidden" i18n="@@admin.backups.list.col.actions">Akce</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of backups(); track item.fileName) {
-                  <tr>
-                    <td
-                      class="created"
-                      data-label="Vytvořeno"
-                      i18n-data-label="@@admin.backups.list.col.createdAt"
-                    >
-                      {{ time(item.createdAt) }}
-                      <span class="file-name">{{ item.fileName }}</span>
-                    </td>
-                    <td data-label="Druh" i18n-data-label="@@admin.backups.list.col.kind">
-                      {{ kindName(item) }}
-                    </td>
-                    <td data-label="Velikost" i18n-data-label="@@admin.backups.list.col.size">
-                      {{ size(item.sizeBytes) }}
-                    </td>
-                    <td class="row-actions">
-                      <div class="row-buttons">
-                        <button
-                          appNeedsConnection
-                          type="button"
-                          class="ui-button"
-                          [disabled]="downloading() !== null"
-                          [attr.aria-label]="downloadLabel(item)"
-                          (click)="download(item)"
-                        >
-                          @if (downloading() === item.fileName) {
-                            <ng-container i18n="@@admin.backups.download.busy"
-                              >Stahujeme…</ng-container
-                            >
-                          } @else {
-                            <ng-container i18n="@@admin.backups.download.start"
-                              >Stáhnout</ng-container
-                            >
-                          }
-                        </button>
-                        <button
-                          type="button"
-                          class="ui-button ui-button--danger-outline"
-                          [disabled]="actionsDisabled()"
-                          [attr.aria-label]="restoreLabel(item)"
-                          (click)="askRestore(item)"
-                          i18n="@@admin.backups.restore.start"
-                        >
-                          Obnovit…
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
           }
         </section>
+
+        @if (key(); as status) {
+          <app-backup-key-card [status]="status" (changed)="keyChanged($event)" />
+        }
 
         @if (schedule(); as plan) {
           <app-backup-schedule-card
@@ -284,6 +272,18 @@
     }
   }
 </div>
+
+@if (opened(); as backup) {
+  <app-backup-sheet
+    [backup]="backup"
+    [downloading]="downloads.downloading() === backup.fileName"
+    [failure]="downloads.failure()"
+    [restoreBlocked]="actionsDisabled()"
+    (download)="downloads.download(backup)"
+    (restore)="restoreOpened()"
+    (dismissed)="closeBackup()"
+  />
+}
 
 @if (restoreCandidate(); as candidate) {
   <app-restore-dialog

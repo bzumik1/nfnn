@@ -5,7 +5,12 @@ import { Routes } from '@angular/router';
 import { AdministrationLockPanel } from './lock/administration-lock-panel';
 import { AdministrationLockService } from './lock/administration-lock-service';
 import { ADMINISTRATION_LOCK, type AdministrationLock } from './shell/administration-lock';
-import { ADMIN_HOME_PATH, ADMIN_LOGS_PATH, ADMIN_MORE_PATH } from './shell/admin-sections';
+import {
+  ADMIN_BACKUPS_PATH,
+  ADMIN_HOME_PATH,
+  ADMIN_LOGS_PATH,
+  ADMIN_MORE_PATH,
+} from './shell/admin-sections';
 import { unsavedChangesGuard } from './unsaved-changes/unsaved-changes-guard';
 
 export const adminRoutes: Routes = [
@@ -144,6 +149,13 @@ export const adminRoutes: Routes = [
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.backups.pageTitle:Zálohy | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),
+      },
+      {
+        path: 'zalohy/historie',
+        data: { parent: ADMIN_BACKUPS_PATH },
+        title: $localize`:@@admin.backups.history.pageTitle:Všechny zálohy | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./backups/history/admin-backup-history').then((m) => m.AdminBackupHistory),
       },
       {
         path: 'upozorneni',

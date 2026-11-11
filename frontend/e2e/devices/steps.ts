@@ -424,6 +424,11 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'admin-backup-history',
+    title: 'the history of backups by day in the administration',
+    open: (ui) => adminPage(ui, '/sprava/zalohy/historie'),
+  },
+  {
     id: 'admin-more',
     title: 'the occasional and technical sections of the administration',
     open: (ui) => adminPage(ui, '/sprava/vice'),
