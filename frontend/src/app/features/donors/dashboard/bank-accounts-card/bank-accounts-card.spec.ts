@@ -6,6 +6,8 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { BankAccountItem } from '../../../donations/bank-accounts-api';
 import { BankCheckResponse } from '../../../donations/donations-api';
+import { BankLogosApi } from '../../../donations/bank-logos-api';
+import { FakeBankLogosApi, LOGO_IMAGE_ID } from '../../../donations/testing/bank-logo-fixtures';
 import { bankAccount, symbolOffer } from '../../../donations/testing/bank-account-fixtures';
 import { foundationPaymentDetails } from '../../../donations/testing/payment-details-fixtures';
 import { drawsText } from '../../../../shared/ui/qr-code/testing/branded-qr';
@@ -125,6 +127,29 @@ describe('Given the bank accounts card in the overview', () => {
       '7 400 Kč',
     ]);
     expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
+  });
+
+  it('when an account arrives, then its row starts with the round logo of its bank, or its monogram without one', async () => {
+    (TestBed.inject(BankLogosApi) as unknown as FakeBankLogosApi).items = [
+      { code: '0800', imageId: LOGO_IMAGE_ID },
+    ];
+    await respond([
+      bankAccount({ id: 'a-1', accountNumber: '2000145399/0800' }),
+      bankAccount({ id: 'a-2' }),
+    ]);
+
+    const [withLogo, withMonogram] = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.account'),
+    ];
+    expect(withLogo.querySelector('.account-main > app-bank-logo img')?.getAttribute('src')).toBe(
+      `/api/donations/bank-logos/images/${LOGO_IMAGE_ID}`,
+    );
+    expect(
+      withMonogram
+        .querySelector('.account-main > app-bank-logo [data-monogram]')
+        ?.getAttribute('data-monogram'),
+    ).toBe('FB');
+    expect(withLogo.querySelector('img')?.getAttribute('width')).toBe('40');
   });
 
   describe('when the site does not name the bank of an account itself', () => {

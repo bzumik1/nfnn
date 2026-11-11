@@ -49,6 +49,7 @@ import {
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
 import { BankNames } from '../../../donations/bank-names';
+import { BankLogo } from '../../../donations/bank-logo/bank-logo';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -129,6 +130,7 @@ const PAYMENT_WATCH_CHECKS = 20;
     QrCode,
     SymbolClaim,
     NeedsConnection,
+    BankLogo,
   ],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
