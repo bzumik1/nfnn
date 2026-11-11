@@ -153,6 +153,7 @@ describe('Given an administrator anywhere in the administration', () => {
           ['Nastavení', '/sprava/nastaveni'],
           ['Logy a diagnostika', '/sprava/logy'],
           ['Odpovědi o starších symbolech', '/sprava/starsi-symboly'],
+          ['Loga bank', '/sprava/loga-bank'],
         ],
       },
     ]);

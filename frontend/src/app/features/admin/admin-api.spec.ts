@@ -10,6 +10,7 @@ import {
   YearlyReceiptsIssueResponse,
 } from './admin-api';
 import {
+  adminBankLogo,
   activitySince,
   adminPush,
   importState,
@@ -172,6 +173,55 @@ describe('Given the administration API', () => {
       pushSubscription(),
       'removed',
       { delivered: 1, failed: 0, removed: 0 },
+    ]);
+  });
+
+  it('when the bank logos are read, set, downloaded again and removed, then each call names its precondition', () => {
+    const answers: unknown[] = [];
+    api.bankLogos().subscribe((response) => answers.push(response));
+    http
+      .expectOne({ method: 'GET', url: '/api/admin/donations/bank-logos' })
+      .flush({ items: [adminBankLogo()] });
+
+    api
+      .setBankLogoSource('0800', 'https://is1-ssl.mzstatic.com/a.jpg', '5e1c0a9f3b7d2486')
+      .subscribe((response) => answers.push(response));
+    const replace = http.expectOne({ method: 'PUT', url: '/api/admin/donations/bank-logos/0800' });
+    expect(replace.request.body).toEqual({ sourceUrl: 'https://is1-ssl.mzstatic.com/a.jpg' });
+    expect(replace.request.headers.get('If-Match')).toBe('"5e1c0a9f3b7d2486"');
+    expect(replace.request.headers.has('If-None-Match')).toBe(false);
+    replace.flush(adminBankLogo());
+
+    api
+      .setBankLogoSource('4000', 'https://is2-ssl.mzstatic.com/b.jpg', null)
+      .subscribe((response) => answers.push(response));
+    const create = http.expectOne({ method: 'PUT', url: '/api/admin/donations/bank-logos/4000' });
+    expect(create.request.headers.get('If-None-Match')).toBe('*');
+    expect(create.request.headers.has('If-Match')).toBe(false);
+    create.flush(adminBankLogo({ code: '4000' }));
+
+    api.refreshBankLogo('0800').subscribe((response) => answers.push(response));
+    const refresh = http.expectOne({
+      method: 'POST',
+      url: '/api/admin/donations/bank-logos/0800/refresh',
+    });
+    expect(refresh.request.body).toBeNull();
+    refresh.flush(adminBankLogo());
+
+    api.removeBankLogo('0800', '5e1c0a9f3b7d2486').subscribe(() => answers.push('removed'));
+    const remove = http.expectOne({
+      method: 'DELETE',
+      url: '/api/admin/donations/bank-logos/0800',
+    });
+    expect(remove.request.headers.get('If-Match')).toBe('"5e1c0a9f3b7d2486"');
+    remove.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(answers).toEqual([
+      { items: [adminBankLogo()] },
+      adminBankLogo(),
+      adminBankLogo({ code: '4000' }),
+      adminBankLogo(),
+      'removed',
     ]);
   });
 });

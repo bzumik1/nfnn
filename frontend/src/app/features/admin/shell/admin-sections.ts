@@ -53,6 +53,7 @@ export const ADMIN_TECHNICAL: SideNavGroup = {
       path: '/sprava/starsi-symboly',
       label: $localize`:@@admin.nav.symbolClaims:Odpovědi o starších symbolech`,
     },
+    { path: '/sprava/loga-bank', label: $localize`:@@admin.nav.bankLogos:Loga bank` },
   ],
 };
 

@@ -1,4 +1,5 @@
 import {
+  AdminBankLogoResponse,
   AdminPushResponse,
   PushSubscriptionResponse,
   AdminBankAccountItem,
@@ -122,6 +123,24 @@ export function administrator(
     name: 'Jana Nováková',
     email: 'jana@example.cz',
     secondFactorEnabled: true,
+    ...overrides,
+  };
+}
+
+export function adminBankLogo(
+  overrides: Partial<AdminBankLogoResponse> = {},
+): AdminBankLogoResponse {
+  return {
+    code: '0800',
+    bankName: 'Česká spořitelna, a.s.',
+    sourceUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple/csas/512x512bb.jpg',
+    sourceAllowed: true,
+    version: '5e1c0a9f3b7d2486',
+    imageId: '019a7c00-0000-7000-8000-0000000000aa',
+    imageSha256: 'a'.repeat(64),
+    fetchedAt: '2026-11-11T04:50:03Z',
+    checkedAt: '2026-11-11T04:50:03Z',
+    lastFailure: null,
     ...overrides,
   };
 }
