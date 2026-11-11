@@ -31,6 +31,14 @@ describe('Given the connector without a backend', () => {
 
     expect(instructions).toMatch(/deleting a bank logo[^.]*are done only on the web at \/sprava/);
   });
+
+  it('when its instructions are asked, then the web-only actions read as one list, the push alerts and the bank logo set apart by commas', async () => {
+    const instructions = await connectorInstructions();
+
+    expect(instructions).toContain(
+      '(which withdraws that receipt), turning push alerts on or off for a device or sending its test alert, and deleting a bank logo are done only on the web at /sprava',
+    );
+  });
 });
 
 describe('Given a running connector', () => {
