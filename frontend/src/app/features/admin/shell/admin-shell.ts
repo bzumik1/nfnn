@@ -20,6 +20,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { AppHeader } from '../../../layout/app-header/app-header';
 import { TabBar } from '../../../layout/tab-bar/tab-bar';
+import { AlertsOffer } from '../alerts/offer/alerts-offer';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { SuspendsDialogs } from '../../../shared/ui/dialog/dialog-suspension';
 import { SideNav } from '../../../shared/ui/side-nav/side-nav';
@@ -29,7 +30,15 @@ import { AlertBadgeRefresh } from './alert-badge-refresh';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [AppHeader, NgComponentOutlet, RouterOutlet, SideNav, SuspendsDialogs, TabBar],
+  imports: [
+    AlertsOffer,
+    AppHeader,
+    NgComponentOutlet,
+    RouterOutlet,
+    SideNav,
+    SuspendsDialogs,
+    TabBar,
+  ],
   providers: [{ provide: DIALOG_PRESENTATION, useValue: 'sheet' }],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
