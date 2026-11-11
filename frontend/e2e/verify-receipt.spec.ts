@@ -16,6 +16,7 @@ import {
   serveReceiptStatus,
   SINGLE_RECEIPT,
   TAMPERED_KEY_LIST,
+  verdictHeading,
   withoutWebCryptoEd25519,
   YEARLY_RECEIPT,
 } from './receipt-verification';
@@ -39,9 +40,10 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    const heading = page.getByRole('heading', { level: 1 });
+    const heading = verdictHeading(page);
     await expect(heading).toHaveText(SIGNED);
     await expect(heading).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
     await expect(page.getByText('Fond toto potvrzení vede jako platné.')).toBeVisible();
     await expect(page.locator('dd').filter({ hasText: DONOR_NAME })).toBeVisible();
     await expect(page.locator('dd').filter({ hasText: '2 500 Kč' })).toBeVisible();
@@ -82,9 +84,9 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
       await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+      await expect(verdictHeading(page)).toHaveText(heading);
       await expect(page.getByText(SIGNED)).toHaveCount(0);
-      await expect(page.locator('.ui-status [aria-hidden="true"]')).not.toHaveText('✓');
+      await expect(page.locator('.ui-status__icon')).not.toHaveText('✓');
     });
   }
 
@@ -96,7 +98,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     await expect(page.getByRole('table', { name: 'Jednotlivé dary (12)' })).toBeVisible();
     await expect(page.locator('tbody tr')).toHaveCount(12);
   });
@@ -108,9 +110,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${CHANGED_AMOUNT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Neověřeno: podpis neodpovídá údajům',
-    );
+    await expect(verdictHeading(page)).toHaveText('Neověřeno: podpis neodpovídá údajům');
     await expect(page.locator('dl')).toHaveCount(0);
   });
 
@@ -121,7 +121,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    await expect(verdictHeading(page)).toHaveText(
       'Neověřeno: kód podepsal klíč, který fond nezveřejnil',
     );
   });
@@ -133,9 +133,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Neověřeno: fond tento klíč zneplatnil',
-    );
+    await expect(verdictHeading(page)).toHaveText('Neověřeno: fond tento klíč zneplatnil');
   });
 
   test('when the code was not read whole, then the page says the link is incomplete and asks nothing', async ({
@@ -150,7 +148,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment.slice(0, 60)}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Odkaz je neúplný');
+    await expect(verdictHeading(page)).toHaveText('Odkaz je neúplný');
     expect(keys).toEqual([]);
   });
 
@@ -164,7 +162,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     expect((await scripts.all()).some((script) => script.includes('edwards25519'))).toBe(true);
   });
 
@@ -177,7 +175,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     expect((await scripts.all()).some((script) => script.includes('edwards25519'))).toBe(false);
   });
 });
@@ -204,7 +202,7 @@ test.describe('Given a visitor whose connection drops after the page has loaded'
     await context.setOffline(true);
     await scanAfterLoad(page, SINGLE_RECEIPT);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     await expect(
       page.getByText(
         'Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo nezrušil.',
@@ -228,12 +226,12 @@ test.describe('Given a visitor whose connection drops after the page has loaded'
     await context.setOffline(true);
     await scanAfterLoad(page, SINGLE_RECEIPT);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Nelze ověřit bez připojení');
+    await expect(verdictHeading(page)).toHaveText('Nelze ověřit bez připojení');
 
     await context.setOffline(false);
     await page.getByRole('button', { name: 'Zkusit znovu' }).click();
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
   });
 
   test('when the kept keys do not hold the key of the code, then the page cannot verify it yet', async ({
@@ -247,9 +245,7 @@ test.describe('Given a visitor whose connection drops after the page has loaded'
     await context.setOffline(true);
     await scanAfterLoad(page, SINGLE_RECEIPT);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Neověřeno: tento podpis zatím neumíme ověřit',
-    );
+    await expect(verdictHeading(page)).toHaveText('Neověřeno: tento podpis zatím neumíme ověřit');
   });
 
   test('when the server cannot be reached although the browser is online, then the kept keys still verify the code', async ({
@@ -263,7 +259,7 @@ test.describe('Given a visitor whose connection drops after the page has loaded'
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     await expect(
       page.getByText(
         'Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo nezrušil.',
@@ -286,8 +282,8 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
-    await expect(page.locator('.ui-status [aria-hidden="true"]')).toHaveText('!');
+    await expect(verdictHeading(page)).toHaveText(NO_ANSWER);
+    await expect(page.locator('.ui-status__icon')).toHaveText('!');
     await expect(page.getByText('Bez připojení')).toHaveCount(0);
   });
 
@@ -301,9 +297,7 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Neověřeno: seznam klíčů fondu teď nejde použít',
-    );
+    await expect(verdictHeading(page)).toHaveText('Neověřeno: seznam klíčů fondu teď nejde použít');
     await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toHaveCount(0);
     await expect(page.getByText('za chvíli')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'info@nfnn.cz' }).first()).toBeVisible();
@@ -317,8 +311,8 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
 
       await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
-      await expect(page.locator('.ui-status [aria-hidden="true"]')).toHaveText('!');
+      await expect(verdictHeading(page)).toHaveText(NO_ANSWER);
+      await expect(page.locator('.ui-status__icon')).toHaveText('!');
       await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
       await expect(
         page.getByText(
@@ -335,7 +329,7 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
 
       await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(NO_ANSWER);
+      await expect(verdictHeading(page)).toHaveText(NO_ANSWER);
       await expect(page.getByText('Bez připojení')).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
     });
@@ -348,15 +342,13 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
 
       await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-        'Ověření teď nejde dokončit',
-      );
+      await expect(verdictHeading(page)).toHaveText('Ověření teď nejde dokončit');
       await expect(page.getByText('Připojte se k internetu')).toHaveCount(0);
 
       api.keys = KEY_LIST;
       await page.getByRole('button', { name: 'Zkusit znovu' }).click();
 
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+      await expect(verdictHeading(page)).toHaveText(SIGNED);
     });
   }
 });
@@ -372,7 +364,7 @@ test.describe('Given a visitor who opens the verification page without a code', 
     page: Page,
     requests: Request[],
   ): Promise<void> {
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
     await expect(page.locator('dd').filter({ hasText: DONOR_NAME })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/overit');
     expect(new URL(page.url()).hash).toBe('');
@@ -414,7 +406,7 @@ test.describe('Given a visitor who opens the verification page without a code', 
     await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
 
     await expectVerifiedWithoutSendingTheCode(page, requests);
-    await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+    await expect(verdictHeading(page)).toBeFocused();
   });
 
   test('when they upload the PDF of the receipt, then the page reads the verification link from it and verifies the code', async ({
@@ -464,6 +456,7 @@ test.describe('Given a visitor who opens the verification page without a code', 
       'Tento QR kód nepatří k potvrzení fondu Nová naděje. Načtěte kód z potvrzení o daru.',
     );
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+    await expect(page.getByLabel('Odkaz z QR kódu')).toBeVisible();
   });
 
   test('when they scan the code with the camera in the page, then the page verifies it and turns the camera off', async ({
@@ -507,12 +500,13 @@ test.describe('Given a visitor who opens the verification page without a code', 
     await page.goto('/overit');
     await page.getByLabel('Odkaz z QR kódu').fill(`${PROOF_ADDRESS}${SINGLE_RECEIPT.fragment}`);
     await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
+    await expect(verdictHeading(page)).toHaveText(SIGNED);
 
     await page.getByRole('button', { name: 'Ověřit další potvrzení' }).click();
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
-    await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+    const pageTitle = page.getByRole('heading', { level: 1 });
+    await expect(pageTitle).toHaveText('Ověření potvrzení o daru');
+    await expect(pageTitle).toBeFocused();
     await expect(page.getByLabel('Odkaz z QR kódu')).toHaveValue('');
   });
 });

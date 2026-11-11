@@ -62,6 +62,7 @@ import {
   breakSha256,
   serveReceiptApi,
   SINGLE_RECEIPT,
+  verdictHeading,
   YEARLY_RECEIPT,
 } from './receipt-verification';
 import {
@@ -522,10 +523,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   test.describe('when they verify receipt codes', () => {
     async function openVerification(page: Page, api: ReceiptApi): Promise<Locator> {
       await serveReceiptApi(page, api);
-      const heading = page.getByRole('heading', { level: 1 });
       await page.goto('/overit');
-      await expect(heading).toHaveText('Ověření potvrzení o daru');
-      return heading;
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+      return verdictHeading(page);
     }
 
     async function scanAndCheck(

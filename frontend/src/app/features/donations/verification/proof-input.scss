@@ -1,31 +1,16 @@
 :host {
   display: block;
-  margin-top: var(--space-6);
-  text-align: left;
+  text-align: start;
 }
 
-.proof-ways {
-  display: grid;
-  gap: var(--space-5);
+.proof-glyph {
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
-.proof-way {
-  display: grid;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-divider);
-}
-
-.proof-way__title {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-semibold);
-  line-height: var(--leading-snug);
-}
-
-.proof-way__hint {
-  color: var(--color-text-soft);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
+.proof-video-cell {
+  background: var(--color-surface-inverse);
 }
 
 .proof-video {
@@ -33,25 +18,40 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: var(--radius-md);
   background: var(--color-surface-inverse);
 }
 
-.proof-link-form {
-  display: grid;
-  gap: var(--space-3);
-  justify-items: start;
+.proof-link-cell {
+  padding: var(--space-3) var(--space-4);
 }
 
-.proof-link-form app-form-field {
-  justify-self: stretch;
+.proof-link-cell .form-control {
+  border-color: transparent;
+  background: var(--color-fill);
+
+  &:focus-visible {
+    outline-offset: -1px;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: transparent;
+    outline: 3px solid var(--color-danger);
+    outline-offset: -1px;
+  }
 }
 
-.proof-status {
-  color: var(--color-text-soft);
-  font-size: var(--text-sm);
+.proof-link-submit {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto var(--space-4);
+    border-top: 1px solid var(--color-separator);
+  }
 }
 
 .proof-status:empty {
   position: absolute;
+  margin: 0;
 }

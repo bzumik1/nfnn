@@ -3,6 +3,13 @@ import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { article, mockPublicContent, project } from './baseline/screen-mocks';
 import { mockDonorApi, openSignInDialog, signIn } from './donor-session';
+import { fakeCameraShowing, pngDataUrl, qrCodePng } from './receipt-code-files';
+import {
+  serveReceiptKeys,
+  serveReceiptStatus,
+  SINGLE_RECEIPT,
+  verdictHeading,
+} from './receipt-verification';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const PAGE_PINCH_STOPPED_JAKUB_2026_10_31 = 'meta-viewport';
@@ -73,6 +80,23 @@ test.describe('Given a visitor whose device shows the light appearance', () => {
       DARK_LUMINANCE,
     );
     expect(await shownSource(headerLogo(page))).toBe('/images/logo.svg');
+  });
+
+  test('when the receipt verification opens, then it stands on the light grouped ground of the app screens with dark text', async ({
+    page,
+  }) => {
+    await page.goto('/overit');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+
+    expect(await luminanceOf(page.locator('body'), 'background-color')).toBeGreaterThan(
+      LIGHT_LUMINANCE,
+    );
+    expect(
+      await luminanceOf(page.locator('app-verification-page'), 'background-color'),
+    ).toBeGreaterThan(LIGHT_LUMINANCE);
+    expect(await luminanceOf(page.getByRole('heading', { level: 1 }), 'color')).toBeLessThan(
+      DARK_LUMINANCE,
+    );
   });
 });
 
@@ -190,6 +214,33 @@ test.describe('Given a visitor whose device shows the dark appearance', () => {
     await signIn(page);
     await expect(page.locator('.send-gift app-qr-code')).toBeVisible();
 
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a visitor scans another code with the camera and then pastes the link of a signed receipt, then neither the preview nor the verdict breaks the rules', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      fakeCameraShowing,
+      pngDataUrl(qrCodePng('https://example.org/jiny-kod')),
+    );
+    await serveReceiptKeys(page);
+    await serveReceiptStatus(page, 'active');
+    await page.goto('/overit');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ověření potvrzení o daru');
+
+    await page.getByRole('button', { name: 'Naskenovat QR kód' }).click();
+    await expect(page.locator('video')).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Zastavit skenování' }).click();
+    await page
+      .getByLabel('Odkaz z QR kódu')
+      .fill(`https://nfnn.cz/overit#${SINGLE_RECEIPT.fragment}`);
+    await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
+
+    await expect(verdictHeading(page)).toHaveText('Podepsáno fondem Nová naděje');
     expect(await violations(page)).toEqual([]);
   });
 });

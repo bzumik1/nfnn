@@ -3,9 +3,17 @@
   position: relative;
 }
 
+:host(.file-button--row) {
+  display: block;
+}
+
 .file-input:focus-visible + .file-label {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.file-input:focus-visible + .ui-list__row {
+  outline-offset: -3px;
 }
 
 .file-label--disabled {

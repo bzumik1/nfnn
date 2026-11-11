@@ -104,18 +104,20 @@ describe('Given the verification page', () => {
     return root().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
   }
 
-  function heading(): HTMLElement {
+  function pageTitle(): HTMLElement {
     return root().querySelector('h1') as HTMLElement;
   }
 
+  function heading(): HTMLElement {
+    return (root().querySelector('h2[tabindex="-1"]') as HTMLElement | null) ?? pageTitle();
+  }
+
   function tone(): string {
-    return text('.ui-status [aria-hidden="true"]');
+    return text('.ui-status__icon');
   }
 
   function lead(): string {
-    return (
-      root().querySelector('h1')?.nextElementSibling?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
-    );
+    return text('.verify-lead');
   }
 
   function button(name: string): HTMLButtonElement | undefined {
@@ -138,7 +140,9 @@ describe('Given the verification page', () => {
     await open('/overit');
 
     expect(heading().textContent?.trim()).toBe('Ověření potvrzení o daru');
-    expect(text('.verify-lead')).toContain('QR kód');
+    expect(lead()).toBe(
+      'Každé potvrzení od fondu nese QR kód. Načtěte ho a uvidíte, co v něm fond podepsal, a porovnejte to s papírem. Kód čteme jen ve vašem zařízení.',
+    );
     expect(text('.verify-domain')).toBe(
       'Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku prohlížeče.',
     );
@@ -210,6 +214,12 @@ describe('Given the verification page', () => {
       await open(`/overit#${FRAGMENT}`);
     });
 
+    it('then the page keeps its title and names the check under way in a second-level heading', () => {
+      expect(pageTitle().textContent?.trim()).toBe('Ověření potvrzení o daru');
+      expect(heading().tagName).toBe('H2');
+      expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
+    });
+
     it('then it says so in a status line', () => {
       expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
       expect(root().querySelector('[role="status"]')?.textContent?.trim()).toBe(
@@ -232,6 +242,14 @@ describe('Given the verification page', () => {
     beforeEach(() =>
       open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'active' }),
     );
+
+    it('then the page keeps its title as the only first-level heading and names the verdict in a second-level heading', () => {
+      expect(
+        Array.from(root().querySelectorAll('h1'), (title) => title.textContent?.trim()),
+      ).toEqual(['Ověření potvrzení o daru']);
+      expect(heading().tagName).toBe('H2');
+      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+    });
 
     it('then the heading says the fund signed it, takes the focus and the status line follows', () => {
       expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');

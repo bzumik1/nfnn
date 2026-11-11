@@ -25,7 +25,8 @@ const PAGE_PATH = '/overit';
   selector: 'app-verification-page',
   imports: [ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
-  styleUrl: './verification-page.scss',
+  styleUrls: ['./verification-page.scss', './verdict-card.scss'],
+  host: { class: 'ui-grouped' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationPage {
@@ -103,8 +104,14 @@ export class VerificationPage {
   }
 
   private focusHeading(): void {
-    afterNextRender(() => this.host.nativeElement.querySelector('h1')?.focus(), {
-      injector: this.injector,
-    });
+    afterNextRender(
+      () => {
+        const page = this.host.nativeElement;
+        const heading =
+          page.querySelector<HTMLElement>('#verify-title') ?? page.querySelector('h1');
+        heading?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 }

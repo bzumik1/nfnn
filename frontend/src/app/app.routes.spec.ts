@@ -82,12 +82,21 @@ describe('Given a visitor and the app routes', () => {
     };
 
     expect(await darkThroughout('/')).toBe(true);
-    expect(await darkThroughout('/overit')).toBe(true);
+    expect(await darkThroughout('/overit')).toBe(false);
     expect(await darkThroughout('/neexistuje')).toBe(false);
     expect(await darkThroughout('/obnova-hesla')).toBe(true);
     expect(await darkThroughout('/potvrzeni-emailu')).toBe(true);
     expect(await darkThroughout('/aktuality/zahrada-pro-deti')).toBe(false);
     expect(await darkThroughout('/o-nas')).toBe(false);
+  });
+
+  it('when the verification page opens, then it stands under the light head of the app screens', async () => {
+    const router = TestBed.inject(Router);
+    const chrome = TestBed.inject(RouteChrome);
+
+    await router.navigateByUrl('/overit');
+
+    expect(chrome.current().head).toBe('light');
   });
 });
 

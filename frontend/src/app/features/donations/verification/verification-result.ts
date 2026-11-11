@@ -77,7 +77,7 @@ const ANSWERED: readonly string[] = [
 @Component({
   selector: 'app-verification-result',
   templateUrl: './verification-result.html',
-  styleUrl: './verification-result.scss',
+  styleUrls: ['./verification-result.scss', './verdict-card.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationResult {

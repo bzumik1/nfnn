@@ -7,6 +7,13 @@
   [disabled]="disabled()"
   (change)="choose($event)"
 />
-<label class="ui-button file-label" [for]="inputId()" [class.file-label--disabled]="disabled()">
+<label
+  class="file-label"
+  [class.ui-button]="look() === 'button'"
+  [class.ui-list__row]="look() === 'row'"
+  [class.ui-list__row--action]="look() === 'row'"
+  [for]="inputId()"
+  [class.file-label--disabled]="disabled()"
+>
   <ng-content />
 </label>
