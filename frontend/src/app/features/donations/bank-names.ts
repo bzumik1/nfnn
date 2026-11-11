@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Connectivity } from '../../core/connectivity/connectivity';
 import { BankCodesApi } from './bank-codes-api';
@@ -20,6 +21,7 @@ export class BankNames {
   private list: ServedList = 'idle';
   private readonly logos = signal<ReadonlyMap<string, string>>(new Map());
   private logoList: LogoList = 'idle';
+  private logoRound = 0;
 
   nameOf(account: string): string | null {
     const ownName = bankNameOf(account);
@@ -55,19 +57,37 @@ export class BankNames {
     });
   }
 
+  forgetLogos(): void {
+    this.logoRound++;
+    this.logoList = 'idle';
+  }
+
   private requireLogos(): void {
     if (this.logoList !== 'idle') {
       return;
     }
+    const round = ++this.logoRound;
     this.logoList = 'asking';
     this.logosApi.list().subscribe({
       next: (response) => {
+        if (round !== this.logoRound) {
+          return;
+        }
         this.logos.set(logosOf(response));
         this.logoList = 'settled';
       },
-      error: () => (this.logoList = 'settled'),
+      error: (failure: unknown) => {
+        if (round !== this.logoRound) {
+          return;
+        }
+        this.logoList = isLostConnection(failure) ? 'idle' : 'settled';
+      },
     });
   }
+}
+
+function isLostConnection(failure: unknown): boolean {
+  return failure instanceof HttpErrorResponse && failure.status === 0;
 }
 
 function logosOf(response: unknown): ReadonlyMap<string, string> {

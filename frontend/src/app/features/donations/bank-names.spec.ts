@@ -206,6 +206,49 @@ describe('Given the logos of Czech banks the server keeps', () => {
     expect(names.logoOf('2000145399/0800')).toBeNull();
   });
 
+  it('when the list fails without an answer, as on a lost connection, then the next require asks again', () => {
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).error(new ProgressEvent('error'));
+
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).flush({ items: [{ code: '0800', imageId: LOGO_ID }] });
+
+    expect(names.logoOf('2000145399/0800')).not.toBeNull();
+  });
+
+  it('when the list fails with another refusal of the client, then it is not asked for again', () => {
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).flush(null, { status: 404, statusText: 'Not Found' });
+
+    names.require('2000145399/0800');
+
+    http.expectNone(BANK_LOGOS_URL);
+  });
+
+  it('when the logos are forgotten after a change in the administration, then the next require asks again and the new answer is given', () => {
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).flush({ items: [{ code: '0800', imageId: LOGO_ID }] });
+
+    names.forgetLogos();
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).flush({ items: [] });
+
+    expect(names.logoOf('2000145399/0800')).toBeNull();
+  });
+
+  it('when the logos are forgotten while the list is on its way, then the older answer is not kept and the list is asked for again', () => {
+    names.require('2000145399/0800');
+    const older = http.expectOne(BANK_LOGOS_URL);
+
+    names.forgetLogos();
+    older.flush({ items: [{ code: '0800', imageId: LOGO_ID }] });
+    expect(names.logoOf('2000145399/0800')).toBeNull();
+
+    names.require('2000145399/0800');
+    http.expectOne(BANK_LOGOS_URL).flush({ items: [{ code: '0800', imageId: LOGO_ID }] });
+    expect(names.logoOf('2000145399/0800')).not.toBeNull();
+  });
+
   it('when the app knows it is offline, then the server is not asked until it is online again', () => {
     offline.set(true);
     names.require('2000145399/0800');
