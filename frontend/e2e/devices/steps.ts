@@ -386,6 +386,11 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'admin-sent-report',
+    title: 'a sent monthly report with its sendings',
+    open: (ui) => adminPage(ui, '/sprava/prehledy/2026-09'),
+  },
+  {
     id: 'admin-settings',
     title: 'the settings in the administration',
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),

@@ -215,9 +215,18 @@ describe('Given an administrator on the monthly report page', () => {
     );
     expect(
       Array.from(
-        fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
-      ).map((row) => (row.textContent ?? '').replace(/\s+/g, ' ').trim()),
-    ).toEqual(['září 2026 5. 10. 2026 7:00', 'srpen 2026 1. 9. 2026 7:00']);
+        fixture.nativeElement.querySelectorAll(
+          '.sent-reports a.ui-list__row',
+        ) as NodeListOf<HTMLAnchorElement>,
+      ).map((row) => ({
+        month: row.querySelector('.ui-list__title')?.textContent?.trim(),
+        sentAt: row.querySelector('.ui-list__meta')?.textContent?.trim(),
+        href: row.getAttribute('href'),
+      })),
+    ).toEqual([
+      { month: 'září 2026', sentAt: 'Odesláno 5. 10. 2026 7:00', href: '/sprava/prehledy/2026-09' },
+      { month: 'srpen 2026', sentAt: 'Odesláno 1. 9. 2026 7:00', href: '/sprava/prehledy/2026-08' },
+    ]);
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
       'září 2026 (odesláno 5. 10. 2026)',
     );
@@ -458,7 +467,7 @@ describe('Given an administrator on the monthly report page', () => {
         ],
       }),
     );
-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('.sent-reports a.ui-list__row')).toHaveLength(2);
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
   });
 

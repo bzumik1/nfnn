@@ -52,6 +52,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/spravci',
   '/sprava/starsi-symboly',
   '/sprava/prehledy',
+  '/sprava/prehledy/2026-09',
   '/sprava/aktuality',
   '/sprava/aktuality/nova',
   '/sprava/projekty',

@@ -1,0 +1,91 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1">
+    @if (known) {
+      <ng-container i18n="@@admin.sentReport.heading">Přehled za {{ monthName }}</ng-container>
+    } @else {
+      <ng-container i18n="@@admin.sentReport.heading.unknown">Odeslaný přehled</ng-container>
+    }
+  </h1>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.sentReport.loading">Načítáme přehled…</p>
+    }
+    @case ('not-found') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p>
+          @if (known) {
+            <ng-container i18n="@@admin.sentReport.notFound"
+              >Za {{ monthName }} žádný přehled neodešel.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@admin.sentReport.notFound.unknown"
+              >Takový přehled neodešel.</ng-container
+            >
+          }
+        </p>
+        <a class="ui-button" routerLink="/sprava/prehledy" i18n="@@admin.sentReport.back"
+          >Zpět na měsíční e-mail</a
+        >
+      </div>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.sentReport.error">Přehled se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.sentReport.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <p class="ui-page-intro" i18n="@@admin.sentReport.intro">
+        Co v přehledu stálo, když odešel e-mailem. Nejnovější odeslání je nahoře.
+      </p>
+      @for (block of blocks(); track block.key; let index = $index) {
+        <section class="delivery" [attr.aria-labelledby]="'delivery-' + index">
+          <h2 class="delivery-title" [id]="'delivery-' + index">{{ block.heading }}</h2>
+          @if (block.meta; as meta) {
+            <p class="delivery-meta">{{ meta }}</p>
+          }
+          @if (block.recomputed) {
+            <p
+              class="ui-callout ui-callout--warning recomputed-note"
+              i18n="@@admin.sentReport.recomputed"
+            >
+              Spočteno z dnešních dat, odeslaný e-mail se mohl lišit. Web tehdy ještě neukládal, co
+              přesně odešlo, proto chybí i stav stahování z banky.
+            </p>
+          }
+          <div class="ui-groups">
+            @for (group of block.groups; track group.title; let groupIndex = $index) {
+              <section [attr.aria-labelledby]="'delivery-' + index + '-group-' + groupIndex">
+                <h3 class="ui-group-title" [id]="'delivery-' + index + '-group-' + groupIndex">
+                  {{ group.title }}
+                </h3>
+                <ul class="ui-list ui-list--inset">
+                  @for (row of group.rows; track row.title) {
+                    <li>
+                      <div class="ui-list__row">
+                        <span class="ui-list__title">{{ row.title }}</span>
+                        @if (row.meta; as meta) {
+                          <span class="ui-list__meta">{{ meta }}</span>
+                        }
+                        <span class="ui-list__value">{{ row.value }}</span>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

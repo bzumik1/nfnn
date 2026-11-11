@@ -79,6 +79,13 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./report/admin-report').then((m) => m.AdminReport),
       },
       {
+        path: 'prehledy/:month',
+        data: { parent: '/sprava/prehledy' },
+        title: $localize`:@@admin.sentReport.pageTitle:Odeslaný přehled | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./report/sent/admin-sent-report').then((m) => m.AdminSentReport),
+      },
+      {
         path: 'aktuality',
         data: { parent: ADMIN_HOME_PATH },
         title: $localize`:@@admin.news.pageTitle:Aktuality | Správa | Nová naděje – nadační fond`,
