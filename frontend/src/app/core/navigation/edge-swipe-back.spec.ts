@@ -92,6 +92,7 @@ const ACROSS: readonly Point[] = [
 ];
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   location = { back: vi.fn() };
   backTarget = { canGoBack: true, back: vi.fn() };
   chrome = signal(chromeWith('/aktuality'));
@@ -112,6 +113,7 @@ afterEach(() => {
   document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
   delete (navigator as { standalone?: boolean }).standalone;
   delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
+  delete (window as { innerWidth?: number }).innerWidth;
 });
 
 describe('Given the app opened from the home screen of an iPhone', () => {
@@ -144,7 +146,30 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a swipe from the middle of the screen goes a third of the screen across, then the app goes back as Zpět does', () => {
+  it('when a swipe goes a third of the screen across and rests before letting go, then nothing happens', () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 90, y: 302, at: 200 },
+      { x: 160, y: 304, at: 400 },
+      { x: 160, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
+  it('when a swipe goes past half the screen and rests before letting go, then the app goes back as Zpět does', () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when a swipe from the middle of the screen moves on across as the finger lets go, then the app goes back as Zpět does', () => {
     drag(page, [
       { x: 160, y: 300, at: 0 },
       { x: 260, y: 305, at: 200 },

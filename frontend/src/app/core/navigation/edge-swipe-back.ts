@@ -1,15 +1,10 @@
 import { DOCUMENT, Location } from '@angular/common';
 import { EnvironmentProviders, inject, Injectable, provideAppInitializer } from '@angular/core';
 import { Router } from '@angular/router';
+import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
 import { RouteChrome } from './route-chrome';
 
-const TAP_SLOP_PX = 10;
-const HOLD_BEFORE_MOVE_MS = 500;
-const COMMIT_SHARE_OF_WIDTH = 0.3;
-const FLICK_MIN_PX = 40;
-const FLICK_MIN_SPEED_PX_PER_MS = 0.3;
-const FLICK_REST_MS = 100;
 const FIELDS = 'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
 const SCROLLS_SIDEWAYS = new Set(['auto', 'scroll']);
 
@@ -19,15 +14,8 @@ type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
 
 interface Swipe {
   readonly id: number;
-  readonly x: number;
-  readonly y: number;
-  readonly at: number;
   readonly pops: number;
-  moved: boolean;
-  furthestX: number;
-  lastX: number;
-  lastAt: number;
-  speed: number;
+  readonly motion: BackSwipe;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -80,17 +68,11 @@ export class EdgeSwipeBack {
     if (event.touches.length > 1 || touch === undefined || keepsItsOwnSwipe(event.target)) {
       return;
     }
+    const width = this.document.defaultView?.innerWidth ?? 0;
     this.swipe = {
       id: touch.identifier,
-      x: touch.clientX,
-      y: touch.clientY,
-      at: event.timeStamp,
       pops: this.pops,
-      moved: false,
-      furthestX: touch.clientX,
-      lastX: touch.clientX,
-      lastAt: event.timeStamp,
-      speed: 0,
+      motion: new BackSwipe(pointOf(touch, event), width),
     };
   }
 
@@ -100,23 +82,8 @@ export class EdgeSwipeBack {
     if (swipe === null || touch === undefined) {
       return;
     }
-    const elapsed = event.timeStamp - swipe.lastAt;
-    if (elapsed > 0) {
-      swipe.speed = (touch.clientX - swipe.lastX) / elapsed;
-    }
-    swipe.lastX = touch.clientX;
-    swipe.lastAt = event.timeStamp;
-    swipe.furthestX = Math.max(swipe.furthestX, touch.clientX);
-    const dx = touch.clientX - swipe.x;
-    const dy = touch.clientY - swipe.y;
-    if (!swipe.moved && Math.hypot(dx, dy) > TAP_SLOP_PX) {
-      swipe.moved = true;
-      if (event.timeStamp - swipe.at > HOLD_BEFORE_MOVE_MS) {
-        this.swipe = null;
-        return;
-      }
-    }
-    if (swipe.moved && (dx < -TAP_SLOP_PX || Math.abs(dy) > Math.abs(dx))) {
+    swipe.motion.move(pointOf(touch, event));
+    if (swipe.motion.abandoned) {
       this.swipe = null;
     }
   }
@@ -128,24 +95,10 @@ export class EdgeSwipeBack {
       return;
     }
     this.swipe = null;
-    if (swipe.moved && swipe.pops === this.pops && this.isSwipeBack(swipe, touch, event)) {
+    const settle = swipe.motion.release(pointOf(touch, event));
+    if (settle?.completes === true && swipe.pops === this.pops) {
       this.back();
     }
-  }
-
-  private isSwipeBack(swipe: Swipe, touch: Touch, event: TouchEvent): boolean {
-    const dx = touch.clientX - swipe.x;
-    const dy = touch.clientY - swipe.y;
-    if (dx <= 2 * Math.abs(dy) || touch.clientX < swipe.furthestX - TAP_SLOP_PX) {
-      return false;
-    }
-    const width = this.document.defaultView?.innerWidth ?? 0;
-    const far = dx >= Math.max(COMMIT_SHARE_OF_WIDTH * width, FLICK_MIN_PX);
-    const flick =
-      dx >= FLICK_MIN_PX &&
-      event.timeStamp - swipe.lastAt <= FLICK_REST_MS &&
-      swipe.speed >= FLICK_MIN_SPEED_PX_PER_MS;
-    return far || flick;
   }
 
   private back(): void {
@@ -166,6 +119,10 @@ export class EdgeSwipeBack {
 
 function isHomeScreenApp(navigator: HomeScreenNavigator): boolean {
   return navigator.standalone === true && navigator.maxTouchPoints > 0;
+}
+
+function pointOf(touch: Touch, event: TouchEvent): SwipePoint {
+  return { x: touch.clientX, y: touch.clientY, at: event.timeStamp };
 }
 
 function touchOf(event: TouchEvent, id: number): Touch | undefined {
