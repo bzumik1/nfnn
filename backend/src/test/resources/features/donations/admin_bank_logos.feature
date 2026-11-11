@@ -139,8 +139,8 @@ Feature: An administrator sets where the server downloads each bank's logo, down
     When "Jana" asks for the bank logos in the administration
     Then the response status is 200
     And the administration lists these bank logos:
-      | code | sourceUrl                            | image | sourceAllowed |
-      | 0800 | https://www.example.com/old-icon.png | yes   | false         |
+      | code | sourceUrl                            | image | fetchedAt            | checkedAt            | sourceAllowed |
+      | 0800 | https://www.example.com/old-icon.png | yes   | 2026-11-04T09:00:00Z | 2026-11-04T09:00:00Z | false         |
     When "Jana" refreshes the logo of bank "0800"
     Then the response status is 400
     And the problem type ends with "donations/bank-logo-source-invalid"

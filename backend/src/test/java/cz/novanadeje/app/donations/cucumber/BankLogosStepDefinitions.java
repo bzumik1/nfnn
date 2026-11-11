@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo;
 import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.support.FakeBankLogoSource;
+import cz.novanadeje.app.support.MutableClock;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -39,15 +41,18 @@ public class BankLogosStepDefinitions {
     private final JdbcClient jdbc;
     private final FakeBankLogoSource source;
     private final BankLogoRefreshService refreshes;
+    private final MutableClock clock;
     private String exchangedApiToken;
     private UUID rememberedImage;
 
-    public BankLogosStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, FakeBankLogoSource source, BankLogoRefreshService refreshes) {
+    public BankLogosStepDefinitions(ApiClient api, DonorSessions sessions, JdbcClient jdbc, FakeBankLogoSource source, BankLogoRefreshService refreshes,
+            MutableClock clock) {
         this.api = api;
         this.sessions = sessions;
         this.jdbc = jdbc;
         this.source = source;
         this.refreshes = refreshes;
+        this.clock = clock;
     }
 
     @Given("the logo address {string} serves the picture {string}")
@@ -65,8 +70,9 @@ public class BankLogosStepDefinitions {
         byte[] webp = FakeBankLogoSource.webpOf(picture);
         UUID imageId = UUID.randomUUID();
         jdbc.sql("insert into bank_logo_image (id, sha256, webp) values (?, ?, ?)").params(imageId, FetchedBankLogo.of(webp).sha256(), webp).update();
-        jdbc.sql("insert into bank_logo (code, source_url, image_id, fetched_at, checked_at) values (?, ?, ?, now(), now())")
-                .params(code, url, imageId).update();
+        Timestamp now = Timestamp.from(clock.instant());
+        jdbc.sql("insert into bank_logo (code, source_url, image_id, fetched_at, checked_at) values (?, ?, ?, ?, ?)")
+                .params(code, url, imageId, now, now).update();
     }
 
     @Given("{string} has set the logo of bank {string} from {string}")
