@@ -234,6 +234,7 @@ describe('Given the about section', () => {
       expect(ink.getAttribute('alt')).toBe('');
       expect(ink.getAttribute('width')).toBe('600');
       expect(ink.getAttribute('height')).toBe('180');
+      expect(ink.classList).toContain('ui-ink');
       expect(
         board().querySelector('.board-people')!.compareDocumentPosition(note) &
           Node.DOCUMENT_POSITION_FOLLOWING,
