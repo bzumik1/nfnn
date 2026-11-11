@@ -2,14 +2,17 @@
   #bar
   class="tab-bar"
   [class.tab-bar--under-keyboard]="keyboard.isOpen()"
+  [class.tab-bar--dragging]="dragging()"
   [attr.aria-label]="label"
 >
+  <span #pill class="tab-bar-pill" aria-hidden="true"></span>
   <ul class="tab-bar-list">
     @for (tab of tabs; track tab.id) {
       <li class="tab-bar-item">
         <a
           class="tab"
-          [class.tab--current]="current() === tab.id"
+          [class.tab--current]="shown() === tab.id"
+          [class.tab--under-finger]="underFinger() === tab.id"
           [href]="hrefOf(tab)"
           [attr.aria-current]="
             current() === tab.id ? (memory.isAtRoot(tab) ? 'page' : 'true') : null
