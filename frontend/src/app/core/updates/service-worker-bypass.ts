@@ -9,6 +9,8 @@ const ANSWERS_THE_SAME_FOR_EVERYONE = [
   /^\/api\/content\/(?:news|projects)\/[^/?]+$/,
   /^\/api\/content\/media\/[^/?]+(?:\?[^/]*)?$/,
   /^\/api\/donations\/payment-details$/,
+  /^\/api\/donations\/bank-logos$/,
+  /^\/api\/donations\/bank-logos\/images\/[^/?]+$/,
 ];
 
 export const serviceWorkerBypassInterceptor: HttpInterceptorFn = (request, next) => {

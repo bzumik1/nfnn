@@ -73,6 +73,10 @@ enum AdminHandlerReach {
         table.put("DELETE /api/admin/content/projects/{id}", BROWSER_ONLY);
         table.put("POST /api/admin/content/projects/{id}/publish", CONNECTOR);
         table.put("POST /api/admin/content/projects/{id}/unpublish", CONNECTOR);
+        table.put("GET /api/admin/donations/bank-logos", CONNECTOR);
+        table.put("PUT /api/admin/donations/bank-logos/{code}", CONNECTOR);
+        table.put("POST /api/admin/donations/bank-logos/{code}/refresh", CONNECTOR);
+        table.put("DELETE /api/admin/donations/bank-logos/{code}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/donors", CONNECTOR);
         table.put("GET /api/admin/donations/donors/{donorId}", CONNECTOR);
         table.put("DELETE /api/admin/donations/donors/{donorId}/bank-accounts/{linkId}", BROWSER_ONLY);

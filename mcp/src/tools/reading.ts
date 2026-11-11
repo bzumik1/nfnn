@@ -432,6 +432,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_bank_logos',
+    {
+      title: 'Loga bank',
+      description:
+        "The bank logos the site shows beside Czech account numbers, one per bank code: code, the bank's name from the ČNB list (null for a code the list does not know), sourceUrl (the official address the server downloads the icon from), sourceAllowed (false when the allow-list no longer admits that address: the site then hides the logo and it is never downloaded again until a new address is set), version (for nfnn_set_bank_logo_source), imageId and imageSha256 of the stored 128 px WebP (null until the first download), fetchedAt, checkedAt and lastFailure (the reason the last daily check could not download it: status, redirected, timeout, unreachable, unknown-host, non-public-address, too-large, unsupported-type, image-too-large, unreadable-image or interrupted; null after a good one). The server checks each logo again weekly and keeps the stored image when its source fails; removing a logo stays on the web (/sprava).",
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_bank_logos', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donations/bank-logos', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_receipt_signature',
     {
       title: 'Podpis na potvrzeních',

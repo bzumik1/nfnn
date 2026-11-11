@@ -20,6 +20,8 @@ const ALLOWED_DATA = {
     '/api/content/projects/novy-voziky',
   ],
   'payment-details': ['/api/donations/payment-details'],
+  'bank-logo-list': ['/api/donations/bank-logos'],
+  'bank-logos': ['/api/donations/bank-logos/images/0192f4d2-1a6b-7c3d-9e8f-001122334455'],
   'public-photos': [
     '/api/content/media/0192f4d2-1a6b-7c3d-9e8f-001122334455?w=640',
     '/api/content/media/0192f4d2-1a6b-7c3d-9e8f-001122334455',
@@ -33,6 +35,9 @@ const NEVER_CACHED = [
   '/api/donations/me/receipt-images/abc',
   '/api/donations/receipt-keys',
   '/api/donations/receipts/status',
+  '/api/donations/bank-codes',
+  '/api/admin/donations/bank-logos',
+  '/api/admin/donations/bank-logos/0800',
   '/api/donors/me',
   '/api/donors/auth/refresh',
   '/api/admin/content/news',
@@ -91,6 +96,7 @@ const PUBLIC_PREFIXES = [
   '/api/content/projects',
   '/api/content/media/',
   '/api/donations/payment-details',
+  '/api/donations/bank-logos',
 ];
 
 function isPublic(path) {
@@ -98,7 +104,7 @@ function isPublic(path) {
 }
 
 describe('Given the service worker configuration', () => {
-  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details wait a second for the network and are kept for at most a day, and the photos are kept, at most 300', async () => {
+  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details and the bank logo list wait a second for the network and are kept for at most a day, and the bank logos, at most 60, and the photos, at most 300, are kept', async () => {
     const manifest = await generatedManifest();
 
     assert.deepEqual(
@@ -121,6 +127,22 @@ describe('Given the service worker configuration', () => {
         },
         {
           name: 'payment-details',
+          strategy: 'freshness',
+          maxSize: 1,
+          maxAge: DAY,
+          timeoutMs: 1_000,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'bank-logos',
+          strategy: 'performance',
+          maxSize: 60,
+          maxAge: 365 * DAY,
+          timeoutMs: undefined,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'bank-logo-list',
           strategy: 'freshness',
           maxSize: 1,
           maxAge: DAY,

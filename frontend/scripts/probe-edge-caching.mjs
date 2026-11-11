@@ -10,6 +10,7 @@ const SIGN_IN_ATTEMPTS = 12;
 const OWN_CACHE_CONTROL = new Map([
   ['/api/donations/payment-details', 'private, max-age=300'],
   ['/api/donations/receipt-keys', 'public, max-age=3600'],
+  ['/api/donations/bank-logos', 'private, max-age=300'],
 ]);
 const NOT_THERE_YET = [401, 404];
 const UNKNOWN_IMAGE = 'e'.repeat(64);
@@ -23,6 +24,11 @@ const API_ANSWERS = [
   { status: 200, method: 'GET', path: '/api/content/home' },
   { status: 401, method: 'GET', path: '/api/donors/me' },
   { status: 404, method: 'GET', path: '/api/content/news/probe-neexistuje' },
+  {
+    status: 404,
+    method: 'GET',
+    path: '/api/donations/bank-logos/images/0192f4d2-1a6b-7c3d-9e8f-001122334455',
+  },
   ...RECEIPT_IMAGES.map(({ path }) => ({ status: 401, method: 'GET', path })),
   { status: 401, method: 'GET', path: '/api/live' },
 ];
