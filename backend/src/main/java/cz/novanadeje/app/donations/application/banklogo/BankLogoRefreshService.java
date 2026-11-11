@@ -33,7 +33,7 @@ public class BankLogoRefreshService {
 
     public BankLogoCheck refresh(BankCode code) {
         Optional<BankLogo> known = transaction.execute(status -> logos.find(code));
-        if (known.isEmpty()) {
+        if (known.isEmpty() || !known.get().source().allowed()) {
             return BankLogoCheck.SKIPPED;
         }
         BankLogo checked = known.get();

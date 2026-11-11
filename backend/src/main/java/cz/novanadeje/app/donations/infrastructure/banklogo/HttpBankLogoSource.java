@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.application.banklogo.BankLogoUnavailable;
 import cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
+import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -64,6 +65,9 @@ class HttpBankLogoSource implements BankLogoImages {
 
     @Override
     public FetchedBankLogo fetch(BankLogoSource source) {
+        if (!source.allowed()) {
+            throw new BankLogoSourceInvalid();
+        }
         long deadline = System.nanoTime() + timeout.toNanos();
         if (!privateAddressesAllowed) {
             requirePublic(source.host(), deadline);

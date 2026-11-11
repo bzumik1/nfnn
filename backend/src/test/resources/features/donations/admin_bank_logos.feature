@@ -128,6 +128,28 @@ Feature: An administrator sets where the server downloads each bank's logo, down
       | SET_BANK_LOGO_SOURCE |                          |
       | REMOVE_BANK_LOGO     | Logo banky 0800 odebráno |
 
+  Scenario: A logo whose stored address the allow-list no longer admits is left off the site, flagged, never downloaded again and still removable
+    Given the logo of bank "0800" was stored from "https://www.example.com/old-icon.png" with the picture "stará spořitelna"
+    When someone without a token asks for the published bank logos
+    Then the response status is 200
+    And the published bank logos are the ones of banks ""
+    When "Jana" asks for the bank logos in the administration
+    Then the response status is 200
+    And the administration lists these bank logos:
+      | code | sourceUrl                            | image | sourceAllowed |
+      | 0800 | https://www.example.com/old-icon.png | yes   | false         |
+    When "Jana" refreshes the logo of bank "0800"
+    Then the response status is 400
+    And the problem type ends with "donations/bank-logo-source-invalid"
+    When the daily check of the bank logos runs
+    Then no logo address was asked
+    When "Jana" removes the logo of bank "0800" over the version she read
+    Then the response status is 204
+    And 0 bank logo images are stored
+    And the bank logo admin actions were recorded:
+      | action           | details                  |
+      | REMOVE_BANK_LOGO | Logo banky 0800 odebráno |
+
   Scenario: Only an administrator reaches the bank logos of the administration
     Given a person "Petr" is registered
     When someone without a token asks for the bank logos in the administration

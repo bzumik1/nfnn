@@ -5,7 +5,7 @@ import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public record BankLogoSource(BankCode bank, String url) {
+public record BankLogoSource(BankCode bank, String url, boolean allowed) {
 
     public static final int MAX_LENGTH = 500;
     private static final String SCHEME = "https";
@@ -15,18 +15,20 @@ public record BankLogoSource(BankCode bank, String url) {
         if (bank == null) {
             throw new IllegalArgumentException("A bank logo source belongs to a bank");
         }
-        if (url == null || url.isEmpty() || url.length() > MAX_LENGTH || !url.startsWith(SCHEME + "://") || url.chars().anyMatch(BankLogoSource::isRefusedCharacter)) {
+        if (url == null || url.isEmpty() || url.length() > MAX_LENGTH) {
             throw new BankLogoSourceInvalid();
         }
-        URI uri = parse(url);
-        if (uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null
-                || (uri.getPort() != -1 && uri.getPort() != HTTPS_PORT)) {
+        if (allowed && !admits(bank, url)) {
             throw new BankLogoSourceInvalid();
         }
-        String host = uri.getHost();
-        if (host == null || !BankLogoHosts.admit(host, bank)) {
-            throw new BankLogoSourceInvalid();
-        }
+    }
+
+    public BankLogoSource(BankCode bank, String url) {
+        this(bank, url, true);
+    }
+
+    public static BankLogoSource stored(BankCode bank, String url) {
+        return new BankLogoSource(bank, url, bank != null && url != null && admits(bank, url));
     }
 
     public URI uri() {
@@ -37,19 +39,21 @@ public record BankLogoSource(BankCode bank, String url) {
         return uri().getHost();
     }
 
-    private static boolean isRefusedCharacter(int character) {
-        return character <= 0x20 || character == 0x7f || character > 0x7e;
-    }
-
-    private static URI parse(String url) {
+    private static boolean admits(BankCode bank, String url) {
+        if (!url.startsWith(SCHEME + "://") || url.chars().anyMatch(BankLogoSource::isRefusedCharacter)) {
+            return false;
+        }
         try {
             URI uri = new URI(url);
-            if (!SCHEME.equals(uri.getScheme()) || uri.isOpaque()) {
-                throw new BankLogoSourceInvalid();
-            }
-            return uri;
+            return SCHEME.equals(uri.getScheme()) && !uri.isOpaque() && uri.getRawUserInfo() == null && uri.getRawQuery() == null
+                    && uri.getRawFragment() == null && (uri.getPort() == -1 || uri.getPort() == HTTPS_PORT)
+                    && uri.getHost() != null && BankLogoHosts.admit(uri.getHost(), bank);
         } catch (URISyntaxException malformed) {
-            throw new BankLogoSourceInvalid();
+            return false;
         }
+    }
+
+    private static boolean isRefusedCharacter(int character) {
+        return character <= 0x20 || character == 0x7f || character > 0x7e;
     }
 }

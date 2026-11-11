@@ -19,7 +19,7 @@ public class PublicBankLogoService {
 
     @Transactional(readOnly = true)
     public List<PublishedBankLogo> published() {
-        return logos.findAll().stream()
+        return logos.findAll().stream().filter(logo -> logo.source().allowed())
                 .flatMap(logo -> logo.image().map(image -> new PublishedBankLogo(logo.code().value(), image.id().value())).stream())
                 .toList();
     }

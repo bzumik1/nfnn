@@ -28,7 +28,7 @@ public record BankLogo(BankCode code, BankLogoSource source, Optional<StoredBank
     }
 
     public boolean isDue(Instant now) {
-        return image.isEmpty() || checkedAt.map(checked -> now.isAfter(checked.plus(REFRESH_INTERVAL))).orElse(true);
+        return source.allowed() && (image.isEmpty() || checkedAt.map(checked -> now.isAfter(checked.plus(REFRESH_INTERVAL))).orElse(true));
     }
 
     public boolean holds(String sha256) {

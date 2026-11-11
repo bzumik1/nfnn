@@ -4,6 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.donations.application.banklogo.BankLogoRefreshService;
 import cz.novanadeje.app.donations.application.banklogo.BankLogoUnavailable;
+import cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo;
 import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.support.FakeBankLogoSource;
@@ -57,6 +58,15 @@ public class BankLogosStepDefinitions {
     @Given("the logo address {string} fails with {string}")
     public void theLogoAddressFailsWith(String url, String failure) {
         source.failWith(url, BankLogoFailure.ofWord(failure));
+    }
+
+    @Given("the logo of bank {string} was stored from {string} with the picture {string}")
+    public void theLogoWasStoredFrom(String code, String url, String picture) {
+        byte[] webp = FakeBankLogoSource.webpOf(picture);
+        UUID imageId = UUID.randomUUID();
+        jdbc.sql("insert into bank_logo_image (id, sha256, webp) values (?, ?, ?)").params(imageId, FetchedBankLogo.of(webp).sha256(), webp).update();
+        jdbc.sql("insert into bank_logo (code, source_url, image_id, fetched_at, checked_at) values (?, ?, ?, now(), now())")
+                .params(code, url, imageId).update();
     }
 
     @Given("{string} has set the logo of bank {string} from {string}")
@@ -334,6 +344,7 @@ public class BankLogosStepDefinitions {
         row.put("fetchedAt", textOrNull(item.get("fetchedAt")));
         row.put("checkedAt", textOrNull(item.get("checkedAt")));
         row.put("lastFailure", textOrNull(item.get("lastFailure")));
+        row.put("sourceAllowed", textOrNull(item.get("sourceAllowed")));
         return row;
     }
 

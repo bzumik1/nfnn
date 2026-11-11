@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo;
 import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
+import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -124,6 +125,15 @@ class HttpBankLogoSourceTest {
         assertThatThrownBy(() -> local(Duration.ofSeconds(2)).fetch(SOURCE)).isInstanceOfSatisfying(BankLogoUnavailable.class,
                 refused -> assertThat(refused.failure()).isEqualTo(BankLogoFailure.TIMEOUT));
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(5_500));
+    }
+
+    @Test
+    @DisplayName("Given a stored source the allow-list no longer admits, when the logo is fetched, then it is refused as an invalid source and nothing is asked")
+    void should_refuse_without_asking_when_fetched_given_source_no_longer_allowed() {
+        BankLogoSource offList = BankLogoSource.stored(new BankCode("0800"), "https://www.example.com" + PATH);
+
+        assertThatThrownBy(() -> local(FUNCTIONAL_TIMEOUT).fetch(offList)).isInstanceOf(BankLogoSourceInvalid.class);
+        assertThat(requests).isEmpty();
     }
 
     @Test

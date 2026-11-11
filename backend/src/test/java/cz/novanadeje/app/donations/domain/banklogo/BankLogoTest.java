@@ -31,6 +31,15 @@ class BankLogoTest {
     }
 
     @Test
+    @DisplayName("Given a logo whose stored source the allow-list no longer admits, when it is checked, then it is never due, fetched or not")
+    void should_never_be_due_when_checked_given_source_no_longer_allowed() {
+        BankLogoSource offList = BankLogoSource.stored(CSAS, "https://www.example.com/old-icon.png");
+
+        assertThat(BankLogo.from(offList).isDue(FETCHED)).isFalse();
+        assertThat(BankLogo.from(offList).fetched(IMAGE, FETCHED).isDue(FETCHED.plus(Duration.ofDays(30)))).isFalse();
+    }
+
+    @Test
     @DisplayName("Given a logo fetched now, when it is checked within 7 days, then it is not due, and after 7 days it is")
     void should_be_due_only_after_seven_days_when_checked_given_fetched_logo() {
         BankLogo logo = BankLogo.from(ARTWORK).fetched(IMAGE, FETCHED);

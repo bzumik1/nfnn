@@ -133,6 +133,25 @@ class JpaBankLogoRepositoryTest {
         assertThat(repository.imageWebp(image.id())).isEmpty();
     }
 
+    @Test
+    @DisplayName("Given a stored row whose address the allow-list no longer admits, when it is read, found, listed or locked, then it comes back with its address marked as no longer allowed")
+    void should_read_back_marked_when_read_given_address_no_longer_allowed() {
+        StoredBankLogoImage image = image("1");
+        repository.storeImage(image, WEBP);
+        jdbc.sql("insert into bank_logo (code, source_url, image_id, fetched_at, checked_at) values ('0800', 'https://www.example.com/old-icon.png', ?, now(), now())")
+                .param(image.id().value()).update();
+        flushAndClear();
+
+        BankLogoSource offList = BankLogoSource.stored(CSAS, "https://www.example.com/old-icon.png");
+        assertThat(repository.find(CSAS)).hasValueSatisfying(logo -> {
+            assertThat(logo.source()).isEqualTo(offList);
+            assertThat(logo.source().allowed()).isFalse();
+            assertThat(logo.image()).contains(image);
+        });
+        assertThat(repository.findAll()).extracting(BankLogo::source).containsExactly(offList);
+        assertThat(repository.lockForChange(CSAS)).map(BankLogo::source).contains(offList);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "insert into bank_logo (code, source_url) values ('800', 'https://www.csas.cz/a.png')",

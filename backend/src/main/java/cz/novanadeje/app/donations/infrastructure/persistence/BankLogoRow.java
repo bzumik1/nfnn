@@ -16,7 +16,7 @@ record BankLogoRow(String code, String sourceUrl, UUID imageId, String sha256, I
     BankLogo toDomain() {
         BankCode bank = new BankCode(code);
         Optional<StoredBankLogoImage> image = Optional.ofNullable(imageId).map(id -> new StoredBankLogoImage(new BankLogoImageId(id), sha256));
-        return new BankLogo(bank, new BankLogoSource(bank, sourceUrl), image, Optional.ofNullable(fetchedAt), Optional.ofNullable(checkedAt),
+        return new BankLogo(bank, BankLogoSource.stored(bank, sourceUrl), image, Optional.ofNullable(fetchedAt), Optional.ofNullable(checkedAt),
                 Optional.ofNullable(lastFailure).map(BankLogoFailure::ofWord));
     }
 }

@@ -33,6 +33,15 @@ class PublicBankLogoServiceTest {
     }
 
     @Test
+    @DisplayName("Given a fetched logo whose stored source the allow-list no longer admits, when the published logos are read, then it is left out")
+    void should_leave_out_logo_when_read_given_source_no_longer_allowed() {
+        logos.put(BankLogo.from(BankLogoSource.stored(new BankCode("0800"), "https://www.example.com/old-icon.png"))
+                .fetched(new StoredBankLogoImage(IMAGE_ID, "a".repeat(64)), Instant.parse("2026-11-11T04:50:00Z")));
+
+        assertThat(service.published()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a stored image, when it is asked by its id, then its WebP bytes come, and an unknown id is not found")
     void should_serve_bytes_when_asked_given_stored_image() {
         logos.putImage(IMAGE_ID, new byte[]{1, 2});

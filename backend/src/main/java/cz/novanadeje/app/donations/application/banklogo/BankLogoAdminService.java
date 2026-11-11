@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogo;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoNotFound;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoRepository;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
+import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -77,6 +78,9 @@ public class BankLogoAdminService {
 
     public BankLogoAdminRow refresh(UUID adminId, BankCode code) {
         BankLogo known = inTransaction(() -> logos.find(code).orElseThrow(BankLogoNotFound::new));
+        if (!known.source().allowed()) {
+            throw new BankLogoSourceInvalid();
+        }
         FetchedBankLogo fetched = images.fetch(known.source());
         return inTransaction(() -> {
             BankLogo locked = logos.lockForChange(code).orElseThrow(BankLogoNotFound::new);

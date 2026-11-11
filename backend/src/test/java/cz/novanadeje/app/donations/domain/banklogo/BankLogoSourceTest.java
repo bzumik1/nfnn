@@ -83,6 +83,25 @@ class BankLogoSourceTest {
     }
 
     @Test
+    @DisplayName("Given a stored address the allow-list no longer admits, when it is read back as stored, then it keeps its address and is marked as no longer allowed")
+    void should_mark_not_allowed_when_read_back_given_stored_address_off_the_allow_list() {
+        BankLogoSource stored = BankLogoSource.stored(new BankCode("0800"), "https://www.example.com/old-icon.png");
+
+        assertThat(stored.url()).isEqualTo("https://www.example.com/old-icon.png");
+        assertThat(stored.bank()).isEqualTo(new BankCode("0800"));
+        assertThat(stored.allowed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a stored address the allow-list still admits, when it is read back as stored, then it is allowed and equals the same address taken anew")
+    void should_be_allowed_when_read_back_given_stored_address_on_the_allow_list() {
+        BankLogoSource stored = BankLogoSource.stored(new BankCode("0800"), ARTWORK);
+
+        assertThat(stored.allowed()).isTrue();
+        assertThat(stored).isEqualTo(new BankLogoSource(new BankCode("0800"), ARTWORK));
+    }
+
+    @Test
     @DisplayName("Given no address or no bank, when a logo source is made, then it is refused")
     void should_refuse_source_when_made_given_nothing() {
         assertThatThrownBy(() -> new BankLogoSource(new BankCode("0800"), null)).isInstanceOf(BankLogoSourceInvalid.class);

@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoImageId;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoNotFound;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
+import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -41,6 +42,7 @@ class BankLogoAdminServiceTest {
     private static final BankCode CSAS = new BankCode("0800");
     private static final BankLogoSource ARTWORK = new BankLogoSource(CSAS, "https://is1-ssl.mzstatic.com/image/thumb/a/512x512bb.jpg");
     private static final BankLogoSource SITE = new BankLogoSource(CSAS, "https://www.csas.cz/content/icon.png");
+    private static final BankLogoSource OFF_LIST = BankLogoSource.stored(CSAS, "https://www.example.com/old-icon.png");
     private static final byte[] OLD_WEBP = {1, 2, 3};
     private static final byte[] NEW_WEBP = {4, 5, 6};
     private static final StoredBankLogoImage OLD_IMAGE = new StoredBankLogoImage(new BankLogoImageId(UUID.fromString("0192f4d2-1a6b-7c3d-9e8f-001122334455")),
@@ -208,6 +210,35 @@ class BankLogoAdminServiceTest {
     }
 
     @Test
+    @DisplayName("Given a stored logo whose source the allow-list no longer admits, when it is refreshed, then it is refused as an invalid source before anything is fetched or written")
+    void should_refuse_before_fetch_when_refreshed_given_source_no_longer_allowed() {
+        BankLogo offList = storeOffListLogo();
+
+        assertThatThrownBy(() -> service.refresh(ADMIN, CSAS)).isInstanceOf(BankLogoSourceInvalid.class);
+
+        assertThat(images.fetchedInsideTransaction()).isEmpty();
+        assertThat(logos.find(CSAS)).contains(offList);
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a stored logo whose source the allow-list no longer admits, when it is listed, then its row says so, and it can still be replaced over its version or removed")
+    void should_flag_and_still_replace_or_remove_when_listed_given_source_no_longer_allowed() {
+        BankLogo offList = storeOffListLogo();
+        images.answer(NEW_WEBP);
+
+        assertThat(service.list()).singleElement().satisfies(row -> {
+            assertThat(row.sourceAllowed()).isFalse();
+            assertThat(row.sourceUrl()).isEqualTo(OFF_LIST.url());
+        });
+        BankLogoAdminRow replaced = service.set(ADMIN, ARTWORK, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(offList))));
+        assertThat(replaced.sourceAllowed()).isTrue();
+
+        service.remove(ADMIN, CSAS, ExpectedVersion.of(replaced.version()));
+        assertThat(logos.find(CSAS)).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given logos of a listed and an unlisted bank, when they are listed, then each carries the ČNB name where there is one and its version")
     void should_name_banks_when_listed_given_codes_on_and_off_the_cnb_list() {
         BankLogo old = storeOldLogo();
@@ -221,6 +252,13 @@ class BankLogoAdminServiceTest {
         assertThat(rows.getFirst().imageSha256()).isEqualTo(OLD_IMAGE.sha256());
         assertThat(rows.getLast().bankName()).isNull();
         assertThat(rows.getLast().imageId()).isNull();
+    }
+
+    private BankLogo storeOffListLogo() {
+        BankLogo offList = BankLogo.from(OFF_LIST).fetched(OLD_IMAGE, NOW.minusSeconds(3600));
+        logos.put(offList);
+        logos.putImage(OLD_IMAGE.id(), OLD_WEBP);
+        return offList;
     }
 
     private BankLogo storeOldLogo() {

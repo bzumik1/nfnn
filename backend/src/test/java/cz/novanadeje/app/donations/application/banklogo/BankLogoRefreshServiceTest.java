@@ -50,6 +50,19 @@ class BankLogoRefreshServiceTest {
     }
 
     @Test
+    @DisplayName("Given a logo whose stored source the allow-list no longer admits, when it is listed as due or refreshed, then it is neither due nor fetched and nothing is written")
+    void should_skip_without_fetch_when_refreshed_given_source_no_longer_allowed() {
+        BankLogo offList = BankLogo.from(BankLogoSource.stored(CSAS, "https://www.example.com/old-icon.png"));
+        logos.put(offList);
+
+        assertThat(service.due()).isEmpty();
+        assertThat(service.refresh(CSAS)).isEqualTo(BankLogoCheck.SKIPPED);
+
+        assertThat(images.fetchedInsideTransaction()).isEmpty();
+        assertThat(logos.find(CSAS)).contains(offList);
+    }
+
+    @Test
     @DisplayName("Given a due logo whose source now serves another picture, when it is refreshed, then the new image replaces the old one outside any transaction for the fetch")
     void should_replace_image_when_refreshed_given_changed_picture() {
         storeOld();
