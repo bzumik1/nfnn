@@ -127,4 +127,27 @@ test.describe('Given an administrator on the bank logos page', () => {
       { method: 'PUT', code: '0100', ifMatch: undefined, ifNoneMatch: '*' },
     ]);
   });
+  for (const width of [390, 1280]) {
+    test(`when a bank's last download failed ${width} px wide, then its mark centres on the code and state lines, not on the failure`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === LOGOS,
+        (route) => route.fulfill({ json: { items: [csas, { ...fio, sourceAllowed: false }] } }),
+      );
+      await page.setViewportSize({ width, height: 900 });
+
+      await page.goto('/sprava/loga-bank');
+      const fioRow = page.locator('[data-code="2010"]');
+      await expect(fioRow.locator('.bank-failure')).toBeVisible();
+      await expect(fioRow.locator('.bank-not-allowed')).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const title = (await fioRow.locator('.bank-title').boundingBox())!;
+      const state = (await fioRow.locator('.bank-state').boundingBox())!;
+      const mark = (await fioRow.locator('app-bank-mark').boundingBox())!;
+      const blockCentre = (title.y + state.y + state.height) / 2;
+      expect(Math.abs(mark.y + mark.height / 2 - blockCentre)).toBeLessThanOrEqual(1);
+    });
+  }
 });

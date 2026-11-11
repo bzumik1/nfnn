@@ -175,6 +175,11 @@ for (const { width, height } of [
         expect(box.x).toBeGreaterThanOrEqual(frame.x);
         expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width);
       }
+      const withLogo = card.locator('.account', { hasText: '19-2000145399/0800' });
+      const logo = (await withLogo.locator('app-bank-logo').boundingBox())!;
+      const number = (await withLogo.locator('.account-number').boundingBox())!;
+      expect(logo.y + logo.height).toBeLessThanOrEqual(number.y);
+      expect(Math.abs(logo.x - number.x)).toBeLessThanOrEqual(1);
     });
 
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({

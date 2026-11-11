@@ -76,17 +76,17 @@
                       </li>
                     }
                   </ul>
-                  @if (!item.secondFactorEnabled) {
-                    <p class="ui-person-row__note" i18n="@@admin.administrators.factorOff.hint">
-                      Správa se mu otevře jen přístupovým klíčem.
-                    </p>
-                  }
-                  @if (isSelf(item)) {
-                    <p class="ui-person-row__note" i18n="@@admin.administrators.self.hint">
-                      Svůj účet spravujete v <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.
-                    </p>
-                  }
                 </div>
+                @if (!item.secondFactorEnabled) {
+                  <p class="ui-person-row__note" i18n="@@admin.administrators.factorOff.hint">
+                    Správa se mu otevře jen přístupovým klíčem.
+                  </p>
+                }
+                @if (isSelf(item)) {
+                  <p class="ui-person-row__note" i18n="@@admin.administrators.self.hint">
+                    Svůj účet spravujete v <a routerLink="/darce/udaje">Údajích a zabezpečení</a>.
+                  </p>
+                }
                 @if (isPending('revoke', item)) {
                   <div
                     class="ui-person-row__detail confirm"

@@ -60,19 +60,19 @@
                       <span class="ui-figures">{{ item.code }}</span> · {{ bankName(item) }}
                     </p>
                     <p class="ui-person-row__meta bank-state">{{ stateLine(item) }}</p>
-                    @if (failureLine(item); as failure) {
-                      <p class="ui-person-row__note bank-failure">{{ failure }}</p>
-                    }
-                    @if (!item.sourceAllowed) {
-                      <p
-                        class="ui-person-row__note bank-not-allowed"
-                        i18n="@@admin.bankLogos.notAllowed"
-                      >
-                        Adresa už není povolená: logo se na webu neukazuje a server ho znovu
-                        nestahuje. Zadejte novou adresu, nebo logo odeberte.
-                      </p>
-                    }
                   </div>
+                  @if (failureLine(item); as failure) {
+                    <p class="ui-person-row__note bank-failure">{{ failure }}</p>
+                  }
+                  @if (!item.sourceAllowed) {
+                    <p
+                      class="ui-person-row__note bank-not-allowed"
+                      i18n="@@admin.bankLogos.notAllowed"
+                    >
+                      Adresa už není povolená: logo se na webu neukazuje a server ho znovu
+                      nestahuje. Zadejte novou adresu, nebo logo odeberte.
+                    </p>
+                  }
                   <form
                     #rowForm="ngForm"
                     class="ui-person-row__detail bank-form"
