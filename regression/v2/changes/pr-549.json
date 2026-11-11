@@ -1,0 +1,114 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a backup folder the backend cannot see is told in plain words, without the server details",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a backup folder the backend cannot see is told in plain words, without the server details, with the message for the technician beside it",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the message for the technician is a row of its own beside the problem",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a backup key nobody saved yet gets a row leading to the backups",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a backup key nobody saved yet gets a warning row leading to the backups",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row itself leads to the backups and says it is a warning",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a current receipt signing key missing from the list gets the same red row",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a current receipt signing key missing from the list gets the same urgent row",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row says it is urgent in words a screen reader reads, not only in red",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a receipt signing key that fails its seal gets a red row leading to the settings",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a receipt signing key that fails its seal gets an urgent row leading to the settings",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row says it is urgent in words a screen reader reads, not only in red",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a withdrawn key of the server and key rows that disagree with the audit trail get a red row leading to the settings",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then a withdrawn key of the server and key rows that disagree with the audit trail get an urgent row leading to the settings",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row says it is urgent in words a screen reader reads, not only in red",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then receipts nobody signs get a red row leading to the people of the foundation",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then receipts nobody signs get an urgent row leading to the people of the foundation",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row says it is urgent in words a screen reader reads, not only in red",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then the message for the technician is copied with the technical details from the row",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then the message for the technician is copied with the technical details from its row",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the copy button stands in its own row",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then unpaired payments of every year, backup problems and an administrator without any second factor each get a row with a link",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then unpaired payments of every year, backup problems and an administrator without any second factor each get a row that is one link",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the whole row is the link instead of a small button beside a sentence",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then while they load the card says so",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then the group is named by its heading and while they load its row says so",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the card became a group of rows named by its heading",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then with nothing pending it says everything is fine with the last import and backup",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when every source of the attention card answers > then with nothing pending one calm row says everything is fine with the last import and backup",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): everything fine is one calm row instead of a green box",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the bank does not answer repeatedly, then the warning says the web retries by itself and links nowhere",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the bank does not answer repeatedly, then the warning says the web retries by itself and leads nowhere",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the next step is an action row of its own when it has a link",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the import has never run, then one sentence says so and points to the token in the settings",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the import has never run, then a warning row says so and leads to the token in the settings",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the sentence became a title and a line under it, and the whole row leads to the settings",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): on a phone what needs attention comes right under the heading (Jakub 2026-11-10)",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin.spec.ts > Given an administrator > when the receipt signing key of the server fails its seal, then a red row leads to the key in the settings, which names it unpublished",
+    "replacement": "e2e/admin.spec.ts > Given an administrator > when the receipt signing key of the server fails its seal, then an urgent row leads to the key in the settings, which names it unpublished",
+    "reason": "PR #549 (Jakub 2026-11-10, variant A of the iOS designer: the attention card of the administration home as rows of a grouped list, no card inside a card): the row says it is urgent in words a screen reader reads, not only in red",
+    "contract": "docs/frontend-overview.md, admin pages, home/"
+  }
+]
