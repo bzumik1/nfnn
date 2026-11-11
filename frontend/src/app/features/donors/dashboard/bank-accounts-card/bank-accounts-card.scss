@@ -156,9 +156,11 @@
 }
 
 .account-number {
-  font-size: var(--text-lg);
+  font-size: var(--text-account-number);
   font-weight: var(--weight-bold);
   color: var(--color-text);
+  flex-shrink: 0;
+  max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
 }
