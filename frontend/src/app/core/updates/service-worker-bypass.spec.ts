@@ -46,6 +46,8 @@ describe('Given the service worker bypass interceptor', () => {
       '/api/content/media/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
       '/api/content/media/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b?w=480',
       '/api/donations/payment-details',
+      '/api/donations/bank-logos',
+      '/api/donations/bank-logos/images/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
     ])('then %s may come from the service worker', (url) => {
       expect(bypassOf('GET', url)).toBeNull();
     });
@@ -64,6 +66,10 @@ describe('Given the service worker bypass interceptor', () => {
       '/api/content/media/0190a1b2/original',
       '/api/donations/payment-details/qr',
       '/api/operations/setup/status',
+      '/api/donations/bank-codes',
+      '/api/donations/bank-logos?code=0800',
+      '/api/donations/bank-logos/images/0190a1b2/original',
+      '/api/admin/donations/bank-logos',
     ])('then %s goes past the service worker straight to the network', (url) => {
       expect(bypassOf('GET', url)).toBe('true');
     });

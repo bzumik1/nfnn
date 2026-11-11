@@ -86,6 +86,25 @@
       }
     },
     {
+      "name": "bank-logos",
+      "urls": ["/api/donations/bank-logos/images/*"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 60,
+        "maxAge": "365d"
+      }
+    },
+    {
+      "name": "bank-logo-list",
+      "urls": ["/api/donations/bank-logos"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 1,
+        "maxAge": "1d",
+        "timeout": "1s"
+      }
+    },
+    {
       "name": "public-photos",
       "urls": ["/api/content/media/*"],
       "cacheConfig": {
