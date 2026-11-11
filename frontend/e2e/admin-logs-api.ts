@@ -8,7 +8,8 @@ export const DIAGNOSTICS = '/api/admin/operations/diagnostics';
 
 const TAIL = Array.from(
   { length: 40 },
-  (_, index) => `2026-10-23T10:00:${String(index).padStart(2, '0')} INFO line ${index}`,
+  (_, index) =>
+    `2026-10-23T10:00:${String(index).padStart(2, '0')}.000+02:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.a.i.ImportBankPaymentsService    : line ${index}`,
 ).join('\n');
 
 export function logsApi(): Record<string, unknown> {
@@ -129,8 +130,14 @@ export async function routeLogsApi(page: RouteTarget): Promise<void> {
           name: 'backend.log',
           sizeBytes: 52000,
           matches: [
-            { offset: 51000, line: '2026-10-23T10:00:38 WARN Fio refused the request (409)' },
-            { offset: 40000, line: '2026-10-23T09:00:00 WARN Fio refused the request (409)' },
+            {
+              offset: 51000,
+              line: '2026-10-23T10:00:38.000+02:00 ERROR 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio refused the request (409)',
+            },
+            {
+              offset: 40000,
+              line: '2026-10-23T09:00:00.000+02:00 ERROR 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio refused the request (409)',
+            },
           ],
           moreOlder: false,
           scannedFrom: 0,

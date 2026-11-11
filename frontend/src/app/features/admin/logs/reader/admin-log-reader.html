@@ -1,162 +1,284 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title file-title ui-mono" tabindex="-1">{{ file }}</h1>
+  <p class="ui-page-intro" i18n="@@admin.logs.reader.intro">
+    Nejnovější záznamy jsou nahoře, časy jsou pražské. Klepnutím na záznam ho zobrazíte celý.
+  </p>
 
-  <section class="ui-card" aria-labelledby="logs-window-title">
-    <h2 id="logs-window-title" class="ui-card__title" i18n="@@admin.logs.window.title">Výpis</h2>
-    <div class="ui-card__body">
-      <form
-        #searchForm="ngForm"
-        class="search-form"
-        appFocusFirstInvalid
-        (ngSubmit)="find(searchForm)"
-        novalidate
+  <div class="toolbar">
+    <form class="search-form" role="search" (ngSubmit)="find()" novalidate>
+      <label class="search-label" for="log-search" i18n="@@admin.logs.reader.searchLabel"
+        >Hledat v souboru</label
       >
-        <app-form-field
-          label="Hledat"
-          i18n-label="@@admin.logs.search.label"
-          hint="Text nebo regulární výraz; velikost písmen nerozhoduje. Najde se nejvýš 50 nejnovějších řádků, starší načtete tlačítkem."
-          i18n-hint="@@admin.logs.search.hint"
-          [messages]="searchMessages"
-        >
-          <input
-            appFormControl
-            id="log-search"
-            name="pattern"
-            type="search"
-            enterkeyhint="search"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="200"
-            [(ngModel)]="pattern"
-            required
-          />
-        </app-form-field>
+      <div class="search-row">
+        <input
+          id="log-search"
+          class="form-control search-input"
+          name="pattern"
+          type="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          spellcheck="false"
+          [maxlength]="maxPattern"
+          [(ngModel)]="query"
+          (ngModelChange)="queryChanged($event)"
+          [attr.aria-invalid]="searchError() !== ''"
+          [attr.aria-describedby]="searchError() !== '' ? 'log-search-error' : null"
+        />
         <button
           appNeedsConnection
           type="submit"
-          class="ui-button"
-          [disabled]="searchState() === 'loading'"
+          class="ui-button ui-button--small"
+          [disabled]="searching()"
+          i18n="@@admin.logs.search.submit"
         >
-          @if (searchState() === 'loading') {
-            <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
-          } @else {
-            <ng-container i18n="@@admin.logs.search.submit">Hledat</ng-container>
-          }
+          Hledat
         </button>
+      </div>
+      @if (searchError() !== '') {
+        <p id="log-search-error" class="ui-field-error" role="alert">{{ searchError() }}</p>
+      }
+    </form>
+    <div class="filters">
+      @if (filters) {
+        <div
+          class="ui-segmented"
+          appRadioGroup
+          aria-label="Které záznamy ukázat"
+          i18n-aria-label="@@admin.logs.reader.filter.label"
+        >
+          <button
+            appNeedsConnection
+            type="button"
+            role="radio"
+            [class.is-active]="filter() === 'all'"
+            [attr.aria-checked]="filter() === 'all'"
+            [tabindex]="filter() === 'all' ? 0 : -1"
+            (click)="choose('all')"
+            i18n="@@admin.logs.reader.filter.all"
+          >
+            Vše
+          </button>
+          <button
+            appNeedsConnection
+            type="button"
+            role="radio"
+            [class.is-active]="filter() === 'warnings'"
+            [attr.aria-checked]="filter() === 'warnings'"
+            [tabindex]="filter() === 'warnings' ? 0 : -1"
+            (click)="choose('warnings')"
+            i18n="@@admin.logs.reader.filter.warnings"
+          >
+            Varování
+          </button>
+          <button
+            appNeedsConnection
+            type="button"
+            role="radio"
+            [class.is-active]="filter() === 'errors'"
+            [attr.aria-checked]="filter() === 'errors'"
+            [tabindex]="filter() === 'errors' ? 0 : -1"
+            (click)="choose('errors')"
+            i18n="@@admin.logs.reader.filter.errors"
+          >
+            Chyby
+          </button>
+        </div>
+      }
+      @if (browserErrors) {
         <button
           appNeedsConnection
           type="button"
-          class="ui-button ui-button--quiet"
-          [disabled]="searchState() === 'loading'"
+          class="ui-button ui-button--quiet ui-button--small browser-errors"
+          [disabled]="searching()"
           (click)="findBrowserErrors()"
           i18n="@@admin.logs.search.browserErrors"
         >
           Chyby z prohlížečů
         </button>
-      </form>
-      @if (searchState() === 'error') {
-        <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>
-      }
-      <div role="status">
-        @if (search()) {
-          @if (matches().length === 0) {
-            <p class="ui-card__intro" i18n="@@admin.logs.search.none">Nic takového v logu není.</p>
-          } @else {
-            <p class="ui-card__intro" i18n="@@admin.logs.search.count">
-              {matches().length, plural,
-                one {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
-                few {
-                  {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i s
-                  okolím.
-                }
-                other {
-                  {{ matches().length }} řádků, nejnovější první. Kliknutím zobrazíte řádek i s
-                  okolím.
-                }
-              }
-            </p>
-          }
-        }
-      </div>
-      @if (search(); as result) {
-        <div class="matches">
-          @if (matches().length > 0) {
-            <ul class="match-list">
-              @for (match of matches(); track match.offset) {
-                <li>
-                  <button appNeedsConnection type="button" class="match" (click)="showMatch(match)">
-                    {{ match.line }}
-                  </button>
-                </li>
-              }
-            </ul>
-            @if (result.moreOlder) {
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button"
-                [disabled]="searchState() === 'loading'"
-                (click)="olderMatches()"
-                i18n="@@admin.logs.search.older"
-              >
-                Načíst starší shody
-              </button>
-            }
-          }
-        </div>
-      }
-
-      <div class="pager">
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          [disabled]="windowState() === 'loading' || !window()?.hasOlder"
-          (click)="older()"
-          i18n="@@admin.logs.window.older"
-        >
-          ← Starší
-        </button>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          [disabled]="windowState() === 'loading' || !window()?.hasNewer"
-          (click)="newer()"
-          i18n="@@admin.logs.window.newer"
-        >
-          Novější →
-        </button>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          [disabled]="windowState() === 'loading'"
-          (click)="toEnd()"
-          i18n="@@admin.logs.window.end"
-        >
-          Na konec
-        </button>
-        <span class="range" aria-live="polite">{{ windowRange() }}</span>
-      </div>
-      <div role="status">
-        @if (windowState() === 'loading') {
-          <p class="ui-card__intro" i18n="@@admin.logs.window.loading">Načítáme výpis…</p>
-        }
-      </div>
-      @if (windowState() === 'error') {
-        <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
-      }
-      @if (window(); as window) {
-        <div class="window-copy">
-          <app-copy-button
-            [value]="window.text"
-            what="výpis logu"
-            i18n-what="@@admin.logs.window.copyWhat"
-          />
-        </div>
-        <pre class="log-text" tabindex="0">{{ window.text }}</pre>
       }
     </div>
-  </section>
+  </div>
+
+  <app-live-notice [notice]="notice()" />
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.logs.reader.loading">
+        Načítáme záznamy…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p>{{ loadError() }}</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="loadTail()"
+          i18n="@@admin.logs.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (!searchMode()) {
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button ui-button--quiet load-more"
+          [disabled]="loadingMore() !== null"
+          (click)="loadNewer()"
+        >
+          @if (loadingMore() === 'newer') {
+            <ng-container i18n="@@admin.logs.reader.loadingMore">Načítáme…</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.logs.reader.newer">Načíst novější řádky</ng-container>
+          }
+        </button>
+      }
+      @if (searchMode() && searching() && results() === null) {
+        <p class="ui-load-state searching" i18n="@@admin.logs.search.busy">Hledáme…</p>
+      } @else if (entries().length === 0 && searchError() === '') {
+        <p class="empty">
+          @if (searchMode()) {
+            <ng-container i18n="@@admin.logs.search.none">Nic takového v logu není.</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.logs.reader.empty">Soubor je prázdný.</ng-container>
+          }
+        </p>
+      } @else {
+        <div class="ui-groups days">
+          @for (day of days(); track day.day + $index) {
+            <section [attr.aria-labelledby]="day.title ? 'log-day-' + $index : null">
+              @if (day.title) {
+                <h2 class="ui-group-title day-title" [id]="'log-day-' + $index">
+                  {{ day.title }}
+                </h2>
+              }
+              <ul class="ui-list ui-list--inset">
+                @for (entry of day.entries; track entry.offset) {
+                  <li>
+                    <button
+                      type="button"
+                      class="entry"
+                      [class.level-error]="entry.level === 'ERROR'"
+                      [class.level-warn]="entry.level === 'WARN'"
+                      [class.is-focused]="isFocused(entry)"
+                      [attr.data-offset]="entry.offset"
+                      (click)="open(entry)"
+                    >
+                      @if (entry.level) {
+                        <span
+                          class="entry-level"
+                          [class.visually-hidden]="
+                            entry.level !== 'ERROR' && entry.level !== 'WARN'
+                          "
+                          >{{ levelLabel(entry.level) }}</span
+                        >
+                      }
+                      <app-level-icon class="entry-icon" [level]="entry.level" />
+                      <span class="entry-time">{{ time(entry) }}</span>
+                      @if (entry.title) {
+                        <span class="entry-title">{{ entry.title }}</span>
+                      }
+                      <span class="entry-message">{{ entry.message }}</span>
+                      @if (entry.details.length > 0) {
+                        <span class="entry-more" i18n="@@admin.logs.reader.moreLines">
+                          {entry.details.length, plural,
+                            one {+ 1 řádek}
+                            few {+ {{ entry.details.length }} řádky}
+                            other {+ {{ entry.details.length }} řádků}
+                          }
+                        </span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+      <div class="list-end">
+        @if (hasOlder()) {
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button load-more"
+            [disabled]="loadingMore() !== null || searching()"
+            (click)="loadOlder()"
+          >
+            @if (loadingMore() === 'older' || (searching() && results() !== null)) {
+              <ng-container i18n="@@admin.logs.reader.loadingMore">Načítáme…</ng-container>
+            } @else {
+              <ng-container i18n="@@admin.logs.reader.older">Načíst starší řádky</ng-container>
+            }
+          </button>
+        }
+        @if (entries().length > 0) {
+          <app-copy-button
+            [value]="loadedText()"
+            what="načtené záznamy"
+            i18n-what="@@admin.logs.reader.copyLoaded"
+          />
+        }
+      </div>
+    }
+  }
 </div>
+
+@if (opened(); as entry) {
+  <app-dialog labelledBy="log-entry-title" presentation="sheet" (dismissed)="close()">
+    <h2 id="log-entry-title" class="sheet-title">
+      <app-level-icon [level]="entry.level" />
+      {{ sheetTitle(entry) }}
+    </h2>
+    <dl class="entry-facts">
+      @if (entry.at) {
+        <div>
+          <dt i18n="@@admin.logs.reader.fact.when">Kdy</dt>
+          <dd>{{ when(entry) }}</dd>
+        </div>
+      }
+      @if (entry.thread) {
+        <div>
+          <dt i18n="@@admin.logs.reader.fact.thread">Vlákno</dt>
+          <dd class="ui-mono">{{ entry.thread }}</dd>
+        </div>
+      }
+      @if (entry.logger) {
+        <div>
+          <dt i18n="@@admin.logs.reader.fact.logger">Třída</dt>
+          <dd class="ui-mono">{{ entry.logger }}</dd>
+        </div>
+      } @else if (entry.title) {
+        <div>
+          <dt i18n="@@admin.logs.reader.fact.request">Požadavek</dt>
+          <dd class="ui-mono">{{ entry.title }}</dd>
+        </div>
+      }
+    </dl>
+    <pre class="entry-text" tabindex="0">{{ entryText(entry) }}</pre>
+    <div class="sheet-actions">
+      <app-copy-button
+        [value]="entry.raw"
+        what="záznam"
+        i18n-what="@@admin.logs.reader.copyEntryWhat"
+        label="Kopírovat záznam"
+        i18n-label="@@admin.logs.reader.copyEntry"
+      />
+      @if (searchMode()) {
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="showSurroundings(entry)"
+          i18n="@@admin.logs.reader.surroundings"
+        >
+          Zobrazit okolí
+        </button>
+      }
+    </div>
+  </app-dialog>
+}

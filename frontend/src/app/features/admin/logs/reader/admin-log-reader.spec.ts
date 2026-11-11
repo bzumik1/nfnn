@@ -2,6 +2,22 @@ import { logWindow } from '../../testing/admin-fixtures';
 import { LOGS_URL, LogPageHarness, problem } from '../testing/log-page-harness';
 import { AdminLogReader } from './admin-log-reader';
 
+const FIO =
+  '2026-11-09T22:09:47.639+01:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio answered 2 movements';
+const FAILED =
+  '2026-11-10T00:30:11.402+01:00 ERROR 1 --- [nova-nadeje] [scheduling-1] c.n.a.o.a.backup.BackupWatchService      : Backup watch failed for request 01a1b3c4';
+const TRACE = 'java.io.UncheckedIOException: /backups/status.json: No such file or directory';
+const TOKEN =
+  '2026-11-10T01:16:07.196+01:00  WARN 1 --- [nova-nadeje] [http-nio-8080-exec-4] c.n.a.d.a.AuthorizationServerService     : The connector exchanged a token';
+const TAIL = `${[FIO, FAILED, TRACE, TOKEN].join('\n')}\n`;
+const UTF8 = new TextEncoder();
+
+function bytes(text: string): number {
+  return UTF8.encode(text).length;
+}
+
+const FAILED_AT = 40000 + bytes(FIO) + 1;
+
 describe('Given an administrator reading a log file', () => {
   let page: LogPageHarness;
 
@@ -28,145 +44,162 @@ describe('Given an administrator reading a log file', () => {
     await page.settle();
   }
 
-  it('when the reader opens, then it shows the tail of the file and lets the administrator page through it', async () => {
+  async function openTail(): Promise<void> {
     await open();
-    await flushWindow('bytes=20000', { from: 100, to: 220, hasOlder: true, hasNewer: false });
-
-    expect(page.text('h1')).toBe('backend.log');
-    expect(page.text('.log-text')).toContain('INFO first line');
-    expect(page.text('.range')).toBe('Konec logu');
-    expect(page.text('.window-copy button')).toBe('Kopírovat výpis logu');
-    expect(page.button('Novější →').disabled).toBe(true);
-
-    await page.click('← Starší');
-    await flushWindow('bytes=20000&from=0', { from: 0, to: 100, hasOlder: false, hasNewer: true });
-
-    expect(page.text('.range')).toBe('Začátek logu');
-    expect(page.button('← Starší').disabled).toBe(true);
-
-    await page.click('Novější →');
-    await flushWindow('bytes=20000&from=100', {
-      from: 100,
-      to: 220,
+    await flushWindow('bytes=20000', {
+      from: 40000,
+      to: 40000 + bytes(TAIL),
       hasOlder: true,
       hasNewer: false,
+      text: TAIL,
+    });
+  }
+
+  async function flushSearch(
+    query: string,
+    matches: { offset: number; line: string }[],
+    more = false,
+  ): Promise<void> {
+    page.http
+      .expectOne((request) => request.urlWithParams === `${LOGS_URL}/backend.log/search?${query}`)
+      .flush({
+        name: 'backend.log',
+        sizeBytes: 50000,
+        matches,
+        moreOlder: more,
+        scannedFrom: matches.at(-1)?.offset ?? 0,
+      });
+    await page.settle();
+  }
+
+  it('when the reader opens, then the newest entries come first under their Prague day, each with its time, level, class and message', async () => {
+    await openTail();
+
+    expect(page.text('h1')).toBe('backend.log');
+    expect(page.texts('.day-title')).toEqual(['10. 11. 2026', '9. 11. 2026']);
+    expect(page.texts('.entry')).toEqual([
+      'Varování 1:16:07 AuthorizationServerService The connector exchanged a token',
+      'Chyba 0:30:11 BackupWatchService Backup watch failed for request 01a1b3c4 + 1 řádek',
+      'Info 22:09:47 FioBankStatementSource Fio answered 2 movements',
+    ]);
+    expect(page.texts('.ui-segmented button')).toEqual(['Vše', 'Varování', 'Chyby']);
+    expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('when they tap an entry, then a sheet shows its time, level, thread, class and the whole message to copy', async () => {
+    await openTail();
+
+    page.element<HTMLButtonElement>('.entry.level-error').click();
+    await page.settle();
+
+    expect(page.text('dialog h2')).toBe('Chyba v 0:30:11');
+    expect(page.texts('dialog .entry-facts > div')).toEqual([
+      'Kdy 10. 11. 2026 0:30:11',
+      'Vlákno scheduling-1',
+      'Třída c.n.a.o.a.backup.BackupWatchService',
+    ]);
+    expect(page.text('dialog .entry-text')).toBe(
+      `Backup watch failed for request 01a1b3c4 ${TRACE}`,
+    );
+    expect(page.button('Kopírovat záznam')).toBeTruthy();
+    expect(page.hasButton('Zobrazit okolí')).toBe(false);
+  });
+
+  it('when they load older lines, then the older entries join below and the first of them takes the focus', async () => {
+    await openTail();
+
+    await page.click('Načíst starší řádky');
+    const older =
+      '2026-11-09T21:00:00.000+01:00  INFO 1 --- [nova-nadeje] [main] c.n.a.App : Backend revision abc is ready\n';
+    await flushWindow('bytes=20000&from=20000', {
+      from: 40000 - bytes(older),
+      to: 40000 + bytes(FIO) + 1,
+      hasOlder: false,
+      hasNewer: true,
+      text: `${older}${FIO}\n`,
     });
 
-    expect(page.text('.range')).toBe('Konec logu');
+    expect(page.texts('.entry')).toHaveLength(4);
+    expect(page.texts('.entry').at(-1)).toContain('Backend revision abc is ready');
+    expect(document.activeElement?.textContent).toContain('Backend revision abc is ready');
+    expect(page.hasButton('Načíst starší řádky')).toBe(false);
   });
 
-  it('when a rotated file is opened, then its own tail is read', async () => {
-    await open('backend.log.2026-10-22.0.gz');
-    await flushWindow('bytes=20000', { text: 'older first\n' }, 'backend.log.2026-10-22.0.gz');
+  it('when they look for newer lines and the file has not grown, then the page says so', async () => {
+    await openTail();
+    const end = 40000 + bytes(TAIL);
 
-    expect(page.text('h1')).toBe('backend.log.2026-10-22.0.gz');
-    expect(page.text('.log-text')).toBe('older first');
+    await page.click('Načíst novější řádky');
+    await flushWindow(`bytes=20000&from=${end}`, {
+      from: end,
+      to: end,
+      hasOlder: true,
+      hasNewer: false,
+      text: '',
+    });
+
+    expect(page.text('.live-notice')).toBe('Žádné nové řádky.');
+    expect(page.texts('.entry')).toHaveLength(3);
   });
 
-  it('when the file is gone, then the problem is shown', async () => {
-    await open('backend.log.2026-10-01.0.gz');
-    const missing = problem(
-      404,
-      'operations/log-not-found',
-      'Soubor nenalezen',
-      'Takový log není.',
+  it('when they show only errors, then the backend is searched for error lines and the matches open their surroundings', async () => {
+    await openTail();
+
+    await page.click('Chyby');
+    await flushSearch(
+      'pattern=%5E%5CS%2B%5Cs%2BERROR%5Cb&limit=50',
+      [{ offset: FAILED_AT, line: FAILED }],
+      true,
     );
-    page.http
-      .expectOne((request) => request.url === `${LOGS_URL}/backend.log.2026-10-01.0.gz`)
-      .flush(missing.body, missing.options);
-    await page.settle();
 
-    expect(page.text('[role="alert"]')).toBe('Soubor nenalezen. Takový log není.');
+    expect(page.texts('.entry')).toEqual([
+      'Chyba 0:30:11 BackupWatchService Backup watch failed for request 01a1b3c4',
+    ]);
+    expect(page.element('.ui-segmented button:nth-child(3)').getAttribute('aria-checked')).toBe(
+      'true',
+    );
+
+    await page.click('Načíst starší řádky');
+    await flushSearch(`pattern=%5E%5CS%2B%5Cs%2BERROR%5Cb&limit=50&before=${FAILED_AT}`, []);
+
+    expect(page.texts('.entry')).toHaveLength(1);
+
+    page.element<HTMLButtonElement>('.entry').click();
+    await page.settle();
+    await page.click('Zobrazit okolí');
+    await flushWindow(`bytes=20000&from=${FAILED_AT - 10000}`, {
+      from: 40000,
+      to: 40000 + bytes(TAIL),
+      hasOlder: true,
+      hasNewer: true,
+      text: TAIL,
+    });
+
+    expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
+    expect(page.texts('.entry')).toHaveLength(3);
+    expect(page.element('.entry.is-focused').textContent).toContain('Backup watch failed');
   });
 
-  it('when they search, then the newest matches are listed with a way to the older ones and a match opens its window', async () => {
-    await open();
-    await flushWindow('bytes=20000');
+  it('when they search within warnings, then the level and the text are asked together', async () => {
+    await openTail();
 
-    await page.type('#log-search', 'fio');
+    await page.click('Varování');
+    await flushSearch('pattern=%5E%5CS%2B%5Cs%2B(?:WARN%7CERROR)%5Cb&limit=50', [
+      { offset: 41500, line: TOKEN },
+    ]);
+    await page.type('#log-search', 'token');
     await page.submit('form.search-form');
-    page.http
-      .expectOne(
-        (request) =>
-          request.urlWithParams === `${LOGS_URL}/backend.log/search?pattern=fio&limit=50`,
-      )
-      .flush({
-        name: 'backend.log',
-        sizeBytes: 220,
-        matches: [
-          { offset: 150, line: '2026-10-23T10:00:01 WARN second line about Fio' },
-          { offset: 50, line: '2026-10-22T10:00:01 WARN older line about Fio' },
-        ],
-        moreOlder: true,
-        scannedFrom: 50,
-      });
-    await page.settle();
-
-    expect(page.text('[role="status"] .ui-card__intro')).toBe(
-      '2 řádky, nejnovější první. Kliknutím zobrazíte řádek i s okolím.',
-    );
-    expect(page.texts('.match')).toEqual([
-      '2026-10-23T10:00:01 WARN second line about Fio',
-      '2026-10-22T10:00:01 WARN older line about Fio',
+    await flushSearch('pattern=%5E%5CS%2B%5Cs%2B(?:WARN%7CERROR)%5Cb.*(?:token)&limit=50', [
+      { offset: 41500, line: TOKEN },
     ]);
 
-    await page.click('Načíst starší shody');
-    page.http
-      .expectOne(
-        (request) =>
-          request.urlWithParams === `${LOGS_URL}/backend.log/search?pattern=fio&limit=50&before=50`,
-      )
-      .flush({
-        name: 'backend.log',
-        sizeBytes: 220,
-        matches: [{ offset: 0, line: '2026-10-21T10:00:01 WARN oldest line about Fio' }],
-        moreOlder: false,
-        scannedFrom: 0,
-      });
-    await page.settle();
-
-    expect(page.texts('.match')).toHaveLength(3);
-    expect(page.hasButton('Načíst starší shody')).toBe(false);
-
-    page.element<HTMLButtonElement>('.match').click();
-    await page.settle();
-    await flushWindow('bytes=20000&from=150', { from: 150, to: 220, hasOlder: true });
-
-    expect(page.text('.range')).toBe('Konec logu');
+    expect(page.texts('.entry')).toEqual([
+      'Varování 1:16:07 AuthorizationServerService The connector exchanged a token',
+    ]);
   });
 
-  it('when they ask for the browser error reports, then the search holds their pattern and the newest reports are listed', async () => {
-    await open();
-    await flushWindow('bytes=20000');
-
-    await page.click('Chyby z prohlížečů');
-    page.http
-      .expectOne(
-        (request) =>
-          request.urlWithParams ===
-          `${LOGS_URL}/backend.log/search?pattern=Browser%20error&limit=50`,
-      )
-      .flush({
-        name: 'backend.log',
-        sizeBytes: 220,
-        matches: [
-          {
-            offset: 150,
-            line: '2026-11-04T10:00:01 WARN Browser error kind=pdf-render place=global name=TypeError version=1a2b3c4 browser=safari/18 os=ios display=standalone count=1',
-          },
-        ],
-        moreOlder: false,
-        scannedFrom: 150,
-      });
-    await page.settle();
-
-    expect(page.element<HTMLInputElement>('#log-search').value).toBe('Browser error');
-    expect(page.texts('.match')[0]).toContain('kind=pdf-render');
-  });
-
-  it('when the pattern is not a valid expression, then the problem is shown at the search', async () => {
-    await open();
-    await flushWindow('bytes=20000');
+  it('when the pattern is not a valid expression, then the problem is shown at the search and no stale results stay', async () => {
+    await openTail();
 
     await page.type('#log-search', '(');
     await page.submit('form.search-form');
@@ -181,8 +214,53 @@ describe('Given an administrator reading a log file', () => {
       .flush(refusal.body, refusal.options);
     await page.settle();
 
-    expect(page.text('.ui-notice--alert')).toBe(
+    expect(page.text('.search-form [role="alert"]')).toBe(
       'Neplatný výraz. Hledaný výraz není platný regulární výraz.',
     );
+    expect(page.texts('.entry')).toEqual([]);
+  });
+
+  it('when they ask for the browser error reports, then the search holds their pattern and the reports are listed', async () => {
+    await openTail();
+
+    await page.click('Chyby z prohlížečů');
+    await flushSearch('pattern=Browser%20error&limit=50', [
+      {
+        offset: 41800,
+        line: '2026-11-10T01:20:00.000+01:00  WARN 1 --- [nova-nadeje] [http-nio-8080-exec-1] c.n.a.o.i.r.ClientErrorController : Browser error kind=pdf-render count=1',
+      },
+    ]);
+
+    expect(page.element<HTMLInputElement>('#log-search').value).toBe('Browser error');
+    expect(page.texts('.entry')[0]).toContain('kind=pdf-render');
+  });
+
+  it('when the file writes no level, then the level filter is not offered', async () => {
+    await open('backup.log');
+    await flushWindow(
+      'bytes=20000',
+      { text: '2026-11-10T03:00:22+0100 backup written: nfnn-2026-11-10_0300.dump.age\n' },
+      'backup.log',
+    );
+
+    expect(page.has('.ui-segmented')).toBe(false);
+    expect(page.texts('.entry')).toEqual(['3:00:22 backup written: nfnn-2026-11-10_0300.dump.age']);
+  });
+
+  it('when the file is gone, then the problem is shown with a retry', async () => {
+    await open('backend.log.2026-10-01.0.gz');
+    const missing = problem(
+      404,
+      'operations/log-not-found',
+      'Soubor nenalezen',
+      'Takový log není.',
+    );
+    page.http
+      .expectOne((request) => request.url === `${LOGS_URL}/backend.log.2026-10-01.0.gz`)
+      .flush(missing.body, missing.options);
+    await page.settle();
+
+    expect(page.text('[role="alert"] p')).toBe('Soubor nenalezen. Takový log není.');
+    expect(page.hasButton('Zkusit znovu')).toBe(true);
   });
 });

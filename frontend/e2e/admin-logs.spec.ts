@@ -10,7 +10,7 @@ test.describe('Given an administrator on the logs hub', () => {
     await rememberedAdministrator(page);
   });
 
-  test('when they open backend.log from the hub, then its tail is shown and older lines and a search are reachable', async ({
+  test('when they open backend.log from the hub, then its newest entries come first, older ones load below and an error opens its surroundings', async ({
     page,
   }) => {
     await page.goto('/sprava/logy');
@@ -23,21 +23,27 @@ test.describe('Given an administrator on the logs hub', () => {
     await page.getByRole('link', { name: /backend\.log Aplikace/ }).click();
     await expect(page).toHaveURL('/sprava/logy/soubor?nazev=backend.log');
     await expect(page.getByRole('heading', { level: 1, name: 'backend.log' })).toBeFocused();
-    await expect(page.locator('.log-text')).toContainText('INFO line 39');
-    await expect(page.locator('.range')).toHaveText('Konec logu');
+    await expect(page.locator('.entry').first()).toContainText('line 39');
+    await expect(page.locator('.entry')).toHaveCount(40);
 
-    await page.getByRole('button', { name: '← Starší' }).click();
-    await expect(page.locator('.range')).toHaveText('Starší část logu');
+    await page.getByRole('button', { name: 'Načíst starší řádky' }).click();
+    await expect(page.locator('.entry')).toHaveCount(80);
 
-    await page.getByLabel('Hledat', { exact: true }).fill('fio');
-    await page.getByRole('button', { name: 'Hledat', exact: true }).click();
-    await expect(page.locator('.match')).toHaveCount(2);
+    await page.getByRole('radio', { name: 'Chyby', exact: true }).click();
+    await expect(page.locator('.entry')).toHaveCount(2);
+    await page.locator('.entry').first().click();
+    const sheet = page.getByRole('dialog', { name: 'Chyba v 10:00:38' });
+    await expect(sheet).toContainText('c.n.a.d.i.fio.FioBankStatementSource');
     const opened = page.waitForRequest(
-      (request) => new URL(request.url()).searchParams.get('from') === '51000',
+      (request) => new URL(request.url()).searchParams.get('from') === '41000',
     );
-    await page.locator('.match').first().click();
+    await sheet.getByRole('button', { name: 'Zobrazit okolí' }).click();
     await opened;
-    await expect(page.locator('.range')).toHaveText('Starší část logu');
+    await expect(page.getByRole('radio', { name: 'Vše', exact: true })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(page.locator('.entry.is-focused')).toBeFocused();
 
     await stepBack(page);
     await expect(page).toHaveURL('/sprava/logy');
@@ -57,7 +63,7 @@ test.describe('Given an administrator on the logs hub', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'backend.log.2026-10-22.0.gz' }),
     ).toBeVisible();
-    await expect(page.locator('.log-text')).toContainText('INFO line 39');
+    await expect(page.locator('.entry').first()).toContainText('line 39');
   });
 
   test('when they raise a logger for half an hour, then the level is put and the list shows it until it is reset', async ({
