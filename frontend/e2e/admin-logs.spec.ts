@@ -49,6 +49,24 @@ test.describe('Given an administrator on the logs hub', () => {
     await expect(page).toHaveURL('/sprava/logy');
   });
 
+  test('when errors were written today, then the hub counts them and a row opens the reader at that line', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava/logy');
+
+    const today = page.getByRole('region', { name: 'Varování a chyby dnes' });
+    const row = today.getByRole('link', { name: /^Chyba Fio refused the request \(409\)/ });
+    await expect(row).toContainText('2×');
+    const opened = page.waitForRequest(
+      (request) => new URL(request.url()).searchParams.get('from') === '41000',
+    );
+    await row.click();
+    await opened;
+    await expect(page).toHaveURL('/sprava/logy/soubor?nazev=backend.log&od=51000');
+    await expect(page.locator('.entry.is-focused')).toBeFocused();
+  });
+
   test('when they open the older files on a phone, then the archive of each series leads to its reader', async ({
     page,
   }) => {
