@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@TestPropertySource(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.donations.bank-codes.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-",
+@TestPropertySource(properties = {"app.donations.fio.token=", "app.donations.report.cron=-", "app.donations.bank-codes.cron=-", "app.donations.bank-logos.cron=-", "app.contact.retention.cron=-", "app.content.media-cleanup.cron=-",
         "app.operations.backups.check-cron=-", "app.donors.registration-reminder.cron=-",
         "app.donors.session-cleanup.cron=-"})
 public @interface ScheduledWorkOff {
