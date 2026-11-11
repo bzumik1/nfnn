@@ -86,6 +86,41 @@ describe('Given an administrator reading a log file', () => {
     expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
   });
 
+  it('when the reader opens at a line, then the window around it loads and its entry takes the focus', async () => {
+    page = await LogPageHarness.open(
+      `/sprava/logy/soubor?nazev=backend.log&od=${FAILED_AT}`,
+      AdminLogReader,
+      '/sprava/logy/soubor',
+    );
+    await flushWindow(`bytes=20000&from=${FAILED_AT - 10000}`, {
+      from: 40000,
+      to: 40000 + bytes(TAIL),
+      hasOlder: true,
+      hasNewer: true,
+      text: TAIL,
+    });
+
+    expect(page.element('.entry.is-focused').textContent).toContain('Backup watch failed');
+    expect(document.activeElement?.textContent).toContain('Backup watch failed');
+  });
+
+  it('when the reader opens with a level, then that filter is chosen and its matches are listed', async () => {
+    page = await LogPageHarness.open(
+      '/sprava/logy/soubor?nazev=backend.log&uroven=varovani',
+      AdminLogReader,
+      '/sprava/logy/soubor',
+    );
+    await flushWindow('bytes=20000', { from: 40000, to: 40000 + bytes(TAIL), text: TAIL });
+    await flushSearch('pattern=%5E%5CS%2B%5Cs%2B(?:WARN%7CERROR)%5Cb&limit=50', [
+      { offset: FAILED_AT, line: FAILED },
+    ]);
+
+    expect(
+      page.element('.ui-segmented [role="radio"]:nth-child(2)').getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(page.texts('.entry')).toHaveLength(1);
+  });
+
   it('when they tap an entry, then a sheet shows its time, level, thread, class and the whole message to copy', async () => {
     await openTail();
 

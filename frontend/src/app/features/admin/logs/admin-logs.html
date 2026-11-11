@@ -60,6 +60,10 @@
       }
     </section>
 
+    @if (showsToday()) {
+      <app-logs-today [today]="today()" />
+    }
+
     <section class="files" aria-labelledby="logs-files-title">
       <h2 id="logs-files-title" class="ui-group-title" i18n="@@admin.logs.files.title">
         Soubory logu

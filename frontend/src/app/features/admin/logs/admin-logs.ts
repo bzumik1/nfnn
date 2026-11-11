@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
-import { formatBankTime } from '../../donations/donation-date';
+import { formatBankTime, pragueDay } from '../../donations/donation-date';
 import { AdminApi, DiagnosticsResponse, LogFileResponse } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
 import { HealthIcon } from './health-icon/health-icon';
@@ -27,12 +27,13 @@ import {
 } from './log-files';
 import { LogPageAccess } from './log-page-access';
 import { serverHealth, ServerHealthKind } from './server-health';
+import { LogsToday, TODAY_FILE } from './today/logs-today';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-logs',
-  imports: [RouterLink, NeedsConnection, HealthIcon],
+  imports: [RouterLink, NeedsConnection, HealthIcon, LogsToday],
   templateUrl: './admin-logs.html',
   styleUrl: './admin-logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +54,15 @@ export class AdminLogs {
   protected readonly diagnostics = signal<DiagnosticsResponse | null>(null);
 
   protected readonly current = computed(() => currentLogFiles(this.files()));
+  protected readonly showsToday = computed(
+    () =>
+      this.filesState() === 'ready' &&
+      this.available() &&
+      this.files().some((file) => file.name === TODAY_FILE),
+  );
+  protected readonly today = computed(() =>
+    pragueDay(this.diagnostics()?.now ?? new Date().toISOString()),
+  );
   protected readonly olderCount = computed(() =>
     olderLogFileGroups(this.files()).reduce((count, group) => count + group.files.length, 0),
   );

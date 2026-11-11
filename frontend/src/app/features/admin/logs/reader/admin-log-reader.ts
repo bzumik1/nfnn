@@ -23,6 +23,7 @@ import { formatDonationDate, pragueDay, pragueTime } from '../../../donations/do
 import { AdminApi, LogSearchResponse, LogWindowResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
 import { LevelIcon } from './level-icon/level-icon';
+import { levelLabel } from './level-labels';
 import {
   entriesOf,
   LevelFilter,
@@ -52,6 +53,10 @@ export const WINDOW_BYTES = 20000;
 export const SEARCH_LIMIT = 50;
 export const MAX_PATTERN_LENGTH = 200;
 export const BROWSER_ERRORS_PATTERN = 'Browser error';
+const FILTER_PARAMS: Readonly<Record<string, LevelFilter>> = {
+  varovani: 'warnings',
+  chyby: 'errors',
+};
 
 @Component({
   selector: 'app-admin-log-reader',
@@ -68,7 +73,8 @@ export class AdminLogReader {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
-  protected readonly file = inject(ActivatedRoute).snapshot.queryParamMap.get('nazev') ?? '';
+  private readonly params = inject(ActivatedRoute).snapshot.queryParamMap;
+  protected readonly file = this.params.get('nazev') ?? '';
   protected readonly format = logFormat(this.file);
   protected readonly filters = levelPattern(this.format, 'errors') !== null;
   protected readonly browserErrors = this.format === 'spring';
@@ -111,7 +117,7 @@ export class AdminLogReader {
   );
 
   constructor() {
-    this.loadTail();
+    this.start();
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
@@ -200,12 +206,29 @@ export class AdminLogReader {
     this.appliedQuery.set('');
     this.results.set(null);
     this.searchError.set('');
+    this.loadAround(entry.offset);
+  }
+
+  private start(): void {
+    const around = Number(this.params.get('od') ?? Number.NaN);
+    if (Number.isInteger(around) && around >= 0) {
+      this.loadAround(around);
+    } else {
+      this.loadTail();
+    }
+    const filter = FILTER_PARAMS[this.params.get('uroven') ?? ''];
+    if (filter !== undefined && this.filters) {
+      this.choose(filter);
+    }
+  }
+
+  private loadAround(offset: number): void {
     this.state.set('loading');
-    this.loadWindow(Math.max(0, entry.offset - WINDOW_BYTES / 2), (window) => {
+    this.loadWindow(Math.max(0, offset - WINDOW_BYTES / 2), (window) => {
       this.timeline.set(startTimeline(window));
       this.state.set('ready');
-      this.focused.set(entry.offset);
-      this.focusEntryAt(entry.offset);
+      this.focused.set(offset);
+      this.focusEntryAt(offset);
     });
   }
 
@@ -225,20 +248,7 @@ export class AdminLogReader {
   }
 
   protected levelLabel(level: LogLevelName | null): string {
-    switch (level) {
-      case 'ERROR':
-        return $localize`:@@admin.logs.reader.level.error:Chyba`;
-      case 'WARN':
-        return $localize`:@@admin.logs.reader.level.warn:Varování`;
-      case 'INFO':
-        return $localize`:@@admin.logs.reader.level.info:Info`;
-      case 'DEBUG':
-        return $localize`:@@admin.logs.reader.level.debug:Ladění`;
-      case 'TRACE':
-        return $localize`:@@admin.logs.reader.level.trace:Trasování`;
-      case null:
-        return '';
-    }
+    return levelLabel(level);
   }
 
   protected sheetTitle(entry: LogEntry): string {

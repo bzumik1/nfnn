@@ -5,6 +5,7 @@ import { diagnostics, logFile, logOverride } from '../testing/admin-fixtures';
 import { AdminLogs } from './admin-logs';
 import { DIAGNOSTICS_URL, LOGS_URL, LogPageHarness, problem } from './testing/log-page-harness';
 
+const TODAY_SEARCH = `${LOGS_URL}/backend.log/search?pattern=%5E%5CS%2B%5Cs%2B(?:WARN%7CERROR)%5Cb&limit=50`;
 const GIGABYTE = 1_000_000_000;
 const MOUNTED = [
   { path: '/logs', mounted: true, freeBytes: 500 * GIGABYTE, totalBytes: 1000 * GIGABYTE },
@@ -37,10 +38,27 @@ describe('Given an administrator on the logs hub', () => {
     options: { files?: ReturnType<typeof logFile>[]; available?: boolean } = {},
     state = diagnostics({ disks: MOUNTED }),
   ): Promise<void> {
-    page.http
-      .expectOne(LOGS_URL)
-      .flush({ available: options.available ?? true, files: options.files ?? FILES });
+    const files = options.files ?? FILES;
+    const available = options.available ?? true;
+    page.http.expectOne(LOGS_URL).flush({ available, files });
     page.http.expectOne(DIAGNOSTICS_URL).flush(state);
+    await page.settle();
+    if (available && files.some((file) => file.name === 'backend.log')) {
+      await flushToday([]);
+    }
+  }
+
+  async function flushToday(
+    matches: { offset: number; line: string }[],
+    moreOlder = false,
+  ): Promise<void> {
+    page.http.expectOne(TODAY_SEARCH).flush({
+      name: 'backend.log',
+      sizeBytes: 106_745,
+      matches,
+      moreOlder,
+      scannedFrom: matches.at(-1)?.offset ?? 0,
+    });
     await page.settle();
   }
 
@@ -73,6 +91,53 @@ describe('Given an administrator on the logs hub', () => {
       { text: 'Úrovně logování', href: '/sprava/logy/urovne' },
       { text: 'Výpis vláken', href: '/sprava/logy/vlakna' },
     ]);
+  });
+
+  it('when warnings and errors were written today, then the card counts each message once, leads to its surroundings and to all of them', async () => {
+    const at = (time: string, level: string, logger: string, message: string) =>
+      `2026-10-23T${time}.000+02:00 ${level.padStart(5)} 1 --- [nova-nadeje] [scheduling-1] ${logger} : ${message}`;
+    page.http.expectOne(LOGS_URL).flush({ available: true, files: FILES });
+    page.http.expectOne(DIAGNOSTICS_URL).flush(diagnostics({ disks: MOUNTED }));
+    await page.settle();
+    await flushToday([
+      {
+        offset: 900,
+        line: at('11:30:11', 'ERROR', 'c.n.a.o.a.backup.BackupWatchService', 'Backup watch failed'),
+      },
+      {
+        offset: 800,
+        line: at('10:58:02', 'WARN', 'c.n.a.d.a.FixedWindowRateLimiter', 'Rate limit reached'),
+      },
+      {
+        offset: 700,
+        line: at('09:58:02', 'WARN', 'c.n.a.d.a.FixedWindowRateLimiter', 'Rate limit reached'),
+      },
+      {
+        offset: 100,
+        line: at('00:10:00', 'WARN', 'c.n.a.App', 'Started').replace('2026-10-23', '2026-10-22'),
+      },
+    ]);
+
+    expect(page.links('.today a')).toEqual([
+      {
+        text: 'Chyba Backup watch failed 11:30:11 · BackupWatchService',
+        href: '/sprava/logy/soubor?nazev=backend.log&od=900',
+      },
+      {
+        text: 'Varování Rate limit reached 10:58:02 · FixedWindowRateLimiter 2×',
+        href: '/sprava/logy/soubor?nazev=backend.log&od=800',
+      },
+      {
+        text: 'Všechna varování a chyby',
+        href: '/sprava/logy/soubor?nazev=backend.log&uroven=varovani',
+      },
+    ]);
+  });
+
+  it('when nothing was written today, then the card says so', async () => {
+    await load();
+
+    expect(page.text('.today .ui-list__row')).toBe('Dnes žádná varování ani chyby');
   });
 
   it('when a folder is not mounted and a level is raised for a while, then the state names the failure and the levels row says so', async () => {
@@ -114,6 +179,7 @@ describe('Given an administrator on the logs hub', () => {
     await page.click('Zkusit znovu');
     page.http.expectOne(LOGS_URL).flush({ available: true, files: FILES });
     await page.settle();
+    await flushToday([]);
 
     expect(page.links('.files a')).toHaveLength(4);
   });
@@ -122,6 +188,7 @@ describe('Given an administrator on the logs hub', () => {
     page.http.expectOne(LOGS_URL).flush({ available: true, files: FILES });
     page.http.expectOne(DIAGNOSTICS_URL).flush(null, { status: 500, statusText: 'Error' });
     await page.settle();
+    await flushToday([]);
 
     expect(page.text('.health [role="alert"]')).toContain('Stav serveru se nepodařilo zjistit.');
     expect(page.links('.files a')).toHaveLength(4);
