@@ -247,6 +247,11 @@ export function declaredAdditions(changesDirectory: string): string[] {
     .map((entry) => entry.path);
 }
 
+function declaredPattern(path: string): RegExp {
+  const parts = path.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^${parts.join('.*')}$`, 's');
+}
+
 export function fakeBackendRequests(
   source: string,
   constants: Readonly<Record<string, string>>,
@@ -455,7 +460,7 @@ export function checkBackendShapes(input: {
   readonly statusesSinceV2?: Readonly<Record<string, string>>;
 }): string[] {
   const { calls, recorded, fixtures } = input;
-  const added = new Set(input.addedSinceV2 ?? []);
+  const added = (input.addedSinceV2 ?? []).map(declaredPattern);
   const problems: string[] = [];
   const unique = calls.filter(
     (call, index) =>
@@ -465,7 +470,10 @@ export function checkBackendShapes(input: {
   );
   for (const call of unique) {
     const name = `${call.method} ${call.template}`;
-    if (answersOf(call, unique, recorded).length === 0 && !added.has(name)) {
+    if (
+      answersOf(call, unique, recorded).length === 0 &&
+      !added.some((pattern) => pattern.test(name))
+    ) {
       problems.push(
         `${name} (${call.source}) is called by the connector, but no transcript records it`,
       );

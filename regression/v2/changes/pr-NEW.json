@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/bank-logos",
+    "scenario": "donations/admin_bank_logos: *",
+    "reason": "Jakub 2026-11-11: the server downloads each bank's round icon from an official address on an allow-list and serves it from nfnn.cz; administrators and the connector's nfnn_bank_logos read every logo with its source, version, image and last check; v2 had no bank logos",
+    "contract": "docs/api-contract.md, Bank logos; MCP connector"
+  },
+  {
+    "kind": "added",
+    "path": "PUT /api/admin/donations/bank-logos/*",
+    "scenario": "donations/admin_bank_logos: *",
+    "reason": "Jakub 2026-11-11: an administrator, or the connector's nfnn_set_bank_logo_source, sets the address a bank's logo is downloaded from (App Store artwork hosts for any code, the bank's own site for its own code) and the server downloads it at once; a failed download saves nothing; v2 had no bank logos",
+    "contract": "docs/api-contract.md, Bank logos; MCP connector"
+  },
+  {
+    "kind": "added",
+    "path": "POST /api/admin/donations/bank-logos/*/refresh",
+    "scenario": "donations/admin_bank_logos: *",
+    "reason": "Jakub 2026-11-11: an administrator, or the connector's nfnn_refresh_bank_logo, downloads a bank's logo again from its stored address; v2 had no bank logos",
+    "contract": "docs/api-contract.md, Bank logos; MCP connector"
+  }
+]

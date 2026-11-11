@@ -25,6 +25,12 @@ describe('Given the connector without a backend', () => {
     expect(instructions).toContain('Nadační fond Nová naděje');
     expect(instructions).toContain('/sprava');
   });
+
+  it('when its instructions are asked, then deleting a bank logo is among the actions left to the web', async () => {
+    const instructions = await connectorInstructions();
+
+    expect(instructions).toMatch(/deleting a bank logo[^.]*are done only on the web at \/sprava/);
+  });
 });
 
 describe('Given a running connector', () => {
