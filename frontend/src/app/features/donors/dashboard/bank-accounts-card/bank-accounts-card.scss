@@ -105,6 +105,7 @@
 }
 
 .account {
+  container: account / inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -136,6 +137,16 @@
   min-width: 0;
 }
 
+@include bp.container-down(account, tabs) {
+  .account-main {
+    flex-wrap: wrap;
+  }
+
+  .account-body {
+    flex-basis: 100%;
+  }
+}
+
 .account-line {
   display: flex;
   flex-wrap: wrap;
@@ -148,6 +159,8 @@
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-text);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .account-status {

@@ -68,7 +68,13 @@
           @for (account of accounts(); track account.id) {
             <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
               <div class="account-main">
-                <app-bank-logo class="account-logo" [account]="account.accountNumber" [size]="40" />
+                @if (isCzech(account)) {
+                  <app-bank-logo
+                    class="account-logo"
+                    [account]="account.accountNumber"
+                    [size]="40"
+                  />
+                }
                 <div class="account-body">
                   <div class="account-line">
                     <span class="account-number ui-figures">{{ account.accountNumber }}</span>

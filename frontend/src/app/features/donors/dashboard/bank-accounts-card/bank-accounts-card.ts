@@ -49,6 +49,7 @@ import {
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
 import { BankNames } from '../../../donations/bank-names';
+import { bankCodeOf } from '../../../donations/czech-account';
 import { BankLogo } from '../../../donations/bank-logo/bank-logo';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
@@ -359,6 +360,10 @@ export class BankAccountsCard {
 
   protected bankName(account: BankAccountItem): string | null {
     return this.bankNames.nameOf(account.accountNumber);
+  }
+
+  protected isCzech(account: BankAccountItem): boolean {
+    return bankCodeOf(account.accountNumber) !== null;
   }
 
   protected formatDate(isoDate: string): string {
