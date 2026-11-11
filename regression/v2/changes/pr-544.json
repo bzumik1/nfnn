@@ -1,0 +1,146 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when it opens, then the app header offers the account and the site tabs stay at the bottom, as everywhere in the app",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when it opens on a computer, then the app header offers the account and the side panel leads without the site tabs",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J1): above nav the administration shows no tab bar, as its side panel leads; below nav the tabs stay",
+    "contract": "docs/requirements.md, 3; docs/frontend-overview.md, App shell (tab-bar/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > then the header and the tabs stay, so the administrator can still leave",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > then the header and the side panel stay, so the administrator can still leave",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J1): above nav the administration shows no tab bar, as its side panel leads; below nav the tabs stay",
+    "contract": "docs/requirements.md, 3; docs/frontend-overview.md, App shell (tab-bar/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the edge is released, then scrolling no longer raises it",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the edge is released, then scrolling no longer raises it",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > and the device switches between light and dark, then the edge takes the ground of the new appearance",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and the device switches between light and dark, then the edge takes the ground of the new appearance",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > and a see-through box comes up under it, then the edge looks past it to the ground",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and a see-through box comes up under it, then the edge looks past it to the ground",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > and a card narrower than the page comes up under it, then the edge takes the ground around the card, so it never stands out as a band of the card",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and a card narrower than the page comes up under it, then the edge takes the ground around the card, so it never stands out as a band of the card",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page is at its top, then the edge is not raised, so the page looks as designed",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page is at its top, then the edge is not raised, so the page looks as designed",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > and it returns to the top, then the edge is lowered again",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and it returns to the top, then the edge is lowered again",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > and lighter content comes up under it, then the edge takes that colour",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > and lighter content comes up under it, then the edge takes that colour",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page one level deeper than its tab > when the page scrolls > then the edge is raised in the colour of the content coming up under it, so no line runs under the back button",
+    "replacement": "src/app/layout/app-header/scroll-edge.spec.ts > Given the edge at the top of a page > when the page scrolls > then the edge is raised in the colour of the content coming up under it, so no line runs under the back button",
+    "reason": "PR #544 (design plan 3.1, R2): the scroll edge rises on every page, not only on a page one level deeper than its tab, so the cases describe the edge of any page",
+    "contract": "docs/frontend-overview.md, App shell (app-header/, scroll edge)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger opens it and a field asks for the focus, then the field keeps it",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger opens it and a field asks for the focus, then its title takes the focus all the same, so the field shows no ring after a tap",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J3: a ring after a tap is a bug): a dialog opened by a finger or a mouse focuses its title, also where a control asks for autofocus",
+    "contract": "docs/requirements.md, 3 (Přístupnost); docs/frontend-overview.md, shared/ui dialog/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger or a mouse opens it, then the dialog itself holds the focus, so no control shows a focus ring nobody asked for",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger or a mouse opens it, then its title holds the focus, so no control shows a focus ring nobody asked for",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J3: a ring after a tap is a bug): a dialog opened by a finger or a mouse focuses its title, also where a control asks for autofocus",
+    "contract": "docs/requirements.md, 3 (Přístupnost); docs/frontend-overview.md, shared/ui dialog/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger or a mouse opens it, then the dialog itself stays out of the tab order",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog and the press that opens it > when a finger or a mouse opens it, then its title and the dialog itself stay out of the tab order",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J3: a ring after a tap is a bug): a dialog opened by a finger or a mouse focuses its title, also where a control asks for autofocus",
+    "contract": "docs/requirements.md, 3 (Přístupnost); docs/frontend-overview.md, shared/ui dialog/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration is on the news editor > and it is locked from the start, then a tab still leads out of the administration",
+    "replacement": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration is on the news editor > and it is locked from the start, then the logo still leads out of the administration",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J1): the administration on a computer has no tab bar, so the way out of a locked administration is the header's logo",
+    "contract": "docs/requirements.md, 3; docs/frontend-overview.md, App shell (tab-bar/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration is on the news editor > and it locks with a half-written article and a tab is pressed, then the question about unsaved changes waits behind the panel until the administration is unlocked",
+    "replacement": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration is on the news editor > and it locks with a half-written article and the logo is pressed, then the question about unsaved changes waits behind the panel until the administration is unlocked",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J1): the administration on a computer has no tab bar, so the way out of a locked administration is the header's logo",
+    "contract": "docs/requirements.md, 3; docs/frontend-overview.md, App shell (tab-bar/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration locked with a half-written article kept under the panel > and a tab was pressed before signing out, then signing out still opens the site",
+    "replacement": "e2e/admin-lock.spec.ts > Given an administrator whose administration locks on this device > when the administration locked with a half-written article kept under the panel > and the logo was pressed before signing out, then signing out still opens the site",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J1): the administration on a computer has no tab bar, so the way out of a locked administration is the header's logo",
+    "contract": "docs/requirements.md, 3; docs/frontend-overview.md, App shell (tab-bar/)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press the account button, then the sheet holds the focus itself and its close button shows no focus ring",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press the account button, then the title of the sheet holds the focus and no control shows a focus ring",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J3: a ring after a tap is a bug): a dialog opened by a finger or a mouse focuses its title, also where a control asks for autofocus",
+    "contract": "docs/requirements.md, 3 (Přístupnost); docs/frontend-overview.md, shared/ui dialog/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press the account button, then the sheet holds the focus itself and its close button shows no focus ring #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press the account button, then the title of the sheet holds the focus and no control shows a focus ring #2",
+    "reason": "PR #544 (Jakub 2026-11-06, design plan J3: a ring after a tap is a bug): a dialog opened by a finger or a mouse focuses its title, also where a control asks for autofocus",
+    "contract": "docs/requirements.md, 3 (Přístupnost); docs/frontend-overview.md, shared/ui dialog/"
+  }
+]

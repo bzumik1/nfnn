@@ -249,15 +249,18 @@ describe('Given a dialog and the press that opens it', () => {
     fixture.nativeElement.remove();
   });
 
-  it('when a finger or a mouse opens it, then the dialog itself holds the focus, so no control shows a focus ring nobody asked for', () => {
+  const title = () => fixture.nativeElement.querySelector('#title') as HTMLElement;
+
+  it('when a finger or a mouse opens it, then its title holds the focus, so no control shows a focus ring nobody asked for', () => {
     openBy(new Event('pointerdown', { bubbles: true }));
 
-    expect(document.activeElement).toBe(native());
+    expect(document.activeElement).toBe(title());
   });
 
-  it('when a finger or a mouse opens it, then the dialog itself stays out of the tab order', () => {
+  it('when a finger or a mouse opens it, then its title and the dialog itself stay out of the tab order', () => {
     openBy(new Event('pointerdown', { bubbles: true }));
 
+    expect(title().getAttribute('tabindex')).toBe('-1');
     expect(native().getAttribute('tabindex')).toBe('-1');
   });
 
@@ -267,10 +270,18 @@ describe('Given a dialog and the press that opens it', () => {
     expect(document.activeElement).not.toBe(native());
   });
 
-  it('when a finger opens it and a field asks for the focus, then the field keeps it', () => {
+  it('when a finger opens it and a field asks for the focus, then its title takes the focus all the same, so the field shows no ring after a tap', () => {
     fixture.componentInstance.fieldTakesFocus.set(true);
 
     openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement).toBe(title());
+  });
+
+  it('when the keyboard opens it and a field asks for the focus, then the field takes it', () => {
+    fixture.componentInstance.fieldTakesFocus.set(true);
+
+    openBy(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
 
     expect(document.activeElement?.id).toBe('field');
   });

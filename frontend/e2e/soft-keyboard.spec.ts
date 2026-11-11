@@ -66,6 +66,8 @@ test.describe('Given a small phone whose on-screen keyboard covers the lower par
     test.beforeEach(async ({ page }) => {
       await page.goto('/prispet');
       await page.getByRole('main').getByRole('button', { name: 'Přihlásit se' }).click();
+      await expect(page.locator('#login-dialog-title')).toBeFocused();
+      await page.locator('#login-email').tap();
       await expect(page.locator('#login-email')).toBeFocused();
     });
 

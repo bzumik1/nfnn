@@ -174,14 +174,22 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when they press the account button, then the sheet holds the focus itself and its close button shows no focus ring', async ({
+  test('when they press the account button, then the title of the sheet holds the focus and no control shows a focus ring', async ({
     page,
   }) => {
     await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
     const sheet = page.getByRole('dialog');
 
-    await expect(sheet).toBeFocused();
+    await expect(sheet.locator('#account-sheet-title')).toBeFocused();
     await expect(sheet.getByRole('button', { name: 'Zavřít' })).not.toBeFocused();
+    expect(
+      await page.evaluate(
+        () =>
+          [...document.querySelectorAll(':focus-visible')].filter(
+            (element) => getComputedStyle(element).outlineStyle !== 'none',
+          ).length,
+      ),
+    ).toBe(0);
   });
 
   test('when they open the sheet with the keyboard, then its close button takes the focus as before', async ({
