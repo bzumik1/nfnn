@@ -68,7 +68,7 @@ test.describe('Given an administrator whose device holds the administration copy
     await expect(page.getByRole('link', { name: 'info@nfnn.cz' })).toHaveCount(0);
     await expect(register(page)).toContainText('Nahrazené');
     await expect(register(page)).toContainText(
-      'Fond ho 01. 02. 2027 nahradil potvrzením č. 2027-000124.',
+      'Fond ho 1. 2. 2027 nahradil potvrzením č. 2027-000124.',
     );
     await expect(register(page)).toContainText(
       /Podle údajů správy stažených do tohoto zařízení \d{2}\. \d{2}\. \d{4} v \d{2}:\d{2}\./,

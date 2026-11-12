@@ -20,7 +20,7 @@ export function formatBankTime(isoInstant: string): string {
 
 export function formatPragueClock(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
-  return `${parts['hour']}:${parts['minute']}`;
+  return `${Number(parts['hour'])}:${parts['minute']}`;
 }
 
 export function pragueDay(isoInstant: string): string {

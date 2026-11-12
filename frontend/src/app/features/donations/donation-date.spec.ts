@@ -43,8 +43,8 @@ describe('Given an instant the API sends', () => {
     expect(pragueHour('2026-11-01T06:00:00Z')).toBe(7);
   });
 
-  it('when its Prague time of day is asked for, then it comes as HH:MM on a 24-hour clock', () => {
-    expect(formatPragueClock('2026-11-06T02:35:00Z')).toBe('03:35');
+  it('when its Prague time of day is asked for, then it comes on a 24-hour clock without a leading zero in the hour', () => {
+    expect(formatPragueClock('2026-11-06T02:35:00Z')).toBe('3:35');
     expect(formatPragueClock('2026-07-01T21:05:00Z')).toBe('23:05');
   });
 });

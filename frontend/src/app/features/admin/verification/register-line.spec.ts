@@ -76,7 +76,7 @@ describe('Given the register line under a verified receipt', () => {
 
       expect(stateText(element)).toBe('Platné Fond ho vede jako platné.');
       expect(text(element)).toContain(
-        'Podle údajů správy stažených do tohoto zařízení 10. 02. 2027 v 08:05.',
+        'Podle údajů správy stažených do tohoto zařízení 10. 2. 2027 v 8:05.',
       );
       expect(element.querySelector('a')?.getAttribute('href')).toBe('/sprava/darci/donor-1');
     });
@@ -90,7 +90,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č.\u00a02026-000020. Platí to novější; najdete ho na kartě dárce.',
+        'Nahrazené Fond ho 1. 2. 2027 nahradil potvrzením č.\u00a02026-000020. Platí to novější; najdete ho na kartě dárce.',
       );
     });
 
@@ -114,7 +114,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Zastaralé Od vystavení se dary dárce změnily, proto ho fond 02. 02. 2027 zrušil. Na kartě dárce uvidíte, zda už má nové.',
+        'Zastaralé Od vystavení se dary dárce změnily, proto ho fond 2. 2. 2027 zrušil. Na kartě dárce uvidíte, zda už má nové.',
       );
     });
 
@@ -124,7 +124,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render();
 
       expect(stateText(element)).toBe(
-        'Zrušené Fond ho 02. 02. 2027 zrušil. Nepovažujte ho za platné.',
+        'Zrušené Fond ho 2. 2. 2027 zrušil. Nepovažujte ho za platné.',
       );
     });
 
@@ -171,7 +171,7 @@ describe('Given the register line under a verified receipt', () => {
       const element = await render('replaced');
 
       expect(stateText(element)).toBe(
-        'Nahrazené Fond ho 01. 02. 2027 nahradil potvrzením č.\u00a02026-000020.',
+        'Nahrazené Fond ho 1. 2. 2027 nahradil potvrzením č.\u00a02026-000020.',
       );
     });
 
@@ -220,7 +220,7 @@ describe('Given the register line under a verified receipt', () => {
 
       const element = await render('outdated');
 
-      expect(stateText(element)).toBe('Zastaralé Fond ho 02. 02. 2027 zrušil.');
+      expect(stateText(element)).toBe('Zastaralé Fond ho 2. 2. 2027 zrušil.');
     });
 
     it('and the fund does not know the receipt the copy holds with these data, then it says they disagree and never valid', async () => {
