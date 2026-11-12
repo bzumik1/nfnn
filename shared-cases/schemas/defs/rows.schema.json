@@ -108,7 +108,7 @@
     },
     "receipts": {
       "type": "array",
-      "description": "Receipts the backend runner issues after writing the rows, in this order, each through the donor's own issuer with the server clock at issuedAt (the signing key and the signatory chosen first), so their numbers, replacements and frozen data are the real issuer's; a yearly receipt replaces the single receipts of its gifts",
+      "description": "Receipts the backend runner issues after writing the rows, listed by issuedAt (the runner refuses another order), each through the donor's own issuer with the server clock at issuedAt (the signing key and the signatory chosen first), so their numbers, replacements and frozen data are the real issuer's; a yearly receipt replaces the single receipts of its gifts",
       "items": {
         "type": "object",
         "required": ["alias", "donor", "kind", "issuedAt"],

@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CaseRowsTest {
 
@@ -101,5 +102,48 @@ class CaseRowsTest {
                 new CaseRows.ReceiptToIssue("rok", rows.donorId("jana"), true, Optional.of(2026), Optional.empty(), Instant.parse("2027-01-10T08:00:00Z")));
         assertThat(rows.aliased(JSON.readTree("{\"id\":\"" + receipt + "\"}")).toString()).isEqualTo("{\"id\":\"receipt:unor\"}");
         assertThat(rows.now()).isEqualTo(Instant.parse("2027-02-10T09:00:00Z"));
+    }
+
+    @Test
+    @DisplayName("Given a single receipt that states its year as null and a yearly receipt that states its gift as null, when the receipts to issue are read, then both are read as absent")
+    void should_read_an_explicit_null_year_and_gift_as_absent_when_the_receipts_to_issue_are_read_given_receipts_that_state_them_as_null() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"SINGLE\",\"year\":null,\"donation\":1,"
+                + "\"issuedAt\":\"2026-02-05T10:00:00Z\"},{\"alias\":\"rok\",\"donor\":\"jana\",\"kind\":\"YEARLY\",\"year\":2026,\"donation\":null,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"}]"));
+
+        List<CaseRows.ReceiptToIssue> receipts = rows.receiptsToIssue();
+
+        assertThat(receipts).extracting(CaseRows.ReceiptToIssue::year).containsExactly(Optional.empty(), Optional.of(2026));
+        assertThat(receipts).extracting(CaseRows.ReceiptToIssue::donation).containsExactly(Optional.of(rows.donationId(1)), Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given a receipt of a kind that is neither YEARLY nor SINGLE, when the receipts to issue are read, then the rows are refused and name the kind")
+    void should_refuse_the_rows_when_the_receipts_to_issue_are_read_given_a_receipt_of_an_unknown_kind() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"YEARLY \",\"year\":2026,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"}]"));
+
+        assertThatThrownBy(rows::receiptsToIssue).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("YEARLY ");
+    }
+
+    @Test
+    @DisplayName("Given receipts listed out of the order of their issuedAt, when the receipts to issue are read, then the rows are refused, because the server clock never runs back")
+    void should_refuse_the_rows_when_the_receipts_to_issue_are_read_given_receipts_listed_out_of_issue_order() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"rok\",\"donor\":\"jana\",\"kind\":\"YEARLY\",\"year\":2026,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"},{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"SINGLE\",\"donation\":1,"
+                + "\"issuedAt\":\"2026-02-05T10:00:00Z\"}]"));
+
+        assertThatThrownBy(rows::receiptsToIssue).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("unor");
+    }
+
+    private static ObjectNode inputWithReceipts(String receipts) {
+        ObjectNode input = JSON.createObjectNode();
+        input.put("now", "2027-02-10T09:00:00Z");
+        input.set("donors", JSON.readTree("[{\"alias\":\"jana\",\"registeredAt\":\"2026-01-15T10:00:00Z\",\"erasedAt\":null}]"));
+        input.set("payments", JSON.readTree("[]"));
+        input.set("donations", JSON.readTree("[{\"donor\":\"jana\",\"payment\":null,\"receivedOn\":\"2026-02-01\",\"amountMinor\":100,"
+                + "\"status\":\"RECEIVED\",\"source\":\"MANUAL\",\"purpose\":\"GENERAL\"}]"));
+        input.set("receipts", JSON.readTree(receipts));
+        return input;
     }
 }

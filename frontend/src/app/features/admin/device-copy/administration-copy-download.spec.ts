@@ -315,6 +315,7 @@ describe('Given the download of the administration into its copy on this device'
       });
 
       expect(await outcome).toBe('another-account');
+      expect(http.match(() => true)).toHaveLength(0);
       expect(vault.stored).toEqual([]);
       expect(vault.revoked).toEqual([]);
     });

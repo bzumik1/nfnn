@@ -119,6 +119,12 @@ public final class CaseRows {
     }
 
     public List<ReceiptToIssue> receiptsToIssue() {
+        for (int next = 1; next < receipts.size(); next++) {
+            if (Instant.parse(receipts.get(next).issuedAt()).isBefore(Instant.parse(receipts.get(next - 1).issuedAt()))) {
+                throw new IllegalArgumentException("The receipts of a case are listed in the order they are issued, but " + receipts.get(next).alias()
+                        + " is issued before " + receipts.get(next - 1).alias());
+            }
+        }
         return receipts.stream().map(receipt -> new ReceiptToIssue(receipt.alias(), donorId(receipt.donor()), yearly(receipt.kind()),
                 receipt.year(), receipt.donation().map(this::donationId), Instant.parse(receipt.issuedAt()))).toList();
     }
