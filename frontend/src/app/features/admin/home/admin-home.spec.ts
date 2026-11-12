@@ -49,6 +49,7 @@ const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
   const openAlerts = signal<readonly OpenAlert[] | null>(null);
+  const refresh = vi.fn();
   let fixture: ComponentFixture<AdminHome>;
   let http: HttpTestingController;
   let store: AuthStore;
@@ -57,13 +58,14 @@ describe('Given an administrator on the administration home', () => {
     localStorage.clear();
     compact.set(false);
     openAlerts.set(null);
+    refresh.mockClear();
     await TestBed.configureTestingModule({
       imports: [AdminHome],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
-        { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly() } },
+        { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly(), refresh } },
         provideRouter([]),
       ],
     }).compileComponents();
@@ -729,6 +731,10 @@ describe('Given an administrator on the administration home', () => {
       await fixture.whenStable();
       fixture.detectChanges();
     }
+
+    it('then the open faults are read again, so a fault fixed meanwhile leaves the card', () => {
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
 
     it('then a fault of the mail sending that the badge of the app icon counts gets a row and a link to the settings', async () => {
       openAlerts.set([{ area: 'mail', since: '2026-11-12T05:15:00Z' }]);

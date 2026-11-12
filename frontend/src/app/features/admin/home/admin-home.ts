@@ -259,6 +259,7 @@ export class AdminHome {
   };
 
   constructor() {
+    this.openAlerts.refresh();
     this.loadSince();
     this.load();
     this.loadOverview();

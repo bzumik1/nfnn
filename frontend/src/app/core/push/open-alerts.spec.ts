@@ -51,10 +51,10 @@ describe('Given the app open on any page', () => {
   });
 
   afterEach(() => {
+    http.verify();
     TestBed.resetTestingModule();
     vi.useRealTimers();
     Reflect.deleteProperty(document, 'visibilityState');
-    http.verify();
   });
 
   function becomes(state: DocumentVisibilityState): void {
@@ -62,8 +62,13 @@ describe('Given the app open on any page', () => {
     document.dispatchEvent(new Event('visibilitychange'));
   }
 
-  async function signsInAsAdministrator(): Promise<void> {
+  function signsInAsAdministrator(): void {
     isAdmin.set(true);
+    TestBed.tick();
+  }
+
+  function signsOut(): void {
+    isAdmin.set(false);
     TestBed.tick();
   }
 
@@ -78,8 +83,8 @@ describe('Given the app open on any page', () => {
     expect(badge.show).not.toHaveBeenCalled();
   });
 
-  it('when an administrator opens the app on a public page, then the badge and the open alerts follow the server', async () => {
-    await signsInAsAdministrator();
+  it('when an administrator opens the app on a public page, then the badge and the open alerts follow the server', () => {
+    signsInAsAdministrator();
 
     http.expectOne({ method: 'GET', url: PUSH_URL }).flush(answer([MAIL]));
 
@@ -87,8 +92,8 @@ describe('Given the app open on any page', () => {
     expect(alerts.alerts()).toEqual([MAIL]);
   });
 
-  it('when the app comes back after a minute and the fault was resolved meanwhile, then the badge is cleared', async () => {
-    await signsInAsAdministrator();
+  it('when the app comes back after a minute and the fault was resolved meanwhile, then the badge is cleared', () => {
+    signsInAsAdministrator();
     http.expectOne(PUSH_URL).flush(answer([MAIL]));
     becomes('hidden');
     vi.advanceTimersByTime(OPEN_ALERTS_REFRESH_GAP_MS);
@@ -101,8 +106,8 @@ describe('Given the app open on any page', () => {
     expect(alerts.alerts()).toEqual([]);
   });
 
-  it('when the app comes back within a minute, then the server is not asked again', async () => {
-    await signsInAsAdministrator();
+  it('when the app comes back within a minute, then the server is not asked again', () => {
+    signsInAsAdministrator();
     http.expectOne(PUSH_URL).flush(answer([]));
     becomes('hidden');
     vi.advanceTimersByTime(OPEN_ALERTS_REFRESH_GAP_MS - 1);
@@ -112,8 +117,8 @@ describe('Given the app open on any page', () => {
     http.expectNone(PUSH_URL);
   });
 
-  it('when an alert arrives while the app is open, then the open alerts are read again at once', async () => {
-    await signsInAsAdministrator();
+  it('when an alert arrives while the app is open, then the open alerts are read again at once', () => {
+    signsInAsAdministrator();
     http.expectOne(PUSH_URL).flush(answer([]));
 
     messages.next({ v: 1, kind: 'mail-outage', count: 1 });
@@ -122,8 +127,8 @@ describe('Given the app open on any page', () => {
     expect(alerts.alerts()).toEqual([MAIL]);
   });
 
-  it('when the open alerts cannot be read, then the badge is left as it is', async () => {
-    await signsInAsAdministrator();
+  it('when the open alerts cannot be read, then the badge is left as it is', () => {
+    signsInAsAdministrator();
 
     http.expectOne(PUSH_URL).flush(null, { status: 500, statusText: 'Error' });
 
@@ -131,13 +136,12 @@ describe('Given the app open on any page', () => {
     expect(alerts.alerts()).toBeNull();
   });
 
-  it('when the administrator signs out before the answer comes, then the answer is dropped and nothing more is asked', async () => {
-    await signsInAsAdministrator();
+  it('when the administrator signs out before the answer comes, then the read is cancelled and nothing more is asked', () => {
+    signsInAsAdministrator();
     const pending = http.expectOne(PUSH_URL);
 
-    isAdmin.set(false);
-    TestBed.tick();
-    pending.flush(answer([MAIL]));
+    signsOut();
+    expect(pending.cancelled).toBe(true);
     becomes('hidden');
     vi.advanceTimersByTime(OPEN_ALERTS_REFRESH_GAP_MS);
     becomes('visible');
@@ -145,5 +149,64 @@ describe('Given the app open on any page', () => {
     expect(badge.show).not.toHaveBeenCalled();
     expect(alerts.alerts()).toBeNull();
     http.expectNone(PUSH_URL);
+  });
+
+  it('when a page of the administration asks for a fresh look within a minute, then the open alerts are read again at once', () => {
+    signsInAsAdministrator();
+    http.expectOne(PUSH_URL).flush(answer([MAIL]));
+
+    alerts.refresh();
+
+    http.expectOne(PUSH_URL).flush(answer([]));
+    expect(alerts.alerts()).toEqual([]);
+    expect(badge.show).toHaveBeenLastCalledWith(0);
+  });
+
+  it('when the alerts page has read the settings itself, then its answer sets the badge and the open alerts without another read', () => {
+    signsInAsAdministrator();
+    http.expectOne(PUSH_URL).flush(answer([]));
+
+    alerts.accept([MAIL]);
+
+    expect(alerts.alerts()).toEqual([MAIL]);
+    expect(badge.show).toHaveBeenLastCalledWith(1);
+    http.expectNone(PUSH_URL);
+  });
+
+  it('when two alerts arrive while a read is running, then one more read follows when it ends, and only the last answer stays', () => {
+    signsInAsAdministrator();
+    const first = http.expectOne(PUSH_URL);
+
+    messages.next({ v: 1, kind: 'mail-outage', count: 1 });
+    messages.next({ v: 1, kind: 'backups-outage', count: 2 });
+    http.expectNone(PUSH_URL);
+    first.flush(answer([]));
+
+    http.expectOne(PUSH_URL).flush(answer([MAIL]));
+    http.expectNone(PUSH_URL);
+    expect(alerts.alerts()).toEqual([MAIL]);
+    expect(badge.show).toHaveBeenLastCalledWith(1);
+  });
+
+  it('when the administrator signs out and in again before the first answer comes, then only the answer of the new session counts', () => {
+    signsInAsAdministrator();
+    const old = http.expectOne(PUSH_URL);
+    signsOut();
+    signsInAsAdministrator();
+    const fresh = http.expectOne(PUSH_URL);
+
+    expect(old.cancelled).toBe(true);
+    fresh.flush(answer([]));
+
+    expect(alerts.alerts()).toEqual([]);
+    expect(badge.show).toHaveBeenCalledTimes(1);
+    expect(badge.show).toHaveBeenCalledWith(0);
+  });
+
+  it('when someone who is not an administrator is signed in, then an answer handed over by a page is ignored', () => {
+    alerts.accept([MAIL]);
+
+    expect(alerts.alerts()).toBeNull();
+    expect(badge.show).not.toHaveBeenCalled();
   });
 });

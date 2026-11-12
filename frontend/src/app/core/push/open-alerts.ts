@@ -1,6 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, effect, inject, Injectable, Injector, signal, untracked } from '@angular/core';
 
+import { Subscription } from 'rxjs';
+
 import { AuthStore } from '../auth/auth-store';
 
 import { openAlertCountOf } from './alert-routes';
@@ -23,6 +25,8 @@ export class OpenAlerts {
   private started = false;
   private lastReadAt = Number.NEGATIVE_INFINITY;
   private generation = 0;
+  private reading: Subscription | null = null;
+  private readAgain = false;
 
   readonly alerts = this.current.asReadonly();
 
@@ -59,22 +63,52 @@ export class OpenAlerts {
     );
   }
 
+  refresh(): void {
+    if (this.auth.isAdmin()) {
+      this.read();
+    }
+  }
+
+  accept(alerts: readonly OpenAlert[]): void {
+    if (this.auth.isAdmin()) {
+      this.current.set(alerts);
+      this.badge.show(alerts.length);
+    }
+  }
+
   private read(): void {
     this.lastReadAt = Date.now();
-    const generation = ++this.generation;
-    this.api.openAlerts().subscribe({
+    if (this.reading !== null) {
+      this.readAgain = true;
+      return;
+    }
+    const generation = this.generation;
+    const done = (): void => {
+      if (generation !== this.generation) {
+        return;
+      }
+      this.reading = null;
+      if (this.readAgain) {
+        this.readAgain = false;
+        this.read();
+      }
+    };
+    this.reading = this.api.openAlerts().subscribe({
       next: (alerts) => {
-        if (generation === this.generation && this.auth.isAdmin()) {
-          this.current.set(alerts);
-          this.badge.show(alerts.length);
+        if (generation === this.generation) {
+          this.accept(alerts);
         }
       },
-      error: () => undefined,
+      error: done,
+      complete: done,
     });
   }
 
   private forget(): void {
     this.generation += 1;
+    this.reading?.unsubscribe();
+    this.reading = null;
+    this.readAgain = false;
     this.current.set(null);
   }
 }
