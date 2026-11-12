@@ -181,7 +181,7 @@ function followShown(changed: (shown: boolean) => void): void {
       takeUntilDestroyed(),
     )
     .subscribe(() => {
-      if (preview.active()) {
+      if (preview.drives()) {
         return;
       }
       const shownNow = isShown(router, route);

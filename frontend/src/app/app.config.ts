@@ -73,7 +73,7 @@ export const tabPagesPreloading = withPreloading(TabPagesPreloading);
 
 export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
   (error) => {
-    if (!inject(NavigationPreview).active()) {
+    if (!inject(NavigationPreview).drives()) {
       void inject(ChunkLoadRecovery).handleNavigationError(error);
     }
   },

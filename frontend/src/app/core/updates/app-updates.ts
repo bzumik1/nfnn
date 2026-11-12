@@ -51,7 +51,7 @@ export class AppUpdates {
     const versions = this.serviceWorker.versionEvents.subscribe((event) => this.onVersion(event));
     const unrecoverable = this.serviceWorker.unrecoverable.subscribe(() => this.onUnrecoverable());
     const navigations = this.router.events.subscribe((event) => {
-      if (this.preview.active()) {
+      if (this.preview.drives()) {
         return;
       }
       if (event instanceof NavigationStart) {

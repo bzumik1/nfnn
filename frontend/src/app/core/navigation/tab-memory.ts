@@ -30,7 +30,7 @@ export class TabMemory {
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
-      if (this.preview.active()) {
+      if (this.preview.drives()) {
         return;
       }
       if (event instanceof NavigationStart) {

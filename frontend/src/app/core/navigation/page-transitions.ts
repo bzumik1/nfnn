@@ -96,7 +96,7 @@ export class PageTransitions {
   }
 
   private follow(event: RouterEvent): void {
-    if (this.preview.active()) {
+    if (this.preview.drives()) {
       return;
     }
     if (event instanceof NavigationStart) {
@@ -170,9 +170,10 @@ export class PageTransitions {
         ...barMotions(bar.items, end.completes ? 1 : 0, timing),
       ];
       await Promise.race([
-        Promise.allSettled([drawn, ...motions.map((motion) => motion.finished)]),
+        Promise.allSettled(motions.map((motion) => motion.finished)),
         new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
       ]);
+      await drawn;
       if (!end.completes) {
         this.preview.discard();
       }
@@ -227,7 +228,7 @@ export class PageTransitions {
     }
     scroller.replaceChildren(drawn.copy);
     scroller.scrollTop = drawn.scrollY;
-    arriving.box.style.backgroundColor = drawn.ground;
+    scroller.style.backgroundColor = drawn.ground;
     redressed(
       this.dressChrome(running.overlay, leaving, {
         box: arriving.box,

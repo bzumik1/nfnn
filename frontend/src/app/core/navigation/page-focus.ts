@@ -12,7 +12,7 @@ export class PageFocus {
 
   movesOnLastNavigation(): boolean {
     const navigation = this.router.lastSuccessfulNavigation();
-    if (navigation === null || navigation.previousNavigation === null || this.preview.active()) {
+    if (navigation === null || navigation.previousNavigation === null || this.preview.drives()) {
       return false;
     }
     return navigation.trigger !== 'popstate' || this.back.returningByButton;

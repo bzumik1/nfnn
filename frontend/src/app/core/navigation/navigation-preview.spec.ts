@@ -1,7 +1,9 @@
 import { Component, DestroyRef, inject } from '@angular/core';
+import { HttpHeaders } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouteReuseStrategy, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { ShownAnswers } from '../connectivity/shown-answers';
 import { BackTarget } from './back-target';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
@@ -114,6 +116,37 @@ describe('Given the administration opened straight from the home screen, whose Z
     await preview.visit('/', () => null);
 
     expect(document.activeElement).toBe(heading);
+  });
+
+  it('when a real navigation starts while the preview runs, then that navigation is the one that wins and nothing is held', async () => {
+    const visiting = preview.visit('/', () => null);
+
+    await router.navigateByUrl('/aktuality');
+    await visiting;
+    harness.detectChanges();
+
+    expect(router.url).toBe('/aktuality');
+    expect(harness.routeNativeElement?.textContent).toContain('/aktuality');
+    expect(destroyed).toContain('/sprava');
+    expect(preview.active()).toBe(false);
+  });
+
+  it('when the swipe is called off while the preview still runs, then the page drawn for it is let go once the preview is over', async () => {
+    const visiting = preview.visit('/', () => null);
+
+    preview.discard();
+    await visiting;
+
+    expect(destroyed).toEqual(['/']);
+  });
+
+  it('when the landing page is previewed, then the times of the answers the administration shows are kept', async () => {
+    const shown = TestBed.inject(ShownAnswers);
+    shown.record('/api/admin/overview', new HttpHeaders(), 1000);
+
+    await preview.visit('/', () => null);
+
+    expect(shown.fetchedAtOf('/api/admin/overview')).toBe(1000);
   });
 
   it('when a preview runs, then it says so, and when it is over, then it no longer does', async () => {

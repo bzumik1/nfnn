@@ -13,7 +13,7 @@ export class PreviewingReuse extends BaseRouteReuseStrategy {
   private readonly preview = inject(NavigationPreview);
 
   override shouldDetach(route: ActivatedRouteSnapshot): boolean {
-    return this.preview.active() || this.kept.shouldDetach(route);
+    return this.preview.drives() || this.kept.shouldDetach(route);
   }
 
   override store(route: ActivatedRouteSnapshot, handle: DetachedRouteHandle | null): void {
