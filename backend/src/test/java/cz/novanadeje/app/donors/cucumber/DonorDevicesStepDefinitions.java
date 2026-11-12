@@ -75,7 +75,7 @@ public class DonorDevicesStepDefinitions {
 
     @Given("{string} signs in on the {string} in a browser that forgets her")
     public void signsInOnTheInABrowserThatForgetsHer(String alias, String device) {
-        signIn(alias, device, Map.of("session", "BROWSER"));
+        signsInOnTheWithTheSession(alias, device, "BROWSER");
     }
 
     @Given("{string} signs in on the {string} in the installed app")
