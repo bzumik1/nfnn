@@ -4,10 +4,16 @@
   příkazu.
 </p>
 
-<app-bank-accounts-card
-  [variableSymbol]="donor()?.variableSymbol ?? null"
-  (sessionEnded)="donations.sendToSignIn()"
-  (bankChecked)="donations.bankCheckedWhileAdding($event)"
-  (donationsChanged)="donations.fetchDonations()"
-  (accountsChanged)="donations.showBankAccounts($event)"
-/>
+@if (fromDevice()) {
+  <p class="ui-callout needs-connection-notice" i18n="@@donor.bankAccountsPage.needsConnection">
+    Bankovní účty se bez připojení nenačtou. Jakmile budete připojeni, ukážou se tu samy.
+  </p>
+} @else {
+  <app-bank-accounts-card
+    [variableSymbol]="donor()?.variableSymbol ?? null"
+    (sessionEnded)="donations.sendToSignIn()"
+    (bankChecked)="donations.bankCheckedWhileAdding($event)"
+    (donationsChanged)="donations.fetchDonations()"
+    (accountsChanged)="donations.showBankAccounts($event)"
+  />
+}

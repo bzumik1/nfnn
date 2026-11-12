@@ -1,10 +1,16 @@
 <app-page-title i18n="@@donor.details.heading">Údaje a zabezpečení</app-page-title>
 
-<app-profile-card (sessionEnded)="donations.sendToSignIn()" />
+@if (fromDevice()) {
+  <p class="ui-callout needs-connection-notice" i18n="@@donor.details.needsConnection">
+    Údaje a zabezpečení se bez připojení nenačtou. Jakmile budete připojeni, ukážou se tu samy.
+  </p>
+} @else {
+  <app-profile-card (sessionEnded)="donations.sendToSignIn()" />
 
-<app-account-card (sessionEnded)="donations.sendToSignIn()" />
+  <app-account-card (sessionEnded)="donations.sendToSignIn()" />
 
-<app-devices-card (sessionEnded)="donations.sendToSignIn()" />
+  <app-devices-card (sessionEnded)="donations.sendToSignIn()" />
+}
 
 <app-device-data-card />
 
@@ -15,7 +21,7 @@
   <app-diagnostics-download source="account-page" />
 </section>
 
-@if (isAdmin()) {
+@if (isAdmin() && !fromDevice()) {
   <app-connected-apps-card (sessionEnded)="donations.sendToSignIn()" />
 }
 

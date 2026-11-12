@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type AdminAccessRefusalReason = 'not-administrator' | 'second-factor';
+export type AdminAccessRefusalReason = 'not-administrator' | 'second-factor' | 'needs-connection';
 
 @Injectable({ providedIn: 'root' })
 export class AdminAccessRefusal {

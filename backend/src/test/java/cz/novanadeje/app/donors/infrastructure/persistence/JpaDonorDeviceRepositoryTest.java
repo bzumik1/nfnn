@@ -6,6 +6,8 @@ import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceStatusSecret;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
@@ -266,6 +268,114 @@ class JpaDonorDeviceRepositoryTest {
         assertThat(refreshTokens.findBySecretHash(recentlyRevokedSecret.hash())).isPresent();
         assertThat(refreshTokens.findBySecretHash(usedSecret.hash())).isPresent();
         assertThat(refreshTokens.findBySecretHash(liveSecret.hash())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given a device signed in with a device secret, when it is found by the secret's hash, then it is that device, and another hash finds none")
+    void should_find_device_when_found_by_hash_given_device_secret() {
+        DeviceStatusSecret secret = DeviceStatusSecret.generate();
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, secret);
+        devices.save(phone);
+        devices.save(DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW));
+        flushAndClear();
+
+        DonorDevice found = devices.findByStatusSecretHash(secret.hash()).orElseThrow();
+
+        assertThat(found.id()).isEqualTo(phone.id());
+        assertThat(found.statusSecretHash()).contains(secret.hash());
+        assertThat(found.wipe()).isEmpty();
+        assertThat(devices.findByStatusSecretHash(DeviceStatusSecret.generate().hash())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a device told to delete everything, when it is told to delete the administration's copy, then it keeps the order to delete everything")
+    void should_keep_full_wipe_when_told_administration_wipe_given_full_wipe() {
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
+        DonorDevice laptop = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
+        devices.save(phone);
+        devices.save(laptop);
+        flushAndClear();
+
+        devices.directWipe(phone.id(), DeviceWipe.ALL);
+        devices.directWipe(phone.id(), DeviceWipe.ADMINISTRATION);
+        devices.directWipe(laptop.id(), DeviceWipe.ADMINISTRATION);
+        devices.directWipe(laptop.id(), DeviceWipe.ALL);
+        flushAndClear();
+
+        assertThat(devices.findById(phone.id()).orElseThrow().wipe()).contains(DeviceWipe.ALL);
+        assertThat(devices.findById(laptop.id()).orElseThrow().wipe()).contains(DeviceWipe.ALL);
+    }
+
+    @Test
+    @DisplayName("Given devices of two donors, one told to delete everything, when one donor's devices are told to delete the administration's copy, then only theirs change and the full order stays")
+    void should_change_only_that_donors_devices_when_told_administration_wipe_given_two_donors() {
+        DonorDevice told = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
+        DonorDevice ended = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
+        ended.end(DeviceSignOutReason.SIGNED_OUT, NOW);
+        DonorDevice petrs = DonorDevice.signIn(petr, IPHONE_SAFARI, SessionKind.APP, NOW, DeviceStatusSecret.generate());
+        devices.save(told);
+        devices.save(ended);
+        devices.save(petrs);
+        flushAndClear();
+        devices.directWipe(told.id(), DeviceWipe.ALL);
+
+        devices.directWipeOfDonor(jana, DeviceWipe.ADMINISTRATION);
+        flushAndClear();
+
+        assertThat(devices.findById(told.id()).orElseThrow().wipe()).contains(DeviceWipe.ALL);
+        assertThat(devices.findById(ended.id()).orElseThrow().wipe()).contains(DeviceWipe.ADMINISTRATION);
+        assertThat(devices.findById(petrs.id()).orElseThrow().wipe()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a device told to delete, when it is saved again after a later use, then its order and its secret's hash stay as stored")
+    void should_keep_order_and_hash_when_saved_after_use_given_wipe() {
+        DeviceStatusSecret secret = DeviceStatusSecret.generate();
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, secret);
+        devices.save(phone);
+        flushAndClear();
+        DonorDevice read = devices.findById(phone.id()).orElseThrow();
+        devices.directWipe(phone.id(), DeviceWipe.ALL);
+        flushAndClear();
+
+        read.recordUse(NOW.plusSeconds(60));
+        devices.save(read);
+        flushAndClear();
+
+        DonorDevice found = devices.findById(phone.id()).orElseThrow();
+        assertThat(found.wipe()).contains(DeviceWipe.ALL);
+        assertThat(found.statusSecretHash()).contains(secret.hash());
+        assertThat(found.lastUsedAt()).isEqualTo(NOW.plusSeconds(60));
+    }
+
+    @Test
+    @DisplayName("Given an erased donor's devices and another donor's, when the erased donor's are reduced, then theirs keep only ids, the secret's hash and the order to delete everything, and the other's stays")
+    void should_reduce_only_erased_donors_devices_when_reduced_given_two_donors() {
+        DeviceStatusSecret secret = DeviceStatusSecret.generate();
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.APP, NOW, secret);
+        phone.recordUse(NOW.plusSeconds(600));
+        DonorDevice petrs = DonorDevice.signIn(petr, IPHONE_SAFARI, SessionKind.APP, NOW);
+        devices.save(phone);
+        devices.save(petrs);
+        flushAndClear();
+        Instant erasedAt = NOW.plusSeconds(3600);
+
+        devices.reduceErasedOf(jana, erasedAt);
+        flushAndClear();
+
+        DonorDevice reduced = devices.findById(phone.id()).orElseThrow();
+        assertThat(reduced.description()).isEqualTo(DeviceDescription.UNKNOWN);
+        assertThat(reduced.kind()).isEqualTo(SessionKind.UNNAMED);
+        assertThat(reduced.signedInAt()).isEqualTo(erasedAt);
+        assertThat(reduced.lastUsedAt()).isEqualTo(erasedAt);
+        assertThat(reduced.endedAt()).contains(erasedAt);
+        assertThat(reduced.endReason()).contains(DeviceSignOutReason.ERASED);
+        assertThat(reduced.wipe()).contains(DeviceWipe.ALL);
+        assertThat(reduced.statusSecretHash()).contains(secret.hash());
+        DonorDevice untouched = devices.findById(petrs.id()).orElseThrow();
+        assertThat(untouched.description()).isEqualTo(IPHONE_SAFARI);
+        assertThat(untouched.isActive()).isTrue();
+        assertThat(untouched.wipe()).isEmpty();
     }
 
     private DonorDevice deviceWithToken(DonorId donor, Instant issuedAt, Duration lifetime) {

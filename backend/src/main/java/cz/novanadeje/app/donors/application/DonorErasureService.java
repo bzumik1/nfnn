@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorAccountErased;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -100,7 +99,7 @@ public class DonorErasureService {
     private void removeAccessOf(DonorId donorId, Instant now) {
         secondFactors.delete(donorId);
         passkeys.deleteAllOf(donorId);
-        signOuts.endAllOf(donorId, DeviceSignOutReason.ERASED, now);
+        signOuts.endForErasure(donorId, now);
         passwordResetTokens.deleteAllOf(donorId);
         emailVerificationTokens.deleteAllOf(donorId);
         challenges.deleteAllOfWithoutWaiting(donorId);

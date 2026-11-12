@@ -12,4 +12,8 @@ public enum SessionKind {
     public boolean installedApp() {
         return this == APP;
     }
+
+    public boolean keepsNothing() {
+        return this == PUBLIC;
+    }
 }

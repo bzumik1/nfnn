@@ -2,6 +2,7 @@ import type { TestInfo } from '@playwright/test';
 import { expect, testWithoutBrowser as test } from '../fixtures';
 import { knownBreak, knownFindings, matches } from './known-findings';
 import type { Check } from './layout-checks';
+import { untilQuiet } from '../settled';
 import { DEVICE_PROJECT_PREFIX } from './poses';
 import { NOT_ON_THIS_DEVICE, type Step, STEPS } from './steps';
 import type { Ui } from './ui';
@@ -44,19 +45,11 @@ export interface Browser {
   screenshot(): Promise<Buffer>;
 }
 
-export async function waitUntilSettled(
+export function waitUntilSettled(
   nextFrames: () => Promise<unknown>,
   inFlight: () => number,
 ): Promise<void> {
-  const deadline = Date.now() + SETTLE_TIMEOUT_MS;
-  let quietRounds = 0;
-  while (quietRounds < 2) {
-    if (Date.now() > deadline) {
-      throw new Error(`the page still waits for ${inFlight()} requests`);
-    }
-    await nextFrames();
-    quietRounds = inFlight() === 0 ? quietRounds + 1 : 0;
-  }
+  return untilQuiet({ nextFrames, inFlight, timeoutMs: SETTLE_TIMEOUT_MS });
 }
 
 export async function runStep(step: Step, browser: Browser, testInfo: TestInfo): Promise<void> {

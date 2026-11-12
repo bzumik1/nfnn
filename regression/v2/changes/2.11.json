@@ -1,0 +1,581 @@
+[
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/choose_project_order: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/clean_up_unused_photos: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/home_content: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_about: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_news: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_people: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/place_photo_focal_point: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/stale_content_writes: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_bank_logos: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_sent_monthly_report: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/bank_codes: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/bank_logos: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_stale_writes: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/bank_check_on_demand: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_bank_accounts: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_donations_overview: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/donor_record_sync: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/monthly_report: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/payment_details: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/payment_pairing: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/receipt_keys: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/receipt_status: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donations/symbol_claims: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_actions: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_donor_erasure: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_donors: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/admin_previous_sign_in: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_credentials: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_devices: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_email_verification: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_login: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_passkeys: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_password_reset: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_passwordless: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_registration: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/donor_second_factor: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/session_kinds: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/admin_push: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/push_alerts: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "donors/administration_device_lock: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/backup_key: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/backups: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/diagnostics: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/plan_backups: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/problem_answers: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/request_text_in_logs: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/restore: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/settings: *",
+    "kind": "added",
+    "field": "$.deviceSecret",
+    "reason": "Plan v3 slice 2.11: every sign-in that may keep a copy on the device (any kind but PUBLIC) answers with its device secret, which the device keeps to ask POST /api/donors/devices/status how its sign-in stands; it is masked in the transcripts as a secret field, and nothing else in these answers changes",
+    "contract": "docs/api-contract.md, Authentication, Device status"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's status (/api/donors/auth/refresh) still works",
+    "reason": "Plan v3 slice 2.11: the device status joins the requests that keep working while the server speaks another API generation, and the sign-in hands the vault the device secret, so the test names say so",
+    "replacement": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's or a device's status (/api/donors/auth/refresh) still works"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's status (/api/donors/auth/logout) still works",
+    "reason": "Plan v3 slice 2.11: the device status joins the requests that keep working while the server speaks another API generation, and the sign-in hands the vault the device secret, so the test names say so",
+    "replacement": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's or a device's status (/api/donors/auth/logout) still works"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's status (/api/donations/receipts/status) still works",
+    "reason": "Plan v3 slice 2.11: the device status joins the requests that keep working while the server speaks another API generation, and the sign-in hands the vault the device secret, so the test names say so",
+    "replacement": "src/app/core/version/version-interceptor.spec.ts > Given the version interceptor > when the server speaks a newer API generation > then keeping or ending the session or asking a receipt's or a device's status (/api/donations/receipts/status) still works"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/device-copies.spec.ts > Given the device copies of the app, loaded only when a session first needs them > when a donor signs in, then the vault receives the sign-in and the download of the copy is started once",
+    "reason": "Plan v3 slice 2.11: the sign-in hands the vault the device secret the server answered with, so the test name says so",
+    "replacement": "src/app/device-copies.spec.ts > Given the device copies of the app, loaded only when a session first needs them > when a donor signs in, then the vault receives the sign-in with its device secret and the download of the copy is started once"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.interfaces.rest.SecretResponsesTest > Given responses that carry tokens or a second-factor secret, when they are printed, then neither appears",
+    "reason": "Plan v3 slice 2.11: the sign-in answer and the status question carry a device secret, which their toString masks too, so the test name says so",
+    "replacement": "donors.interfaces.rest.SecretResponsesTest > Given responses that carry tokens, a device secret or a second-factor secret, when they are printed, then neither appears"
+  }
+]

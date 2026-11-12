@@ -558,6 +558,16 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.admin-refusal a')?.getAttribute('href')).toBe('/darce/udaje');
     });
 
+    it('then an account shown from the device copy reads that the administration opens once the device is connected', async () => {
+      TestBed.inject(AdminAccessRefusal).refuse('needs-connection');
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(text('.admin-refusal')).toBe(
+        'Správa se bez připojení zatím neotevře. Jakmile budete připojeni, otevřete ji znovu.',
+      );
+    });
+
     it('then the sentence is gone once the donor leaves the overview', async () => {
       TestBed.inject(AdminAccessRefusal).refuse('not-administrator');
       await open('/darce/prehled');
@@ -3231,6 +3241,35 @@ describe('Given a signed-in donor in the donor area', () => {
       await go('/darce/prehled');
       expect(element('.dashboard-loading')).toBeNull();
       expect(texts('.stat-value')).toEqual(['1 750 Kč', '3', '1 500 Kč']);
+    });
+  });
+
+  describe('when the account shows from the device copy without a live session', () => {
+    beforeEach(() => {
+      Object.defineProperty(store, 'fromDevice', { value: signal(true).asReadonly() });
+    });
+
+    it('then the bank accounts page says the accounts load once the device is connected and asks for no accounts of its own', async () => {
+      await open('/darce/ucty');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      expect(sectionAccountRequests).toHaveLength(0);
+      expect(element('app-bank-accounts-card')).toBeNull();
+      expect(text('.needs-connection-notice')).toBe(
+        'Bankovní účty se bez připojení nenačtou. Jakmile budete připojeni, ukážou se tu samy.',
+      );
+    });
+
+    it('then the details page says the details and security load once the device is connected and keeps only what works on the device', async () => {
+      await open('/darce/udaje');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      http.expectNone(PASSKEYS_URL);
+      http.expectNone(DEVICES_URL);
+      expect(text('.needs-connection-notice')).toBe(
+        'Údaje a zabezpečení se bez připojení nenačtou. Jakmile budete připojeni, ukážou se tu samy.',
+      );
+      expect(texts('h2')).toEqual(['Data v tomto zařízení', 'Když web nefunguje', 'Smazání účtu']);
     });
   });
 

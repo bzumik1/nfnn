@@ -81,11 +81,15 @@ class AdminDeviceSyncTest {
     private static final int TIMED_FIRST_RECEIPT_YEAR = 2021;
     private static final int TIMED_RECEIPT_YEARS = 5;
     private static final int LARGE_YEARLY_RECEIPT_GIFTS = 300;
-    private static final long MANIFEST_BUDGET_MILLIS = 100;
+    private static final long MANIFEST_BUDGET_IN_PLAIN_READS = 4;
     private static final String MANIFEST = "/api/admin/donations/sync";
     private static final String CHUNKS = "/api/admin/donations/sync/chunks";
     private static final List<List<String>> ACCOUNTS = List.of(List.of("2900233333", "2010"), List.of("2900244444", "0800"),
             List.of("1234567", "0800"), List.of("7654321", "0800"));
+    private static final List<String> PLAIN_READS = List.of("select * from donor_record", "select * from donor_sender_account",
+            "select * from bank_payment", "select * from donation", "select * from donor_symbol_claim",
+            "select id, donor_id, kind, number, donation_id, receipt_year, issued_on, issued_at, locale, status, superseded_at, withdrawn_at, "
+                    + "withdrawal_reason, gift_count, total_amount_minor, certified_year from issued_receipt");
     private static final List<String> SYMBOLS = List.of("6123456789", "7012345678", "8123456780");
     private static final Runnable NOTHING_MEANWHILE = () -> {
     };
@@ -144,8 +148,8 @@ class AdminDeviceSyncTest {
     }
 
     @Test
-    @DisplayName("Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms")
-    void should_answer_within_100_ms_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts_and_two_thousand_receipts() throws Exception {
+    @DisplayName("Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within four times a plain read of the same rows on the same machine")
+    void should_answer_within_four_plain_reads_of_the_same_rows_when_an_administration_device_asks_for_the_manifest_given_a_thousand_gifts_and_two_thousand_receipts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(THREE_DONORS));
         rows.write(jdbc, clock);
         rows.writeAdministrator(jdbc);
@@ -176,17 +180,37 @@ class AdminDeviceSyncTest {
         for (int run = 0; run < WARM_UP_RUNS; run++) {
             RateLimiterWindows.reset(List.of(syncRateLimiter));
             answer(get(MANIFEST));
+            readRowsPlainly();
         }
-        long[] millis = new long[TIMED_RUNS];
+        long[] manifests = new long[TIMED_RUNS];
+        long[] plainReads = new long[TIMED_RUNS];
         for (int run = 0; run < TIMED_RUNS; run++) {
             RateLimiterWindows.reset(List.of(syncRateLimiter));
             long start = System.nanoTime();
             answer(get(MANIFEST));
-            millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
+            manifests[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
+            long plain = System.nanoTime();
+            readRowsPlainly();
+            plainReads[run] = Duration.ofNanos(System.nanoTime() - plain).toMillis();
         }
-        Arrays.sort(millis);
-        assertThat(millis[0]).as("the fastest manifest took %d ms (budget %d ms); all %d over %d donors, %d gifts and payments and %d receipts, in ms: %s",
-                millis[0], MANIFEST_BUDGET_MILLIS, TIMED_RUNS, TIMED_DONORS, TIMED_DONATIONS, TIMED_DONORS * TIMED_RECEIPT_YEARS * 2, Arrays.toString(millis)).isLessThan(MANIFEST_BUDGET_MILLIS);
+        Arrays.sort(manifests);
+        Arrays.sort(plainReads);
+        long manifest = manifests[TIMED_RUNS / 4];
+        long plainRead = Math.max(1, plainReads[TIMED_RUNS / 4]);
+        assertThat(manifest).as("the lower quartile of %d manifests took %d ms, %.1f times the %d ms of a plain read of the same rows (budget %d times); "
+                        + "over %d donors, %d gifts and payments and %d receipts, manifests in ms: %s, plain reads in ms: %s",
+                TIMED_RUNS, manifest, (double) manifest / plainRead, plainRead, MANIFEST_BUDGET_IN_PLAIN_READS, TIMED_DONORS, TIMED_DONATIONS,
+                TIMED_DONORS * TIMED_RECEIPT_YEARS * 2, Arrays.toString(manifests), Arrays.toString(plainReads))
+                .isLessThan(MANIFEST_BUDGET_IN_PLAIN_READS * plainRead);
+    }
+
+    private void readRowsPlainly() {
+        List<List<Map<String, Object>>> tables = PLAIN_READS.stream().map(sql -> jdbc.sql(sql).query().listOfRows()).toList();
+        CanonicalRows.sha256(json.valueToTree(tables.stream().map(rows -> rows.stream().map(row -> {
+            Map<String, String> text = new TreeMap<>();
+            row.forEach((column, value) -> text.put(column, String.valueOf(value)));
+            return text;
+        }).toList()).toList()));
     }
 
     private void issueReceipts(Random random, List<UUID> donors) {

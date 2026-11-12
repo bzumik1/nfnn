@@ -12,7 +12,20 @@ import {
 import { appEntryGuard } from './app-entry-guard';
 import { SESSION_HINT_KEY } from './auth-store';
 import { LoginDialogService } from './login-dialog.service';
+import { copyProfileOf } from './copy-profile';
+import { NO_SESSION_DEVICE, SESSION_DEVICE, type SessionDevice } from './session-device';
 import { authResponse, sampleDonor } from './testing/donor-fixtures';
+
+function offlineAdministrator(): SessionDevice {
+  const administrator = sampleDonor({ roles: ['DONOR', 'ADMIN'] });
+  return {
+    ...NO_SESSION_DEVICE,
+    openedOffline: async () => ({
+      profile: copyProfileOf(administrator),
+      session: { kind: 'REMEMBERED', acceptedAt: new Date().toISOString(), wrap: 'wrap-1' },
+    }),
+  };
+}
 
 describe('Given the app opened from its icon on the home screen', () => {
   let http: HttpTestingController;
@@ -20,7 +33,12 @@ describe('Given the app opened from its icon on the home screen', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: SESSION_DEVICE, useValue: offlineAdministrator() },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -47,6 +65,20 @@ describe('Given the app opened from its icon on the home screen', () => {
     http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-1', sampleDonor()));
 
     expect(await result).toBe('/darce/prehled');
+  });
+
+  it('when the account of an administrator shows from the device copy because the server cannot be reached, then it opens their overview', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = landing();
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').error(new ProgressEvent('error'), { status: 0 }),
+    );
+
+    expect(await result).toBe('/darce/prehled');
+    http
+      .match(() => true)
+      .forEach((request) => request.error(new ProgressEvent('error'), { status: 0 }));
   });
 
   it('when an administrator signed in with the second factor has a session to restore, then it opens the administration', async () => {
