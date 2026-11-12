@@ -249,7 +249,7 @@ Setting a new password from an e-mailed link; refused to an administrator who ho
 
 **Device**\
 UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`.\
-One sign-in of a browser or the installed app, named by platform and browser; signing it out ends its session within 30 seconds.
+One sign-in of a browser or the installed app, named by platform and browser, or by platform and „aplikace“ for the installed app; signing it out ends its session within 30 seconds.
 
 **Session kind**\
 UI „Zapamatovat si mě“, „Cizí počítač“ · Code: `SessionKind` `APP`, `REMEMBERED`, `BROWSER`, `PUBLIC`.\

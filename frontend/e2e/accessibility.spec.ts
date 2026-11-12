@@ -30,6 +30,7 @@ import {
   secondFactorEnrolment,
   secondFactorRecovery,
   secondFactorRequired,
+  longUnusedDevices,
   signedInDevices,
   signIn,
   session,
@@ -922,6 +923,27 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor opens the older sign-ins, then the device card with the folded and the opened rows breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/devices',
+      (route) => route.fulfill({ json: { items: [...signedInDevices, ...longUnusedDevices] } }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    const older = page.locator('.devices').getByRole('button', { name: /Starší \(2\)/ });
+    await expect(older).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await older.click();
+    await expect(older).toHaveAttribute('aria-expanded', 'true');
 
     expect(await violations(page)).toEqual([]);
   });

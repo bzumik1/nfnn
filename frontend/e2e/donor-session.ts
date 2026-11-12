@@ -327,6 +327,7 @@ export const signedInDevices = [
     id: '019a5a3c-0000-7000-8000-000000000001',
     platform: 'MAC',
     browser: 'SAFARI',
+    session: 'REMEMBERED',
     signedInAt: '2026-10-18T07:00:00Z',
     lastUsedAt: '2026-10-18T08:05:00Z',
     current: true,
@@ -335,8 +336,30 @@ export const signedInDevices = [
     id: '019a5a3c-0000-7000-8000-000000000002',
     platform: 'IPHONE',
     browser: 'SAFARI',
+    session: 'REMEMBERED',
     signedInAt: '2026-10-12T18:00:00Z',
     lastUsedAt: '2026-10-17T19:05:00Z',
+    current: false,
+  },
+];
+
+export const longUnusedDevices = [
+  {
+    id: '019a5a3c-0000-7000-8000-000000000003',
+    platform: 'IPHONE',
+    browser: 'SAFARI',
+    session: 'APP',
+    signedInAt: '2026-08-02T18:00:00Z',
+    lastUsedAt: '2026-09-10T06:40:00Z',
+    current: false,
+  },
+  {
+    id: '019a5a3c-0000-7000-8000-000000000004',
+    platform: 'WINDOWS',
+    browser: 'EDGE',
+    session: 'PUBLIC',
+    signedInAt: '2026-07-01T10:00:00Z',
+    lastUsedAt: '2026-07-01T10:20:00Z',
     current: false,
   },
 ];
