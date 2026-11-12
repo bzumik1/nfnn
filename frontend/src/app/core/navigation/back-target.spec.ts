@@ -38,6 +38,10 @@ describe('Given the back target of the app', () => {
     expect(back.canGoBack).toBe(false);
   });
 
+  it('when the app starts on a deep link, then back leads to the parent in place of the entry', () => {
+    expect(back.destination('/aktuality')).toEqual({ kind: 'parent', path: '/aktuality' });
+  });
+
   it('when the app starts on a deep link and back is pressed, then it replaces the entry with the parent', async () => {
     const replaced = navigated(router);
     back.back('/aktuality');
@@ -50,6 +54,14 @@ describe('Given the back target of the app', () => {
   describe('when the visitor opens another page of the app', () => {
     beforeEach(async () => {
       await router.navigateByUrl('/aktuality/druhy');
+    });
+
+    it('then back leads one step back to the page before', () => {
+      expect(back.destination('/aktuality')).toEqual({
+        kind: 'step',
+        depth: 0,
+        path: '/aktuality/clanek',
+      });
     });
 
     it('then back returns to the page before', async () => {
@@ -83,6 +95,10 @@ describe('Given the back target of the app', () => {
     beforeEach(async () => {
       await router.navigateByUrl('/projekty');
       await router.navigateByUrl('/aktuality/clanek');
+    });
+
+    it('then back leads to the parent within the tab, not one step back to the other tab', () => {
+      expect(back.destination('/aktuality')).toEqual({ kind: 'parent', path: '/aktuality' });
     });
 
     it('then back opens the parent within the tab instead of the other tab', async () => {

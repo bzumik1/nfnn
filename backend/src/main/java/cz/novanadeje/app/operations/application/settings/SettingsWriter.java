@@ -31,6 +31,10 @@ public class SettingsWriter {
         this.validator = validator;
     }
 
+    public void lockForChange() {
+        repository.lockForChange();
+    }
+
     public Map<Setting, String> storedValues() {
         Map<Setting, String> values = new EnumMap<>(Setting.class);
         for (StoredSetting stored : repository.findAll()) {

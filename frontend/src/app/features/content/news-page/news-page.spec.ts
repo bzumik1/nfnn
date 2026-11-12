@@ -1,4 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpInterceptorFn,
+  HttpRequest,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
@@ -7,17 +12,22 @@ import { ProjectResponse } from '../projects-api';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { MAX_PROJECT_PAGES, NewsPage, STORIES_WAIT_MS } from './news-page';
+import { PROBE_PATH } from '../../../core/connectivity/connectivity';
+import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
+import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
+import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
 
 async function setUp(
   query: Record<string, string> | Observable<ParamMap> = {},
+  interceptors: HttpInterceptorFn[] = [],
 ): Promise<{ fixture: ComponentFixture<NewsPage>; http: HttpTestingController }> {
   await TestBed.configureTestingModule({
     imports: [NewsPage],
     providers: [
-      provideHttpClient(),
+      provideHttpClient(withInterceptors(interceptors)),
       provideHttpClientTesting(),
       provideRouter([]),
       {
@@ -262,6 +272,36 @@ describe('Given a visitor opening Aktuality', () => {
     }
   });
 
+  it('when the news and projects come from copies the service worker kept, then the page shows them at once and takes the newer news when the server answers', async () => {
+    ({ fixture, http } = await setUp({}, [
+      keptAnswerRefreshInterceptor,
+      serviceWorkerBypassInterceptor,
+      connectivityInterceptor,
+    ]));
+    root = fixture.nativeElement;
+    const kept = { headers: { Date: new Date(Date.now() - 600_000).toUTCString() } };
+    const fromWorker = (url: string) => (request: HttpRequest<unknown>) =>
+      request.urlWithParams === url && !request.headers.has('ngsw-bypass');
+    const fromServer = (url: string) => (request: HttpRequest<unknown>) =>
+      request.urlWithParams === url && request.headers.has('ngsw-bypass');
+
+    http.expectOne(fromWorker(NEWS(0))).flush(page([lookBack2024], 0, 1), kept);
+    http
+      .expectOne(fromWorker(PROJECTS(0)))
+      .flush(page([story('sofinka', 2025, 'Sofinka')], 0, 1, 50), kept);
+    await settle(fixture);
+
+    expect(text(root, '.list-state')).toBe('');
+    expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2024');
+    expect(http.match(fromServer(PROJECTS(0)))).toHaveLength(0);
+
+    http.expectOne(fromServer(NEWS(0))).flush(page([lookBack2025, lookBack2024], 0, 2));
+    await settle(fixture);
+
+    expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+  });
+
   it('when the projects run on past the pages it reads, then it stops asking', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
@@ -375,8 +415,8 @@ describe('Given a visitor opening Aktuality', () => {
       const nav = root.querySelector('nav.pages') as HTMLElement;
       expect(nav.getAttribute('aria-label')).toBe('Stránky aktualit');
       expect(text(nav, '.pages-position')).toBe('Strana 1 z 3');
-      expect(link(nav, 'Starší →')?.getAttribute('href')).toBe('/aktuality?strana=2');
-      expect(link(nav, '← Novější')).toBeUndefined();
+      expect(link(nav, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=2');
+      expect(link(nav, 'Novější')).toBeUndefined();
     });
   });
 
@@ -399,8 +439,14 @@ describe('Given a visitor opening Aktuality', () => {
 
     it('then both directions are offered', () => {
       expect(text(root, '.pages-position')).toBe('Strana 2 z 3');
-      expect(link(root, '← Novější')?.getAttribute('href')).toBe('/aktuality');
-      expect(link(root, 'Starší →')?.getAttribute('href')).toBe('/aktuality?strana=3');
+      expect(link(root, 'Novější')?.getAttribute('href')).toBe('/aktuality');
+      expect(link(root, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=3');
+    });
+
+    it('then each direction carries a chevron icon hidden from screen readers', () => {
+      for (const name of ['Novější', 'Starší']) {
+        expect(link(root, name)?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+      }
     });
   });
 

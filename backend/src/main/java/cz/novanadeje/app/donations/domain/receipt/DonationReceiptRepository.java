@@ -17,6 +17,8 @@ public interface DonationReceiptRepository {
 
     Optional<DonationReceipt> findActiveForDonation(DonationId donation);
 
+    List<DonationReceipt> findActiveSinglesFor(Collection<DonationId> donations);
+
     Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year);
 
     Optional<DonationReceipt> findLatestOutdatedForYear(DonorReference donor, Year year);

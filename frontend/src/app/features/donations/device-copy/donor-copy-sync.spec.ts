@@ -6,15 +6,20 @@ import {
 } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { AuthStore } from '../../../core/auth/auth-store';
+import type { Donor } from '../../../core/auth/donor';
 import { deviceAccountOf } from '../../../core/auth/session-device';
+import { sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { DiagnosticEvents } from '../../../core/diagnostics/diagnostic-events';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { sharedCases } from '../../../../testing/shared-cases';
 import { rowsSha256 } from '../sync/canonical-rows';
 import { DonorCopyLink } from './donor-copy';
 import {
   CATCH_UP_PAUSE_MS,
+  copyProfileOf,
   DonorCopySync,
   REBUILD_PAUSE_MS,
   SYNC_REQUEST_TIMEOUT_MS,
@@ -126,8 +131,10 @@ describe('Given the sync of the donor copy', () => {
   let sync: DonorCopySync;
   let gifts2025: SyncChunk;
   let gifts2026: SyncChunk;
+  let signedIn: ReturnType<typeof signal<Donor | null>>;
 
   beforeEach(async () => {
+    signedIn = signal<Donor | null>(null);
     vault = new FakeVault();
     store = new FakeStore();
     reporter = { report: vi.fn() };
@@ -137,6 +144,7 @@ describe('Given the sync of the donor copy', () => {
         provideHttpClientTesting(),
         { provide: DeviceVault, useValue: vault },
         { provide: ErrorReporter, useValue: reporter },
+        { provide: AuthStore, useValue: { donor: signedIn.asReadonly() } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -225,6 +233,100 @@ describe('Given the sync of the donor copy', () => {
     ]);
     expect(sync.firstSync()).toBe(false);
     expect(sync.view()?.items.map((item) => item.id)).toEqual(['gift-2', 'gift-1']);
+  });
+
+  it('when the signed-in donor owns the copy, then the stored contents carry their profile, so the copy can show the account without the server', async () => {
+    const jana = sampleDonor({ id: DONOR_ID, email: 'jana@example.cz' });
+    signedIn.set(jana);
+    open('empty');
+
+    await vi.waitFor(() => answerManifest([gifts2025]));
+    await answerChunks(['donations:2025'], [gifts2025]);
+    await settled();
+
+    expect(vault.stored[0].profile).toEqual({
+      id: jana.id,
+      type: jana.type,
+      name: jana.name,
+      email: jana.email,
+      roles: jana.roles,
+      address: jana.address,
+      companyIdentifier: jana.companyIdentifier,
+      variableSymbol: jana.variableSymbol,
+    });
+  });
+
+  it('when the profile is stored, then it keeps only what the account shows without the server and never a pending address, the second factor or the dates', async () => {
+    signedIn.set(
+      sampleDonor({
+        id: DONOR_ID,
+        pendingEmailChange: { newEmail: 'nova@example.cz', expiresAt: '2026-11-13T10:00:00Z' },
+      }),
+    );
+    open('empty');
+
+    await vi.waitFor(() => answerManifest([gifts2025]));
+    await answerChunks(['donations:2025'], [gifts2025]);
+    await settled();
+
+    expect(Object.keys(vault.stored[0].profile as object).sort()).toEqual([
+      'address',
+      'companyIdentifier',
+      'email',
+      'id',
+      'name',
+      'roles',
+      'type',
+      'variableSymbol',
+    ]);
+  });
+
+  it('when nobody is signed in while the copy syncs, then the stored contents keep the profile the copy had', async () => {
+    const kept = copyProfileOf(sampleDonor({ id: DONOR_ID, name: 'Jana z kopie' }));
+    await holding([gifts2025]);
+    store.persisted = { ...store.persisted!, profile: kept };
+    store.contents.set(store.persisted);
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2025, gifts2026]);
+    await settled();
+
+    expect(vault.stored[0].profile).toEqual(kept);
+  });
+
+  it("when the owner signs in under a changed name, then the stored contents take the new profile over the copy's older one", async () => {
+    await holding([gifts2025]);
+    store.persisted = {
+      ...store.persisted!,
+      profile: copyProfileOf(sampleDonor({ id: DONOR_ID, name: 'Jana Stará' })),
+    };
+    store.contents.set(store.persisted);
+    signedIn.set(sampleDonor({ id: DONOR_ID, name: 'Jana Nová' }));
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2025, gifts2026]);
+    await settled();
+
+    expect((vault.stored[0].profile as { name: string }).name).toBe('Jana Nová');
+  });
+
+  it('when the signed-in donor is not the one whose copy is open, then the stored contents keep the profile the copy had and take none of theirs', async () => {
+    const kept = copyProfileOf(
+      sampleDonor({ id: DONOR_ID, email: 'jana@example.cz', name: 'Jana z kopie' }),
+    );
+    await holding([gifts2025]);
+    store.persisted = { ...store.persisted!, profile: kept };
+    store.contents.set(store.persisted);
+    signedIn.set(sampleDonor({ id: PETR_ID, email: 'petr@example.cz' }));
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2025, gifts2026]);
+    await settled();
+
+    expect(vault.stored[0].profile).toEqual(kept);
   });
 
   it('when a copy opens, then the sync names the donor whose copy it is, and none once it closes', async () => {
@@ -429,6 +531,27 @@ describe('Given the sync of the donor copy', () => {
 
     expect(vault.stored).toEqual([]);
     expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+  });
+
+  it('when a sync stores the copy and a later one cannot verify it, then the diagnostic file lists both outcomes and nothing of the data', async () => {
+    open('empty');
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2026]);
+    await settled();
+
+    const reloading = sync.reload();
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await vi.waitFor(() => answerManifest([gifts2026]));
+    await answerChunks(['donations:2026'], [], { summary: summaryOf([gifts2026]) });
+    await reloading;
+
+    const listed = TestBed.inject(DiagnosticEvents).listed();
+    expect(listed.map(({ kind, detail }) => [kind, detail])).toEqual([
+      ['copy-sync', 'stored'],
+      ['copy-sync', 'mismatch'],
+    ]);
+    expect(JSON.stringify(listed)).not.toMatch(/gift-2|donations:2026|100000/);
   });
 
   it('when the manifest names another donor than the copy, then nothing is stored, and since the session changed rather than the data, nothing is reported', async () => {

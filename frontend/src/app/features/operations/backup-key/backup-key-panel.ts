@@ -2,7 +2,7 @@
 
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
-import { saveBlob } from '../../donations/file-download';
+import { saveBlob } from '../../../core/files/file-download';
 import { backupKeyWords } from './backup-key-words';
 
 export const BACKUP_KEY_FILE_NAME = 'nfnn-klic-k-zaloham.txt';

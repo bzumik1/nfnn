@@ -17,6 +17,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -27,10 +28,13 @@ import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { formatCrowns } from '../donation-amount';
+import { GiftArrivalWatch } from '../gift-arrival/gift-arrival-watch';
+import { giftArrivalText } from '../gift-arrival/gift-arrival-text';
+import { RepositoryGiftFeed } from '../gift-arrival/repository-gift-feed';
 import { ibanHalves } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
 import { PaymentDetailsStore } from '../payment-details-store';
-import { saveBlob } from '../file-download';
+import { saveBlob } from '../../../core/files/file-download';
 import { spayd } from '../spayd';
 import {
   deviceShares,
@@ -89,7 +93,8 @@ export type PaymentAccountState =
 
 @Component({
   selector: 'app-payment-panel',
-  imports: [CopyButton, NgTemplateOutlet, QrCode, Zoomable],
+  imports: [CopyButton, NgTemplateOutlet, QrCode, RouterLink, Zoomable],
+  providers: [GiftArrivalWatch, RepositoryGiftFeed],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +105,8 @@ export class PaymentPanel {
   private readonly injector = inject(Injector);
   private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly localPaymentRoute = inject(LocalPaymentRoute);
+  private readonly giftArrival = inject(GiftArrivalWatch);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
@@ -108,6 +115,7 @@ export class PaymentPanel {
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private readonly customAmountField = viewChild<ElementRef<HTMLInputElement>>('customAmountField');
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly arrivalClose = viewChild<ElementRef<HTMLButtonElement>>('arrivalClose');
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
@@ -226,6 +234,12 @@ export class PaymentPanel {
 
   protected readonly bankAccount = computed(() => this.details()?.account ?? null);
 
+  protected readonly arrivalText = computed(() => {
+    const arrival = this.giftArrival.arrival();
+    return arrival === null ? null : giftArrivalText(arrival);
+  });
+  protected readonly arrivalListedHere = this.giftArrival.listedHere;
+
   readonly accountState = computed<PaymentAccountState>(() => {
     const account = this.bankAccount();
     if (account) {
@@ -261,6 +275,13 @@ export class PaymentPanel {
     this.store.load();
     effect(() => this.focusAfterRetry(this.state().kind, this.openReady()));
     afterRenderEffect(() => this.prepareImage());
+    effect(() => this.giftArrival.enable(this.variableSymbol() !== null));
+    afterNextRender(() => {
+      const qrBox = this.qrBox();
+      if (qrBox) {
+        this.giftArrival.observe(this.host.nativeElement, qrBox.nativeElement);
+      }
+    });
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.redrawTimer);
       clearTimeout(this.announceTimer);
@@ -331,11 +352,24 @@ export class PaymentPanel {
     this.store.reload();
   }
 
+  noteIntentToPay(): void {
+    this.giftArrival.intent();
+  }
+
+  closeThanks(): void {
+    const closeHadFocus = document.activeElement === this.arrivalClose()?.nativeElement;
+    this.giftArrival.dismiss();
+    if (closeHadFocus) {
+      (this.compact() ? this.bankAppOpen() : this.qrBox())?.nativeElement.focus();
+    }
+  }
+
   async saveQr(): Promise<void> {
     const qrCode = this.qrCode();
     if (!qrCode || this.saving()) {
       return;
     }
+    this.noteIntentToPay();
     this.saving.set(true);
     try {
       const link = document.createElement('a');
@@ -350,6 +384,9 @@ export class PaymentPanel {
 
   toggleQr(): void {
     this.qrShown.update((shown) => !shown);
+    if (this.qrShown()) {
+      this.noteIntentToPay();
+    }
   }
 
   async openInBankApp(): Promise<void> {
@@ -357,6 +394,7 @@ export class PaymentPanel {
     if (payment === null || !this.openReady() || this.handingOff()) {
       return;
     }
+    this.noteIntentToPay();
     const png = this.opensWithImage ? (this.preparedImage()?.png ?? null) : null;
     if (png !== null) {
       await this.handOverPayment(payment, imageFile(png, sharedImageName(payment)), imageNotice);
@@ -372,6 +410,7 @@ export class PaymentPanel {
     if (payment === null || !this.handoffReady() || this.handingOff()) {
       return;
     }
+    this.noteIntentToPay();
     await this.handOverPayment(payment, spaydFile(payment.spayd), fileNotice);
   }
 
@@ -414,6 +453,7 @@ export class PaymentPanel {
     if (!qrCode || payment === null || !this.imageReady() || this.handingOff()) {
       return;
     }
+    this.noteIntentToPay();
     this.clearNotices();
     const prepared = this.preparedImage()?.png ?? null;
     const shared = prepared === null ? null : imageFile(prepared, sharedImageName(payment));

@@ -160,7 +160,7 @@ jobs:
               release) echo "Zkouška vydání (nasazená revize a latest)|provoz, schéma a obrazy|další řez s changesetem Liquibase nebo se změnou obrazů, compose, záloh či importu (2.3, 2.4, 2.9, 2.12, 2.17, 2.27)" ;;
               sync-convergence) echo "Konvergence synchronizace (300 semínek)|kopie dat v zařízení dárce a její synchronizace|další řez, který mění synchronizaci nebo kopii v zařízení (2.13, 2.17)" ;;
               bulk-receipts) echo "Hromadná potvrzení (300 potvrzení při čtvrtinovém výkonu)|kreslení potvrzení v prohlížeči a hromadná potvrzení|další řez, který mění kreslení potvrzení nebo hromadná potvrzení (2.19)" ;;
-              *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing.md" ;;
+              *) echo "$1|neurčeno|doplňte job do tabulky v nightly.yml a v .claude/rules/testing-nightly.md" ;;
             esac
           }
           table="| Noční job | Výsledek | Oblast | Co čeká, dokud je červený |

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   appearanceProblems,
   barContrastProblems,
+  launchIconProblems,
   manifestProblems,
   receiptTokensOutsideRoot,
   themeAssetProblems,
@@ -289,6 +290,72 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     );
   });
 
+  it('when the light accent is too light for the grouped page of the app areas, then its contrast there is reported', () => {
+    const pale = NOVA_NADEJE.replace('  --color-accent: #1d5fc9;', '  --color-accent: #4f86e8;');
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-accent on --color-surface-grouped is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the accent is too light for its own 14 % tint, then its contrast on the tint is reported, because tinted buttons and the selected pill carry accent text', () => {
+    const pale = NOVA_NADEJE.replace('  --color-accent: #1d5fc9;', '  --color-accent: #3b74e0;');
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-accent on the 14 % tint of --color-accent is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the soft text is too light for a sheet in the dark, then its contrast on the elevated surface is reported', () => {
+    const dim = NOVA_NADEJE.replace(
+      '    --color-text-soft: #9aa3b2;',
+      '    --color-text-soft: #5d6575;',
+    );
+
+    assert.match(
+      appearanceProblems('dim', dim).join('\n'),
+      /^theme dim in the dark appearance: --color-text-soft on --color-surface-elevated is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the soft text is too light for the muted ground that stands for the quiet ground inside the cells of the app areas, then its contrast there is reported', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-surface-muted: #f1f3f5;',
+      '  --color-surface-muted: #d5d9df;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-text-soft on --color-surface-muted is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the text of the filled warning badge is too light for it, then its contrast is reported', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-badge-warning: #b45309;',
+      '  --color-badge-warning: #f59e0b;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-on-badge-warning on --color-badge-warning is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when an icon tile is too light for its white glyph, then its contrast is reported against the 3:1 of a graphic', () => {
+    const pale = NOVA_NADEJE.replace(
+      '  --color-tile-warning: #d97706;',
+      '  --color-tile-warning: #fbbf24;',
+    );
+
+    assert.match(
+      appearanceProblems('pale', pale).join('\n'),
+      /^theme pale in the light appearance: --color-on-tile on --color-tile-warning is [0-9.]+:1, below 3:1$/m,
+    );
+  });
+
   it('when the field border is as soft in the dark as in the default look, then only the dark appearance reports it, because Jakub kept the soft border of the light default', () => {
     const soft = NOVA_NADEJE.replace(
       '    --color-border-field: #6b7588;',
@@ -300,7 +367,7 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     assert.deepEqual(
       problems.filter((problem) => problem.includes('--color-border-field')),
       [
-        'theme soft in the dark appearance: --color-border-field on --color-surface is 1.43:1, below 3:1',
+        'theme soft in the dark appearance: --color-border-field on --color-surface is 1.38:1, below 3:1',
         'theme soft in the dark appearance: --color-border-field on --color-surface-alt is 1.53:1, below 3:1',
       ],
     );
@@ -518,6 +585,44 @@ describe('Given the web app manifest of a theme', () => {
     ]);
     assert.deepEqual(problemsOf(MANIFEST, ICON_SIZES, THEME_COLOURS, null), [
       'theme control: manifest short_name Nová naděje is not the apple-mobile-web-app-title null of src/index.html',
+    ]);
+  });
+});
+
+describe('Given the launch icon of a theme', () => {
+  const star =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>Star</title><path fill="#005dab" d="M5 1L9 9L1 9Z"/></svg>';
+
+  it('when it is filled paths with transparent corners, then nothing is reported', () => {
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: star }), []);
+  });
+
+  it('when the theme has none, then the missing file is reported', () => {
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: null }), [
+      'theme control has no assets/launch-icon.svg, which the launch screen and the launch images draw',
+    ]);
+  });
+
+  it('when it holds what the launch images cannot draw, then that is reported', () => {
+    const stroked = star.replace('<path fill', '<path stroke="#000" fill');
+
+    const problems = launchIconProblems({ theme: 'control', svg: stroked });
+
+    assert.equal(problems.length, 1);
+    assert.match(
+      problems[0],
+      /^theme control: assets\/launch-icon\.svg cannot be drawn into the launch images: .*stroke/,
+    );
+  });
+
+  it('when it paints a tile behind the star, then the tile is reported, because it would stand out on the dark surface', () => {
+    const tiled = star.replace(
+      '<path fill',
+      '<path fill="#ffffff" d="M0 0L10 0L10 10L0 10Z"/><path fill',
+    );
+
+    assert.deepEqual(launchIconProblems({ theme: 'control', svg: tiled }), [
+      'theme control: assets/launch-icon.svg paints its corners, so a tile would stand around the star on the dark launch screen',
     ]);
   });
 });

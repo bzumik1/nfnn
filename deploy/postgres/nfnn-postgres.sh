@@ -12,8 +12,10 @@
 # superuser over a schema the role can fill with operators and functions; a restored database is the
 # role's already, since the backup restores it as that role). The same script pins the superuser's
 # own search_path to pg_catalog, so an operator's psql as the superuser never resolves a name to
-# something the role planted. A new database is initialised with data checksums (the Dockerfile's
-# POSTGRES_INITDB_ARGS); an older one keeps what it was created with (deploy/README.md).
+# something the role planted. A new database is initialised with data checksums and PostgreSQL's
+# built-in C.UTF-8 locale, so its text order and case mapping do not depend on the image's C library
+# (the Dockerfile's POSTGRES_INITDB_ARGS); an older one keeps what it was created with
+# (deploy/README.md).
 # $SECRETS_DIR/db-password.ready tells the backend and the backup that the roles accept the
 # passwords; it is removed at every start and written once they hold.
 set -eu

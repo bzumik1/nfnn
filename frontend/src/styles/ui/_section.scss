@@ -33,7 +33,7 @@
       transparent 60%
     ),
     var(--color-surface-inverse);
-  padding: calc(var(--header-height) + var(--space-22)) 0 var(--space-20);
+  padding: calc(var(--page-top) + var(--space-18)) 0 var(--space-20);
 }
 
 .ui-intro--light {
@@ -151,13 +151,13 @@
   }
 
   .ui-intro {
-    padding: calc(var(--header-height) + var(--space-14)) 0 var(--space-14);
+    padding: calc(var(--page-top) + var(--space-10)) 0 var(--space-14);
   }
 }
 
 @include bp.height-down(short) {
   .ui-intro {
-    padding: calc(var(--header-height) + var(--space-2)) 0 var(--space-6);
+    padding: var(--page-top) 0 var(--space-6);
   }
 
   .ui-intro .ui-container {

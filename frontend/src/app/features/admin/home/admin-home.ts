@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -26,19 +27,14 @@ import {
   AdminOverviewResponse,
   AdministratorResponse,
   BackupRunResponse,
-  ImportFailureKind,
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
-import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
-import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
-import {
-  unpublishedKeyIds,
-  unpublishedKeysSentence,
-} from '../settings/receipt-signing-key/unpublished-keys';
+import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
+import { unpublishedKeyIds } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -48,19 +44,17 @@ import {
   SectionIcon,
   SectionRowGroup,
 } from '../shell/section-rows/admin-section-rows';
-
-type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
-type LoadState = 'loading' | 'ready' | 'error';
+import {
+  AttentionRetry,
+  attentionRows,
+  LoadState,
+  SignatoryState,
+  UnpairedSummary,
+  unpairedCount,
+} from './attention-rows';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-
-type NextStepLink = 'settings' | 'logs' | null;
-
-interface UnpairedSummary {
-  readonly count: number;
-  readonly totalMinor: number;
-}
 
 interface SinceSignIn {
   readonly previousSignInAt: string | null;
@@ -74,50 +68,9 @@ interface SinceFigure {
   readonly query: Record<string, string> | null;
 }
 
-interface NextStep {
-  readonly text: string;
-  readonly link: NextStepLink;
-}
-
-const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
-  RATE_LIMITED: {
-    text: $localize`:@@admin.home.import.next.rateLimited:Banka teď odmítá příliš časté dotazy. Web to zkusí znovu sám, nic dělat nemusíte.`,
-    link: null,
-  },
-  HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut restartujte backend (v ZimaOS restart aplikace).`,
-    link: null,
-  },
-  UNAUTHORIZED: {
-    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
-    link: 'settings',
-  },
-  TRANSPORT: {
-    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
-    link: null,
-  },
-  INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
-    link: 'logs',
-  },
-  UNEXPECTED: {
-    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
-    link: 'logs',
-  },
-};
-
-const FAILURE_LABELS: Record<ImportFailureKind, string> = {
-  RATE_LIMITED: $localize`:@@admin.home.import.failure.rateLimited:Fio odmítlo příliš častý dotaz`,
-  HISTORY_LOCKED: $localize`:@@admin.home.import.failure.historyLocked:Historie starší než 90 dní je ve Fio zamčená`,
-  UNAUTHORIZED: $localize`:@@admin.home.import.failure.unauthorized:Fio odmítlo token (chybí, ještě neplatí nebo vypršel)`,
-  TRANSPORT: $localize`:@@admin.home.import.failure.transport:Fio nebylo dostupné`,
-  INVALID_RESPONSE: $localize`:@@admin.home.import.failure.invalidResponse:Fio poslalo odpověď, které web nerozumí`,
-  UNEXPECTED: $localize`:@@admin.home.import.failure.unexpected:Neočekávaná chyba`,
-};
-
 @Component({
   selector: 'app-admin-home',
-  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows],
+  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows, NgTemplateOutlet],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -152,13 +105,7 @@ export class AdminHome {
   protected readonly unpublishedSigningKeys = signal<readonly string[]>([]);
   protected readonly signingKeyWarnings = signal<readonly string[]>([]);
 
-  protected readonly backupProblems = computed(() =>
-    (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
-  );
-  protected readonly backupTechnicianMessage = computed(() => {
-    const view = this.backups();
-    return view !== null && needsTechnician(view) ? technicianMessage(view) : null;
-  });
+  protected readonly backupsHealthy = computed(() => this.backups()?.problems.length === 0);
   protected readonly lastBackup = computed(() => {
     const run = this.backups()?.lastBackup;
     if (!run) {
@@ -237,7 +184,7 @@ export class AdminHome {
   protected readonly lastAttempt = computed(() => time(this.importState()?.lastAttemptedAt));
   protected readonly lastFailure = computed(() => {
     const failure = this.importState()?.lastFailure;
-    return failure ? FAILURE_LABELS[failure.kind] : null;
+    return failure ? IMPORT_FAILURE_LABELS[failure.kind] : null;
   });
   protected readonly lastFailureMessage = computed(
     () => this.importState()?.lastFailure?.message ?? null,
@@ -245,46 +192,24 @@ export class AdminHome {
   protected readonly lastFailureAt = computed(() =>
     time(this.importState()?.lastFailure?.attemptedAt),
   );
-  protected readonly outage = computed(() => {
-    const state = this.importState();
-    return state?.reportedOutage ? FAILURE_LABELS[state.reportedOutage] : null;
-  });
-  protected readonly nextStep = computed(() => {
-    const state = this.importState();
-    return state?.reportedOutage ? NEXT_STEPS[state.reportedOutage] : null;
-  });
   protected readonly neverAttempted = computed(
     () => this.state() === 'ready' && this.importState()?.lastAttemptedAt == null,
   );
-
-  protected readonly importNeedsAttention = computed(
-    () => this.state() === 'error' || this.outage() !== null || this.neverAttempted(),
-  );
-  protected readonly unpairedNeedsAttention = computed(
-    () => this.unpairedState() === 'error' || (this.unpaired()?.count ?? 0) > 0,
-  );
-  protected readonly backupsNeedAttention = computed(
-    () => this.backupsState() === 'error' || this.backupProblems().length > 0,
-  );
-  protected readonly backupKeyUnconfirmed = computed(() => {
-    const key = this.backups()?.key;
-    return key !== undefined && key.available && !key.confirmed;
-  });
-  protected readonly administratorsNeedAttention = computed(
-    () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
-  );
-  protected readonly signatoryNeedsAttention = computed(() =>
-    ['error', 'missing', 'unsigned'].includes(this.signatoryState()),
-  );
-  protected readonly signingKeysNeedAttention = computed(
-    () =>
-      this.signingKeysState() === 'error' ||
-      this.unpublishedSigningKeys().length > 0 ||
-      this.signingKeyWarnings().length > 0,
-  );
-  protected readonly signingKeyWarningsText = computed(() => this.signingKeyWarnings().join(' '));
-  protected readonly unpublishedSigningKeysText = computed(() =>
-    unpublishedKeysSentence(this.unpublishedSigningKeys()),
+  protected readonly attentionRows = computed(() =>
+    attentionRows({
+      importLoad: this.state(),
+      importState: this.importState(),
+      unpairedLoad: this.unpairedState(),
+      unpaired: this.unpaired(),
+      backupsLoad: this.backupsState(),
+      backups: this.backups(),
+      administratorsLoad: this.administratorsState(),
+      withoutSecondFactor: this.withoutSecondFactor(),
+      signingKeysLoad: this.signingKeysState(),
+      unpublishedSigningKeys: this.unpublishedSigningKeys(),
+      signingKeyWarnings: this.signingKeyWarnings(),
+      signatory: this.signatoryState(),
+    }),
   );
   protected readonly attentionLoading = computed(() =>
     [
@@ -295,34 +220,14 @@ export class AdminHome {
       this.signingKeysState(),
     ].includes('loading'),
   );
-  protected readonly needsAttention = computed(
-    () =>
-      this.importNeedsAttention() ||
-      this.unpairedNeedsAttention() ||
-      this.backupsNeedAttention() ||
-      this.backupKeyUnconfirmed() ||
-      this.administratorsNeedAttention() ||
-      this.signingKeysNeedAttention() ||
-      this.signatoryNeedsAttention(),
-  );
-  protected readonly unpairedText = computed(() => {
-    const summary = this.unpaired();
-    return summary === null ? '' : unpairedText(summary);
-  });
-  protected readonly withoutSecondFactorText = computed(() => {
-    const names = this.withoutSecondFactor();
-    const list = names.join(', ');
-    return names.length === 1
-      ? $localize`:@@admin.home.attention.secondFactor.one:Správce ${list}:names: nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře.`
-      : $localize`:@@admin.home.attention.secondFactor.many:Správci bez druhého faktoru (kódu z ověřovací aplikace i přístupového klíče), kterým se správa neotevře: ${list}:names:.`;
-  });
   protected readonly lastBackupTime = computed(() => {
     const run = this.backups()?.lastBackup;
     return run && run.outcome === 'OK' ? formatBankTime(run.finishedAt) : null;
   });
-  protected readonly consecutiveFailures = computed(
-    () => this.importState()?.consecutiveFailures ?? 0,
-  );
+  protected readonly toneLabels: Readonly<Record<string, string>> = {
+    danger: $localize`:@@admin.home.attention.tone.danger:Naléhavé:`,
+    warning: $localize`:@@admin.home.attention.tone.warning:Upozornění:`,
+  };
 
   constructor() {
     this.loadSince();
@@ -462,6 +367,23 @@ export class AdminHome {
     );
   }
 
+  protected retry(target: AttentionRetry): void {
+    switch (target) {
+      case 'unpaired':
+        this.loadUnpaired();
+        return;
+      case 'signingKeys':
+        this.loadSigningKeys();
+        return;
+      case 'administrators':
+        this.loadAdministrators();
+        return;
+      case 'signatory':
+        this.loadSignatory();
+        return;
+    }
+  }
+
   protected changeYear(event: Event): void {
     this.loadOverview(Number((event.target as HTMLSelectElement).value));
   }
@@ -568,18 +490,6 @@ function time(isoInstant: string | null | undefined): string | null {
   return isoInstant ? formatBankTime(isoInstant) : null;
 }
 
-function unpairedText({ count, totalMinor }: UnpairedSummary): string {
-  const total = `${formatMinorUnits(totalMinor)}\u00a0Kč`;
-  switch (pluralCategory(count)) {
-    case 'one':
-      return $localize`:@@admin.home.attention.unpaired.one:1 platba čeká na přiřazení dárci (${total}:total:).`;
-    case 'few':
-      return $localize`:@@admin.home.attention.unpaired.few:${count}:count: platby čekají na přiřazení dárci (${total}:total:).`;
-    case 'other':
-      return $localize`:@@admin.home.attention.unpaired.many:${count}:count: plateb čeká na přiřazení dárci (${total}:total:).`;
-  }
-}
-
 const DAILY_ICONS: Readonly<Record<string, SectionIcon>> = {
   [ADMIN_PAYMENTS_PATH]: 'payments',
   '/sprava/darci': 'donors',
@@ -596,7 +506,7 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
         ...item,
         icon: DAILY_ICONS[item.path],
         ...(item.path === ADMIN_PAYMENTS_PATH
-          ? { badge: { count: unpaired, description: unpairedBadge(unpaired) } }
+          ? { badge: { count: unpaired, description: unpairedCount(unpaired) } }
           : {}),
       })),
     },
@@ -612,15 +522,4 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
       ],
     },
   ];
-}
-
-function unpairedBadge(count: number): string {
-  switch (pluralCategory(count)) {
-    case 'one':
-      return $localize`:@@admin.home.sections.unpaired.one:${count}:count: platba čeká na přiřazení`;
-    case 'few':
-      return $localize`:@@admin.home.sections.unpaired.few:${count}:count: platby čekají na přiřazení`;
-    default:
-      return $localize`:@@admin.home.sections.unpaired.many:${count}:count: plateb čeká na přiřazení`;
-  }
 }

@@ -36,6 +36,7 @@ import { LiveUpdates } from '../../../core/live/live-updates';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
+import { BankAccount } from '../../donations/bank-account/bank-account';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { formatMonth } from '../../donations/donation-month';
@@ -117,7 +118,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 
 @Component({
   selector: 'app-admin-payments',
-  imports: [LiveNotice, Dialog, RouterLink, NeedsConnection, ChangedMeanwhileDialog],
+  imports: [LiveNotice, Dialog, RouterLink, NeedsConnection, ChangedMeanwhileDialog, BankAccount],
   templateUrl: './admin-payments.html',
   styleUrl: './admin-payments.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

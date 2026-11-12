@@ -288,7 +288,8 @@ Feature: An administrator pairs bank payments by hand
     When "Jana" unpairs payment 1001
     Then the response status is 409
     And the problem type ends with "donations/donation-has-receipt"
-    And 2 receipts are active
+    And 1 receipt is active
+    And receipt "2026-000001" is superseded
     And no admin action "WITHDRAW_RECEIPT" is recorded
 
   Scenario: Donors are found by part of the name or the start of the variable symbol

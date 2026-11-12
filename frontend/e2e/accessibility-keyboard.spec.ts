@@ -44,16 +44,19 @@ async function settledOverlapWithBar(page: Page): Promise<number> {
       const focused = document.activeElement!.getBoundingClientRect();
       return Math.round(Math.min(focused.bottom, bar.bottom) - Math.max(focused.top, bar.top));
     });
-  let previous = await overlap();
-  for (let check = 0; check < 30; check += 1) {
-    await page.waitForTimeout(100);
-    const current = await overlap();
-    if (current === previous) {
-      return current;
-    }
-    previous = current;
-  }
-  return previous;
+  let previous: number | undefined;
+  await expect
+    .poll(
+      async () => {
+        const current = await overlap();
+        const unchanged = current === previous;
+        previous = current;
+        return unchanged;
+      },
+      { intervals: [100] },
+    )
+    .toBe(true);
+  return previous!;
 }
 
 async function widerThanScreen(page: Page): Promise<number> {
@@ -277,7 +280,7 @@ for (const width of [320, 390]) {
       );
     });
 
-    test('when they open an article signed out, then the back button, the logo and Přihlásit se stay on screen side by side', async ({
+    test('when they open an article signed out, then the back button and Přihlásit se stay on screen side by side, with no logo between them', async ({
       page,
     }) => {
       await page.goto('/aktuality/zahrada-pro-deti');
@@ -286,17 +289,16 @@ for (const width of [320, 390]) {
       const boxes = await Promise.all(
         [
           banner.getByRole('button', { name: 'Zpět' }),
-          banner.getByRole('link').first(),
           banner.getByRole('button', { name: 'Přihlásit se' }),
         ].map(async (control) => (await control.boundingBox())!),
       );
 
+      await expect(banner.getByRole('link', { name: 'Nová naděje – nadační fond' })).toHaveCount(0);
       for (const box of boxes) {
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
       expect(boxes[0].x + boxes[0].width).toBeLessThanOrEqual(boxes[1].x);
-      expect(boxes[1].x + boxes[1].width).toBeLessThanOrEqual(boxes[2].x);
       expect(await widerThanScreen(page)).toBe(0);
     });
 

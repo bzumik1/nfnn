@@ -5,6 +5,7 @@ import { administrator, mockDonorApi, problem, session } from './donor-session';
 const REPORT = '/api/admin/donations/report';
 const SETTINGS = '/api/admin/donations/report/settings';
 const SEND = '/api/admin/donations/report/send';
+const SENT = '/api/admin/donations/report/sent';
 
 function reportView(overrides: Record<string, unknown> = {}) {
   return {
@@ -18,6 +19,37 @@ function reportView(overrides: Record<string, unknown> = {}) {
     sentReports: [{ month: '2026-09', sentAt: '2026-10-01T05:00:12Z' }],
     nextReport: { month: '2026-10', dueOn: '2026-11-01' },
     lastEndedMonth: '2026-10',
+    ...overrides,
+  };
+}
+
+function content() {
+  return {
+    donors: { registered: 2, newInMonth: 1 },
+    donations: {
+      received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+      paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+      receivedInYear: { count: 9, totalMinor: 240000, currency: 'CZK' },
+    },
+    unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+    bankImport: { lastSucceededAt: '2026-10-01T04:00:00Z', lastFailure: null },
+  };
+}
+
+function sentReport(overrides: Record<string, unknown> = {}) {
+  return {
+    month: '2026-09',
+    firstSentAt: '2026-10-01T05:00:12Z',
+    deliveries: [
+      { sentAt: '2026-10-02T08:00:00Z', byHand: true, recipientCount: 1, content: content() },
+      {
+        sentAt: '2026-10-01T05:00:12Z',
+        byHand: false,
+        recipientCount: 1,
+        content: { ...content(), unpairedPayments: null, bankImport: null },
+      },
+    ],
+    recomputed: null,
     ...overrides,
   };
 }
@@ -95,7 +127,10 @@ test.describe('Given an administrator on the monthly report page', () => {
       page.getByText('Příští přehled za říjen 2026 odejde 1. 11. 2026 v 7:00.'),
     ).toBeVisible();
     await expect(page.getByText('Nastavení jste zatím neměnili.')).toBeVisible();
-    await expect(page.locator('tbody tr')).toHaveText(['září 2026 1. 10. 2026 7:00']);
+    await expect(page.locator('.sent-reports .ui-list__title')).toHaveText(['září 2026']);
+    await expect(page.locator('.sent-reports .ui-list__meta')).toHaveText([
+      'Odesláno 1. 10. 2026 7:00',
+    ]);
 
     await page.getByLabel('Příjemci').fill('pavel@example.cz\njakub@example.cz');
     await page.getByLabel('Den odeslání').selectOption({ label: '5.' });
@@ -187,9 +222,13 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(page.locator('.send-card .ui-notice--status')).toHaveText(
       'Přehled za říjen 2026 jsme poslali na info@nfnn.cz.',
     );
-    await expect(page.locator('tbody tr')).toHaveText([
-      'říjen 2026 23. 10. 2026 10:00',
-      'září 2026 1. 10. 2026 7:00',
+    await expect(page.locator('.sent-reports .ui-list__title')).toHaveText([
+      'říjen 2026',
+      'září 2026',
+    ]);
+    await expect(page.locator('.sent-reports .ui-list__meta')).toHaveText([
+      'Odesláno 23. 10. 2026 10:00',
+      'Odesláno 1. 10. 2026 7:00',
     ]);
     await expect(
       page.getByText('Příští přehled za listopad 2026 odejde 1. 12. 2026 v 7:00.'),
@@ -227,7 +266,70 @@ test.describe('Given an administrator on the monthly report page', () => {
     await expect(page.getByRole('alert')).toHaveText(
       'Přehled se nepodařilo odeslat. Poštovní server e-mail odmítl. V Nastavení si pošlete zkušební e-mail, který řekne, co je špatně, a zkuste to znovu.',
     );
-    await expect(page.locator('tbody tr')).toHaveCount(1);
+    await expect(page.locator('.sent-reports li')).toHaveCount(1);
     await expect(page.getByRole('group', { name: 'Poslat přehled?' })).toHaveCount(0);
+  });
+
+  test('when they open a sent month from the list on a phone, then its latest sending and the earlier one are shown and the back arrow returns to the list', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route(
+      (url) => url.pathname === REPORT,
+      (route) => route.fulfill({ json: reportView() }),
+    );
+    const asked: string[] = [];
+    await page.route(
+      (url) => url.pathname === SENT,
+      (route) => {
+        asked.push(new URL(route.request().url()).search);
+        return route.fulfill({ json: sentReport() });
+      },
+    );
+
+    await page.goto('/sprava/prehledy');
+    await page.getByRole('link', { name: /září 2026/ }).click();
+
+    await expect(page).toHaveURL('/sprava/prehledy/2026-09');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Přehled za září 2026' }),
+    ).toBeFocused();
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Naposledy odesláno 2. 10. 2026 10:00',
+      'Dříve odesláno 1. 10. 2026 7:00',
+    ]);
+    await expect(page.locator('.delivery').first()).toContainText('Přijaté dary za září 2026');
+    await expect(page.locator('.delivery').last()).not.toContainText('Banka');
+    expect(asked).toEqual(['?month=2026-09']);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+    await expect(page).toHaveURL('/sprava/prehledy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();
+  });
+
+  test('when a month sent before the sendings were kept is opened, then today\u2019s figures come with the note and without the bank', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === SENT,
+      (route) =>
+        route.fulfill({
+          json: sentReport({
+            firstSentAt: '2026-10-19T05:00:00Z',
+            deliveries: [],
+            recomputed: { ...content(), bankImport: null },
+          }),
+        }),
+    );
+
+    await page.goto('/sprava/prehledy/2026-09');
+
+    await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+      'Odesláno 19. 10. 2026 7:00',
+    ]);
+    await expect(
+      page.getByText('Spočteno z dnešních dat, odeslaný e-mail se mohl lišit.', { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: 'Banka' })).toHaveCount(0);
   });
 });

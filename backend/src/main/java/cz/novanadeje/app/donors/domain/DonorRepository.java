@@ -14,6 +14,8 @@ public interface DonorRepository {
 
     void delete(DonorId id);
 
+    int deleteUnconfirmedRegisteredBefore(Instant cutoff);
+
     Optional<Donor> findById(DonorId id);
 
     Optional<Donor> findByEmail(EmailAddress email);
@@ -24,6 +26,8 @@ public interface DonorRepository {
 
     void lockEmail(EmailAddress email);
 
+    void lockAdministrators();
+
     boolean existsByEmail(EmailAddress email);
 
     boolean existsByVariableSymbol(VariableSymbol variableSymbol);
@@ -33,6 +37,8 @@ public interface DonorRepository {
     List<Donor> findByIds(Collection<DonorId> ids);
 
     List<Donor> findAll();
+
+    List<Donor> findErased();
 
     List<Donor> search(String query, int offset, int limit);
 

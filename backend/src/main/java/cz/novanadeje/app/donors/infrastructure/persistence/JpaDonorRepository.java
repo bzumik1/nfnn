@@ -42,6 +42,11 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    public int deleteUnconfirmedRegisteredBefore(Instant cutoff) {
+        return jpa.deleteUnconfirmedRegisteredBefore(cutoff);
+    }
+
+    @Override
     public Optional<Donor> findById(DonorId id) {
         return jpa.findById(id.value()).map(DonorJpaEntity::toDomain);
     }
@@ -68,6 +73,12 @@ class JpaDonorRepository implements DonorRepository {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockAdministrators() {
+        AdvisoryLock.ADMINISTRATORS.acquireFor(entityManager);
+    }
+
+    @Override
     public boolean existsByEmail(EmailAddress email) {
         return jpa.existsByEmail(email.value());
     }
@@ -85,6 +96,11 @@ class JpaDonorRepository implements DonorRepository {
     @Override
     public List<Donor> findAll() {
         return jpa.findAllWithRoles().stream().map(DonorJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<Donor> findErased() {
+        return jpa.findErased().stream().map(DonorJpaEntity::toDomain).toList();
     }
 
     @Override

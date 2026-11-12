@@ -1,6 +1,9 @@
-import { DownloadedFile } from './donations-api';
+export interface SavedFile {
+  readonly blob: Blob;
+  readonly fileName: string;
+}
 
-export function saveBlob(file: DownloadedFile): void {
+export function saveBlob(file: SavedFile): void {
   const url = URL.createObjectURL(file.blob);
   const link = document.createElement('a');
   link.href = url;

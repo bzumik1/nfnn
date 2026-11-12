@@ -1,6 +1,6 @@
 FROM postgres:17-alpine
 
-ENV POSTGRES_INITDB_ARGS="--data-checksums"
+ENV POSTGRES_INITDB_ARGS="--data-checksums --locale-provider=builtin --builtin-locale=C.UTF-8"
 
 COPY nfnn-postgres.sh /usr/local/bin/nfnn-postgres
 COPY app-role.sql own-by-app-role.sql /usr/local/share/nfnn/

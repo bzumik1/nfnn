@@ -19,13 +19,13 @@
 }
 
 @supports (-webkit-touch-callout: none) {
-  input.form-control[type='date'] {
+  input.form-control:is([type='date'], [type='time']) {
     display: block;
     min-width: 0;
     appearance: none;
   }
 
-  input.form-control[type='date']::-webkit-date-and-time-value {
+  input.form-control:is([type='date'], [type='time'])::-webkit-date-and-time-value {
     min-height: 1lh;
     text-align: left;
   }

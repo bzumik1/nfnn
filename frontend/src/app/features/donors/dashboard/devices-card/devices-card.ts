@@ -13,21 +13,36 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
-import { SignedInDevice } from '../../../../core/auth/donor';
+import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { deviceName } from './device-labels';
+import { groupDevices } from './device-groups';
+import { deviceName, sessionKindName } from './device-labels';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
 const ALL_OTHERS = 'others';
 
+type DeviceShape = 'phone' | 'tablet' | 'computer' | 'other';
+
+const SHAPES: Record<DevicePlatform, DeviceShape> = {
+  IPHONE: 'phone',
+  ANDROID: 'phone',
+  IPAD: 'tablet',
+  MAC: 'computer',
+  WINDOWS: 'computer',
+  CHROMEBOOK: 'computer',
+  LINUX: 'computer',
+  OTHER: 'other',
+};
+
 @Component({
   selector: 'app-devices-card',
-  imports: [NeedsConnection],
+  imports: [NeedsConnection, NgTemplateOutlet],
   templateUrl: './devices-card.html',
   styleUrl: './devices-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,12 +54,16 @@ export class DevicesCard {
   private readonly document = inject(DOCUMENT);
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
+  private readonly olderToggle = viewChild<ElementRef<HTMLButtonElement>>('olderToggle');
 
   readonly sessionEnded = output<void>();
 
   protected readonly devices = signal<SignedInDevice[] | null>(null);
   protected readonly loadError = signal('');
   protected readonly actionError = signal('');
+  protected readonly olderShown = signal(false);
+  protected readonly groups = computed(() => groupDevices(this.devices() ?? []));
+  protected readonly shown = computed(() => [...this.groups().current, ...this.groups().recent]);
   protected readonly signingOut = signal<string | null>(null);
   protected readonly signedOut = signal('');
   protected readonly hasOthers = computed(() =>
@@ -111,8 +130,20 @@ export class DevicesCard {
     });
   }
 
+  toggleOlder(): void {
+    this.olderShown.update((shown) => !shown);
+  }
+
   protected name(device: SignedInDevice): string {
     return deviceName(device);
+  }
+
+  protected kind(device: SignedInDevice): string | null {
+    return sessionKindName(device);
+  }
+
+  protected shape(device: SignedInDevice): DeviceShape {
+    return SHAPES[device.platform];
   }
 
   protected signOutLabel(device: SignedInDevice): string | null {
@@ -136,19 +167,24 @@ export class DevicesCard {
 
   private removed(device: SignedInDevice): void {
     this.signingOut.set(null);
-    const list = this.devices() ?? [];
-    const position = list.findIndex((other) => other.id === device.id);
-    const remaining = list.filter((other) => other.id !== device.id);
-    const next = remaining.slice(position).find((other) => !other.current);
-    this.devices.set(remaining);
+    const visible = this.visibleDevices();
+    const position = visible.findIndex((other) => other.id === device.id);
+    const next = visible.slice(position + 1).find((other) => !other.current);
+    this.devices.update((list) => (list ?? []).filter((other) => other.id !== device.id));
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.name(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
     this.focusAfterRender(() =>
       next
         ? this.document.getElementById(this.signOutButtonId(next))
-        : (this.othersButton()?.nativeElement ?? this.heading().nativeElement),
+        : (this.olderToggle()?.nativeElement ??
+          this.othersButton()?.nativeElement ??
+          this.heading().nativeElement),
     );
+  }
+
+  private visibleDevices(): SignedInDevice[] {
+    return [...this.shown(), ...(this.olderShown() ? this.groups().older : [])];
   }
 
   private focusAfterRender(target: () => HTMLElement | null | undefined): void {

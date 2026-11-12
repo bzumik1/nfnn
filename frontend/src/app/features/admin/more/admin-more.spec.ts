@@ -53,7 +53,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
           ['Správci', '/sprava/spravci'],
           ['Měsíční e-mail', '/sprava/prehledy'],
           ['Zálohy', '/sprava/zalohy'],
-          ['Upozornění na telefon', '/sprava/upozorneni'],
+          ['Upozornění', '/sprava/upozorneni'],
           ['Historie změn', '/sprava/historie'],
         ],
       },
@@ -63,6 +63,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
           ['Nastavení', '/sprava/nastaveni'],
           ['Logy a diagnostika', '/sprava/logy'],
           ['Odpovědi o starších symbolech', '/sprava/starsi-symboly'],
+          ['Loga bank', '/sprava/loga-bank'],
         ],
       },
     ]);

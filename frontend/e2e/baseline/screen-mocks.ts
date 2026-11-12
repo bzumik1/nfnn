@@ -4,12 +4,14 @@ import { join } from 'node:path';
 import { routeLogsApi } from '../admin-logs-api';
 import {
   adminSettings,
+  administrationCopyGift,
   administrator,
   bankAccountItem,
   donationItem,
   DonorApiMock,
   noDonations,
   problem,
+  serveAdministrationCopy,
   session,
 } from '../donor-session';
 import type { RouteTarget } from '../fixtures';
@@ -448,6 +450,46 @@ const adminAnswers: Record<string, unknown> = {
     nextReport: { month: '2026-10', dueOn: '2026-11-01' },
     lastEndedMonth: '2026-09',
   },
+  '/api/admin/donations/report/sent': {
+    month: '2026-09',
+    firstSentAt: '2026-10-01T05:00:12Z',
+    deliveries: [
+      {
+        sentAt: '2026-10-21T08:00:00Z',
+        byHand: true,
+        recipientCount: 1,
+        content: {
+          donors: { registered: 2, newInMonth: 1 },
+          donations: {
+            received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+            paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+            receivedInYear: { count: 9, totalMinor: 240000, currency: 'CZK' },
+          },
+          unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+          bankImport: {
+            lastSucceededAt: '2026-10-21T07:00:00Z',
+            lastFailure: { kind: 'TRANSPORT', attemptedAt: '2026-10-21T06:00:00Z' },
+          },
+        },
+      },
+      {
+        sentAt: '2026-10-01T05:00:12Z',
+        byHand: false,
+        recipientCount: 1,
+        content: {
+          donors: { registered: 2, newInMonth: 1 },
+          donations: {
+            received: { count: 2, totalMinor: 70000, currency: 'CZK' },
+            paired: { count: 1, totalMinor: 55000, currency: 'CZK' },
+            receivedInYear: { count: 8, totalMinor: 225000, currency: 'CZK' },
+          },
+          unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+          bankImport: { lastSucceededAt: '2026-10-01T04:00:00Z', lastFailure: null },
+        },
+      },
+    ],
+    recomputed: null,
+  },
   '/api/admin/operations/settings': fictionalSettings,
   '/api/admin/content/news': { items: [article, draft] },
   '/api/admin/content/projects': { items: [project] },
@@ -455,6 +497,8 @@ const adminAnswers: Record<string, unknown> = {
   [`/api/admin/content/news/${article.id}`]: article,
   [`/api/admin/content/projects/${project.id}`]: project,
 };
+
+const JANA_PORTRAIT_ID = '019a1c00-0000-7000-8000-00000000c101';
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
@@ -550,6 +594,59 @@ export async function mockAdministration(page: RouteTarget): Promise<void> {
         },
       });
     },
+  );
+}
+
+export async function serveRecentDonors(page: RouteTarget): Promise<void> {
+  await serveAdministrationCopy(page, {
+    donations: {
+      'donations:2026-10': [
+        administrationCopyGift(
+          '0192f0f1-0000-7000-8000-000000000012',
+          PETR_ID,
+          '2026-10-24',
+          125050,
+        ),
+        administrationCopyGift(
+          '0192f0f1-0000-7000-8000-000000000011',
+          administrator.id,
+          '2026-10-08',
+          50000,
+        ),
+      ],
+    },
+    donors: { 'accounts:2026-10': [janaAccount, petrAccount] },
+  });
+  await page.route(
+    (url) => url.pathname === '/api/admin/content/people',
+    (route) =>
+      route.fulfill({
+        json: {
+          members: [
+            {
+              id: '019a1c00-0000-7000-8000-00000000c001',
+              name: 'Jana Nováková',
+              role: 'Zakladatelka',
+              position: 0,
+              onBoard: true,
+              boardNote: null,
+              featured: true,
+              portrait: {
+                id: JANA_PORTRAIT_ID,
+                url: `/api/content/media/${JANA_PORTRAIT_ID}`,
+                width: 640,
+                height: 640,
+              },
+              webSignature: null,
+              personalEmail: janaAccount.email,
+              fundEmail: null,
+              linkedToAccount: true,
+            },
+          ],
+          note: null,
+          footnote: null,
+        },
+      }),
   );
 }
 

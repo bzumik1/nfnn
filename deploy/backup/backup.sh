@@ -4,17 +4,21 @@
 # and replaces the live one by renaming only when it succeeded, after a -pred-obnovou backup, so a
 # failed restore leaves the current data as they were. A restored database keeps every sequence (the
 # receipt numbers) at the higher of its current and restored value, and a Liquibase lock caught in
-# the dump is released. Whatever a dump or the site's data can run (its SQL, a trigger, a check, an
+# the dump is released. What the current database decided after the dump comes along into the
+# restored one (carry-forward.sql): erasures, sign-in credentials, roles and the audit trail, and
+# the receipt numbers move 1000 further when the current database holds no issued receipt. Whatever a dump or the site's data can run (its SQL, a trigger, a check, an
 # index expression, a function in a view) runs as the application role novanadeje_app and never as
 # the superuser: every restore and every query of the site's databases connects as that role, and a
 # database a restore fills is created with its public schema owned by that role, so pg_restore
 # --no-owner --no-privileges makes it the owner of everything, as the backend needs; the database
 # itself is handed to the superuser before anything is restored, so neither the dump nor the role can
-# create another schema in it or change its settings. The superuser only dumps (pg_dump reads every
-# object whatever its owner and runs no function of the data: since PostgreSQL 17 it reads only
-# tables, restrict_nonsystem_relation_kind) and creates, renames and drops databases and ends their
-# sessions, connected to the maintenance database postgres, where the application role can create
-# nothing.
+# create another schema in it or change its settings. A database a restore fills takes PostgreSQL's
+# built-in C.UTF-8 locale, as a new cluster of nfnn-postgres does, so a restore also moves an older
+# cluster's database off the C library's locale (pg_restore builds every index again). The superuser
+# only dumps (pg_dump reads every object whatever its owner and runs no function of the data: since
+# PostgreSQL 17 it reads only tables, restrict_nonsystem_relation_kind) and creates, renames and
+# drops databases and ends their sessions, connected to the maintenance database postgres, where the
+# application role can create nothing.
 # $BACKUPS/status/restore.running exists while one runs and the backend waits
 # for it to go. Everything is reported in the container log, in $LOGS/backup.log and in key=value
 # files under $BACKUPS/status, which the backend reads for the administration page.
@@ -48,6 +52,7 @@ RETIRED_DATABASE=${RETIRED_DATABASE:-nfnn_restore_retired}
 APP_ROLE=${APP_ROLE:-novanadeje_app}
 APP_PASSWORD=""
 REVOCATIONS_SQL=${REVOCATIONS_SQL:-/usr/local/share/nfnn/revoke-restored-credentials.sql}
+CARRY_FORWARD_SQL=${CARRY_FORWARD_SQL:-/usr/local/share/nfnn/carry-forward.sql}
 LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
 KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
@@ -114,7 +119,7 @@ as_app() {
 }
 
 create_app_database() {
-  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 "$1" \
+  createdb --maintenance-db=postgres --owner="$APP_ROLE" --template=template0 --locale-provider=builtin --builtin-locale=C.UTF-8 "$1" \
     && as_app psql --dbname="$1" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 \
       --command="alter schema public owner to \"$APP_ROLE\"" > /dev/null \
     && server_psql --command="alter database \"$1\" owner to current_user" > /dev/null
@@ -312,7 +317,7 @@ revoke_restored_credentials() {
 counted() {
   case "$1" in
     ''|*[!0-9]*)
-      echo "the staging copy did not report how many sessions and one-time secrets it revoked" >> "$2"
+      echo "${3:-the staging copy did not report how many sessions and one-time secrets it revoked}" >> "$2"
       return 1 ;;
   esac
   return 0
@@ -356,6 +361,27 @@ keep_sequences_ahead() {
     --command="select setval(format('public.%I', s.sequencename)::regclass, v.last_value) from pg_sequences s join (values $k_values) as v (sequencename, last_value) on v.sequencename = s.sequencename where s.schemaname = 'public' and (s.last_value is null or s.last_value < v.last_value)" > /dev/null 2>> "$STATUS/restore.err"
 }
 
+carry_forward() {
+  (set -o pipefail
+    {
+      printf '%s\n' 'create temp table carried (kind text not null, fact jsonb not null);' 'copy pg_temp.carried from stdin;'
+      as_app psql --dbname="$RETIRED_DATABASE" --quiet --no-align --tuples-only -v ON_ERROR_STOP=1 -v VERBOSITY=terse --file="$CARRY_FORWARD_SQL" \
+        --command="copy (select carried_kind, carried_fact from pg_temp.facts_to_carry_forward()) to stdout" 2>> "$STATUS/restore.err"
+      printf '%s\n' '\.' 'select pg_temp.carry_forward();'
+    } | as_app psql --dbname="$STAGING_DATABASE" --quiet --no-align --tuples-only --single-transaction -v ON_ERROR_STOP=1 -v VERBOSITY=terse \
+      --file="$CARRY_FORWARD_SQL" --file=- 2>> "$STATUS/restore.err")
+}
+
+carried_counted() {
+  read -r s_erasures s_credentials s_roles s_admin_actions s_receipt_numbers s_rest <<EOF_CARRIED
+$1
+EOF_CARRIED
+  for s_count in "$s_erasures" "$s_credentials" "$s_roles" "$s_admin_actions" "$s_receipt_numbers"; do
+    counted "$s_count" "$STATUS/restore.err" "the restored copy did not report what it carried forward from the current database" || return 1
+  done
+  [ -z "$s_rest" ]
+}
+
 swap_in_staging() {
   server_psql --command="alter database \"$PGDATABASE\" with allow_connections false" > /dev/null 2>> "$STATUS/restore.err" || return 1
   s_tries=0
@@ -369,6 +395,8 @@ swap_in_staging() {
     sleep 1
   done
   if ! keep_sequences_ahead \
+      || ! s_carried=$(carry_forward) \
+      || ! carried_counted "$s_carried" \
       || ! server_psql --command="alter database \"$STAGING_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>> "$STATUS/restore.err"; then
     server_psql --command="alter database \"$RETIRED_DATABASE\" rename to \"$PGDATABASE\"" > /dev/null 2>&1
     allow_connections
@@ -411,8 +439,10 @@ restore_dump() {
           && r_sessions=${r_revoked%% *} && r_secrets=${r_revoked##* } \
           && counted "$r_sessions" "$STATUS/restore.err" && counted "$r_secrets" "$STATUS/restore.err" \
           && swap_in_staging; then
-        write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "sessions_ended=$r_sessions" "one_time_secrets_spent=$r_secrets" "request=$r_request" "admin=$r_admin"
-        log "restore of $r_file succeeded: $r_tables tables"
+        write_status restore "outcome=ok" "started_at=$r_started" "finished_at=$(now_utc)" "file=$r_file" "size=$(file_size "$r_dump")" "tables=$r_tables" "sessions_ended=$r_sessions" "one_time_secrets_spent=$r_secrets" \
+          "erasures_carried=$s_erasures" "credentials_carried=$s_credentials" "roles_carried=$s_roles" "admin_actions_carried=$s_admin_actions" "receipt_numbers_skipped=$s_receipt_numbers" \
+          "request=$r_request" "admin=$r_admin"
+        log "restore of $r_file succeeded: $r_tables tables; kept from the database it replaced: $s_erasures erasures, $s_credentials changed sign-in credentials, $s_roles changed roles, $s_admin_actions audit entries; receipt numbers moved $s_receipt_numbers further"
         return 0
       fi
       r_error="the restored database could not replace the current one: $(tail -n 1 "$STATUS/restore.err" | tr -d '\n' | cut -c1-400)"

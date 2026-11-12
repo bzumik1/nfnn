@@ -164,6 +164,52 @@ class DonorErasureServiceTest {
         verifyNoInteractions(secondFactors, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
     }
 
+    @Test
+    @DisplayName("Given a donor a restore marked erased whose personal data came back with the backup, when the erasure is completed, then the anonymized donor is saved, the factor, passkeys and tokens go, every session ends, and only the erasure is published with its first time, without a second audit entry or e-mail")
+    void should_complete_the_erasure_when_completed_given_donor_marked_erased_by_a_restore() {
+        Instant erasedAt = NOW.minusSeconds(86_400);
+        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, null, new VariableSymbol("7310945528"), LocaleCode.CS,
+                Set.of(), NOW.minusSeconds(1000), NOW.minusSeconds(900), erasedAt);
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
+
+        boolean completed = service.completeRestoredErasure(PETR);
+
+        assertThat(completed).isTrue();
+        verify(donors).save(petr);
+        assertThat(petr.erasureIncomplete()).isFalse();
+        assertThat(petr.erasedAt()).contains(erasedAt);
+        assertThat(petr.email()).isEqualTo(ErasedPersonalData.emailFor(PETR.value()));
+        verify(secondFactors).delete(PETR);
+        verify(passkeys).deleteAllOf(PETR);
+        verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ERASED, NOW);
+        verify(passwordResetTokens).deleteAllOf(PETR);
+        verify(emailVerificationTokens).deleteAllOf(PETR);
+        verify(challenges).deleteAllOfWithoutWaiting(PETR);
+        verify(recoveries).deleteAllOfWithoutWaiting(PETR);
+        verify(authorizationCodes).deleteAllOfWithoutWaiting(PETR);
+        verify(events).publishEvent(new DonorErased(PETR.value(), erasedAt));
+        verify(events, times(1)).publishEvent(any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Given a donor erased in full, a donor never erased and an unknown donor, when the erasure is completed, then nothing is written or published")
+    void should_change_nothing_when_completed_given_nothing_left_to_erase() {
+        Donor erased = donor(PETR, Set.of(Role.DONOR), LocaleCode.CS);
+        erased.erase(NOW.minusSeconds(60));
+        Donor active = donor(JANA, Set.of(Role.DONOR), LocaleCode.CS);
+        DonorId unknown = DonorId.newId(NOW);
+        when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(erased));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(active));
+        when(donors.findByIdForUpdate(unknown)).thenReturn(Optional.empty());
+
+        assertThat(service.completeRestoredErasure(PETR)).isFalse();
+        assertThat(service.completeRestoredErasure(JANA)).isFalse();
+        assertThat(service.completeRestoredErasure(unknown)).isFalse();
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(secondFactors, passkeys, signOuts, passwordResetTokens, emailVerificationTokens, challenges, recoveries, authorizationCodes, events);
+    }
+
     private static Donor donor(DonorId id, Set<Role> roles, LocaleCode locale) {
         return Donor.reconstitute(id, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
                 new VariableSymbol("7310945528"), locale, roles, NOW.minusSeconds(1000), NOW.minusSeconds(900), null);

@@ -7,10 +7,19 @@ import { DevicesCard } from '../devices-card/devices-card';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
 import { ProfileCard } from '../profile-card/profile-card';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 @Component({
   selector: 'app-donor-details',
-  imports: [PageTitle, ProfileCard, AccountCard, DevicesCard, DeviceDataCard, ConnectedAppsCard],
+  imports: [
+    PageTitle,
+    ProfileCard,
+    AccountCard,
+    DevicesCard,
+    DeviceDataCard,
+    DiagnosticsDownload,
+    ConnectedAppsCard,
+  ],
   templateUrl: './donor-details.html',
   styleUrl: './donor-details.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

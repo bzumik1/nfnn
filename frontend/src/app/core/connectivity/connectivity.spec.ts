@@ -136,7 +136,7 @@ describe('Given the connectivity of the app', () => {
     });
   });
 
-  it('when the server answers 522 and the probe then hangs, then the probe is cancelled after 10 s and the cause becomes the network', () => {
+  it('when the server answers 522 and the probe then hangs, then the probe is cancelled after its timeout and the cause becomes the network at once', () => {
     start();
     ask(PROFILE);
     answers(PROFILE, 522, { 'Content-Type': 'text/html' });
@@ -150,6 +150,82 @@ describe('Given the connectivity of the app', () => {
     vi.advanceTimersByTime(1);
     expect(probe.cancelled).toBe(true);
     expect(connectivity.cause()).toBe('network');
+  });
+
+  describe('when the device sleeps (a phone locked or the app in the background) while the app waits', () => {
+    beforeEach(() => start());
+
+    function sleepFor(ms: number): void {
+      vi.setSystemTime(Date.now() + ms);
+    }
+
+    it('and the probe runs out of time the moment the device wakes, then the app asks again instead of saying offline, and an answer keeps it online', () => {
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(NOW - 5 * 60_000).toUTCString() });
+      const firstProbe = http.expectOne(PROBE_PATH);
+
+      sleepFor(60_000);
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+
+      expect(firstProbe.cancelled).toBe(true);
+      expect(connectivity.offline()).toBe(false);
+      answers(PROBE_PATH);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      expect(connectivity.offline()).toBe(false);
+    });
+
+    it('and the probe asked again after waking gets no answer either, then the app is offline once that one gives up', () => {
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(NOW - 5 * 60_000).toUTCString() });
+      http.expectOne(PROBE_PATH);
+      sleepFor(60_000);
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+      const secondProbe = http.expectOne(PROBE_PATH);
+
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+
+      expect(secondProbe.cancelled).toBe(true);
+      expect(connectivity.offline()).toBe(true);
+      expect(connectivity.cause()).toBe('network');
+    });
+
+    it('and a request failed just before and its 3 s run out the moment the device wakes, then the app asks again and stays online when the server answers', () => {
+      ask(PROFILE);
+      networkFails(PROFILE);
+      networkFails(PROBE_PATH);
+
+      sleepFor(60_000);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+
+      expect(connectivity.offline()).toBe(false);
+      answers(PROBE_PATH);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      expect(connectivity.offline()).toBe(false);
+    });
+  });
+
+  describe('when nothing has failed yet and the server is asked whether it is there', () => {
+    beforeEach(() => {
+      start();
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(NOW - 5 * 60_000).toUTCString() });
+    });
+
+    it('and the probe hangs, then the app is offline as soon as the probe gives up, without waiting 3 s more', () => {
+      const probe = http.expectOne(PROBE_PATH);
+
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS - 1);
+      expect(connectivity.offline()).toBe(false);
+
+      vi.advanceTimersByTime(1);
+      expect(probe.cancelled).toBe(true);
+      expect(connectivity.offline()).toBe(true);
+      expect(connectivity.cause()).toBe('network');
+    });
+  });
+
+  it('when a hanging probe is given up, then it waits no longer than 5 s', () => {
+    expect(PROBE_TIMEOUT_MS).toBe(5_000);
   });
 
   for (const status of [500, 519, 531]) {
@@ -238,15 +314,33 @@ describe('Given the connectivity of the app', () => {
     expect(connectivity.cause()).toBe('network');
   });
 
-  it('when the browser says it went offline, then the app probes at once and is offline 3 s later, never on the browser word alone', () => {
+  it('when the browser says it went offline, then the app is offline at once without a network and probes whether the server is there anyway', () => {
     start();
     browserSays('offline');
-    expect(connectivity.offline()).toBe(false);
 
+    expect(connectivity.offline()).toBe(true);
+    expect(connectivity.cause()).toBe('network');
     networkFails(PROBE_PATH);
     vi.advanceTimersByTime(OFFLINE_AFTER_MS);
     expect(connectivity.offline()).toBe(true);
+  });
+
+  it('when the browser says it went offline but the server answers the probe, then the app is online again', () => {
+    start();
+    browserSays('offline');
+
+    answers(PROBE_PATH);
+    expect(connectivity.offline()).toBe(false);
+  });
+
+  it('when the browser says it is offline at the start, then the app starts offline before any request has had to wait', () => {
+    onLine = false;
+    start();
+
+    expect(connectivity.offline()).toBe(true);
     expect(connectivity.cause()).toBe('network');
+    vi.advanceTimersByTime(0);
+    networkFails(PROBE_PATH);
   });
 
   it('when the browser says it is offline at the start but the server answers the probe, then the app is online', () => {
@@ -257,6 +351,15 @@ describe('Given the connectivity of the app', () => {
 
     vi.advanceTimersByTime(OFFLINE_AFTER_MS);
     expect(connectivity.offline()).toBe(false);
+  });
+
+  it('when the browser says it is offline while the app is, then it probes once, not a second time beside the probe in flight', () => {
+    start();
+    browserSays('offline');
+    browserSays('offline');
+
+    networkFails(PROBE_PATH);
+    http.expectNone(PROBE_PATH);
   });
 
   describe('when the service worker answers from its copy', () => {

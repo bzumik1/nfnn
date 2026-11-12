@@ -62,6 +62,19 @@ describe('Given the tab bar', () => {
     ]);
   });
 
+  it('when it renders, then every tab shows one decorative filled glyph drawn in the text colour', () => {
+    const icons = tabs().map((link) => link.querySelectorAll('svg'));
+
+    expect(icons.map((found) => found.length)).toEqual([1, 1, 1, 1]);
+    for (const [icon] of icons.map((found) => Array.from(found))) {
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+      expect(icon.getAttribute('viewBox')).not.toBeNull();
+      expect(icon.getAttribute('fill')).toBe('currentColor');
+      expect(icon.querySelectorAll('[stroke], [stroke-width]')).toHaveLength(0);
+      expect(icon.hasAttribute('stroke')).toBe(false);
+    }
+  });
+
   it('when the landing page is open, then no tab is the current page', async () => {
     await visit('/');
 

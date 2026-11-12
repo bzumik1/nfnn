@@ -26,7 +26,7 @@
           "/boot-guard.js",
           "/manifest.webmanifest",
           "/favicon.svg",
-          "/icon-512.png",
+          "/launch-icon.svg",
           "/images/logo.svg",
           "/images/logo-on-dark.svg",
           "/main-*.js",
@@ -68,10 +68,11 @@
         "/api/content/projects/*"
       ],
       "cacheConfig": {
-        "strategy": "freshness",
+        "strategy": "performance",
         "maxSize": 100,
         "maxAge": "30d",
-        "timeout": "5s"
+        "timeout": "5s",
+        "refreshAhead": "0u"
       }
     },
     {
@@ -81,7 +82,26 @@
         "strategy": "freshness",
         "maxSize": 1,
         "maxAge": "1d",
-        "timeout": "5s"
+        "timeout": "1s"
+      }
+    },
+    {
+      "name": "bank-logos",
+      "urls": ["/api/donations/bank-logos/images/*"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 60,
+        "maxAge": "365d"
+      }
+    },
+    {
+      "name": "bank-logo-list",
+      "urls": ["/api/donations/bank-logos"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 1,
+        "maxAge": "1d",
+        "timeout": "1s"
       }
     },
     {

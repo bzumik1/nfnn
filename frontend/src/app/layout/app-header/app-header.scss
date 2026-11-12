@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 @use 'touch-target';
 
 :host {
@@ -11,27 +12,28 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-top);
 
   &:focus {
     outline: none;
   }
 }
 
-.app-header--deeper {
+.app-header {
   --scroll-edge-tone: var(--color-surface);
+  --status-bar-inset: max(var(--safe-area-top), var(--window-controls-inset-block));
+  --scroll-edge-height: min(
+    calc(var(--status-bar-inset) * 1000),
+    calc(var(--status-bar-inset) + var(--space-2) + var(--scroll-edge-fade))
+  );
 
-  &::before {
+  &::before,
+  &::after {
     content: '';
     position: fixed;
     inset: 0 0 auto;
     z-index: -1;
-    height: calc(env(safe-area-inset-top) + var(--header-height) + var(--scroll-edge-fade));
-    background: linear-gradient(
-      to bottom,
-      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
-      transparent
-    );
+    height: var(--scroll-edge-height);
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -40,18 +42,107 @@
       visibility var(--duration-fast);
   }
 
-  &.app-header--scrolled::before {
+  &::before {
+    background: linear-gradient(
+      to bottom,
+      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
+      transparent
+    );
+  }
+
+  &::after {
+    backdrop-filter: blur(var(--blur-bar));
+    mask-image: linear-gradient(
+      to bottom,
+      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade) / 3),
+      transparent
+    );
+  }
+
+  &.app-header--scrolled::before,
+  &.app-header--scrolled::after {
     opacity: 1;
     visibility: visible;
   }
 
-  @media (prefers-contrast: more) {
+  @media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {
     &::before {
-      height: calc(env(safe-area-inset-top) + var(--header-height));
+      height: calc(var(--scroll-edge-height) - var(--scroll-edge-fade));
       background: var(--scroll-edge-tone);
       border-bottom: 1px solid var(--color-border);
     }
+
+    &::after {
+      display: none;
+    }
   }
+
+  @media (forced-colors: active) {
+    &::before {
+      height: calc(var(--scroll-edge-height) - var(--scroll-edge-fade));
+      background: Canvas;
+      border-bottom: 1px solid CanvasText;
+    }
+
+    &::after {
+      display: none;
+    }
+  }
+}
+
+.app-header--deeper {
+  --scroll-edge-height: calc(var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade));
+}
+
+.edge-title {
+  --edge-title-inset: calc(
+    max(
+        var(--space-8),
+        env(safe-area-inset-left),
+        env(safe-area-inset-right),
+        var(--window-controls-inset-inline)
+      ) +
+      var(--back-button-size) + var(--space-2)
+  );
+
+  position: fixed;
+  top: var(--safe-area-top);
+  left: var(--edge-title-inset);
+  right: var(--edge-title-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--header-height);
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.edge-title--shown {
+  opacity: 1;
+}
+
+.app-header--edge-dark .edge-title {
+  color: var(--color-on-inverse);
+}
+
+.edge-title-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.app-header--pinned-account .account-button {
+  position: fixed;
+  top: calc(var(--safe-area-top) + (var(--header-height) - var(--back-button-size)) / 2);
+  right: max(var(--space-8), env(safe-area-inset-right));
+  z-index: 110;
 }
 
 .app-header-inner {
@@ -69,9 +160,14 @@
   display: flex;
   align-items: center;
   flex: 0 1 auto;
-  min-width: 0;
+  min-width: 96px;
   margin-inline-end: auto;
   border-radius: var(--radius-sm);
+  transition: opacity var(--duration-base);
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
 
   picture {
     display: contents;
@@ -89,13 +185,9 @@
   justify-content: flex-end;
 }
 
-.brand--after-back {
-  margin-inline-start: calc(var(--back-button-size) + var(--space-1));
-}
-
 .back-button {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + (var(--header-height) - var(--back-button-size)) / 2);
+  top: calc(var(--safe-area-top) + (var(--header-height) - var(--back-button-size)) / 2);
   left: max(
     max(var(--space-8), env(safe-area-inset-left), var(--window-controls-inset-inline)),
     calc((100% - var(--content-max)) / 2 + var(--space-8))
@@ -124,16 +216,17 @@
   flex: none;
   max-width: 60%;
   text-align: center;
-  border: 1.5px solid var(--color-accent-fill);
+  border: 1px solid var(--color-tab-bar-rim);
   border-radius: var(--radius-pill);
-  background: var(--color-accent-fill);
-  color: var(--color-on-accent);
+  background: var(--color-tab-bar);
+  backdrop-filter: blur(var(--blur-bar));
+  color: var(--color-on-tab-bar);
   padding: var(--space-2-25) var(--space-4-5);
   font-family: var(--font-sans);
   font-size: var(--text-header-action);
   white-space: nowrap;
   font-weight: var(--weight-semibold);
-  box-shadow: var(--shadow-button-sm);
+  box-shadow: var(--shadow-tab-bar);
   cursor: pointer;
   @include touch-target.reaches-finger-size;
 }
@@ -193,5 +286,21 @@
 
   .back-button {
     left: max(var(--space-5), env(safe-area-inset-left), var(--window-controls-inset-inline));
+  }
+
+  .edge-title {
+    --edge-title-inset: calc(
+      max(
+          var(--space-5),
+          env(safe-area-inset-left),
+          env(safe-area-inset-right),
+          var(--window-controls-inset-inline)
+        ) +
+        var(--back-button-size) + var(--space-2)
+    );
+  }
+
+  .app-header--pinned-account .account-button {
+    right: max(var(--space-5), env(safe-area-inset-right));
   }
 }

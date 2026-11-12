@@ -1,7 +1,10 @@
 export const SCROLLED_CLASS = 'app-header--scrolled';
 export const SCROLL_EDGE_TONE = '--scroll-edge-tone';
+export const SCROLL_EDGE_DARK = 'app-header--edge-dark';
 
-const TRANSPARENT = /^transparent$|^rgba\(.*,\s*0\)$|\/\s*0\)$/;
+const SEE_THROUGH =
+  /^transparent$|^rgba\(.*,\s*0?\.\d+\)$|^rgba\(.*,\s*0\)$|\/\s*0?\.\d+\)$|\/\s*0\)$/;
+const APPEARANCE = '(prefers-color-scheme: dark)';
 
 export function followScrollEdge(document: Document, header: HTMLElement): () => void {
   const view = document.defaultView;
@@ -14,9 +17,10 @@ export function followScrollEdge(document: Document, header: HTMLElement): () =>
     const scrolled = view.scrollY > 0;
     header.classList.toggle(SCROLLED_CLASS, scrolled);
     if (scrolled) {
-      const tone = backgroundAt(document, view.innerWidth / 2, edgeBottom(view, header));
+      const tone = groundAt(document, view.innerWidth / 2, edgeBottom(view, header));
       if (tone !== null) {
         header.style.setProperty(SCROLL_EDGE_TONE, tone);
+        header.classList.toggle(SCROLL_EDGE_DARK, isDark(tone));
       }
     }
   };
@@ -25,16 +29,35 @@ export function followScrollEdge(document: Document, header: HTMLElement): () =>
       frame = view.requestAnimationFrame(follow);
     }
   };
+  const appearance = typeof view.matchMedia === 'function' ? view.matchMedia(APPEARANCE) : null;
   follow();
   view.addEventListener('scroll', schedule, { passive: true });
   view.addEventListener('resize', schedule, { passive: true });
+  appearance?.addEventListener('change', schedule);
   return () => {
     view.removeEventListener('scroll', schedule);
     view.removeEventListener('resize', schedule);
+    appearance?.removeEventListener('change', schedule);
     if (frame !== 0) {
       view.cancelAnimationFrame(frame);
     }
   };
+}
+
+function isDark(color: string): boolean {
+  const channels = color
+    .match(/[\d.]+/g)
+    ?.slice(0, 3)
+    .map(Number);
+  if (channels === undefined || channels.length < 3) {
+    return false;
+  }
+  const scale = color.startsWith('color(') ? 1 : 255;
+  const [red, green, blue] = channels.map((channel) => {
+    const value = channel / scale;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.18;
 }
 
 function edgeBottom(view: Window, header: HTMLElement): number {
@@ -43,14 +66,19 @@ function edgeBottom(view: Window, header: HTMLElement): number {
   return Number.isFinite(height) ? height : header.getBoundingClientRect().height;
 }
 
-function backgroundAt(document: Document, x: number, y: number): string | null {
+function groundAt(document: Document, x: number, y: number): string | null {
   const view = document.defaultView!;
   const [top] = document.elementsFromPoint(x, y);
   for (let node: Element | null = top ?? null; node !== null; node = node.parentElement) {
     const color = view.getComputedStyle(node).backgroundColor;
-    if (color && !TRANSPARENT.test(color)) {
+    if (color && !SEE_THROUGH.test(color) && spansTheWidth(view, node)) {
       return color;
     }
   }
   return null;
+}
+
+function spansTheWidth(view: Window, node: Element): boolean {
+  const box = node.getBoundingClientRect();
+  return box.left <= 0 && box.right >= view.innerWidth;
 }

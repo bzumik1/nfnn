@@ -168,7 +168,7 @@ class DonorRegistrationEmailSenderTest {
 
                     Odkaz platí 24 hodin a lze ho použít jen jednou. Do potvrzení se do účtu nepřihlásíte.
 
-                    Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte; další připomínku už nepošleme.
+                    Pokud jste se neregistrovali vy, tento e-mail prosím ignorujte; další připomínku už nepošleme a nepotvrzenou registraci i s jejími údaji smažeme 30 dní po jejím založení.
 
                     Nová naděje – nadační fond
 
@@ -196,6 +196,19 @@ class DonorRegistrationEmailSenderTest {
                     .contains(LINK)
                     .contains("we will not remind you again");
             assertThat(MailContents.html(email)).contains("lang=\"en\"").contains("Confirm e-mail");
+        });
+    }
+
+    @Test
+    @DisplayName("Given an unconfirmed donor, when the reminder is sent in Czech or English, then both parts say the registration is deleted thirty days after it was made")
+    void should_name_deletion_after_thirty_days_when_sent_given_unconfirmed_donor() {
+        reminderSent(LocaleCode.CS, email -> {
+            assertThat(MailContents.plainText(email)).contains("nepotvrzenou registraci i s jejími údaji smažeme 30 dní po jejím založení");
+            assertThat(MailContents.html(email)).contains("nepotvrzenou registraci i s jejími údaji smažeme 30 dní po jejím založení");
+        });
+        reminderSent(LocaleCode.EN, email -> {
+            assertThat(MailContents.plainText(email)).contains("we delete an unconfirmed registration with its details 30 days after it was made");
+            assertThat(MailContents.html(email)).contains("we delete an unconfirmed registration with its details 30 days after it was made");
         });
     }
 

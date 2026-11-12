@@ -73,7 +73,7 @@ class SecondFactorRecoveryServiceTest {
     private static final SecondFactorRecoveryTarget TARGET = new SecondFactorRecoveryTarget("5544332217/2010", "CZ2620100000005544332217",
             Money.czk(100), LocalDate.of(2026, 10, 27));
     private static final SecondFactorRecoveryPaymentText PAYMENT_TEXT = new SecondFactorRecoveryPaymentText(
-            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA ABCD2345");
+            "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*MSG:OBNOVA ABCD2345");
 
     @Mock
     private DonorRepository donors;
@@ -218,12 +218,13 @@ class SecondFactorRecoveryServiceTest {
         SecondFactorRecovery recovery = openRecovery(JANA);
         when(recoveries.markUsed(recovery.id(), NOW)).thenReturn(true);
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", false);
-        when(donors.findById(JANA)).thenReturn(Optional.of(jana));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(jana));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
 
         service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW.minusSeconds(5)));
 
-        InOrder order = inOrder(recoveries, secondFactors, signOuts, events);
+        InOrder order = inOrder(donors, recoveries, secondFactors, signOuts, events);
+        order.verify(donors).findByIdForUpdate(JANA);
         order.verify(recoveries).markUsed(recovery.id(), NOW);
         order.verify(secondFactors).delete(JANA);
         order.verify(signOuts).endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
@@ -241,7 +242,7 @@ class SecondFactorRecoveryServiceTest {
         Donor eva = Donor.reconstitute(EVA, DonorType.PERSON, "Eva Malá", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("eva@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937562"), LocaleCode.EN,
                 Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
-        when(donors.findById(JANA)).thenReturn(Optional.of(jana));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(jana));
         when(donors.findAdministrators()).thenReturn(List.of(eva, jana, petr));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
 
@@ -283,7 +284,7 @@ class SecondFactorRecoveryServiceTest {
     void should_only_spend_the_recovery_when_paid_given_the_factor_is_off_already() {
         SecondFactorRecovery recovery = openRecovery(JANA);
         when(recoveries.markUsed(recovery.id(), NOW)).thenReturn(true);
-        when(donors.findById(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.empty());
 
         service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW));

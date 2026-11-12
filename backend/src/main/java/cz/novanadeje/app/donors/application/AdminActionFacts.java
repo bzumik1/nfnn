@@ -178,6 +178,9 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("removed", "Řádek pod správní radou odebrán")));
         shapes.put("CHANGE_WEB_SIGNATURE", List.of(full("Podpis " + ID + " na webu u osoby " + ID + " nastaven")));
         shapes.put("REMOVE_WEB_SIGNATURE", List.of(full("Podpis na webu u osoby " + ID + " odebrán")));
+        shapes.put("SET_BANK_LOGO_SOURCE", List.of(full("Logo banky (?<bank>\\d{4}) nastaveno z (?<host>[a-z0-9.-]+), obrázek (?<image>[0-9a-f]{64})")));
+        shapes.put("REFRESH_BANK_LOGO", List.of(full("Logo banky (?<bank>\\d{4}) znovu staženo z (?<host>[a-z0-9.-]+), obrázek (?<image>[0-9a-f]{64})")));
+        shapes.put("REMOVE_BANK_LOGO", List.of(full("Logo banky (?<bank>\\d{4}) odebráno")));
         shapes.put("CHANGE_PROJECT_ORDER", List.of(
                 full("Řazení projektů na webu změněno z (?<fromOrder>[A-Z_]+) na (?<toOrder>[A-Z_]+)")));
         content(shapes, "NEWS", "Aktualita", "News article", List.of("napsána", "upravena", "zveřejněna od", "stažena z webu", "smazána"));
@@ -203,6 +206,10 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 full("Vyžádána obnova ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\); .*"),
                 full("A restore of (?<file>\\S+) was requested \\(request " + ID + "\\); .*")));
         shapes.put("BACKUP_RESTORED", List.of(
+                variant("withCarriedForward", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"
+                        + "; ukončená přihlášení: (?<sessions>\\d+), zneplatněné jednorázové odkazy a kódy: (?<secrets>\\d+)"
+                        + "; zachováno z doby po záloze: vymazaní dárci (?<erasures>\\d+), přihlašovací údaje (?<credentials>\\d+), role (?<roles>\\d+)"
+                        + ", záznamy historie (?<adminActions>\\d+); čísla potvrzení posunuta o (?<receiptNumbersSkipped>\\d+)"),
                 variant("withRevocations", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"
                         + "; ukončená přihlášení: (?<sessions>\\d+), zneplatněné jednorázové odkazy a kódy: (?<secrets>\\d+)"),
                 variant("withTables", "Databáze obnovena ze zálohy (?<file>\\S+) \\(požadavek " + ID + "\\), tabulek: (?<tables>\\d+)"),

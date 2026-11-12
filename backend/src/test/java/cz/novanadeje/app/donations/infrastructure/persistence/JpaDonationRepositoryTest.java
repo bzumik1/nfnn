@@ -307,8 +307,9 @@ class JpaDonationRepositoryTest {
     private void insertDonation(ConfirmedSymbolSetup setup, String pairedBy, UUID link, UUID claim) {
         jdbc.sql("insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, currency, source, status, paired_by,"
                         + " sender_account_id, symbol_claim_id, purpose, recorded_at)"
-                        + " values (?, ?, ?, current_date, 100, 'CZK', 'BANK_TRANSFER', 'RECEIVED', ?, ?, ?, 'GENERAL', now())")
-                .params(UuidV7.generate(NOW), setup.donor().value(), setup.payment().id().value(), pairedBy, link, claim)
+                        + " values (?, ?, ?, ?, ?, 'CZK', 'BANK_TRANSFER', 'RECEIVED', ?, ?, ?, 'GENERAL', now())")
+                .params(UuidV7.generate(NOW), setup.donor().value(), setup.payment().id().value(), setup.payment().bookedOn(),
+                        setup.payment().amount().amountMinor(), pairedBy, link, claim)
                 .update();
     }
 

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="029-keep-czech-bank-codes" author="nfnn">
+        <createTable tableName="bank_code">
+            <column name="code" type="varchar(4)">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_code" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(120)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table bank_code add constraint ck_bank_code_code check (code ~ '^[0-9]{4}$')</sql>
+        <sql>alter table bank_code add constraint ck_bank_code_name check (length(name) between 1 and 120 and name = btrim(name) and name !~ '[[:cntrl:]]')</sql>
+    </changeSet>
+
+    <changeSet id="029-track-bank-code-list-fetches" author="nfnn">
+        <createTable tableName="bank_code_list_state">
+            <column name="id" type="smallint">
+                <constraints primaryKey="true" primaryKeyName="pk_bank_code_list_state" nullable="false"/>
+            </column>
+            <column name="fetched_at" type="timestamp with time zone"/>
+            <column name="source_last_modified" type="varchar(64)"/>
+            <column name="checked_at" type="timestamp with time zone"/>
+        </createTable>
+        <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_singleton check (id = 1)</sql>
+        <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_source_last_modified check (source_last_modified ~ '^[ -~]{1,64}$' and btrim(source_last_modified) &lt;&gt; '')</sql>
+        <sql>alter table bank_code_list_state add constraint ck_bank_code_list_state_last_modified_after_fetch check (source_last_modified is null or fetched_at is not null)</sql>
+    </changeSet>
+
+</databaseChangeLog>

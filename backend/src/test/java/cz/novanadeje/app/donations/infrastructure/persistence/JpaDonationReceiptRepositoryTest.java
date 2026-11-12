@@ -434,6 +434,34 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given active and replaced single receipts, a yearly one and another donor's, when the active single receipts of some donations are read, then only the active single ones of those donations come")
+    void should_find_active_singles_of_the_donations_when_read_given_mixed_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        Donation june = storedDonation(jana, LocalDate.of(2026, 6, 1));
+        Donation july = storedDonation(jana, LocalDate.of(2026, 7, 1));
+        Donation petrs = storedDonation(petr, LocalDate.of(2026, 4, 1));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        receipts.save(single(jana, march, "2026-000002"));
+        receipts.save(single(jana, june, "2026-000003"));
+        receipts.save(single(jana, july, "2026-000004"));
+        receipts.save(single(petr, petrs, "2026-000005"));
+        receipts.save(yearly(jana, YEAR_2025, "2026-000006", Optional.empty()));
+        flushAndClear();
+
+        List<DonationReceipt> active = receipts.findActiveSinglesFor(List.of(march.id(), june.id(), petrs.id()));
+
+        assertThat(active).extracting(DonationReceipt::number).containsExactlyInAnyOrder(
+                new ReceiptNumber("2026-000002"), new ReceiptNumber("2026-000003"), new ReceiptNumber("2026-000005"));
+        assertThat(active).allSatisfy(receipt -> assertThat(receipt.isActive()).isTrue());
+        assertThat(receipts.findActiveSinglesFor(List.of())).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given receipts of two donors, active, replaced and withdrawn, when every receipt is listed newest first, then all come, latest issue and higher number first")
     void should_list_every_receipt_newest_first_when_all_listed_given_receipts_of_two_donors() {
         DonorReference jana = storedDonor("4821937560");
@@ -633,6 +661,7 @@ class JpaDonationReceiptRepositoryTest {
         DonationReceipt receipt = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
         receipts.save(receipt);
         flushAndClear();
+        jdbc.sql("set local session_replication_role = replica").update();
         jdbc.sql("update issued_receipt set number = '2026-000099' where id = ?").param(receipt.id().value()).update();
 
         assertThatThrownBy(() -> receipts.findById(receipt.id()))

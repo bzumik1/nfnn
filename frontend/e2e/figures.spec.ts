@@ -36,6 +36,13 @@ async function linesOf(figure: Locator): Promise<string[]> {
   });
 }
 
+async function expectNotCutOffBy(inner: Locator, clip: Locator): Promise<void> {
+  await expect(inner).toBeVisible();
+  const innerBox = (await inner.boundingBox())!;
+  const clipBox = (await clip.boundingBox())!;
+  expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(clipBox.x + clipBox.width);
+}
+
 test.describe('Given a phone with the text at twice its size', () => {
   test.beforeEach(async ({ page }) => {
     await showDoubledText(page);
@@ -74,7 +81,9 @@ test.describe('Given a phone with the text at twice its size', () => {
     }
   });
 
-  test('when a donor opens Účty, then each account number stands on one line', async ({ page }) => {
+  test('when a donor opens Účty, then each account number stands on one line and the name of its bank shows whole', async ({
+    page,
+  }) => {
     await mockDonorApi(page);
     await page.route(
       (url) => url.pathname === '/api/donations/me/bank-accounts',
@@ -87,6 +96,10 @@ test.describe('Given a phone with the text at twice its size', () => {
                 donationCount: 2,
                 totalAmountMinor: 150000,
               }),
+              bankAccountItem({
+                id: '0192f0c4-0000-7000-8000-000000000002',
+                accountNumber: '1234567890/8030',
+              }),
             ],
           },
         }),
@@ -96,8 +109,18 @@ test.describe('Given a phone with the text at twice its size', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openDonorSection(page, 'Bankovní účty');
 
-    const number = page.locator('.account-number', { hasText: '19-2000145399/0800' });
-    await expect(number).toBeVisible();
-    expect(await linesOf(number)).toHaveLength(1);
+    for (const [account, bank] of [
+      ['19-2000145399/0800', 'Česká spořitelna'],
+      ['1234567890/8030', 'Volksbank Raiffeisenbank Nordoberpfalz'],
+    ]) {
+      const row = page.locator('.account', { hasText: account });
+      const number = row.locator('.account-number');
+      await expect(number).toHaveText(account);
+      expect(await linesOf(number)).toHaveLength(1);
+      await expectNotCutOffBy(
+        row.locator('.account-bank', { hasText: bank }),
+        row.locator('.account-meta-wrap'),
+      );
+    }
   });
 });

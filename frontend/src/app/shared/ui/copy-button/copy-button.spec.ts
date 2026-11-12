@@ -42,6 +42,25 @@ describe('Given a copy button for an account number', () => {
     expect(status()).toBe('Zkopírováno.');
   });
 
+  it('when it is pressed, then it reports the copy once it is in the clipboard', async () => {
+    let copies = 0;
+    fixture.componentInstance.copied.subscribe(() => copies++);
+
+    await press();
+
+    expect(copies).toBe(1);
+  });
+
+  it('when the browser refuses to copy, then it reports no copy', async () => {
+    writeText.mockRejectedValue(new Error('denied'));
+    let copies = 0;
+    fixture.componentInstance.copied.subscribe(() => copies++);
+
+    await press();
+
+    expect(copies).toBe(0);
+  });
+
   it('when a moment has passed after copying, then it offers to copy again', async () => {
     await press();
 

@@ -91,6 +91,18 @@ Feature: An administrator manages who administers the site
     When "Jana" lists the administrators
     Then the administrators are Jana
 
+  Scenario: An administrator whose role was just taken cannot take it from the last administrator left
+    Given "Petr" is an administrator
+    And "Petr" keeps an access token that names no session
+    When "Jana" removes "Petr" from the administrators
+    Then the response status is 204
+    When "Petr" removes "Jana" from the administrators with the token that names no session
+    Then the response status is 409
+    And the problem type ends with "donors/last-administrator"
+    And the problem has the title "Web by zůstal bez správce"
+    And the admin action "REVOKE_ADMINISTRATION" by "Petr" is not recorded
+    And "Jana" is an administrator in the database
+
   Scenario: A donor who is not an administrator has no role to take
     When "Jana" removes "Petr" from the administrators
     Then the response status is 409

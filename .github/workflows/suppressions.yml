@@ -1,0 +1,51 @@
+name: Výjimky
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: suppressions-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  suppressions:
+    name: Výjimky
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the base, whose guard judges the change
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: base
+
+      - name: Fetch the change as data only, nothing of it ever runs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          package-manager-cache: false
+
+      - name: Every suppression and skipped test the change adds is declared with its reason
+        env:
+          DESCRIPTION: ${{ github.event.pull_request.body }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          printf '%s' "$DESCRIPTION" > "$RUNNER_TEMP/description.md"
+          git -C head fetch --no-tags --quiet "https://github.com/$BASE_REPOSITORY.git" "refs/heads/$BASE_REF"
+          merge_base=$(git -C head merge-base FETCH_HEAD HEAD)
+          git -C head -c core.quotePath=false diff --text --no-ext-diff --no-textconv --unified=0 "$merge_base" HEAD > "$RUNNER_TEMP/change.diff"
+          node base/scripts/suppression-guard.mjs --diff="$RUNNER_TEMP/change.diff" --declared="$RUNNER_TEMP/description.md" --root=head

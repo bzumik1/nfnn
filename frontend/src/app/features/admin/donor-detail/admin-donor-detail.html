@@ -619,7 +619,7 @@
                         data-label="Účet"
                         i18n-data-label="@@admin.donorDetail.accounts.col.account"
                       >
-                        <span class="ui-figures admin-name">{{ item.accountNumber }}</span>
+                        <app-bank-account class="account-number" [account]="item.accountNumber" />
                         @if (item.shared) {
                           <span class="tag tag--warn" i18n="@@admin.donorDetail.accounts.shared"
                             >sdílený</span

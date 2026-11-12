@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/file-download.spec.ts > Given a downloaded file > when it is saved, then a download link to its object URL under its file name is clicked inside the page",
+    "replacement": "src/app/core/files/file-download.spec.ts > Given a downloaded file > when it is saved, then a download link to its object URL under its file name is clicked inside the page",
+    "reason": "PR #532 (review finding approved by Jakub 2026-11-07): saveBlob moves to core/files so the diagnostic file saves through it too; the spec moves with it unchanged",
+    "contract": "docs/frontend-overview.md, core/files"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/file-download.spec.ts > Given a downloaded file > when it is saved, then the link leaves the page right after the click",
+    "replacement": "src/app/core/files/file-download.spec.ts > Given a downloaded file > when it is saved, then the link leaves the page right after the click",
+    "reason": "PR #532 (review finding approved by Jakub 2026-11-07): saveBlob moves to core/files so the diagnostic file saves through it too; the spec moves with it unchanged",
+    "contract": "docs/frontend-overview.md, core/files"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/file-download.spec.ts > Given a downloaded file > when it is saved, then the object URL is revoked only after the click has been handled",
+    "replacement": "src/app/core/files/file-download.spec.ts > Given a downloaded file > when it is saved, then the object URL is revoked only after the click has been handled",
+    "reason": "PR #532 (review finding approved by Jakub 2026-11-07): saveBlob moves to core/files so the diagnostic file saves through it too; the spec moves with it unchanged",
+    "contract": "docs/frontend-overview.md, core/files"
+  }
+]

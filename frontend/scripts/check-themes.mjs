@@ -3,6 +3,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { rasterizeSvg } from './svg-raster.mjs';
+
 const root = new URL('..', import.meta.url).pathname;
 const themesDir = join(root, 'src/themes');
 const reference = 'nova-nadeje';
@@ -229,6 +231,8 @@ const APPEARANCES = [
 const TINTED_GROUNDS = [
   '--color-surface',
   '--color-surface-alt',
+  '--color-surface-grouped',
+  '--color-surface-elevated',
   '--color-surface-muted',
   '--color-surface-accent',
   '--color-accent-soft',
@@ -243,11 +247,59 @@ const READABLE_PAIRS = [
   },
   {
     texts: ['--color-text-soft', '--color-text-subtle', '--color-danger'],
-    grounds: ['--color-surface', '--color-surface-alt'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-surface-grouped',
+      '--color-surface-elevated',
+    ],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-accent'],
+    grounds: [{ tintOf: '--color-accent', percent: 14 }],
     minimum: 4.5,
   },
   { texts: ['--color-on-accent'], grounds: ['--color-accent-fill'], minimum: 4.5 },
+  { texts: ['--color-on-badge-warning'], grounds: ['--color-badge-warning'], minimum: 4.5 },
+  {
+    texts: ['--color-on-tile'],
+    grounds: [
+      '--color-tile-accent',
+      '--color-tile-success',
+      '--color-tile-warning',
+      '--color-tile-neutral',
+    ],
+    minimum: 3,
+  },
   { texts: ['--color-on-danger'], grounds: ['--color-danger-fill'], minimum: 4.5 },
+  {
+    texts: ['--color-log-code'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-danger-bg',
+      '--color-accent-bg',
+    ],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-text', '--color-text-secondary', '--color-text-muted'],
+    grounds: ['--color-danger-bg'],
+    minimum: 4.5,
+  },
+  {
+    texts: ['--color-log-warn', '--color-danger'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-muted',
+      '--color-accent-bg',
+    ],
+    minimum: 3,
+  },
   {
     texts: ['--color-on-inverse', '--color-accent-on-inverse'],
     grounds: INVERSE_GROUNDS,
@@ -259,7 +311,12 @@ const READABLE_PAIRS = [
   { texts: ['--color-success'], grounds: ['--color-success-bg'], minimum: 4.5 },
   {
     texts: ['--color-focus-ring'],
-    grounds: ['--color-surface', '--color-surface-alt', '--color-surface-inverse'],
+    grounds: [
+      '--color-surface',
+      '--color-surface-alt',
+      '--color-surface-grouped',
+      '--color-surface-inverse',
+    ],
     minimum: 3,
   },
   {
@@ -303,6 +360,18 @@ function resolvedColour(tokens, name, seen = new Set()) {
   return { written: value, colour: value === undefined ? null : colourOf(value) };
 }
 
+function groundOf(ground, measurable) {
+  if (typeof ground === 'string') {
+    return measurable(ground);
+  }
+  const tinted = measurable(ground.tintOf);
+  return tinted === null ? null : { rgb: tinted.rgb, alpha: (tinted.alpha * ground.percent) / 100 };
+}
+
+function groundName(ground) {
+  return typeof ground === 'string' ? ground : `the ${ground.percent} % tint of ${ground.tintOf}`;
+}
+
 export function appearanceProblems(theme, source) {
   const declarations = declarationsByBlock(source);
   const darkBlock = declarations.some(
@@ -335,7 +404,7 @@ export function appearanceProblems(theme, source) {
         continue;
       }
       for (const ground of pair.grounds) {
-        const groundColour = measurable(ground);
+        const groundColour = groundOf(ground, measurable);
         for (const text of pair.texts) {
           const textColour = measurable(text);
           if (groundColour === null || textColour === null) {
@@ -345,7 +414,7 @@ export function appearanceProblems(theme, source) {
           const ratio = contrast(over(textColour, under), under);
           if (ratio < pair.minimum) {
             problems.push(
-              `${label}: ${text} on ${ground} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
+              `${label}: ${text} on ${groundName(ground)} is ${ratio.toFixed(2)}:1, below ${pair.minimum}:1`,
             );
           }
         }
@@ -441,6 +510,38 @@ const REQUIRED_ICONS = [
   ['any', '512x512'],
   ['maskable', '512x512'],
 ];
+
+const LAUNCH_ICON = 'launch-icon.svg';
+const LAUNCH_ICON_PROBE_SIZE = 64;
+
+export function launchIconProblems({ theme, svg }) {
+  if (svg === null) {
+    return [
+      `theme ${theme} has no assets/${LAUNCH_ICON}, which the launch screen and the launch images draw`,
+    ];
+  }
+  let image;
+  try {
+    image = rasterizeSvg(svg, { width: LAUNCH_ICON_PROBE_SIZE, height: LAUNCH_ICON_PROBE_SIZE });
+  } catch (error) {
+    return [
+      `theme ${theme}: assets/${LAUNCH_ICON} cannot be drawn into the launch images: ${error.message}`,
+    ];
+  }
+  const last = LAUNCH_ICON_PROBE_SIZE - 1;
+  const corners = [
+    [0, 0],
+    [last, 0],
+    [0, last],
+    [last, last],
+  ];
+  if (corners.some(([x, y]) => image.pixels[(y * LAUNCH_ICON_PROBE_SIZE + x) * 4 + 3] > 0)) {
+    return [
+      `theme ${theme}: assets/${LAUNCH_ICON} paints its corners, so a tile would stand around the star on the dark launch screen`,
+    ];
+  }
+  return [];
+}
 
 export function manifestProblems({ theme, manifest, source, iconSizes, homeScreenTitle }) {
   if (manifest === null) {
@@ -650,6 +751,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         homeScreenTitle,
       }),
     );
+    const launchIcon = join(assetsDir, LAUNCH_ICON);
+    problems.push(
+      ...launchIconProblems({
+        theme,
+        svg: existsSync(launchIcon) ? readFileSync(launchIcon, 'utf8') : null,
+      }),
+    );
   }
   problems.push(
     ...themeAssetProblems({
@@ -688,6 +796,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable on their pages, grouped pages, sheets, tints, badges and icon tiles in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
   );
 }

@@ -51,6 +51,16 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public List<DonationReceipt> findActiveSinglesFor(Collection<DonationId> donations) {
+        if (donations.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findByDonationIdInAndStatus(donations.stream().map(DonationId::value).collect(Collectors.toSet()), ReceiptStatus.ACTIVE).stream()
+                .map(IssuedReceiptJpaEntity::toDomain)
+                .toList();
+    }
+
+    @Override
     public Optional<DonationReceipt> findActiveForYear(DonorReference donor, Year year) {
         return jpa.findByDonorIdAndReceiptYearAndStatus(donor.value(), year.getValue(), ReceiptStatus.ACTIVE)
                 .map(IssuedReceiptJpaEntity::toDomain);

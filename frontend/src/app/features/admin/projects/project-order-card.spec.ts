@@ -72,23 +72,23 @@ describe('Given an administrator choosing the order of the projects', () => {
       {
         label: 'Podle roku, v něm podle kategorie',
         description:
-          'Nahoře je nejnovější rok. V každém roce jsou nejdřív projekty pro děti, pak pro dospělé, zvířata a ostatní, a v každé kategorii od naposledy zveřejněného.',
+          'Nahoře je nejnovější rok. V každém roce jsou nejdřív příběhy dětí, pak dospělých, zvířat a ostatních, a v každé kategorii od naposledy zveřejněného.',
         checked: false,
       },
       {
         label: 'Podle roku',
         description:
-          'Nahoře je nejnovější rok. V každém roce jsou projekty od naposledy zveřejněného, ať patří do kterékoli kategorie.',
+          'Nahoře je nejnovější rok. V každém roce jsou příběhy od naposledy zveřejněného, ať patří do kterékoli kategorie.',
         checked: true,
       },
       {
         label: 'Podle kategorie, v ní podle roku',
         description:
-          'Nahoře jsou všechny projekty pro děti, pak pro dospělé, zvířata a ostatní. V každé kategorii od nejnovějšího roku a v roce od naposledy zveřejněného.',
+          'Nahoře jsou všechny příběhy dětí, pak dospělých, zvířat a ostatních. V každé kategorii od nejnovějšího roku a v roce od naposledy zveřejněného.',
         checked: false,
       },
     ]);
-    expect(text(query('legend'))).toBe('Pořadí projektů na webu');
+    expect(text(query('legend'))).toBe('Pořadí příběhů na webu');
   });
 
   it('when another order is chosen and saved, then it is put to the API, the card confirms it and tells the page', async () => {
@@ -105,7 +105,7 @@ describe('Given an administrator choosing the order of the projects', () => {
     await settle();
 
     expect(text(query('[role="status"]:not(:empty)'))).toBe(
-      'Řazení jsme uložili. Web už projekty ukazuje v tomto pořadí.',
+      'Řazení jsme uložili. Web už příběhy ukazuje v tomto pořadí.',
     );
     expect(radio('CATEGORY_THEN_YEAR').checked).toBe(true);
     expect(changes).toEqual(['CATEGORY_THEN_YEAR']);

@@ -8,6 +8,7 @@ import {
   Observable,
   of,
   share,
+  Subject,
   timeout,
   TimeoutError,
 } from 'rxjs';
@@ -17,8 +18,9 @@ export { PROBE_PATH } from './connectivity-probe-api';
 
 export const OFFLINE_AFTER_MS = 3_000;
 export const PROBE_EVERY_MS = 30_000;
-export const PROBE_TIMEOUT_MS = 10_000;
+export const PROBE_TIMEOUT_MS = 5_000;
 export const FRESH_ANSWER_MS = 15_000;
+export const SLEEP_TOLERANCE_MS = 1_000;
 
 export type OfflineCause = 'network' | 'server';
 
@@ -56,13 +58,15 @@ export class Connectivity {
   private probing: ReturnType<typeof setInterval> | null = null;
   private probeInFlight: Observable<boolean> | null = null;
   private serverClockAhead = 0;
+  private readonly lost = new Subject<void>();
 
   readonly offline = computed(() => this.offlineFor() !== null);
   readonly cause = this.offlineFor.asReadonly();
+  readonly wentOffline: Observable<void> = this.lost.asObservable();
 
   constructor() {
     const view = this.document.defaultView;
-    const wentOffline = () => this.doubt();
+    const wentOffline = () => this.browserWentOffline();
     const wentOnline = () => this.probeIfOffline();
     const visibilityChanged = () => {
       if (this.visible()) {
@@ -78,9 +82,11 @@ export class Connectivity {
       this.document.removeEventListener('visibilitychange', visibilityChanged);
       this.stopSettling();
       this.stopProbing();
+      this.lost.complete();
     });
     if (view?.navigator.onLine === false) {
-      setTimeout(() => this.doubt());
+      this.startOffline();
+      setTimeout(() => this.probe().subscribe());
     }
   }
 
@@ -135,7 +141,8 @@ export class Connectivity {
       return;
     }
     if (this.settling === null) {
-      this.settling = setTimeout(() => this.settled(), OFFLINE_AFTER_MS);
+      const since = Date.now();
+      this.settling = setTimeout(() => this.settleUnlessWoken(since), OFFLINE_AFTER_MS);
       if (this.probeInFlight === null) {
         this.probe().subscribe();
       }
@@ -150,21 +157,52 @@ export class Connectivity {
     }
   }
 
+  private browserWentOffline(): void {
+    this.startOffline();
+    this.probe().subscribe();
+  }
+
+  private startOffline(): void {
+    this.failingCause = 'network';
+    this.stopSettling();
+    if (this.offlineFor() === null) {
+      this.settled();
+    }
+  }
+
   private doubt(): void {
     if (this.offlineFor() === null && this.settling === null) {
       this.probe().subscribe();
     }
   }
 
+  private settleUnlessWoken(since: number): void {
+    if (!sleptThrough(since, OFFLINE_AFTER_MS)) {
+      this.settled();
+      return;
+    }
+    this.settling = null;
+    this.failed(this.failingCause);
+  }
+
   private settled(): void {
     this.settling = null;
+    const wasOnline = this.offlineFor() === null;
     this.offlineFor.set(this.failingCause);
+    if (wasOnline) {
+      this.lost.next();
+    }
     this.stopProbing();
     this.probing = setInterval(() => {
       if (this.visible()) {
         this.probe().subscribe();
       }
     }, PROBE_EVERY_MS);
+  }
+
+  private gaveUpWaiting(): void {
+    this.startOffline();
+    this.offlineFor.set('network');
   }
 
   private probeIfOffline(): void {
@@ -175,21 +213,30 @@ export class Connectivity {
 
   private probe(): Observable<boolean> {
     if (this.probeInFlight === null) {
-      this.probeInFlight = this.probeApi.probe().pipe(
-        timeout(PROBE_TIMEOUT_MS),
-        map(() => true),
-        catchError((failure: unknown) => {
-          if (failure instanceof TimeoutError) {
-            this.failed('network');
-            return of(false);
-          }
-          return of(!isUnreachable(failure));
-        }),
+      this.probeInFlight = this.askServer(true).pipe(
         finalize(() => (this.probeInFlight = null)),
         share(),
       );
     }
     return this.probeInFlight;
+  }
+
+  private askServer(mayAskAgainAfterSleep: boolean): Observable<boolean> {
+    const since = Date.now();
+    return this.probeApi.probe().pipe(
+      timeout(PROBE_TIMEOUT_MS),
+      map(() => true),
+      catchError((failure: unknown) => {
+        if (!(failure instanceof TimeoutError)) {
+          return of(!isUnreachable(failure));
+        }
+        if (mayAskAgainAfterSleep && sleptThrough(since, PROBE_TIMEOUT_MS)) {
+          return this.askServer(false);
+        }
+        this.gaveUpWaiting();
+        return of(false);
+      }),
+    );
   }
 
   private visible(): boolean {
@@ -209,4 +256,8 @@ export class Connectivity {
       this.probing = null;
     }
   }
+}
+
+function sleptThrough(since: number, waited: number): boolean {
+  return Date.now() - since > waited + SLEEP_TOLERANCE_MS;
 }

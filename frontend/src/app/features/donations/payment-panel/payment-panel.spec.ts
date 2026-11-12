@@ -3,10 +3,14 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
+import { DonationItem } from '../donations-api';
+import { GIFT_FEED } from '../gift-arrival/gift-feed';
+import { FakeGiftFeed, giftItem } from '../gift-arrival/testing/gift-feed-fixtures';
 import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-details-fixtures';
 import { LocalPaymentRoute } from './local-payment-route';
 import { PaymentPanel } from './payment-panel';
@@ -702,5 +706,227 @@ describe('Given the payment panel on a computer', () => {
     expect(panel.querySelector('.bank-app-open')).toBeNull();
     expect(panel.querySelector('.bank-app-second')).toBeNull();
     expect(panel.querySelector('.other-device')).toBeNull();
+  });
+});
+
+describe('Given the payment panel of a signed-in donor whose gift is on its way', () => {
+  let fixture: ComponentFixture<PaymentPanel>;
+  let http: HttpTestingController;
+  let feed: FakeGiftFeed;
+  let compactLayout: WritableSignal<boolean>;
+
+  async function open(options: { compact: boolean; listedHere?: boolean }): Promise<void> {
+    compactLayout = signal(options.compact);
+    feed = new FakeGiftFeed(options.listedHere ?? false);
+    feed.gifts.set([giftItem('earlier', { amountMinor: 10_000 })]);
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: { writeText: () => Promise.resolve() },
+    });
+    await TestBed.configureTestingModule({
+      imports: [PaymentPanel],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: compactLayout.asReadonly() } },
+        { provide: AuthStore, useValue: { donor: signal({ id: 'jana' }) } },
+        { provide: GIFT_FEED, useValue: feed },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(PaymentPanel);
+    fixture.componentRef.setInput('variableSymbol', '1234567890');
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(foundationPaymentDetails());
+    await settle();
+  }
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function panel(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function thanks(): string {
+    return (panel().querySelector('.gift-arrival [role="status"]')?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function buttonNamed(name: string): HTMLButtonElement | undefined {
+    return Array.from(panel().querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name,
+    );
+  }
+
+  async function copyAccountNumber(): Promise<void> {
+    panel().querySelector<HTMLButtonElement>('.bank-row app-copy-button button')?.click();
+    await settle();
+  }
+
+  async function arrive(...gifts: DonationItem[]): Promise<void> {
+    feed.gifts.set([giftItem('earlier', { amountMinor: 10_000 }), ...gifts]);
+    await settle();
+  }
+
+  afterEach(() => {
+    http.verify();
+    vi.unstubAllGlobals();
+  });
+
+  it('when the panel only shows, then nothing watches for the gift', async () => {
+    await open({ compact: true });
+
+    expect(feed.following).toBe(0);
+    expect(thanks()).toBe('');
+  });
+
+  it('when the donor copies a bank detail and the gift arrives, then the panel thanks with its amount and offers the overview', async () => {
+    await open({ compact: true });
+
+    await copyAccountNumber();
+    expect(feed.following).toBe(1);
+    await arrive(giftItem('new', { amountMinor: 50_000 }));
+
+    expect(thanks()).toBe('Váš dar 500 Kč dorazil. Děkujeme!');
+    const link = panel().querySelector<HTMLAnchorElement>('.gift-arrival a');
+    expect(link?.textContent?.trim()).toBe('Zobrazit v přehledu');
+    expect(link?.getAttribute('href')).toBe('/darce/prehled');
+  });
+
+  it('when the thank-you stands right after the bank details, then it is just above Otevřít v aplikaci banky', async () => {
+    await open({ compact: true });
+    await copyAccountNumber();
+    await arrive(giftItem('new'));
+
+    const order = Array.from(panel().querySelectorAll('.bank, .gift-arrival, .bank-app')).map(
+      (part) => part.classList[0],
+    );
+    expect(order).toEqual(['bank', 'gift-arrival', 'bank-app']);
+  });
+
+  it('when the overview lists the gifts itself, then the thank-you offers no link to it', async () => {
+    await open({ compact: true, listedHere: true });
+    await copyAccountNumber();
+
+    await arrive(giftItem('new'));
+
+    expect(thanks()).toBe('Váš dar 500 Kč dorazil. Děkujeme!');
+    expect(panel().querySelector('.gift-arrival a')).toBeNull();
+  });
+
+  it('when two or five gifts arrive together, then it names their count and total', async () => {
+    await open({ compact: true });
+    await copyAccountNumber();
+
+    await arrive(giftItem('a', { amountMinor: 50_000 }), giftItem('b', { amountMinor: 100_000 }));
+
+    expect(thanks()).toBe('Dorazily 2 dary, celkem 1 500 Kč. Děkujeme!');
+    buttonNamed('Zavřít')?.click();
+    await settle();
+    await copyAccountNumber();
+    await arrive(...['c', 'd', 'e', 'f', 'g'].map((id) => giftItem(id, { amountMinor: 50_000 })));
+    expect(thanks()).toBe('Dorazilo 5 darů, celkem 2 500 Kč. Děkujeme!');
+  });
+
+  it('when the donor closes the thank-you, then it goes and the focus moves to Otevřít v aplikaci banky', async () => {
+    await open({ compact: true });
+    await copyAccountNumber();
+    await arrive(giftItem('new'));
+    const close = buttonNamed('Zavřít');
+    close?.focus();
+
+    close?.click();
+    await settle();
+
+    expect(thanks()).toBe('');
+    expect(buttonNamed('Zavřít')).toBeUndefined();
+    expect(document.activeElement?.classList.contains('bank-app-open')).toBe(true);
+  });
+
+  it('when the donor opens the QR for another device, then it watches for the gift', async () => {
+    await open({ compact: true });
+
+    panel().querySelector<HTMLButtonElement>('.other-device')?.click();
+    await settle();
+
+    expect(feed.following).toBe(1);
+  });
+
+  it('when the variable symbol goes, then nothing watches any more', async () => {
+    await open({ compact: true });
+    await copyAccountNumber();
+
+    fixture.componentRef.setInput('variableSymbol', null);
+    await settle();
+
+    expect(feed.following).toBe(0);
+  });
+
+  it('when a computer saves the QR code and the gift arrives, then the thanks stand above the QR and closing moves the focus to it', async () => {
+    await open({ compact: false });
+    vi.spyOn(QrCode.prototype, 'pngDataUrl').mockResolvedValue('data:image/png;base64,AA==');
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    buttonNamed('Uložit QR kód')?.click();
+    await settle();
+    await arrive(giftItem('new'));
+
+    const order = Array.from(panel().querySelectorAll('.bank, .gift-arrival, .qr')).map(
+      (part) => part.classList[0],
+    );
+    expect(order).toEqual(['bank', 'gift-arrival', 'qr']);
+    expect(thanks()).toBe('Váš dar 500 Kč dorazil. Děkujeme!');
+    const close = buttonNamed('Zavřít');
+    close?.focus();
+    close?.click();
+    await settle();
+    expect(document.activeElement?.classList.contains('qr-code')).toBe(true);
+  });
+});
+
+describe('Given the payment panel of a visitor without a variable symbol', () => {
+  it('when the visitor copies a bank detail, then nothing watches for a gift', async () => {
+    const feed = new FakeGiftFeed();
+    feed.gifts.set([]);
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: { writeText: () => Promise.resolve() },
+    });
+    await TestBed.configureTestingModule({
+      imports: [PaymentPanel],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        { provide: AuthStore, useValue: { donor: signal({ id: 'jana' }) } },
+        { provide: GIFT_FEED, useValue: feed },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PaymentPanel);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(foundationPaymentDetails());
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('app-copy-button button')
+      ?.click();
+    await fixture.whenStable();
+
+    expect(feed.following).toBe(0);
+    http.verify();
+    vi.unstubAllGlobals();
   });
 });

@@ -1,0 +1,152 @@
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.page-transition--under-tab-bar {
+  z-index: 140;
+}
+
+.page-transition__page {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.page-transition__page--over {
+  box-shadow: var(--shadow-page-edge);
+}
+
+.page-transition__scroller {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  scroll-behavior: auto;
+}
+
+.page-transition__scroller * {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition: none !important;
+}
+
+.page-transition__dim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-page-dim);
+  opacity: 0;
+}
+
+.page-transition--push .page-transition__dim {
+  opacity: 0;
+}
+
+.page-transition--pop .page-transition__page--under {
+  transform: translateX(var(--page-parallax));
+}
+
+.page-transition--pop .page-transition__dim {
+  opacity: 1;
+}
+
+.page-transition--moving {
+  .page-transition__page,
+  .page-transition__dim {
+    animation-duration: var(--duration-page);
+    animation-timing-function: var(--ease-page);
+    animation-fill-mode: both;
+  }
+
+  &.page-transition--push .page-transition__page--over {
+    animation-name: page-enter;
+  }
+
+  &.page-transition--push .page-transition__page--under {
+    animation-name: page-recede;
+  }
+
+  &.page-transition--push .page-transition__dim {
+    animation-name: page-dim;
+  }
+
+  &.page-transition--pop .page-transition__page--over {
+    animation-name: page-leave;
+  }
+
+  &.page-transition--pop .page-transition__page--under {
+    animation-name: page-return;
+  }
+
+  &.page-transition--pop .page-transition__dim {
+    animation-name: page-undim;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes page-recede {
+  from {
+    transform: none;
+  }
+
+  to {
+    transform: translateX(var(--page-parallax));
+  }
+}
+
+@keyframes page-leave {
+  from {
+    transform: none;
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes page-return {
+  from {
+    transform: translateX(var(--page-parallax));
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes page-dim {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-undim {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    display: none;
+  }
+}

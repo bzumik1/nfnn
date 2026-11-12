@@ -33,7 +33,7 @@
 
 .dialog-panel {
   position: relative;
-  background: var(--color-surface);
+  background: var(--color-surface-elevated);
   border-radius: var(--radius-dialog);
   padding: var(--space-9) var(--space-10);
   width: 100%;
@@ -44,6 +44,12 @@
 
   &--wide {
     max-width: var(--dialog-max-width-wide);
+  }
+
+  &--grouped {
+    background: var(--color-sheet-grouped);
+    color: var(--color-sheet-text);
+    font-family: var(--font-sheet);
   }
 }
 
@@ -75,7 +81,8 @@
   }
 }
 
-.dialog-grabber {
+.dialog-grabber,
+.dialog-close-icon {
   display: none;
 }
 
@@ -117,7 +124,16 @@
       var(--color-backdrop) calc((1 - var(--dialog-pull)) * 100%),
       transparent
     );
-    transition: background-color var(--duration-base) ease;
+    backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
+    -webkit-backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
+    transition:
+      background-color var(--duration-base) ease,
+      backdrop-filter var(--duration-base) ease;
+  }
+
+  .dialog--sheet.dialog--leaving[open] {
+    transition-duration: var(--duration-sheet);
+    transition-timing-function: var(--ease-sheet);
   }
 
   .dialog--sheet .dialog-panel {
@@ -137,6 +153,41 @@
 
   .dialog--sheet .dialog-panel--dragging {
     transition: none;
+  }
+
+  .dialog--leaving .dialog-panel {
+    transition: translate var(--duration-sheet) var(--ease-sheet);
+  }
+
+  .dialog--sheet .dialog-panel--tall {
+    height: calc(100dvh - var(--safe-area-top) - var(--sheet-top-gap));
+    max-height: none;
+    padding: var(--sheet-close-inset) max(var(--sheet-inset-inline), env(safe-area-inset-right))
+      calc(var(--space-8) + env(safe-area-inset-bottom))
+      max(var(--sheet-inset-inline), env(safe-area-inset-left));
+  }
+
+  .dialog--sheet .dialog-panel--tall .dialog-grabber::before {
+    display: none;
+  }
+
+  .dialog--sheet .dialog-close {
+    top: var(--sheet-close-inset);
+    right: max(var(--sheet-inset-inline), env(safe-area-inset-right));
+    width: var(--sheet-close-size);
+    height: var(--sheet-close-size);
+    border-radius: var(--radius-pill);
+    background: var(--color-sheet-close);
+    box-shadow: var(--shadow-sheet-close);
+    color: var(--color-on-sheet-close);
+  }
+
+  .dialog--sheet .dialog-close-icon {
+    display: block;
+  }
+
+  .dialog--sheet .dialog-close-glyph {
+    display: none;
   }
 
   .dialog--sheet .dialog-grabber {
@@ -187,7 +238,7 @@
     max-width: none;
     min-height: 0;
     height: 100%;
-    padding: env(safe-area-inset-top) 0 0;
+    padding: var(--safe-area-top) 0 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -196,7 +247,7 @@
   }
 
   .dialog-close {
-    top: calc(var(--dialog-close-inset) + env(safe-area-inset-top));
+    top: calc(var(--dialog-close-inset) + var(--safe-area-top));
     z-index: 1;
     background: color-mix(in srgb, var(--color-surface-inverse) 60%, transparent);
     color: var(--color-on-inverse);

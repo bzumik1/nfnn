@@ -1,7 +1,7 @@
 @use 'breakpoints' as bp;
 
 .about {
-  padding: var(--space-27) 0;
+  padding: max(calc(var(--safe-area-top) + var(--space-27)), var(--page-top)) 0 var(--space-27);
   background: var(--color-surface);
 }
 
@@ -52,6 +52,8 @@
   border-radius: var(--radius-media);
   height: 480px;
   overflow: hidden;
+  outline: 1px solid var(--color-media-rim);
+  outline-offset: -1px;
 
   img {
     object-position: center 20%;
@@ -80,6 +82,8 @@
   aspect-ratio: var(--about-photo-ratio);
   border-radius: var(--radius-media);
   background: var(--color-surface-alt);
+  outline: 1px solid var(--color-media-rim);
+  outline-offset: -1px;
 }
 
 .about-caption {
@@ -197,8 +201,6 @@
   width: auto;
   height: 44px;
   max-width: 100%;
-  filter: var(--filter-ink);
-  mix-blend-mode: var(--blend-ink);
 }
 
 .signature-name {
@@ -220,7 +222,7 @@
 
 @include bp.down(tablet) {
   .about {
-    padding: var(--space-16) 0;
+    padding: max(calc(var(--safe-area-top) + var(--space-16)), var(--page-top)) 0 var(--space-16);
   }
 
   .board {

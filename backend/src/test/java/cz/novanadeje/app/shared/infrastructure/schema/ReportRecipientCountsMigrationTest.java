@@ -1,9 +1,8 @@
 package cz.novanadeje.app.shared.infrastructure.schema;
 
+import cz.novanadeje.app.TestcontainersConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -41,7 +40,7 @@ class ReportRecipientCountsMigrationTest {
         records.put("0190a000-0000-7000-8000-000000000046", new String[]{"CHANGE_SETTINGS",
                 "Změněna nastavení: MAIL_HOST; backend se restartuje, aby je použil",
                 "Změněna nastavení: MAIL_HOST; backend se restartuje, aby je použil"});
-        try (var postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"))) {
+        try (var postgres = TestcontainersConfiguration.newPostgres()) {
             postgres.start();
             try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
                 BaselineDatabase.migrate(connection, BEFORE_COUNTS_CHANGELOG);

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -139,6 +140,32 @@
   font-size: var(--text-md);
 }
 
+.gift-arrival.ui-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.gift-arrival-text {
+  flex: 1 1 14rem;
+  font-weight: var(--weight-semibold);
+}
+
+.gift-arrival-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+
+  a {
+    color: inherit;
+    @include touch-target.reaches-finger-size;
+  }
+}
+
 .qr {
   display: flex;
   gap: var(--space-6);
@@ -156,6 +183,8 @@
 
 .qr-image {
   width: 200px;
+  border-radius: var(--radius-qr-ground);
+  overflow: hidden;
   transition: opacity var(--duration-base) ease;
 }
 
@@ -411,7 +440,8 @@
 
 .qr[role='region'] .qr-image,
 .qr[role='region'] .qr-placeholder {
-  width: min(260px, 100%);
+  width: 260px;
+  max-width: 100%;
 }
 
 .qr[role='region'] .qr-placeholder {

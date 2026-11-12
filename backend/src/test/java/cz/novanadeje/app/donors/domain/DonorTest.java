@@ -282,6 +282,54 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given a donor a restore marked erased while its personal data came back with the backup, when the erasure is completed, then every personal detail is a placeholder, the password, the roles and the confirmation are gone and the first erasure time stays")
+    void should_replace_personal_data_and_keep_the_time_when_erasure_completed_given_donor_marked_erased_by_a_restore() {
+        DonorId id = DonorId.newId(NOW);
+        Donor donor = Donor.reconstitute(id, DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL,
+                LocaleCode.EN, Set.of(Role.DONOR, Role.ADMIN), NOW, NOW.plusSeconds(60), NOW.plusSeconds(3600));
+
+        assertThat(donor.erasureIncomplete()).isTrue();
+        donor.completeErasure();
+
+        assertThat(donor.erasureIncomplete()).isFalse();
+        assertThat(donor.erasedAt()).contains(NOW.plusSeconds(3600));
+        assertThat(donor.name()).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(donor.companyIdentifier()).isEmpty();
+        assertThat(donor.address()).isEqualTo(ErasedPersonalData.ADDRESS);
+        assertThat(donor.email()).isEqualTo(ErasedPersonalData.emailFor(id.value()));
+        assertThat(donor.passwordHash()).isEmpty();
+        assertThat(donor.roles()).isEmpty();
+        assertThat(donor.isEmailVerified()).isFalse();
+        assertThat(donor.variableSymbol()).isEqualTo(SYMBOL);
+        assertThat(donor.preferredLocale()).isEqualTo(LocaleCode.EN);
+    }
+
+    @Test
+    @DisplayName("Given a donor erased in full, a donor marked erased with only an address left, and a donor never erased, when asked whether the erasure is incomplete, then only the one with data left says so")
+    void should_tell_an_incomplete_erasure_when_asked_given_erased_partly_erased_and_active_donors() {
+        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        erased.erase(NOW.plusSeconds(10));
+        DonorId partlyErasedId = DonorId.newId(NOW);
+        Donor partlyErased = Donor.reconstitute(partlyErasedId, DonorType.PERSON, ErasedPersonalData.NAME, null, ADDRESS,
+                ErasedPersonalData.emailFor(partlyErasedId.value()), null, SYMBOL, LocaleCode.CS, Set.of(), NOW, null, NOW.plusSeconds(10));
+        Donor active = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThat(erased.erasureIncomplete()).isFalse();
+        assertThat(partlyErased.erasureIncomplete()).isTrue();
+        assertThat(active.erasureIncomplete()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a donor never erased, when the erasure is completed, then it is refused and nothing changes")
+    void should_refuse_when_erasure_completed_given_donor_never_erased() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(donor::completeErasure).isInstanceOf(IllegalStateException.class);
+        assertThat(donor.name()).isEqualTo("Jana Nováková");
+        assertThat(donor.isErased()).isFalse();
+    }
+
+    @Test
     @DisplayName("Given an administrator, when erased, then it is refused and nothing changes")
     void should_refuse_when_erased_given_administrator() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);

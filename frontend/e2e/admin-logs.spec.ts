@@ -1,36 +1,87 @@
 import { expect, test } from './fixtures';
 import { LOGGERS, rememberedAdministrator, routeLogsApi } from './admin-logs-api';
+import { stepBack } from './app-history';
 import { mockDonorApi } from './donor-session';
 
-test.describe('Given an administrator on the logs page', () => {
+test.describe('Given an administrator on the logs hub', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
     await routeLogsApi(page);
     await rememberedAdministrator(page);
   });
 
-  test('when the page opens, then the tail of backend.log is shown and older lines and a search are reachable', async ({
+  test('when they open backend.log from the hub, then its newest entries come first, older ones load below and an error opens its surroundings', async ({
     page,
   }) => {
     await page.goto('/sprava/logy');
 
     await expect(page).toHaveTitle('Logy a diagnostika | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeFocused();
-    await expect(page.locator('.log-text').first()).toContainText('INFO line 39');
-    await expect(page.locator('.range')).toHaveText('Konec logu');
+    await expect(page.getByRole('link', { name: /Bez poruchy/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Starší soubory/ })).toContainText('1');
 
-    await page.getByRole('button', { name: '← Starší' }).click();
-    await expect(page.locator('.range')).toHaveText('Starší část logu');
+    await page.getByRole('link', { name: /backend\.log Aplikace/ }).click();
+    await expect(page).toHaveURL('/sprava/logy/soubor?nazev=backend.log');
+    await expect(page.getByRole('heading', { level: 1, name: 'backend.log' })).toBeFocused();
+    await expect(page.getByRole('main').locator('.entry').first()).toContainText('line 39');
+    await expect(page.getByRole('main').locator('.entry')).toHaveCount(40);
 
-    await page.getByLabel('Hledat', { exact: true }).fill('fio');
-    await page.getByRole('button', { name: 'Hledat', exact: true }).click();
-    await expect(page.locator('.match')).toHaveCount(2);
+    await page.getByRole('button', { name: 'Načíst starší řádky' }).click();
+    await expect(page.getByRole('main').locator('.entry')).toHaveCount(80);
+
+    await page.getByRole('radio', { name: 'Chyby', exact: true }).click();
+    await expect(page.getByRole('main').locator('.entry')).toHaveCount(2);
+    await page.getByRole('main').locator('.entry').first().click();
+    const sheet = page.getByRole('dialog', { name: 'Chyba v 10:00:38' });
+    await expect(sheet).toContainText('c.n.a.d.i.fio.FioBankStatementSource');
     const opened = page.waitForRequest(
-      (request) => new URL(request.url()).searchParams.get('from') === '51000',
+      (request) => new URL(request.url()).searchParams.get('from') === '41000',
     );
-    await page.locator('.match').first().click();
+    await sheet.getByRole('button', { name: 'Zobrazit okolí' }).click();
     await opened;
-    await expect(page.locator('.range')).toHaveText('Starší část logu');
+    await expect(page.getByRole('radio', { name: 'Vše', exact: true })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(page.getByRole('main').locator('.entry.is-focused')).toBeFocused();
+
+    await stepBack(page);
+    await expect(page).toHaveURL('/sprava/logy');
+  });
+
+  test('when errors were written today, then the hub counts them and a row opens the reader at that line', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava/logy');
+
+    const today = page.getByRole('region', { name: 'Varování a chyby dnes' });
+    const row = today.getByRole('link', { name: /^Chyba Fio refused the request \(409\)/ });
+    await expect(row).toContainText('2×');
+    const opened = page.waitForRequest(
+      (request) => new URL(request.url()).searchParams.get('from') === '41000',
+    );
+    await row.click();
+    await opened;
+    await expect(page).toHaveURL('/sprava/logy/soubor?nazev=backend.log&od=51000');
+    await expect(page.getByRole('main').locator('.entry.is-focused')).toBeFocused();
+  });
+
+  test('when they open the older files on a phone, then the archive of each series leads to its reader', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava/logy');
+
+    await page.getByRole('link', { name: /Starší soubory/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Starší soubory' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 2, name: 'Aplikace' })).toBeVisible();
+
+    await page.getByRole('link', { name: /backend\.log\.2026-10-22\.0\.gz/ }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'backend.log.2026-10-22.0.gz' }),
+    ).toBeVisible();
+    await expect(page.getByRole('main').locator('.entry').first()).toContainText('line 39');
   });
 
   test('when they raise a logger for half an hour, then the level is put and the list shows it until it is reset', async ({
@@ -74,30 +125,43 @@ test.describe('Given an administrator on the logs page', () => {
     );
 
     await page.goto('/sprava/logy');
-    await page.getByLabel('Logger').fill('cz.novanadeje.app');
-    await page.getByRole('button', { name: 'Nastavit' }).click();
+    await page.getByRole('link', { name: 'Úrovně logování' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Úrovně logování' })).toBeFocused();
+    await page.getByRole('button', { name: /^Aplikace cz\.novanadeje\.app/ }).click();
+    const sheet = page.getByRole('dialog', { name: 'Úroveň loggeru cz.novanadeje.app' });
+    await expect(sheet.getByRole('radio', { name: 'DEBUG' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await sheet.getByRole('button', { name: 'Nastavit na 30 min' }).click();
 
     await expect(page.getByRole('status').filter({ hasText: 'má úroveň DEBUG' })).toHaveText(
       'Logger cz.novanadeje.app má úroveň DEBUG do 23. 10. 2026 12:30.',
     );
-    await expect(page.locator('.levels tr.overridden')).toHaveCount(1);
+    await expect(page.getByRole('main').locator('.overrides .ui-list__row')).toContainText(
+      'INFO → DEBUG',
+    );
 
     await page.getByRole('button', { name: 'Vrátit úroveň loggeru cz.novanadeje.app' }).click();
-    await expect(page.locator('.levels tr.overridden')).toHaveCount(0);
+    await expect(page.getByRole('main').locator('.overrides')).toHaveCount(0);
     await expect(page.getByText('Logger cz.novanadeje.app má zase původní úroveň.')).toBeVisible();
   });
 
-  test('when they ask for the thread dump on a phone, then it opens below the diagnostics', async ({
+  test('when they open the server state and the thread dump on a phone, then each reads as its own page', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/sprava/logy');
 
-    await page.getByRole('button', { name: 'Zobrazit výpis vláken' }).click();
-    await expect(page.locator('#logs-threads .log-text')).toContainText('"main" #1 state=RUNNABLE');
-    await expect(page.getByRole('button', { name: 'Skrýt výpis vláken' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    await page.getByRole('link', { name: /Bez poruchy/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Stav serveru' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 2, name: 'Bez poruchy' })).toBeVisible();
+    await expect(page.getByRole('main').locator('.database')).toContainText('za 2 ms');
+
+    await stepBack(page);
+    await page.getByRole('link', { name: 'Výpis vláken' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Výpis vláken' })).toBeFocused();
+    await expect(page.getByRole('main').locator('.states')).toContainText('Běží');
+    await expect(page.getByRole('main').locator('.dump')).toContainText('"main" #1 state=RUNNABLE');
   });
 });

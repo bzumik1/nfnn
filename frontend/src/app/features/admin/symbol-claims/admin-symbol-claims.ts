@@ -15,6 +15,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { BankAccount } from '../../donations/bank-account/bank-account';
 import { formatBankTime } from '../../donations/donation-date';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { AdminApi, SymbolClaimResponse } from '../admin-api';
@@ -29,7 +30,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-symbol-claims',
-  imports: [LiveNotice, RouterLink, NeedsConnection, ChangedMeanwhileDialog],
+  imports: [LiveNotice, RouterLink, NeedsConnection, ChangedMeanwhileDialog, BankAccount],
   templateUrl: './admin-symbol-claims.html',
   styleUrl: './admin-symbol-claims.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

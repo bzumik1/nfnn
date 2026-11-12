@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.container {
+  max-width: 720px;
+}
+
+.groups {
+  margin-top: var(--space-4);
+}
+
+.logger-name {
+  font-weight: var(--weight-medium);
+}
+
+.ui-list__value .ui-button {
+  font-weight: var(--weight-semibold);
+}
+
+.sheet-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-title);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.level-form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.choice-title {
+  margin-top: var(--space-3);
+}
+
+.choices {
+  .choice {
+    min-height: var(--list-row-min-height);
+  }
+
+  .choice:disabled {
+    cursor: not-allowed;
+    color: var(--color-text-subtle);
+  }
+
+  .check {
+    color: var(--color-accent);
+  }
+}
+
+.submit {
+  margin-top: var(--space-4);
+}
