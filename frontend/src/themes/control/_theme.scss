@@ -177,6 +177,7 @@
   --page-parallax: -50%;
   --color-page-dim: color-mix(in srgb, var(--color-surface-inverse) 20%, transparent);
   --shadow-page-edge: -3px 0 0 var(--color-border-field);
+  --radius-page-card: 0;
   --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;

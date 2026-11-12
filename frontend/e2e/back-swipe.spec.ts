@@ -1,5 +1,11 @@
 import { CDPSession, Page } from '@playwright/test';
-import { mockDonorApi } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const FLICK_REST_MS = 100;
@@ -187,5 +193,69 @@ test.describe('Given the app on the home screen of a phone with an article opene
     await finger.up();
 
     await expect(page).toHaveURL('/aktuality');
+  });
+});
+
+function barBackButtonLeft(page: Page): Promise<number> {
+  return page
+    .locator('.page-transition--swipe .page-transition__bar .back-button')
+    .evaluate((button) => button.getBoundingClientRect().left);
+}
+
+test.describe('Given the app on the home screen of a phone and an administrator who opened the administration from the account sheet over the news', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'touch events come only through CDP; the swipe in Safari is recorded on the iOS simulator',
+  );
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) =>
+        route.fulfill({ json: { items: [article], page: 0, size: 10, total: 1, hasMore: false } }),
+    );
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+    await openAccountItem(page, 'Správa');
+    await expect(page).toHaveURL(/\/sprava$/);
+    await copied();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger drags the administration back, then the news lies under it without the sheet while the round back button stands still, and on letting go the news returns', async ({
+    page,
+  }) => {
+    const finger = await fingerOn(page);
+
+    await drag(finger, 30, 150);
+    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveText(
+      LIST_TITLE,
+    );
+    await expect(swipeOverlay(page).locator('dialog')).toHaveCount(0);
+    const backAt = await barBackButtonLeft(page);
+    await finger.move(250);
+    await expect.poll(() => pageOffset(page)).toBeCloseTo(220, 0);
+    expect(await barBackButtonLeft(page)).toBe(backAt);
+
+    await restLongerThanAFlick(page);
+    await finger.up();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 });
