@@ -25,6 +25,14 @@
   },
   {
     "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_history_import: *",
+    "kind": "added",
+    "field": "$.balance",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
     "scenario": "donations/admin_import_state: An administrator sees the account balance of the last successful import*",
     "kind": "added",
     "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads",
