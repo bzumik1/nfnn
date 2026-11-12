@@ -508,6 +508,30 @@ describe('Given receipts of 1, 40, 120 and 366 gifts', () => {
   });
 });
 
+describe('Given a single receipt with a scanned signature on white paper', () => {
+  it('when it is drawn, then the scan is multiplied onto the card, so its white does not show as a box, and nothing else is', async () => {
+    const document = documentOf(frozenCase(SINGLE_SIGNATURE));
+
+    const scanned = await readPdf(
+      await drawReceipt(document, TEST_STYLE, {
+        fonts: themeFonts(),
+        signature: PORTRAIT,
+        portrait: PORTRAIT,
+      }),
+    );
+    const drawn = await readPdf(
+      await drawReceipt(document, TEST_STYLE, {
+        fonts: themeFonts(),
+        signature: VECTOR_SIGNATURE,
+        portrait: PORTRAIT,
+      }),
+    );
+
+    expect(scanned.raw.match(/\/BM \/Multiply/g) ?? []).toHaveLength(1);
+    expect(drawn.raw).not.toContain('/Multiply');
+  });
+});
+
 describe('Given a single receipt with a vector signature and a portrait', () => {
   it('when it is drawn, then the signature is vector paths, the portrait the one image, and both are described figures', async () => {
     const frozen = frozenCase(SINGLE_SIGNATURE);

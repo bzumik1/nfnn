@@ -64,10 +64,15 @@ declare module 'pdfkit' {
     };
   }
 
+  interface PdfReference {
+    end(): void;
+  }
+
   interface PdfPage {
     readonly width: number;
     readonly height: number;
     margins: { top: number; right: number; bottom: number; left: number };
+    readonly ext_gstates: Record<string, PdfReference>;
   }
 
   interface PdfImage {
@@ -117,6 +122,8 @@ declare module 'pdfkit' {
     scale(x: number, y?: number): this;
     roundedRect(x: number, y: number, width: number, height: number, radius: number): this;
     openImage(source: Uint8Array | ArrayBuffer): PdfImage;
+    ref(data: Record<string, string>): PdfReference;
+    addContent(content: string): this;
     flushPages(): void;
     image(
       source: Uint8Array | ArrayBuffer | PdfImage,

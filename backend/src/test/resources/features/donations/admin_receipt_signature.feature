@@ -35,7 +35,7 @@ Feature: An administrator chooses who signs the donation receipts, and the recei
     Then the response status is 200
     And the issued receipt is the yearly receipt for 2026
     And the frozen receipt shows the current signature image
-    And the frozen receipt's signature image is a PNG of 1200 by 400 pixels whose white is transparent
+    And the frozen receipt's signature image is a PNG of 1200 by 400 pixels without an alpha channel
     And the frozen receipt holds:
       | field          | value                 |
       | signatory.name | Josef Vzorový         |

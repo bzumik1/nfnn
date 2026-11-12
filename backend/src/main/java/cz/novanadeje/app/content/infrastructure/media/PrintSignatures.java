@@ -14,15 +14,12 @@ import java.io.IOException;
 
 public final class PrintSignatures {
 
-    private static final int OPAQUE = 255;
-
     private PrintSignatures() {
     }
 
     public static PrintSignature prepare(MediaVariant variant) {
         BufferedImage onWhite = fitted(decode(variant.webp()));
-        BufferedImage ink = inkOf(onWhite);
-        return new PrintSignature(png(ink), ink.getWidth(), ink.getHeight());
+        return new PrintSignature(png(onWhite), onWhite.getWidth(), onWhite.getHeight());
     }
 
     private static BufferedImage decode(byte[] webp) {
@@ -51,32 +48,6 @@ public final class PrintSignatures {
         graphics.drawImage(source, 0, 0, width, height, null);
         graphics.dispose();
         return target;
-    }
-
-    private static BufferedImage inkOf(BufferedImage onWhite) {
-        BufferedImage ink = new BufferedImage(onWhite.getWidth(), onWhite.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < onWhite.getHeight(); y++) {
-            for (int x = 0; x < onWhite.getWidth(); x++) {
-                ink.setRGB(x, y, withoutWhite(onWhite.getRGB(x, y)));
-            }
-        }
-        return ink;
-    }
-
-    private static int withoutWhite(int rgb) {
-        int red = (rgb >> 16) & OPAQUE;
-        int green = (rgb >> 8) & OPAQUE;
-        int blue = rgb & OPAQUE;
-        int lightest = Math.min(red, Math.min(green, blue));
-        int alpha = OPAQUE - lightest;
-        if (alpha == 0) {
-            return 0;
-        }
-        return alpha << 24 | unblended(red, lightest, alpha) << 16 | unblended(green, lightest, alpha) << 8 | unblended(blue, lightest, alpha);
-    }
-
-    private static int unblended(int channel, int lightest, int alpha) {
-        return Math.min(OPAQUE, Math.round((channel - lightest) * (float) OPAQUE / alpha));
     }
 
     private static byte[] png(BufferedImage image) {

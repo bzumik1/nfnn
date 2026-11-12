@@ -22,7 +22,6 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import javax.imageio.ImageIO;
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -348,7 +347,7 @@ public class DonorFrozenReceiptStepDefinitions {
         signatureImageSeen = Optional.of(shown);
     }
 
-    @Then("the frozen receipt's signature image is a PNG of {int} by {int} pixels whose white is transparent")
+    @Then("the frozen receipt's signature image is a PNG of {int} by {int} pixels without an alpha channel")
     public void theFrozenReceiptsSignatureImageIsAnInkPng(int width, int height) throws IOException {
         String shown = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
         Map<String, Object> image = jdbc.sql("select media_type, content from receipt_image where sha256 = ?").param(shown).query().singleRow();
@@ -356,8 +355,7 @@ public class DonorFrozenReceiptStepDefinitions {
         BufferedImage signature = ImageIO.read(new ByteArrayInputStream((byte[]) image.get("content")));
         assertThat(signature.getWidth()).isEqualTo(width);
         assertThat(signature.getHeight()).isEqualTo(height);
-        assertThat(new Color(signature.getRGB(1, 1), true).getAlpha()).isZero();
-        assertThat(new Color(signature.getRGB(width / 2, height / 2), true).getAlpha()).isGreaterThan(200);
+        assertThat(signature.getColorModel().hasAlpha()).isFalse();
     }
 
     @Then("the frozen receipt still shows the signature image it showed before")

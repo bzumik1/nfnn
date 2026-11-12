@@ -53,18 +53,17 @@ class PrintSignaturesTest {
     }
 
     @Test
-    @DisplayName("Given ink on a white background, when prepared for print, then the white becomes transparent and the ink stays opaque in its colour, so on white paper it looks as uploaded")
-    void should_make_white_transparent_when_prepared_given_ink_on_white() throws IOException {
+    @DisplayName("Given ink on a white background, when prepared for print, then it is a PNG without an alpha channel, which the browser's PDF library embeds, in the colours it was uploaded in")
+    void should_keep_white_and_ink_without_alpha_when_prepared_given_ink_on_white() throws IOException {
         BufferedImage printed = decoded(PrintSignatures.prepare(variantOf(signature(300, 100))));
 
-        Color background = new Color(printed.getRGB(5, 5), true);
-        Color ink = new Color(printed.getRGB(150, 50), true);
-        assertThat(background.getAlpha()).isZero();
-        assertThat(ink.getAlpha()).isGreaterThan(200);
-        Color overWhite = overWhite(ink);
-        assertThat(Math.abs(overWhite.getRed() - INK.getRed())).isLessThan(12);
-        assertThat(Math.abs(overWhite.getGreen() - INK.getGreen())).isLessThan(12);
-        assertThat(Math.abs(overWhite.getBlue() - INK.getBlue())).isLessThan(12);
+        Color background = new Color(printed.getRGB(5, 5));
+        Color ink = new Color(printed.getRGB(150, 50));
+        assertThat(printed.getColorModel().hasAlpha()).isFalse();
+        assertThat(background).isEqualTo(Color.WHITE);
+        assertThat(Math.abs(ink.getRed() - INK.getRed())).isLessThan(12);
+        assertThat(Math.abs(ink.getGreen() - INK.getGreen())).isLessThan(12);
+        assertThat(Math.abs(ink.getBlue() - INK.getBlue())).isLessThan(12);
     }
 
     @Test
@@ -91,12 +90,6 @@ class PrintSignaturesTest {
         graphics.fillRect(width / 4, height * 2 / 5, width / 2, height / 5);
         graphics.dispose();
         return image;
-    }
-
-    private static Color overWhite(Color ink) {
-        double alpha = ink.getAlpha() / 255.0;
-        return new Color((int) Math.round(ink.getRed() * alpha + 255 * (1 - alpha)), (int) Math.round(ink.getGreen() * alpha + 255 * (1 - alpha)),
-                (int) Math.round(ink.getBlue() * alpha + 255 * (1 - alpha)));
     }
 
     private static MediaVariant variantOf(BufferedImage image) {
