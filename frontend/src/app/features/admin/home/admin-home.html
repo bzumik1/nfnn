@@ -63,12 +63,17 @@
               <dt i18n="@@admin.home.import.balance">Zůstatek účtu</dt>
               <dd>
                 @if (balance(); as balance) {
-                  {{ balance }}
-                  @if (balanceMayBeOutdated()) {
-                    <span class="admin-failure-message" i18n="@@admin.home.import.balance.outdated"
-                      >(poslední známý, nemusí být aktuální)</span
+                  {{ balance.amount }}
+                  <span class="balance-read-at">
+                    <ng-container i18n="@@admin.home.import.balance.readAt"
+                      >k {{ balance.readAt }}</ng-container
                     >
-                  }
+                    @if (balanceMayBeOutdated()) {
+                      &ngsp;<ng-container i18n="@@admin.home.import.balance.outdated"
+                        >(poslední známý, nemusí být aktuální)</ng-container
+                      >
+                    }
+                  </span>
                 } @else {
                   <ng-container i18n="@@admin.home.import.balance.none">zatím neznámý</ng-container>
                 }

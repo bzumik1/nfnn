@@ -271,7 +271,7 @@ test.describe('Given an administrator', () => {
     await expect(page).toHaveURL(/\/sprava$/);
     await expect(page).toHaveTitle('Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
-    await expect(value(page, 'Zůstatek účtu')).toHaveText('123 456,78 Kč · k 18. 10. 2026 10:05');
+    await expect(value(page, 'Zůstatek účtu')).toHaveText('123 456,78 Kč k 18. 10. 2026 10:05');
     await expect(value(page, 'Stažené období')).toHaveText('20. 7. 2026 – 17. 10. 2026');
     await expect(value(page, 'Poslední úspěšné stažení')).toHaveText('18. 10. 2026 10:05');
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
@@ -359,7 +359,7 @@ test.describe('Given an administrator', () => {
       'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
     );
     await expect(value(page, 'Zůstatek účtu')).toHaveText(
-      '500 Kč · k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)',
+      '500 Kč k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)',
     );
   });
 

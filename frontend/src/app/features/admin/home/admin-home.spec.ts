@@ -173,7 +173,7 @@ describe('Given an administrator on the administration home', () => {
     );
 
     expect(dataRows()).toEqual({
-      'Zůstatek účtu': '123 456,78 Kč · k 18. 10. 2026 10:05',
+      'Zůstatek účtu': '123 456,78 Kč k 18. 10. 2026 10:05',
       'Stažené období': '20. 7. 2026 – 17. 10. 2026',
       'Poslední úspěšné stažení': '18. 10. 2026 10:05',
       'Poslední pokus': '18. 10. 2026 10:05',
@@ -346,7 +346,7 @@ describe('Given an administrator on the administration home', () => {
     );
 
     expect(dataRows()['Zůstatek účtu']).toBe(
-      '500 Kč · k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)',
+      '500 Kč k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)',
     );
   });
 

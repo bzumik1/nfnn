@@ -157,7 +157,10 @@ export class AdminHome {
   protected readonly balance = computed(() => {
     const balance = this.importState()?.balance;
     return balance
-      ? `${formatMinorUnits(balance.amountMinor)}\u00a0Kč · k ${formatBankTime(balance.readAt)}`
+      ? {
+          amount: `${formatMinorUnits(balance.amountMinor)}\u00a0Kč`,
+          readAt: formatBankTime(balance.readAt),
+        }
       : null;
   });
   protected readonly balanceMayBeOutdated = computed(() => this.importState()?.lastFailure != null);
