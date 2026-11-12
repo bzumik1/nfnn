@@ -4,6 +4,12 @@ import { MARKER, SERVICE_WORKER, SERVICE_WORKER_MANIFEST } from './pwa-site';
 import { waitWhileNothingMayHappen } from '../fixed-waits';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
+
+function privacyLinkOfContact(page: Page) {
+  return page
+    .locator('#kontakt .contact-legal')
+    .getByRole('link', { name: 'zásady ochrany osobních údajů' });
+}
 const APP_API_UNREACHABLE =
   /^Failed to load resource: the server responded with a status of 504 \(Gateway Timeout\) \(http:\/\/localhost:\d+\/api\//;
 const APP_API_OFFLINE =
@@ -373,7 +379,7 @@ test.describe('Given the app registered its own service worker', () => {
       site.remove(chunk);
     }
 
-    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+    await privacyLinkOfContact(page).click();
 
     await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -430,7 +436,7 @@ test.describe('Given a visitor who already acted on the page when a new version 
     expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');
 
-    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+    await privacyLinkOfContact(page).click();
 
     await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -443,6 +449,8 @@ test.describe('Given a visitor who already acted on the page when a new version 
     site,
   }) => {
     expect(await marker(page)).toBe('a');
+    await privacyLinkOfContact(page).click();
+    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
     await markThisDocument(page);
 
     site.switchTo('b');
@@ -450,17 +458,17 @@ test.describe('Given a visitor who already acted on the page when a new version 
     await waitWhileNothingMayHappen(page, SETTLE_MS);
     expect(await sameDocument(page)).toBe(true);
 
-    await page.getByRole('link', { name: 'Kontakt', exact: true }).click();
-    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
+    await page.getByRole('link', { name: 'Jaké údaje zpracováváme a proč', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${POLICY}#udaje$`));
     await waitWhileNothingMayHappen(page, SETTLE_MS);
     expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');
 
-    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+    await page.getByRole('link', { name: 'kontaktní formulář', exact: true }).click();
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect.poll(() => sameDocument(page)).toBe(false);
-    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
+    await expect(page).toHaveURL(/\/o-nas#kontakt$/);
     expect(await marker(page)).toBe('b');
   });
 
