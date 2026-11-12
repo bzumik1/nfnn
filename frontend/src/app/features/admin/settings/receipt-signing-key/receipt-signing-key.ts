@@ -65,7 +65,7 @@ export class ReceiptSigningKey {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
-  private readonly onlineAgain = reloadWhenOnlineAgain(
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.state() === 'offline',
     () => this.load(),
   );
@@ -140,8 +140,7 @@ export class ReceiptSigningKey {
           this.keys.set(keys);
           this.state.set('ready');
         },
-        error: (failure: unknown) =>
-          this.state.set(this.onlineAgain.unreachable(failure) ? 'offline' : 'error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       });
   }
 

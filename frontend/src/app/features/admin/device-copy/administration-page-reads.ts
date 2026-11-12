@@ -1,5 +1,3 @@
-/// <reference types="@angular/localize" />
-
 import { computed, inject, Injectable, type Signal } from '@angular/core';
 import { map, type Observable } from 'rxjs';
 import { type AboutResponse, AboutApi } from '../../content/about-api';
@@ -31,10 +29,12 @@ import { AdministrationCopy } from './administration-copy';
 import { AdministrationReads } from './administration-reads';
 import type { CopyAccountRow } from './administration-views';
 
-export const DETAILS_NEED_CONNECTION = $localize`:@@admin.copy.history.detailsNeedConnection:Podrobnosti se ukážou s připojením.`;
-
 export interface AdminActionsRead extends AdminActionListResponse {
   readonly fromCopy: boolean;
+}
+
+export interface AdminReportRead extends AdminReportResponse {
+  readonly heldAt: string | null;
 }
 
 export interface AdminBackupsRead extends AdminBackupsResponse {
@@ -135,14 +135,14 @@ export class AdministrationPageReads {
 
   about(): Observable<AboutResponse> {
     return this.reads.copyFirst(
-      () => this.fromContent(this.aboutRows, (rows) => rows[0] ?? { photo: null }),
+      () => this.fromContent(this.aboutRows, (rows) => rows[0] ?? null),
       () => this.aboutApi.load(),
     );
   }
 
   donateBand(): Observable<DonateBandResponse> {
     return this.reads.copyFirst(
-      () => this.fromContent(this.bandRows, (rows) => rows[0] ?? { photo: null }),
+      () => this.fromContent(this.bandRows, (rows) => rows[0] ?? null),
       () => this.donateBandApi.load(),
     );
   }
@@ -162,7 +162,7 @@ export class AdministrationPageReads {
   }
 
   backups(): Observable<AdminBackupsRead> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => {
         const row = this.fromOperations(this.backupRows);
         return row === null ? null : { ...row, fromCopy: true };
@@ -172,18 +172,26 @@ export class AdministrationPageReads {
     );
   }
 
-  report(): Observable<AdminReportResponse> {
+  backupsWithoutRunErrors(): Observable<AdminBackupsResponse> {
+    return this.reads.copyFirst(
+      () => this.fromOperations(this.backupRows),
+      () => this.api.backups(),
+    );
+  }
+
+  report(): Observable<AdminReportRead> {
     return this.reads.copyFirst(
       () => {
         const row = this.reportRows()?.[0];
-        return row === undefined ? null : reportOf(row);
+        const report = row === undefined ? null : reportOf(row);
+        return report === null ? null : { ...report, heldAt: this.reads.copyTime() };
       },
-      () => this.api.report(),
+      () => this.api.report().pipe(map((report): AdminReportRead => ({ ...report, heldAt: null }))),
     );
   }
 
   adminActions(after: ActionCursor | null = null, limit = 50): Observable<AdminActionsRead> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => {
         const rows = this.auditNewestFirst();
         const accounts = this.accounts();
@@ -223,9 +231,8 @@ function actionPage(
   after: ActionCursor | null,
   limit: number,
 ): AdminActionsRead {
-  const start = after === null ? 0 : rows.findIndex((row) => newerFirst(row, after) > 0);
-  const from = start < 0 ? rows.length : start;
-  const page = rows.slice(from, from + limit);
+  const older = after === null ? rows : rows.filter((row) => newerFirst(row, after) > 0);
+  const page = older.slice(0, limit);
   const byId = new Map(accounts.map((account) => [account.donorId, account]));
   return {
     items: page.map((row) => {
@@ -238,13 +245,13 @@ function actionPage(
         action: row.action,
         subjectId: row.subjectId,
         donorId: row.donorId ?? null,
-        summary: row.summary ?? DETAILS_NEED_CONNECTION,
+        summary: row.summary ?? '',
         details: '',
         performedAt: row.performedAt,
         client: row.client,
       };
     }),
-    hasMore: from + limit < rows.length,
+    hasMore: older.length > limit,
     fromCopy: true,
   };
 }

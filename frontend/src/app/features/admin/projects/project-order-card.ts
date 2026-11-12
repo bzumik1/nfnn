@@ -40,7 +40,7 @@ export class ProjectOrderCard {
   private readonly saved = signal<ProjectOrder | null>(null);
   protected readonly saving = signal(false);
   protected readonly notice = signal<Notice | null>(null);
-  private readonly onlineAgain = reloadWhenOnlineAgain(
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.state() === 'offline',
     () => this.load(),
   );
@@ -62,8 +62,7 @@ export class ProjectOrderCard {
           this.saved.set(response.order);
           this.state.set('ready');
         },
-        error: (failure: unknown) =>
-          this.state.set(this.onlineAgain.unreachable(failure) ? 'offline' : 'error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       });
   }
 

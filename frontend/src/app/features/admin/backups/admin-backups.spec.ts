@@ -9,7 +9,12 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { backupFile, backupRun, backupSchedule, backupsView } from '../testing/admin-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups';
-import { copyOf, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  openWithCopy,
+  textOf,
+} from '../device-copy/testing/opened-copy';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
@@ -711,8 +716,39 @@ describe('Given an administrator offline whose device keeps the administration c
 });
 
 describe('Given an administrator offline whose copy holds a failed backup without its error text', () => {
+  const failedCopy = () =>
+    copyOf({
+      'operations/settings': [{}],
+      'operations/backups': [
+        backupsView({ lastBackup: backupRun({ outcome: 'FAILED', error: null }) }),
+      ],
+    });
+
   it('when the backups open, then the failure shows by its time and says its details show with a connection', async () => {
+    const { page, http } = await openOfflineFromCopy(AdminBackups, failedCopy());
+
+    expect(textOf(page)).toContain('Nepovedla se');
+    expect(textOf(page)).toContain('Podrobnosti chyby ukážeme, až budete online.');
+    expect(page.querySelector('details.tech-details')).toBeNull();
+    http.verify();
+  });
+
+  it('when the server is away rather than the internet, then the line says the details show when the server answers again', async () => {
     const { page, http } = await openOfflineFromCopy(
+      AdminBackups,
+      failedCopy(),
+      undefined,
+      'server',
+    );
+
+    expect(textOf(page)).toContain('Podrobnosti chyby ukážeme, až server zase odpoví.');
+    http.verify();
+  });
+});
+
+describe('Given an administrator online whose open copy is fresh and holds a failed backup without its text', () => {
+  it('when the backups open, then they come from the server with the error text of the failed run', async () => {
+    const { page, http, settle } = await openWithCopy(
       AdminBackups,
       copyOf({
         'operations/settings': [{}],
@@ -721,9 +757,17 @@ describe('Given an administrator offline whose copy holds a failed backup withou
         ],
       }),
     );
+    http.expectOne(BACKUPS_URL).flush(
+      backupsView({
+        lastBackup: backupRun({ outcome: 'FAILED', error: 'pg_dump: error: out of memory' }),
+      }),
+    );
+    await settle();
 
-    expect(textOf(page)).toContain('Nepovedla se');
-    expect(textOf(page)).toContain('Technické podrobnosti chyby se ukážou s připojením.');
+    expect(textOf(page.querySelector('details.tech-details'))).toContain(
+      'pg_dump: error: out of memory',
+    );
+    expect(textOf(page)).not.toContain('ukážeme');
     http.verify();
   });
 });

@@ -8,7 +8,11 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { DONATE_BAND_PHOTO_ID, donateBandPhoto } from '../../content/testing/donate-band-fixtures';
 import { IMAGE_ID, uploadedImage } from '../../content/testing/news-fixtures';
 import { AdminDonateBand } from './admin-donate-band';
-import { contentCopy, openOfflineFromCopy } from '../device-copy/testing/opened-copy';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 import { donateBandPhoto as heldPhoto } from '../../content/testing/donate-band-fixtures';
 
 const BAND_URL = '/api/admin/content/donate-band';
@@ -310,6 +314,7 @@ describe('Given an administrator offline whose device keeps the administration c
     );
 
     expect(page.querySelector(`img[src*="${photo.id}"]`)).not.toBeNull();
+    waitsForConnection(page, 'Uložit a ukázat na webu');
     http.verify();
   });
 });

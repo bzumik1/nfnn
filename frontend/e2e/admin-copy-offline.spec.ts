@@ -2,7 +2,13 @@ import { Page } from '@playwright/test';
 import { everyOfferedYear } from '../src/app/features/admin/device-copy/administration-overview';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { expect, test } from './fixtures';
-import { administrator, adminSettings, mockDonorApi, signIn } from './donor-session';
+import {
+  administrator,
+  adminSettings,
+  mockDonorApi,
+  signIn,
+  whenAdministrationCopied,
+} from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
 const OVERVIEW = '/api/admin/donations/overview';
@@ -131,7 +137,7 @@ const people = {
 };
 
 const reportSettings = {
-  recipients: ['kopie@nfnn.cz'],
+  recipients: ['kopie@example.cz'],
   sendDay: 1,
   sendHour: 7,
   sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
@@ -140,6 +146,17 @@ const reportSettings = {
   nextReport: { month: '2026-10', dueOn: '2026-11-01' },
   lastEndedMonth: '2026-10',
   version: '8a3c5e1f64b7d29a',
+};
+
+const failedTestRestore = {
+  outcome: 'FAILED',
+  startedAt: '2026-10-18T02:00:00Z',
+  finishedAt: '2026-10-18T02:00:04Z',
+  fileName: 'nfnn-2026-10-17_0300.dump.age',
+  sizeBytes: null,
+  tables: null,
+  requestId: null,
+  error: null,
 };
 
 const backups = {
@@ -162,7 +179,7 @@ const backups = {
     requestId: null,
     error: null,
   },
-  lastTestRestore: null,
+  lastTestRestore: failedTestRestore,
   lastRestore: null,
   restoreFiles: [],
   pendingRequests: 0,
@@ -209,6 +226,8 @@ const COPY_READS = [
   '/api/admin/donations/report',
   '/api/admin/donors/actions',
 ];
+
+const SERVER_FIRST_READS = ['/api/admin/donors/actions', '/api/admin/operations/backups'];
 
 interface Chunk {
   readonly id: string;
@@ -286,15 +305,38 @@ test.describe('Given an administrator whose device keeps the administration copy
     context,
   }) => {
     test.setTimeout(90_000);
-    const stored = Promise.all(
-      ['donations', 'donors', 'content', 'operations'].map((part) =>
-        page.waitForResponse(
-          (response) => new URL(response.url()).pathname === `/api/admin/${part}/sync/chunks`,
-        ),
-      ),
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors/actions',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                ...auditEntry,
+                adminName: adminAccount.name,
+                adminEmail: adminAccount.email,
+                details: `paymentId=${payment.id}`,
+              },
+            ],
+            hasMore: false,
+          },
+        }),
     );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups',
+      (route) =>
+        route.fulfill({
+          json: {
+            ...backups,
+            lastTestRestore: { ...failedTestRestore, error: 'pg_restore: error: out of memory' },
+          },
+        }),
+    );
+    const copied = whenAdministrationCopied(page);
     await signIn(page, administrator);
-    await stored;
+    await page.getByRole('link', { name: 'Správa' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeVisible();
+    await copied();
     const serverReads: string[] = [];
     page.on('request', (request) => {
       const path = new URL(request.url()).pathname;
@@ -302,49 +344,94 @@ test.describe('Given an administrator whose device keeps the administration copy
         serverReads.push(path);
       }
     });
-    await page.getByRole('link', { name: 'Správa' }).click();
     const nav = page.getByRole('navigation', { name: 'Správa' });
-    const pages: [string, string, (main: ReturnType<Page['locator']>) => Promise<void>][] = [
-      ['Aktuality', 'Aktuality', (main) => expect(main).toContainText(article.title)],
-      ['Pomáháme', 'Pomáháme', (main) => expect(main).toContainText(story.title)],
-      [
-        'Fotka v sekci O nás',
-        'Fotka v sekci O nás',
-        (main) => expect(main.locator('.ui-load-state--error')).toHaveCount(0),
-      ],
-      [
-        'Fotka v pruhu Přispět',
-        'Fotka v pruhu Přispět',
-        (main) => expect(main.locator('.ui-load-state--error')).toHaveCount(0),
-      ],
-      ['Lidé fondu', 'Lidé fondu', (main) => expect(main).toContainText('Eva Vzorová z kopie')],
-      ['Měsíční e-mail', 'Měsíční e-mail', (main) => expect(main).toContainText('kopie@nfnn.cz')],
-      [
-        'Historie změn',
-        'Historie změn',
-        async (main) => {
+    type Shows = (main: ReturnType<Page['locator']>) => Promise<void>;
+    const nothingFailed: Shows = (main) =>
+      expect(main.locator('.ui-load-state--error')).toHaveCount(0);
+    const waits =
+      (name: string): Shows =>
+      (main) =>
+        expect(main.getByRole('button', { name, exact: true }).first()).toHaveAttribute(
+          'aria-disabled',
+          'true',
+        );
+    const pages: {
+      link: string;
+      shows: Shows;
+      online?: Shows;
+      offline?: Shows;
+    }[] = [
+      { link: 'Aktuality', shows: (main) => expect(main).toContainText(article.title) },
+      {
+        link: 'Pomáháme',
+        shows: (main) => expect(main).toContainText(story.title),
+        offline: waits('Uložit řazení'),
+      },
+      { link: 'Fotka v sekci O nás', shows: nothingFailed },
+      { link: 'Fotka v pruhu Přispět', shows: nothingFailed },
+      {
+        link: 'Lidé fondu',
+        shows: (main) => expect(main).toContainText('Eva Vzorová z kopie'),
+        offline: waits('Uložit slovo zakladatelů'),
+      },
+      {
+        link: 'Měsíční e-mail',
+        shows: (main) => expect(main).toContainText('kopie@example.cz'),
+        offline: waits('Uložit nastavení'),
+      },
+      {
+        link: 'Historie změn',
+        shows: async (main) => {
           await expect(main).toContainText('Platba 500 Kč přiřazena dárci Jana Nováková');
           await expect(main).toContainText('Správce z kopie');
+          await main.getByText('Technické podrobnosti', { exact: true }).first().click();
         },
-      ],
-      ['Zálohy', 'Zálohy', (main) => expect(main.locator('.ui-load-state--error')).toHaveCount(0)],
-      [
-        'Nastavení',
-        'Nastavení',
-        (main) => expect(main.locator('.ui-load-state--error')).toHaveCount(0),
-      ],
+        online: (main) => expect(main).toContainText(`paymentId=${payment.id}`),
+        offline: (main) =>
+          expect(main.getByText('Podrobnosti ukážeme, až budete online.').first()).toBeVisible(),
+      },
+      {
+        link: 'Zálohy',
+        shows: nothingFailed,
+        online: async (main) => {
+          await main.locator('details.tech-details summary').click();
+          await expect(main).toContainText('pg_restore: error: out of memory');
+        },
+        offline: async (main) => {
+          await expect(main).toContainText('Podrobnosti chyby ukážeme, až budete online.');
+          await waits('Zálohovat teď')(main);
+        },
+      },
+      {
+        link: 'Nastavení',
+        shows: nothingFailed,
+        offline: async (main) => {
+          await expect(main).toContainText('Klíč ukážeme, až budete online.');
+          await waits('Uložit nastavení')(main);
+        },
+      },
     ];
     const main = page.locator('main');
-    for (const [link, heading, shows] of pages) {
-      await nav.getByRole('link', { name: link, exact: true }).click();
-      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-      await shows(main);
-    }
-    await nav.getByRole('link', { name: 'Aktuality', exact: true }).click();
-    await page.getByRole('link', { name: article.title }).click();
-    await expect(page.getByRole('textbox', { name: 'Titulek' })).toHaveValue(article.title);
-    expect(serverReads).toEqual([]);
+    const visit = async (offline: boolean) => {
+      for (const { link, shows, online, offline: whenOffline } of pages) {
+        await nav.getByRole('link', { name: link, exact: true }).click();
+        await expect(page.getByRole('heading', { level: 1, name: link })).toBeVisible();
+        await shows(main);
+        await (offline ? whenOffline : online)?.(main);
+      }
+      await nav.getByRole('link', { name: 'Aktuality', exact: true }).click();
+      await page.getByRole('link', { name: article.title }).click();
+      await expect(page.getByRole('textbox', { name: 'Titulek' })).toHaveValue(article.title);
+      if (offline) {
+        await expect(
+          page.getByRole('button', { name: 'Uložit a ukázat na webu', exact: true }),
+        ).toHaveAttribute('aria-disabled', 'true');
+      }
+    };
+    await visit(false);
+    expect(serverReads).toEqual(SERVER_FIRST_READS);
 
+    serverReads.length = 0;
     await page.route(
       (url) => url.pathname.startsWith('/api/'),
       (route) => route.abort('internetdisconnected'),
@@ -353,20 +440,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     await expect(
       page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
     ).toBeVisible();
-    for (const [link, heading, shows] of pages) {
-      await nav.getByRole('link', { name: link, exact: true }).click();
-      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
-      await shows(main);
-    }
-    await expect(main).toContainText('Klíč ukážeme, až se spojení se serverem obnoví.');
-    await nav.getByRole('link', { name: 'Zálohy', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await nav.getByRole('link', { name: 'Aktuality', exact: true }).click();
-    await page.getByRole('link', { name: article.title }).click();
-    await expect(page.getByRole('textbox', { name: 'Titulek' })).toHaveValue(article.title);
+    await visit(true);
     expect(serverReads).toEqual([]);
     await context.setOffline(false);
   });

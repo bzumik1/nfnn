@@ -8,7 +8,12 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { draftProject, project } from '../../content/testing/project-fixtures';
 import { AdminProjects } from './admin-projects';
-import { contentCopy, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
 
 const LIST_URL = '/api/admin/content/projects';
@@ -239,6 +244,7 @@ describe('Given an administrator offline whose device keeps the administration c
     expect(
       (page.querySelector('input[value="CATEGORY_THEN_YEAR"]') as HTMLInputElement | null)?.checked,
     ).toBe(true);
+    waitsForConnection(page, 'Uložit řazení');
     http.verify();
   });
 
@@ -250,7 +256,7 @@ describe('Given an administrator offline whose device keeps the administration c
     http.expectOne('/api/admin/content/project-order').error(new ProgressEvent('error'));
     await settle();
 
-    expect(textOf(page)).toContain('Řazení ukážeme, až se spojení se serverem obnoví.');
+    expect(textOf(page)).toContain('Řazení ukážeme, až budete online.');
     http.verify();
   });
 });

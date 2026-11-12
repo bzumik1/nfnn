@@ -47,7 +47,7 @@ export class ReceiptSignatory {
   private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly state = signal<LoadState>('loading');
-  private readonly onlineAgain = reloadWhenOnlineAgain(
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.state() === 'offline',
     () => this.load(),
   );
@@ -83,12 +83,10 @@ export class ReceiptSignatory {
                 this.block.set(block);
                 this.state.set('ready');
               },
-              error: (failure: unknown) =>
-                this.state.set(this.onlineAgain.unreachable(failure) ? 'offline' : 'error'),
+              error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
             });
         },
-        error: (failure: unknown) =>
-          this.state.set(this.onlineAgain.unreachable(failure) ? 'offline' : 'error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       });
   }
 

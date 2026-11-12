@@ -7,6 +7,12 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { backupFile, backupsView } from '../../testing/admin-fixtures';
 import { AdminBackupHistory } from './admin-backup-history';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../../device-copy/testing/opened-copy';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 
@@ -185,5 +191,24 @@ describe('Given an administrator on the history of backups', () => {
     await respond(backupsView({ backups: BACKUPS }));
 
     expect(texts('button.ui-list__row')).toHaveLength(3);
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the backup history opens, then it lists the backups of the copy and downloading one needs a connection', async () => {
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminBackupHistory,
+      copyOf({
+        'operations/settings': [{}],
+        'operations/backups': [backupsView({ backups: [backupFile()] })],
+      }),
+    );
+
+    expect(textOf(page.querySelector('.ui-list__row'))).toContain('3:00');
+    (page.querySelector('.ui-list__row') as HTMLButtonElement).click();
+    await settle();
+
+    waitsForConnection(page, 'Stáhnout');
+    http.verify();
   });
 });

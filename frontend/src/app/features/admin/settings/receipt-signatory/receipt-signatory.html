@@ -29,11 +29,6 @@
           </button>
         </div>
       }
-      @case ('offline') {
-        <p class="signatory-status" i18n="@@admin.signatory.offline">
-          Kdo potvrzení podepisuje, ukážeme, až se spojení se serverem obnoví.
-        </p>
-      }
       @case ('ready') {
         @if (block(); as block) {
           <p class="ui-card__intro" i18n="@@admin.signatory.intro">
@@ -119,5 +114,18 @@
         >
       }
     }
+    <div class="signatory-offline" role="status">
+      @if (state() === 'offline') {
+        @if (onlineAgain.serverAway()) {
+          <p class="signatory-status" i18n="@@admin.signatory.serverAway">
+            Kdo potvrzení podepisuje, ukážeme, až server zase odpoví.
+          </p>
+        } @else {
+          <p class="signatory-status" i18n="@@admin.signatory.offline">
+            Kdo potvrzení podepisuje, ukážeme, až budete online.
+          </p>
+        }
+      }
+    </div>
   </div>
 </section>

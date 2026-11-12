@@ -31,11 +31,6 @@
           </button>
         </div>
       }
-      @case ('offline') {
-        <p class="ui-load-state ui-load-state--inset" i18n="@@admin.projects.order.offline">
-          Řazení ukážeme, až se spojení se serverem obnoví.
-        </p>
-      }
       @case ('ready') {
         <form class="order-form" (submit)="save($event)" novalidate>
           <fieldset class="orders">
@@ -77,6 +72,19 @@
         </form>
       }
     }
+    <div class="order-offline" role="status">
+      @if (state() === 'offline') {
+        @if (onlineAgain.serverAway()) {
+          <p class="ui-load-state" i18n="@@admin.projects.order.serverAway">
+            Řazení ukážeme, až server zase odpoví.
+          </p>
+        } @else {
+          <p class="ui-load-state" i18n="@@admin.projects.order.offline">
+            Řazení ukážeme, až budete online.
+          </p>
+        }
+      }
+    </div>
     <app-live-notice [notice]="notice()" />
   </div>
 </section>

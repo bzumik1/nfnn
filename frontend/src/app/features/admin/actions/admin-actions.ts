@@ -14,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -120,7 +121,8 @@ export class AdminActions {
   protected readonly hasMore = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
-  private readonly withoutDetails = signal<ReadonlySet<string>>(new Set());
+  private readonly readWithoutDetails = signal<ReadonlySet<string>>(new Set());
+  private readonly connectivity = inject(Connectivity);
 
   constructor() {
     this.load();
@@ -134,8 +136,8 @@ export class AdminActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
-          this.withoutDetails.set(new Set());
-          this.heldWithoutDetails(page);
+          this.readWithoutDetails.set(new Set());
+          this.noteReadWithoutDetails(page);
           this.items.set(page.items);
           this.hasMore.set(page.hasMore);
           this.state.set('ready');
@@ -166,7 +168,7 @@ export class AdminActions {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
-          this.heldWithoutDetails(page);
+          this.noteReadWithoutDetails(page);
           this.items.update((current) => [...current, ...page.items]);
           this.hasMore.set(page.hasMore);
           this.loadingMore.set(false);
@@ -182,13 +184,17 @@ export class AdminActions {
     return formatBankTime(item.performedAt);
   }
 
-  protected detailsHeld(item: AdminActionResponse): boolean {
-    return this.withoutDetails().has(item.id);
+  protected detailsOnServerOnly(item: AdminActionResponse): boolean {
+    return this.readWithoutDetails().has(item.id);
   }
 
-  private heldWithoutDetails(page: AdminActionsRead): void {
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
+  }
+
+  private noteReadWithoutDetails(page: AdminActionsRead): void {
     if (page.fromCopy) {
-      this.withoutDetails.update(
+      this.readWithoutDetails.update(
         (held) => new Set([...held, ...page.items.map((item) => item.id)]),
       );
     }

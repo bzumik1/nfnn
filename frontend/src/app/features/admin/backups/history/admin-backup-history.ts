@@ -57,7 +57,7 @@ export class AdminBackupHistory {
   protected load(): void {
     this.state.set('loading');
     this.reads
-      .backups()
+      .backupsWithoutRunErrors()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {

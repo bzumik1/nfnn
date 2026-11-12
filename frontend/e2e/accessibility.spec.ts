@@ -2008,8 +2008,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when the administration reads its copy and the server cannot be reached, then the settings parts waiting for the server, the history without details and a failed backup without its text break no rule', async ({
+  test('when the administration reads its copy offline, then the parts waiting for the server, the history without details, a failed backup without its text, the stories and the people break no rule', async ({
     page,
+    context,
   }) => {
     const failedRun = {
       outcome: 'FAILED',
@@ -2057,7 +2058,28 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       },
       content: {
         people: [
-          { members: [], note: null, footnote: null, noteVersion: 'a', footnoteVersion: 'b' },
+          {
+            members: [
+              {
+                id: '0199f3e0-0000-7000-8000-00000000e001',
+                name: 'Eva Vzorová',
+                role: 'Zakladatelka',
+                position: 0,
+                onBoard: true,
+                boardNote: null,
+                featured: true,
+                portrait: null,
+                webSignature: null,
+                personalEmail: null,
+                fundEmail: null,
+                linkedToAccount: false,
+              },
+            ],
+            note: null,
+            footnote: null,
+            noteVersion: 'a',
+            footnoteVersion: 'b',
+          },
         ],
       },
       operations: {
@@ -2084,14 +2106,6 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         ],
       },
     });
-    await page.route(
-      (url) =>
-        [
-          '/api/admin/donations/receipt-signatory',
-          '/api/admin/donations/receipt-signing-keys',
-        ].includes(url.pathname),
-      (route) => route.abort('connectionrefused'),
-    );
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
     );
@@ -2099,33 +2113,49 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await openUnlockedAdministrationPage(page, '/sprava/vice', 'Občas a pro technika');
     const nav = page.getByRole('navigation', { name: 'Správa' });
+    for (const link of ['Nastavení', 'Historie změn', 'Zálohy', 'Pomáháme', 'Lidé fondu']) {
+      await nav.getByRole('link', { name: link, exact: true }).click();
+      await expect(page.getByRole('heading', { level: 1, name: link })).toBeVisible();
+    }
+    await page.route(
+      (url) => url.pathname.startsWith('/api/'),
+      (route) => route.abort('internetdisconnected'),
+    );
+    await context.setOffline(true);
     await nav.getByRole('link', { name: 'Nastavení', exact: true }).click();
-    await expect(page.getByText('Klíč ukážeme, až se spojení se serverem obnoví.')).toBeVisible();
     await expect(
-      page.getByText('Kdo potvrzení podepisuje, ukážeme, až se spojení se serverem obnoví.'),
+      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+    ).toBeVisible();
+    await expect(page.getByText('Klíč ukážeme, až budete online.')).toBeVisible();
+    await expect(
+      page.getByText('Kdo potvrzení podepisuje, ukážeme, až budete online.'),
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await nav.getByRole('link', { name: 'Historie změn', exact: true }).click();
-    await expect(
-      page.getByText('Podrobnosti se ukážou s připojením.', { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Přiřazení platby dárci' })).toBeVisible();
     await page.getByText('Technické podrobnosti', { exact: true }).first().click();
-    await expect(
-      page.getByText('Technické podrobnosti se ukážou s připojením.').first(),
-    ).toBeVisible();
+    await expect(page.getByText('Podrobnosti ukážeme, až budete online.').first()).toBeVisible();
     expect(await violations(page)).toEqual([]);
 
     await nav.getByRole('link', { name: 'Zálohy', exact: true }).click();
+    await expect(page.getByText('Podrobnosti chyby ukážeme, až budete online.')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Pomáháme', exact: true }).click();
+    await expect(page.getByText('Řazení ukážeme, až budete online.')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Lidé fondu', exact: true }).click();
     await page
-      .locator('details.tech-details')
-      .filter({ hasText: 'Technické podrobnosti chyby se ukážou s připojením.' })
-      .locator('summary')
+      .getByRole('button', { name: /Upravit/ })
+      .first()
       .click();
     await expect(
-      page.getByText('Technické podrobnosti chyby se ukážou s připojením.'),
+      page.getByText('Kdo potvrzení podepisuje, ukážeme, až budete online.'),
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
+    await context.setOffline(false);
   });
 
   test('when an administrator watches the backups, then the page with its problems and busy action breaks no rule', async ({

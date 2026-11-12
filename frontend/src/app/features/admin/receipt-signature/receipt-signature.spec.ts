@@ -10,6 +10,8 @@ import {
   vectorReceiptSignature,
 } from '../testing/admin-fixtures';
 import { ReceiptSignatureResponse } from '../admin-api';
+import { Connectivity, type OfflineCause } from '../../../core/connectivity/connectivity';
+import { type FakeConnectivity, fakeConnectivity } from '../device-copy/testing/opened-copy';
 import { ReceiptSignature } from './receipt-signature';
 
 const SIGNATURE_URL = `/api/admin/donations/receipt-signatures/${SIGNATORY_ID}`;
@@ -499,5 +501,82 @@ describe('Given the receipt signature part of a person of the foundation', () =>
 
       expect(text('[role="status"]:not(:empty)')).toBe('Podpis je odebraný.');
     });
+  });
+});
+
+describe('Given the receipt signature part of a person of the foundation while the connectivity is known', () => {
+  let fixture: ComponentFixture<ReceiptSignature>;
+  let http: HttpTestingController;
+  let connectivity: FakeConnectivity;
+
+  async function open(cause: OfflineCause | null): Promise<void> {
+    connectivity = fakeConnectivity(cause);
+    await TestBed.configureTestingModule({
+      imports: [ReceiptSignature],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: Connectivity,
+          useValue: { offline: connectivity.offline, cause: connectivity.cause },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(ReceiptSignature);
+    fixture.componentRef.setInput('personId', SIGNATORY_ID);
+    fixture.detectChanges();
+  }
+
+  afterEach(() => http.verify());
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function text(selector: string): string {
+    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async function failUnreachable(): Promise<void> {
+    http.expectOne(SIGNATURE_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+  }
+
+  it('when the server cannot be reached while the device is online, then it shows the error with its retry', async () => {
+    await open(null);
+    await failUnreachable();
+
+    expect(text('[role="alert"]:not(:empty)')).toContain('Podpis se nepodařilo načíst.');
+    expect(text('.signature-offline[role="status"]')).toBe('');
+  });
+
+  it('when the device is offline, then a status line says the signature shows once online, and the part loads it when the device is back online', async () => {
+    await open('network');
+    await failUnreachable();
+
+    expect(fixture.nativeElement.querySelector('.signature-error')).toBeNull();
+    expect(text('.signature-offline[role="status"]')).toBe('Podpis ukážeme, až budete online.');
+
+    connectivity.set(null);
+    await settle();
+    http.expectOne(SIGNATURE_URL).flush(noReceiptSignature());
+    await settle();
+
+    expect(text('.signature-offline[role="status"]')).toBe('');
+    expect(text('.signature-state')).toContain('Podpis není nahraný.');
+  });
+
+  it('when the server is away rather than the internet, then the status line says the signature shows when the server answers again', async () => {
+    await open('server');
+    await failUnreachable();
+
+    expect(text('.signature-offline[role="status"]')).toBe(
+      'Podpis ukážeme, až server zase odpoví.',
+    );
   });
 });

@@ -318,7 +318,7 @@ export class AdminHome {
   protected loadBackups(): void {
     this.backupsState.set('loading');
     this.pageReads
-      .backups()
+      .backupsWithoutRunErrors()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {

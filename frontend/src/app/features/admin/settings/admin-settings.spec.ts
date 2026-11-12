@@ -13,7 +13,12 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
-import { copyOf, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -762,11 +767,11 @@ describe('Given an administrator offline whose device keeps the administration c
     expect(
       Array.from(page.querySelectorAll('input')).map((input) => (input as HTMLInputElement).value),
     ).toContain('smtp-relay.brevo.com');
-    expect(textOf(page)).toContain('Klíč ukážeme, až se spojení se serverem obnoví.');
-    expect(textOf(page)).toContain(
-      'Kdo potvrzení podepisuje, ukážeme, až se spojení se serverem obnoví.',
-    );
+    const statuses = [...page.querySelectorAll('[role="status"]')].map((line) => textOf(line));
+    expect(statuses).toContain('Klíč ukážeme, až budete online.');
+    expect(statuses).toContain('Kdo potvrzení podepisuje, ukážeme, až budete online.');
     expect(page.querySelector('.signing-key-error, .signatory-error')).toBeNull();
+    waitsForConnection(page, 'Uložit nastavení');
     http.verify();
   });
 });

@@ -126,6 +126,12 @@
   }
 }
 
+.run-error-later {
+  margin-top: var(--space-1-5);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .run-error {
   font-family: var(--font-mono);
   overflow-wrap: anywhere;

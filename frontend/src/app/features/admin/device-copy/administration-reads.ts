@@ -133,9 +133,7 @@ export class AdministrationReads {
     };
   });
 
-  private readonly copyTime = computed(() =>
-    latest(this.download.checkedAt(), this.copy.storedAt()),
-  );
+  readonly copyTime = computed(() => latest(this.download.checkedAt(), this.copy.storedAt()));
 
   constructor() {
     effect(() => {
@@ -218,18 +216,28 @@ export class AdministrationReads {
   }
 
   importState(): Observable<ImportStateRead> {
-    const fromCopy = (): ImportStateRead | null => {
-      const row = this.copy.opened() ? this.importStates()?.[0] : undefined;
-      return row === undefined ? null : { source: 'copy', state: storedImportState(row) };
-    };
+    return this.serverFirst(
+      () => {
+        const row = this.importStates()?.[0];
+        return row === undefined ? null : { source: 'copy', state: storedImportState(row) };
+      },
+      () =>
+        this.api.importState().pipe(map((state): ImportStateRead => ({ source: 'server', state }))),
+    );
+  }
+
+  serverFirst<Answer>(
+    local: () => Answer | null,
+    server: () => Observable<Answer>,
+  ): Observable<Answer> {
+    const fromCopy = (): Answer | null => (this.copy.opened() ? local() : null);
     return defer(() => {
       const offline = this.connectivity.offline() ? fromCopy() : null;
       if (offline !== null) {
         this.held(offline);
         return of(offline);
       }
-      return this.api.importState().pipe(
-        map((state): ImportStateRead => ({ source: 'server', state })),
+      return server().pipe(
         catchError((failure: unknown) => {
           const held = isUnreachable(failure) || this.connectivity.offline() ? fromCopy() : null;
           if (held === null) {

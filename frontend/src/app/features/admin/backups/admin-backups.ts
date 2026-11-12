@@ -42,6 +42,7 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { RestoreDialog } from './restore-dialog';
 import { ADMIN_BACKUP_HISTORY_PATH, RESTORE_STATE_KEY } from './backup-paths';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
@@ -51,11 +52,10 @@ interface RunningJob {
   kind: BackupRequestKind;
 }
 
-const ERROR_NEEDS_CONNECTION = $localize`:@@admin.backups.errorNeedsConnection:Technické podrobnosti chyby se ukážou s připojením.`;
-
 interface RunLine {
   text: string;
   error: string | null;
+  errorOnServerOnly?: boolean;
 }
 
 interface RequestedRestore {
@@ -118,8 +118,8 @@ export class AdminBackups {
   protected readonly restoreError = signal<string | null>(null);
   protected readonly restoring = signal<RequestedRestore | null>(null);
   protected readonly restoreSlow = signal(false);
-  protected readonly errorNeedsConnection = ERROR_NEEDS_CONNECTION;
-  private readonly errorsHeld = signal(false);
+  private readonly errorsOnServerOnly = signal(false);
+  private readonly connectivity = inject(Connectivity);
 
   protected readonly available = computed(() => this.view()?.available ?? false);
   protected readonly backups = computed(() => this.view()?.backups ?? []);
@@ -161,7 +161,7 @@ export class AdminBackups {
       .subscribe({
         next: (view) => {
           this.view.set(view);
-          this.errorsHeld.set(view.fromCopy);
+          this.errorsOnServerOnly.set(view.fromCopy);
           this.state.set('ready');
           this.reportRequestedRestore(view);
           this.askHandedOverRestore(view);
@@ -312,7 +312,7 @@ export class AdminBackups {
       .subscribe({
         next: (view) => {
           this.view.set(view);
-          this.errorsHeld.set(false);
+          this.errorsOnServerOnly.set(false);
         },
         complete: () => this.finishJob(kind),
         error: (failure: unknown) => {
@@ -423,10 +423,10 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return {
-        text: $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
-        error: this.runError(run),
-      };
+      return this.failedRun(
+        $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
+        run,
+      );
     }
     return {
       text: $localize`:@@admin.backups.lastRestore.ok:${at}:time: ze zálohy ${run.fileName ?? ''}:file:`,
@@ -434,8 +434,16 @@ export class AdminBackups {
     };
   }
 
-  private runError(run: BackupRunResponse): string | null {
-    return run.error ?? (this.errorsHeld() ? ERROR_NEEDS_CONNECTION : null);
+  private failedRun(text: string, run: BackupRunResponse): RunLine {
+    return {
+      text,
+      error: run.error,
+      errorOnServerOnly: run.error === null && this.errorsOnServerOnly(),
+    };
+  }
+
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
   }
 
   private describeBackup(run: BackupRunResponse | null | undefined): RunLine {
@@ -444,7 +452,7 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: this.runError(run) };
+      return this.failedRun(failedAt(at), run);
     }
     return {
       text: $localize`:@@admin.backups.lastBackup.ok:${at}:time: (${formatSize(run.sizeBytes ?? 0)}:size:)`,
@@ -465,7 +473,7 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: this.runError(run) };
+      return this.failedRun(failedAt(at), run);
     }
     return {
       text: $localize`:@@admin.backups.lastTestRestore.ok:${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:`,

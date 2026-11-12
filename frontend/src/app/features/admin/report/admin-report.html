@@ -35,7 +35,21 @@
         <div class="ui-card__body">
           @if (nextReport(); as next) {
             <p class="next-report">
-              @if (next.overdue) {
+              @if (next.heldAt; as heldAt) {
+                @if (serverAway()) {
+                  <ng-container i18n="@@admin.report.next.heldServerAway"
+                    >Podle údajů z {{ heldAt }} měl přehled za {{ next.month }} odejít
+                    {{ next.dueOn }} v {{ next.hour }}; jestli odešel, ukážeme, až server zase
+                    odpoví.</ng-container
+                  >
+                } @else {
+                  <ng-container i18n="@@admin.report.next.held"
+                    >Podle údajů z {{ heldAt }} měl přehled za {{ next.month }} odejít
+                    {{ next.dueOn }} v {{ next.hour }}; jestli odešel, ukážeme, až budete
+                    online.</ng-container
+                  >
+                }
+              } @else if (next.overdue) {
                 <ng-container i18n="@@admin.report.next.overdue"
                   >Přehled za {{ next.month }} měl odejít {{ next.dueOn }} v {{ next.hour }}, ale
                   zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete

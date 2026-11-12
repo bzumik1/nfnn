@@ -17,6 +17,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
@@ -113,6 +114,8 @@ export class AdminReport {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly report = signal<AdminReportResponse | null>(null);
+  private readonly heldAt = signal<string | null>(null);
+  private readonly connectivity = inject(Connectivity);
   protected readonly settingsStatus = signal<string | null>(null);
   protected readonly sendNotice = signal<Notice | null>(null);
   protected readonly mailRefused = signal(false);
@@ -174,6 +177,10 @@ export class AdminReport {
       dueOn: formatDonationDate(next.dueOn),
       hour: `${hour}:00`,
       overdue: next.month === report.lastEndedMonth && passed(next.dueOn, hour),
+      heldAt:
+        this.heldAt() !== null && this.connectivity.offline() && passed(next.dueOn, hour)
+          ? time(this.heldAt())
+          : null,
     };
   });
   protected readonly sentReports = computed(() => this.report()?.sentReports ?? []);
@@ -213,6 +220,10 @@ export class AdminReport {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
+  protected serverAway(): boolean {
+    return this.connectivity.cause() === 'server';
+  }
+
   protected load(): void {
     this.state.set('loading');
     this.fetch();
@@ -223,7 +234,8 @@ export class AdminReport {
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (report) => {
+        next: ({ heldAt, ...report }) => {
+          this.heldAt.set(heldAt);
           const previous = this.report();
           if (keepsEdits && previous !== null && this.settingsForm()?.dirty === true) {
             this.report.set({ ...report, settings: previous.settings });

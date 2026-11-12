@@ -1,8 +1,9 @@
-import { effect, inject, untracked } from '@angular/core';
-import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
+import { computed, effect, inject, type Signal, untracked } from '@angular/core';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 
 export interface OnlineAgain {
-  readonly unreachable: (failure: unknown) => boolean;
+  readonly offline: () => boolean;
+  readonly serverAway: Signal<boolean>;
 }
 
 export function reloadWhenOnlineAgain(waiting: () => boolean, reload: () => void): OnlineAgain {
@@ -17,5 +18,8 @@ export function reloadWhenOnlineAgain(waiting: () => boolean, reload: () => void
       wasOffline = offline;
     });
   });
-  return { unreachable: (failure) => isUnreachable(failure) || connectivity.offline() };
+  return {
+    offline: () => untracked(() => connectivity.offline()),
+    serverAway: computed(() => connectivity.cause() === 'server'),
+  };
 }

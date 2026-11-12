@@ -28,6 +28,8 @@ import {
   COPY_STORED_AT,
   contentCopy,
   openOfflineFromCopy,
+  waitsForConnection,
+  textOf,
 } from '../device-copy/testing/opened-copy';
 import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import { newsArticle as heldArticle } from '../../content/testing/news-fixtures';
@@ -1902,6 +1904,10 @@ describe('Given an administrator offline whose device keeps the administration c
       article.title,
     );
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse(COPY_STORED_AT));
+    expect([...page.querySelectorAll('option')].map((option) => textOf(option))).toContainEqual(
+      expect.stringContaining('Eva Vzorová'),
+    );
+    waitsForConnection(page, 'Uložit a ukázat na webu');
     http.verify();
   });
 });

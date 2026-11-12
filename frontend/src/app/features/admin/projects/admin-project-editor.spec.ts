@@ -22,7 +22,11 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminProjectEditor } from './admin-project-editor';
-import { contentCopy, openOfflineFromCopy } from '../device-copy/testing/opened-copy';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 import { project as heldProject } from '../../content/testing/project-fixtures';
 
 const PROJECTS_URL = '/api/admin/content/projects';
@@ -1284,6 +1288,7 @@ describe('Given an administrator offline whose device keeps the administration c
     expect((page.querySelector('#projects-title') as HTMLInputElement | null)?.value).toBe(
       story.title,
     );
+    waitsForConnection(page, 'Uložit a ukázat na webu');
     http.verify();
   });
 });

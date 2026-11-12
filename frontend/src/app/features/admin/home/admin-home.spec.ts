@@ -1223,6 +1223,8 @@ describe('Given an administrator on the administration home with the administrat
         { id: 'donations/donations:2026-10', rowsSha256: 'b', rows: [GIFT] },
         { id: 'donations/donor-records:2026-01', rowsSha256: 'c', rows: [RECORD] },
         { id: 'donations/import-state', rowsSha256: 'd', rows: [STORED_IMPORT] },
+        { id: 'operations/settings', rowsSha256: 'e', rows: [{}] },
+        { id: 'operations/backups', rowsSha256: 'f', rows: [backupsView()] },
       ],
       summary: {
         donations: {
@@ -1301,6 +1303,13 @@ describe('Given an administrator on the administration home with the administrat
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('Fio refused');
     expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+  });
+
+  it('when the device is offline, then the backups card shows the last backup of the copy without asking the server', () => {
+    expect(http.match('/api/admin/operations/backups')).toEqual([]);
+    expect(text('.ui-card[aria-labelledby="admin-backups-title"]')).toContain(
+      '23. 10. 2026 3:00 (2 kB)',
+    );
   });
 
   it("when the device comes back online, then the import state is read from the server again, with the failure's text and the part for older payments the copy does not hold", async () => {

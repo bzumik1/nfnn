@@ -8,7 +8,11 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { ABOUT_PHOTO_ID, aboutPhoto } from '../../content/testing/about-fixtures';
 import { IMAGE_ID, uploadedImage } from '../../content/testing/news-fixtures';
 import { AdminAbout } from './admin-about';
-import { contentCopy, openOfflineFromCopy } from '../device-copy/testing/opened-copy';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 import { aboutPhoto as heldPhoto } from '../../content/testing/about-fixtures';
 
 const ABOUT_URL = '/api/admin/content/about';
@@ -403,11 +407,15 @@ describe('Given an administrator offline whose device keeps the administration c
     );
 
     expect(page.querySelector(`img[src*="${photo.id}"]`)).not.toBeNull();
+    waitsForConnection(page, 'Uložit a ukázat na webu');
     http.verify();
   });
 
   it('when the copy holds no About photo, then the page says there is none, as when the server says so', async () => {
-    const { page, http } = await openOfflineFromCopy(AdminAbout, contentCopy({}));
+    const { page, http } = await openOfflineFromCopy(
+      AdminAbout,
+      contentCopy({ 'content/about': [{ photo: null }] }),
+    );
 
     expect(page.querySelector('img')).toBeNull();
     expect(page.querySelector('.ui-load-state--error')).toBeNull();

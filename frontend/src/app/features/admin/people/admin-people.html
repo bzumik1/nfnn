@@ -509,11 +509,6 @@
                       </button>
                     </div>
                   }
-                  @case ('offline') {
-                    <p class="field-status" i18n="@@admin.people.receipt.offline">
-                      Kdo podepisuje potvrzení, ukážeme, až se spojení se serverem obnoví.
-                    </p>
-                  }
                   @case ('ready') {
                     <form
                       #receiptForm="ngForm"
@@ -591,6 +586,19 @@
                     </form>
                   }
                 }
+                <div class="receipt-offline" role="status">
+                  @if (signatoryState() === 'offline') {
+                    @if (onlineAgain.serverAway()) {
+                      <p class="field-status" i18n="@@admin.people.receipt.serverAway">
+                        Kdo potvrzení podepisuje, ukážeme, až server zase odpoví.
+                      </p>
+                    } @else {
+                      <p class="field-status" i18n="@@admin.people.receipt.offline">
+                        Kdo potvrzení podepisuje, ukážeme, až budete online.
+                      </p>
+                    }
+                  }
+                </div>
                 <app-live-notice class="card-notice" [notice]="receiptNotice()" />
                 <app-receipt-signature
                   [personId]="member.id"

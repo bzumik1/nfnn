@@ -1,11 +1,11 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { type Provider, signal, type Type } from '@angular/core';
+import { computed, type Provider, type Signal, signal, type Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
-import { Connectivity } from '../../../../core/connectivity/connectivity';
+import { Connectivity, type OfflineCause } from '../../../../core/connectivity/connectivity';
 import type {
   AccountStore,
   CopyContents,
@@ -28,7 +28,27 @@ export function copyOf(chunks: Readonly<Record<string, readonly unknown[]>>): Co
   };
 }
 
-export function openedCopyProviders(contents: CopyContents, offline: boolean): Provider[] {
+export interface FakeConnectivity {
+  readonly offline: Signal<boolean>;
+  readonly cause: Signal<OfflineCause | null>;
+  readonly set: (cause: OfflineCause | null) => void;
+}
+
+export function fakeConnectivity(cause: OfflineCause | null): FakeConnectivity {
+  const held = signal(cause);
+  return {
+    offline: computed(() => held() !== null),
+    cause: held.asReadonly(),
+    set: (next) => held.set(next),
+  };
+}
+
+export function openedCopyProviders(
+  contents: CopyContents,
+  offline: boolean | FakeConnectivity,
+): Provider[] {
+  const connectivity =
+    typeof offline === 'boolean' ? fakeConnectivity(offline ? 'network' : null) : offline;
   const opened: OpenedCopy = {
     store: {
       copyId: 'copy-1',
@@ -41,7 +61,7 @@ export function openedCopyProviders(contents: CopyContents, offline: boolean): P
     { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
     {
       provide: Connectivity,
-      useValue: { offline: signal(offline).asReadonly(), cause: signal(null).asReadonly() },
+      useValue: { offline: connectivity.offline, cause: connectivity.cause },
     },
     {
       provide: AdministrationCopyDownload,
@@ -70,20 +90,39 @@ export interface PageFromCopy {
   readonly page: HTMLElement;
   readonly http: HttpTestingController;
   readonly settle: () => Promise<void>;
+  readonly connectivity: FakeConnectivity;
 }
 
-export async function openOfflineFromCopy(
+interface CopyRoute {
+  readonly path: string;
+  readonly url: string;
+}
+
+const ADMIN_HOME: CopyRoute = { path: 'sprava', url: '/sprava' };
+
+export function openOfflineFromCopy(
   component: Type<unknown>,
   contents: CopyContents,
-  route: { readonly path: string; readonly url: string } = { path: 'sprava', url: '/sprava' },
+  route: CopyRoute = ADMIN_HOME,
+  cause: OfflineCause = 'network',
 ): Promise<PageFromCopy> {
+  return openWithCopy(component, contents, route, cause);
+}
+
+export async function openWithCopy(
+  component: Type<unknown>,
+  contents: CopyContents,
+  route: CopyRoute = ADMIN_HOME,
+  cause: OfflineCause | null = null,
+): Promise<PageFromCopy> {
+  const connectivity = fakeConnectivity(cause);
   localStorage.clear();
   await TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       provideRouter([{ path: route.path, component }]),
-      ...openedCopyProviders(contents, true),
+      ...openedCopyProviders(contents, connectivity),
     ],
   }).compileComponents();
   const http = TestBed.inject(HttpTestingController);
@@ -95,9 +134,22 @@ export async function openOfflineFromCopy(
     }
   };
   await settle();
-  return { page: harness.routeNativeElement as HTMLElement, http, settle };
+  return { page: harness.routeNativeElement as HTMLElement, http, settle, connectivity };
 }
 
 export function textOf(element: Element | null): string {
   return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+export function waitsForConnection(page: HTMLElement, label: string): void {
+  const control = [...page.querySelectorAll<HTMLElement>('button, input[type="file"], label')].find(
+    (candidate) => textOf(candidate) === label,
+  );
+  const offered = [...page.querySelectorAll('button')].map((button) => textOf(button));
+  expect(control, `the control ${label} among ${offered.join(' | ')}`).toBeDefined();
+  expect(control?.getAttribute('aria-disabled')).toBe('true');
+  const hints = (control?.getAttribute('aria-describedby') ?? '')
+    .split(/\s+/)
+    .map((id) => textOf(page.ownerDocument.getElementById(id)));
+  expect(hints).toContain('Potřebuje připojení');
 }

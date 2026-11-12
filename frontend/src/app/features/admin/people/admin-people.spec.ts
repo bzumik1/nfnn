@@ -29,7 +29,12 @@ import {
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { heldRecordOf } from '../../../core/version/row-version';
 import { AdminPeople } from './admin-people';
-import { contentCopy, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
 
 const PEOPLE_URL = '/api/admin/content/people';
@@ -1375,6 +1380,23 @@ describe('Given an administrator offline whose device keeps the administration c
     expect((page.querySelector('#founders-note') as HTMLTextAreaElement | null)?.value).toBe(
       'Slovo zakladatelů z kopie',
     );
+    waitsForConnection(page, 'Uložit slovo zakladatelů');
+    (page.querySelector(`#person-edit-${heldPerson().id}`) as HTMLButtonElement).click();
+    await settle();
+
+    expect(textOf(page.querySelector('.receipt-offline[role="status"]'))).toBe(
+      'Kdo potvrzení podepisuje, ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.ui-load-state--error, .receipt-error')).toBeNull();
+    http
+      .expectOne((request) => request.url.startsWith(RECEIPT_SIGNATURES))
+      .error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(textOf(page.querySelector('.signature-offline[role="status"]'))).toBe(
+      'Podpis ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.signature-error')).toBeNull();
     http.verify();
   });
 });

@@ -189,7 +189,7 @@ export class AdminPeople {
   protected readonly noteNotice = signal<Notice | null>(null);
   protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
   protected readonly signatoryState = signal<SignatoryState>('loading');
-  private readonly onlineAgain = reloadWhenOnlineAgain(
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
     () => this.signatoryState() === 'offline',
     () => this.loadSignatory(),
   );
@@ -335,9 +335,9 @@ export class AdminPeople {
           this.loadReceiptPreviews(view.signatures);
           this.fillReceiptRole();
         },
-        error: (failure: unknown) => {
+        error: () => {
           if (this.signatoryState() !== 'ready') {
-            this.signatoryState.set(this.onlineAgain.unreachable(failure) ? 'offline' : 'error');
+            this.signatoryState.set(this.onlineAgain.offline() ? 'offline' : 'error');
           }
         },
       });

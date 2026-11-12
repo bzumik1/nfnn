@@ -804,6 +804,57 @@ describe('Given the download of the administration into its copy on this device'
       expect(await outcome).toBe('another-account');
       expect(vault.stored).toEqual([]);
     });
+
+    it('and the operations say the account is no longer an administrator, then the copy of the administration is cleared', async () => {
+      const outcome = download.refresh();
+      await manifestsUpTo('operations');
+      await answer('/api/admin/operations/sync', {
+        subject: ADMIN_ID,
+        administrator: false,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('revoked');
+      expect(vault.revoked).toEqual([JANA]);
+    });
+  });
+
+  describe('when a copy that holds the news opens again and the content no longer lists them', () => {
+    const NEWS = [{ id: 'news-1', title: 'Letní tábor', version: 'a1' }];
+    const PEOPLE = [{ members: [], note: null, footnote: null }];
+
+    beforeEach(async () => {
+      const held = await stored();
+      vault.open('unlocked', {
+        ...held,
+        chunks: [
+          ...held.chunks,
+          { id: 'content/news', rowsSha256: await rowsSha256(NEWS), rows: NEWS },
+          { id: 'content/people', rowsSha256: await rowsSha256(PEOPLE), rows: PEOPLE },
+        ],
+      });
+      await flush();
+    });
+
+    it('then the stored copy keeps the people and drops the news chunk', async () => {
+      await manifestsUpTo('content');
+      await answer('/api/admin/content/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'people', rowsSha256: await rowsSha256(PEOPLE), count: 1 }],
+      });
+      await answer('/api/admin/operations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [],
+      });
+      await flush();
+
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored.map((held) => held.chunks.map((chunk) => chunk.id))).toEqual([
+        ['donations/payments:2026-11', 'donors/accounts:2026-11', 'content/people'],
+      ]);
+    });
   });
 
   async function manifestsUpTo(last: 'content' | 'operations'): Promise<void> {
