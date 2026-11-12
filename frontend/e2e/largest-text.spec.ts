@@ -212,7 +212,7 @@ for (const { width, height } of [
       const row = page.locator('.overview-question .ui-list__row');
       await expect(row).toContainText('Odpovědět');
 
-      expect(await contentPastTheSides(row)).toEqual([]);
+      await expect.poll(() => contentPastTheSides(row)).toEqual([]);
     });
 
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
