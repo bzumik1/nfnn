@@ -37,6 +37,22 @@ export interface ImportStateResponse {
   lastFailure: ImportFailure | null;
   consecutiveFailures: number;
   reportedOutage: ImportFailureKind | null;
+  historyImport: HistoryImportResponse | null;
+  defaultHistoryFrom: string;
+}
+
+export type HistoryImportStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'HISTORY_LOCKED' | 'FAILED';
+
+export interface HistoryImportResponse {
+  from: string;
+  to: string;
+  needsUnlockedHistory: boolean;
+  requestedAt: string;
+  startsAt: string;
+  status: HistoryImportStatus;
+  failure: ImportFailureKind | null;
+  added: number | null;
+  finishedAt: string | null;
 }
 
 export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
@@ -115,6 +131,7 @@ export interface PaymentQuery {
   from?: string;
   to?: string;
   donorId?: string;
+  year?: number;
   offset?: number;
   limit?: number;
 }
@@ -801,6 +818,10 @@ export class AdminApi {
     return this.http.get<ImportStateResponse>('/api/admin/donations/import-state');
   }
 
+  requestHistoryImport(from: string): Observable<HistoryImportResponse> {
+    return this.http.post<HistoryImportResponse>('/api/admin/donations/import/history', { from });
+  }
+
   payments(pairing: PairingFilter, query: PaymentQuery = {}): Observable<AdminPaymentListResponse> {
     const params: Record<string, string> = { pairing };
     const filters: [string, string | number | undefined][] = [
@@ -808,6 +829,7 @@ export class AdminApi {
       ['from', query.from],
       ['to', query.to],
       ['donorId', query.donorId],
+      ['year', query.year],
       ['offset', query.offset],
       ['limit', query.limit],
     ];

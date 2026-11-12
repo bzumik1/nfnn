@@ -9,10 +9,12 @@ import java.util.Optional;
 
 import static cz.novanadeje.app.donations.domain.importing.ImportCoverageTest.coverage;
 import static cz.novanadeje.app.donations.domain.importing.ImportPeriodTest.period;
+import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HISTORY;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HOURLY;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.ON_DEMAND;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.STARTUP;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ImportPlannerTest {
 
@@ -138,6 +140,69 @@ class ImportPlannerTest {
     void should_never_start_after_today_when_startup_given_history_from_in_the_future() {
         assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, withHistoryFrom("2026-12-01"), STARTUP))
                 .isEqualTo(new ImportPlan(period("2026-10-17", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a requested start before the window and a coverage, when a history run plans, then it asks from the requested day to today and needs the unlocked history")
+    void should_plan_from_requested_day_and_need_unlock_when_history_run_given_start_before_window() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, withHistoryFrom("2026-01-01"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-01-01", "2026-10-17"), true));
+    }
+
+    @Test
+    @DisplayName("Given a requested start inside the coverage, when a history run plans, then it reads the window again from that day")
+    void should_plan_from_requested_day_when_history_run_given_start_inside_coverage() {
+        assertThat(ImportPlanner.plan(coverage("2025-01-01", "2026-10-16"), TODAY, withHistoryFrom("2025-06-01"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2025-06-01", "2026-10-17"), true));
+    }
+
+    @Test
+    @DisplayName("Given a requested start eighty-nine days back, when a history run plans, then it needs no unlocked history")
+    void should_not_need_unlock_when_history_run_given_start_at_window_edge() {
+        assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, withHistoryFrom("2026-07-20"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-07-20", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a requested start ninety days back, when a history run plans, then it needs the unlocked history")
+    void should_need_unlock_when_history_run_given_start_one_day_before_window() {
+        assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, withHistoryFrom("2026-07-19"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-07-19", "2026-10-17"), true));
+    }
+
+    @Test
+    @DisplayName("Given no coverage and a requested start of today, when a history run plans, then it asks for today alone")
+    void should_plan_today_when_history_run_given_start_today_and_no_coverage() {
+        assertThat(ImportPlanner.plan(ImportCoverage.none(), TODAY, withHistoryFrom("2026-10-17"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-10-17", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage up to yesterday and a requested start of today, when a history run plans, then it reaches back over the overlap so the coverage stays continuous")
+    void should_reach_back_over_overlap_when_history_run_given_start_today_and_coverage() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, withHistoryFrom("2026-10-17"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-10-13", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage that ended a while ago and a requested start after it, when a history run plans, then it starts at the coverage's end less the overlap and leaves no gap")
+    void should_start_at_coverage_end_when_history_run_given_start_after_coverage() {
+        assertThat(ImportPlanner.plan(coverage("2026-07-01", "2026-10-01"), TODAY, withHistoryFrom("2026-10-10"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-09-28", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given a coverage that ended before the window and a requested start inside it, when a history run plans, then it starts at the window's edge without the unlock")
+    void should_start_at_window_edge_when_history_run_given_coverage_ended_before_window() {
+        assertThat(ImportPlanner.plan(coverage("2026-01-01", "2026-03-01"), TODAY, withHistoryFrom("2026-10-10"), HISTORY))
+                .isEqualTo(new ImportPlan(period("2026-07-20", "2026-10-17"), false));
+    }
+
+    @Test
+    @DisplayName("Given no requested start, when a history run plans, then it is refused")
+    void should_refuse_when_history_run_planned_given_no_start() {
+        assertThatThrownBy(() -> ImportPlanner.plan(ImportCoverage.none(), TODAY, DEFAULTS, HISTORY))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static ImportSettings withHistoryFrom(String date) {

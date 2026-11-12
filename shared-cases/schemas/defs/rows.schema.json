@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/defs/rows.schema.json",
-  "title": "Database rows of a case: the server clock, donor records, bank payments and donations, each with only the columns the computation reads",
+  "title": "Database rows of a case: the server clock, donor records (and their accounts), bank payments, donations, bank account links and older-symbol answers, each with only the columns the computation reads",
   "type": "object",
   "required": ["now", "donors", "payments", "donations"],
   "properties": {
@@ -15,7 +15,18 @@
         "properties": {
           "alias": { "$ref": "#/$defs/alias" },
           "registeredAt": { "$ref": "#/$defs/instant" },
-          "erasedAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
+          "erasedAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+          "name": { "type": "string", "minLength": 1, "description": "Default Dárce <alias>" },
+          "type": { "enum": ["PERSON", "COMPANY"], "description": "Default PERSON" },
+          "companyIdentifier": { "type": "string", "pattern": "^\\d{8}$" },
+          "variableSymbol": { "$ref": "#/$defs/variableSymbol", "description": "Default 4000000000 plus the donor's position" },
+          "account": {
+            "type": "object",
+            "required": ["email", "emailVerified"],
+            "additionalProperties": false,
+            "description": "The donor has an account in the donors context with this e-mail, the same id, name and symbol",
+            "properties": { "email": { "type": "string", "pattern": "^[a-z0-9.]+@example\\.(cz|org)$" }, "emailVerified": { "type": "boolean" } }
+          }
         }
       }
     },
@@ -29,7 +40,11 @@
           "alias": { "$ref": "#/$defs/alias" },
           "bookedOn": { "$ref": "#/$defs/day" },
           "amountMinor": { "$ref": "#/$defs/amountMinor" },
-          "unpairedByAdminAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] }
+          "unpairedByAdminAt": { "oneOf": [{ "$ref": "#/$defs/instant" }, { "type": "null" }] },
+          "variableSymbol": { "$ref": "#/$defs/variableSymbol" },
+          "counterpartyAccount": { "$ref": "#/$defs/account", "description": "Default 2900233333/2010, also the sender account" },
+          "counterpartyName": { "type": "string", "minLength": 1 },
+          "messageForRecipient": { "type": "string", "minLength": 1 }
         }
       }
     },
@@ -46,7 +61,47 @@
           "amountMinor": { "$ref": "#/$defs/amountMinor" },
           "status": { "enum": ["RECEIVED", "REFUNDED"] },
           "source": { "enum": ["BANK_TRANSFER", "MANUAL"] },
-          "purpose": { "enum": ["GENERAL", "ACCOUNT_VERIFICATION"] }
+          "purpose": { "enum": ["GENERAL", "ACCOUNT_VERIFICATION"] },
+          "pairedBy": {
+            "enum": ["VARIABLE_SYMBOL", "SENDER_ACCOUNT", "CONFIRMED_SYMBOL", "MANUAL"],
+            "description": "Default VARIABLE_SYMBOL for a gift with a payment, none without"
+          },
+          "bankAccount": { "$ref": "#/$defs/alias", "description": "The alias of the link of input.links the gift was paired through" },
+          "symbolClaim": { "$ref": "#/$defs/alias", "description": "The alias of the answer of input.symbolClaims the gift was paired by" }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["alias", "donor", "accountNumber", "status", "learnedFrom", "learnedAt", "validFrom", "validTo"],
+        "additionalProperties": false,
+        "properties": {
+          "alias": { "$ref": "#/$defs/alias" },
+          "donor": { "$ref": "#/$defs/alias" },
+          "accountNumber": { "$ref": "#/$defs/account" },
+          "status": { "enum": ["ACTIVE", "AWAITING_PAYMENT", "DISCONNECTED"] },
+          "learnedFrom": { "$ref": "#/$defs/alias" },
+          "learnedAt": { "$ref": "#/$defs/instant" },
+          "validFrom": { "$ref": "#/$defs/day" },
+          "validTo": { "oneOf": [{ "$ref": "#/$defs/day" }, { "type": "null" }] }
+        }
+      }
+    },
+    "symbolClaims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["alias", "donor", "accountNumber", "variableSymbol", "answer", "answeredAt"],
+        "additionalProperties": false,
+        "properties": {
+          "alias": { "$ref": "#/$defs/alias" },
+          "donor": { "$ref": "#/$defs/alias" },
+          "accountNumber": { "$ref": "#/$defs/account" },
+          "variableSymbol": { "$ref": "#/$defs/variableSymbol" },
+          "answer": { "enum": ["CONFIRMED", "DECLINED"] },
+          "answeredAt": { "$ref": "#/$defs/instant" }
         }
       }
     }
@@ -58,6 +113,8 @@
     "month": { "type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$" },
     "amountMinor": { "type": "integer", "minimum": 1 },
     "count": { "type": "integer", "minimum": 0 },
-    "year": { "type": "integer", "minimum": 2000, "maximum": 2999 }
+    "year": { "type": "integer", "minimum": 2000, "maximum": 2999 },
+    "variableSymbol": { "type": "string", "pattern": "^[0-9]{1,10}$" },
+    "account": { "type": "string", "pattern": "^[0-9]{2,10}/[0-9]{4}$" }
   }
 }

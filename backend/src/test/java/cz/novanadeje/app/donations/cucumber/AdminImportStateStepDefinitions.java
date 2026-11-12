@@ -40,8 +40,8 @@ public class AdminImportStateStepDefinitions {
         expected.forEach((path, value) -> assertThat(at(state, path).asString()).as(path).isEqualTo(value));
     }
 
-    @Then("the import state has no coverage, no attempt and no outage")
-    public void theImportStateHasNoCoverageNoAttemptAndNoOutage() {
+    @Then("the import state has no coverage, no attempt, no outage and no balance")
+    public void theImportStateHasNoCoverageNoAttemptNoOutageAndNoBalance() {
         JsonNode state = api.lastResponseJson();
         assertThat(state.get("coveredFrom").isNull()).isTrue();
         assertThat(state.get("coveredTo").isNull()).isTrue();
@@ -50,6 +50,13 @@ public class AdminImportStateStepDefinitions {
         assertThat(state.get("lastFailure").isNull()).isTrue();
         assertThat(state.get("consecutiveFailures").asInt()).isZero();
         assertThat(state.get("reportedOutage").isNull()).isTrue();
+        assertThat(state.get("historyImport").isNull()).isTrue();
+        assertThat(state.get("balance").isNull()).isTrue();
+    }
+
+    @Then("the import state names no run of older payments")
+    public void theImportStateNamesNoRunOfOlderPayments() {
+        assertThat(api.lastResponseJson().get("historyImport").isNull()).isTrue();
     }
 
     private static JsonNode at(JsonNode node, String path) {

@@ -20,12 +20,29 @@ Feature: An administrator reads the state of the bank import
       | consecutiveFailures | 1                    |
       | reportedOutage      | UNAUTHORIZED         |
 
+  Scenario: An administrator sees the account balance of the last successful import, which stays when an import fails
+    Given today is 2026-10-17
+    And a person "Jana" is registered
+    And "Jana" is an administrator
+    And the account balance at the bank is 123456.78 CZK
+    And the application starts the import
+    And 1 days pass
+    And the account balance at the bank is 99.00 CZK
+    And Fio refuses the next request because the token is not valid
+    And the hourly import runs
+    When "Jana" asks for the import state
+    Then the response status is 200
+    And the import state says:
+      | balance.amountMinor | 12345678             |
+      | balance.readAt      | 2026-10-17T10:00:00Z |
+      | lastAttemptedAt     | 2026-10-18T10:00:00Z |
+
   Scenario: Before the first import the state is empty
     Given a person "Jana" is registered
     And "Jana" is an administrator
     When "Jana" asks for the import state
     Then the response status is 200
-    And the import state has no coverage, no attempt and no outage
+    And the import state has no coverage, no attempt, no outage and no balance
 
   Scenario: A donor without the administrator role is refused
     Given a person "Jana" is registered

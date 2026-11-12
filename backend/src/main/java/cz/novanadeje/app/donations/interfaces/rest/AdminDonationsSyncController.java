@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsSyncService;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsSyncSnapshot;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
@@ -30,18 +31,21 @@ class AdminDonationsSyncController {
     private final AdminDonationsSyncService sync;
     private final AdminDonationsSyncProjection projection;
     private final AdminDonationsSyncRateLimiter rateLimiter;
+    private final FirstReceiptYear firstReceiptYear;
 
-    AdminDonationsSyncController(AdminDonationsSyncService sync, AdminDonationsSyncProjection projection, AdminDonationsSyncRateLimiter rateLimiter) {
+    AdminDonationsSyncController(AdminDonationsSyncService sync, AdminDonationsSyncProjection projection, AdminDonationsSyncRateLimiter rateLimiter,
+                                 FirstReceiptYear firstReceiptYear) {
         this.sync = sync;
         this.projection = projection;
         this.rateLimiter = rateLimiter;
+        this.firstReceiptYear = firstReceiptYear;
     }
 
     @GetMapping
     ResponseEntity<AdminDonationsSyncManifestResponse> manifest(@AuthenticationPrincipal Jwt jwt) {
         rateLimiter.check(jwt.getSubject());
         AdminDonationsSyncSnapshot snapshot = sync.snapshotFor(DonorReference.of(jwt.getSubject()));
-        return notStored(AdminDonationsSyncManifestResponse.from(snapshot, projection.chunksOf(snapshot)));
+        return notStored(AdminDonationsSyncManifestResponse.from(snapshot, firstReceiptYear, projection.chunksOf(snapshot)));
     }
 
     @GetMapping("/chunks")
@@ -55,7 +59,7 @@ class AdminDonationsSyncController {
         AdminDonationsSyncSnapshot snapshot = sync.snapshotFor(DonorReference.of(jwt.getSubject()));
         SyncChunk.Asked asked = SyncChunk.asked(projection.chunksOf(snapshot), ids);
         return notStored(new AdminDonationsSyncChunksResponse(snapshot.subject().value(), snapshot.administrator(),
-                AdminDonationsSyncSummaryResponse.from(snapshot), asked.chunks(), asked.missing()));
+                AdminDonationsSyncSummaryResponse.from(snapshot, firstReceiptYear), asked.chunks(), asked.missing()));
     }
 
     private static <T> ResponseEntity<T> notStored(T body) {

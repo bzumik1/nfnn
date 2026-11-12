@@ -9,6 +9,7 @@ import { APP_REVISION } from '../errors/app-revision';
 import { API_GENERATION } from './api-generation';
 import { ServerVersion } from './server-version';
 import { Connectivity, OFFLINE_AFTER_MS, PROBE_PATH } from '../connectivity/connectivity';
+import { AdministrationWrites } from '../admin-writes/administration-writes';
 
 describe("Given the app's HTTP client", () => {
   let client: HttpClient;
@@ -67,6 +68,16 @@ describe("Given the app's HTTP client", () => {
     const retried = http.expectOne('/api/donors/me');
     expect(retried.request.headers.get('ngsw-bypass')).toBe('true');
     retried.flush(sampleDonor());
+  });
+
+  it('when an administration write succeeds, then the app counts it, so the pages read from the device copy wait for a refresh after it', () => {
+    const writes = TestBed.inject(AdministrationWrites);
+    const before = writes.made();
+
+    client.post('/api/admin/donations/payments/p/pairing', {}).subscribe();
+    http.expectOne('/api/admin/donations/payments/p/pairing').flush({});
+
+    expect(writes.made()).toBe(before + 1);
   });
 
   it('when the app reads public news, then the service worker may answer it', () => {

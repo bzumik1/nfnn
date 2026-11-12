@@ -74,6 +74,7 @@ const ACTION_NAMES: Record<string, string> = {
   DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání příběhu`,
   CHANGE_BACKUP_SCHEDULE: $localize`:@@admin.actions.action.changeBackupSchedule:Změna plánu záloh`,
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
+  REQUEST_HISTORY_IMPORT: $localize`:@@admin.actions.action.requestHistoryImport:Načtení starších plateb z banky`,
   REQUEST_TEST_RESTORE: $localize`:@@admin.actions.action.requestTestRestore:Spuštění zkušební obnovy zálohy`,
   DOWNLOAD_BACKUP: $localize`:@@admin.actions.action.downloadBackup:Stažení zálohy databáze`,
   RESTORE_BACKUP: $localize`:@@admin.actions.action.restoreBackup:Spuštění obnovy databáze ze zálohy`,

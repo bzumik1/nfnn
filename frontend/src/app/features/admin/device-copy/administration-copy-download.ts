@@ -14,7 +14,14 @@ import {
 } from './administration-sync-api';
 
 export type AdministrationDownloadOutcome =
-  'stored' | 'failed' | 'mismatch' | 'revoked' | 'another-account' | 'unrecorded' | 'no-copy';
+  | 'stored'
+  | 'unchanged'
+  | 'failed'
+  | 'mismatch'
+  | 'revoked'
+  | 'another-account'
+  | 'unrecorded'
+  | 'no-copy';
 
 export interface DownloadProgress {
   readonly done: number;
@@ -24,7 +31,7 @@ export interface DownloadProgress {
 const PARTS: readonly AdministrationCopyPart[] = ['donations', 'donors'];
 const ATTEMPTS = 2;
 
-type Fetched = CopyContents | 'changed' | 'another-account' | 'revoked';
+type Fetched = CopyContents | 'unchanged' | 'changed' | 'another-account' | 'revoked';
 
 @Injectable({ providedIn: 'root' })
 export class AdministrationCopyDownload {
@@ -32,16 +39,62 @@ export class AdministrationCopyDownload {
   private readonly api = inject(AdministrationSyncApi);
   private readonly reporter = inject(ErrorReporter);
   private readonly progress = signal<DownloadProgress | null>(null);
+  private readonly checked = signal<string | null>(null);
+  private running: {
+    readonly copy: OpenedCopy;
+    readonly outcome: Promise<AdministrationDownloadOutcome>;
+  } | null = null;
+  private queued: {
+    readonly copy: OpenedCopy;
+    readonly outcome: Promise<AdministrationDownloadOutcome>;
+  } | null = null;
 
   readonly firstDownload = this.progress.asReadonly();
+  readonly checkedAt = this.checked.asReadonly();
 
   constructor() {
     effect(() => {
       const opened = this.vault.administration();
+      this.checked.set(null);
       if (opened !== null) {
-        untracked(() => void this.download(opened));
+        untracked(() => void this.synced(opened));
       }
     });
+  }
+
+  refresh(startingNow = false): Promise<AdministrationDownloadOutcome> {
+    const opened = this.vault.administration();
+    if (opened === null) {
+      return Promise.resolve('no-copy');
+    }
+    const running = this.running?.copy === opened ? this.running.outcome : null;
+    if (!startingNow || running === null) {
+      return this.synced(opened);
+    }
+    if (this.queued?.copy !== opened) {
+      const next = (): Promise<AdministrationDownloadOutcome> => {
+        if (this.queued?.outcome === outcome) {
+          this.queued = null;
+        }
+        return this.refresh();
+      };
+      const outcome = running.then(next, next);
+      this.queued = { copy: opened, outcome };
+    }
+    return this.queued.outcome;
+  }
+
+  private synced(opened: OpenedCopy): Promise<AdministrationDownloadOutcome> {
+    if (this.running?.copy === opened) {
+      return this.running.outcome;
+    }
+    const outcome = this.download(opened).finally(() => {
+      if (this.running?.outcome === outcome) {
+        this.running = null;
+      }
+    });
+    this.running = { copy: opened, outcome };
+    return outcome;
   }
 
   private async download(opened: OpenedCopy): Promise<AdministrationDownloadOutcome> {
@@ -62,7 +115,7 @@ export class AdministrationCopyDownload {
         for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
           let contents: Fetched;
           try {
-            contents = await this.fetched(opened.account.userHandle, first);
+            contents = await this.fetched(opened.account.userHandle, first, store.contents());
           } catch {
             return 'failed';
           }
@@ -73,8 +126,16 @@ export class AdministrationCopyDownload {
           if (contents === 'another-account') {
             return 'another-account';
           }
+          if (contents === 'unchanged') {
+            this.checkedNow(opened);
+            return 'unchanged';
+          }
           if (contents !== 'changed') {
-            return (await this.vault.replaceContents(store, contents)) ? 'stored' : 'no-copy';
+            const stored = await this.vault.replaceContents(store, contents);
+            if (stored) {
+              this.checkedNow(opened);
+            }
+            return stored ? 'stored' : 'no-copy';
           }
         }
         this.reporter.report('device-copy-mismatch', 'global');
@@ -89,7 +150,18 @@ export class AdministrationCopyDownload {
     }
   }
 
-  private async fetched(userHandle: string, first: boolean): Promise<Fetched> {
+  private checkedNow(opened: OpenedCopy): void {
+    if (this.vault.administration() === opened) {
+      this.checked.set(new Date().toISOString());
+    }
+  }
+
+  private async fetched(
+    userHandle: string,
+    first: boolean,
+    held: CopyContents | null,
+  ): Promise<Fetched> {
+    const kept = new Map((held?.chunks ?? []).map((chunk) => [chunk.id, chunk]));
     const manifests: AdministrationManifest[] = [];
     for (const part of PARTS) {
       const manifest = await firstValueFrom(this.api.manifest(part));
@@ -101,7 +173,25 @@ export class AdministrationCopyDownload {
       }
       manifests.push(manifest);
     }
-    const total = manifests.reduce((sum, manifest) => sum + manifest.chunks.length, 0);
+    const wanted = manifests.map((manifest, index) =>
+      manifest.chunks
+        .filter((entry) => kept.get(`${PARTS[index]}/${entry.id}`)?.rowsSha256 !== entry.rowsSha256)
+        .map((entry) => entry.id),
+    );
+    const listed = new Set(
+      manifests.flatMap((manifest, index) =>
+        manifest.chunks.map((entry) => `${PARTS[index]}/${entry.id}`),
+      ),
+    );
+    if (
+      held !== null &&
+      wanted.every((ids) => ids.length === 0) &&
+      [...kept.keys()].every((id) => listed.has(id)) &&
+      sameSummary(manifests[0].summary, (held.summary as { donations?: unknown } | null)?.donations)
+    ) {
+      return 'unchanged';
+    }
+    const total = wanted.reduce((sum, ids) => sum + ids.length, 0);
     let done = 0;
     if (first) {
       this.progress.set({ done, total });
@@ -110,7 +200,7 @@ export class AdministrationCopyDownload {
     let summary: unknown = null;
     for (const [index, part] of PARTS.entries()) {
       const manifest = manifests[index];
-      const ids = manifest.chunks.map((entry) => entry.id);
+      const ids = wanted[index];
       const served: AdministrationChunk[] = [];
       for (let start = 0; start < ids.length; start += MAX_CHUNKS_PER_REQUEST) {
         const answer = await firstValueFrom(
@@ -135,6 +225,11 @@ export class AdministrationCopyDownload {
         }
       }
       for (const entry of manifest.chunks) {
+        const held = kept.get(`${part}/${entry.id}`);
+        if (held !== undefined && held.rowsSha256 === entry.rowsSha256) {
+          chunks.push(held);
+          continue;
+        }
         const chunk = served.find((candidate) => candidate.id === entry.id);
         if (
           chunk === undefined ||

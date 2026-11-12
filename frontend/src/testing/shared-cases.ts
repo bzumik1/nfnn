@@ -284,7 +284,46 @@ export type CanonicalRowsExpected =
   | { readonly canonical: string; readonly rowsSha256: string }
   | { readonly refusal: 'not-a-safe-integer' };
 
+export interface AdministrationCopyInput<Query> {
+  readonly chunks: Readonly<Record<string, readonly unknown[]>>;
+  readonly summary?: { readonly today: string; readonly receiptsAvailableFrom: number };
+  readonly queries: readonly Query[];
+}
+
+export interface AdministrationCopyAnswers {
+  readonly answers: readonly Answer[];
+}
+
 export interface SharedCaseTopics {
+  readonly 'admin-donors/account-search.json': SharedCase<
+    AdministrationCopyInput<{
+      readonly query?: string;
+      readonly page?: number;
+      readonly limit?: number;
+    }>,
+    AdministrationCopyAnswers
+  >;
+  readonly 'admin-donors/donor-card.json': SharedCase<
+    AdministrationCopyInput<{ readonly donor: string }>,
+    AdministrationCopyAnswers
+  >;
+  readonly 'admin-donors/record-search.json': SharedCase<
+    AdministrationCopyInput<{ readonly query: string }>,
+    AdministrationCopyAnswers
+  >;
+  readonly 'admin-payments/list.json': SharedCase<
+    AdministrationCopyInput<{
+      readonly pairing?: 'unpaired' | 'paired';
+      readonly year?: number;
+      readonly query?: string;
+      readonly from?: string;
+      readonly to?: string;
+      readonly donor?: string;
+      readonly offset?: number;
+      readonly limit?: number;
+    }>,
+    AdministrationCopyAnswers
+  >;
   readonly 'admin-overview/year-overview.json': SharedCase<RowsInput, Answer>;
   readonly 'donor-donations/list.json': SharedCase<
     RowsInput,
@@ -321,6 +360,10 @@ export interface SharedCaseTopics {
 export type SharedCaseTopic = keyof SharedCaseTopics;
 
 const REGISTERED_TOPICS: Readonly<Record<SharedCaseTopic, true>> = {
+  'admin-donors/account-search.json': true,
+  'admin-donors/donor-card.json': true,
+  'admin-donors/record-search.json': true,
+  'admin-payments/list.json': true,
   'admin-overview/year-overview.json': true,
   'donor-donations/list.json': true,
   'donor-summary/summary.json': true,

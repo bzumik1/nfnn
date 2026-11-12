@@ -19,6 +19,13 @@ const PEOPLE_URL = '/api/admin/content/people';
 class FakeAdministrationCopy {
   readonly gifts: WritableSignal<readonly CopiedGift[] | null> = signal(null);
   readonly accounts: WritableSignal<readonly unknown[] | null> = signal(null);
+  readonly summary = signal(null);
+  readonly storedAt = signal(null);
+  private readonly unread = signal(null);
+
+  opened(): boolean {
+    return false;
+  }
 
   rows(part: string, kind: string) {
     if (part === 'donations' && kind === 'donations') {
@@ -27,7 +34,7 @@ class FakeAdministrationCopy {
     if (part === 'donors' && kind === 'accounts') {
       return this.accounts.asReadonly();
     }
-    throw new Error(`The donors page reads no ${part}/${kind}`);
+    return this.unread.asReadonly();
   }
 }
 

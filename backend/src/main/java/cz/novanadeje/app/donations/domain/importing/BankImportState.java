@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.domain.importing;
 
+import cz.novanadeje.app.shared.domain.Money;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -20,11 +22,12 @@ public final class BankImportState {
     private String lastFailureMessage;
     private int consecutiveFailures;
     private ImportFailureKind reportedOutage;
+    private AccountBalance balance;
     private Instant updatedAt;
 
     private BankImportState(ImportCoverage coverage, Instant lastAttemptedAt, Instant lastSucceededAt,
                             ImportFailureKind lastFailureKind, String lastFailureMessage, int consecutiveFailures,
-                            ImportFailureKind reportedOutage, Instant updatedAt) {
+                            ImportFailureKind reportedOutage, AccountBalance balance, Instant updatedAt) {
         if (consecutiveFailures < 0) {
             throw new IllegalArgumentException("The failure count cannot be negative, but is " + consecutiveFailures);
         }
@@ -35,18 +38,28 @@ public final class BankImportState {
         this.lastFailureMessage = cut(lastFailureMessage);
         this.consecutiveFailures = consecutiveFailures;
         this.reportedOutage = reportedOutage;
+        this.balance = balance;
         this.updatedAt = require(updatedAt, "Update time");
     }
 
     public static BankImportState initial(Instant at) {
-        return new BankImportState(ImportCoverage.none(), null, null, null, null, 0, null, at);
+        return new BankImportState(ImportCoverage.none(), null, null, null, null, 0, null, null, at);
     }
 
     public static BankImportState reconstitute(ImportCoverage coverage, Optional<Instant> lastAttemptedAt, Optional<Instant> lastSucceededAt,
                                                Optional<ImportFailureKind> lastFailureKind, Optional<String> lastFailureMessage,
                                                int consecutiveFailures, Optional<ImportFailureKind> reportedOutage, Instant updatedAt) {
         return new BankImportState(coverage, lastAttemptedAt.orElse(null), lastSucceededAt.orElse(null),
-                lastFailureKind.orElse(null), lastFailureMessage.orElse(null), consecutiveFailures, reportedOutage.orElse(null), updatedAt);
+                lastFailureKind.orElse(null), lastFailureMessage.orElse(null), consecutiveFailures, reportedOutage.orElse(null), null, updatedAt);
+    }
+
+    public static BankImportState reconstitute(ImportCoverage coverage, Optional<Instant> lastAttemptedAt, Optional<Instant> lastSucceededAt,
+                                               Optional<ImportFailureKind> lastFailureKind, Optional<String> lastFailureMessage,
+                                               int consecutiveFailures, Optional<ImportFailureKind> reportedOutage, AccountBalance balance,
+                                               Instant updatedAt) {
+        return new BankImportState(coverage, lastAttemptedAt.orElse(null), lastSucceededAt.orElse(null),
+                lastFailureKind.orElse(null), lastFailureMessage.orElse(null), consecutiveFailures, reportedOutage.orElse(null),
+                require(balance, "Balance"), updatedAt);
     }
 
     public Optional<ImportRecovery> succeeded(ImportCoverage newCoverage, Instant at) {
@@ -87,6 +100,11 @@ public final class BankImportState {
         return kind == ImportFailureKind.UNAUTHORIZED && reportedOutage != ImportFailureKind.UNAUTHORIZED;
     }
 
+    public void balanceRead(Money closingBalance, Instant at) {
+        balance = new AccountBalance(closingBalance, at);
+        updatedAt = at;
+    }
+
     public boolean attemptedWithin(Duration window, Instant now) {
         return lastAttemptedAt != null && lastAttemptedAt.plus(window).isAfter(now);
     }
@@ -117,6 +135,10 @@ public final class BankImportState {
 
     public Optional<ImportFailureKind> reportedOutage() {
         return Optional.ofNullable(reportedOutage);
+    }
+
+    public Optional<AccountBalance> balance() {
+        return Optional.ofNullable(balance);
     }
 
     public Instant updatedAt() {
