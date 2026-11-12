@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/push/notification.json",
+    "reason": "Jakub 2026-11-12: donors get push notifications; the donor's confirmation kind donor-test gets its tag nfnn-donor-test and the route /darce/udaje",
+    "contract": "docs/api-contract.md, Push notifications of donors"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/push/notification.schema.json",
+    "reason": "Jakub 2026-11-12: a donor notification opens a route of the donor's account, so the schema takes routes under /darce besides /sprava",
+    "contract": "docs/api-contract.md, Push notifications of donors"
+  }
+]
