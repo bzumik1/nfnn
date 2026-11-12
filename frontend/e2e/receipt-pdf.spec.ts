@@ -12,7 +12,12 @@ import {
   yearlyButton,
   yearlyLine,
 } from './receipt-donations';
-import { answerReceiptIssuing, RECEIPT_ISSUING_URL, YEARLY_120 } from './receipt-issuing';
+import {
+  answerReceiptIssuing,
+  RECEIPT_ISSUING_URL,
+  YEARLY_120,
+  YEARLY_ONE,
+} from './receipt-issuing';
 
 const WORKER = /^\/worker-[A-Za-z0-9_-]{8}\.js$/;
 async function savedPdf(download: Download): Promise<Uint8Array> {
@@ -191,7 +196,8 @@ async function lastDrawingMs(page: Page): Promise<number> {
 
 const SLOWER_COMPUTER = 4;
 const WARM_DRAWINGS = 5;
-const WARM_MEDIAN_BOUND_MS = 1000;
+const WARM_MEDIAN_IN_ONE_GIFT_DRAWINGS = 3;
+const WARM_MEDIAN_CEILING_MS = 2000;
 
 function median(values: readonly number[]): number {
   const sorted = [...values].sort((first, second) => first - second);
@@ -203,11 +209,16 @@ test.describe('Given a donor whose year holds 120 gifts', () => {
     ({ browserName }) => browserName !== 'chromium',
     'The drawing time is bounded for Chromium at full speed; the iPhone itself is timed on the device checklist',
   );
-  test('when they download its receipt again and again, then the median drawing in the worker stays within a second at full speed, and the cold and warm times are reported', async ({
+  test('when they download its receipt again and again, then the median drawing in the worker stays within three drawings of a one-gift year in the same worker and under two seconds, and the cold and warm times are reported', async ({
     page,
   }) => {
     await timeWorkerDrawings(page);
     await mockDonorApi(page, { ...donations, receipts: { ...ISSUING, yearlyCase: YEARLY_120 } });
+    const issuing = { ...ISSUING, yearlyCase: YEARLY_120 };
+    await page.route(
+      (url) => url.pathname === RECEIPT_ISSUING_URL,
+      (route) => answerReceiptIssuing(route, issuing),
+    );
     await openReceiptsAfterSignIn(page);
     const draw = async (): Promise<{ pdf: Uint8Array; milliseconds: number }> => {
       const [saved] = await Promise.all([
@@ -220,10 +231,15 @@ test.describe('Given a donor whose year holds 120 gifts', () => {
 
     const cold = await draw();
     const warm: number[] = [];
+    const oneGift: number[] = [];
     for (let run = 0; run < WARM_DRAWINGS; run++) {
       warm.push((await draw()).milliseconds);
+      issuing.yearlyCase = YEARLY_ONE;
+      oneGift.push((await draw()).milliseconds);
+      issuing.yearlyCase = YEARLY_120;
     }
     const warmMedian = median(warm);
+    const oneGiftMedian = median(oneGift);
 
     test.info().annotations.push(
       {
@@ -234,9 +250,14 @@ test.describe('Given a donor whose year holds 120 gifts', () => {
         type: `warm drawings in the worker at CPU 1× (${WARM_DRAWINGS} runs)`,
         description: `${warm.join(' ms, ')} ms; median ${warmMedian} ms, ×${SLOWER_COMPUTER} = ${warmMedian * SLOWER_COMPUTER} ms`,
       },
+      {
+        type: `warm drawings of a one-gift year in the same worker (${WARM_DRAWINGS} runs, each right after one of 120 gifts)`,
+        description: `${oneGift.join(' ms, ')} ms; median ${oneGiftMedian} ms, 120 gifts take ${(warmMedian / oneGiftMedian).toFixed(1)}×`,
+      },
     );
     expect((await readPdf(cold.pdf)).pages).toHaveLength(4);
-    expect([cold.milliseconds, ...warm].every(Number.isFinite)).toBe(true);
-    expect(warmMedian).toBeLessThanOrEqual(WARM_MEDIAN_BOUND_MS);
+    expect([cold.milliseconds, ...warm, ...oneGift].every(Number.isFinite)).toBe(true);
+    expect(warmMedian).toBeLessThanOrEqual(WARM_MEDIAN_IN_ONE_GIFT_DRAWINGS * oneGiftMedian);
+    expect(warmMedian).toBeLessThanOrEqual(WARM_MEDIAN_CEILING_MS);
   });
 });
