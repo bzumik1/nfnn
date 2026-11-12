@@ -135,3 +135,31 @@
     var(--floating-notice-height) + var(--offline-pill-height) + var(--space-3) + var(--space-3)
   );
 }
+
+:host-context(.landing-stage) {
+  .hero {
+    overflow: visible;
+  }
+
+  .hero-img {
+    top: calc(-1 * var(--page-resting-scroll));
+    height: calc(100% + var(--page-resting-scroll) + var(--page-bleed-bottom));
+  }
+
+  .hero-overlay {
+    bottom: calc(-1 * var(--page-bleed-bottom));
+  }
+
+  .hero-top-shade {
+    top: calc(-1 * var(--page-resting-scroll));
+    background:
+      var(--hero-top-scrim),
+      linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
+          color-mix(in srgb, var(--color-image-shade) 55%, transparent) var(--page-resting-scroll),
+          transparent 100%
+        )
+        top / 100% calc(160px + var(--page-resting-scroll)) no-repeat;
+  }
+}
