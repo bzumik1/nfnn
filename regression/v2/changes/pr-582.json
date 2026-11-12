@@ -1,0 +1,41 @@
+[
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_import_state: *",
+    "kind": "added",
+    "field": "$.balance",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donors/admin_administrators: *",
+    "kind": "added",
+    "field": "$.balance",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing"
+  },
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_import_state: An administrator sees the account balance of the last successful import*",
+    "kind": "added",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.chunks[*].rows[*].balance",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads; the administration's device copy holds the import-state row as the endpoint answers it",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing; Administration device copy"
+  },
+  {
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "field": "$.chunks[*].rows[*].balance",
+    "reason": "Jakub 2026-11-12: the administration shows the account balance; the import state carries the balance the bank reported with the last successful import (amountMinor and readAt), kept when an import fails, null before the first; taken from the statement the hourly import already downloads; the administration's device copy holds the import-state row as the endpoint answers it",
+    "contract": "docs/api-contract.md, GET /api/admin/donations/import-state; Fio import and pairing; Administration device copy"
+  }
+]

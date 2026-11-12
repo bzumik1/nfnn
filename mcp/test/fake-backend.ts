@@ -55,6 +55,13 @@ export interface RecordedRequest {
   readonly body: string;
 }
 
+const IMPORT_STATE = {
+  coveredFrom: '2026-07-20',
+  coveredTo: '2026-10-22',
+  lastSucceededAt: '2026-10-23T05:00:00Z',
+  consecutiveFailures: 0,
+};
+
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
@@ -62,6 +69,7 @@ export class FakeBackend {
   receiptSigningKeysAnswer: Record<string, unknown> | undefined;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   signatoryChosen = true;
+  importBalance: Record<string, unknown> | undefined;
   private server: Server | undefined;
   url = '';
 
@@ -153,6 +161,13 @@ export class FakeBackend {
         },
       ];
     }
+    if (
+      this.importBalance &&
+      request.method === 'GET' &&
+      url.pathname === '/api/admin/donations/import-state'
+    ) {
+      return [200, { ...IMPORT_STATE, balance: this.importBalance }];
+    }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
     }
@@ -187,16 +202,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
   }
   switch (`${request.method} ${url.pathname}`) {
     case 'GET /api/admin/donations/import-state':
-      return [
-        200,
-        {
-          coveredFrom: '2026-07-20',
-          coveredTo: '2026-10-22',
-          lastSucceededAt: '2026-10-23T05:00:00Z',
-          consecutiveFailures: 0,
-          balance: { amountMinor: 12345678, readAt: '2026-10-23T05:00:00Z' },
-        },
-      ];
+      return [200, IMPORT_STATE];
     case 'GET /api/admin/donations/receipt-signing-keys':
       return [
         200,
