@@ -25,6 +25,14 @@ import { LogPageAccess } from '../log-page-access';
 import { LevelIcon } from './level-icon/level-icon';
 import { levelLabel } from './level-labels';
 import {
+  exceptionOf,
+  frameOf,
+  LoggedException,
+  MessageSegment,
+  segmentsOf,
+  StackFrame,
+} from './message-segments';
+import {
   entriesOf,
   LevelFilter,
   levelPattern,
@@ -91,6 +99,8 @@ export class AdminLogReader {
   protected readonly searchError = signal('');
   protected readonly focused = signal<number | null>(null);
   protected readonly opened = signal<LogEntry | null>(null);
+
+  private readonly segmentCache = new Map<string, readonly MessageSegment[]>();
 
   protected query = '';
   protected readonly maxPattern = MAX_PATTERN_LENGTH;
@@ -259,8 +269,33 @@ export class AdminLogReader {
       : $localize`:@@admin.logs.reader.sheetTitle:${level}:level: v ${time}:time:`;
   }
 
-  protected entryText(entry: LogEntry): string {
-    return [entry.message, ...entry.details].join('\n');
+  protected segments(message: string): readonly MessageSegment[] {
+    const known = this.segmentCache.get(message);
+    if (known !== undefined) {
+      return known;
+    }
+    const segments = segmentsOf(message);
+    this.segmentCache.set(message, segments);
+    return segments;
+  }
+
+  protected exception(entry: LogEntry): LoggedException | null {
+    return exceptionOf(entry.details);
+  }
+
+  protected summary(entry: LogEntry): { exception: string | null; lines: number } | null {
+    const thrown = exceptionOf(entry.details);
+    const lines =
+      thrown?.frames.length ?? entry.details.filter((line) => line.trim() !== '').length;
+    return thrown === null && lines === 0 ? null : { exception: thrown?.name ?? null, lines };
+  }
+
+  protected details(entry: LogEntry): string {
+    return entry.details.filter((line) => line.trim() !== '').join('\n');
+  }
+
+  protected frame(line: string): StackFrame | null {
+    return frameOf(line);
   }
 
   private refreshResults(): void {
