@@ -63,7 +63,7 @@ import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers } from '../kept-donor-answers';
+import { KeptDonorAnswers, KeptRefresh } from '../kept-donor-answers';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -141,7 +141,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
   private readonly kept = inject(KeptDonorAnswers);
-  private keptRefresh = Subscription.EMPTY;
+  private readonly refresh = new KeptRefresh();
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly live = inject(LiveUpdates);
@@ -277,7 +277,7 @@ export class BankAccountsCard {
   }
 
   private fetch(focusTitle = false, shownBefore = false): void {
-    this.keptRefresh.unsubscribe();
+    this.refresh.stop();
     const behindKept = shownBefore && this.kept.kept('bank-accounts') !== null;
     const list = behindKept ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
     const load = list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -296,7 +296,7 @@ export class BankAccountsCard {
       },
     });
     if (behindKept) {
-      this.keptRefresh = load;
+      this.refresh.follow(load);
     }
   }
 
@@ -459,7 +459,7 @@ export class BankAccountsCard {
     if (this.busy() !== null) {
       return;
     }
-    this.keptRefresh.unsubscribe();
+    this.refresh.pause();
     this.busy.set(account.id);
     this.actionError.set('');
     this.actionDone.set('');
@@ -480,6 +480,8 @@ export class BankAccountsCard {
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
           this.fetchAfterChange(this.addError);
+        } else {
+          this.refresh.resume(() => this.fetch());
         }
       },
     });
@@ -572,7 +574,10 @@ export class BankAccountsCard {
 
   private listAccounts(): Observable<void> {
     return this.api.list().pipe(
-      map(({ items }: BankAccountListResponse) => this.showAccounts(items)),
+      map(({ items }: BankAccountListResponse) => {
+        this.refresh.stop();
+        this.showAccounts(items);
+      }),
       catchError((failure: unknown) => {
         if (this.sessionHasEnded(failure)) {
           this.closeAdd();

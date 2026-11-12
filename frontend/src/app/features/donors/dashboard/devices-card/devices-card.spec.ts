@@ -438,7 +438,7 @@ describe("Given a donor's signed-in devices card", () => {
       http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
     });
 
-    it('then a device signed out while the refresh is still on its way does not come back with its answer', async () => {
+    it('then a device signed out while the refresh is still on its way does not come back, and the list is asked for again once it is gone', async () => {
       const refresh = http.expectOne(DEVICES_URL);
       rows()[1].querySelector<HTMLButtonElement>('button')?.click();
       await settle();
@@ -449,6 +449,22 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(refresh.cancelled).toBe(true);
       expect(rows()).toHaveLength(1);
+      await listed([THIS_MAC]);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a sign-out that fails after cutting the refresh off asks for the list again and shows its answer', async () => {
+      http.expectOne(DEVICES_URL);
+      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+      await settle();
+
+      await listed([THIS_MAC, IPHONE, UNKNOWN]);
+
+      expect(rows()).toHaveLength(3);
     });
 
     it('then a refresh refused because the session ended still sends the donor to sign in', async () => {

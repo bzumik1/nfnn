@@ -400,6 +400,28 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(element('.side-nav-badge')).toBeNull();
     });
+
+    it('then a list the section shows on a return replaces the one the area asked for when it opened, even if that one answers later', async () => {
+      areaAccounts = questions(1);
+      await open('/darce/ucty');
+      flushSectionAccounts(questions(1));
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+      await go('/');
+
+      await harness.navigateByUrl('/darce/ucty');
+      await settle();
+      const [areaRequest, sectionRequest] = http.match({ method: 'GET', url: BANK_ACCOUNTS_URL });
+      sectionRequest.flush({ items: [bankAccount()] });
+      await settle();
+
+      expect(areaRequest.cancelled).toBe(true);
+      expect(element('.side-nav-badge')).toBeNull();
+      http.match('/api/donations/me/summary').forEach((request) => request.flush(twoYearSummary()));
+      http.match('/api/donations/me').forEach((request) => request.flush(twoYearDonations()));
+    });
   });
 
   describe('when the live stream says that something changed while the donor reads Moje dary', () => {

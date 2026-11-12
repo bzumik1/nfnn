@@ -117,6 +117,27 @@ describe("Given an administrator's connected applications card", () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
   });
 
+  it('when the card is opened again and a disconnect fails before the refresh answered, then the list is asked for again and its answer shows', async () => {
+    http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
+    await settle();
+    fixture.destroy();
+    fixture = TestBed.createComponent(ConnectedAppsCard);
+    fixture.detectChanges();
+    const refresh = http.expectOne(CONNECTIONS_URL);
+
+    element<HTMLButtonElement>('.connection-disconnect').click();
+    await settle();
+    http
+      .expectOne({ method: 'DELETE', url: `${CONNECTIONS_URL}/${CLAUDE_CONNECTION.id}` })
+      .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+    await settle();
+
+    expect(refresh.cancelled).toBe(true);
+    http.expectOne(CONNECTIONS_URL).flush({ items: [] });
+    await settle();
+    expect(root().textContent).not.toContain(CLAUDE_CONNECTION.client);
+  });
+
   it('when the list cannot be loaded, then the card shows the reason and offers to load again', async () => {
     http.expectOne(CONNECTIONS_URL).flush(problem('x', 'Server neodpovídá'), {
       status: 500,

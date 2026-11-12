@@ -124,6 +124,26 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-name')).toHaveLength(1);
   });
 
+  it('when the card is opened again and a removal fails before the refresh answered, then the list is asked for again and its answer shows', async () => {
+    await render([IPHONE, WINDOWS]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(PasskeysPanel);
+    fixture.detectChanges();
+    const refresh = http.expectOne(PASSKEYS_URL);
+
+    await clickButton('Odebrat');
+    await clickButton('Ano, odebrat');
+    http
+      .expectOne(`${PASSKEYS_URL}/${IPHONE.id}`)
+      .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+    await settle();
+
+    expect(refresh.cancelled).toBe(true);
+    http.expectOne(PASSKEYS_URL).flush({ items: [WINDOWS] });
+    await settle();
+    expect(texts('.passkey-name')).toEqual(['Windows']);
+  });
+
   it('when the donor has no passkey, then the card says so and offers to add one', async () => {
     await render([]);
 

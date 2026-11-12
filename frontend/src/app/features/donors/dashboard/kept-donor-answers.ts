@@ -1,6 +1,16 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { effect, inject, Injectable, untracked } from '@angular/core';
-import { catchError, concat, defer, EMPTY, Observable, of, tap, throwError } from 'rxjs';
+import {
+  catchError,
+  concat,
+  defer,
+  EMPTY,
+  Observable,
+  of,
+  Subscription,
+  tap,
+  throwError,
+} from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { ConnectedAppList, PasskeyList, SignedInDeviceList } from '../../../core/auth/donor';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -88,6 +98,34 @@ export class KeptDonorAnswers {
       this.answers.clear();
       this.owner = owner;
     }
+  }
+}
+
+export class KeptRefresh {
+  private running = Subscription.EMPTY;
+  private cut = false;
+
+  follow(refresh: Subscription): void {
+    this.running = refresh;
+  }
+
+  pause(): void {
+    if (!this.running.closed) {
+      this.running.unsubscribe();
+      this.cut = true;
+    }
+  }
+
+  resume(loadAgain: () => void): void {
+    if (this.cut) {
+      this.cut = false;
+      loadAgain();
+    }
+  }
+
+  stop(): void {
+    this.running.unsubscribe();
+    this.cut = false;
   }
 }
 

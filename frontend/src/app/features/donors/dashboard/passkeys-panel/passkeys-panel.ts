@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Observable, Subscription, finalize, from, map, of, switchMap } from 'rxjs';
+import { Observable, finalize, from, map, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -35,7 +35,7 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers } from '../kept-donor-answers';
+import { KeptDonorAnswers, KeptRefresh } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
@@ -59,7 +59,7 @@ export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
-  private listLoad = Subscription.EMPTY;
+  private readonly refresh = new KeptRefresh();
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly device = inject(SESSION_DEVICE);
   private readonly document = inject(DOCUMENT);
@@ -128,11 +128,10 @@ export class PasskeysPanel {
 
   load(shownBefore = false): void {
     this.loadError.set('');
-    this.listLoad.unsubscribe();
     const passkeys = shownBefore
       ? this.kept.read('passkeys', this.authApi.passkeys())
       : this.authApi.passkeys();
-    this.listLoad = passkeys.subscribe({
+    const load = passkeys.subscribe({
       next: (list) => this.passkeys.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {
@@ -146,6 +145,13 @@ export class PasskeysPanel {
         );
       },
     });
+    if (shownBefore) {
+      this.refresh.follow(load);
+    }
+  }
+
+  private loadAgainIfCut(): void {
+    this.refresh.resume(() => this.load());
   }
 
   focusTarget(): HTMLElement {
@@ -185,7 +191,7 @@ export class PasskeysPanel {
       return;
     }
     const name = this.name.trim();
-    this.listLoad.unsubscribe();
+    this.refresh.pause();
     this.saving.set(true);
     this.error.set('');
     this.confirm()
@@ -225,16 +231,19 @@ export class PasskeysPanel {
               : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();
+          this.loadAgainIfCut();
         },
         error: (failure: unknown) => {
           this.saving.set(false);
           if (failure instanceof PasskeyCeremonyError) {
             this.error.set(ceremonyMessage(failure.reason));
+            this.loadAgainIfCut();
             return;
           }
           if (this.sessionLost(failure)) {
             return;
           }
+          this.loadAgainIfCut();
           this.error.set(
             describeProblem(
               failure,
@@ -269,7 +278,7 @@ export class PasskeysPanel {
     if (form.invalid || this.renameSaving()) {
       return;
     }
-    this.listLoad.unsubscribe();
+    this.refresh.pause();
     this.renameSaving.set(true);
     this.renameError.set('');
     this.authApi.renamePasskey(passkey.id, this.newName.trim()).subscribe({
@@ -282,12 +291,14 @@ export class PasskeysPanel {
           $localize`:@@donor.passkeys.renamed:Přístupový klíč je přejmenovaný na ${renamed.name}:name:.`,
         );
         this.closeRename(passkey);
+        this.loadAgainIfCut();
       },
       error: (failure: unknown) => {
         this.renameSaving.set(false);
         if (this.sessionLost(failure)) {
           return;
         }
+        this.loadAgainIfCut();
         this.renameError.set(
           describeProblem(
             failure,
@@ -306,7 +317,7 @@ export class PasskeysPanel {
     if (this.removing() !== null) {
       return;
     }
-    this.listLoad.unsubscribe();
+    this.refresh.pause();
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
       next: () => {
@@ -316,12 +327,14 @@ export class PasskeysPanel {
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v zařízení ho můžete smazat.`,
         );
+        this.loadAgainIfCut();
       },
       error: (failure: unknown) => {
         this.removing.set(null);
         if (this.sessionLost(failure)) {
           return;
         }
+        this.loadAgainIfCut();
         this.loadError.set(
           describeProblem(
             failure,

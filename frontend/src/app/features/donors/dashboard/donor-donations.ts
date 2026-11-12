@@ -210,6 +210,7 @@ export class DonorDonations implements GiftFeed {
   private shownOwner: string | null = null;
   private bankCheckEndedAt: number | null = null;
   private shownFromLastVisit = false;
+  private firstBankAccounts = Subscription.EMPTY;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
     return donor === null
@@ -255,7 +256,7 @@ export class DonorDonations implements GiftFeed {
       const asOf = this.bankDataAsOf();
       untracked(() => this.keepBankTime(asOf));
     });
-    this.kept
+    this.firstBankAccounts = this.kept
       .read('bank-accounts', this.bankAccountsApi.list())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -355,6 +356,7 @@ export class DonorDonations implements GiftFeed {
   }
 
   showBankAccounts(items: readonly BankAccountItem[]): void {
+    this.firstBankAccounts.unsubscribe();
     this.bankAccounts.set(items);
     this.kept.keep('bank-accounts', { items });
   }
