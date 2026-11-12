@@ -1,6 +1,8 @@
 import { expect, test } from './fixtures';
 
 test.describe('Given a visitor on the About page', () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
   test('when the figures scroll into view, then they count up from zero to their values', async ({
     page,
   }) => {
