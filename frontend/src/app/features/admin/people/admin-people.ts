@@ -40,6 +40,7 @@ import {
   MAX_EMAIL_LENGTH,
   MAX_FOUNDERS_NOTE_LENGTH,
   StoredPageText,
+  storedPageTextOf,
   MAX_PEOPLE_FOOTNOTE_LENGTH,
   MAX_PEOPLE,
   MAX_PERSON_NAME_LENGTH,
@@ -755,7 +756,7 @@ export class AdminPeople {
   }
 
   private adoptText(which: PageText, saved: SavedText): void {
-    this.storedTexts[which] = { held: { text: saved.text }, version: saved.version };
+    this.storedTexts[which] = { held: storedPageTextOf(saved.text), version: saved.version };
     if (which === 'note') {
       this.noteText = saved.text ?? '';
     } else {
@@ -985,5 +986,5 @@ function savedTextNotice(which: PageText, shown: boolean): string {
 
 function pageTextInRefusal(failure: unknown): StoredPageText | null {
   const stored = currentInRefusal(failure)?.['text'];
-  return stored === null || typeof stored === 'string' ? { text: stored } : null;
+  return stored === null || typeof stored === 'string' ? storedPageTextOf(stored) : null;
 }

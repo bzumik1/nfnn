@@ -44,8 +44,8 @@ describe('Given a versioned write that carries the record the page held', () => 
 
   afterEach(() => http.verify());
 
-  function write(held?: object): void {
-    client.put(URL, { title: 'Léto' }, ifMatch('0000000000000001', held)).subscribe({
+  function write(held?: object, mayDiffer?: readonly string[]): void {
+    client.put(URL, { title: 'Léto' }, ifMatch('0000000000000001', held, mayDiffer)).subscribe({
       next: (value) => (answer = value),
       error: (refusal: unknown) => (failure = refusal),
     });
@@ -101,14 +101,89 @@ describe('Given a versioned write that carries the record the page held', () => 
   });
 
   it('when the second try is refused too, then that refusal passes through and nothing goes a third time', () => {
+    const stored = { id: '7', title: 'Léto', perex: 'Krátce' };
     write(HELD);
-    refuse('00000000000000ff', { title: 'Léto' });
-    refuse('0000000000000aaa', { title: 'Léto' });
+    refuse('00000000000000ff', stored);
+    refuse('0000000000000aaa', stored);
 
     expect((failure as HttpErrorResponse).status).toBe(409);
     expect((failure as HttpErrorResponse).error).toEqual(
-      changedMeanwhile('0000000000000aaa', { title: 'Léto' }),
+      changedMeanwhile('0000000000000aaa', stored),
     );
+  });
+
+  it('when the stored record has a field the held one lacks, then it counts as a change and the refusal passes through', () => {
+    write(HELD);
+    refuse('00000000000000ff', { id: '7', title: 'Léto', perex: 'Krátce', storyYear: 2026 });
+
+    expect((failure as HttpErrorResponse).status).toBe(409);
+    expect(answer).toBeUndefined();
+  });
+
+  it('when the held record has a field the stored one lacks, then it counts as a change and the refusal passes through', () => {
+    write({ ...HELD, tag: 'x' });
+    refuse('00000000000000ff', { id: '7', title: 'Léto', perex: 'Krátce' });
+
+    expect((failure as HttpErrorResponse).status).toBe(409);
+  });
+
+  it('when the two name the same value under different keys, then it counts as a change and the refusal passes through', () => {
+    write({ id: '7', account: '19-2000145399/0800' });
+    refuse('00000000000000ff', { id: '7', accountNumber: '35-1000145399/0800' });
+
+    expect((failure as HttpErrorResponse).status).toBe(409);
+  });
+
+  it('when the held record leaves a field undefined that the stored one lacks, then the two count as the same and the write goes once more', () => {
+    write({ ...HELD, tag: undefined });
+    refuse('00000000000000ff', { id: '7', title: 'Léto', perex: 'Krátce' });
+
+    http.expectOne(URL).flush({ id: '7' });
+
+    expect(answer).toEqual({ id: '7' });
+  });
+
+  it('when the held record leaves a field undefined that the stored one holds, then it counts as a change and the refusal passes through', () => {
+    write({ ...HELD, tag: undefined });
+    refuse('00000000000000ff', { id: '7', title: 'Léto', perex: 'Krátce', tag: 'Tábor' });
+
+    expect((failure as HttpErrorResponse).status).toBe(409);
+  });
+
+  it('when the two share only the id, then nothing is compared and the refusal passes through', () => {
+    write({ id: '7', version: '0000000000000001' });
+    refuse('00000000000000ff', { id: '7' });
+
+    expect((failure as HttpErrorResponse).status).toBe(409);
+  });
+
+  it('when only the stored timestamps differ or are missing from the held record, then the write goes once more', () => {
+    write({ ...HELD, createdAt: '2026-11-01T08:00:00Z' });
+    refuse('00000000000000ff', {
+      id: '7',
+      title: 'Léto',
+      perex: 'Krátce',
+      createdAt: '2026-11-02T08:00:00Z',
+      updatedAt: '2026-11-05T15:20:00Z',
+    });
+
+    http.expectOne(URL).flush({ id: '7' });
+
+    expect(answer).toEqual({ id: '7' });
+  });
+
+  it('when the stored record has a field the write names as allowed to differ, then the write goes once more', () => {
+    write(HELD, ['sentReports']);
+    refuse('00000000000000ff', {
+      id: '7',
+      title: 'Léto',
+      perex: 'Krátce',
+      sentReports: [{ month: '2026-10', sentAt: '2026-11-01T06:00:00Z' }],
+    });
+
+    http.expectOne(URL).flush({ id: '7' });
+
+    expect(answer).toEqual({ id: '7' });
   });
 
   it('when the write carries no held record, then the refusal passes through', () => {
@@ -120,7 +195,7 @@ describe('Given a versioned write that carries the record the page held', () => 
 
   it('when the refusal names no version or no stored record, then it passes through', () => {
     write(HELD);
-    refuse('', { title: 'Léto' });
+    refuse('', { id: '7', title: 'Léto', perex: 'Krátce' });
     expect((failure as HttpErrorResponse).status).toBe(409);
 
     write(HELD);

@@ -2374,6 +2374,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2450,6 +2453,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2783,6 +2789,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: 'Děkujeme všem, kdo pomáhají s námi.',
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -3514,9 +3523,9 @@ test.describe('Given a donor whose unsaved edit of the data on the receipt is ke
     await page.getByRole('button', { name: 'Uložit údaje' }).click();
 
     await expect(
-      page.getByRole('alert').filter({ hasText: 'Mezitím se profil změnil' }),
+      page.getByRole('alert').filter({ hasText: 'Mezitím se uložené údaje změnily' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Uložit moje změny' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Uložit své úpravy' })).toBeEnabled();
     await expect(page.getByLabel('Ulice a číslo')).toHaveValue('Krátká 3');
     expect(await violations(page)).toEqual([]);
   });

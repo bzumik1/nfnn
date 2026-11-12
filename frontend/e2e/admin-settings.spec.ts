@@ -48,6 +48,7 @@ test.describe('Given an administrator on the settings page', () => {
     page,
   }) => {
     const saved: unknown[] = [];
+    const versions: (string | undefined)[] = [];
     let restarted = false;
     await page.route(
       (url) => url.pathname === '/api/operations/setup',
@@ -63,7 +64,7 @@ test.describe('Given an administrator on the settings page', () => {
       (url) => url.pathname === SETTINGS,
       (route) => {
         if (route.request().method() === 'PUT') {
-          expect(route.request().headers()['if-match']).toBe('"00000000000000c1"');
+          versions.push(route.request().headers()['if-match']);
           saved.push(route.request().postDataJSON());
           return route.fulfill({
             status: 202,
@@ -97,6 +98,7 @@ test.describe('Given an administrator on the settings page', () => {
       'Nastavení je uložené a web po restartu běží s ním.',
       { timeout: 15_000 },
     );
+    expect(versions).toEqual(['"00000000000000c1"']);
     expect(saved).toEqual([
       {
         changes: [

@@ -79,6 +79,8 @@ test.describe('Given an administrator on the administrators page', () => {
             ],
             note: null,
             footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );

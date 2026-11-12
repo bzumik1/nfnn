@@ -37,6 +37,10 @@ export interface StoredPageText {
   text: string | null;
 }
 
+export function storedPageTextOf(text: string | null): StoredPageText {
+  return { text };
+}
+
 export interface PersonRequest {
   name: string;
   role: string | null;

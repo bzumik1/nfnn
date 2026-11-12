@@ -20,7 +20,9 @@ import {
   problemOf,
   problemTypeEndsWith,
 } from '../../../../core/auth/api-problem';
+import { StoredProfile, storedProfileOf } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { Donor, DonorLocale } from '../../../../core/auth/donor';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
@@ -56,14 +58,25 @@ interface ProfileFields {
   preferredLocale: DonorLocale;
 }
 
+type ProfileField = keyof ProfileFields;
+
+const PROFILE_FIELD_NAMES: readonly ProfileField[] = [
+  'name',
+  'street',
+  'city',
+  'postalCode',
+  'preferredLocale',
+];
+
 interface EditedFrom {
+  readonly donorId: string;
   readonly version: string;
-  readonly held: ProfileFields | null;
+  readonly held: StoredProfile | null;
 }
 
 interface NewerProfile {
-  readonly version: string;
-  readonly stored: ProfileFields | null;
+  readonly merged: boolean;
+  readonly bothChanged: readonly ProfileField[];
 }
 
 const LOCALE_LABELS: Record<DonorLocale, string> = {
@@ -72,8 +85,23 @@ const LOCALE_LABELS: Record<DonorLocale, string> = {
 };
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
-const STORED_PROFILE_LOADED = $localize`:@@donor.profile.changed.loaded:Načetli jsme uložený profil. Vaše úpravy jsme zahodili.`;
-const STORED_PROFILE_FAILED = $localize`:@@donor.profile.changed.loadFailed:Uložený profil se nepodařilo načíst. Zkuste to prosím znovu.`;
+const STORED_PROFILE_LOADED = $localize`:@@donor.profile.changed.loaded:Vaše úpravy jsme zahodili a načetli uložené údaje.`;
+const STORED_PROFILE_FAILED = $localize`:@@donor.profile.changed.loadFailed:Uložené údaje se nepodařilo načíst. Zkuste to prosím znovu.`;
+const EDIT_CANCELLED_AND_LOADED = $localize`:@@donor.profile.changed.cancelled:Úpravy jsme zrušili a načetli uložené údaje.`;
+const ACCOUNT_CHANGED = $localize`:@@donor.profile.accountChanged:V tomto okně je teď přihlášený jiný účet. Rozepsané úpravy jsme zahodili, nic jsme neuložili.`;
+const MERGED_TEXT = $localize`:@@donor.profile.changed.merged:Údaje, které jste neměnili, jsme ve formuláři doplnili tak, jak jsou uložené teď.`;
+const PERSON_FIELD_NAMES: Record<ProfileField, string> = {
+  name: $localize`:@@donor.profile.changed.field.personName:jméno a příjmení`,
+  street: $localize`:@@donor.profile.changed.field.street:ulice a číslo`,
+  city: $localize`:@@donor.profile.changed.field.city:město`,
+  postalCode: $localize`:@@donor.profile.changed.field.postalCode:PSČ`,
+  preferredLocale: $localize`:@@donor.profile.changed.field.locale:jazyk potvrzení`,
+};
+const COMPANY_FIELD_NAMES: Record<ProfileField, string> = {
+  ...PERSON_FIELD_NAMES,
+  name: $localize`:@@donor.profile.changed.field.companyName:název firmy`,
+  street: $localize`:@@donor.profile.changed.field.companyStreet:sídlo`,
+};
 const PROFILE_FIELDS: Readonly<Record<string, string>> = {
   name: 'name',
   'address.street': 'street',
@@ -99,6 +127,7 @@ const PROFILE_FIELDS: Readonly<Record<string, string>> = {
 })
 export class ProfileCard {
   private readonly auth = inject(AuthStore);
+  private readonly connectivity = inject(Connectivity);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
 
@@ -118,6 +147,18 @@ export class ProfileCard {
   protected readonly confirmingStale = signal(false);
   protected readonly newerVersion = signal<NewerProfile | null>(null);
   protected readonly loadingStored = signal(false);
+  protected readonly newerNotice = computed(() => {
+    const newer = this.newerVersion();
+    if (newer === null || !newer.merged) {
+      return null;
+    }
+    if (newer.bothChanged.length === 0) {
+      return MERGED_TEXT;
+    }
+    const names = this.company() ? COMPANY_FIELD_NAMES : PERSON_FIELD_NAMES;
+    const fields = newer.bothChanged.map((field) => names[field]).join(', ');
+    return $localize`:@@donor.profile.changed.conflicts:Mezitím se jinak uložilo i to, co jste změnili: ${fields}:fields:. Ve formuláři zůstávají vaše hodnoty, ostatní údaje jsou doplněné tak, jak jsou uložené teď.`;
+  });
   private editedFrom: EditedFrom | null = null;
   protected readonly localeLabels = LOCALE_LABELS;
 
@@ -149,6 +190,14 @@ export class ProfileCard {
       if (donor !== null && !untracked(this.editing)) {
         untracked(() => this.draft.ready(donor.version));
       }
+    });
+    effect(() => {
+      const donorId = this.donor()?.id ?? null;
+      untracked(() => {
+        if (this.editing() && this.editedFrom !== null && this.editedFrom.donorId !== donorId) {
+          this.leaveForAnotherAccount(donorId);
+        }
+      });
     });
   }
 
@@ -186,20 +235,20 @@ export class ProfileCard {
     this.draft.overwriteConfirmed();
     this.startFrom(this.donor());
     this.save(form);
+    this.focusSave();
   }
 
   protected saveOverNewer(form: NgForm): void {
-    const newer = this.newerVersion();
-    if (newer === null || this.editedFrom === null) {
+    if (this.newerVersion() === null || this.editedFrom === null) {
       return;
     }
-    this.editedFrom = { version: newer.version, held: newer.stored };
     this.newerVersion.set(null);
     this.draft.overwriteConfirmed();
     this.save(form);
+    this.focusSave();
   }
 
-  protected loadStored(): void {
+  protected loadStored(loaded: string = STORED_PROFILE_LOADED): void {
     if (this.loadingStored()) {
       return;
     }
@@ -211,13 +260,12 @@ export class ProfileCard {
         this.newerVersion.set(null);
         this.draft.discard();
         this.saved.set(false);
-        this.draftStatus.set(STORED_PROFILE_LOADED);
+        this.draftStatus.set(loaded);
         this.close();
       },
       error: (failure: unknown) => {
         this.loadingStored.set(false);
-        if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
-          this.sessionEnded.emit();
+        if (this.endsSession(failure)) {
           return;
         }
         this.error.set(describeProblemWithoutFields(failure, STORED_PROFILE_FAILED));
@@ -243,8 +291,11 @@ export class ProfileCard {
   }
 
   cancel(): void {
+    if (this.newerVersion() !== null && !this.connectivity.offline()) {
+      this.loadStored(EDIT_CANCELLED_AND_LOADED);
+      return;
+    }
     this.confirmingStale.set(false);
-    this.newerVersion.set(null);
     this.draft.discard();
     this.close();
   }
@@ -261,9 +312,47 @@ export class ProfileCard {
     if (from === null) {
       return;
     }
+    if (from.donorId !== this.donor()?.id) {
+      this.leaveForAnotherAccount(this.donor()?.id ?? null);
+      return;
+    }
     this.saving.set(true);
     this.error.set('');
     this.newerVersion.set(null);
+    if (from.version === '') {
+      this.saveOverStored(form, from);
+      return;
+    }
+    this.send(form, from);
+  }
+
+  private saveOverStored(form: NgForm, from: EditedFrom): void {
+    this.auth.reloadStoredProfile().subscribe({
+      next: (donor) => {
+        if (this.editedFrom !== from || donor.id !== from.donorId) {
+          this.saving.set(false);
+          return;
+        }
+        const newer = this.adoptNewer(donor.version, storedProfileOf(donor));
+        if (newer.bothChanged.length > 0) {
+          this.saving.set(false);
+          this.newerVersion.set(newer);
+          this.focusNewerIfFocusWasLost();
+          return;
+        }
+        this.send(form, this.editedFrom);
+      },
+      error: (failure: unknown) => {
+        this.saving.set(false);
+        if (this.endsSession(failure)) {
+          return;
+        }
+        this.error.set(describeProblemWithoutFields(failure, STORED_PROFILE_FAILED));
+      },
+    });
+  }
+
+  private send(form: NgForm, from: EditedFrom): void {
     this.auth
       .updateProfile(
         {
@@ -288,18 +377,80 @@ export class ProfileCard {
         },
         error: (failure: unknown) => {
           this.saving.set(false);
-          if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
-            this.sessionEnded.emit();
+          if (this.endsSession(failure) || this.editedFrom !== from) {
             return;
           }
           const newer = isChangedMeanwhile(failure) ? versionInRefusal(failure) : null;
           if (newer !== null) {
-            this.newerVersion.set({ version: newer, stored: storedProfileIn(failure) });
+            this.newerVersion.set(this.adoptNewer(newer, storedProfileIn(failure)));
+            this.focusNewerIfFocusWasLost();
             return;
           }
           this.refuse(form, failure);
         },
       });
+  }
+
+  private adoptNewer(version: string, stored: StoredProfile | null): NewerProfile {
+    const from = this.editedFrom;
+    if (from === null) {
+      return { merged: false, bothChanged: [] };
+    }
+    this.editedFrom = { donorId: from.donorId, version, held: stored };
+    if (stored === null || from.held === null) {
+      return { merged: false, bothChanged: [] };
+    }
+    const held = from.held;
+    const merged = { ...this.fields };
+    const bothChanged: ProfileField[] = [];
+    for (const field of PROFILE_FIELD_NAMES) {
+      if (merged[field] === held[field]) {
+        Object.assign(merged, { [field]: stored[field] });
+      } else if (stored[field] !== held[field] && stored[field] !== merged[field]) {
+        bothChanged.push(field);
+      }
+    }
+    this.fields = merged;
+    return { merged: true, bothChanged };
+  }
+
+  private endsSession(failure: unknown): boolean {
+    if (problemTypeEndsWith(failure, UNAUTHENTICATED) || this.auth.status() === 'anonymous') {
+      this.sessionEnded.emit();
+      return true;
+    }
+    return false;
+  }
+
+  private leaveForAnotherAccount(donorId: string | null): void {
+    this.confirmingStale.set(false);
+    this.saving.set(false);
+    this.loadingStored.set(false);
+    this.error.set('');
+    this.saved.set(false);
+    this.fields = fieldsOf(this.donor());
+    if (donorId !== null) {
+      this.draftStatus.set(ACCOUNT_CHANGED);
+    }
+    this.close();
+  }
+
+  private focusSave(): void {
+    afterNextRender(() => this.host.querySelector<HTMLButtonElement>('.profile-save')?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  private focusNewerIfFocusWasLost(): void {
+    afterNextRender(
+      () => {
+        const focused = this.host.ownerDocument.activeElement;
+        if (focused === null || focused === this.host.ownerDocument.body) {
+          this.host.querySelector<HTMLButtonElement>('.profile-changed-keep')?.focus();
+        }
+      },
+      { injector: this.injector },
+    );
   }
 
   private refuse(form: NgForm, failure: unknown): void {
@@ -320,7 +471,10 @@ export class ProfileCard {
   }
 
   private startFrom(donor: Donor | null): EditedFrom | null {
-    this.editedFrom = donor === null ? null : { version: donor.version, held: fieldsOf(donor) };
+    this.editedFrom =
+      donor === null
+        ? null
+        : { donorId: donor.id, version: donor.version, held: storedProfileOf(donor) };
     return this.editedFrom;
   }
 
@@ -342,7 +496,7 @@ function fieldsOf(donor: Donor | null): ProfileFields {
   };
 }
 
-function storedProfileIn(failure: unknown): ProfileFields | null {
+function storedProfileIn(failure: unknown): StoredProfile | null {
   const stored = currentInRefusal(failure);
   if (stored === null) {
     return null;

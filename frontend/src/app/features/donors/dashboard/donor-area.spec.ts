@@ -2656,7 +2656,7 @@ describe('Given a signed-in donor in the donor area', () => {
                 preferredLocale: donor.preferredLocale,
               },
               donor.version,
-              {},
+              null,
             )
             .subscribe();
           http
@@ -2679,7 +2679,7 @@ describe('Given a signed-in donor in the donor area', () => {
             .updateProfile(
               { name: donor.name, address: donor.address, preferredLocale: 'en' },
               donor.version,
-              {},
+              null,
             )
             .subscribe();
           http

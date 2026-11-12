@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   heldRecordOf,
   ifMatch,
+  keysThatMayDifferOf,
   isChangedMeanwhile,
   savedAtInRefusal,
   versionInRefusal,
@@ -83,5 +84,12 @@ describe('Given a row version and the record the page held', () => {
     expect(options.headers.get('If-Match')).toBe('"0123456789abcdef"');
     expect(heldRecordOf(options.context)).toBe(held);
     expect(heldRecordOf(ifMatch('0123456789abcdef').context)).toBeNull();
+  });
+
+  it('when it names keys allowed to differ, then they travel with the request, and without them there are none', () => {
+    expect(keysThatMayDifferOf(ifMatch('0123456789abcdef', {}, ['sentReports']).context)).toEqual([
+      'sentReports',
+    ]);
+    expect(keysThatMayDifferOf(ifMatch('0123456789abcdef', {}).context)).toEqual([]);
   });
 });

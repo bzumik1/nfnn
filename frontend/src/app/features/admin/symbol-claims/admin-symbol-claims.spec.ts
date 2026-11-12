@@ -193,9 +193,13 @@ describe('Given an administrator on the older symbols page', () => {
     const request = http.expectOne(`/api/admin/donations/symbol-claims/${NO_ID}`);
     expect(request.request.method).toBe('DELETE');
     expect(request.request.headers.get('If-Match')).toBe('"9c4f1e7a2d6b0853"');
-    expect(heldRecordOf(request.request.context)).toMatchObject({
+    expect(heldRecordOf(request.request.context)).toEqual({
       id: NO_ID,
-      version: '9c4f1e7a2d6b0853',
+      donorId: '019a1c00-0000-7000-8000-00000000a002',
+      accountNumber: '2900233333/2010',
+      variableSymbol: '777',
+      answer: 'DECLINED',
+      answeredAt: '2026-10-19T08:30:00Z',
     });
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();

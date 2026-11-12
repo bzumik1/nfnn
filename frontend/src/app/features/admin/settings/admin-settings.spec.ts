@@ -351,7 +351,7 @@ describe('Given an administrator on the settings page', () => {
       await settle();
 
       expect(text('app-changed-meanwhile-dialog dialog')).toContain(
-        'Zatímco jste měli formulář otevřený',
+        'Zatímco jste měli formulář otevřený, uložil novější verzi někdo jiný (jiný správce nebo připojená aplikace) nebo vy v jiném okně.',
       );
       expect(text('app-changed-meanwhile-dialog dialog')).toContain(
         'Novější verze je z 12. 11. 2026 9:05.',

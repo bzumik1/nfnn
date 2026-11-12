@@ -7,19 +7,27 @@ const CHANGED_MEANWHILE = '/changed-meanwhile';
 export type HeldRecord = object;
 
 const HELD_RECORD = new HttpContextToken<HeldRecord | null>(() => null);
+const KEYS_THAT_MAY_DIFFER = new HttpContextToken<readonly string[]>(() => []);
 
 export function ifMatch(
   version: string,
   held?: HeldRecord | null,
+  mayDiffer: readonly string[] = [],
 ): { headers: HttpHeaders; context: HttpContext } {
   return {
     headers: new HttpHeaders({ 'If-Match': `"${version}"` }),
-    context: new HttpContext().set(HELD_RECORD, held ?? null),
+    context: new HttpContext()
+      .set(HELD_RECORD, held ?? null)
+      .set(KEYS_THAT_MAY_DIFFER, [...mayDiffer]),
   };
 }
 
 export function heldRecordOf(context: HttpContext): HeldRecord | null {
   return context.get(HELD_RECORD);
+}
+
+export function keysThatMayDifferOf(context: HttpContext): readonly string[] {
+  return context.get(KEYS_THAT_MAY_DIFFER);
 }
 
 export function currentInRefusal(failure: unknown): Record<string, unknown> | null {

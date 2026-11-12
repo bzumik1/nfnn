@@ -22,7 +22,7 @@ import {
   EmptyError,
 } from 'rxjs';
 import { Connectivity, isUnreachable } from '../connectivity/connectivity';
-import { AuthApi } from './auth-api';
+import { AuthApi, type StoredProfile } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
@@ -60,7 +60,6 @@ import {
   SecondFactorEnrolment,
   UpdateDonorProfileRequest,
 } from './donor';
-import type { HeldRecord } from '../version/row-version';
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
@@ -261,7 +260,7 @@ export class AuthStore {
   updateProfile(
     request: UpdateDonorProfileRequest,
     version: string,
-    held: HeldRecord | null,
+    held: StoredProfile | null,
   ): Observable<Donor> {
     return this.api
       .updateProfile(request, version, held)

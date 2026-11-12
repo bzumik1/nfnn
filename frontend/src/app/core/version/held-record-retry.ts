@@ -1,9 +1,16 @@
 import type { HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
-import { currentInRefusal, heldRecordOf, versionInRefusal } from './row-version';
+import {
+  currentInRefusal,
+  heldRecordOf,
+  keysThatMayDifferOf,
+  versionInRefusal,
+} from './row-version';
 
-const VERSION_FIELD = 'version';
+const IDENTITY_FIELD = 'id';
+
+export const KEYS_THAT_ALWAYS_MAY_DIFFER: readonly string[] = ['version', 'createdAt', 'updatedAt'];
 
 export const heldRecordRetryInterceptor: HttpInterceptorFn = (request, next) => {
   const held = heldRecordOf(request.context);
@@ -14,7 +21,11 @@ export const heldRecordRetryInterceptor: HttpInterceptorFn = (request, next) => 
     catchError((failure: unknown) => {
       const version = versionInRefusal(failure);
       const current = currentInRefusal(failure);
-      if (version === null || current === null || !holdsTheSame(held, current)) {
+      const mayDiffer = new Set([
+        ...KEYS_THAT_ALWAYS_MAY_DIFFER,
+        ...keysThatMayDifferOf(request.context),
+      ]);
+      if (version === null || current === null || !holdsTheSame(held, current, mayDiffer)) {
         return throwError(() => failure);
       }
       return next(request.clone({ setHeaders: { 'If-Match': `"${version}"` } }));
@@ -22,18 +33,23 @@ export const heldRecordRetryInterceptor: HttpInterceptorFn = (request, next) => 
   );
 };
 
-function holdsTheSame(held: object, current: Record<string, unknown>): boolean {
+function holdsTheSame(
+  held: object,
+  current: Record<string, unknown>,
+  mayDiffer: ReadonlySet<string>,
+): boolean {
   const heldFields = held as Record<string, unknown>;
-  const shared = Object.keys(current).filter(
-    (key) =>
-      key !== VERSION_FIELD &&
-      Object.prototype.hasOwnProperty.call(heldFields, key) &&
-      heldFields[key] !== undefined,
+  const compared = [...new Set([...presentKeys(heldFields), ...presentKeys(current)])].filter(
+    (key) => !mayDiffer.has(key),
   );
   return (
-    shared.length > 0 &&
-    shared.every((key) => canonical(heldFields[key]) === canonical(current[key]))
+    compared.some((key) => key !== IDENTITY_FIELD) &&
+    compared.every((key) => canonical(heldFields[key]) === canonical(current[key]))
   );
+}
+
+function presentKeys(record: Record<string, unknown>): string[] {
+  return Object.keys(record).filter((key) => record[key] !== undefined);
 }
 
 function canonical(value: unknown): string {

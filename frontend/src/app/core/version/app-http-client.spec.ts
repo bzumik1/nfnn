@@ -10,6 +10,7 @@ import { API_GENERATION } from './api-generation';
 import { ServerVersion } from './server-version';
 import { Connectivity, OFFLINE_AFTER_MS, PROBE_PATH } from '../connectivity/connectivity';
 import { AdministrationWrites } from '../admin-writes/administration-writes';
+import { ifMatch } from './row-version';
 
 describe("Given the app's HTTP client", () => {
   let client: HttpClient;
@@ -68,6 +69,69 @@ describe("Given the app's HTTP client", () => {
     const retried = http.expectOne('/api/donors/me');
     expect(retried.request.headers.get('ngsw-bypass')).toBe('true');
     retried.flush(sampleDonor());
+  });
+
+  it('when a versioned write is refused only because the version moved, then the app sends it once more with the refusal version and the refreshed token', () => {
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    const held = { text: 'Děkujeme.' };
+    let answer: unknown;
+
+    client
+      .put('/api/admin/content/people/note', held, ifMatch('0000000000000001', held))
+      .subscribe((value) => (answer = value));
+    http
+      .expectOne('/api/admin/content/people/note')
+      .flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-2'));
+    http.expectOne('/api/admin/content/people/note').flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: '00000000000000ff',
+        current: { text: 'Děkujeme.', updatedAt: '2026-11-12T08:00:00Z' },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    const resent = http.expectOne('/api/admin/content/people/note');
+    expect(resent.request.headers.get('If-Match')).toBe('"00000000000000ff"');
+    expect(resent.request.headers.get('Authorization')).toBe('Bearer token-2');
+    resent.flush({ text: 'Děkujeme.', version: '0000000000000100' });
+
+    expect(answer).toEqual({ text: 'Děkujeme.', version: '0000000000000100' });
+    http.expectNone('/api/admin/content/people/note');
+  });
+
+  it('when a refused write comes from a server of a newer API generation, then it is not sent again and the app asks to be updated', () => {
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    const held = { text: 'Děkujeme.' };
+    let failure: { status?: number } | undefined;
+
+    client
+      .put('/api/admin/content/people/note', held, ifMatch('0000000000000001', held))
+      .subscribe({ error: (refusal: { status?: number }) => (failure = refusal) });
+    http.expectOne('/api/admin/content/people/note').flush(
+      {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version: '00000000000000ff',
+        current: { text: 'Děkujeme.' },
+      },
+      {
+        status: 409,
+        statusText: 'Conflict',
+        headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': String(API_GENERATION + 1) },
+      },
+    );
+
+    http.expectNone('/api/admin/content/people/note');
+    expect(failure?.status).toBe(426);
   });
 
   it('when an administration write succeeds, then the app counts it, so the pages read from the device copy wait for a refresh after it', () => {

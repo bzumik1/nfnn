@@ -189,6 +189,28 @@ export interface SymbolClaimResponse {
   donationCount: number;
 }
 
+export interface StoredSymbolClaim {
+  readonly id: string;
+  readonly donorId: string;
+  readonly accountNumber: string;
+  readonly variableSymbol: string;
+  readonly answer: SymbolClaimAnswer;
+  readonly answeredAt: string;
+}
+
+export function storedSymbolClaimOf(claim: SymbolClaimResponse): StoredSymbolClaim {
+  return {
+    id: claim.id,
+    donorId: claim.donorId,
+    accountNumber: claim.account,
+    variableSymbol: claim.variableSymbol,
+    answer: claim.answer,
+    answeredAt: claim.answeredAt,
+  };
+}
+
+const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports'];
+
 export type BankLogoFailure =
   | 'status'
   | 'redirected'
@@ -940,7 +962,7 @@ export class AdminApi {
     return this.http.post<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
       null,
-      ifMatch(version, held),
+      ifMatch(version, held === null ? null : storedSymbolClaimOf(held)),
     );
   }
 
@@ -951,7 +973,7 @@ export class AdminApi {
   ): Observable<void> {
     return this.http.delete<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
-      ifMatch(version, held),
+      ifMatch(version, held === null ? null : storedSymbolClaimOf(held)),
     );
   }
 
@@ -993,7 +1015,7 @@ export class AdminApi {
     return this.http.put<ReportSettingsResponse>(
       '/api/admin/donations/report/settings',
       request,
-      ifMatch(version, held),
+      ifMatch(version, held, REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER),
     );
   }
 
