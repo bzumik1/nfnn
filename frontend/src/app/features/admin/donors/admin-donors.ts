@@ -30,8 +30,9 @@ import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { formatDonationDate, pragueDay } from '../../donations/donation-date';
-import { AdminApi, DonorAccountResponse } from '../admin-api';
+import { DonorAccountResponse } from '../admin-api';
 import { AdministrationCopy } from '../device-copy/administration-copy';
+import { AdministrationReads } from '../device-copy/administration-reads';
 import { portraitsByEmail } from '../people/portraits-by-email';
 import { type CopiedGift, type LastGift, recentDonors } from './recent-donors';
 
@@ -62,7 +63,7 @@ const RECENT_DONORS_SHOWN = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDonors {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
   private readonly people = inject(PeopleApi);
   private readonly copy = inject(AdministrationCopy);
   private readonly auth = inject(AuthStore);
@@ -177,7 +178,7 @@ export class AdminDonors {
       return of<Outcome>({ state: 'idle', items: [], hasMore: false });
     }
     this.state.set('searching');
-    return this.api.donors(query).pipe(
+    return this.reads.accountList(query).pipe(
       map((response): Outcome => ({
         state: 'ready',
         items: response.items,

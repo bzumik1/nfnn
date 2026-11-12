@@ -324,6 +324,8 @@ const adminAnswers: Record<string, unknown> = {
     lastFailure: null,
     consecutiveFailures: 0,
     reportedOutage: null,
+    historyImport: null,
+    defaultHistoryFrom: '2026-01-01',
   },
   '/api/admin/donations/overview': overview,
   '/api/admin/operations/backups': backups,
@@ -645,6 +647,8 @@ export async function serveRecentDonors(page: RouteTarget): Promise<void> {
           ],
           note: null,
           footnote: null,
+          noteVersion: '6a0c1e3f9b2d4875',
+          footnoteVersion: '1f8e2d7c4b6a9035',
         },
       }),
   );

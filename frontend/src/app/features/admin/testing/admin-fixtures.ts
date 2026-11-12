@@ -28,6 +28,7 @@ import {
   AdminPaymentResponse,
   AdminReceiptResponse,
   DonorAccountResponse,
+  HistoryImportResponse,
   ImportStateResponse,
   MonthOverviewResponse,
   PairedDonationResponse,
@@ -56,6 +57,25 @@ export function importState(overrides: Partial<ImportStateResponse> = {}): Impor
     lastFailure: null,
     consecutiveFailures: 0,
     reportedOutage: null,
+    historyImport: null,
+    defaultHistoryFrom: '2026-01-01',
+    ...overrides,
+  };
+}
+
+export function historyImport(
+  overrides: Partial<HistoryImportResponse> = {},
+): HistoryImportResponse {
+  return {
+    from: '2026-01-01',
+    to: '2026-11-05',
+    needsUnlockedHistory: true,
+    requestedAt: '2026-11-05T10:00:00Z',
+    startsAt: '2026-11-05T10:00:20Z',
+    status: 'QUEUED',
+    failure: null,
+    added: null,
+    finishedAt: null,
     ...overrides,
   };
 }
@@ -599,6 +619,8 @@ export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileRespon
   };
 }
 
+export const SETTINGS_VERSION = '00000000000000c1';
+
 export function settingsView(
   overrides: Partial<AdminSettingsResponse> = {},
 ): AdminSettingsResponse {
@@ -640,6 +662,7 @@ export function settingsView(
       setting({ name: 'SESSION_REMEMBER_DAYS', group: 'SITE', value: '14', stored: false }),
     ],
     secretsCanBeStored: true,
+    version: SETTINGS_VERSION,
     ...overrides,
   };
 }

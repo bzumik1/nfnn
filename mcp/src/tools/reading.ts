@@ -37,7 +37,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say.',
+        'The running backend version and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage, balance: the account balance the bank reported with the last successful import and when it was read, kept when a later import fails, historyImport: the last run of older payments that nfnn_import_history queued since the server started, with its status QUEUED, RUNNING, COMPLETED, HISTORY_LOCKED or FAILED and the payments added, or null, and defaultHistoryFrom, the day such a run starts from by default), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -422,7 +422,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Nastavení webu',
       description:
-        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year, and how many days a remembered sign-in lasts (SESSION_REMEMBER_DAYS). Secrets (SMTP password, Fio token) only say whether they are set or unreadable, never their value.',
+        'The settings of the site: public address, mail server and senders, Fio history start, accounts excluded from pairing, receipt signatory and first year, and how many days a remembered sign-in lasts (SESSION_REMEMBER_DAYS). Secrets (SMTP password, Fio token) only say whether they are set or unreadable, never their value. `version` names the stored settings for nfnn_change_settings.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -492,7 +492,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktuality a příběhy',
       description:
-        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
+        'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, the year a news article looks back on (lookBackYear, set with nfnn_set_news_look_back_year), photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -523,7 +523,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Aktualita',
       description:
-        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), and live (whether the site shows it today; false for a draft and before its published date).',
+        'One news article whole, draft or published: every field nfnn_update_news takes, with its text and photo (coverImage.focalPoint is the spot the site crops around, set with nfnn_set_photo_focal_point), the year it looks back on (lookBackYear, null for none, set with nfnn_set_news_look_back_year) and its version, and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),
       annotations: READ_ONLY,
     },
@@ -558,6 +558,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   );
 
   server.registerTool(
+    'nfnn_donate_band',
+    {
+      title: 'Fotka v pruhu Přispět',
+      description:
+        'The photo of the closing Přispět band that ends the O nás, Pomáháme and Aktuality tabs: its id, size in pixels, alt (read by screen readers) and focalPoint (set with nfnn_set_photo_focal_point), or photo null while the band shows without one. Change it with nfnn_update_donate_band.',
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_donate_band', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/content/donate-band', apiToken)),
+      ),
+  );
+
+  server.registerTool(
     'nfnn_about',
     {
       title: 'Fotka v sekci O nás',
@@ -576,7 +590,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Lidé fondu',
       description:
-        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none). With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
+        'The people of the foundation (Lidé fondu) the home page shows in "Kdo fond vede", in their order: id, name, role, position, onBoard with boardNote, featured, portrait and webSignature (id, url, size, or null), personalEmail and fundEmail (administration data only, never on the site), linkedToAccount (true when one of those e-mails is the confirmed e-mail of an account on the site; the link only shows the portrait at that account and grants nothing), the founders note under the cards and the footnote, the one line under the board line (each null when none), with noteVersion and footnoteVersion for nfnn_update_founders_note and nfnn_update_people_footnote. With no people the home page shows its own block. Change them with nfnn_add_person, nfnn_update_person, nfnn_remove_person, nfnn_order_people, nfnn_update_founders_note, nfnn_update_people_footnote, nfnn_set_web_signature and nfnn_remove_web_signature.',
       annotations: READ_ONLY,
     },
     async (ctx) =>

@@ -213,7 +213,7 @@ class SymbolClaimPairingConcurrencyTest {
     }
 
     private static BankStatement statementWith(IncomingMovement movement) {
-        return new BankStatement(REQUESTED, Optional.empty(), List.of(movement), 1);
+        return new BankStatement(REQUESTED, Optional.empty(), List.of(movement), 1, Optional.empty());
     }
 
     private static IncomingMovement movement(long transactionId, LocalDate bookedOn) {

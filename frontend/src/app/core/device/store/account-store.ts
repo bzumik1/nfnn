@@ -1,9 +1,15 @@
 import { signal } from '@angular/core';
-import { CopyRefused, type OpenCopy, type RecordAddress } from '../crypto/copy-keys';
+import {
+  CopyRefused,
+  type DraftAddress,
+  type OpenCopy,
+  type RecordAddress,
+} from '../crypto/copy-keys';
 import { bytesToBase64Url, randomBytes, utf8 } from '../crypto/device-bytes';
-import type { DeviceStorage, StoredRecord } from './device-storage';
+import type { DeviceStorage, DraftLocation, StoredRecord } from './device-storage';
 
 export const RECORD_SCHEMA_VERSION = 1;
+export const DRAFT_SCHEMA_VERSION = 1;
 const RECORD_ID_LENGTH = 16;
 const SMALLEST_RECORD_BYTES = 1024;
 
@@ -25,6 +31,23 @@ export interface CopyContents {
   readonly storedAt: string;
   readonly images?: readonly StoredImage[];
   readonly profile?: unknown;
+  readonly session?: unknown;
+}
+
+export interface StoredDraft {
+  readonly key: string;
+  readonly base: string;
+  readonly values: unknown;
+  readonly savedAt: string;
+}
+
+interface DraftPlaintext extends StoredDraft {
+  readonly type: 'draft';
+}
+
+interface OpenedDraft {
+  readonly recordId: string;
+  readonly draft: StoredDraft | null;
 }
 
 export type CopyLoad = 'empty' | 'loaded' | 'damaged';
@@ -42,6 +65,7 @@ interface MetaPlaintext {
   readonly summary: unknown;
   readonly storedAt: string;
   readonly profile?: unknown;
+  readonly session?: unknown;
 }
 
 export class AccountStore {
@@ -85,6 +109,7 @@ export class AccountStore {
         summary: contents.summary,
         storedAt: contents.storedAt,
         ...(contents.profile === undefined ? {} : { profile: contents.profile }),
+        ...(contents.session === undefined ? {} : { session: contents.session }),
       },
       ...contents.chunks.map((chunk): ChunkPlaintext => ({
         type: 'chunk',
@@ -112,6 +137,53 @@ export class AccountStore {
     }
     await this.storage.write({ replaceRecords: { copyId: this.copy.copyId, records } });
     this.show(structuredClone(contents));
+  }
+
+  async drafts(): Promise<readonly StoredDraft[]> {
+    const drafts: StoredDraft[] = [];
+    for (const { draft } of await this.openedDrafts()) {
+      if (draft !== null) {
+        drafts.push(draft);
+      }
+    }
+    return drafts.sort((first, second) =>
+      first.key < second.key ? -1 : first.key > second.key ? 1 : 0,
+    );
+  }
+
+  async keepDraft(draft: StoredDraft): Promise<void> {
+    const replaced = (await this.openedDrafts()).filter(
+      (opened) => opened.draft === null || opened.draft.key === draft.key,
+    );
+    const recordId = bytesToBase64Url(randomBytes(RECORD_ID_LENGTH));
+    const plaintext: DraftPlaintext = {
+      type: 'draft',
+      key: draft.key,
+      base: draft.base,
+      values: draft.values,
+      savedAt: draft.savedAt,
+    };
+    const bytes = padded(utf8(JSON.stringify(plaintext)));
+    try {
+      const sealed = await this.copy.sealDraft(this.draftAddressOf(recordId), bytes);
+      await this.storage.write({
+        deleteDrafts: replaced.map((opened) => this.draftLocationOf(opened.recordId)),
+        putDrafts: [{ copyId: this.copy.copyId, recordId, ...sealed }],
+      });
+    } finally {
+      bytes.fill(0);
+    }
+  }
+
+  async dropDraft(key: string): Promise<void> {
+    const dropped = (await this.openedDrafts()).filter(
+      (opened) => opened.draft === null || opened.draft.key === key,
+    );
+    if (dropped.length > 0) {
+      await this.storage.write({
+        deleteDrafts: dropped.map((opened) => this.draftLocationOf(opened.recordId)),
+      });
+    }
   }
 
   close(): void {
@@ -161,7 +233,54 @@ export class AccountStore {
       storedAt: meta.storedAt,
       ...(images.length === 0 ? {} : { images }),
       ...(meta.profile === undefined ? {} : { profile: meta.profile }),
+      ...(meta.session === undefined ? {} : { session: meta.session }),
     };
+  }
+
+  private async openedDrafts(): Promise<readonly OpenedDraft[]> {
+    const opened: OpenedDraft[] = [];
+    for (const record of await this.storage.drafts(this.copy.copyId)) {
+      opened.push({ recordId: record.recordId, draft: await this.draftOf(record) });
+    }
+    return opened;
+  }
+
+  private async draftOf(record: StoredRecord): Promise<StoredDraft | null> {
+    let bytes: Uint8Array<ArrayBuffer>;
+    try {
+      bytes = await this.copy.openDraft(this.draftAddressOf(record.recordId), record);
+    } catch (failure: unknown) {
+      if (failure instanceof CopyRefused && failure.reason === 'damaged') {
+        return null;
+      }
+      throw failure;
+    }
+    try {
+      const plaintext = JSON.parse(new TextDecoder().decode(bytes)) as Partial<DraftPlaintext>;
+      return plaintext.type === 'draft' &&
+        typeof plaintext.key === 'string' &&
+        typeof plaintext.base === 'string' &&
+        typeof plaintext.savedAt === 'string'
+        ? {
+            key: plaintext.key,
+            base: plaintext.base,
+            values: plaintext.values,
+            savedAt: plaintext.savedAt,
+          }
+        : null;
+    } catch {
+      return null;
+    } finally {
+      bytes.fill(0);
+    }
+  }
+
+  private draftAddressOf(recordId: string): DraftAddress {
+    return { recordId, schemaVersion: DRAFT_SCHEMA_VERSION };
+  }
+
+  private draftLocationOf(recordId: string): DraftLocation {
+    return { copyId: this.copy.copyId, recordId };
   }
 
   private addressOf(recordId: string): RecordAddress {

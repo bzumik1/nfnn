@@ -152,6 +152,13 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./about/admin-about').then((m) => m.AdminAbout),
       },
       {
+        path: 'pruh-prispet',
+        data: { parent: ADMIN_MORE_PATH },
+        title: $localize`:@@admin.donateBand.pageTitle:Fotka v pruhu Přispět | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./donate-band/admin-donate-band').then((m) => m.AdminDonateBand),
+      },
+      {
         path: 'lide-fondu',
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.people.pageTitle:Lidé fondu | Správa | Nová naděje – nadační fond`,

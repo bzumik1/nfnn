@@ -132,11 +132,17 @@ describe('Given the privacy policy page', () => {
 
   it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, how to delete it and that the server is unaffected', () => {
     expect(texts('#cookies .device-copy')).toEqual([
-      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte.',
+      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte. Když zařízení odhlásíte na dálku z jiného zařízení nebo vaše údaje vymažeme, zařízení kopii zpravidla smaže, jakmile se na něm web příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
     ]);
     expect(sectionText('Cookies')).toContain(
       '; po přihlášení pak zašifrovanou kopii vašich údajů, viz níže.',
     );
+  });
+
+  it('when it renders, then the cookies section says that unsaved edits go only into the encrypted copies and when they go', () => {
+    expect(texts('#cookies .drafts')).toEqual([
+      'Do těchto šifrovaných kopií si portál a správa ukládají i rozepsané, ještě neuložené úpravy (vaše údaje na potvrzení, u správců texty a nastavení webu), aby se neztratily zavřením stránky. Zmizí uložením, zahozením nebo spolu s kopií. Kontaktní formulář nic neukládá a na cizím počítači se neukládá nic.',
+    ]);
   });
 
   it('when it renders, then the cookies section says that administrators keep an encrypted copy of the administration on their devices, how it locks, and when it goes', () => {
@@ -151,7 +157,13 @@ describe('Given the privacy policy page', () => {
       'heslem jde odemknout jen tehdy, když server ověří i kód z ověřovací aplikace',
     );
     expect(paragraph).toContain(
+      'zařízení ji zpravidla smaže, jakmile se příště spojí se serverem, a stejně tak zařízení, které správce odhlásí na dálku',
+    );
+    expect(paragraph).toContain(
       'Když správci roli odebereme, aplikace mu kopii správy už neotevře ani do ní nic nestáhne',
+    );
+    expect(paragraph).toContain(
+      'jeho vlastní dárcovská kopie po odebrání role zůstane. Výmaz vašich údajů se do kopií promítne při jejich příští synchronizaci.',
     );
   });
 
@@ -376,7 +388,7 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
   });
 
-  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators', () => {
+  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators, and deletes the copies on the devices', () => {
     const erasure =
       texts('#prava p').find((paragraph) => paragraph.includes('Zrušení dárcovského účtu')) ?? '';
 
@@ -392,7 +404,13 @@ describe('Given the privacy policy page', () => {
     expect(erasure).toContain(
       'Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho výmazu; může uvádět i číslo vašeho bankovního účtu.',
     );
-    expect(erasure).not.toContain('zařízení');
+    expect(erasure).toContain(
+      'Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení zpravidla smaže, až se příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
+    );
+    expect(erasure).toContain('Potvrzení, která jste si sami stáhli, zůstávají u vás.');
+    expect(erasure).toContain(
+      'Do kopií správy v zařízeních správců se výmaz promítne při jejich příští synchronizaci; historie změn správy v nich zůstává stejně jako na serveru.',
+    );
   });
 
   it('when it renders, then it says the backups on the server are deleted after about a month, so deleted data leave them by then', () => {

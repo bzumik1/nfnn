@@ -3,6 +3,8 @@ package cz.novanadeje.app.content.application.media;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.content.application.about.AboutCommand;
 import cz.novanadeje.app.content.application.about.AboutService;
+import cz.novanadeje.app.content.application.donateband.DonateBandCommand;
+import cz.novanadeje.app.content.application.donateband.DonateBandService;
 import cz.novanadeje.app.content.application.news.NewsAdminService;
 import cz.novanadeje.app.content.application.news.NewsArticleCommand;
 import cz.novanadeje.app.content.application.people.PeopleAdminService;
@@ -57,6 +59,8 @@ class MediaUseDuringCleanupConcurrencyTest {
     @Autowired
     private AboutService about;
     @Autowired
+    private DonateBandService donateBand;
+    @Autowired
     private PeopleAdminService people;
     @Autowired
     private PlatformTransactionManager transactionManager;
@@ -68,7 +72,7 @@ class MediaUseDuringCleanupConcurrencyTest {
     private final ExecutorService callers = Executors.newFixedThreadPool(2);
 
     enum Writer {
-        NEWS_COVER, PROJECT_COVER, ABOUT_PHOTO, PERSON_PORTRAIT, WEB_SIGNATURE
+        NEWS_COVER, PROJECT_COVER, ABOUT_PHOTO, DONATE_BAND_PHOTO, PERSON_PORTRAIT, WEB_SIGNATURE
     }
 
     @BeforeEach
@@ -121,6 +125,7 @@ class MediaUseDuringCleanupConcurrencyTest {
             case PROJECT_COVER -> projects.create(ADMIN, new ProjectCommand("Dominik", 2024, ProjectCategory.OTHER, Optional.empty(), Optional.empty(),
                     "Perex", "Text", Optional.of(photo), Optional.empty()));
             case ABOUT_PHOTO -> about.change(ADMIN, new AboutCommand(Optional.of(photo), Optional.empty(), Optional.empty()));
+            case DONATE_BAND_PHOTO -> donateBand.change(ADMIN, new DonateBandCommand(Optional.of(photo), Optional.empty()));
             case PERSON_PORTRAIT -> people.add(ADMIN, person(Optional.of(photo)));
             case WEB_SIGNATURE -> people.setWebSignature(ADMIN, person, photo);
         }

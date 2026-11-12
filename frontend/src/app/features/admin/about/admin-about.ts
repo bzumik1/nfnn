@@ -26,7 +26,7 @@ import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
 import { PhotoResponse, PhotosApi } from '../../content/photos-api';
-import { FocalPointPicker } from '../focal-point-picker/focal-point-picker';
+import { FocalPointPicker, PreviewShape } from '../focal-point-picker/focal-point-picker';
 import {
   AboutApi,
   AboutPhotoResponse,
@@ -119,7 +119,9 @@ export class AdminAbout {
     const savedPoint = saved?.id === photo.id ? saved.focalPoint : null;
     return photo.focalPoint?.x !== savedPoint?.x || photo.focalPoint?.y !== savedPoint?.y;
   });
-  protected readonly focalPointHint = $localize`:@@admin.about.focalPoint.hint:Web dnes ukazuje celou fotku, takže bod zatím nic neořízne; použije se, až sekce O nás začne fotku ořezávat.`;
+  protected readonly previewShapes: readonly PreviewShape[] = [
+    { shape: 'square', label: $localize`:@@admin.about.preview.square:V sekci O nás` },
+  ];
   protected readonly busy = computed(() => this.saving() || this.removing() || this.uploading());
 
   constructor() {

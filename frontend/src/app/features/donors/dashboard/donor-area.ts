@@ -1,17 +1,22 @@
 /// <reference types="@angular/localize" />
 
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
+  Injector,
 } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { PageFocus } from '../../../core/navigation/page-focus';
 import { AccountBadges } from '../../../core/layout/account-badges';
 import { AppHeader } from '../../../layout/app-header/app-header';
 import { TabBar } from '../../../layout/tab-bar/tab-bar';
@@ -68,6 +73,28 @@ export class DonorArea {
     const badges = inject(AccountBadges);
     effect(() => badges.show(BANK_ACCOUNTS_PATH, this.questions()));
     inject(DestroyRef).onDestroy(() => badges.clear(BANK_ACCOUNTS_PATH));
+    this.followNavigations();
+  }
+
+  private followNavigations(): void {
+    const router = inject(Router);
+    const pageFocus = inject(PageFocus);
+    const injector = inject(Injector);
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationEnd && pageFocus.movesOnLastNavigation()) {
+        const fragment = router.parseUrl(event.urlAfterRedirects).fragment;
+        afterNextRender(
+          () => {
+            const main = host.nativeElement.querySelector<HTMLElement>('main#obsah');
+            if (main) {
+              pageFocus.follow(main, fragment);
+            }
+          },
+          { injector },
+        );
+      }
+    });
   }
 }
 

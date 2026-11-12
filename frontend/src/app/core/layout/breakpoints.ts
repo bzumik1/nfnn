@@ -1,5 +1,6 @@
 export const BREAKPOINTS = {
   tabs: 208,
+  pair: 260,
   pager: 312,
   tiny: 360,
   narrow: 420,

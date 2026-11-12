@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorRegistrations;
+import cz.novanadeje.app.cucumber.ProfileRowVersions;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -51,12 +52,14 @@ public class DonorRecordStepDefinitions {
     private final Clock clock;
     private final DonorSessions sessions;
     private final DonorRegistrations registrations;
+    private final ProfileRowVersions profileVersions;
     private final Map<String, PostalAddress> addresses = new HashMap<>();
 
     public DonorRecordStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, DonorRecordRepository donorRecords,
                                       ApplicationEventPublisher events, TransactionTemplate transaction, JdbcClient jdbc, Clock clock,
-                                      DonorSessions sessions, DonorRegistrations registrations) {
+                                      DonorSessions sessions, DonorRegistrations registrations, ProfileRowVersions profileVersions) {
         this.api = api;
+        this.profileVersions = profileVersions;
         this.registrations = registrations;
         this.scenarioDonors = scenarioDonors;
         this.donorRecords = donorRecords;
@@ -178,7 +181,7 @@ public class DonorRecordStepDefinitions {
 
     private void patchProfileOf(String alias, Map<String, ?> body) {
         sessions.actAs(alias);
-        ResponseEntity<String> response = api.patch(PROFILE_PATH, body);
+        ResponseEntity<String> response = api.patch(PROFILE_PATH, body, profileVersions.ifMatchOfSignedIn(api));
         assertThat(response.getStatusCode().value()).withFailMessage("Profile update answered %s", response.getBody()).isEqualTo(200);
     }
 

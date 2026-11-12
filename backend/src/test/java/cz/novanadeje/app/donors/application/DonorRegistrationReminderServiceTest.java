@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -64,7 +65,7 @@ class DonorRegistrationReminderServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         DonorEmailVerificationService emailVerification = new DonorEmailVerificationService(donors, tokens, sessions,
-                new DonorViews(secondFactors, tokens, clock), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events, signOuts);
+                new DonorViews(secondFactors, tokens, clock, new ProfileVersions(RowVersionsFixture.canonical())), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events, signOuts);
         service = new DonorRegistrationReminderService(reminders, donors, emailVerification,
                 new RegistrationReminderProperties("0 20 * * * *", Duration.ofDays(1), Duration.ofDays(7)), clock);
     }

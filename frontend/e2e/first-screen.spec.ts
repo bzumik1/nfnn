@@ -178,7 +178,10 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
 });
 
 test.describe('Given a page that opens with a band under the header', () => {
-  for (const path of ['/aktuality', '/projekty']) {
+  for (const { path, band } of [
+    { path: '/aktuality', band: '.ui-intro' },
+    { path: '/projekty', band: '.stories-intro' },
+  ]) {
     for (const screen of SHORT_SCREENS) {
       test.describe(`when ${path} opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
         test.use({ viewport: { width: screen.width, height: screen.height } });
@@ -190,10 +193,13 @@ test.describe('Given a page that opens with a band under the header', () => {
           await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
           await page.evaluate(() => document.fonts.ready);
 
-          const { bandBottom, tabBarTop } = await page.evaluate(() => ({
-            bandBottom: document.querySelector('.ui-intro')!.getBoundingClientRect().bottom,
-            tabBarTop: document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top,
-          }));
+          const { bandBottom, tabBarTop } = await page.evaluate(
+            (selector) => ({
+              bandBottom: document.querySelector(selector)!.getBoundingClientRect().bottom,
+              tabBarTop: document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top,
+            }),
+            band,
+          );
 
           expect(bandBottom).toBeLessThanOrEqual(tabBarTop - 24);
         });

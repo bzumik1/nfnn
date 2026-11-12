@@ -2,6 +2,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -192,6 +193,14 @@ describe('Given an administrator on the older symbols page', () => {
     const request = http.expectOne(`/api/admin/donations/symbol-claims/${NO_ID}`);
     expect(request.request.method).toBe('DELETE');
     expect(request.request.headers.get('If-Match')).toBe('"9c4f1e7a2d6b0853"');
+    expect(heldRecordOf(request.request.context)).toEqual({
+      id: NO_ID,
+      donorId: '019a1c00-0000-7000-8000-00000000a002',
+      accountNumber: '2900233333/2010',
+      variableSymbol: '777',
+      answer: 'DECLINED',
+      answeredAt: '2026-10-19T08:30:00Z',
+    });
     request.flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 

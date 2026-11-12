@@ -209,8 +209,13 @@ export class PageTransitions {
 
   private revealIfNoScrollFollows(): void {
     const view = this.document.defaultView;
-    if (this.running !== null && view !== null) {
-      view.setTimeout(() => this.reveal(), PAGE_TRANSITION_LONGEST_MS / 4);
+    const running = this.running;
+    if (running !== null && view !== null) {
+      view.setTimeout(() => {
+        if (this.running === running) {
+          this.reveal();
+        }
+      }, PAGE_TRANSITION_LONGEST_MS / 4);
     }
   }
 

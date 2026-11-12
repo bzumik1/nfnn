@@ -246,10 +246,11 @@ describe('Given an administrator and an About section with a saved photo', () =>
   });
 
   it('when they only tap a spot on the photo and save, then only the photo gets the point and the About section is not saved again', async () => {
-    expect(text(fixture, '#about-focal-point-hint')).toContain(
-      'Web dnes ukazuje celou fotku, takže bod zatím nic neořízne',
-    );
-    expect(fixture.nativeElement.querySelector('figure.preview')).toBeNull();
+    expect(
+      Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
+        (caption) => (caption as HTMLElement).textContent?.trim(),
+      ),
+    ).toEqual(['V sekci O nás']);
     const frame = element<HTMLButtonElement>(fixture, 'button.frame');
     frame.querySelector('img')!.getBoundingClientRect = () => new DOMRect(0, 0, 300, 400);
     frame.dispatchEvent(new MouseEvent('click', { clientX: 150, clientY: 100, detail: 1 }));

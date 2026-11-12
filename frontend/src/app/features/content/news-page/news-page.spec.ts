@@ -9,6 +9,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { ProjectResponse } from '../projects-api';
+import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
 import { newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { MAX_PROJECT_PAGES, NewsPage, STORIES_WAIT_MS } from './news-page';
@@ -110,6 +111,14 @@ const sofinka = story('sofinka', 2025, 'Sofinka');
 const miki = story('miki', 2025, 'Miki a jeho první krůčky');
 const nelinka = story('nelinka', 2025, 'Nelinka');
 
+function answerHome(http: HttpTestingController): void {
+  http
+    .match((request) => request.url === '/api/content/home')
+    .forEach((request) =>
+      request.flush({ news: [], projects: [], donateBand: { photo: donateBandPhoto() } }),
+    );
+}
+
 describe('Given a visitor opening Aktuality', () => {
   let fixture: ComponentFixture<NewsPage>;
   let http: HttpTestingController;
@@ -123,6 +132,7 @@ describe('Given a visitor opening Aktuality', () => {
   });
 
   afterEach(() => {
+    answerHome(http);
     http.verify();
     Reflect.deleteProperty(navigator, 'share');
   });
@@ -417,6 +427,26 @@ describe('Given a visitor opening Aktuality', () => {
       expect(text(nav, '.pages-position')).toBe('Strana 1 z 3');
       expect(link(nav, 'Starší')?.getAttribute('href')).toBe('/aktuality?strana=2');
       expect(link(nav, 'Novější')).toBeUndefined();
+    });
+
+    it('and the home content arrives, then the Přispět band closes the page after the paging, with the band photo and the way to the projects', async () => {
+      answerHome(http);
+      await settle(fixture);
+
+      const band = root.querySelector('app-donate-band')!;
+      expect(root.querySelector('.news-page')!.lastElementChild).toBe(band);
+      expect(
+        root.querySelector('nav.pages')!.compareDocumentPosition(band) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(text(band, 'h2')).toBe('Další ohlédnutí napíšeme i díky vám');
+      expect(text(band, '.band-lead')).toBe(
+        'Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok.',
+      );
+      expect(texts(band, 'a')).toEqual(['Přispět', 'Kde pomáháme']);
+      expect(band.querySelector('img')?.getAttribute('src')).toBe(
+        `/api/content/media/${DONATE_BAND_PHOTO_ID}?w=480`,
+      );
     });
   });
 

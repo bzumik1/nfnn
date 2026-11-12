@@ -37,6 +37,7 @@ export interface Donor {
   hasPassword: boolean;
   secondFactor: SecondFactorState;
   pendingEmailChange: PendingEmailChange | null;
+  version: string;
 }
 
 export interface RegisterDonorRequest {
@@ -161,6 +162,7 @@ export interface AuthResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
   session?: SessionKind;
+  deviceSecret?: string;
 }
 
 export interface PasskeyCredentialDescriptor {

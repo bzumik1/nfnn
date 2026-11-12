@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.AdminDeviceSyncTest > Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within 100 ms",
+    "replacement": "donations.interfaces.rest.AdminDeviceSyncTest > Given two hundred donors, each with a linked bank account, half of them with an older-symbol answer, and five yearly and five single receipts, a tenth of the yearly ones listing 300 gifts, and a thousand gifts and payments, when an administration device asks for the manifest, then the backend answers within four times a plain read of the same rows on the same machine",
+    "reason": "PR #580: a fixed 100 ms measured the runner (a GitHub runner took 105 ms for the fastest of 21 with the sync unchanged), so the manifest is held to four times a plain read of the same rows timed beside it on the same machine, and the test's name says so",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  }
+]

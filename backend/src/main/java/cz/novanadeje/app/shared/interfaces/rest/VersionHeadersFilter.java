@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 class VersionHeadersFilter extends OncePerRequestFilter {
 
-    static final int API_GENERATION = 3;
+    static final int API_GENERATION = 4;
     static final String REVISION_HEADER = "Nfnn-Revision";
     static final String API_HEADER = "Nfnn-Api";
     static final String APP_API_HEADER = "Nfnn-App-Api";
@@ -38,7 +38,7 @@ class VersionHeadersFilter extends OncePerRequestFilter {
     private static final Pattern GENERATION = Pattern.compile("[1-9][0-9]{0,8}");
     private static final Set<String> READING_METHODS = Set.of("GET", "HEAD", "OPTIONS");
     static final Set<String> POSTS_ACROSS_GENERATIONS =
-            Set.of("/api/donors/auth/refresh", "/api/donors/auth/logout", "/api/donations/receipts/status");
+            Set.of("/api/donors/auth/refresh", "/api/donors/auth/logout", "/api/donors/devices/status", "/api/donations/receipts/status");
 
     private final BuildProperties build;
     private final ProblemMessages texts;

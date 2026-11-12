@@ -1,7 +1,14 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { NewsApi, NewsArticleResponse, slugFromText, UploadedImageResponse } from './news-api';
+import { heldRecordOf } from '../../core/version/row-version';
+import {
+  NewsApi,
+  NewsArticleResponse,
+  slugFromText,
+  storedNewsArticleOf,
+  UploadedImageResponse,
+} from './news-api';
 import { newsArticle, uploadedImage } from './testing/news-fixtures';
 
 describe('Given the news API', () => {
@@ -21,16 +28,49 @@ describe('Given the news API', () => {
   it('when an article is published, then it posts the date with the version read to the publish endpoint and hands the article on', () => {
     let received: NewsArticleResponse | undefined;
     api
-      .publish(newsArticle().id, '2026-10-20', '9d4b2e7a1c0f5836')
+      .publish(
+        newsArticle().id,
+        '2026-10-20',
+        '9d4b2e7a1c0f5836',
+        storedNewsArticleOf(newsArticle()),
+      )
       .subscribe((response) => (received = response));
 
     const request = http.expectOne(`/api/admin/content/news/${newsArticle().id}/publish`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ publishedOn: '2026-10-20' });
     expect(request.request.headers.get('If-Match')).toBe('"9d4b2e7a1c0f5836"');
+    expect(heldRecordOf(request.request.context)).toEqual({
+      id: newsArticle().id,
+      slug: newsArticle().slug,
+      title: newsArticle().title,
+      tag: newsArticle().tag,
+      perex: newsArticle().perex,
+      body: newsArticle().body,
+      coverImage: newsArticle().coverImage?.id ?? null,
+      coverImageAlt: newsArticle().coverImage?.alt ?? null,
+      signer: newsArticle().signer?.id ?? null,
+      publishedOn: newsArticle().publishedOn,
+      lookBackYear: newsArticle().lookBackYear ?? null,
+    });
     request.flush(newsArticle());
 
     expect(received).toEqual(newsArticle());
+  });
+
+  it('when the year an article looks back on is set, then it puts only the year with the version read to its own endpoint, so an older tab saving the article never clears it', () => {
+    let received: NewsArticleResponse | undefined;
+    api
+      .setLookBackYear(newsArticle().id, 2025, '9d4b2e7a1c0f5836')
+      .subscribe((response) => (received = response));
+
+    const request = http.expectOne(`/api/admin/content/news/${newsArticle().id}/look-back-year`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ year: 2025 });
+    expect(request.request.headers.get('If-Match')).toBe('"9d4b2e7a1c0f5836"');
+    request.flush(newsArticle({ lookBackYear: 2025 }));
+
+    expect(received?.lookBackYear).toBe(2025);
   });
 
   it('when an image is uploaded, then it sends the file as the "file" part of a multipart request', () => {

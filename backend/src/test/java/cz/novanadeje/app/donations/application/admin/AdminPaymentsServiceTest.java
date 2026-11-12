@@ -91,10 +91,10 @@ class AdminPaymentsServiceTest {
         assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactly(december, october, lastYear);
         PairedDonationView decemberView = list.items().getFirst().donation().orElseThrow();
         assertThat(decemberView.donation()).isEqualTo(decemberGift);
-        assertThat(decemberView.donor()).contains(petrRecord);
+        assertThat(decemberView.donor()).isEqualTo(petrRecord);
         assertThat(decemberView.receiptIssued()).isFalse();
         PairedDonationView octoberView = list.items().get(1).donation().orElseThrow();
-        assertThat(octoberView.donor()).contains(janaRecord);
+        assertThat(octoberView.donor()).isEqualTo(janaRecord);
         assertThat(octoberView.receiptIssued()).isTrue();
     }
 

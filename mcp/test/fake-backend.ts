@@ -55,6 +55,13 @@ export interface RecordedRequest {
   readonly body: string;
 }
 
+const IMPORT_STATE = {
+  coveredFrom: '2026-07-20',
+  coveredTo: '2026-10-22',
+  lastSucceededAt: '2026-10-23T05:00:00Z',
+  consecutiveFailures: 0,
+};
+
 export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
@@ -62,6 +69,7 @@ export class FakeBackend {
   receiptSigningKeysAnswer: Record<string, unknown> | undefined;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   signatoryChosen = true;
+  importBalance: Record<string, unknown> | undefined;
   private server: Server | undefined;
   url = '';
 
@@ -153,6 +161,13 @@ export class FakeBackend {
         },
       ];
     }
+    if (
+      this.importBalance &&
+      request.method === 'GET' &&
+      url.pathname === '/api/admin/donations/import-state'
+    ) {
+      return [200, { ...IMPORT_STATE, balance: this.importBalance }];
+    }
     if (request.method === 'GET' && url.pathname === '/api/admin/donors/me/previous-sign-in') {
       return [200, { previousSignInAt: this.previousSignInAt }];
     }
@@ -187,15 +202,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
   }
   switch (`${request.method} ${url.pathname}`) {
     case 'GET /api/admin/donations/import-state':
-      return [
-        200,
-        {
-          coveredFrom: '2026-07-20',
-          coveredTo: '2026-10-22',
-          lastSucceededAt: '2026-10-23T05:00:00Z',
-          consecutiveFailures: 0,
-        },
-      ];
+      return [200, IMPORT_STATE];
     case 'GET /api/admin/donations/receipt-signing-keys':
       return [
         200,
@@ -433,11 +440,11 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [200, people()];
     case 'PUT /api/admin/content/people/note': {
       const note = JSON.parse(body) as Record<string, unknown>;
-      return [200, { text: note['text'] ?? null }];
+      return [200, { text: note['text'] ?? null, version: CURRENT_VERSION }];
     }
     case 'PUT /api/admin/content/people/footnote': {
       const footnote = JSON.parse(body) as Record<string, unknown>;
-      return [200, { text: footnote['text'] ?? null }];
+      return [200, { text: footnote['text'] ?? null, version: CURRENT_VERSION }];
     }
     case 'GET /api/admin/content/about':
       return [
@@ -447,6 +454,26 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
     case 'PUT /api/admin/content/about': {
       const about = JSON.parse(body) as Record<string, unknown>;
       return [200, { photo: about['photoId'] === null ? null : aboutPhoto(about) }];
+    }
+    case 'GET /api/admin/content/donate-band':
+      return [200, { photo: donateBandPhoto({ photoAlt: 'Děti u stolu' }) }];
+    case 'PUT /api/admin/content/donate-band': {
+      const band = JSON.parse(body) as Record<string, unknown>;
+      return [200, { photo: band['photoId'] === null ? null : donateBandPhoto(band) }];
+    }
+    case `PUT /api/admin/content/news/${UNKNOWN_ID}/look-back-year`: {
+      const year = (JSON.parse(body) as { year: number | null }).year;
+      return year === 2024
+        ? [
+            409,
+            problem(
+              409,
+              'content/look-back-year-taken',
+              'Rok už má jiná aktualita',
+              'Ohlédnutí za tímto rokem už je v jiné aktualitě.',
+            ),
+          ]
+        : [200, { id: UNKNOWN_ID, title: 'Koncept', lookBackYear: year }];
     }
     case `PUT /api/admin/content/media/${MEDIA_ID}`: {
       const photo = JSON.parse(body) as Record<string, unknown>;
@@ -893,6 +920,21 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         200,
         { month: (JSON.parse(body) as { month: string }).month, sentAt: '2026-10-23T06:30:00Z' },
       ];
+    case 'POST /api/admin/donations/import/history':
+      return [
+        202,
+        {
+          from: (JSON.parse(body) as { from: string }).from,
+          to: '2026-10-23',
+          needsUnlockedHistory: true,
+          requestedAt: '2026-10-23T06:30:00Z',
+          startsAt: '2026-10-23T06:30:20Z',
+          status: 'QUEUED',
+          failure: null,
+          added: null,
+          finishedAt: null,
+        },
+      ];
     case 'POST /api/admin/operations/backups/requests':
       return [202, { requestId: UNKNOWN_ID, kind: (JSON.parse(body) as { kind: string }).kind }];
     case `POST /api/admin/content/news/${UNKNOWN_ID}/publish`:
@@ -1154,6 +1196,17 @@ function aboutPhoto(about: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
+function donateBandPhoto(band: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: MEDIA_ID,
+    url: `/api/content/media/${MEDIA_ID}`,
+    width: 1600,
+    height: 900,
+    alt: band['photoAlt'] ?? null,
+    focalPoint: null,
+  };
+}
+
 function people(): Record<string, unknown> {
   return {
     members: [
@@ -1177,7 +1230,9 @@ function people(): Record<string, unknown> {
       person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
     ],
     note: 'Děkujeme všem, kdo pomáhají s námi.',
+    noteVersion: CURRENT_VERSION,
     footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
+    footnoteVersion: CURRENT_VERSION,
   };
 }
 

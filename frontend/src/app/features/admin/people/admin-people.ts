@@ -39,6 +39,8 @@ import {
   MAX_BOARD_NOTE_LENGTH,
   MAX_EMAIL_LENGTH,
   MAX_FOUNDERS_NOTE_LENGTH,
+  StoredPageText,
+  storedPageTextOf,
   MAX_PEOPLE_FOOTNOTE_LENGTH,
   MAX_PEOPLE,
   MAX_PERSON_NAME_LENGTH,
@@ -50,9 +52,46 @@ import {
 } from '../../content/people-api';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { FormDraft, formDraft } from '../../../core/drafts/form-draft';
+import {
+  currentInRefusal,
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from '../../../core/version/row-version';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { formatBankTime } from '../../donations/donation-date';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
+type PageText = 'note' | 'footnote';
+
+interface PageTextValues {
+  readonly text: string;
+}
+
+interface StoredText {
+  readonly held: StoredPageText | null;
+  readonly version: string;
+}
+
+interface ChangedText {
+  readonly which: PageText;
+  readonly fromDraft: boolean;
+  readonly version: string | null;
+  readonly savedAt: string | null;
+  readonly current: StoredPageText | null;
+}
+
+interface SavedText {
+  readonly text: string | null;
+  readonly version: string;
+}
 
 type ReceiptPreview =
   | { key: string; state: 'loading' }
@@ -79,6 +118,8 @@ const FORBIDDEN = 'auth/forbidden';
 const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const NEW_PERSON = 'new';
+const TEXT_RELOADED = $localize`:@@admin.people.text.reloaded:Vaše úpravy jsme zahodili a načetli uložený text.`;
+const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený text se nepodařilo načíst. Zkuste to prosím znovu.`;
 
 @Component({
   selector: 'app-admin-people',
@@ -93,6 +134,8 @@ const NEW_PERSON = 'new';
     LiveNotice,
     ReceiptSignature,
     NeedsConnection,
+    DraftOffer,
+    ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-people.html',
   styleUrl: './admin-people.scss',
@@ -111,6 +154,8 @@ export class AdminPeople {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
   private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
+  private readonly noteForm = viewChild<NgForm>('noteForm');
+  private readonly footnoteForm = viewChild<NgForm>('footnoteForm');
 
   protected readonly maxNameLength = MAX_PERSON_NAME_LENGTH;
   protected readonly maxRoleLength = MAX_PERSON_ROLE_LENGTH;
@@ -150,6 +195,29 @@ export class AdminPeople {
   protected receiptDraft: ReceiptDraft = { signs: false, role: '' };
   protected noteText = '';
   protected footnoteText = '';
+  protected readonly noteDraft = formDraft<PageTextValues>({
+    copy: 'administration',
+    key: () => 'people/note',
+    values: () => ({ text: this.noteText }),
+    apply: (values) => {
+      this.noteText = values.text;
+      this.noteForm()?.form.markAsDirty();
+    },
+  });
+  protected readonly footnoteDraft = formDraft<PageTextValues>({
+    copy: 'administration',
+    key: () => 'people/footnote',
+    values: () => ({ text: this.footnoteText }),
+    apply: (values) => {
+      this.footnoteText = values.text;
+      this.footnoteForm()?.form.markAsDirty();
+    },
+  });
+  protected readonly changedText = signal<ChangedText | null>(null);
+  private storedTexts: Record<PageText, StoredText> = {
+    note: { held: null, version: '' },
+    footnote: { held: null, version: '' },
+  };
 
   protected readonly nameMessages = {
     required: $localize`:@@admin.people.name.required:Vyplňte prosím jméno.`,
@@ -216,9 +284,11 @@ export class AdminPeople {
       .subscribe({
         next: (people) => {
           this.members.set(people.members);
-          this.noteText = people.note ?? '';
-          this.footnoteText = people.footnote ?? '';
+          this.adoptText('note', { text: people.note, version: people.noteVersion });
+          this.adoptText('footnote', { text: people.footnote, version: people.footnoteVersion });
           this.state.set('ready');
+          this.noteDraft.ready(people.noteVersion);
+          this.footnoteDraft.ready(people.footnoteVersion);
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -411,6 +481,11 @@ export class AdminPeople {
         next: (people) => {
           this.moving.set(false);
           this.members.set(people.members);
+          this.adoptUntouchedText('note', { text: people.note, version: people.noteVersion });
+          this.adoptUntouchedText('footnote', {
+            text: people.footnote,
+            version: people.footnoteVersion,
+          });
           this.listNotice.set({
             kind: 'status',
             text: $localize`:@@admin.people.moved:Pořadí je uložené, web ho ukazuje hned.`,
@@ -602,78 +677,169 @@ export class AdminPeople {
       });
   }
 
-  protected saveNote(form: NgForm): void {
-    if (this.savingNote()) {
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeText(which: PageText): void {
+    this.textDraft(which).resume();
+    this.textNotice(which).set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    this.focusLater(which === 'note' ? '#founders-note' : '#people-footnote');
+  }
+
+  protected discardText(which: PageText): void {
+    this.textDraft(which).discard();
+    this.textNotice(which).set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    this.focusLater(which === 'note' ? '#founders-note' : '#people-footnote');
+  }
+
+  protected overwriteChangedText(): void {
+    const changed = this.changedText();
+    this.changedText.set(null);
+    if (changed === null) {
       return;
     }
-    this.noteNotice.set(null);
-    if (form.invalid) {
+    const form = this.textForm(changed.which);
+    if (!form) {
       return;
     }
-    this.savingNote.set(true);
+    if (changed.version !== null) {
+      this.storedTexts[changed.which] = { held: changed.current, version: changed.version };
+    }
+    this.textDraft(changed.which).overwriteConfirmed();
+    this.saveText(changed.which, form);
+  }
+
+  protected reloadChangedText(): void {
+    const which = this.changedText()?.which ?? null;
+    this.changedText.set(null);
+    if (which === null) {
+      return;
+    }
+    const draft = this.textDraft(which);
+    draft.discard();
     this.api
-      .saveNote(text(this.noteText))
+      .load()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (note) => {
-          this.savingNote.set(false);
-          this.noteText = note.text ?? '';
-          form.form.markAsPristine();
-          this.noteNotice.set({
-            kind: 'status',
-            text: note.text
-              ? $localize`:@@admin.people.note.saved:Slovo zakladatelů je uložené a na webu.`
-              : $localize`:@@admin.people.note.removed:Slovo zakladatelů jsme z webu odebrali.`,
+        next: (people) => {
+          const version = which === 'note' ? people.noteVersion : people.footnoteVersion;
+          this.adoptText(which, {
+            text: which === 'note' ? people.note : people.footnote,
+            version,
           });
+          draft.ready(version);
+          this.textNotice(which).set({ kind: 'status', text: TEXT_RELOADED });
         },
-        error: (failure: unknown) => {
-          this.savingNote.set(false);
-          this.noteNotice.set({
+        error: (failure: unknown) =>
+          this.textNotice(which).set({
             kind: 'alert',
-            text: describeProblem(
-              failure,
-              $localize`:@@admin.people.note.failed:Slovo zakladatelů se nepodařilo uložit. Zkuste to prosím znovu.`,
-            ),
-          });
-        },
+            text: describeProblem(failure, TEXT_RELOAD_FAILED),
+          }),
       });
   }
 
-  protected saveFootnote(form: NgForm): void {
-    if (this.savingFootnote()) {
+  private textDraft(which: PageText): FormDraft<PageTextValues> {
+    return which === 'note' ? this.noteDraft : this.footnoteDraft;
+  }
+
+  private textNotice(which: PageText) {
+    return which === 'note' ? this.noteNotice : this.footnoteNotice;
+  }
+
+  private textForm(which: PageText): NgForm | undefined {
+    return which === 'note' ? this.noteForm() : this.footnoteForm();
+  }
+
+  private textSaving(which: PageText) {
+    return which === 'note' ? this.savingNote : this.savingFootnote;
+  }
+
+  private adoptText(which: PageText, saved: SavedText): void {
+    this.storedTexts[which] = { held: storedPageTextOf(saved.text), version: saved.version };
+    if (which === 'note') {
+      this.noteText = saved.text ?? '';
+    } else {
+      this.footnoteText = saved.text ?? '';
+    }
+    this.textForm(which)?.form.markAsPristine();
+  }
+
+  private adoptUntouchedText(which: PageText, saved: SavedText): void {
+    if (this.textForm(which)?.dirty || this.storedTexts[which].version === saved.version) {
       return;
     }
-    this.footnoteNotice.set(null);
+    this.adoptText(which, saved);
+    this.textDraft(which).ready(saved.version);
+  }
+
+  protected saveNote(form: NgForm): void {
+    this.saveText('note', form);
+  }
+
+  protected saveFootnote(form: NgForm): void {
+    this.saveText('footnote', form);
+  }
+
+  private saveText(which: PageText, form: NgForm): void {
+    const saving = this.textSaving(which);
+    const notice = this.textNotice(which);
+    const draft = this.textDraft(which);
+    if (saving()) {
+      return;
+    }
+    notice.set(null);
     if (form.invalid) {
       return;
     }
-    this.savingFootnote.set(true);
-    this.api
-      .saveFootnote(text(this.footnoteText))
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (footnote) => {
-          this.savingFootnote.set(false);
-          this.footnoteText = footnote.text ?? '';
-          form.form.markAsPristine();
-          this.footnoteNotice.set({
-            kind: 'status',
-            text: footnote.text
-              ? $localize`:@@admin.people.footnote.saved:Řádek pod správní radou je uložený a na webu.`
-              : $localize`:@@admin.people.footnote.removed:Řádek pod správní radou jsme z webu odebrali.`,
-          });
-        },
-        error: (failure: unknown) => {
-          this.savingFootnote.set(false);
-          this.footnoteNotice.set({
-            kind: 'alert',
-            text: describeProblem(
-              failure,
-              $localize`:@@admin.people.footnote.failed:Řádek pod správní radou se nepodařilo uložit. Zkuste to prosím znovu.`,
-            ),
-          });
-        },
+    if (draft.resumedStale()) {
+      this.changedText.set({
+        which,
+        fromDraft: true,
+        version: null,
+        savedAt: null,
+        current: null,
       });
+      return;
+    }
+    const stored = this.storedTexts[which];
+    const typed = text(which === 'note' ? this.noteText : this.footnoteText);
+    saving.set(true);
+    const call =
+      which === 'note'
+        ? this.api.saveNote(typed, stored.version, stored.held)
+        : this.api.saveFootnote(typed, stored.version, stored.held);
+    call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (saved) => {
+        saving.set(false);
+        this.adoptText(which, saved);
+        form.form.markAsPristine();
+        draft.saved(saved.version);
+        notice.set({ kind: 'status', text: savedTextNotice(which, saved.text !== null) });
+      },
+      error: (failure: unknown) => {
+        saving.set(false);
+        if (isChangedMeanwhile(failure)) {
+          this.changedText.set({
+            which,
+            fromDraft: false,
+            version: versionInRefusal(failure),
+            savedAt: savedAtInRefusal(failure),
+            current: pageTextInRefusal(failure),
+          });
+          return;
+        }
+        notice.set({
+          kind: 'alert',
+          text: describeProblem(
+            failure,
+            which === 'note'
+              ? $localize`:@@admin.people.note.failed:Slovo zakladatelů se nepodařilo uložit. Zkuste to prosím znovu.`
+              : $localize`:@@admin.people.footnote.failed:Řádek pod správní radou se nepodařilo uložit. Zkuste to prosím znovu.`,
+          ),
+        });
+      },
+    });
   }
 
   protected moveUpLabel(member: PersonResponse): string {
@@ -805,4 +971,20 @@ function refusalOf(file: File): string | null {
 function text(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+function savedTextNotice(which: PageText, shown: boolean): string {
+  if (which === 'note') {
+    return shown
+      ? $localize`:@@admin.people.note.saved:Slovo zakladatelů je uložené a na webu.`
+      : $localize`:@@admin.people.note.removed:Slovo zakladatelů jsme z webu odebrali.`;
+  }
+  return shown
+    ? $localize`:@@admin.people.footnote.saved:Řádek pod správní radou je uložený a na webu.`
+    : $localize`:@@admin.people.footnote.removed:Řádek pod správní radou jsme z webu odebrali.`;
+}
+
+function pageTextInRefusal(failure: unknown): StoredPageText | null {
+  const stored = currentInRefusal(failure)?.['text'];
+  return stored === null || typeof stored === 'string' ? storedPageTextOf(stored) : null;
 }

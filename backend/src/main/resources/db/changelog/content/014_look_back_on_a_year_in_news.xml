@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="014-look-back-on-a-year-in-news" author="nfnn">
+        <addColumn tableName="content_news">
+            <column name="look_back_year" type="smallint"/>
+        </addColumn>
+        <sql>alter table content_news add constraint ck_content_news_look_back_year check (look_back_year between 2005 and 2100)</sql>
+        <sql>create unique index uq_content_news_look_back_year on content_news (look_back_year) where look_back_year is not null</sql>
+    </changeSet>
+</databaseChangeLog>

@@ -111,6 +111,32 @@ Feature: An administrator keeps the people of the foundation that the About sect
       Děkujeme všem, kdo pomáhají s námi.
       """
 
+  Scenario: Each signature under the founders note shows the portrait and the role of its person, and none of them when the person has neither
+    Given "Jana" uploads a 640 by 640 pixel PNG image named "eva.png"
+    And "Jana" adds a person:
+      | name     | Eva Vzorová                     |
+      | role     | Zakladatelka a předsedkyně rady |
+      | featured | true                            |
+      | portrait | eva.png                         |
+    And "Jana" adds a person:
+      | name     | Adam Vzor |
+      | featured | true      |
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
+    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" uploads a 500 by 200 pixel PNG image named "podpis-adam.png"
+    And "Jana" sets the web signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+    And "Jana" writes the founders note:
+      """
+      Děkujeme všem, kdo pomáhají s námi.
+      """
+    When someone without a token asks for the home content
+    Then the response status is 200
+    And the home founders note is signed by:
+      | name        | url                                        | role                            | portrait.id     | portrait.url                        | portrait.width | portrait.height |
+      | Eva Vzorová | /api/content/media/{image:podpis-eva.png}  | Zakladatelka a předsedkyně rady | {image:eva.png} | /api/content/media/{image:eva.png}  | 640            | 640             |
+      | Adam Vzor   | /api/content/media/{image:podpis-adam.png} |                                 |                 |                                     |                |                 |
+    And the people on the home page carry no e-mail address
+
   Scenario: Without a note the home page shows no note and so no signatures
     Given "Jana" adds a person:
       | name     | Eva Vzorová |

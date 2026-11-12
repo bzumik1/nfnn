@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, forkJoin, Observable, of, switchMap, tap } from 'rxjs';
+import { catchError, forkJoin, map, Observable, of, switchMap, tap } from 'rxjs';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -36,9 +36,13 @@ import {
   MAX_SLUG_LENGTH,
   MAX_TAG_LENGTH,
   MAX_TITLE_LENGTH,
+  MIN_LOOK_BACK_YEAR,
   NewsApi,
   NewsArticleRequest,
+  AdminNewsArticleResponse,
   NewsArticleResponse,
+  StoredNewsArticle,
+  storedNewsArticleOf,
   NewsSignerResponse,
   SLUG_PATTERN,
   slugFromText,
@@ -63,6 +67,12 @@ import {
   ChangedMeanwhileState,
 } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -75,6 +85,22 @@ const NOT_FOUND = 'content/news-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
 const EDIT_TITLE = $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const NEW_ARTICLE_BASE = 'new';
+
+interface NewsDraftValues {
+  readonly title: string;
+  readonly slug: string;
+  readonly tag: string;
+  readonly perex: string;
+  readonly body: string;
+  readonly coverImageAlt: string;
+  readonly coverImageId: string | null;
+  readonly signerId: string;
+  readonly publishDate: string;
+  readonly lookBackYear?: number | null;
+}
+
+const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.newsEditor.draft.dateMoved:Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
 
 @Component({
   selector: 'app-admin-news-editor',
@@ -93,6 +119,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     ActionBar,
     FocalPointPicker,
     NeedsConnection,
+    DraftOffer,
   ],
   templateUrl: './admin-news-editor.html',
   styleUrl: './admin-news-editor.scss',
@@ -133,7 +160,8 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected readonly state = signal<LoadState>('loading');
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   private refusedDelete = false;
-  protected readonly article = signal<NewsArticleResponse | null>(null);
+  protected readonly article = signal<AdminNewsArticleResponse | null>(null);
+  private serverVersion: string | null = null;
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
   protected readonly notice = signal<Notice | null>(null);
@@ -186,8 +214,31 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected body = '';
   protected coverImageAlt = '';
   protected signerId = '';
+  protected lookBackYear: number | null = null;
+  protected readonly lookBackYears = yearsBackTo(MIN_LOOK_BACK_YEAR);
   protected publishDate = todayIso();
   private slugEdited = false;
+  private publishDateMoved = false;
+  private readonly routeId = inject(ActivatedRoute).snapshot.paramMap.get('id');
+  protected readonly draft = formDraft<NewsDraftValues>({
+    copy: 'administration',
+    key: () => `news/${this.article()?.id ?? this.routeId ?? 'new'}`,
+    values: () => ({
+      title: this.articleTitle,
+      slug: this.slug,
+      tag: this.tag,
+      perex: this.perex,
+      body: this.body,
+      coverImageAlt: this.coverUnsaved()
+        ? (this.article()?.coverImage?.alt ?? '')
+        : this.coverImageAlt,
+      coverImageId: this.article()?.coverImage?.id ?? null,
+      signerId: this.signerId,
+      publishDate: this.publishDate,
+      lookBackYear: this.lookBackYear,
+    }),
+    apply: (values) => this.applyDraft(values),
+  });
 
   protected readonly isNew = computed(() => this.article() === null);
   protected readonly isPublished = computed(() => this.article()?.publishedOn != null);
@@ -291,6 +342,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');
+      this.draft.ready(NEW_ARTICLE_BASE);
     } else {
       this.load(id);
     }
@@ -314,6 +366,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         next: (article) => {
           this.show(article);
           this.state.set('ready');
+          this.draft.ready(article.version);
           loaded?.();
         },
         error: (failure: unknown) => {
@@ -349,9 +402,66 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
           this.people.set(
             people.members.map(({ id, name, role, portrait }) => ({ id, name, role, portrait })),
           );
+          this.newArticleReady(withDefault);
         },
-        error: () => this.people.set([]),
+        error: () => {
+          this.people.set([]);
+          this.newArticleReady(withDefault);
+        },
       });
+  }
+
+  private newArticleReady(isNew: boolean): void {
+    if (isNew && this.article() === null && !this.edited()) {
+      this.draft.ready(NEW_ARTICLE_BASE);
+    }
+  }
+
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    const stale = this.draft.staleVersion();
+    if (stale !== null) {
+      this.article.update((saved) => (saved ? { ...saved, version: stale } : saved));
+    }
+    this.notice.set({
+      kind: 'status',
+      text: this.publishDateMoved
+        ? `${DRAFT_RESUMED_TEXT} ${PUBLISH_DATE_MOVED_TEXT}`
+        : DRAFT_RESUMED_TEXT,
+    });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.notice.set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  private applyDraft(values: NewsDraftValues): void {
+    this.articleTitle = values.title;
+    this.slug = values.slug;
+    this.slugEdited = values.slug.trim() !== '';
+    this.slugOrDraft.set(values.slug);
+    this.tag = values.tag;
+    this.perex = values.perex;
+    this.body = values.body;
+    if (values.coverImageId === (this.coverImage()?.id ?? null)) {
+      this.coverImageAlt = values.coverImageAlt;
+    }
+    this.signerId = values.signerId;
+    if (values.lookBackYear !== undefined) {
+      this.lookBackYear = values.lookBackYear;
+    }
+    const today = todayIso();
+    this.publishDateMoved = !this.isPublished() && values.publishDate < today;
+    this.publishDate = this.publishDateMoved ? today : values.publishDate;
+    this.articleForm()?.form.markAsDirty();
+    this.edited.set(true);
   }
 
   canLeave(): boolean | Promise<boolean> {
@@ -372,6 +482,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   protected leaveWithoutSaving(): void {
+    this.draft.left();
     this.closeLeaveQuestion(true);
   }
 
@@ -450,7 +561,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date, existing.version ?? '');
+      this.sendPublish(existing, date);
       return;
     }
     if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
@@ -459,7 +570,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         .subscribe({
           next: () => {
             if (needsPublish) {
-              this.sendPublish(existing.id, date, existing.version ?? '');
+              this.sendPublish(existing, date);
               return;
             }
             this.saving.set(null);
@@ -473,19 +584,26 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       return;
     }
     const request = this.request();
+    const lookBackYear = this.lookBackYear;
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
         existing
-          ? this.api.update(existing.id, request, existing.version ?? '')
+          ? this.api.update(existing.id, request, existing.version, this.heldOf(existing))
           : this.api.create(request),
       ),
+      switchMap((article) => this.placeLookBackYear(article, lookBackYear)),
     );
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (article) => {
+      next: ({ article, refusal }) => {
         this.saved(article, existing === null);
+        if (refusal !== null) {
+          this.saving.set(null);
+          this.lookBackRefused(refusal, lookBackYear, needsPublish, article.publishedOn !== null);
+          return;
+        }
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(article.id, date, article.version ?? '');
+          this.sendPublish(article, date);
           return;
         }
         this.saving.set(null);
@@ -500,6 +618,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
             overwrite: true,
             publish,
             savedAt: savedAtInRefusal(failure),
+            fromDraft: this.draft.resumedStale(),
           });
           return;
         }
@@ -559,6 +678,40 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
       : of(null);
   }
 
+  private placeLookBackYear(
+    article: AdminNewsArticleResponse,
+    year: number | null,
+  ): Observable<{ article: AdminNewsArticleResponse; refusal: unknown }> {
+    if ((article.lookBackYear ?? null) === year) {
+      return of({ article, refusal: null });
+    }
+    return this.api.setLookBackYear(article.id, year, article.version).pipe(
+      map((placed) => ({ article: placed, refusal: null })),
+      catchError((refusal: unknown) => of({ article, refusal })),
+    );
+  }
+
+  private lookBackRefused(
+    refusal: unknown,
+    year: number | null,
+    publishing: boolean,
+    onTheWeb: boolean,
+  ): void {
+    this.lookBackYear = year;
+    this.articleForm()?.controls['lookBackYear']?.markAsDirty();
+    this.edited.set(true);
+    const outcome = !publishing
+      ? $localize`:@@admin.newsEditor.lookBackYear.notSaved:Ostatní změny jsme uložili, rok ohlédnutí ale ne.`
+      : onTheWeb
+        ? $localize`:@@admin.newsEditor.lookBackYear.dateNotChanged:Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem.`
+        : $localize`:@@admin.newsEditor.lookBackYear.notPublished:Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo.`;
+    const reason = describeProblem(
+      refusal,
+      $localize`:@@admin.newsEditor.lookBackYear.retry:Zkuste to prosím znovu.`,
+    );
+    this.notice.set({ kind: 'alert', text: `${outcome} ${reason}` });
+  }
+
   private keepPlacedPoint(photo: PhotoResponse): void {
     this.article.update((saved) =>
       saved?.coverImage?.id === photo.id
@@ -573,14 +726,16 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string, version: string): void {
+  private sendPublish(saved: AdminNewsArticleResponse, date: string): void {
     this.api
-      .publish(id, date, version)
+      .publish(saved.id, date, saved.version, this.heldOf(saved))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
           this.saving.set(null);
           this.article.set(article);
+          this.serverVersion = article.version;
+          this.draft.saved(article.version);
           const on = formatDonationDate(article.publishedOn ?? date);
           this.notice.set({
             kind: 'status',
@@ -614,13 +769,19 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id, existing.version ?? '')
+      .unpublish(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
           this.unpublishing.set(false);
           this.article.set(article);
+          this.serverVersion = article.version;
           this.publishDate = todayIso();
+          if (this.unsaved()) {
+            this.draft.rebased(article.version);
+          } else {
+            this.draft.saved(article.version);
+          }
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.newsEditor.unpublished:Aktualitu jsme z webu stáhli. Zůstává tu jako koncept.`,
@@ -661,12 +822,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id, existing.version ?? '')
+      .delete(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.deleting.set(false);
           this.discarded = true;
+          this.draft.left();
           this.router.navigateByUrl('/sprava/aktuality', { state: { deleted: existing.title } });
         },
         error: (failure: unknown) => {
@@ -700,6 +862,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.publishRequested = changed.publish;
     this.article.update((saved) => (saved ? { ...saved, version } : saved));
+    this.draft.overwriteConfirmed();
     this.submit(form);
   }
 
@@ -710,6 +873,9 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.changedMeanwhile.set(null);
     if (!saved) {
       return;
+    }
+    if (discardedEdits) {
+      this.draft.discard();
     }
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
@@ -754,10 +920,11 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     answer?.(leave);
   }
 
-  private saved(article: NewsArticleResponse, created: boolean): void {
+  private saved(article: AdminNewsArticleResponse, created: boolean): void {
     this.show(article);
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
+    this.draft.saved(article.version);
     if (created) {
       this.location.replaceState(`/sprava/aktuality/${article.id}`);
       this.pageTitle.setTitle(EDIT_TITLE);
@@ -825,8 +992,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     };
   }
 
-  private show(article: NewsArticleResponse): void {
+  private heldOf(saved: AdminNewsArticleResponse): StoredNewsArticle | null {
+    return saved.version === this.serverVersion ? storedNewsArticleOf(saved) : null;
+  }
+
+  private show(article: AdminNewsArticleResponse): void {
     this.article.set(article);
+    this.serverVersion = article.version;
     this.articleTitle = article.title;
     this.slug = article.slug;
     this.slugEdited = true;
@@ -837,6 +1009,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.coverImage.set(article.coverImage);
     this.coverImageAlt = article.coverImage?.alt ?? '';
     this.signerId = article.signer?.id ?? '';
+    this.lookBackYear = article.lookBackYear ?? null;
     this.publishDate = article.publishedOn ?? (this.publishDate || todayIso());
   }
 
@@ -870,6 +1043,14 @@ function todayIso(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function yearsBackTo(first: number): number[] {
+  const years: number[] = [];
+  for (let year = new Date().getFullYear(); year >= first; year--) {
+    years.push(year);
+  }
+  return years;
 }
 
 function samePoint(a: FocalPoint | null, b: FocalPoint | null): boolean {

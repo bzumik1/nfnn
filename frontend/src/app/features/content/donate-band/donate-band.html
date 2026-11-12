@@ -1,0 +1,37 @@
+<div class="ui-container">
+  <section class="band" aria-labelledby="donate-band-title">
+    <div class="band-photo">
+      <img
+        loading="lazy"
+        [attr.srcset]="sourceSet()"
+        sizes="(max-width: 768px) 100vw, 1200px"
+        [src]="source()"
+        width="1440"
+        height="960"
+        [alt]="alt()"
+        [appFocalPoint]="focalPoint()"
+        focalShape="band"
+      />
+    </div>
+    <div class="band-text">
+      <p class="ui-eyebrow ui-eyebrow--accent-on-inverse" i18n="@@content.donateBand.eyebrow">
+        Přispět
+      </p>
+      <h2 id="donate-band-title" class="band-title">{{ heading() }}</h2>
+      <p class="band-lead">{{ lead() }}</p>
+      <div class="band-actions">
+        <a class="ui-cta band-donate" routerLink="/prispet" i18n="@@content.donateBand.donate"
+          >Přispět</a
+        >
+        @if (showsProjects()) {
+          <a
+            class="ui-cta ui-cta--ghost ui-cta--on-inverse band-projects"
+            routerLink="/projekty"
+            i18n="@@content.donateBand.projects"
+            >Kde pomáháme</a
+          >
+        }
+      </div>
+    </div>
+  </section>
+</div>

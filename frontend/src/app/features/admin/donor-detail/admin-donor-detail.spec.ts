@@ -28,6 +28,12 @@ import {
 import { AdminDonorDetail } from './admin-donor-detail';
 import type { AdminDonorDetailResponse } from '../admin-api';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { Connectivity } from '../../../core/connectivity/connectivity';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
+import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
+import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
+import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -1783,5 +1789,337 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(cardTitles()).toContain('Vydaná potvrzení');
     expect(document.activeElement?.id).toBe('potvrzeni');
     expect(textOf(crumb())).toBe('← Dárci');
+  });
+});
+
+describe('Given an administrator on a donor card with the administration copy on the device', () => {
+  let fixture: ComponentFixture<AdminDonorDetail>;
+  let http: HttpTestingController;
+  let offline: ReturnType<typeof signal<boolean>>;
+  let cause: ReturnType<typeof signal<'network' | 'server'>>;
+  let refresh: ReturnType<typeof vi.fn<(startingNow?: boolean) => Promise<string>>>;
+  const account = donorAccount();
+  const record = {
+    donorId: DONOR_ID,
+    name: account.name,
+    type: account.type,
+    variableSymbol: account.variableSymbol,
+    companyIdentifier: null,
+    address: account.address,
+    preferredLocale: 'cs',
+    registeredAt: account.registeredAt,
+    erasedAt: null,
+  };
+
+  async function open(deviceOffline: boolean, erasedAt: string | null = null): Promise<void> {
+    localStorage.clear();
+    offline = signal(deviceOffline);
+    cause = signal<'network' | 'server'>('network');
+    refresh = vi.fn<(startingNow?: boolean) => Promise<string>>().mockResolvedValue('unchanged');
+    const contents: CopyContents = {
+      chunks: [
+        { id: 'donations/donor-records:2026-10', rowsSha256: 'a', rows: [{ ...record, erasedAt }] },
+        { id: 'donors/accounts:2026-10', rowsSha256: 'b', rows: [account] },
+      ],
+      summary: { donations: { today: '2026-10-20', byYear: [], receiptsAvailableFrom: 2026 } },
+      storedAt: '2026-10-20T10:30:00.000Z',
+    };
+    const opened: OpenedCopy = {
+      store: {
+        copyId: 'copy-1',
+        contents: signal(contents).asReadonly(),
+      } as unknown as AccountStore,
+      reason: 'unlocked',
+      account: { email: 'admin@example.cz', userHandle: 'h', administrator: true },
+    };
+    await TestBed.configureTestingModule({
+      imports: [AdminDonorDetail],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: DONOR_ID }) } },
+        },
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: new FakeReceiptPdfEnvironment() },
+        { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
+        {
+          provide: Connectivity,
+          useValue: { offline: offline.asReadonly(), cause: cause.asReadonly() },
+        },
+        {
+          provide: AdministrationCopyDownload,
+          useValue: {
+            refresh,
+            checkedAt: signal<string | null>(null).asReadonly(),
+            writesAtStart: () => null,
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    const store = TestBed.inject(AuthStore);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminDonorDetail);
+    fixture.detectChanges();
+    await settle();
+  }
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    http.match(KEYS_URL).forEach((request) => request.flush(keyListWith([TEST_KEY])));
+    http.verify();
+  });
+
+  function accountsCard(): string {
+    return (
+      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"]')?.textContent ?? ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  it('when the device is online, then the card shows the copy at once and the bank accounts once the server gives them', async () => {
+    await open(false);
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(accountsCard()).toContain('Načítáme bankovní účty…');
+    });
+
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+  });
+
+  it('when the device is offline, then the card comes from the copy and the bank accounts come once it is online again', async () => {
+    await open(true);
+
+    expect(fixture.nativeElement.querySelector('h1')?.textContent).toContain('Jana Nováková');
+    expect(accountsCard()).toContain('Bankovní účty dárce ukážeme, až budete online.');
+    expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T10:30:00.000Z'));
+
+    offline.set(false);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+  });
+
+  it('when the device is offline and the donor is erased, whose card the copy leaves to the server, then the card says it loads once the device is online, and loads by itself then', async () => {
+    await open(true, '2026-10-01T08:00:00Z');
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
+    );
+    expect(fixture.nativeElement.textContent).not.toContain(
+      'Účty, dary a potvrzení se nepodařilo načíst.',
+    );
+    const alerts = Array.from(
+      fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>,
+    ).map((alert) => alert.textContent ?? '');
+    expect(alerts.filter((text) => text.includes('v zařízení nejsou'))).toEqual([]);
+    expect(alerts.filter((text) => text.includes('Zkusit znovu'))).toEqual([]);
+
+    offline.set(false);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          donor: {
+            ...donorDetail().donor,
+            name: 'Vymazaný dárce',
+            erasedAt: '2026-10-01T08:00:00Z',
+          },
+        }),
+      ),
+    );
+    await settle();
+
+    expect(fixture.nativeElement.textContent).not.toContain('v zařízení nejsou');
+    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+  });
+
+  it("when the erased donor's card fails to load before the device knows it is offline, then the card waits for the connection once it does and loads by itself when it returns", async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení se nepodařilo načíst.',
+    );
+
+    offline.set(true);
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
+    );
+
+    offline.set(false);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          donor: {
+            ...donorDetail().donor,
+            name: 'Vymazaný dárce',
+            erasedAt: '2026-10-01T08:00:00Z',
+          },
+        }),
+      ),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+  });
+
+  it("when the erased donor's card cannot be read because the server does not answer, then the card says it loads once the server answers again", async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    cause.set('server');
+    offline.set(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server zase odpoví.',
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('až budete online');
+  });
+
+  it('when the card is read again before the first read of a card the copy leaves to the server answered, then the newer answer shows the card instead of loading for ever', async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    const older = await vi.waitFor(() => http.expectOne(DETAIL_URL));
+
+    fixture.componentInstance['readCard']();
+    await settle();
+
+    expect(older.cancelled).toBe(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          donor: {
+            ...donorDetail().donor,
+            name: 'Vymazaný dárce',
+            erasedAt: '2026-10-01T08:00:00Z',
+          },
+        }),
+      ),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).not.toContain('Načítáme účty, dary a potvrzení');
+    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+  });
+
+  it('when the card is read again while an older read still waits for the server, then the older read is dropped and only the newer one lands on the card', async () => {
+    await open(false);
+    const older = await vi.waitFor(() => http.expectOne(DETAIL_URL));
+
+    fixture.componentInstance['loadDonations']();
+    await settle();
+
+    expect(older.cancelled).toBe(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+    expect(accountsCard()).toContain('2900233333/2010');
+  });
+
+  it('when the server cannot give the bank accounts, then the card says so, and Zkusit znovu keeps the focus in the card, asks again and says the accounts are loaded', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 500, statusText: 'Error' }),
+    );
+    await settle();
+
+    const alert = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"] .ui-load-state--error',
+    ) as HTMLElement;
+    expect(alert.textContent).toContain('Bankovní účty dárce se nepodařilo načíst.');
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
+    expect(document.activeElement?.id).toBe('bankovni-ucty');
+    expect(
+      fixture.nativeElement.querySelector('[aria-labelledby="accounts-title"] [role="status"]')
+        ?.textContent,
+    ).toContain('Bankovní účty dárce jsme načetli.');
+  });
+
+  it('when a receipt was replaced since the card was read, then the card is read again from a refresh that starts after it', async () => {
+    vi.spyOn(PdfDelivery.prototype, 'save').mockImplementation(() => undefined);
+    const receiptId = '019a1c00-0000-7000-8000-00000000f001';
+    await open(false);
+    await vi.waitFor(() =>
+      http
+        .expectOne(DETAIL_URL)
+        .flush(donorDetail({ receipts: [adminReceipt({ id: receiptId, number: '2027-000001' })] })),
+    );
+    await settle();
+    const callsBefore = refresh.mock.calls.length;
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now + FORCED_REFRESH_GAP_MS);
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+
+    (fixture.nativeElement.querySelector('button.receipt-pdf') as HTMLButtonElement).click();
+    await settle();
+    http.expectOne(`/api/admin/donations/receipts/${receiptId}`).flush({
+      ...issuedReceipt({ id: receiptId, number: '2027-000001' }),
+      receipt: frozenCase(SINGLE_PERSON_CS),
+      status: 'REPLACED',
+    });
+    await settle();
+    await vi.waitFor(() => http.expectOne(DETAIL_URL).flush(donorDetail()));
+    await settle();
+
+    expect(refresh.mock.calls.slice(callsBefore)).toEqual([[true]]);
+  });
+
+  it('when the server is unreachable while the device is online, then the card says so as an alert, and Zkusit znovu asks the server again', async () => {
+    await open(false);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 503, statusText: 'Unavailable' }),
+    );
+    await settle();
+
+    const alert = fixture.nativeElement.querySelector(
+      '[aria-labelledby="accounts-title"] .ui-load-state[role="alert"]',
+    ) as HTMLElement;
+    expect(alert.textContent).toContain('Bankovní účty dárce ukážeme, až server zase odpoví.');
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(donorDetail({ bankAccounts: [adminBankAccount()] })),
+    );
+    await settle();
+
+    expect(accountsCard()).toContain('2900233333/2010');
   });
 });

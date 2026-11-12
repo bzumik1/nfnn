@@ -1,0 +1,124 @@
+@use 'breakpoints' as bp;
+
+$lead-width: 34rem;
+
+:host {
+  display: block;
+  padding: var(--space-16) 0;
+}
+
+.band {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'band';
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 24rem;
+  overflow: hidden;
+  border-radius: var(--radius-media);
+  background: var(--color-surface-inverse);
+  box-shadow: var(--shadow-media);
+}
+
+.band-photo {
+  position: absolute;
+  inset: 0;
+}
+
+.band-text {
+  grid-area: band;
+}
+
+.band-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.band-text {
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-14) var(--space-16);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-surface-inverse) 94%, transparent) 0%,
+    color-mix(in srgb, var(--color-surface-inverse) 78%, transparent)
+      max(42%, calc(var(--space-16) + #{$lead-width})),
+    transparent max(78%, calc(var(--space-16) + #{$lead-width} + 25%))
+  );
+}
+
+.band-title {
+  max-width: 16ch;
+  font-family: var(--font-display);
+  font-size: var(--text-cta-title);
+  font-weight: var(--weight-extrabold);
+  line-height: var(--leading-heading);
+  color: var(--color-on-inverse);
+  text-wrap: balance;
+}
+
+.band-lead {
+  max-width: $lead-width;
+  margin-top: var(--space-4);
+  color: color-mix(in srgb, var(--color-on-inverse) 82%, transparent);
+  font-size: var(--text-xl);
+  line-height: var(--leading-relaxed);
+}
+
+.band-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+}
+
+@include bp.down(tablet) {
+  :host {
+    padding: var(--space-10) 0;
+  }
+
+  .band {
+    grid-template-areas:
+      'photo'
+      'text';
+    min-height: 0;
+  }
+
+  .band-photo {
+    position: relative;
+    inset: auto;
+    grid-area: photo;
+    aspect-ratio: 3 / 2;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 0;
+      height: 45%;
+      background: linear-gradient(180deg, transparent, var(--color-surface-inverse));
+    }
+  }
+
+  .band-text {
+    grid-area: text;
+    padding: var(--space-2) var(--space-6) var(--space-7);
+    background: var(--color-surface-inverse);
+  }
+
+  .band-lead {
+    font-size: var(--text-lg);
+  }
+
+  .band-actions {
+    flex-direction: column;
+    margin-top: var(--space-6);
+
+    .ui-cta {
+      text-align: center;
+    }
+  }
+}

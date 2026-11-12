@@ -42,7 +42,10 @@ import {
   ProjectCategory,
   ProjectsApi,
   ProjectRequest,
+  AdminProjectResponse,
   ProjectResponse,
+  StoredProject,
+  storedProjectOf,
   SLUG_PATTERN,
   slugFromText,
 } from '../../content/projects-api';
@@ -66,6 +69,12 @@ import {
   ChangedMeanwhileState,
 } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type EditorMode = 'edit' | 'preview';
@@ -78,6 +87,22 @@ const NOT_FOUND = 'content/project-not-found';
 const SLUG_TAKEN = 'content/slug-taken';
 const EDIT_TITLE = $localize`:@@admin.projectEditor.pageTitle.edit:Úprava příběhu | Správa | Nová naděje – nadační fond`;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const NEW_PROJECT_BASE = 'new';
+
+interface ProjectDraftValues {
+  readonly title: string;
+  readonly year: number | null;
+  readonly category: ProjectCategory;
+  readonly slug: string;
+  readonly tag: string;
+  readonly perex: string;
+  readonly body: string;
+  readonly coverImageAlt: string;
+  readonly coverImageId: string | null;
+  readonly publishDate: string;
+}
+
+const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved:Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.`;
 
 @Component({
   selector: 'app-admin-project-editor',
@@ -96,6 +121,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     ActionBar,
     FocalPointPicker,
     NeedsConnection,
+    DraftOffer,
   ],
   templateUrl: './admin-project-editor.html',
   styleUrl: './admin-project-editor.scss',
@@ -139,7 +165,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly state = signal<LoadState>('loading');
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   private refusedDelete = false;
-  protected readonly project = signal<ProjectResponse | null>(null);
+  protected readonly project = signal<AdminProjectResponse | null>(null);
+  private serverVersion: string | null = null;
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
   protected readonly notice = signal<Notice | null>(null);
@@ -198,7 +225,28 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected body = '';
   protected coverImageAlt = '';
   protected publishDate = todayIso();
+  private readonly routeId = inject(ActivatedRoute).snapshot.paramMap.get('id');
+  protected readonly draft = formDraft<ProjectDraftValues>({
+    copy: 'administration',
+    key: () => `projects/${this.project()?.id ?? this.routeId ?? 'new'}`,
+    values: () => ({
+      title: this.projectTitle,
+      year: this.year,
+      category: this.category,
+      slug: this.slug,
+      tag: this.tag,
+      perex: this.perex,
+      body: this.body,
+      coverImageAlt: this.coverUnsaved()
+        ? (this.project()?.coverImage?.alt ?? '')
+        : this.coverImageAlt,
+      coverImageId: this.project()?.coverImage?.id ?? null,
+      publishDate: this.publishDate,
+    }),
+    apply: (values) => this.applyDraft(values),
+  });
   private slugEdited = false;
+  private publishDateMoved = false;
 
   protected readonly isNew = computed(() => this.project() === null);
   protected readonly isPublished = computed(() => this.project()?.publishedOn != null);
@@ -286,6 +334,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const id = this.route.snapshot.paramMap.get('id');
     if (id === null) {
       this.state.set('ready');
+      this.draft.ready(NEW_PROJECT_BASE);
     } else {
       this.load(id);
     }
@@ -308,6 +357,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         next: (project) => {
           this.show(project);
           this.state.set('ready');
+          this.draft.ready(project.version);
           loaded?.();
         },
         error: (failure: unknown) => {
@@ -345,7 +395,53 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
   }
 
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    const stale = this.draft.staleVersion();
+    if (stale !== null) {
+      this.project.update((saved) => (saved ? { ...saved, version: stale } : saved));
+    }
+    this.notice.set({
+      kind: 'status',
+      text: this.publishDateMoved
+        ? `${DRAFT_RESUMED_TEXT} ${PUBLISH_DATE_MOVED_TEXT}`
+        : DRAFT_RESUMED_TEXT,
+    });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.notice.set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
+  }
+
+  private applyDraft(values: ProjectDraftValues): void {
+    this.projectTitle = values.title;
+    this.year = values.year;
+    this.category = values.category;
+    this.slug = values.slug;
+    this.slugEdited = values.slug.trim() !== '';
+    this.slugOrDraft.set(values.slug);
+    this.tag = values.tag;
+    this.perex = values.perex;
+    this.body = values.body;
+    if (values.coverImageId === (this.coverImage()?.id ?? null)) {
+      this.coverImageAlt = values.coverImageAlt;
+    }
+    const today = todayIso();
+    this.publishDateMoved = !this.isPublished() && values.publishDate < today;
+    this.publishDate = this.publishDateMoved ? today : values.publishDate;
+    this.projectForm()?.form.markAsDirty();
+    this.edited.set(true);
+  }
+
   protected leaveWithoutSaving(): void {
+    this.draft.left();
     this.closeLeaveQuestion(true);
   }
 
@@ -424,7 +520,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date, existing.version ?? '');
+      this.sendPublish(existing, date);
       return;
     }
     if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
@@ -433,7 +529,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         .subscribe({
           next: () => {
             if (needsPublish) {
-              this.sendPublish(existing.id, date, existing.version ?? '');
+              this.sendPublish(existing, date);
               return;
             }
             this.saving.set(null);
@@ -450,7 +546,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
         existing
-          ? this.api.update(existing.id, request, existing.version ?? '')
+          ? this.api.update(existing.id, request, existing.version, this.heldOf(existing))
           : this.api.create(request),
       ),
     );
@@ -459,7 +555,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         this.saved(project, existing === null);
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(project.id, date, project.version ?? '');
+          this.sendPublish(project, date);
           return;
         }
         this.saving.set(null);
@@ -474,6 +570,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
             overwrite: true,
             publish,
             savedAt: savedAtInRefusal(failure),
+            fromDraft: this.draft.resumedStale(),
           });
           return;
         }
@@ -547,14 +644,16 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string, version: string): void {
+  private sendPublish(saved: AdminProjectResponse, date: string): void {
     this.api
-      .publish(id, date, version)
+      .publish(saved.id, date, saved.version, this.heldOf(saved))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
           this.saving.set(null);
           this.project.set(project);
+          this.serverVersion = project.version;
+          this.draft.saved(project.version);
           const on = formatDonationDate(project.publishedOn ?? date);
           this.notice.set({
             kind: 'status',
@@ -588,13 +687,19 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id, existing.version ?? '')
+      .unpublish(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
           this.unpublishing.set(false);
           this.project.set(project);
+          this.serverVersion = project.version;
           this.publishDate = todayIso();
+          if (this.unsaved()) {
+            this.draft.rebased(project.version);
+          } else {
+            this.draft.saved(project.version);
+          }
           this.notice.set({
             kind: 'status',
             text: $localize`:@@admin.projectEditor.unpublished:Příběh jsme z webu stáhli. Zůstává tu jako koncept.`,
@@ -635,12 +740,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id, existing.version ?? '')
+      .delete(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.deleting.set(false);
           this.discarded = true;
+          this.draft.left();
           this.router.navigateByUrl('/sprava/projekty', { state: { deleted: existing.title } });
         },
         error: (failure: unknown) => {
@@ -674,6 +780,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     this.publishRequested = changed.publish;
     this.project.update((saved) => (saved ? { ...saved, version } : saved));
+    this.draft.overwriteConfirmed();
     this.submit(form);
   }
 
@@ -684,6 +791,9 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.changedMeanwhile.set(null);
     if (!saved) {
       return;
+    }
+    if (discardedEdits) {
+      this.draft.discard();
     }
     this.projectForm()?.form.markAsPristine();
     this.edited.set(false);
@@ -728,10 +838,11 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     answer?.(leave);
   }
 
-  private saved(project: ProjectResponse, created: boolean): void {
+  private saved(project: AdminProjectResponse, created: boolean): void {
     this.show(project);
     this.projectForm()?.form.markAsPristine();
     this.edited.set(false);
+    this.draft.saved(project.version);
     if (created) {
       this.location.replaceState(`/sprava/projekty/${project.id}`);
       this.pageTitle.setTitle(EDIT_TITLE);
@@ -800,8 +911,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     };
   }
 
-  private show(project: ProjectResponse): void {
+  private heldOf(saved: AdminProjectResponse): StoredProject | null {
+    return saved.version === this.serverVersion ? storedProjectOf(saved) : null;
+  }
+
+  private show(project: AdminProjectResponse): void {
     this.project.set(project);
+    this.serverVersion = project.version;
     this.projectTitle = project.title;
     this.year = project.year;
     this.category = project.category;

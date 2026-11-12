@@ -18,6 +18,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     'It signs out through AuthStore.logout, which works offline, and then opens the sign-in dialog.',
   'features/donors/dashboard/device-data-card/delete-device-data-dialog.html':
     'Deleting the copy on this device is local, and the sign-out after it goes through AuthStore.logout, which works offline, so a device without a connection can still drop its data.',
+  'features/donors/dashboard/profile-card/profile-card.html#cancel':
+    'Zrušit closes the profile form offline too; only after a changed-meanwhile refusal and while online does it read the stored data again, and a failed read keeps the form with its retry.',
   'features/operations/setup/first-setup.html#openRestore':
     'It only switches the wizard to the restore panel.',
   'features/operations/setup/first-setup.html#closeRestore':

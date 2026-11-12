@@ -56,6 +56,13 @@ export function publicPeople(overrides: Partial<PublicPeopleResponse> = {}): Pub
           width: 600,
           height: 180,
           name: 'Eva Vzorová',
+          role: 'Zakladatelka a předsedkyně správní rady',
+          portrait: {
+            id: PORTRAIT_ID,
+            url: `/api/content/media/${PORTRAIT_ID}`,
+            width: 640,
+            height: 640,
+          },
         },
       ],
     },

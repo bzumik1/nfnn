@@ -81,7 +81,22 @@
           fungovat.
         </p>
       }
-      <form class="settings-form" appTrackedForm (ngSubmit)="askSave()" novalidate>
+      @if (draft.offer(); as offer) {
+        <app-draft-offer
+          [savedAt]="draftSavedAt(offer.savedAt)"
+          [stale]="offer.stale"
+          [secrets]="true"
+          (resumed)="resumeDraft()"
+          (discarded)="discardDraft()"
+        />
+      }
+      <form
+        class="settings-form"
+        appTrackedForm
+        [inert]="draft.offer() !== null"
+        (ngSubmit)="askSave()"
+        novalidate
+      >
         <ng-template #settingField let-field>
           @switch (field.input) {
             @case ('flag') {
@@ -361,3 +376,15 @@
     }
   }
 </div>
+@if (changedMeanwhile(); as changed) {
+  <app-changed-meanwhile-dialog
+    subject="content"
+    [keepsDraft]="true"
+    [fromDraft]="changed.fromDraft"
+    [canOverwrite]="changed.fromDraft || changed.version !== null"
+    [savedAt]="changed.savedAt"
+    (overwriteChosen)="overwriteAfterChange()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="keepAfterChange()"
+  />
+}

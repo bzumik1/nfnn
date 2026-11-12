@@ -190,20 +190,34 @@
               </p>
             }
             @case ('error') {
-              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-                <p i18n="@@admin.donorDetail.donations.error.text">
-                  Účty, dary a potvrzení se nepodařilo načíst.
-                </p>
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-button ui-button--small"
-                  (click)="loadDonations()"
-                  i18n="@@admin.donorDetail.donations.error.retry"
-                >
-                  Zkusit znovu
-                </button>
-              </div>
+              @if (donationsAwaitConnection()) {
+                @if (serverAway()) {
+                  <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.serverAway">
+                    Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server
+                    zase odpoví.
+                  </p>
+                } @else {
+                  <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.offline">
+                    Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete
+                    online.
+                  </p>
+                }
+              } @else {
+                <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                  <p i18n="@@admin.donorDetail.donations.error.text">
+                    Účty, dary a potvrzení se nepodařilo načíst.
+                  </p>
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--small"
+                    (click)="loadDonations()"
+                    i18n="@@admin.donorDetail.donations.error.retry"
+                  >
+                    Zkusit znovu
+                  </button>
+                </div>
+              }
             }
           }
         } @else {
@@ -552,26 +566,83 @@
             </p>
           }
           @case ('error') {
-            <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-              <p i18n="@@admin.donorDetail.donations.error.text">
-                Účty, dary a potvrzení se nepodařilo načíst.
-              </p>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button ui-button--small"
-                (click)="loadDonations()"
-                i18n="@@admin.donorDetail.donations.error.retry"
-              >
-                Zkusit znovu
-              </button>
-            </div>
+            @if (donationsAwaitConnection()) {
+              @if (serverAway()) {
+                <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.serverAway">
+                  Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server zase
+                  odpoví.
+                </p>
+              } @else {
+                <p class="ui-card__empty" i18n="@@admin.donorDetail.donations.offline">
+                  Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete
+                  online.
+                </p>
+              }
+            } @else {
+              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                <p i18n="@@admin.donorDetail.donations.error.text">
+                  Účty, dary a potvrzení se nepodařilo načíst.
+                </p>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button ui-button--small"
+                  (click)="loadDonations()"
+                  i18n="@@admin.donorDetail.donations.error.retry"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
+            }
           }
           @case ('ready') {
             @if (erasedAt()) {
               <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.erased">
                 Bankovní účty jsme s osobními údaji dárce smazali; další platby se mu už nepřiřadí.
               </p>
+            } @else if (bankAccountsSource() === 'pending') {
+              <p
+                class="ui-load-state ui-load-state--inset"
+                i18n="@@admin.donorDetail.accounts.pending"
+              >
+                Načítáme bankovní účty…
+              </p>
+            } @else if (bankAccountsSource() === 'offline') {
+              @if (serverAway()) {
+                <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                  <p i18n="@@admin.donorDetail.accounts.serverAway">
+                    Bankovní účty dárce ukážeme, až server zase odpoví.
+                  </p>
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-button ui-button--small"
+                    (click)="reloadBankAccounts()"
+                    i18n="@@admin.donorDetail.accounts.serverAway.retry"
+                  >
+                    Zkusit znovu
+                  </button>
+                </div>
+              } @else {
+                <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.offline">
+                  Bankovní účty dárce ukážeme, až budete online.
+                </p>
+              }
+            } @else if (bankAccountsSource() === 'failed') {
+              <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
+                <p i18n="@@admin.donorDetail.accounts.failed">
+                  Bankovní účty dárce se nepodařilo načíst.
+                </p>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button ui-button--small"
+                  (click)="reloadBankAccounts()"
+                  i18n="@@admin.donorDetail.accounts.retry"
+                >
+                  Zkusit znovu
+                </button>
+              </div>
             } @else if (bankAccounts().length === 0) {
               <p class="ui-card__empty" i18n="@@admin.donorDetail.accounts.empty">
                 Z žádného účtu zatím nepřišla platba s variabilním symbolem dárce.

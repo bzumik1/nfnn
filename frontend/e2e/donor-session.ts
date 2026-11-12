@@ -20,6 +20,7 @@ export const donor = {
   hasPassword: true,
   secondFactor: { enabled: false, neededForAdministration: false },
   pendingEmailChange: null as { newEmail: string; expiresAt: string } | null,
+  version: '00000000000000d1',
 };
 
 export const administrator = {
@@ -459,6 +460,7 @@ export const adminSettings = {
     adminSetting('SESSION_REMEMBER_DAYS', 'SITE', '14'),
   ],
   secretsCanBeStored: true,
+  version: '00000000000000c1',
 };
 
 function sectionName(name: string): RegExp {
@@ -565,6 +567,17 @@ export function administrationCopyGift(
 }
 
 const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
+
+export function whenAdministrationCopied(page: Page): () => Promise<void> {
+  const synced = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
+    { timeout: 10_000 },
+  );
+  return async () => {
+    await synced;
+    await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
+  };
+}
 
 export async function openUnlockedAdministrationPage(
   page: Page,

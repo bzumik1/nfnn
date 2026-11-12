@@ -30,12 +30,50 @@ export interface NewsArticleResponse {
   live: boolean;
   createdAt: string;
   updatedAt: string;
-  version?: string;
   signer: NewsSignerResponse | null;
+  lookBackYear?: number | null;
 }
 
 export interface NewsListResponse {
   items: NewsArticleResponse[];
+}
+
+export interface AdminNewsArticleResponse extends NewsArticleResponse {
+  version: string;
+}
+
+export interface AdminNewsListResponse {
+  items: AdminNewsArticleResponse[];
+}
+
+export interface StoredNewsArticle {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly tag: string | null;
+  readonly perex: string;
+  readonly body: string;
+  readonly coverImage: string | null;
+  readonly coverImageAlt: string | null;
+  readonly signer: string | null;
+  readonly publishedOn: string | null;
+  readonly lookBackYear: number | null;
+}
+
+export function storedNewsArticleOf(article: AdminNewsArticleResponse): StoredNewsArticle {
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    tag: article.tag,
+    perex: article.perex,
+    body: article.body,
+    coverImage: article.coverImage?.id ?? null,
+    coverImageAlt: article.coverImage?.alt ?? null,
+    signer: article.signer?.id ?? null,
+    publishedOn: article.publishedOn,
+    lookBackYear: article.lookBackYear ?? null,
+  };
 }
 
 export interface NewsPageResponse extends NewsListResponse {
@@ -77,6 +115,7 @@ const ADMIN_MEDIA = '/api/admin/content/media';
 const PUBLIC_NEWS = '/api/content/news';
 const PUBLIC_MEDIA = '/api/content/media/';
 
+export const MIN_LOOK_BACK_YEAR = 2005;
 export const MEDIA_WIDTHS = [480, 960, 1440] as const;
 export const SMALL_MEDIA_WIDTH = MEDIA_WIDTHS[0];
 
@@ -99,44 +138,70 @@ export function slugFromText(text: string): string {
 export class NewsApi {
   private readonly http = inject(HttpClient);
 
-  list(): Observable<NewsListResponse> {
-    return this.http.get<NewsListResponse>(ADMIN_NEWS);
+  list(): Observable<AdminNewsListResponse> {
+    return this.http.get<AdminNewsListResponse>(ADMIN_NEWS);
   }
 
-  get(id: string): Observable<NewsArticleResponse> {
-    return this.http.get<NewsArticleResponse>(`${ADMIN_NEWS}/${id}`);
+  get(id: string): Observable<AdminNewsArticleResponse> {
+    return this.http.get<AdminNewsArticleResponse>(`${ADMIN_NEWS}/${id}`);
   }
 
-  create(request: NewsArticleRequest): Observable<NewsArticleResponse> {
-    return this.http.post<NewsArticleResponse>(ADMIN_NEWS, request);
+  create(request: NewsArticleRequest): Observable<AdminNewsArticleResponse> {
+    return this.http.post<AdminNewsArticleResponse>(ADMIN_NEWS, request);
   }
 
   update(
     id: string,
     request: NewsArticleRequest,
     version: string,
-  ): Observable<NewsArticleResponse> {
-    return this.http.put<NewsArticleResponse>(`${ADMIN_NEWS}/${id}`, request, ifMatch(version));
+    held: StoredNewsArticle | null,
+  ): Observable<AdminNewsArticleResponse> {
+    return this.http.put<AdminNewsArticleResponse>(
+      `${ADMIN_NEWS}/${id}`,
+      request,
+      ifMatch(version, held),
+    );
   }
 
-  publish(id: string, publishedOn: string, version: string): Observable<NewsArticleResponse> {
-    return this.http.post<NewsArticleResponse>(
+  publish(
+    id: string,
+    publishedOn: string,
+    version: string,
+    held: StoredNewsArticle | null,
+  ): Observable<AdminNewsArticleResponse> {
+    return this.http.post<AdminNewsArticleResponse>(
       `${ADMIN_NEWS}/${id}/publish`,
       { publishedOn },
-      ifMatch(version),
+      ifMatch(version, held),
     );
   }
 
-  unpublish(id: string, version: string): Observable<NewsArticleResponse> {
-    return this.http.post<NewsArticleResponse>(
+  unpublish(
+    id: string,
+    version: string,
+    held: StoredNewsArticle | null,
+  ): Observable<AdminNewsArticleResponse> {
+    return this.http.post<AdminNewsArticleResponse>(
       `${ADMIN_NEWS}/${id}/unpublish`,
       {},
+      ifMatch(version, held),
+    );
+  }
+
+  setLookBackYear(
+    id: string,
+    year: number | null,
+    version: string,
+  ): Observable<AdminNewsArticleResponse> {
+    return this.http.put<AdminNewsArticleResponse>(
+      `${ADMIN_NEWS}/${id}/look-back-year`,
+      { year },
       ifMatch(version),
     );
   }
 
-  delete(id: string, version: string): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_NEWS}/${id}`, ifMatch(version));
+  delete(id: string, version: string, held: StoredNewsArticle | null): Observable<void> {
+    return this.http.delete<void>(`${ADMIN_NEWS}/${id}`, ifMatch(version, held));
   }
 
   uploadImage(file: File): Observable<UploadedImageResponse> {

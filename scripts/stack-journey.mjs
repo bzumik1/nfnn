@@ -767,9 +767,11 @@ class Journey {
     }
     this.say(`The donor issued ${ownEntry.number} and read it with its signature and portrait; both receipts are active`);
 
+    const profile = await this.expect(200, 'GET', '/api/donors/me', { token: donor }, 'the donor\'s profile before the address change');
     await this.expect(200, 'PATCH', '/api/donors/me', {
       token: donor,
       json: { address: { street: 'Přestěhovaná 9', city: 'Zkušebná', postalCode: '100 00' } },
+      headers: ifMatch(profile),
     }, 'the donor\'s address change');
     const replacement = await this.expect(200, 'POST', '/api/donations/me/receipts', {
       token: donor,

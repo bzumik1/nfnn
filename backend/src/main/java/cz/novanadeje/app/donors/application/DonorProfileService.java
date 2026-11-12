@@ -1,11 +1,14 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.Donor;
+import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.ProfileChangedMeanwhile;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,11 +23,13 @@ public class DonorProfileService {
     private final DonorRepository donors;
     private final DonorViews views;
     private final ApplicationEventPublisher events;
+    private final ProfileVersions profiles;
 
-    public DonorProfileService(DonorRepository donors, DonorViews views, ApplicationEventPublisher events) {
+    public DonorProfileService(DonorRepository donors, DonorViews views, ApplicationEventPublisher events, ProfileVersions profiles) {
         this.donors = donors;
         this.views = views;
         this.events = events;
+        this.profiles = profiles;
     }
 
     @Transactional(readOnly = true)
@@ -33,8 +38,15 @@ public class DonorProfileService {
     }
 
     @Transactional
-    public DonorView updateProfile(DonorId donorId, Set<Role> sessionRoles, UpdateDonorProfileCommand command) {
+    public DonorView updateProfile(DonorId donorId, Set<Role> sessionRoles, UpdateDonorProfileCommand command, ExpectedVersion expected) {
         Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        if (donor.isErased()) {
+            throw new DonorAlreadyErased(donorId);
+        }
+        String version = profiles.of(donor);
+        if (!expected.admits(version)) {
+            throw new ProfileChangedMeanwhile(version, ProfileVersions.StoredProfile.of(donor));
+        }
         String name = command.name() == null ? donor.name() : command.name();
         PostalAddress address = command.street() == null && command.city() == null && command.postalCode() == null
                 ? donor.address()

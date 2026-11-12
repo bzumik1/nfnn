@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -101,7 +102,7 @@ class DonorViewsTest {
     }
 
     private DonorViews views() {
-        return new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical()));
     }
 
     private static Donor donor(Set<Role> roles) {

@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { heldRecordOf } from '../../core/version/row-version';
 import {
   AdminActivitySinceResponse,
   AdminApi,
+  HistoryImportResponse,
   ImportStateResponse,
   ReceiptSigningKeysResponse,
   YearlyReceiptCandidatesResponse,
@@ -13,6 +15,7 @@ import {
   adminBankLogo,
   activitySince,
   adminPush,
+  historyImport,
   importState,
   pushSubscription,
   receiptSigningKeys,
@@ -43,6 +46,18 @@ describe('Given the administration API', () => {
     request.flush(importState());
 
     expect(received).toEqual(importState());
+  });
+
+  it('when older bank payments are requested, then the day is posted to the history import and the queued run is handed on', () => {
+    let received: HistoryImportResponse | undefined;
+    api.requestHistoryImport('2026-01-01').subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/admin/donations/import/history');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ from: '2026-01-01' });
+    request.flush(historyImport(), { status: 202, statusText: 'Accepted' });
+
+    expect(received).toEqual(historyImport());
   });
 
   it('when the receipt signing keys are requested, then it asks the admin endpoint and hands the answer on', () => {
@@ -184,16 +199,22 @@ describe('Given the administration API', () => {
       .flush({ items: [adminBankLogo()] });
 
     api
-      .setBankLogoSource('0800', 'https://is1-ssl.mzstatic.com/a.jpg', '5e1c0a9f3b7d2486')
+      .setBankLogoSource(
+        '0800',
+        'https://is1-ssl.mzstatic.com/a.jpg',
+        '5e1c0a9f3b7d2486',
+        adminBankLogo(),
+      )
       .subscribe((response) => answers.push(response));
     const replace = http.expectOne({ method: 'PUT', url: '/api/admin/donations/bank-logos/0800' });
     expect(replace.request.body).toEqual({ sourceUrl: 'https://is1-ssl.mzstatic.com/a.jpg' });
     expect(replace.request.headers.get('If-Match')).toBe('"5e1c0a9f3b7d2486"');
     expect(replace.request.headers.has('If-None-Match')).toBe(false);
+    expect(heldRecordOf(replace.request.context)).toEqual(adminBankLogo());
     replace.flush(adminBankLogo());
 
     api
-      .setBankLogoSource('4000', 'https://is2-ssl.mzstatic.com/b.jpg', null)
+      .setBankLogoSource('4000', 'https://is2-ssl.mzstatic.com/b.jpg', null, null)
       .subscribe((response) => answers.push(response));
     const create = http.expectOne({ method: 'PUT', url: '/api/admin/donations/bank-logos/4000' });
     expect(create.request.headers.get('If-None-Match')).toBe('*');
@@ -208,12 +229,15 @@ describe('Given the administration API', () => {
     expect(refresh.request.body).toBeNull();
     refresh.flush(adminBankLogo());
 
-    api.removeBankLogo('0800', '5e1c0a9f3b7d2486').subscribe(() => answers.push('removed'));
+    api
+      .removeBankLogo('0800', '5e1c0a9f3b7d2486', adminBankLogo())
+      .subscribe(() => answers.push('removed'));
     const remove = http.expectOne({
       method: 'DELETE',
       url: '/api/admin/donations/bank-logos/0800',
     });
     expect(remove.request.headers.get('If-Match')).toBe('"5e1c0a9f3b7d2486"');
+    expect(heldRecordOf(remove.request.context)).toEqual(adminBankLogo());
     remove.flush(null, { status: 204, statusText: 'No Content' });
 
     expect(answers).toEqual([

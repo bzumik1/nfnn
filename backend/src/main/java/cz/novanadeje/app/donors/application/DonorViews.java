@@ -17,17 +17,19 @@ public class DonorViews {
     private final SecondFactorRepository secondFactors;
     private final EmailVerificationTokenRepository verificationTokens;
     private final Clock clock;
+    private final ProfileVersions profiles;
 
-    public DonorViews(SecondFactorRepository secondFactors, EmailVerificationTokenRepository verificationTokens, Clock clock) {
+    public DonorViews(SecondFactorRepository secondFactors, EmailVerificationTokenRepository verificationTokens, Clock clock, ProfileVersions profiles) {
         this.secondFactors = secondFactors;
         this.verificationTokens = verificationTokens;
         this.clock = clock;
+        this.profiles = profiles;
     }
 
     public DonorView forSession(Donor donor, Set<Role> sessionRoles) {
         boolean enabled = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).isPresent();
         return DonorView.of(donor, sessionRoles, new SecondFactorView(enabled, donor.isAdministrator() && !sessionRoles.contains(Role.ADMIN)),
-                pendingEmailChange(donor));
+                pendingEmailChange(donor), profiles.of(donor));
     }
 
     private Optional<PendingEmailChangeView> pendingEmailChange(Donor donor) {

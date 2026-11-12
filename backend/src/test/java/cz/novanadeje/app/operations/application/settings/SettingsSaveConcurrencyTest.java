@@ -9,6 +9,7 @@ import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,14 +75,14 @@ class SettingsSaveConcurrencyTest {
         try {
             Future<?> moving = administrators.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
                 settings.change(JANA, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"),
-                        new SettingChange(Setting.MAIL_PASSWORD, "password-for-smtp-example")));
+                        new SettingChange(Setting.MAIL_PASSWORD, "password-for-smtp-example")), ExpectedVersion.none());
                 status.flush();
                 moved.countDown();
                 waitFor(commit);
             }));
             assertThat(moved.await(30, TimeUnit.SECONDS)).isTrue();
-            Future<List<Setting>> passwordOnly = administrators.submit(() -> settings.change(PETR,
-                    List.of(new SettingChange(Setting.MAIL_PASSWORD, "another-password-for-localhost"))));
+            Future<SavedSettings> passwordOnly = administrators.submit(() -> settings.change(PETR,
+                    List.of(new SettingChange(Setting.MAIL_PASSWORD, "another-password-for-localhost")), ExpectedVersion.none()));
             await().atMost(Duration.ofSeconds(30)).until(() -> waitingOnLocks() > 0);
             commit.countDown();
             moving.get(30, TimeUnit.SECONDS);

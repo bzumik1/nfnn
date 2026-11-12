@@ -98,7 +98,15 @@ test.describe('Given an administrator who keeps the people of the foundation', (
         const request = route.request();
         const path = new URL(request.url()).pathname;
         if (request.method() === 'GET') {
-          return route.fulfill({ json: { members: saved ? [saved] : [], note: null } });
+          return route.fulfill({
+            json: {
+              members: saved ? [saved] : [],
+              note: null,
+              footnote: null,
+              noteVersion: '6a0c1e3f9b2d4875',
+              footnoteVersion: '1f8e2d7c4b6a9035',
+            },
+          });
         }
         sent.push([request.method(), path, request.postDataJSON()]);
         if (request.method() === 'POST' && path === PEOPLE) {
@@ -188,7 +196,16 @@ test.describe('Given an administrator who chooses who signs the receipts', () =>
     await rememberedSession(page);
     await page.route(
       (url) => url.pathname === PEOPLE,
-      (route) => route.fulfill({ json: { members: [member(EVA)], note: null } }),
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [member(EVA)],
+            note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
+          },
+        }),
     );
   });
 
@@ -403,7 +420,7 @@ test.describe('Given a visitor and people of the foundation kept in the administ
     await servePhotos(page);
   });
 
-  test('when they open the About page, then "Kdo fond vede" shows the cards, the founders note with the signature and the board line instead of the built-in block', async ({
+  test('when they open the About page, then the founders’ note shows as a quote signed with the web signature, portrait and role, with the board line, instead of the built-in block', async ({
     page,
   }) => {
     await page.route(
@@ -429,7 +446,14 @@ test.describe('Given a visitor and people of the foundation kept in the administ
               ],
               note: {
                 text: 'Fond jsme založili, abychom pomáhali.\n\nDěkujeme.',
-                signatures: [{ ...image(SIGNATURE_ID, 600, 180), name: 'Eva Vzorová' }],
+                signatures: [
+                  {
+                    ...image(SIGNATURE_ID, 600, 180),
+                    name: 'Eva Vzorová',
+                    role: 'Zakladatelka',
+                    portrait: image(PORTRAIT_ID, 640, 640),
+                  },
+                ],
               },
             },
           },
@@ -437,24 +461,25 @@ test.describe('Given a visitor and people of the foundation kept in the administ
     );
 
     await page.goto('/o-nas');
-    const board = page.locator('#o-nas .board');
-    await board.scrollIntoViewIfNeeded();
+    const founders = page.locator('#o-nas .founders');
+    await expect(founders.locator('.signer-name')).toHaveText(['Eva Vzorová']);
+    await founders.scrollIntoViewIfNeeded();
 
-    await expect(board.locator('.board-name')).toHaveText(['Eva Vzorová', 'Adam Vzor']);
-    await expect(board.locator('.board-photo img').first()).toHaveAttribute(
-      'src',
-      `/api/content/media/${PORTRAIT_ID}?w=480`,
-    );
-    await expect(board.locator('.founders-note-text')).toHaveText([
+    await expect(founders.locator('.quote-text p')).toHaveText([
       'Fond jsme založili, abychom pomáhali.',
       'Děkujeme.',
     ]);
-    await expect(board.locator('.signature-ink')).toHaveAttribute(
+    await expect(founders.locator('.signer-ink')).toHaveAttribute(
       'src',
       `/api/content/media/${SIGNATURE_ID}?w=480`,
     );
-    await expect(board.locator('.signature-name')).toHaveText('Eva Vzorová');
-    await expect(board.locator('.board-members')).toHaveText(
+    await expect(founders.locator('.signer-photo img')).toHaveAttribute(
+      'src',
+      `/api/content/media/${PORTRAIT_ID}?w=480`,
+    );
+    await expect(founders.locator('.signer-name')).toHaveText('Eva Vzorová');
+    await expect(founders.locator('.signer-role')).toHaveText('Zakladatelka');
+    await expect(founders.locator('.board-members')).toHaveText(
       'Správní rada: Eva Vzorová (předsedkyně), Adam Vzor.',
     );
   });

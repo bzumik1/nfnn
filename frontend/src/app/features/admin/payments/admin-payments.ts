@@ -54,6 +54,7 @@ import {
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { AdministrationReads } from '../device-copy/administration-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -125,6 +126,7 @@ const METHOD_LABELS: Record<PairingMethod, string> = {
 })
 export class AdminPayments {
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly dialogHistory = inject(DialogHistory);
@@ -208,7 +210,10 @@ export class AdminPayments {
     this.live
       .changes(['payments'])
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.refreshQuietly());
+      .subscribe(() => {
+        this.reads.changed();
+        this.refreshQuietly();
+      });
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const filters = filtersFrom(params);
       this.filters.set(filters);
@@ -239,8 +244,8 @@ export class AdminPayments {
 
   private searchAfterPause(search: DonorSearch): Observable<DonorSearchOutcome> {
     const lookUp = combineLatest({
-      found: this.api.searchDonors(search.query).pipe(catchError(() => of(null))),
-      emails: this.api.donors(search.query, EMAIL_LOOKUP_LIMIT).pipe(
+      found: this.reads.donorSearch(search.query).pipe(catchError(() => of(null))),
+      emails: this.reads.accountList(search.query, EMAIL_LOOKUP_LIMIT).pipe(
         map(emailsById),
         catchError(() => of(NO_EMAILS)),
         startWith(NO_EMAILS),
@@ -354,8 +359,8 @@ export class AdminPayments {
     const offset = this.items().length;
     this.loadingMore.set(true);
     this.moreFailed.set(false);
-    this.api
-      .payments(filters.pairing, { ...queryOf(filters), offset, limit: PAGE_SIZE })
+    this.reads
+      .paymentList(filters.pairing, { ...queryOf(filters), offset, limit: PAGE_SIZE })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {
@@ -381,7 +386,7 @@ export class AdminPayments {
   }
 
   private firstPage(filters: PaymentFilters): Observable<PageOutcome> {
-    return this.api.payments(filters.pairing, { ...queryOf(filters), limit: PAGE_SIZE }).pipe(
+    return this.reads.paymentList(filters.pairing, { ...queryOf(filters), limit: PAGE_SIZE }).pipe(
       map((list): PageOutcome => ({ kind: 'loaded', list })),
       catchError((failure: unknown) => of<PageOutcome>({ kind: 'failed', failure })),
     );
@@ -555,6 +560,7 @@ export class AdminPayments {
               this.receiptNote(result.changedYearlyReceipts),
           });
           this.changedDonor.set({ id: donor.donorId, name: donor.name });
+          this.reads.changed();
           this.load();
           this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
         },
@@ -635,6 +641,7 @@ export class AdminPayments {
             this.changedDonor.set({ id: donation.donorId, name: donation.donorName });
           }
           this.unpairedCount.update((count) => (count === null ? null : count + 1));
+          this.reads.changed();
           this.load();
           this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
         },
@@ -670,6 +677,7 @@ export class AdminPayments {
       });
       this.focusAfterRender(() => this.noticeElement()?.nativeElement ?? null);
     };
+    this.reads.changed();
     this.load();
   }
 

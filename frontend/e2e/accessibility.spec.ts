@@ -11,6 +11,7 @@ import {
   rememberedSession,
   serveRecentDonors,
 } from './baseline/screen-mocks';
+import { rawDevice } from './raw-device';
 import { giftArrivesAfterSavingQr } from './gift-arrival';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
@@ -23,6 +24,7 @@ import {
   donor,
   mockConnectApi,
   mockDonorApi,
+  noDonations,
   openAccountItem,
   openDonorSection,
   openSignInDialog,
@@ -371,7 +373,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/projekty');
-    await expect(page.locator('app-project-card')).toHaveCount(1);
+    await expect(page.locator('app-story-tile')).toHaveCount(1);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('navigation', { name: 'Roky' }).getByRole('link', { name: 'Vše' }).click();
+    await expect(page.locator('a.strip-all')).toHaveCount(1);
 
     expect(await violations(page)).toEqual([]);
 
@@ -1173,6 +1180,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: { kind: 'TRANSPORT', message: null, attemptedAt: '2026-10-18T09:00:00Z' },
             consecutiveFailures: 3,
             reportedOutage: 'TRANSPORT',
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );
@@ -1235,6 +1244,56 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  for (const [name, run, expected] of [
+    [
+      'queued',
+      { status: 'QUEUED', failure: null, finishedAt: null },
+      'Fio přijímá jeden dotaz za 30 sekund.',
+    ],
+    [
+      'locked',
+      { status: 'HISTORY_LOCKED', failure: 'HISTORY_LOCKED', finishedAt: '2026-11-05T10:00:30Z' },
+      'historie ve Fio byla zamčená',
+    ],
+  ] as const) {
+    test(`when an administrator opens the administration with a ${name} run of older payments, then the part for older payments breaks no rule`, async ({
+      page,
+    }) => {
+      await page.clock.install({ time: new Date('2026-11-05T10:00:05Z') });
+      await page.route(
+        (url) => url.pathname === '/api/admin/donations/import-state',
+        (route) =>
+          route.fulfill({
+            json: {
+              coveredFrom: '2026-08-08',
+              coveredTo: '2026-11-05',
+              lastAttemptedAt: '2026-11-05T09:00:00Z',
+              lastSucceededAt: '2026-11-05T09:00:00Z',
+              lastFailure: null,
+              consecutiveFailures: 0,
+              reportedOutage: null,
+              historyImport: {
+                from: '2026-01-01',
+                to: '2026-11-05',
+                needsUnlockedHistory: true,
+                requestedAt: '2026-11-05T10:00:00Z',
+                startsAt: '2026-11-05T10:00:20Z',
+                added: null,
+                ...run,
+              },
+              defaultHistoryFrom: '2026-01-01',
+            },
+          }),
+      );
+      await signIn(page, administrator);
+      await page.getByRole('link', { name: 'Správa' }).click();
+      const part = page.getByRole('region', { name: 'Starší platby z banky' });
+      await expect(part).toContainText(expected);
+
+      expect(await violations(page)).toEqual([]);
+    });
+  }
+
   test('when an administrator opens the administration on a phone, then its overview with the section rows and the page of further sections break no rule', async ({
     page,
   }) => {
@@ -1250,6 +1309,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             lastFailure: null,
             consecutiveFailures: 0,
             reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         }),
     );
@@ -2345,6 +2406,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2421,6 +2485,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2665,6 +2732,62 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when an administrator sets the photo of the Přispět band and the About page ends with it, then the band, the page and its removal confirmation break no rule', async ({
+    page,
+  }) => {
+    const photoId = '0199f3e0-0000-7000-8000-00000000b101';
+    const photo = {
+      id: photoId,
+      url: `/api/content/media/${photoId}`,
+      width: 1600,
+      height: 1067,
+      alt: 'Usměvavá dívka na zahradě',
+      focalPoint: null,
+    };
+    await page.route(
+      (url) => url.pathname === '/api/admin/content/donate-band',
+      (route) => route.fulfill({ json: { photo } }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/content/home',
+      (route) => route.fulfill({ json: { news: [], projects: [], donateBand: { photo } } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/content/media/'),
+      (route) =>
+        route.fulfill({
+          contentType: 'image/png',
+          body: Buffer.from(samplePngBase64, 'base64'),
+        }),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/o-nas');
+    const band = page.getByRole('region', { name: 'Pomozte nám napsat další příběh' });
+    await band.scrollIntoViewIfNeeded();
+    await expect(band.getByRole('img', { name: 'Usměvavá dívka na zahradě' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/pruh-prispet');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Fotka v pruhu Přispět' }),
+    ).toBeFocused();
+    await expect(page.locator('figure.preview figcaption')).toHaveText([
+      'Na počítači',
+      'Na telefonu',
+    ]);
+
+    expect(await violations(page)).toEqual([]);
+
+    await page.getByRole('button', { name: 'Odebrat fotku z webu' }).click();
+    await expect(page.getByRole('group', { name: 'Odebrat fotku?' })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when an administrator keeps the people of the foundation and the About page shows them, then the section, the page, the editor and the removal confirmation break no rule', async ({
     page,
   }) => {
@@ -2698,6 +2821,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: 'Děkujeme všem, kdo pomáhají s námi.',
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2739,8 +2865,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       route.fulfill(session(200, administrator)),
     );
     await page.goto('/o-nas');
-    await page.locator('#o-nas .signatures').scrollIntoViewIfNeeded();
-    await expect(page.locator('#o-nas .signature-name')).toHaveText('Eva Vzorová');
+    await expect(page.locator('#o-nas .signer-name')).toHaveText(['Eva Vzorová']);
+    await page.locator('#o-nas .signers').scrollIntoViewIfNeeded();
 
     expect(await violations(page)).toEqual([]);
 
@@ -3354,5 +3480,85 @@ test.describe('Given an administrator whose administration is locked on this dev
       await expect(page.getByRole('heading', { level: 1, name: 'Odemknout heslem' })).toBeVisible();
       expect(await violations(page)).toEqual([]);
     }
+  });
+});
+
+test.describe('Given a donor whose unsaved edit of the data on the receipt is kept on this device', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page, noDonations);
+    await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200)));
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await page.getByRole('button', { name: 'Upravit údaje' }).click();
+    await page.getByLabel('Ulice a číslo').fill('Krátká 3');
+    await expect.poll(async () => (await rawDevice(page)).drafts).toBe(1);
+  });
+
+  test('when the page is loaded again and the edit is offered back, then the offer has no violations', async ({
+    page,
+  }) => {
+    await page.reload();
+
+    await expect(page.locator('app-draft-offer')).toContainText('Máte tu rozepsané úpravy');
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the data were saved differently since and she saves the edit she continued, then the warning in the form has no violations', async ({
+    page,
+  }) => {
+    await page.unroute('**/api/donors/auth/refresh');
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(
+        session(200, {
+          ...donor,
+          address: { ...donor.address, city: 'Děčín' },
+          version: '00000000000000d9',
+        }),
+      ),
+    );
+    await page.reload();
+    const offer = page.locator('app-draft-offer');
+    await expect(offer).toContainText('Uložená verze se od té doby změnila');
+    await offer.getByRole('button', { name: 'Pokračovat v rozepsaném' }).click();
+
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
+
+    await expect(page.locator('.profile-stale')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the profile changed meanwhile in another window and the save is refused, then the warning in the form has no violations', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            body: JSON.stringify({
+              type: 'https://nfnn.cz/problems/donors/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              status: 409,
+              version: '00000000000000d9',
+              current: {
+                name: donor.name,
+                street: donor.address.street,
+                city: 'Děčín',
+                postalCode: donor.address.postalCode,
+                preferredLocale: 'en',
+              },
+            }),
+          })
+        : route.fallback(),
+    );
+
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Mezitím se uložené údaje změnily' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uložit své úpravy' })).toBeEnabled();
+    await expect(page.getByLabel('Ulice a číslo')).toHaveValue('Krátká 3');
+    expect(await violations(page)).toEqual([]);
   });
 });

@@ -34,8 +34,10 @@ import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
+import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
+import { administrationWritesInterceptor } from './core/admin-writes/administration-writes';
 import { keptAnswerRefreshInterceptor } from './core/connectivity/kept-answer-refresh';
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
@@ -46,6 +48,7 @@ import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { heldRecordRetryInterceptor } from './core/version/held-record-retry';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { windowControlsAtStart } from './core/layout/window-controls';
@@ -70,11 +73,13 @@ export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
   withInterceptors([
     keptPublicAnswersInterceptor,
+    heldRecordRetryInterceptor,
     authInterceptor,
     versionInterceptor,
     keptAnswerRefreshInterceptor,
     serviceWorkerBypassInterceptor,
     connectivityInterceptor,
+    administrationWritesInterceptor,
   ]),
 );
 
@@ -106,6 +111,7 @@ export const deviceCopies: Provider[] = [
 export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(Connectivity);
   inject(UnseenPhotos);
+  inject(DeviceStatusRetry).start();
 });
 
 export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
