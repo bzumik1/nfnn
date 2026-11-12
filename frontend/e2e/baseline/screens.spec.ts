@@ -13,8 +13,9 @@ import {
   secondFactorRecovery,
   secondFactorRequired,
   session,
+  whenAdministrationCopied,
 } from '../donor-session';
-import { expect, test } from '../fixtures';
+import { ADMINISTRATION_LOCKED, expect, test } from '../fixtures';
 import {
   article,
   donorWithDonations,
@@ -49,6 +50,8 @@ const WIDTHS = [390, 1280];
 const HEIGHT = 900;
 const DIALOG_OPENING_WIDTH = 1280;
 const SEARCH_PAUSE_MS = 5_000;
+const UNLOCK_TIMEOUT_MS = 15_000;
+const STABLE_SCREENSHOT_TIMEOUT_MS = 15_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
@@ -118,6 +121,15 @@ async function paymentDrawn(page: Page, elements: string[]): Promise<void> {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
+async function openUnlocked(page: Page, path: string): Promise<void> {
+  const copied = whenAdministrationCopied(page);
+  await page.goto(path);
+  await expect(page.locator('h1').first()).not.toHaveText(ADMINISTRATION_LOCKED, {
+    timeout: UNLOCK_TIMEOUT_MS,
+  });
+  await copied();
+}
+
 function adminPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
   return {
     name,
@@ -125,7 +137,7 @@ function adminPage(name: string, path: string, more: Partial<Screen> = {}): Scre
       await mockDonorApi(page, donorWithDonations);
       await mockAdministration(page);
       await rememberedSession(page);
-      await page.goto(path);
+      await openUnlocked(page, path);
     },
     ...more,
   };
@@ -265,7 +277,7 @@ const SCREENS: Screen[] = [
           route.fulfill(problem(500, 'server-error', 'Chyba serveru', 'Zkuste to prosím znovu.')),
       );
       await rememberedSession(page);
-      await page.goto('/sprava/platby');
+      await openUnlocked(page, '/sprava/platby');
     },
   },
   adminPage('admin-donors', '/sprava/darci'),
@@ -541,6 +553,7 @@ async function shootElement(
   tolerance: { maxDiffPixels?: number; maxDiffPixelRatio?: number },
 ): Promise<void> {
   await expect(target).toHaveScreenshot(file, {
+    timeout: STABLE_SCREENSHOT_TIMEOUT_MS,
     animations: 'disabled',
     caret: 'hide',
     ...tolerance,
@@ -564,6 +577,7 @@ function shootEach(screens: Screen[]): void {
         if (!screen.region) {
           await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
           await expect(page).toHaveScreenshot(`${screen.name}-${width}.png`, {
+            timeout: STABLE_SCREENSHOT_TIMEOUT_MS,
             fullPage: !screen.viewportOnly,
             mask: (screen.masked ?? []).map((selector) => page.locator(selector)),
             animations: 'disabled',

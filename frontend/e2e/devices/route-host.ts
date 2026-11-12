@@ -141,6 +141,7 @@ export class RouteHost {
       throw new Error(`${this.appShell} is missing: build the app first (npm run build)`);
     }
     this.server = createServer((request, response) => {
+      response.shouldKeepAlive = false;
       this.open++;
       response.on('close', () => this.open--);
       this.answer(request, response).catch((error: unknown) => {
