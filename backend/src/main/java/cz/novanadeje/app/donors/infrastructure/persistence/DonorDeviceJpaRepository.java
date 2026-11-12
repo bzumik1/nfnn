@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, UUID> {
@@ -30,6 +32,25 @@ interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, U
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update DonorDeviceJpaEntity d set d.endedAt = :at, d.endReason = :reason where d.id = :id and d.endedAt is null")
     int endIfActive(@Param("id") UUID id, @Param("reason") DeviceSignOutReason reason, @Param("at") Instant at);
+
+    Optional<DonorDeviceJpaEntity> findByStatusSecretHash(String statusSecretHash);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.id = :id"
+            + " and (d.wipe is null or d.wipe <> cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
+    int directWipe(@Param("id") UUID id, @Param("wipe") DeviceWipe wipe);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update DonorDeviceJpaEntity d set d.wipe = :wipe where d.donorId = :donorId"
+            + " and (d.wipe is null or d.wipe <> cz.novanadeje.app.donors.domain.DeviceWipe.ALL)")
+    int directWipeOfDonor(@Param("donorId") UUID donorId, @Param("wipe") DeviceWipe wipe);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update DonorDeviceJpaEntity d set d.wipe = cz.novanadeje.app.donors.domain.DeviceWipe.ALL,"
+            + " d.platform = cz.novanadeje.app.donors.domain.DevicePlatform.OTHER, d.browser = cz.novanadeje.app.donors.domain.DeviceBrowser.OTHER,"
+            + " d.sessionKind = null, d.signedInAt = :at, d.lastUsedAt = :at, d.endedAt = :at,"
+            + " d.endReason = cz.novanadeje.app.donors.domain.DeviceSignOutReason.ERASED where d.donorId = :donorId")
+    int reduceErasedOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from DonorDeviceJpaEntity d where d.endedAt < :cutoff")

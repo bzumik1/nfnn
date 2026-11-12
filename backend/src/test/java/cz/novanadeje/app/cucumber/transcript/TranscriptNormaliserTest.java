@@ -175,7 +175,7 @@ class TranscriptNormaliserTest {
         JsonNode raw = json.readTree("""
                 {"email":"jana@example.cz","password":"Heslo-12345","secret":"JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
                  "otpauthUri":"otpauth://totp/x","qrCode":{"size":21,"modules":"0101"},"recoveryCodes":["A","B"],
-                 "accessToken":"x","code":"123456","nested":{"refreshToken":null}}
+                 "accessToken":"x","code":"123456","deviceSecret":"device","nested":{"refreshToken":null}}
                 """);
 
         JsonNode normalised = normaliser.json(raw);
@@ -183,7 +183,7 @@ class TranscriptNormaliserTest {
         assertThat(normalised.toString()).isEqualTo("""
                 {"email":"jana@example.cz","password":"<secret>","secret":"<secret>","otpauthUri":"<secret>",\
                 "qrCode":{"size":"<secret>","modules":"<secret>"},"recoveryCodes":["<secret>","<secret>"],\
-                "accessToken":"<secret>","code":"<secret>","nested":{"refreshToken":null}}""");
+                "accessToken":"<secret>","code":"<secret>","deviceSecret":"<secret>","nested":{"refreshToken":null}}""");
     }
 
     @Test
