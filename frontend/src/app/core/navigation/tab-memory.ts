@@ -1,5 +1,13 @@
 import { DOCUMENT } from '@angular/common';
-import { afterNextRender, DestroyRef, inject, Injectable, Injector, signal } from '@angular/core';
+import {
+  afterNextRender,
+  DestroyRef,
+  inject,
+  Injectable,
+  Injector,
+  signal,
+  untracked,
+} from '@angular/core';
 import { NavigationEnd, NavigationStart, Router, Scroll } from '@angular/router';
 import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
@@ -17,15 +25,21 @@ export class TabMemory {
   private keptTop: { readonly top: number; readonly navigation: number } | null = null;
   private returnedToKeptPage = false;
   private placements = 0;
+  private trigger: NavigationStart['navigationTrigger'] = 'imperative';
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
+        this.trigger = event.navigationTrigger;
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
         this.visited(event.urlAfterRedirects);
         const top = this.keptPages.takeReturningTop();
-        this.returned(event.id, this.leadsToSection(event.urlAfterRedirects) ? null : top);
+        const section = this.leadsToSection(event.urlAfterRedirects);
+        this.returned(event.id, section ? null : top);
+        if (top === null && !section) {
+          this.startNewPageAtTop();
+        }
       } else if (event instanceof Scroll) {
         this.overRouterScrolling(event);
       }
@@ -68,6 +82,13 @@ export class TabMemory {
     this.keptTop = null;
     if (event.anchor === null && event.scrollBehavior !== 'manual') {
       queueMicrotask(() => this.scrollTo(kept.top));
+    }
+  }
+
+  private startNewPageAtTop(): void {
+    const scroll = untracked(this.router.currentNavigation)?.extras.scroll;
+    if (this.trigger !== 'popstate' && scroll !== 'manual') {
+      this.scrollTo(0);
     }
   }
 

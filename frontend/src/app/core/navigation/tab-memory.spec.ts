@@ -158,6 +158,16 @@ describe('Given pages of the tabs kept while the visitor is away', () => {
     expect(scrolledTo.at(-1)).toEqual({ top: 420, behavior: 'instant' });
   });
 
+  it('when a link opens a page that is not kept, then it starts at its top in its first frame, without sliding there through the smooth scrolling of the page', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    scrolledTo = [];
+
+    await navigateAndRender('/projekty');
+
+    expect(scrolledTo).toEqual([{ top: 0, behavior: 'instant' }]);
+  });
+
   it('when a link leads to a section of a kept page, then the page is left to the section rather than put back where it was', async () => {
     await harness.navigateByUrl('/o-nas');
     scrolledBy(420);
