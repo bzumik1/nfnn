@@ -24,6 +24,8 @@ import { SwipeSettle } from './back-swipe';
 import { NavigationFacts, PageTransitionKind, pageTransitionFor } from './page-transition-kind';
 import { tabOf } from './app-tabs';
 import { chromeOf, RouteChrome } from './route-chrome';
+import { DirtyForms } from '../updates/dirty-forms';
+import { NavigationPreview } from './navigation-preview';
 import { stillCopyOf } from './still-copy';
 
 export const PAGE_LAYER_CLASS = 'page-layer';
@@ -77,6 +79,8 @@ export class PageTransitions {
   private readonly chrome = inject(RouteChrome).current;
   private readonly compact = inject(CompactLayout).isCompact;
   private readonly backTarget = inject(BackTarget);
+  private readonly preview = inject(NavigationPreview);
+  private readonly dirtyForms = inject(DirtyForms);
   private readonly kept = new Map<number, KeptPage>();
   private handingOver = false;
   private trigger: NavigationFacts['trigger'] = 'imperative';
@@ -92,6 +96,9 @@ export class PageTransitions {
   }
 
   private follow(event: RouterEvent): void {
+    if (this.preview.active()) {
+      return;
+    }
     if (event instanceof NavigationStart) {
       if (this.handingOver) {
         this.handingOver = false;
@@ -132,13 +139,21 @@ export class PageTransitions {
     overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
     const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
     const leaving = this.place(overlay, this.keep(layer), 'over');
-    const bar = this.dressChrome(overlay, leaving, arriving);
+    const bar = { items: this.dressChrome(overlay, leaving, arriving) };
     const under = arriving.box;
     const over = leaving.box;
     const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
     const running: Running = { kind: 'pop', overlay, swiping: true, revealed: false };
     this.running = running;
     const width = Math.max(1, view.innerWidth);
+    let progress = 0;
+    const drawn =
+      behind === null && destination.path !== null && !this.dirtyForms.any()
+        ? this.drawUnder(destination.path, running, leaving, arriving, (items) => {
+            bar.items = items;
+            followBar(items, progress);
+          })
+        : Promise.resolve();
     const settle = async (end: SwipeSettle): Promise<void> => {
       if (this.running !== running) {
         return;
@@ -152,12 +167,15 @@ export class PageTransitions {
         over.animate([{ transform: `translateX(${end.to}px)` }], timing),
         under.animate([{ transform: end.completes ? 'none' : parallaxAt(0) }], timing),
         ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
-        ...barMotions(bar, end.completes ? 1 : 0, timing),
+        ...barMotions(bar.items, end.completes ? 1 : 0, timing),
       ];
       await Promise.race([
-        Promise.allSettled(motions.map((motion) => motion.finished)),
+        Promise.allSettled([drawn, ...motions.map((motion) => motion.finished)]),
         new Promise((done) => view.setTimeout(done, PAGE_TRANSITION_LONGEST_MS)),
       ]);
+      if (!end.completes) {
+        this.preview.discard();
+      }
       if (this.running !== running) {
         return;
       }
@@ -172,13 +190,13 @@ export class PageTransitions {
     return {
       follow: (to) => {
         offset = Math.min(width, Math.max(0, to));
-        const progress = offset / width;
+        progress = offset / width;
         over.style.transform = `translateX(${offset}px)`;
         under.style.transform = parallaxAt(progress);
         if (dim !== null) {
           dim.style.opacity = String(1 - progress);
         }
-        followBar(bar, progress);
+        followBar(bar.items, progress);
       },
       settle,
       slideBack: () =>
@@ -186,10 +204,43 @@ export class PageTransitions {
           completes: false,
           from: offset,
           to: 0,
-          durationMs: this.pageDurationMs(),
+          durationMs: this.durationOf('--duration-page'),
           easing: 'ease-out',
         }),
     };
+  }
+
+  private async drawUnder(
+    path: string,
+    running: Running,
+    leaving: PlacedPage,
+    arriving: PlacedPage,
+    redressed: (items: BarItem[]) => void,
+  ): Promise<void> {
+    const drawn = await this.preview.visit(path, () => {
+      const layer = this.layer();
+      return layer === null ? null : this.keep(layer);
+    });
+    const scroller = arriving.box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`);
+    if (drawn === null || drawn.copy === null || scroller === null || this.running !== running) {
+      return;
+    }
+    scroller.replaceChildren(drawn.copy);
+    scroller.scrollTop = drawn.scrollY;
+    arriving.box.style.backgroundColor = drawn.ground;
+    redressed(
+      this.dressChrome(running.overlay, leaving, {
+        box: arriving.box,
+        copy: drawn.copy,
+        scrollY: drawn.scrollY,
+      }),
+    );
+    if (typeof scroller.animate === 'function') {
+      scroller.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: this.durationOf('--duration-fast'),
+        easing: 'ease-out',
+      });
+    }
   }
 
   private cover(event: GuardsCheckEnd): void {
@@ -448,11 +499,9 @@ export class PageTransitions {
     );
   }
 
-  private pageDurationMs(): number {
+  private durationOf(name: string): number {
     const view = this.document.defaultView;
-    const token = view
-      ?.getComputedStyle(this.document.documentElement)
-      .getPropertyValue('--duration-page');
+    const token = view?.getComputedStyle(this.document.documentElement).getPropertyValue(name);
     const value = Number.parseFloat(token ?? '');
     if (!Number.isFinite(value)) {
       return 0;

@@ -13,6 +13,7 @@ import {
 } from '@angular/router';
 import { filter } from 'rxjs';
 import { AppTabId, tabOf } from './app-tabs';
+import { NavigationPreview } from './navigation-preview';
 
 export const KEPT_PAGES_OWNER = new InjectionToken<() => string | null>('KEPT_PAGES_OWNER', {
   providedIn: 'root',
@@ -172,6 +173,7 @@ export function whenLeft(leave: () => void): void {
 function followShown(changed: (shown: boolean) => void): void {
   const router = inject(Router);
   const route = inject(ActivatedRoute);
+  const preview = inject(NavigationPreview);
   let shown = true;
   router.events
     .pipe(
@@ -179,6 +181,9 @@ function followShown(changed: (shown: boolean) => void): void {
       takeUntilDestroyed(),
     )
     .subscribe(() => {
+      if (preview.active()) {
+        return;
+      }
       const shownNow = isShown(router, route);
       if (shownNow !== shown) {
         shown = shownNow;

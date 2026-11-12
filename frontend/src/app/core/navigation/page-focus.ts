@@ -1,16 +1,18 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BackTarget } from './back-target';
+import { NavigationPreview } from './navigation-preview';
 
 @Injectable({ providedIn: 'root' })
 export class PageFocus {
   private readonly router = inject(Router);
   private readonly back = inject(BackTarget);
+  private readonly preview = inject(NavigationPreview);
   private readonly document = inject(DOCUMENT);
 
   movesOnLastNavigation(): boolean {
     const navigation = this.router.lastSuccessfulNavigation();
-    if (navigation === null || navigation.previousNavigation === null) {
+    if (navigation === null || navigation.previousNavigation === null || this.preview.active()) {
       return false;
     }
     return navigation.trigger !== 'popstate' || this.back.returningByButton;

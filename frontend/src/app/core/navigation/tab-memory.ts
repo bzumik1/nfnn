@@ -11,12 +11,14 @@ import {
 import { NavigationEnd, NavigationStart, Router, Scroll } from '@angular/router';
 import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
+import { NavigationPreview } from './navigation-preview';
 
 @Injectable({ providedIn: 'root' })
 export class TabMemory {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly keptPages = inject(KeptTabPages);
+  private readonly preview = inject(NavigationPreview);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly lastUrls = new Map<AppTabId, string>();
   private readonly current = signal<AppTab | null>(tabOf(this.router.url));
@@ -28,6 +30,9 @@ export class TabMemory {
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
+      if (this.preview.active()) {
+        return;
+      }
       if (event instanceof NavigationStart) {
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
