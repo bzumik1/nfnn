@@ -378,9 +378,14 @@ describe('Given the summary of what is new since the last visit on this device',
 
     expect(replaced).toHaveLength(0);
     expect(visit.state().kind).toBe('ready');
+
+    replacing = async () => true;
+    await visit.keepMark();
+
+    expect(replaced).toHaveLength(1);
   });
 
-  it('when the device went offline after an offline summary and comes back, then it waits for the copy to catch up and a check shows the summary again', async () => {
+  it('when the device went offline after an offline summary and comes back, then the summary stays, saying how old the copy is, until a check catches it up', async () => {
     offline.set(true);
     open(copy([payment('payment-2', '2026-11-11', 30000)], MARK));
     await visit.check();
@@ -388,12 +393,56 @@ describe('Given the summary of what is new since the last visit on this device',
 
     offline.set(false);
 
-    expect(visit.state().kind).toBe('checking');
+    const waiting = visit.state();
+    expect(waiting.kind === 'ready' && waiting.copiedAt).toBe('2026-11-12T08:00:00Z');
 
     await visit.check();
 
+    const caughtUp = visit.state();
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(visit.state().kind).toBe('ready');
+    expect(caughtUp.kind === 'ready' && caughtUp.copiedAt).toBeNull();
+  });
+
+  it('when the copy caught up earlier in this opening and the device goes offline, then the copy time is the later of the last check and the last store', async () => {
+    open(copy([], MARK));
+    await visit.check();
+    checkedAt.set('2026-11-12T09:20:00Z');
+
+    offline.set(true);
+
+    const state = visit.state();
+    expect(state.kind === 'ready' && state.copiedAt).toBe('2026-11-12T09:20:00Z');
+  });
+
+  it('when the summary was closed, then a change of the copy keeps no new mark, since nobody saw it', async () => {
+    const contents = open(copy([], MARK));
+    await visit.check();
+    visit.dismiss();
+
+    synced(
+      contents,
+      copy([payment('payment-3', '2026-11-12', 5000)], replaced[0].seen as VisitMark),
+    );
+    await visit.keepMark();
+
+    expect(replaced).toHaveLength(1);
+  });
+
+  it('when the copy closes and the same opening shows again, then nothing of it was kept: the summary waits for a new check and is not closed', async () => {
+    const contents = open(copy([], MARK));
+    const opening = opened();
+    await visit.check();
+    visit.dismiss();
+
+    opened.set(null);
+    TestBed.tick();
+    expect(visit.state().kind).toBe('closed');
+    contents.set(copy([], MARK));
+    opened.set(opening);
+    checkedAt.set('2026-11-12T09:31:00Z');
+
+    expect(visit.dismissed()).toBe(false);
+    expect(visit.state().kind).toBe('checking');
   });
 
   it('when the copy could not catch up and the device then goes offline, then a check shows what the copy holds', async () => {
@@ -435,6 +484,7 @@ describe('Given the summary of what is new since the last visit on this device',
     open(copy([], MARK));
     refresh.mockImplementationOnce(async () => {
       open(copy([], MARK));
+      checkedAt.set('2026-11-12T09:30:00Z');
       return 'stored';
     });
 

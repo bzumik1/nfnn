@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import type { CopyContents } from '../../../core/device/store/account-store';
@@ -22,11 +22,6 @@ export type VisitState =
       readonly copiedAt: string | null;
     };
 
-interface KeptMark {
-  readonly copy: OpenedCopy;
-  readonly mark: VisitMark;
-}
-
 const CLOSED: VisitState = { kind: 'closed' };
 const CHECKING: VisitState = { kind: 'checking' };
 const FAILED: VisitState = { kind: 'failed' };
@@ -44,7 +39,7 @@ export class AdministrationVisit {
   private readonly keptFor = signal<OpenedCopy | null>(null);
   private readonly dismissedFor = signal<OpenedCopy | null>(null);
   private readonly baselines = new WeakMap<OpenedCopy, VisitMark | null>();
-  private kept: KeptMark | null = null;
+  private markedFor: OpenedCopy | null = null;
 
   private readonly compared = computed<VisitState>(() => {
     const opened = this.vault.administration();
@@ -59,7 +54,8 @@ export class AdministrationVisit {
     }
     const contents = opened.store.contents();
     const offline = this.connectivity.offline();
-    if (contents === null || (this.download.checkedAt() === null && !offline)) {
+    const checkedAt = this.download.checkedAt();
+    if (contents === null || (checkedAt === null && !offline && this.keptFor() !== opened)) {
       return this.failedFor() === opened || (contents === null && offline) ? FAILED : CHECKING;
     }
     const mark = this.baselineOf(opened, contents);
@@ -70,7 +66,7 @@ export class AdministrationVisit {
       kind: 'ready',
       seenAt: mark.at,
       changes: visitChanges(mark, contents, this.auth.donor()?.id ?? ''),
-      copiedAt: offline ? contents.storedAt : null,
+      copiedAt: offline || checkedAt === null ? later(checkedAt, contents.storedAt) : null,
     };
   });
 
@@ -87,6 +83,14 @@ export class AdministrationVisit {
       ? CHECKING
       : state;
   });
+
+  constructor() {
+    effect(() => {
+      if (this.vault.administration() === null) {
+        untracked(() => this.forget());
+      }
+    });
+  }
 
   dismiss(): void {
     this.dismissedFor.set(this.vault.administration());
@@ -125,7 +129,7 @@ export class AdministrationVisit {
   async keepMark(): Promise<void> {
     const kind = this.compared().kind;
     const opened = this.vault.administration();
-    if ((kind !== 'ready' && kind !== 'first') || opened === null) {
+    if ((kind !== 'ready' && kind !== 'first') || opened === null || this.dismissed()) {
       return;
     }
     const store = opened.store;
@@ -144,25 +148,29 @@ export class AdministrationVisit {
       }
       this.baselineOf(opened, contents);
       if (this.keptAlready(opened, contents)) {
-        this.kept = { copy: opened, mark: markOf(contents, '') };
         return;
       }
       const mark = markOf(contents, new Date().toISOString());
       if (await this.vault.replaceContents(store, { ...contents, seen: mark })) {
-        this.kept = { copy: opened, mark };
+        this.markedFor = opened;
       }
     });
   }
 
   private keptAlready(opened: OpenedCopy, contents: CopyContents): boolean {
-    if (this.kept?.copy !== opened) {
-      return false;
-    }
-    const now = markOf(contents, '');
     return (
-      sameMarkedRows(this.kept.mark, now) ||
-      (isVisitMark(contents.seen) && sameMarkedRows(contents.seen, now))
+      this.markedFor === opened &&
+      isVisitMark(contents.seen) &&
+      sameMarkedRows(contents.seen, markOf(contents, ''))
     );
+  }
+
+  private forget(): void {
+    this.failedFor.set(null);
+    this.markFailedFor.set(null);
+    this.keptFor.set(null);
+    this.dismissedFor.set(null);
+    this.markedFor = null;
   }
 
   private baselineOf(opened: OpenedCopy, contents: CopyContents): VisitMark | null {
@@ -171,4 +179,8 @@ export class AdministrationVisit {
     }
     return this.baselines.get(opened) ?? null;
   }
+}
+
+function later(one: string | null, other: string): string {
+  return one !== null && Date.parse(one) > Date.parse(other) ? one : other;
 }

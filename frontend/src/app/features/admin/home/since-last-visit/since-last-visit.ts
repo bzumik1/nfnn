@@ -6,6 +6,7 @@ import {
   effect,
   ElementRef,
   inject,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -36,13 +37,17 @@ interface VisitFigure {
   templateUrl: './since-last-visit.html',
   styleUrl: './since-last-visit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[hidden]': "dismissed() || state().kind === 'closed'" },
+  host: {
+    '[hidden]': "dismissed() || state().kind === 'closed'",
+    '(document:visibilitychange)': 'visibilityChanged()',
+  },
 })
 export class SinceLastVisit {
   private readonly visit = inject(AdministrationVisit);
   private readonly connectivity = inject(Connectivity);
   private readonly document = inject(DOCUMENT);
   private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
+  private readonly visible = signal(this.document.visibilityState !== 'hidden');
 
   protected readonly state = this.visit.state;
   protected readonly dismissed = this.visit.dismissed;
@@ -65,7 +70,7 @@ export class SinceLastVisit {
       return null;
     }
     const time = formatBankTime(state.copiedAt);
-    return $localize`:@@admin.home.visit.offline:Jste bez připojení, takže vidíte jen to, co si zařízení stáhlo do ${time}:time:. Nemusí to být aktuální.`;
+    return $localize`:@@admin.home.visit.offline:Bez spojení se serverem vidíte údaje z ${time}:time:. Nemusí být aktuální.`;
   });
   protected readonly figures = computed((): readonly VisitFigure[] => {
     const state = this.state();
@@ -76,14 +81,20 @@ export class SinceLastVisit {
     effect(() => {
       this.visit.opened();
       this.connectivity.offline();
-      untracked(() => void this.visit.check());
+      if (this.visible()) {
+        untracked(() => void this.visit.check());
+      }
     });
     effect(() => {
       const kind = this.state().kind;
-      if (kind === 'ready' || kind === 'first') {
+      if (this.visible() && (kind === 'ready' || kind === 'first')) {
         untracked(() => void this.visit.keepMark().catch(() => undefined));
       }
     });
+  }
+
+  protected visibilityChanged(): void {
+    this.visible.set(this.document.visibilityState !== 'hidden');
   }
 
   protected retry(): void {

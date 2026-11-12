@@ -137,6 +137,32 @@ describe('Given the block of what is new since the last visit on the administrat
     expect(check).toHaveBeenCalledTimes(3);
   });
 
+  it('when the tab is hidden, then it neither checks nor keeps the mark until the tab shows again', async () => {
+    let visibility: DocumentVisibilityState = 'hidden';
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibility,
+    });
+    try {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await fixture.whenStable();
+      opened.set({});
+      await show(ready(BUSY));
+
+      expect(check).toHaveBeenCalledTimes(1);
+      expect(keepMark).not.toHaveBeenCalled();
+
+      visibility = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+      await fixture.whenStable();
+
+      expect(check).toHaveBeenCalledTimes(2);
+      expect(keepMark).toHaveBeenCalled();
+    } finally {
+      delete (document as unknown as Record<string, unknown>)['visibilityState'];
+    }
+  });
+
   it('when no copy of the administration is open, then the card is not shown', async () => {
     await show({ kind: 'closed' });
 
@@ -147,7 +173,7 @@ describe('Given the block of what is new since the last visit on the administrat
     await show(ready(BUSY, '2026-11-10T13:05:00Z', '2026-11-12T08:00:00Z'));
 
     expect(text('.visit-offline')).toBe(
-      'Jste bez připojení, takže vidíte jen to, co si zařízení stáhlo do 12. 11. 2026 9:00. Nemusí to být aktuální.',
+      'Bez spojení se serverem vidíte údaje z 12. 11. 2026 9:00. Nemusí být aktuální.',
     );
   });
 
