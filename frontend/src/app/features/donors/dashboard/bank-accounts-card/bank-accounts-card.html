@@ -75,7 +75,7 @@
                     [size]="40"
                   />
                 }
-                <div class="account-body">
+                <div class="account-identity">
                   <div class="account-line">
                     <span class="account-number ui-figures">{{ account.accountNumber }}</span>
                     <span class="account-status" [class]="labelModifier(account)">{{
@@ -119,6 +119,8 @@
                       </ul>
                     </div>
                   }
+                </div>
+                <div class="account-body">
                   @if (hint(account); as hint) {
                     @if (warns(account)) {
                       <ng-container

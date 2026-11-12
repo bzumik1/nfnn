@@ -125,25 +125,37 @@
 }
 
 .account-main {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   flex: 1 1 320px;
   min-width: 0;
 }
 
+.account-logo {
+  margin-inline-end: var(--space-3);
+}
+
+.account-identity,
 .account-body {
-  flex: 1 1 auto;
+  grid-column: 2;
   min-width: 0;
 }
 
 @include bp.container-down(account, tabs) {
   .account-main {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
 
+  .account-logo {
+    justify-self: start;
+    margin-inline-end: 0;
+    margin-block-end: var(--space-3);
+  }
+
+  .account-identity,
   .account-body {
-    flex-basis: 100%;
+    grid-column: 1;
   }
 }
 
@@ -151,7 +163,6 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  min-height: var(--space-10);
   gap: var(--space-1-5) var(--space-2-5);
 }
 
@@ -601,6 +612,11 @@
   font-weight: var(--weight-bold);
   font-size: var(--text-md);
   cursor: pointer;
+}
+
+.account-action {
+  max-width: 100%;
+  white-space: normal;
 }
 
 @include bp.down(tablet) {

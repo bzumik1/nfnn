@@ -1,4 +1,5 @@
-import { Page, Request } from '@playwright/test';
+import { Request } from '@playwright/test';
+import type { RouteTarget } from './fixtures';
 
 export const LOGO_IMAGE_ID = '019a7c00-0000-7000-8000-0000000000aa';
 
@@ -13,7 +14,7 @@ export interface BankLogoRequests {
 }
 
 export async function mockBankLogos(
-  page: Page,
+  page: RouteTarget,
   items: { code: string; imageId: string }[],
 ): Promise<BankLogoRequests> {
   const requests: BankLogoRequests = { list: [], images: [] };

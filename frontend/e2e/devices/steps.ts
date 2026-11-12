@@ -8,7 +8,8 @@ import {
   servePaymentDetails,
   serveRecentDonors,
 } from '../baseline/screen-mocks';
-import { administrator, donor, mockDonorApi, session } from '../donor-session';
+import { LOGO_IMAGE_ID, mockBankLogos } from '../bank-logos';
+import { administrator, bankAccountItem, donor, mockDonorApi, session } from '../donor-session';
 import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
@@ -271,6 +272,37 @@ export const STEPS: Step[] = [
     id: 'donor-details',
     title: "the donor's details",
     open: (ui) => donorPage(ui, '/darce/udaje'),
+  },
+  {
+    id: 'donor-bank-accounts',
+    title: "the donor's bank accounts with a bank logo and a monogram",
+    open: async (ui) => {
+      await mockDonorApi(ui.routes, donorWithDonations);
+      await ui.routes.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000001',
+                  accountNumber: '6020809023/0800',
+                  donationCount: 1,
+                  totalAmountMinor: 200,
+                }),
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000002',
+                  accountNumber: '123-7092740277/2010',
+                }),
+              ],
+            },
+          }),
+      );
+      await mockBankLogos(ui.routes, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await rememberedSession(ui, donor);
+      await visit(ui, '/darce/ucty');
+      await ui.waitVisible({ css: '.accounts-list' });
+    },
   },
   {
     id: 'donor-device-data-delete',
