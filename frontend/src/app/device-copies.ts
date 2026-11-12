@@ -82,6 +82,12 @@ export class DeviceCopies implements SessionDevice {
     return this.vault().then((vault) => vault.sessionLost());
   }
 
+  connectionReturned(): Promise<void> {
+    return this.loading === null
+      ? Promise.resolve()
+      : this.loading.then((vault) => vault.connectionReturned?.()).catch(() => undefined);
+  }
+
   passwordChanged(account: DeviceAccount, password: string): Promise<void> {
     return this.vault().then((vault) => vault.passwordChanged(account, password));
   }

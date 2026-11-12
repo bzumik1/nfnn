@@ -87,7 +87,7 @@ class DonorAccountErasedEmailSenderTest {
 
                     na vaši žádost jsme vymazali osobní údaje z vašeho dárcovského účtu Nová naděje: jméno, adresu, e-mail, heslo a bankovní účty. Účet už nejde použít a všechna přihlášení jsme ukončili.
 
-                    Vydaná potvrzení o daru jsou účetní doklady, a proto je po dobu, kterou stanoví účetní a daňové předpisy, uchováváme na našem serveru beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich stojí. Stejně dlouho uchováváme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce. Na serveru zůstává i záznam o tom, co správci webu udělali, včetně tohoto výmazu.
+                    Vydaná potvrzení o daru jsou účetní doklady, a proto je po dobu, kterou stanoví účetní a daňové předpisy, uchováváme na našem serveru beze změny, tedy i s vaším jménem a adresou (u firmy i s IČO), jak na nich stojí. Stejně dlouho uchováváme záznamy o přijatých platbách a darech s tím, co o platbě uvádí výpis z banky, včetně čísla účtu a jména plátce. Na serveru zůstává i záznam o tom, co správci webu udělali, včetně tohoto výmazu. Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení zpravidla smaže, až se příště spojí s naším serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou. Potvrzení, která jste si sami stáhli, zůstávají u vás. Do kopií správy v zařízeních správců se výmaz promítne při jejich příští synchronizaci; historie změn správy v nich zůstává stejně jako na serveru.
 
                     Databázi webu každý den zálohujeme na náš server a zálohy na serveru mažeme přibližně po měsíci; vymazané údaje proto ze záloh zmizí nejpozději po této době.
 
@@ -126,7 +126,11 @@ class DonorAccountErasedEmailSenderTest {
                     .contains("We back up the site's database to our server every day and delete the backups on the server after about a month,"
                             + " so the erased data leave the backups within that time at the latest.")
                     .doesNotContain("no longer linked to your name")
-                    .doesNotContain("device")
+                    .contains("The copy of your data that the donor portal kept on a device where you were signed in is, as a rule, deleted by that"
+                            + " device when it next reaches our server; a device that never connects again keeps it encrypted.")
+                    .contains("Receipts you downloaded yourself stay with you.")
+                    .contains("The erasure reaches the administrators' copies of the administration on their devices at their next synchronisation;"
+                            + " the record of the administrators' actions stays in them as it does on the server.")
                     .contains("simply register again");
             assertThat(MailContents.html(email)).contains("lang=\"en\"").contains(">Personal data erased</h1>");
         });

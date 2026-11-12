@@ -566,6 +566,17 @@ export function administrationCopyGift(
 
 const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
 
+export function whenAdministrationCopied(page: Page): () => Promise<void> {
+  const synced = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
+    { timeout: 10_000 },
+  );
+  return async () => {
+    await synced;
+    await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
+  };
+}
+
 export async function openUnlockedAdministrationPage(
   page: Page,
   path: string,

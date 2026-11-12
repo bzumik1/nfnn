@@ -1,7 +1,13 @@
 import { Locator, Page, Route } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, stepBack } from './app-history';
-import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openAccountItem,
+  session,
+  whenAdministrationCopied,
+} from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
 const SHEET_FLICK_REST_MS = 100;
@@ -29,9 +35,11 @@ async function openPayments(page: Page): Promise<void> {
     route.fulfill(session(200, administrator)),
   );
   await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
+  const copied = whenAdministrationCopied(page);
   await page.goto('/');
   await openAccountItem(page, 'Správa');
   await expect(page).toHaveURL(/\/sprava$/);
+  await copied();
   await page.getByRole('link', { name: 'Platby z banky' }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
   await expect(page.locator('.page-transition')).toHaveCount(0);
@@ -106,6 +114,59 @@ async function fingerTo(
     bubbles: true,
     cancelable: true,
   });
+}
+
+type LegacyTouchDocument = Document & {
+  createTouch(
+    view: Window,
+    target: EventTarget,
+    identifier: number,
+    pageX: number,
+    pageY: number,
+    screenX: number,
+    screenY: number,
+  ): Touch;
+  createTouchList(...touches: Touch[]): TouchList;
+};
+
+async function fingerPulls(target: Locator, x: number, y: number, downs: number[]): Promise<void> {
+  await target.evaluate(
+    (element, path) => {
+      const document = element.ownerDocument as LegacyTouchDocument;
+      const view = document.defaultView!;
+      const at = (clientY: number): Touch[] | TouchList =>
+        typeof document.createTouch === 'function'
+          ? document.createTouchList(
+              document.createTouch(
+                view,
+                element,
+                1,
+                path.x + view.scrollX,
+                clientY + view.scrollY,
+                path.x,
+                clientY,
+              ),
+            )
+          : [new Touch({ identifier: 1, target: element, clientX: path.x, clientY })];
+      const finger = (type: string, clientY: number): void => {
+        const touches = at(clientY) as Touch[];
+        element.dispatchEvent(
+          new TouchEvent(type, {
+            touches,
+            targetTouches: touches,
+            changedTouches: touches,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      };
+      finger('touchstart', path.y);
+      for (const down of path.downs) {
+        finger('touchmove', path.y + down);
+      }
+    },
+    { x, y, downs },
+  );
 }
 
 interface SheetLeave {
@@ -210,7 +271,7 @@ async function phoneThatAnimates(page: Page): Promise<void> {
 
 async function pageUsableAgain(page: Page): Promise<void> {
   await expect(page.locator('dialog')).toHaveCount(0);
-  expect(await page.locator('[inert]').count()).toBe(0);
+  await expect(page.locator('[inert]')).toHaveCount(0);
   await openPairing(page);
 }
 
@@ -437,9 +498,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
 
-    await fingerTo(content, 'touchstart', x, y);
-    await fingerTo(content, 'touchmove', x, y + 20);
-    await fingerTo(content, 'touchmove', x, y + 80);
+    await fingerPulls(content, x, y, [20, 80]);
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 60);
     await fingerTo(content, 'touchmove', x, y + 400);
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 300);
@@ -464,8 +523,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
 
-    await fingerTo(content, 'touchstart', x, y);
-    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerPulls(content, x, y, [20]);
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 10);
     await fingerTo(content, 'touchend', x, y + 20, false);
 
@@ -502,9 +560,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     const box = (await content.boundingBox())!;
     const x = box.x + box.width / 2;
     const y = box.y + box.height / 2;
-    await fingerTo(content, 'touchstart', x, y);
-    await fingerTo(content, 'touchmove', x, y + 20);
-    await fingerTo(content, 'touchmove', x, y + 200);
+    await fingerPulls(content, x, y, [20, 200]);
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 150);
     const released = (await panel.boundingBox())!.y;
     await watchSheetLeave(page);
@@ -551,7 +607,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect(page.locator('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
     await entryTakenBack(page);
-    expect(await page.locator('[inert]').count()).toBe(0);
+    await expect(page.locator('[inert]')).toHaveCount(0);
     await stepBack(page);
     await expect(page).toHaveURL(/\/sprava$/);
   });
