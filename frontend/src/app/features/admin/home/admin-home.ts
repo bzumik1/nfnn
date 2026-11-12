@@ -55,6 +55,7 @@ import {
 } from '../shell/section-rows/admin-section-rows';
 import {
   AttentionRetry,
+  AttentionTone,
   attentionRows,
   LoadState,
   SignatoryState,
@@ -65,6 +66,14 @@ import { AdministrationPageReads } from '../device-copy/administration-page-read
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
+
+const TILE_OF_TONE: Readonly<Record<AttentionTone, string>> = {
+  danger: 'ui-list__tile--danger',
+  warning: 'ui-list__tile--warning',
+  task: 'ui-list__tile--accent',
+  unknown: '',
+  action: '',
+};
 
 @Component({
   selector: 'app-admin-home',
@@ -190,13 +199,10 @@ export class AdminHome {
     const run = this.backups()?.lastBackup;
     return run && run.outcome === 'OK' ? formatBankTime(run.finishedAt) : null;
   });
-  protected readonly tileOfTone: Readonly<Record<string, string>> = {
-    danger: 'ui-list__tile--danger',
-    warning: 'ui-list__tile--warning',
-    task: 'ui-list__tile--accent',
-    unknown: 'ui-list__tile--neutral',
-    action: 'ui-list__tile--accent',
-  };
+  protected tileClass(tone: AttentionTone): string {
+    return TILE_OF_TONE[tone];
+  }
+
   protected readonly toneLabels: Readonly<Record<string, string>> = {
     danger: $localize`:@@admin.home.attention.tone.danger:Naléhavé:`,
     warning: $localize`:@@admin.home.attention.tone.warning:Upozornění:`,

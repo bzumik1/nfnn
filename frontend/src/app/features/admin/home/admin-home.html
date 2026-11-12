@@ -465,7 +465,7 @@
 
 <ng-template #rowContent let-row>
   @if (row.icon) {
-    <span class="ui-list__lead ui-list__tile" [class]="tileOfTone[row.tone]" aria-hidden="true">
+    <span class="ui-list__lead ui-list__tile" [class]="tileClass(row.tone)" aria-hidden="true">
       <svg
         width="18"
         height="18"

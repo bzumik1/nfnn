@@ -47,7 +47,7 @@ div.ui-list__row {
 
 @media (hover: hover) {
   a.ui-list__row:hover,
-  button.ui-list__row:hover {
+  button.ui-list__row:not(:disabled):hover {
     background: var(--color-surface-alt);
   }
 }
@@ -169,9 +169,19 @@ div.ui-list__row {
 
   .ui-list__row {
     min-height: var(--list-inset-row-min-height);
+    padding-block: var(--space-2);
+  }
+
+  .ui-list__lead {
+    justify-content: center;
+    min-inline-size: var(--list-lead-size);
   }
 
   .ui-list__title {
+    font-weight: var(--weight-list-inset-title);
+  }
+
+  .ui-list__value:not(.ui-list__count) {
     font-weight: var(--weight-list-inset-title);
   }
 }
@@ -290,6 +300,10 @@ div.ui-list__row {
 button.ui-list__row:disabled {
   color: var(--color-text-muted);
   cursor: default;
+
+  @media (forced-colors: active) {
+    color: GrayText;
+  }
 }
 
 a.ui-list__row,

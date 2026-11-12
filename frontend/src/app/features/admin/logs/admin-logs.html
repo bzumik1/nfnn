@@ -105,7 +105,7 @@
               @for (file of current(); track file.name) {
                 <li>
                   <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">
-                    <span class="ui-list__lead row-icon" aria-hidden="true">
+                    <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
                       <svg
                         width="20"
                         height="20"
@@ -142,7 +142,7 @@
               @if (olderCount() > 0) {
                 <li>
                   <a class="ui-list__row" [routerLink]="filesPath">
-                    <span class="ui-list__lead row-icon" aria-hidden="true">
+                    <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
                       <svg
                         width="20"
                         height="20"
@@ -189,7 +189,7 @@
       <ul class="ui-list ui-list--inset">
         <li>
           <a class="ui-list__row" routerLink="/sprava/logy/urovne">
-            <span class="ui-list__lead row-icon" aria-hidden="true">
+            <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
               <svg
                 width="20"
                 height="20"
@@ -230,7 +230,7 @@
         </li>
         <li>
           <a class="ui-list__row" routerLink="/sprava/logy/vlakna">
-            <span class="ui-list__lead row-icon" aria-hidden="true">
+            <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
               <svg
                 width="20"
                 height="20"

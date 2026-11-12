@@ -268,7 +268,7 @@
   --radius-xl: 14px;
   --radius-card: 16px;
   --radius-qr-ground: max(0px, calc(var(--radius-card) - 2px - var(--space-2-5)));
-  --radius-group: 22px;
+  --radius-group: 24px;
   --radius-media: 20px;
   --radius-dialog: 24px;
   --radius-sheet: 34px;
@@ -410,6 +410,7 @@
     --color-border-accent: #1d4ed8;
     --color-border-field: #4b5563;
     --color-divider: #6b7280;
+    --color-separator: #6b7280;
     --color-log-code: #1e3560;
     --color-log-warn: #92400e;
   }
@@ -498,6 +499,7 @@
     --color-border-accent: #6ea8ff;
     --color-border-field: #9aa3b2;
     --color-divider: #8a93a3;
+    --color-separator: #8a93a3;
     --color-log-code: #cbdaf5;
     --color-log-warn: #fcd34d;
   }

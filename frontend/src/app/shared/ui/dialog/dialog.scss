@@ -52,7 +52,7 @@
 
   &--grouped {
     --color-group-cell: var(--color-sheet-group);
-    --color-surface-alt: var(--color-sheet-grouped);
+    --color-surface-alt: var(--color-fill);
 
     background: var(--color-sheet-grouped);
     color: var(--color-sheet-text);
