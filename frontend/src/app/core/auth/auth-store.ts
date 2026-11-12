@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import {
   catchError,
   defer,
@@ -19,12 +19,14 @@ import {
   throwError,
   timeout,
   TimeoutError,
+  EmptyError,
 } from 'rxjs';
-import { Connectivity } from '../connectivity/connectivity';
+import { Connectivity, isUnreachable } from '../connectivity/connectivity';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
+import { donorFromCopy } from './copy-profile';
 import { deviceAccountOf, SESSION_DEVICE, type SignInSecret } from './session-device';
 import {
   BROWSER_JAR,
@@ -63,6 +65,7 @@ export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
 export const SESSION_HINT_KEY = BROWSER_JAR.hintKey;
 export const CONNECTION_CHECK_AFTER_MS = 1_000;
+export const OFFLINE_OPEN_WAIT_MS = 3_000;
 
 export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 
@@ -80,10 +83,13 @@ export class AuthStore {
   private readonly currentDonor = signal<Donor | null>(null);
   private readonly currentStatus = signal<AuthStatus>('unknown');
   private readonly currentSession = signal<SessionKind | null>(null);
+  private readonly fromCopy = signal(false);
+  private readonly acceptedAt = signal<string | null>(null);
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
   private restoring: Promise<void> | null = null;
   private adoptions = 0;
+  private changes = 0;
 
   readonly donor = this.currentDonor.asReadonly();
   readonly status = this.currentStatus.asReadonly();
@@ -91,6 +97,8 @@ export class AuthStore {
   readonly isAdmin = computed(() => this.currentDonor()?.roles.includes('ADMIN') ?? false);
   readonly session = this.currentSession.asReadonly();
   readonly storesNothing = computed(() => this.currentSession() === 'PUBLIC');
+  readonly fromDevice = this.fromCopy.asReadonly();
+  readonly sessionAcceptedAt = this.acceptedAt.asReadonly();
   readonly installed = this.jar.installed;
 
   constructor() {
@@ -103,6 +111,11 @@ export class AuthStore {
       }
     });
     inject(DestroyRef).onDestroy(() => this.channel?.close());
+    effect(() => {
+      if (this.fromCopy() && !this.connectivity.offline()) {
+        untracked(() => this.refresh().subscribe({ error: () => undefined }));
+      }
+    });
   }
 
   currentAccessToken(): string | null {
@@ -209,8 +222,7 @@ export class AuthStore {
       return this.restoring;
     }
     if (this.connectivity.offline()) {
-      this.waitSignedOut();
-      return Promise.resolve();
+      return this.openFromDevice();
     }
     const connectionChecked = timer(CONNECTION_CHECK_AFTER_MS).pipe(
       switchMap(() => this.connectivity.tryAgain()),
@@ -367,16 +379,41 @@ export class AuthStore {
     });
   }
 
-  private restoreLater(failure: unknown): void {
+  private restoreLater(failure: unknown): Promise<void> | undefined {
     if (isRefusal(failure)) {
-      return;
+      return undefined;
     }
-    this.waitSignedOut();
     if (isSlow(failure)) {
       setTimeout(() => (this.restoring = null), SLOW_RESTORE_PAUSE_MS);
     } else {
       this.restoring = null;
     }
+    if (!isUnanswered(failure) && !this.connectivity.offline()) {
+      this.waitSignedOut();
+      return undefined;
+    }
+    return this.openFromDevice();
+  }
+
+  private async openFromDevice(): Promise<void> {
+    if (this.currentStatus() === 'signed-in' || this.device.openedOffline === undefined) {
+      this.waitSignedOut();
+      return;
+    }
+    const seen = this.changes;
+    const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
+    const opening = await withinWait(this.device.openedOffline(expected));
+    if (opening === null || this.changes !== seen) {
+      this.waitSignedOut();
+      return;
+    }
+    this.changes++;
+    this.accessToken = null;
+    this.currentDonor.set(donorFromCopy(opening.profile));
+    this.currentSession.set(opening.session.kind);
+    this.acceptedAt.set(null);
+    this.fromCopy.set(true);
+    this.currentStatus.set('signed-in');
   }
 
   private waitSignedOut(): void {
@@ -403,8 +440,9 @@ export class AuthStore {
 
   private adoptRestored(response: AuthResponse): Donor {
     const before = this.currentDonor();
+    const wasFromCopy = this.fromCopy();
     const donor = this.adopt(response);
-    if (before === null || before.id !== donor.id) {
+    if (before === null || before.id !== donor.id || wasFromCopy) {
       void this.device.restored(deviceAccountOf(donor), this.storesNothing());
     }
     return donor;
@@ -444,6 +482,9 @@ export class AuthStore {
       this.diagnostics.clear();
     }
     this.adoptions++;
+    this.changes++;
+    this.fromCopy.set(false);
+    this.acceptedAt.set(new Date().toISOString());
     this.accessToken = response.accessToken;
     this.currentDonor.set(response.user);
     this.currentStatus.set('signed-in');
@@ -462,6 +503,9 @@ export class AuthStore {
       this.diagnostics.clear();
     }
     this.administrationAccess.ended();
+    this.changes++;
+    this.fromCopy.set(false);
+    this.acceptedAt.set(null);
     this.accessToken = null;
     this.currentDonor.set(null);
     this.currentStatus.set('anonymous');
@@ -470,7 +514,23 @@ export class AuthStore {
   }
 }
 
-function isRefusal(failure: unknown): boolean {
+function isUnanswered(failure: unknown): boolean {
+  return isUnreachable(failure) || isSlow(failure) || failure instanceof EmptyError;
+}
+
+async function withinWait<T>(opening: Promise<T | null>): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>(
+    (resolve) => (timer = setTimeout(() => resolve(null), OFFLINE_OPEN_WAIT_MS)),
+  );
+  try {
+    return await Promise.race([opening.catch(() => null), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function isRefusal(failure: unknown): boolean {
   return (
     failure instanceof HttpErrorResponse &&
     failure.status >= 400 &&
