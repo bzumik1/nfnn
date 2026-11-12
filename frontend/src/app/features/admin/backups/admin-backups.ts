@@ -43,12 +43,15 @@ import { RestoreDialog } from './restore-dialog';
 import { ADMIN_BACKUP_HISTORY_PATH, RESTORE_STATE_KEY } from './backup-paths';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
 interface RunningJob {
   kind: BackupRequestKind;
 }
+
+const ERROR_NEEDS_CONNECTION = $localize`:@@admin.backups.errorNeedsConnection:Technické podrobnosti chyby se ukážou s připojením.`;
 
 interface RunLine {
   text: string;
@@ -92,6 +95,7 @@ function failedAt(at: string): string {
 })
 export class AdminBackups {
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly setupApi = inject(SetupApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -114,6 +118,8 @@ export class AdminBackups {
   protected readonly restoreError = signal<string | null>(null);
   protected readonly restoring = signal<RequestedRestore | null>(null);
   protected readonly restoreSlow = signal(false);
+  protected readonly errorNeedsConnection = ERROR_NEEDS_CONNECTION;
+  private readonly errorsHeld = signal(false);
 
   protected readonly available = computed(() => this.view()?.available ?? false);
   protected readonly backups = computed(() => this.view()?.backups ?? []);
@@ -149,12 +155,13 @@ export class AdminBackups {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .backups()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
           this.view.set(view);
+          this.errorsHeld.set(view.fromCopy);
           this.state.set('ready');
           this.reportRequestedRestore(view);
           this.askHandedOverRestore(view);
@@ -303,7 +310,10 @@ export class AdminBackups {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (view) => this.view.set(view),
+        next: (view) => {
+          this.view.set(view);
+          this.errorsHeld.set(false);
+        },
         complete: () => this.finishJob(kind),
         error: (failure: unknown) => {
           this.job.set(null);
@@ -415,7 +425,7 @@ export class AdminBackups {
     if (run.outcome === 'FAILED') {
       return {
         text: $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
-        error: run.error,
+        error: this.runError(run),
       };
     }
     return {
@@ -424,13 +434,17 @@ export class AdminBackups {
     };
   }
 
+  private runError(run: BackupRunResponse): string | null {
+    return run.error ?? (this.errorsHeld() ? ERROR_NEEDS_CONNECTION : null);
+  }
+
   private describeBackup(run: BackupRunResponse | null | undefined): RunLine {
     if (!run) {
       return { text: NONE_YET, error: null };
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: run.error };
+      return { text: failedAt(at), error: this.runError(run) };
     }
     return {
       text: $localize`:@@admin.backups.lastBackup.ok:${at}:time: (${formatSize(run.sizeBytes ?? 0)}:size:)`,
@@ -451,7 +465,7 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: run.error };
+      return { text: failedAt(at), error: this.runError(run) };
     }
     return {
       text: $localize`:@@admin.backups.lastTestRestore.ok:${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:`,

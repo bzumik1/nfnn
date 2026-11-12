@@ -44,6 +44,7 @@ import {
   versionInRefusal,
 } from '../../../core/version/row-version';
 import { formatBankTime } from '../../donations/donation-date';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -220,6 +221,7 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
 export class AdminSettings {
   private readonly api = inject(AdminApi);
   private readonly setupApi = inject(SetupApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -285,7 +287,7 @@ export class AdminSettings {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .settings()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -378,6 +380,7 @@ export class AdminSettings {
     this.draft.discard();
     this.notice.set(null);
     this.reloadingAfterStaleDraft = true;
+    this.reads.changed();
     this.load();
   }
 

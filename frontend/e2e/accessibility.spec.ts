@@ -37,6 +37,8 @@ import {
   signedInDevices,
   signIn,
   session,
+  openUnlockedAdministrationPage,
+  serveAdministrationCopy,
 } from './donor-session';
 import {
   chunkLoadNotice,
@@ -2003,6 +2005,126 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(page.locator('tbody tr')).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Načíst starší' })).toBeVisible();
 
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the administration reads its copy and the server cannot be reached, then the settings parts waiting for the server, the history without details and a failed backup without its text break no rule', async ({
+    page,
+  }) => {
+    const failedRun = {
+      outcome: 'FAILED',
+      startedAt: '2026-10-23T01:00:00Z',
+      finishedAt: '2026-10-23T01:00:03Z',
+      fileName: null,
+      sizeBytes: null,
+      tables: null,
+      requestId: null,
+      error: null,
+    };
+    await serveAdministrationCopy(page, {
+      donations: {},
+      donors: {
+        'accounts:2026-01': [
+          {
+            donorId: administrator.id,
+            type: 'PERSON',
+            name: 'Jana Nováková',
+            companyIdentifier: null,
+            address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+            email: administrator.email,
+            variableSymbol: '4821937560',
+            preferredLocale: 'cs',
+            registeredAt: '2026-01-15T10:00:00Z',
+            emailVerified: true,
+            administrator: true,
+            secondFactorEnabled: true,
+            passkeys: 0,
+            erasedAt: null,
+          },
+        ],
+        'audit:2026-10': [
+          {
+            id: '019a1c00-0000-7000-8000-00000000e001',
+            adminId: administrator.id,
+            action: 'PAIR_PAYMENT',
+            subjectId: '019a1c00-0000-7000-8000-000000001001',
+            donorId: null,
+            summary: null,
+            performedAt: '2026-10-22T10:00:00Z',
+            client: null,
+          },
+        ],
+      },
+      content: {
+        people: [
+          { members: [], note: null, footnote: null, noteVersion: 'a', footnoteVersion: 'b' },
+        ],
+      },
+      operations: {
+        settings: [adminSettings],
+        backups: [
+          {
+            available: true,
+            backups: [],
+            lastBackup: failedRun,
+            lastTestRestore: null,
+            lastRestore: null,
+            restoreFiles: [],
+            pendingRequests: 0,
+            restorePending: false,
+            problems: ['BACKUP_FAILED'],
+            schedule: {
+              backupTime: '03:00',
+              testRestoreDay: 7,
+              testRestoreTime: '04:00',
+              applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+            },
+            key: { available: true, confirmed: true, confirmedAt: '2026-10-23T08:00:00Z' },
+          },
+        ],
+      },
+    });
+    await page.route(
+      (url) =>
+        [
+          '/api/admin/donations/receipt-signatory',
+          '/api/admin/donations/receipt-signing-keys',
+        ].includes(url.pathname),
+      (route) => route.abort('connectionrefused'),
+    );
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await openUnlockedAdministrationPage(page, '/sprava/vice', 'Občas a pro technika');
+    const nav = page.getByRole('navigation', { name: 'Správa' });
+    await nav.getByRole('link', { name: 'Nastavení', exact: true }).click();
+    await expect(page.getByText('Klíč ukážeme, až se spojení se serverem obnoví.')).toBeVisible();
+    await expect(
+      page.getByText('Kdo potvrzení podepisuje, ukážeme, až se spojení se serverem obnoví.'),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Historie změn', exact: true }).click();
+    await expect(
+      page.getByText('Podrobnosti se ukážou s připojením.', { exact: true }),
+    ).toBeVisible();
+    await page.getByText('Technické podrobnosti', { exact: true }).first().click();
+    await expect(
+      page.getByText('Technické podrobnosti se ukážou s připojením.').first(),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Zálohy', exact: true }).click();
+    await page
+      .locator('details.tech-details')
+      .filter({ hasText: 'Technické podrobnosti chyby se ukážou s připojením.' })
+      .locator('summary')
+      .click();
+    await expect(
+      page.getByText('Technické podrobnosti chyby se ukážou s připojením.'),
+    ).toBeVisible();
     expect(await violations(page)).toEqual([]);
   });
 

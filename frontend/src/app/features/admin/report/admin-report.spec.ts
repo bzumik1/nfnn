@@ -15,6 +15,7 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminReport } from './admin-report';
+import { copyOf, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
 
 const REPORT_URL = '/api/admin/donations/report';
 const SETTINGS_URL = '/api/admin/donations/report/settings';
@@ -728,5 +729,21 @@ describe('Given an administrator changing the monthly report on a device that ke
 
     expect(shelf.draftOf('administration', 'report-settings')).toBeNull();
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the monthly e-mail opens, then its settings and the next report come from the copy', async () => {
+    const { settings, sentReports, nextReport, lastEndedMonth } = reportView();
+    const { page, http } = await openOfflineFromCopy(
+      AdminReport,
+      copyOf({
+        'donations/report-settings': [{ ...settings, sentReports, nextReport, lastEndedMonth }],
+      }),
+    );
+
+    expect(textOf(page)).toContain('info@nfnn.cz');
+    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    http.verify();
   });
 });

@@ -8,6 +8,8 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { ABOUT_PHOTO_ID, aboutPhoto } from '../../content/testing/about-fixtures';
 import { IMAGE_ID, uploadedImage } from '../../content/testing/news-fixtures';
 import { AdminAbout } from './admin-about';
+import { contentCopy, openOfflineFromCopy } from '../device-copy/testing/opened-copy';
+import { aboutPhoto as heldPhoto } from '../../content/testing/about-fixtures';
 
 const ABOUT_URL = '/api/admin/content/about';
 const MEDIA_URL = '/api/admin/content/media';
@@ -389,5 +391,26 @@ describe('Given an administrator whose About section does not load', () => {
     await settle(fixture);
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the About section opens, then its photo comes from the copy', async () => {
+    const photo = heldPhoto();
+    const { page, http } = await openOfflineFromCopy(
+      AdminAbout,
+      contentCopy({ 'content/about': [{ photo }] }),
+    );
+
+    expect(page.querySelector(`img[src*="${photo.id}"]`)).not.toBeNull();
+    http.verify();
+  });
+
+  it('when the copy holds no About photo, then the page says there is none, as when the server says so', async () => {
+    const { page, http } = await openOfflineFromCopy(AdminAbout, contentCopy({}));
+
+    expect(page.querySelector('img')).toBeNull();
+    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    http.verify();
   });
 });

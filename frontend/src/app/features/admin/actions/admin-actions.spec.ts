@@ -9,6 +9,7 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { adminAction } from '../testing/admin-fixtures';
 import { AdminActions } from './admin-actions';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { copyOf, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -484,5 +485,40 @@ describe('Given an administrator on the history page where lists show as rows', 
     expect(textOf(second.querySelector('details'))).toContain(
       'Správce: 019a1c00-0000-7000-8000-00000000a009',
     );
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the history opens, then it lists the entries of the copy with the names from the accounts and says the details show with a connection', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminActions,
+      copyOf({
+        'donors/accounts:2026-01': [
+          {
+            donorId: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+            name: 'Petr Správce',
+            email: 'petr@nfnn.cz',
+          },
+        ],
+        'donors/audit:2026-10': [
+          {
+            id: '0190c3a2-0000-7000-8000-000000000001',
+            adminId: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+            action: 'PAIR_PAYMENT',
+            subjectId: 'payment-1',
+            performedAt: '2026-10-30T10:00:00Z',
+            client: null,
+            summary: 'Platba 500 Kč přiřazena dárci',
+            donorId: null,
+          },
+        ],
+      }),
+    );
+
+    expect(textOf(page)).toContain('Přiřazení platby dárci');
+    expect(textOf(page)).toContain('Petr Správce');
+    expect(textOf(page)).toContain('Platba 500 Kč přiřazena dárci');
+    expect(textOf(page)).toContain('Technické podrobnosti se ukážou s připojením.');
+    http.verify();
   });
 });

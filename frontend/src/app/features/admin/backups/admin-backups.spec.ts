@@ -9,6 +9,7 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { backupFile, backupRun, backupSchedule, backupsView } from '../testing/admin-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { AdminBackups, JOB_POLL_MS, RESTORE_REQUEST_KEY } from './admin-backups';
+import { copyOf, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
 
 const BACKUPS_URL = '/api/admin/operations/backups';
 const REQUESTS_URL = '/api/admin/operations/backups/requests';
@@ -689,6 +690,40 @@ describe('Given an administrator who chose to restore a backup from the history 
         .replace(/\s+/g, ' ')
         .trim(),
     ).toBe('Web se vrátí do stavu z 22. 10. 2026 3:00, ze zálohy nfnn-2026-10-22_0300.dump.age.');
+    http.verify();
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the backups open, then their state comes from the copy and starting a backup needs a connection', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminBackups,
+      copyOf({ 'operations/settings': [{}], 'operations/backups': [backupsView()] }),
+    );
+
+    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    const start = Array.from(page.querySelectorAll('button')).find((button) =>
+      (button.textContent ?? '').includes('Zálohovat'),
+    );
+    expect(start?.getAttribute('aria-disabled')).toBe('true');
+    http.verify();
+  });
+});
+
+describe('Given an administrator offline whose copy holds a failed backup without its error text', () => {
+  it('when the backups open, then the failure shows by its time and says its details show with a connection', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminBackups,
+      copyOf({
+        'operations/settings': [{}],
+        'operations/backups': [
+          backupsView({ lastBackup: backupRun({ outcome: 'FAILED', error: null }) }),
+        ],
+      }),
+    );
+
+    expect(textOf(page)).toContain('Nepovedla se');
+    expect(textOf(page)).toContain('Technické podrobnosti chyby se ukážou s připojením.');
     http.verify();
   });
 });

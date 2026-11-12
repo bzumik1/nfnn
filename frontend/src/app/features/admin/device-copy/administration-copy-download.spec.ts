@@ -99,6 +99,17 @@ describe('Given the download of the administration into its copy on this device'
         administrator,
         chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
       });
+      await laterParts();
+    }
+  }
+
+  async function laterParts(): Promise<void> {
+    for (const part of ['content', 'operations']) {
+      await answer(`/api/admin/${part}/sync`, {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [],
+      });
     }
   }
 
@@ -403,6 +414,7 @@ describe('Given the download of the administration into its copy on this device'
         administrator: true,
         chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
       });
+      await laterParts();
       const asked = await vi.waitFor(() =>
         http.expectOne((request) => request.url === '/api/admin/donations/sync/chunks'),
       );
@@ -469,6 +481,7 @@ describe('Given the download of the administration into its copy on this device'
         administrator: true,
         chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
       });
+      await laterParts();
 
       expect(await outcome).toBe('stored');
       expect(http.match(() => true)).toHaveLength(0);
@@ -580,7 +593,7 @@ describe('Given the download of the administration into its copy on this device'
                 { id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 },
               ],
             });
-          } else {
+          } else if (request.request.url === '/api/admin/donors/sync') {
             request.flush({
               subject: ADMIN_ID,
               administrator: true,
@@ -588,6 +601,8 @@ describe('Given the download of the administration into its copy on this device'
                 { id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 },
               ],
             });
+          } else {
+            request.flush({ subject: ADMIN_ID, administrator: true, chunks: [] });
           }
         }
         await flush();
@@ -656,4 +671,159 @@ describe('Given the download of the administration into its copy on this device'
       expect(http.match(() => true)).toHaveLength(0);
     });
   });
+
+  describe('when a copy stored before the content and the operations were kept opens again', () => {
+    const NEWS = [{ id: 'news-1', title: 'Letní tábor', version: 'a1' }];
+    const PEOPLE = [{ members: [], note: null, footnote: null }];
+    const SETTINGS = [{ settings: [], secretsCanBeStored: true, version: 'b2' }];
+
+    beforeEach(async () => {
+      vault.open('unlocked', await stored());
+      await flush();
+    });
+
+    it('then only the new parts are downloaded and stored beside the chunks it kept', async () => {
+      await answer('/api/admin/donations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [{ id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 }],
+      });
+      await answer('/api/admin/donors/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
+      });
+      await answer('/api/admin/content/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [
+          { id: 'news', rowsSha256: await rowsSha256(NEWS), count: 1 },
+          { id: 'people', rowsSha256: await rowsSha256(PEOPLE), count: 1 },
+        ],
+      });
+      await answer('/api/admin/operations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'settings', rowsSha256: await rowsSha256(SETTINGS), count: 1 }],
+      });
+      const content = await vi.waitFor(() =>
+        http.expectOne((request) => request.url === '/api/admin/content/sync/chunks'),
+      );
+      expect(content.request.params.get('ids')).toBe('news,people');
+      content.flush({
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [
+          { id: 'news', rowsSha256: await rowsSha256(NEWS), count: 1, rows: NEWS },
+          { id: 'people', rowsSha256: await rowsSha256(PEOPLE), count: 1, rows: PEOPLE },
+        ],
+        missing: [],
+      });
+      await flush();
+      await answer('/api/admin/operations/sync/chunks', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [
+          { id: 'settings', rowsSha256: await rowsSha256(SETTINGS), count: 1, rows: SETTINGS },
+        ],
+        missing: [],
+      });
+
+      expect(http.match('/api/admin/donations/sync/chunks')).toHaveLength(0);
+      expect(vault.stored.map((held) => held.chunks.map((chunk) => chunk.id))).toEqual([
+        [
+          'donations/payments:2026-11',
+          'donors/accounts:2026-11',
+          'content/news',
+          'content/people',
+          'operations/settings',
+        ],
+      ]);
+      expect(vault.stored[0].chunks[2].rows).toEqual(NEWS);
+    });
+
+    it('and the content refuses as too many requests, then the refresh says so and the copy stays as it was', async () => {
+      const outcome = download.refresh();
+      await answer('/api/admin/donations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [{ id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 }],
+      });
+      await answer('/api/admin/donors/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
+      });
+      (await vi.waitFor(() => http.expectOne('/api/admin/content/sync'))).flush(
+        { type: 'https://nfnn.cz/problems/content/rate-limited' },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+
+      expect(await outcome).toBe('rate-limited');
+      expect(vault.stored).toEqual([]);
+      expect(vault.revoked).toEqual([]);
+    });
+
+    it('and the operations refuse with 403, then the copy is kept as it is', async () => {
+      const outcome = download.refresh();
+      await manifestsUpTo('operations');
+      (await vi.waitFor(() => http.expectOne('/api/admin/operations/sync'))).flush(
+        { type: 'https://nfnn.cz/problems/auth/forbidden', status: 403 },
+        { status: 403, statusText: 'Forbidden' },
+      );
+
+      expect(await outcome).toBe('failed');
+      expect(vault.stored).toEqual([]);
+      expect(vault.revoked).toEqual([]);
+    });
+
+    it('and the content says the account is no longer an administrator, then the copy of the administration is cleared', async () => {
+      const outcome = download.refresh();
+      await manifestsUpTo('content');
+      await answer('/api/admin/content/sync', {
+        subject: ADMIN_ID,
+        administrator: false,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('revoked');
+      expect(vault.revoked).toEqual([JANA]);
+    });
+
+    it('and the operations answer for another account, then nothing is stored', async () => {
+      const outcome = download.refresh();
+      await manifestsUpTo('operations');
+      await answer('/api/admin/operations/sync', {
+        subject: '0190c3a2-7b1e-7cc1-8a52-000000000000',
+        administrator: true,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('another-account');
+      expect(vault.stored).toEqual([]);
+    });
+  });
+
+  async function manifestsUpTo(last: 'content' | 'operations'): Promise<void> {
+    await answer('/api/admin/donations/sync', {
+      subject: ADMIN_ID,
+      administrator: true,
+      summary: SUMMARY,
+      chunks: [{ id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 }],
+    });
+    await answer('/api/admin/donors/sync', {
+      subject: ADMIN_ID,
+      administrator: true,
+      chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
+    });
+    if (last === 'operations') {
+      await answer('/api/admin/content/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        chunks: [],
+      });
+    }
+  }
 });

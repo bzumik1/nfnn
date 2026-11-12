@@ -156,7 +156,7 @@ export class AdministrationReads {
     pairing: PairingFilter,
     query: PaymentQuery = {},
   ): Observable<AdminPaymentListResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const rows = this.donationsRows();
         if (rows === null) {
@@ -170,7 +170,7 @@ export class AdministrationReads {
   }
 
   donorSearch(query: string): Observable<AdminDonorSearchResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const records = this.donorRecords();
         return records === null ? null : donorRecordSearch(records, query);
@@ -180,7 +180,7 @@ export class AdministrationReads {
   }
 
   accountList(query: string, limit?: number): Observable<DonorAccountListResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const accounts = this.accounts();
         return accounts === null ? null : accountSearch(accounts, query, 0, limit);
@@ -190,14 +190,14 @@ export class AdministrationReads {
   }
 
   account(donorId: string): Observable<DonorAccountResponse> {
-    return this.read(
+    return this.copyFirst(
       () => this.accounts()?.find((account) => account.donorId === donorId) ?? null,
       () => this.api.donor(donorId),
     );
   }
 
   overview(year: number | null = null): Observable<AdminOverviewResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const held = this.overviews();
         if (held === null) {
@@ -286,7 +286,7 @@ export class AdministrationReads {
     );
   }
 
-  private read<Answer>(
+  copyFirst<Answer>(
     local: () => Answer | null,
     server: () => Observable<Answer>,
   ): Observable<Answer> {

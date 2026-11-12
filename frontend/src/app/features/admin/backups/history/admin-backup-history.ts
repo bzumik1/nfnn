@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { AdminApi, AdminBackupsResponse, BackupFileResponse } from '../../admin-api';
+import { AdminBackupsResponse, BackupFileResponse } from '../../admin-api';
 import { LogPageAccess } from '../../logs/log-page-access';
 import { backupDays } from '../backup-days';
 import { BackupDownloads } from '../backup-downloads';
@@ -20,6 +20,7 @@ import { formatSize } from '../backup-format';
 import { backupKindName } from '../backup-kinds';
 import { ADMIN_BACKUPS_PATH, RESTORE_STATE_KEY } from '../backup-paths';
 import { BackupSheet } from '../backup-sheet/backup-sheet';
+import { AdministrationPageReads } from '../../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -32,7 +33,7 @@ type LoadState = 'loading' | 'ready' | 'error';
   providers: [BackupDownloads],
 })
 export class AdminBackupHistory {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly access = inject(LogPageAccess);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -55,7 +56,7 @@ export class AdminBackupHistory {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .backups()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

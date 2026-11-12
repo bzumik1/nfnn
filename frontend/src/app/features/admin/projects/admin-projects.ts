@@ -14,7 +14,8 @@ import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { ProjectsApi, ProjectResponse } from '../../content/projects-api';
+import { ProjectResponse } from '../../content/projects-api';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
@@ -34,7 +35,7 @@ const FORBIDDEN = 'auth/forbidden';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminProjects {
-  private readonly api = inject(ProjectsApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -65,8 +66,8 @@ export class AdminProjects {
   }
 
   private fetch(): void {
-    this.api
-      .list()
+    this.reads
+      .projectList()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {

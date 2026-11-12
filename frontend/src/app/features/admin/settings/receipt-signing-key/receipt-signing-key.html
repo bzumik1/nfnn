@@ -35,6 +35,11 @@
           </button>
         </div>
       }
+      @case ('offline') {
+        <p class="signing-key-status" i18n="@@admin.signingKey.offline">
+          Klíč ukážeme, až se spojení se serverem obnoví.
+        </p>
+      }
       @case ('ready') {
         @if (current(); as key) {
           <dl class="ui-data-list signing-key-data">

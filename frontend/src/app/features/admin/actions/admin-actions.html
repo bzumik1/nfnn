@@ -76,7 +76,13 @@
                         @if (item.adminEmail) {
                           <span class="details-text">{{ item.adminEmail }}</span>
                         }
-                        <span class="details-text">{{ item.details }}</span>
+                        @if (detailsHeld(item)) {
+                          <span class="details-text" i18n="@@admin.actions.details.needConnection"
+                            >Technické podrobnosti se ukážou s připojením.</span
+                          >
+                        } @else {
+                          <span class="details-text">{{ item.details }}</span>
+                        }
                         @if (!item.adminName && !byServer(item)) {
                           <span class="details-text" i18n="@@admin.actions.details.adminId"
                             >Správce: {{ item.adminId }}</span
@@ -142,7 +148,13 @@
                         <summary i18n="@@admin.actions.details.summary">
                           Technické podrobnosti
                         </summary>
-                        <span class="details-text">{{ item.details }}</span>
+                        @if (detailsHeld(item)) {
+                          <span class="details-text" i18n="@@admin.actions.details.needConnection"
+                            >Technické podrobnosti se ukážou s připojením.</span
+                          >
+                        } @else {
+                          <span class="details-text">{{ item.details }}</span>
+                        }
                         @if (!item.adminName && !byServer(item)) {
                           <span class="details-text" i18n="@@admin.actions.details.adminId"
                             >Správce: {{ item.adminId }}</span

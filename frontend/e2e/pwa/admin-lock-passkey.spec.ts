@@ -80,7 +80,10 @@ async function mockAdministration(context: BrowserContext, unlocks: string[]): P
       }),
   );
   await context.route(
-    (url) => url.pathname === '/api/admin/donors/sync',
+    (url) =>
+      ['/api/admin/donors/sync', '/api/admin/content/sync', '/api/admin/operations/sync'].includes(
+        url.pathname,
+      ),
     (route) =>
       route.fulfill({ json: { subject: administrator.id, administrator: true, chunks: [] } }),
   );

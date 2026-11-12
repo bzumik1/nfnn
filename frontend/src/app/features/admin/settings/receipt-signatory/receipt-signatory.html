@@ -29,6 +29,11 @@
           </button>
         </div>
       }
+      @case ('offline') {
+        <p class="signatory-status" i18n="@@admin.signatory.offline">
+          Kdo potvrzení podepisuje, ukážeme, až se spojení se serverem obnoví.
+        </p>
+      }
       @case ('ready') {
         @if (block(); as block) {
           <p class="ui-card__intro" i18n="@@admin.signatory.intro">

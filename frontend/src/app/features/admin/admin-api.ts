@@ -209,7 +209,7 @@ export function storedSymbolClaimOf(claim: SymbolClaimResponse): StoredSymbolCla
   };
 }
 
-const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports'];
+const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports', 'nextReport', 'lastEndedMonth'];
 
 export type BankLogoFailure =
   | 'status'

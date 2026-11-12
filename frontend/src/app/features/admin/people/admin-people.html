@@ -509,6 +509,11 @@
                       </button>
                     </div>
                   }
+                  @case ('offline') {
+                    <p class="field-status" i18n="@@admin.people.receipt.offline">
+                      Kdo podepisuje potvrzení, ukážeme, až se spojení se serverem obnoví.
+                    </p>
+                  }
                   @case ('ready') {
                     <form
                       #receiptForm="ngForm"

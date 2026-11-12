@@ -53,6 +53,16 @@ describe('Given an administrator choosing the order of the projects', () => {
     await settle();
   }
 
+  it('when the server cannot be reached, then the card says the order shows once the connection is back instead of an error', async () => {
+    http.expectOne(ORDER_URL).error(new ProgressEvent('error'));
+    await settle();
+
+    expect(query('.ui-load-state--error')).toBeNull();
+    expect(text(query('.ui-load-state--inset'))).toBe(
+      'Řazení ukážeme, až se spojení se serverem obnoví.',
+    );
+  });
+
   it('when the order is still loading, then the card says so', () => {
     expect(text(query('[role="status"].ui-load-state'))).toBe('Načítáme řazení…');
     http.expectOne(ORDER_URL).flush({ order: 'YEAR' });

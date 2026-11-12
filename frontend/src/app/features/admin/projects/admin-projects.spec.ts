@@ -8,6 +8,8 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { draftProject, project } from '../../content/testing/project-fixtures';
 import { AdminProjects } from './admin-projects';
+import { contentCopy, openOfflineFromCopy, textOf } from '../device-copy/testing/opened-copy';
+import { project as heldProject } from '../../content/testing/project-fixtures';
 
 const LIST_URL = '/api/admin/content/projects';
 const ORDER_URL = '/api/admin/content/project-order';
@@ -219,6 +221,36 @@ describe('Given an administrator who has just deleted a project', () => {
         fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
       ).trim(),
     ).toBe('Příběh „Zahrada pro děti“ jsme smazali.');
+    http.verify();
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the stories open, then they and their order come from the copy', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminProjects,
+      contentCopy({
+        'content/projects': [heldProject()],
+        'content/project-order': [{ order: 'CATEGORY_THEN_YEAR' }],
+      }),
+    );
+
+    expect(textOf(page.querySelector('tbody'))).toContain(heldProject().title);
+    expect(
+      (page.querySelector('input[value="CATEGORY_THEN_YEAR"]') as HTMLInputElement | null)?.checked,
+    ).toBe(true);
+    http.verify();
+  });
+
+  it('when a copy stored before it kept the order is open, then the order says it shows once the connection is back', async () => {
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminProjects,
+      contentCopy({ 'content/projects': [heldProject()] }),
+    );
+    http.expectOne('/api/admin/content/project-order').error(new ProgressEvent('error'));
+    await settle();
+
+    expect(textOf(page)).toContain('Řazení ukážeme, až se spojení se serverem obnoví.');
     http.verify();
   });
 });

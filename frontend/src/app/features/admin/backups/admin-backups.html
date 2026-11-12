@@ -300,7 +300,7 @@
   @if (line.error) {
     <details class="tech-details">
       <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
-      <p class="run-error">{{ line.error }}</p>
+      <p [class.run-error]="line.error !== errorNeedsConnection">{{ line.error }}</p>
     </details>
   }
 </ng-template>

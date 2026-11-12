@@ -18,7 +18,11 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { AdminActionResponse, AdminApi } from '../admin-api';
+import { AdminActionResponse } from '../admin-api';
+import {
+  type AdminActionsRead,
+  AdministrationPageReads,
+} from '../device-copy/administration-page-reads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -102,7 +106,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminActions {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -116,6 +120,7 @@ export class AdminActions {
   protected readonly hasMore = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
+  private readonly withoutDetails = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
     this.load();
@@ -124,11 +129,13 @@ export class AdminActions {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .adminActions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
+          this.withoutDetails.set(new Set());
+          this.heldWithoutDetails(page);
           this.items.set(page.items);
           this.hasMore.set(page.hasMore);
           this.state.set('ready');
@@ -154,11 +161,12 @@ export class AdminActions {
     }
     this.loadingMore.set(true);
     this.moreFailed.set(false);
-    this.api
+    this.reads
       .adminActions(lastListed)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
+          this.heldWithoutDetails(page);
           this.items.update((current) => [...current, ...page.items]);
           this.hasMore.set(page.hasMore);
           this.loadingMore.set(false);
@@ -172,6 +180,18 @@ export class AdminActions {
 
   protected performedAt(item: AdminActionResponse): string {
     return formatBankTime(item.performedAt);
+  }
+
+  protected detailsHeld(item: AdminActionResponse): boolean {
+    return this.withoutDetails().has(item.id);
+  }
+
+  private heldWithoutDetails(page: AdminActionsRead): void {
+    if (page.fromCopy) {
+      this.withoutDetails.update(
+        (held) => new Set([...held, ...page.items.map((item) => item.id)]),
+      );
+    }
   }
 
   protected byServer(item: AdminActionResponse): boolean {

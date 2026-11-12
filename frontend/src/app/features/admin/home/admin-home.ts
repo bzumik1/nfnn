@@ -61,6 +61,7 @@ import {
   UnpairedSummary,
   unpairedCount,
 } from './attention-rows';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -94,6 +95,7 @@ interface SinceFigure {
 export class AdminHome {
   private readonly api = inject(AdminApi);
   private readonly reads = inject(AdministrationReads);
+  private readonly pageReads = inject(AdministrationPageReads);
   private readonly connectivity = inject(Connectivity);
   private overviewRead: Subscription | null = null;
   private readonly auth = inject(AuthStore);
@@ -315,7 +317,7 @@ export class AdminHome {
 
   protected loadBackups(): void {
     this.backupsState.set('loading');
-    this.api
+    this.pageReads
       .backups()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
