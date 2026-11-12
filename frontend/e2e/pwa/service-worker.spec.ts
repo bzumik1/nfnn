@@ -1,6 +1,7 @@
 import { Page, Request } from '@playwright/test';
 import { expect, pwaTest as test } from './pwa-fixtures';
 import { MARKER, SERVICE_WORKER, SERVICE_WORKER_MANIFEST } from './pwa-site';
+import { waitWhileNothingMayHappen } from '../fixed-waits';
 
 const POLICY = '/zasady-ochrany-osobnich-udaju';
 const APP_API_UNREACHABLE =
@@ -68,10 +69,6 @@ async function markThisDocument(page: Page): Promise<void> {
 
 async function sameDocument(page: Page): Promise<boolean> {
   return page.evaluate(() => document.documentElement.dataset['pwaSameDocument'] === 'yes');
-}
-
-async function settle(page: Page): Promise<void> {
-  await page.evaluate((ms) => new Promise((done) => setTimeout(done, ms)), SETTLE_MS);
 }
 
 async function cachedBodiesHolding(page: Page, text: string): Promise<readonly string[]> {
@@ -427,7 +424,7 @@ test.describe('Given a visitor who already acted on the page when a new version 
 
     site.switchTo('b');
     expect(await checkForUpdate(page)).toEqual({ result: true });
-    await settle(page);
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
 
     await expect(message).toHaveValue('Dobrý den, chtěla bych se zeptat');
     expect(await sameDocument(page)).toBe(true);
@@ -450,12 +447,12 @@ test.describe('Given a visitor who already acted on the page when a new version 
 
     site.switchTo('b');
     expect(await checkForUpdate(page)).toEqual({ result: true });
-    await settle(page);
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
     expect(await sameDocument(page)).toBe(true);
 
     await page.getByRole('link', { name: 'Kontakt', exact: true }).click();
     await expect(page).toHaveURL(/\/o-nas#kontakt$/);
-    await settle(page);
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
     expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');
 

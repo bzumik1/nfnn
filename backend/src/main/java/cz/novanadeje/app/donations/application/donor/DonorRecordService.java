@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -59,15 +58,11 @@ public class DonorRecordService {
         donorRecords.save(newRecord(id, command));
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void pairPaymentsOf(UUID donorId) {
-        Optional<DonorRecord> record = donorRecords.findById(new DonorReference(donorId));
-        if (record.isEmpty()) {
-            log.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
-            return;
-        }
         try {
-            pairing.pairPaymentsOf(record.get(), clock.instant());
+            if (pairing.pairPaymentsOf(new DonorReference(donorId), clock.instant()).isEmpty()) {
+                log.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
+            }
         } catch (DataIntegrityViolationException | PessimisticLockingFailureException e) {
             log.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
         }

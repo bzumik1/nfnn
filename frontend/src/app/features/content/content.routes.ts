@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { RouteChromeData } from '../../core/navigation/route-chrome';
+import { LOADED_AHEAD } from '../../core/navigation/tab-preloading';
 import { oldSectionRedirect } from './landing/old-section-redirect';
 import { NOT_FOUND_TITLE } from './not-found/not-found';
 
@@ -19,13 +20,13 @@ export const contentRoutes: Routes = [
   {
     path: 'o-nas',
     title: $localize`:@@content.about.pageTitle:O nás | Nová naděje – nadační fond`,
-    data: { ...LIGHT_HEAD, phoneFooter: true },
+    data: { ...LIGHT_HEAD, phoneFooter: true, ...LOADED_AHEAD },
     loadComponent: () => import('./about-page/about-page').then((m) => m.AboutPage),
   },
   {
     path: 'prispet',
     title: $localize`:@@content.donate.pageTitle:Přispět | Nová naděje – nadační fond`,
-    data: LIGHT_HEAD,
+    data: { ...LIGHT_HEAD, ...LOADED_AHEAD },
     loadComponent: () => import('./donate-page/donate-page').then((m) => m.DonatePage),
   },
   {
@@ -37,13 +38,13 @@ export const contentRoutes: Routes = [
   {
     path: 'aktuality',
     title: $localize`:@@content.newsList.pageTitle:Aktuality | Nová naděje – nadační fond`,
-    data: LIGHT_HEAD,
+    data: { ...LIGHT_HEAD, ...LOADED_AHEAD },
     loadComponent: () => import('./news-page/news-page').then((m) => m.NewsPage),
   },
   {
     path: 'projekty',
     title: $localize`:@@content.projectList.pageTitle:Kde pomáháme | Nová naděje – nadační fond`,
-    data: { kind: 'project' },
+    data: { kind: 'project', ...LOADED_AHEAD },
     loadComponent: () => import('./list/content-list').then((m) => m.ContentList),
   },
   {
@@ -54,7 +55,7 @@ export const contentRoutes: Routes = [
   },
   {
     path: 'projekty/:slug',
-    title: $localize`:@@content.projectDetail.pageTitle:Projekt | Nová naděje – nadační fond`,
+    title: $localize`:@@content.projectDetail.pageTitle:Příběh | Nová naděje – nadační fond`,
     data: { kind: 'project', parent: '/projekty' },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },

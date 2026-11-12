@@ -1,0 +1,10 @@
+[
+  {
+    "path": "POST /api/admin/content/people",
+    "scenario": "content/manage_people: Missing or too long texts, unknown images and too many people are refused*",
+    "kind": "body",
+    "field": "$.errors[*].message",
+    "reason": "Security audit 2026-11-06 (#422): the e-mail shape pattern opens with a length guard (?=[\\s\\S]{3,254}$) so a long string cannot make it backtrack; Hibernate Validator's default @Pattern message names the expression",
+    "contract": "docs/security-overview.md, Abuse limits"
+  }
+]

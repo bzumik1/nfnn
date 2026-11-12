@@ -17,6 +17,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -72,6 +73,14 @@ public class MonthlyReportStepDefinitions {
         } catch (ReportMonthNotEnded refused) {
             lastFailure = refused;
         }
+    }
+
+    @Given("the report for {string} was recorded as sent on {date} before its sendings were kept")
+    public void theReportForWasRecordedAsSentOnBeforeItsSendingsWereKept(String month, LocalDate day) {
+        jdbc.sql("insert into donation_monthly_report (report_month, sent_at) values (?, ?)")
+                .param(YearMonth.parse(month).atDay(1))
+                .param(Timestamp.from(day.atTime(CHECK_TIME).atZone(FoundationCalendar.ZONE).toInstant()))
+                .update();
     }
 
     @Then("the monthly report was not delivered")

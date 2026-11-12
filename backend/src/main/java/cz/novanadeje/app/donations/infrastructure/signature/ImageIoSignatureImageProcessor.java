@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -14,18 +15,32 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.Semaphore;
 
 @Component
 class ImageIoSignatureImageProcessor implements SignatureImageProcessor {
 
     static final int MAX_SIDE = 8000;
+    static final long MAX_PIXELS = 48_000_000L;
+    private static final int MAX_BITS_PER_SAMPLE = 8;
+    private static final Semaphore ONE_AT_A_TIME = new Semaphore(1, true);
     private static final Set<String> FORMATS = Set.of("png", "jpeg", "webp");
 
     @Override
     public SignatureImage process(byte[] upload) {
+        ONE_AT_A_TIME.acquireUninterruptibly();
+        try {
+            return processAlone(upload);
+        } finally {
+            ONE_AT_A_TIME.release();
+        }
+    }
+
+    private static SignatureImage processAlone(byte[] upload) {
         BufferedImage decoded = decode(upload);
         BufferedImage fitted = fit(decoded);
         return new SignatureImage(encode(fitted), fitted.getWidth(), fitted.getHeight());
@@ -49,6 +64,12 @@ class ImageIoSignatureImageProcessor implements SignatureImageProcessor {
                 if (reader.getWidth(0) > MAX_SIDE || reader.getHeight(0) > MAX_SIDE) {
                     throw new UnsupportedSignatureImage("it is larger than " + MAX_SIDE + " pixels on a side");
                 }
+                if ((long) reader.getWidth(0) * reader.getHeight(0) > MAX_PIXELS) {
+                    throw new UnsupportedSignatureImage("it has more than 48 million pixels");
+                }
+                if (bitsPerSample(reader) > MAX_BITS_PER_SAMPLE) {
+                    throw new UnsupportedSignatureImage("it has more than 8 bits per sample");
+                }
                 return reader.read(0);
             } finally {
                 reader.dispose();
@@ -59,6 +80,15 @@ class ImageIoSignatureImageProcessor implements SignatureImageProcessor {
             }
             throw new UnsupportedSignatureImage("it could not be decoded");
         }
+    }
+
+    private static int bitsPerSample(ImageReader reader) throws IOException {
+        ImageTypeSpecifier raw = reader.getRawImageType(0);
+        if (raw == null) {
+            Iterator<ImageTypeSpecifier> types = reader.getImageTypes(0);
+            raw = types.hasNext() ? types.next() : null;
+        }
+        return raw == null ? 0 : Arrays.stream(raw.getSampleModel().getSampleSize()).max().orElse(0);
     }
 
     private static BufferedImage fit(BufferedImage source) {

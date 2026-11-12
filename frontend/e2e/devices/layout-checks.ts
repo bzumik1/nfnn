@@ -8,9 +8,14 @@ export interface Check {
 }
 
 export const MINIMUM_TARGET_PX = 24;
+const CENTRING_TOLERANCE_PX = 1;
 const STACKED_SHARE = 0.25;
 
-export const LIMITS = { minimumTarget: MINIMUM_TARGET_PX, stackedShare: STACKED_SHARE };
+export const LIMITS = {
+  minimumTarget: MINIMUM_TARGET_PX,
+  stackedShare: STACKED_SHARE,
+  centringTolerance: CENTRING_TOLERANCE_PX,
+};
 const LISTED = 6;
 
 export interface Findings {
@@ -24,9 +29,10 @@ export interface Findings {
   focusCovered: string[];
   smallTargets: string[];
   clippedText: string[];
+  offCentreQr: string[];
 }
 
-export function collectFindings(limits: { minimumTarget: number; stackedShare: number }): Findings {
+export function collectFindings(limits: typeof LIMITS): Findings {
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight;
   const modal = document.querySelector('dialog:modal');
@@ -58,8 +64,18 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     return `${tag}${label ? ` "${label.slice(0, 40)}"` : ''} at ${where}`;
   };
 
+  const clippedAway = (element: Element): boolean => {
+    for (let node: Element | null = element; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.clip === 'rect(0px, 0px, 0px, 0px)' || style.clipPath === 'inset(50%)') {
+        return true;
+      }
+    }
+    return false;
+  };
+
   const shown = (element: Element): boolean => {
-    if (element.closest('[inert]')) {
+    if (element.closest('[inert]') || clippedAway(element)) {
       return false;
     }
     const box = element.getBoundingClientRect();
@@ -326,6 +342,45 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     })
     .map(describe);
 
+  const painted = (element: Element): boolean => {
+    const style = getComputedStyle(element);
+    const transparent = (colour: string) =>
+      colour === 'transparent' || /^rgba\(.*,\s*0\)$/.test(colour);
+    return !transparent(style.backgroundColor) || parseFloat(style.borderTopWidth) > 0;
+  };
+  const frameOf = (qr: Element): Element | null => {
+    for (let node = qr.parentElement; node && node !== document.body; node = node.parentElement) {
+      if (node.tagName === 'DIALOG') {
+        return null;
+      }
+      if (painted(node)) {
+        return node;
+      }
+    }
+    return null;
+  };
+  const offCentreQr = [...scope.querySelectorAll('app-qr-code svg[role="img"]')]
+    .filter(shown)
+    .flatMap((symbol) => {
+      const frame = frameOf(symbol.closest('app-qr-code')!);
+      if (!frame) {
+        return [];
+      }
+      const inner = symbol.getBoundingClientRect();
+      const outer = frame.getBoundingClientRect();
+      const left = inner.left - outer.left;
+      const right = outer.right - inner.right;
+      const top = inner.top - outer.top;
+      const bottom = outer.bottom - inner.bottom;
+      const off =
+        Math.abs(left - right) > limits.centringTolerance ||
+        Math.abs(top - bottom) > limits.centringTolerance;
+      const gaps = [left, right, top, bottom].map((gap) => gap.toFixed(1)).join('/');
+      return off
+        ? [`${describe(symbol)} in ${describe(frame)}, gaps left/right/top/bottom ${gaps}`]
+        : [];
+    });
+
   return {
     pageWidth,
     viewportWidth,
@@ -337,6 +392,7 @@ export function collectFindings(limits: { minimumTarget: number; stackedShare: n
     focusCovered,
     smallTargets,
     clippedText,
+    offCentreQr,
   };
 }
 
@@ -397,6 +453,11 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'no text cut off by its box',
       pass: found.clippedText.length === 0,
       detail: list(found.clippedText),
+    },
+    {
+      name: 'every QR code in the middle of its frame',
+      pass: found.offCentreQr.length === 0,
+      detail: list(found.offCentreQr),
     },
   ];
 }

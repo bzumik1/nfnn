@@ -126,6 +126,42 @@ class JpaSecondFactorChallengeRepositoryTest {
         assertThat(challenges.findBySecretHash(challenge.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
     }
 
+    @Test
+    @DisplayName("Given a used and an unused challenge that expired before the cutoff and one that expires after it, when those expired before the cutoff are deleted, then only the later one stays")
+    void should_delete_only_challenges_expired_before_cutoff_when_deleted() {
+        SecondFactorChallenge used = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW.minus(Duration.ofDays(31)), TTL);
+        SecondFactorChallenge abandoned = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW.minus(Duration.ofDays(31)), TTL);
+        SecondFactorChallenge recent = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW.minus(Duration.ofDays(30)), TTL);
+        challenges.save(used);
+        challenges.save(abandoned);
+        challenges.save(recent);
+        flushAndClear();
+        challenges.markUsed(used.id(), NOW.minus(Duration.ofDays(31)).plusSeconds(30));
+
+        int deleted = challenges.deleteExpiredBefore(NOW.minus(Duration.ofDays(30)));
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(challenges.findBySecretHash(used.secretHash())).isEmpty();
+        assertThat(challenges.findBySecretHash(abandoned.secretHash())).isEmpty();
+        assertThat(challenges.findBySecretHash(recent.secretHash())).isPresent();
+    }
+
+    @Test
+    @DisplayName("Given challenges of two donors, when one donor's are deleted, then only the other donor's stay")
+    void should_delete_only_the_donors_challenges_when_deleted_given_two_donors() {
+        DonorId petr = donor("petr@example.cz", "4821937561");
+        SecondFactorChallenge janas = SecondFactorChallenge.issue(LinkSecret.generate(), jana, NOW, TTL);
+        SecondFactorChallenge petrs = SecondFactorChallenge.issue(LinkSecret.generate(), petr, NOW, TTL);
+        challenges.save(janas);
+        challenges.save(petrs);
+        flushAndClear();
+
+        challenges.deleteAllOfWithoutWaiting(jana);
+
+        assertThat(challenges.findBySecretHash(janas.secretHash())).isEmpty();
+        assertThat(challenges.findBySecretHash(petrs.secretHash())).isPresent();
+    }
+
     private DonorId donor(String email, String variableSymbol) {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),

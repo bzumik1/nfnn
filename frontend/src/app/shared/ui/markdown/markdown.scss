@@ -1,7 +1,7 @@
 :host {
   display: block;
   max-width: 70ch;
-  color: var(--color-text-soft);
+  color: var(--color-text-secondary);
   font-size: var(--text-2xl);
   line-height: var(--leading-loose);
 }
@@ -22,7 +22,7 @@ blockquote {
 
 h2,
 h3 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   color: var(--color-text);
   line-height: var(--leading-heading);
   margin: var(--space-10) 0 0;

@@ -97,6 +97,16 @@ describe('Given the MCP connector in front of the administration', () => {
     expect(exchanges.map((exchange) => exchange.forwardedFor)).toEqual(['203.0.113.7', undefined]);
   });
 
+  it('when a tool calls the administration, then each call carries the visitor address nginx passed, so one connection cannot use up the limits of the others', async () => {
+    const client = await connect(stack.app, READ_TOKEN, { 'x-real-ip': '203.0.113.7' });
+    await client.callTool({ name: 'nfnn_find_donors', arguments: { query: 'nováková' } });
+    await client.close();
+
+    const calls = stack.backend.requests.filter((request) => request.path.startsWith('/api/admin'));
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.map((call) => call.forwardedFor)).toEqual(calls.map(() => '203.0.113.7'));
+  });
+
   it('when another path is asked, then 404', async () => {
     expect((await stack.app.fetch(new Request(`${ISSUER}/api/admin/donors`))).status).toBe(404);
   });

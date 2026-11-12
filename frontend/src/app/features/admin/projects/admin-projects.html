@@ -1,16 +1,16 @@
 <div class="ui-page container">
   <div class="ui-page-head">
-    <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.projects.heading">Projekty</h1>
+    <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.projects.heading">Pomáháme</h1>
     <a
       class="ui-button ui-button--primary"
       routerLink="/sprava/projekty/nova"
       i18n="@@admin.projects.new"
-      >Nový projekt</a
+      >Nový příběh</a
     >
   </div>
   <p class="ui-page-intro" i18n="@@admin.projects.intro">
-    Projekty se na webu ukazují od data zveřejnění, v pořadí, které vyberete v části Řazení na webu
-    pod seznamem. Koncept vidíte jen vy; zveřejněný projekt můžete kdykoli upravit nebo z webu
+    Příběhy se na webu ukazují od data zveřejnění, v pořadí, které vyberete v části Řazení na webu
+    pod seznamem. Koncept vidíte jen vy; zveřejněný příběh můžete kdykoli upravit nebo z webu
     stáhnout.
   </p>
 
@@ -18,11 +18,11 @@
 
   @switch (state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.projects.loading">Načítáme projekty…</p>
+      <p class="ui-load-state" role="status" i18n="@@admin.projects.loading">Načítáme příběhy…</p>
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.projects.error.text">Projekty se nepodařilo načíst.</p>
+        <p i18n="@@admin.projects.error.text">Příběhy se nepodařilo načíst.</p>
         <button
           appNeedsConnection
           type="button"
@@ -37,11 +37,11 @@
     @case ('ready') {
       <section class="ui-card" aria-labelledby="projects-list-title">
         <h2 id="projects-list-title" class="ui-card__title" i18n="@@admin.projects.list.title">
-          Všechny projekty
+          Všechny příběhy
         </h2>
         @if (items().length === 0) {
           <p class="ui-card__body ui-card__intro" i18n="@@admin.projects.list.empty">
-            Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.
+            Zatím tu žádný příběh není. Napište první tlačítkem Nový příběh.
           </p>
         } @else {
           <table class="ui-table">

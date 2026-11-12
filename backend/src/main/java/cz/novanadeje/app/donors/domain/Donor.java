@@ -79,6 +79,22 @@ public final class Donor {
             throw new AdministratorNotErasable(id);
         }
         this.erasedAt = checkedAt;
+        replacePersonalData();
+    }
+
+    public boolean erasureIncomplete() {
+        return erasedAt != null && (!name.equals(ErasedPersonalData.NAME) || companyIdentifier != null || !address.equals(ErasedPersonalData.ADDRESS)
+                || !email.equals(ErasedPersonalData.emailFor(id.value())) || passwordHash != null || !roles.isEmpty() || emailVerifiedAt != null);
+    }
+
+    public void completeErasure() {
+        if (erasedAt == null) {
+            throw new IllegalStateException("Donor " + id + " was never erased, so there is no erasure to complete");
+        }
+        replacePersonalData();
+    }
+
+    private void replacePersonalData() {
         this.name = ErasedPersonalData.NAME;
         this.companyIdentifier = null;
         this.address = ErasedPersonalData.ADDRESS;
@@ -97,6 +113,7 @@ public final class Donor {
     }
 
     public void verifyEmail(Instant at) {
+        requireNotErased();
         if (emailVerifiedAt != null) {
             throw new IllegalStateException("The e-mail of donor " + id + " is already verified");
         }
@@ -112,12 +129,14 @@ public final class Donor {
     }
 
     public void updateProfile(String newName, PostalAddress newAddress, LocaleCode newLocale) {
+        requireNotErased();
         this.name = requireName(newName);
         this.address = require(newAddress, "Address");
         this.preferredLocale = require(newLocale, "Preferred locale");
     }
 
     public void changePassword(PasswordHash newPasswordHash) {
+        requireNotErased();
         this.passwordHash = require(newPasswordHash, "Password hash");
     }
 
@@ -130,6 +149,7 @@ public final class Donor {
     }
 
     public void changeEmail(EmailAddress newEmail) {
+        requireNotErased();
         if (emailVerifiedAt == null) {
             throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
         }
@@ -209,6 +229,12 @@ public final class Donor {
 
     public Instant registeredAt() {
         return registeredAt;
+    }
+
+    private void requireNotErased() {
+        if (erasedAt != null) {
+            throw new DonorAlreadyErased(id);
+        }
     }
 
     private static String requireName(String value) {

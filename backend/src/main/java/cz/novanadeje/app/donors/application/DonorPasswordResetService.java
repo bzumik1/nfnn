@@ -33,10 +33,12 @@ public class DonorPasswordResetService {
     private final Clock clock;
     private final ApplicationEventPublisher events;
     private final DeviceSignOuts signOuts;
+    private final SecondFactorHoldings holdings;
 
     public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, DonorPasswordResetProperties properties, Clock clock,
-                                     ApplicationEventPublisher events, DeviceSignOuts signOuts) {
+                                     ApplicationEventPublisher events, DeviceSignOuts signOuts, SecondFactorHoldings holdings) {
         this.signOuts = signOuts;
+        this.holdings = holdings;
         this.donors = donors;
         this.tokens = tokens;
         this.passwordHasher = passwordHasher;
@@ -54,6 +56,9 @@ public class DonorPasswordResetService {
         }
         if (!donor.isEmailVerified()) {
             log.info("Password reset for donor {} not sent: the e-mail is not verified", donor.id());
+            return;
+        }
+        if (isAdministratorWithoutSecondFactor(donor)) {
             return;
         }
         Instant now = clock.instant();
@@ -78,15 +83,22 @@ public class DonorPasswordResetService {
         PasswordResetToken found = tokens.findBySecretHash(secret.hash())
                 .filter(candidate -> candidate.isUsableAt(now))
                 .orElseThrow(InvalidPasswordResetToken::new);
+        Donor donor = donors.findByIdForUpdate(found.donorId()).orElseThrow(InvalidPasswordResetToken::new);
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidPasswordResetToken();
         }
-        Donor donor = donors.findById(found.donorId()).orElseThrow(InvalidPasswordResetToken::new);
+        if (isAdministratorWithoutSecondFactor(donor)) {
+            throw new InvalidPasswordResetToken();
+        }
         donor.changePassword(passwordHasher.hash(rawPassword));
         donors.save(donor);
         tokens.deleteOthersOf(donor.id(), found.id());
         signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password reset completed for donor {}", donor.id());
+    }
+
+    private boolean isAdministratorWithoutSecondFactor(Donor donor) {
+        return donor.isAdministrator() && !holdings.holdsAny(donor.id());
     }
 }

@@ -74,7 +74,7 @@ public enum Setting {
     }
 
     public boolean changesOnlyInBrowser() {
-        return secret() || this == PUBLIC_URL;
+        return secret() || this == PUBLIC_URL || group == SettingGroup.MAIL;
     }
 
     public boolean decidesWhereMailPasswordGoes() {

@@ -146,6 +146,7 @@ export interface SignedInDevice {
   id: string;
   platform: DevicePlatform;
   browser: DeviceBrowser;
+  session?: SessionKind;
   signedInAt: string;
   lastUsedAt: string;
   current: boolean;

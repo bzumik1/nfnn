@@ -115,11 +115,25 @@ class AdministratorActivityServiceTest {
         when(trail.findPerformedBefore(before, 3)).thenReturn(List.of(first, second, third));
         when(donors.findByIds(anyCollection())).thenReturn(List.of(donor(JANA, "Jana Nováková")));
 
-        AdministratorActivity activity = service.list(Optional.of(before), 2);
+        AdministratorActivity activity = service.list(Optional.of(new AdminActionCursor(before, Optional.empty())), 2);
 
         assertThat(activity.hasMore()).isTrue();
         assertThat(activity.items()).extracting(AdminActionView::id).containsExactly(first.id(), second.id());
         verify(donors).findByIds(List.of(JANA));
+    }
+
+    @Test
+    @DisplayName("Given a cursor naming the last action listed, when the next page is listed, then the trail is read after that action, not only before its time")
+    void should_read_after_the_last_action_listed_when_listed_given_a_cursor_with_its_id() {
+        AdminActionEntry lastListed = entry(JANA.value(), "PAIR_PAYMENT", NOW.minusSeconds(10));
+        AdminActionEntry sameMoment = entry(JANA.value(), "UNPAIR_PAYMENT", NOW.minusSeconds(10));
+        when(trail.findPerformedBefore(lastListed.performedAt(), lastListed.id(), 3)).thenReturn(List.of(sameMoment));
+        when(donors.findByIds(anyCollection())).thenReturn(List.of(donor(JANA, "Jana Nováková")));
+
+        AdministratorActivity activity = service.list(Optional.of(new AdminActionCursor(lastListed.performedAt(), Optional.of(lastListed.id()))), 2);
+
+        assertThat(activity.items()).extracting(AdminActionView::id).containsExactly(sameMoment.id());
+        assertThat(activity.hasMore()).isFalse();
     }
 
     @Test

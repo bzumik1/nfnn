@@ -28,6 +28,7 @@ public class DonorCredentialsStepDefinitions {
     private static final String EMAIL_CHANGE_PATH = "/api/donors/me/email-change";
     private static final String EMAIL_CHANGE_RESEND_PATH = "/api/donors/me/email-change/resend";
     private static final String PROFILE_PATH = "/api/donors/me";
+    private static final String EMAIL_CHANGE_CONFIRM_PATH = "/api/donors/auth/email-change/confirm";
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
 
     private final ApiClient api;
@@ -113,9 +114,31 @@ public class DonorCredentialsStepDefinitions {
         keptToken = DonorRegistrations.tokenOf(mailSender.sent().getLast());
     }
 
-    @When("the donor confirms the e-mail with the kept link")
-    public void theDonorConfirmsTheEmailWithTheKeptLink() {
+    @When("the donor confirms the e-mail change with the kept link")
+    public void theDonorConfirmsTheEmailChangeWithTheKeptLink() {
+        confirmChange(keptToken);
+    }
+
+    @When("the kept link is confirmed as a registration")
+    public void theKeptLinkIsConfirmedAsARegistration() {
         registrations.confirm(keptToken);
+    }
+
+    @When("the donor confirms the e-mail change with the link from the e-mail")
+    public void theDonorConfirmsTheEmailChangeWithTheLinkFromTheEmail() {
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).isNotEmpty());
+        confirmChange(DonorRegistrations.tokenOf(mailSender.sent().getLast()));
+    }
+
+    @When("the donor confirms the e-mail change with the link from e-mail {int}")
+    public void theDonorConfirmsTheEmailChangeWithTheLinkFromEmail(int position) {
+        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThanOrEqualTo(position));
+        confirmChange(DonorRegistrations.tokenOf(mailSender.sent().get(position - 1)));
+    }
+
+    private void confirmChange(String token) {
+        api.forgetCredentials();
+        api.post(EMAIL_CHANGE_CONFIRM_PATH, Map.of("token", token));
     }
 
     private JsonNode profile() {

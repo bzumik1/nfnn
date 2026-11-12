@@ -1,0 +1,100 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the page opens, then it lists the files, shows the tail of backend.log and lets the administrator page through it",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the reader opens, then it shows the tail of the file and lets the administrator page through it",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when they search, then the newest matches are listed with a way to the older ones and a match opens its window",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they search, then the newest matches are listed with a way to the older ones and a match opens its window",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when they ask for the browser error reports, then the search holds their pattern and the newest reports are listed",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when they ask for the browser error reports, then the search holds their pattern and the newest reports are listed",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the pattern is not a valid expression, then the problem is shown at the search",
+    "replacement": "src/app/features/admin/logs/reader/admin-log-reader.spec.ts > Given an administrator reading a log file > when the pattern is not a valid expression, then the problem is shown at the search",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when they raise a logger for a while, then the level is put and the list shows the temporary level with a reset",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when they raise a logger for a while, then the level is put and the list shows the temporary level with a reset",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the logger name is not a Java name or the minutes are out of range, then the form says so and posts nothing",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when the logger name is not a Java name or the minutes are out of range, then the form says so and posts nothing",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the backend refuses the level, then the problem is shown as an alert",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when the backend refuses the level, then the problem is shown as an alert",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the diagnostics load, then the JVM, the database and the folders are described and a thread dump can be shown",
+    "replacement": "src/app/features/admin/logs/state/admin-server-state.spec.ts > Given an administrator on the server state page > when the state loads, then the verdict names each finding and the application, the database and the folders read as rows",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the backend does not see the log folder, then the page says so and shows no viewer",
+    "replacement": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs hub > when the backend does not see the log folder, then the files say so while the state still shows",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs page > when the session is gone, then the donor is sent home with the sign-in dialog",
+    "replacement": "src/app/features/admin/logs/admin-logs.spec.ts > Given an administrator on the logs hub > when the session is gone, then the administrator is sent home with the sign-in dialog",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator reads the logs, searches, raises a level and opens the thread dump, then the page breaks no rule",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when an administrator walks the logs hub, a file, its search, the levels, the server state and the thread dump, then no page breaks a rule",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-logs.spec.ts > Given an administrator on the logs page > when the page opens, then the tail of backend.log is shown and older lines and a search are reachable",
+    "replacement": "e2e/admin-logs.spec.ts > Given an administrator on the logs hub > when they open backend.log from the hub, then its tail is shown and older lines and a search are reachable",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-logs.spec.ts > Given an administrator on the logs page > when they ask for the thread dump on a phone, then it opens below the diagnostics",
+    "replacement": "e2e/admin-logs.spec.ts > Given an administrator on the logs hub > when they open the server state and the thread dump on a phone, then each reads as its own page",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-logs.spec.ts > Given an administrator on the logs page > when they raise a logger for half an hour, then the level is put and the list shows it until it is reset",
+    "replacement": "e2e/admin-logs.spec.ts > Given an administrator on the logs hub > when they raise a logger for half an hour, then the level is put and the list shows it until it is reset",
+    "reason": "PR #543 (Jakub 2026-11-07, variant A of the logs redesign): /sprava/logy becomes a hub with a page for each job (older files, a file, the levels, the server state, the thread dump), so the page's tests move to the page that now does the job and are named after it"
+  }
+]

@@ -54,7 +54,7 @@ export class ContentList {
     return previous > 1 ? { strana: previous } : {};
   });
   protected readonly olderQuery = computed(() => ({ strana: this.pageNumber() + 1 }));
-  protected readonly projectPagesLabel = $localize`:@@content.list.projects.pages:Stránky projektů`;
+  protected readonly projectPagesLabel = $localize`:@@content.list.projects.pages:Stránky příběhů`;
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((query) => {

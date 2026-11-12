@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -47,6 +48,16 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     @Override
     public Optional<DonationReceipt> findActiveForDonation(DonationId donation) {
         return jpa.findByDonationIdAndStatus(donation.value(), ReceiptStatus.ACTIVE).map(IssuedReceiptJpaEntity::toDomain);
+    }
+
+    @Override
+    public List<DonationReceipt> findActiveSinglesFor(Collection<DonationId> donations) {
+        if (donations.isEmpty()) {
+            return List.of();
+        }
+        return jpa.findByDonationIdInAndStatus(donations.stream().map(DonationId::value).collect(Collectors.toSet()), ReceiptStatus.ACTIVE).stream()
+                .map(IssuedReceiptJpaEntity::toDomain)
+                .toList();
     }
 
     @Override
@@ -91,6 +102,11 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
+    public long countReplacementsIssuedSince(DonorReference donor, Instant since) {
+        return jpa.countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtGreaterThanEqual(donor.value(), since);
+    }
+
+    @Override
     public Set<DonationId> findDonationsWithReceipt(Collection<DonationId> donations) {
         if (donations.isEmpty()) {
             return Set.of();
@@ -107,8 +123,8 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public List<DonationReceipt> findAllNewestFirst() {
-        return jpa.findAllByOrderByIssuedAtDescNumberDesc().stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+    public List<ReceiptSummary> findAllSummariesNewestFirst() {
+        return jpa.findAllSummariesNewestFirst().stream().map(IssuedReceiptSummaryRow::toSummary).toList();
     }
 
     @Override

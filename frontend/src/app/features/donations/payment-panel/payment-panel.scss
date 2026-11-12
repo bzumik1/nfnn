@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -20,12 +21,11 @@
 }
 
 .panel-label {
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  font-family: var(--font-title);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
   margin-bottom: var(--space-3-5);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
 
   &:focus {
     outline: none;
@@ -67,8 +67,8 @@
   }
 
   &.active {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
+    background: var(--color-accent-fill);
+    border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
   }
@@ -137,8 +137,33 @@
 .bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
-  font-family: var(--font-mono);
   font-size: var(--text-md);
+}
+
+.gift-arrival.ui-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.gift-arrival-text {
+  flex: 1 1 14rem;
+  font-weight: var(--weight-semibold);
+}
+
+.gift-arrival-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+
+  a {
+    color: inherit;
+    @include touch-target.reaches-finger-size;
+  }
 }
 
 .qr {
@@ -158,6 +183,8 @@
 
 .qr-image {
   width: 200px;
+  border-radius: var(--radius-qr-ground);
+  overflow: hidden;
   transition: opacity var(--duration-base) ease;
 }
 
@@ -272,13 +299,11 @@
   }
 
   .bank-value-wrap {
-    flex-wrap: nowrap;
     justify-content: space-between;
   }
 
   .bank-value {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    flex: 1 1 0;
   }
 
   app-copy-button {
@@ -345,6 +370,12 @@
   margin: var(--space-3) 0 0;
 }
 
+.bank-app-progress {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
 .bank-app .bank-app-second {
   margin-top: var(--space-3);
   background: var(--color-surface);
@@ -409,7 +440,8 @@
 
 .qr[role='region'] .qr-image,
 .qr[role='region'] .qr-placeholder {
-  width: min(260px, 100%);
+  width: 260px;
+  max-width: 100%;
 }
 
 .qr[role='region'] .qr-placeholder {

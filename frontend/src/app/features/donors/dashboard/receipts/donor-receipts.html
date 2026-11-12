@@ -22,6 +22,9 @@
     @if (donations.receiptError(); as error) {
       @if (error.scope === 'yearly') {
         <p class="ui-callout ui-callout--danger receipt-error" role="alert">{{ error.message }}</p>
+        @if (donations.offersDiagnostics()) {
+          <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+        }
       }
     }
 
@@ -33,7 +36,7 @@
             <span class="year-count"
               ><app-gift-count [gifts]="row.gifts" [verifications]="row.verifications"
             /></span>
-            <span class="year-total">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
+            <span class="year-total ui-figures">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
             <span class="year-action">
               @switch (row.receipt) {
                 @case ('available') {
@@ -136,6 +139,9 @@
           <p class="ui-callout ui-callout--danger receipt-error" role="alert">
             {{ error.message }}
           </p>
+          @if (donations.offersDiagnostics()) {
+            <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
+          }
         }
       }
       <div class="single-gifts">

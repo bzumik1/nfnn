@@ -1,9 +1,9 @@
 @use 'breakpoints' as bp;
 
 .ui-dialog__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   margin: 0 var(--space-8) var(--space-3) 0;
   overflow-wrap: anywhere;

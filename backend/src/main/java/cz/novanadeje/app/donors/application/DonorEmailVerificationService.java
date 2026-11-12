@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Service
 public class DonorEmailVerificationService {
@@ -67,24 +68,43 @@ public class DonorEmailVerificationService {
 
     @Transactional
     public AuthenticatedDonor confirm(String token, DeviceDescription device, SessionKind kind) {
-        LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
-        EmailVerificationToken found = tokens.findBySecretHash(secret.hash())
-                .filter(candidate -> candidate.isUsableAt(now))
-                .orElseThrow(InvalidEmailVerificationToken::new);
-        if (!tokens.markUsed(found.id(), now)) {
-            throw new InvalidEmailVerificationToken();
-        }
-        Donor donor = found.newEmail()
-                .map(newEmail -> changeEmail(found, newEmail, now))
-                .orElseGet(() -> verifyRegistration(found, now));
+        EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isEmpty());
+        Donor donor = verifyRegistration(spend(found, now).filter(candidate -> !candidate.isEmailVerified())
+                .orElseThrow(InvalidEmailVerificationToken::new), now);
         return views.authenticated(donor, sessions.signIn(donor, false, device, kind));
     }
 
-    private Donor verifyRegistration(EmailVerificationToken found, Instant now) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(candidate -> !candidate.isEmailVerified())
+    @Transactional
+    public void confirmChange(String token) {
+        Instant now = clock.instant();
+        EmailVerificationToken found = usableLink(token, now, candidate -> candidate.newEmail().isPresent());
+        EmailAddress newEmail = found.newEmail().orElseThrow(InvalidEmailVerificationToken::new);
+        donors.lockEmail(newEmail);
+        Donor donor = spend(found, now)
+                .filter(Donor::isEmailVerified)
+                .filter(candidate -> !donors.existsByEmail(newEmail))
                 .orElseThrow(InvalidEmailVerificationToken::new);
+        changeEmail(donor, newEmail, now);
+    }
+
+    private EmailVerificationToken usableLink(String token, Instant now, Predicate<EmailVerificationToken> purpose) {
+        LinkSecret secret = new LinkSecret(token);
+        return tokens.findBySecretHash(secret.hash())
+                .filter(candidate -> candidate.isUsableAt(now))
+                .filter(purpose)
+                .orElseThrow(InvalidEmailVerificationToken::new);
+    }
+
+    private Optional<Donor> spend(EmailVerificationToken found, Instant now) {
+        Optional<Donor> owner = donors.findByIdForUpdate(found.donorId());
+        if (!tokens.markUsed(found.id(), now)) {
+            throw new InvalidEmailVerificationToken();
+        }
+        return owner;
+    }
+
+    private Donor verifyRegistration(Donor donor, Instant now) {
         donor.verifyEmail(now);
         donors.save(donor);
         tokens.deleteAllOf(donor.id());
@@ -96,11 +116,7 @@ public class DonorEmailVerificationService {
         return donor;
     }
 
-    private Donor changeEmail(EmailVerificationToken found, EmailAddress newEmail, Instant now) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(Donor::isEmailVerified)
-                .filter(candidate -> !donors.existsByEmail(newEmail))
-                .orElseThrow(InvalidEmailVerificationToken::new);
+    private void changeEmail(Donor donor, EmailAddress newEmail, Instant now) {
         EmailAddress previousEmail = donor.email();
         donor.changeEmail(newEmail);
         donors.save(donor);
@@ -108,7 +124,6 @@ public class DonorEmailVerificationService {
         signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorEmailChanged(donor.id().value(), previousEmail, newEmail, donor.preferredLocale()));
         log.info("E-mail of donor {} changed", donor.id());
-        return donor;
     }
 
     void issueChangeLink(Donor donor, EmailAddress newEmail) {
@@ -158,7 +173,7 @@ public class DonorEmailVerificationService {
     }
 
     private Optional<Donor> awaitingVerification(EmailAddress email) {
-        Donor donor = donors.findByEmail(email).orElse(null);
+        Donor donor = donors.findByEmailForUpdate(email).orElse(null);
         if (donor == null) {
             log.debug("E-mail verification requested for an address without a donor");
             return Optional.empty();

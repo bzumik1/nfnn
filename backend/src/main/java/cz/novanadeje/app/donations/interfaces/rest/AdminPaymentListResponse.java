@@ -33,9 +33,10 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
             String account = payment.sender().map(SenderAccount::display)
                     .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)))
                     .orElse(null);
+            boolean withheld = view.payerWithheld();
             return new AdminPaymentResponse(payment.id().value(), payment.transactionId().value(), payment.bookedOn(), payment.amount().amountMinor(),
-                    payment.amount().currency(), payment.variableSymbol().orElse(null), account, payment.counterpartyName().orElse(null),
-                    payment.messageForRecipient().orElse(null), payment.importedAt(), payment.unpairedByAdminAt().orElse(null),
+                    payment.amount().currency(), payment.variableSymbol().orElse(null), withheld ? null : account,
+                    withheld ? null : payment.counterpartyName().orElse(null), withheld ? null : payment.messageForRecipient().orElse(null), payment.importedAt(), payment.unpairedByAdminAt().orElse(null),
                     view.accountVerification(), view.donation().map(PairedDonationResponse::from).orElse(null), view.version());
         }
     }

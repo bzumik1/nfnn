@@ -172,7 +172,7 @@ test.describe('Given Claude sent an administrator to the site to connect the adm
     await page.getByRole('button', { name: 'Přihlásit se jiným účtem' }).click();
 
     const dialog = page.getByRole('dialog');
-    await expect(dialog.locator('#login-email')).toBeFocused();
+    await expect(dialog.locator('#login-dialog-title')).toBeFocused();
     await dialog.locator('#login-email').fill('spravce@example.cz');
     await dialog.locator('#login-password').fill('correct horse battery');
     await dialog.locator('.ui-button--block').click();

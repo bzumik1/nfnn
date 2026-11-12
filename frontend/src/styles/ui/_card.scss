@@ -1,20 +1,31 @@
 .ui-card {
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-panel);
-  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
   overflow: hidden;
   margin-bottom: var(--space-5);
 }
 
-.ui-card--danger {
+.ui-grouped {
+  --color-surface-alt: var(--color-surface-muted);
+}
+
+.ui-grouped .ui-card:not(dialog .ui-card) {
+  border-radius: var(--radius-group);
+  box-shadow: var(--shadow-group);
+  border-color: transparent;
+}
+
+.ui-card--danger,
+.ui-grouped .ui-card--danger:not(dialog .ui-card) {
   border-color: var(--color-danger-border);
 }
 
 .ui-card__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-2xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   padding: var(--space-5) var(--space-6) var(--space-3);
 }
@@ -54,7 +65,7 @@
 
 .ui-card__bar {
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-separator);
 
   .ui-card__title {
     padding: 0;
@@ -71,7 +82,7 @@
 
 .ui-card__footer {
   padding: var(--space-4) var(--space-6) var(--space-5);
-  border-top: 1px solid var(--color-divider);
+  border-top: 1px solid var(--color-separator);
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -35,76 +36,12 @@
   margin-bottom: var(--space-4);
 }
 
-.attention-list {
-  display: grid;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.attention-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-  font-size: var(--text-md);
-  line-height: var(--leading-normal);
-}
-
-.attention-item--stack {
-  display: block;
-}
-
-.attention-item--warning {
-  background: var(--color-warning-bg);
-  border-color: var(--color-warning-border);
-  color: var(--color-warning);
-}
-
-.attention-item--danger {
-  background: var(--color-danger-bg);
-  border-color: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.attention-problems {
-  flex: 1 1 320px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  li + li {
-    margin-top: var(--space-1);
-  }
-}
-
 .admin-status .ui-card {
   padding: var(--space-4) var(--space-5);
 }
 
 .admin-status .admin-data dd {
   font-size: var(--text-md);
-}
-
-.attention-item p + p {
-  margin-top: var(--space-2);
-}
-
-.admin-next-step-label {
-  font-weight: var(--weight-semibold);
-}
-
-.admin-next-step a,
-.admin-pending a {
-  color: inherit;
-  font-weight: var(--weight-semibold);
 }
 
 .admin-data {
@@ -202,11 +139,9 @@
   th {
     padding: var(--space-2-5) var(--space-3);
     text-align: left;
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
     background: var(--color-surface-alt);
   }
 
@@ -300,11 +235,9 @@
     td::before {
       content: attr(data-label);
       display: block;
-      font-size: var(--text-2xs);
-      font-weight: var(--weight-bold);
-      color: var(--color-text-subtle);
-      letter-spacing: var(--tracking-wide);
-      text-transform: uppercase;
+      font-size: var(--text-md);
+      font-weight: var(--weight-regular);
+      color: var(--color-text-soft);
       margin-bottom: var(--space-0-5);
     }
   }
@@ -324,12 +257,17 @@
 }
 
 .healthy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-success-bg);
   color: var(--color-success);
-  border-radius: var(--radius-sm);
   font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+
+  svg {
+    flex: none;
+  }
 }
 
 .admin-card-link {
@@ -345,9 +283,72 @@
   }
 }
 
-.attention-actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+.attention {
+  display: block;
+  margin-bottom: var(--space-6);
+  container: attention / inline-size;
+}
+
+.attention-tile {
+  justify-content: center;
+  width: var(--space-7);
+  height: var(--space-7);
+  border-radius: var(--radius-sm);
+  color: var(--color-on-tile);
+}
+
+.attention-tile--danger {
+  background: var(--color-danger-fill);
+  color: var(--color-on-danger);
+}
+
+.attention-tile--warning {
+  background: var(--color-tile-warning);
+}
+
+.attention-tile--task {
+  background: var(--color-tile-accent);
+}
+
+.attention-tile--unknown {
+  background: var(--color-tile-neutral);
+}
+
+.attention-tile--success {
+  background: var(--color-tile-success);
+}
+
+.attention-quiet {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+
+.admin-next-step {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.attention-action {
+  font-weight: var(--weight-regular);
+
+  .ui-pill-button {
+    @include touch-target.reaches-finger-size;
+  }
+}
+
+@include bp.container-down(attention, tabs) {
+  .attention-list .ui-list__row:has(.ui-list__value) {
+    grid-template-areas:
+      'lead title chevron'
+      'lead meta chevron'
+      'lead value chevron';
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .attention-list .ui-list__value {
+    justify-self: start;
+    margin-inline-start: 0;
+    margin-top: var(--space-1);
+  }
 }

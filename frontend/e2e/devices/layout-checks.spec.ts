@@ -279,6 +279,17 @@ test.describe('Given a page checked as on a phone', () => {
     ).not.toContain('no control cut off by a box that hides its overflow');
   });
 
+  test('when visually hidden text keeps padding that makes its box wider than a pixel, then it is not counted as cut off', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<table><tr><th style="position: absolute; width: 1px; height: 1px; padding: 10px 24px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap">Actions</th></tr></table>',
+      ),
+    ).toEqual([]);
+  });
+
   test('when a box hides text that does not fit, then the text is cut off', async ({ page }) => {
     expect(
       await failingChecks(
@@ -286,6 +297,37 @@ test.describe('Given a page checked as on a phone', () => {
         '<p style="width: 80px; overflow: hidden; white-space: nowrap">A sentence far too long for it</p>',
       ),
     ).toEqual(['no text cut off by its box']);
+  });
+
+  test('when a QR code sits in the middle of its frame, then the centring check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="width: 200px; padding: 10px; background: #123"><app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code></div>',
+      ),
+    ).toEqual([]);
+  });
+
+  test('when a QR code leans to one side of its frame, then it is off centre', async ({ page }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="width: 280px; padding: 10px; background: #123"><app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code></div>',
+      ),
+    ).toEqual(['every QR code in the middle of its frame']);
+  });
+
+  test('when a QR code stands on a bare page with no frame, then the centring check passes', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<app-qr-code><svg role="img" style="display: block; width: 200px; height: 200px"></svg></app-qr-code>',
+      ),
+    ).toEqual([]);
   });
 
   test('when a modal dialog is open, then only its controls are checked', async ({ page }) => {

@@ -108,7 +108,7 @@ describe('Given an administrator on the older symbols page', () => {
 
     const [first, second] = rows();
     expect(rowText(first)).toContain('Jana Nováková');
-    expect(rowText(first)).toContain('1234567/0800');
+    expect(rowText(first)).toContain('1234567/0800 · Česká spořitelna');
     expect(rowText(first)).toContain('6123456789');
     expect(rowText(first)).toContain('Ano, jsou moje');
     expect(rowText(first)).toContain('20. 10. 2026 11:00');

@@ -1,10 +1,15 @@
 @use 'theme';
 @use 'breakpoints' as bp;
+@use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
+@use 'styles/launch-screen';
+@use 'styles/page-transition';
 @use 'styles/ui/page';
 @use 'styles/ui/card';
 @use 'styles/ui/notice';
+@use 'styles/ui/figures';
+@use 'styles/ui/ink';
 @use 'styles/ui/button';
 @use 'styles/ui/table';
 @use 'styles/ui/form';
@@ -14,6 +19,8 @@
 @use 'styles/ui/dialog';
 @use 'styles/ui/person-list';
 @use 'styles/ui/list';
+@use 'styles/ui/group';
+@use 'styles/ui/pager';
 
 *,
 *::before,
@@ -26,7 +33,7 @@
 html {
   touch-action: manipulation;
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  scroll-padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
 }
 
 html.follows-system-text-size {
@@ -34,12 +41,20 @@ html.follows-system-text-size {
   font-family: var(--font-sans);
 }
 
+:where(h1, h2, h3) {
+  overflow-wrap: break-word;
+}
+
 html:has(app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
-html:has(app-landing) {
+html:has(app-landing),
+html:has(app-landing) body {
   background: var(--color-image-shade);
+}
+
+html:has(app-landing) {
   overscroll-behavior: none;
 }
 
@@ -48,6 +63,14 @@ html:has(app-landing) {
   html:has(app-not-found) body {
     background: var(--color-surface-inverse);
   }
+}
+
+html:has(.ui-grouped) body {
+  background: var(--color-surface-grouped);
+}
+
+html.footer-in-view body {
+  background: var(--color-surface-inverse-strong);
 }
 
 :focus-visible {
@@ -122,10 +145,28 @@ body {
   }
 }
 
+html.has-window-controls {
+  --window-controls-inset-inline: var(--window-controls-room-inline);
+  --window-controls-inset-block: var(--window-controls-room-block);
+}
+
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --safe-area-top: calc(env(safe-area-inset-top) + var(--home-screen-top-clearance));
+      --full-screen-height: calc(100svh + env(safe-area-inset-top));
+    }
+
+    body {
+      min-height: var(--full-screen-height);
+    }
+  }
+}
+
 .skip-link {
   position: fixed;
   top: var(--space-4);
-  left: var(--space-4);
+  left: max(var(--space-4), var(--window-controls-inset-inline));
   z-index: 300;
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);
@@ -142,15 +183,7 @@ body {
 }
 
 .visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  @include visually-hidden.hides;
 }
 
 .real-img {

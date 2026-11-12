@@ -22,9 +22,17 @@ import { DialogAnnouncer } from './dialog-announcer';
 import { DialogHistory, DialogHistoryListener } from './dialog-history';
 import { DIALOG_PRESENTATION, DialogPresentation } from './dialog-presentation';
 import { DIALOG_SUSPENSION } from './dialog-suspension';
-import { SheetDrag } from './sheet-drag';
+import { canPullSheetFrom, PullIntent, pullIntent, SheetDrag, TouchOrigin } from './sheet-drag';
+import { InputModality } from '../../../core/input/input-modality';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const ROOM_ABOVE_STICKY_ACTIONS_PX = 16;
+const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const SLIDE_GRACE_MS = 1000;
+
+type SheetExit = 'open' | 'sliding' | 'down';
+
+let nextDialog = 0;
 
 @Component({
   selector: 'app-dialog',
@@ -37,10 +45,18 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly labelledBy = input.required<string>();
   readonly describedBy = input<string | null>(null);
   readonly wide = input(false);
+  readonly tall = input(false);
+  readonly grouped = input(false);
   readonly presentation = input<DialogPresentation>('auto');
   readonly pushesHistory = input(true);
   readonly dismissible = input(true);
+  readonly unsavedInput = input(false);
+  readonly alert = input(false);
+  readonly pulledAway = input(0);
+  readonly depth = input(0);
+  readonly showsClose = input(true);
   readonly dismissed = output<void>();
+  readonly steppedBack = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 
   private readonly areaPresentation = inject(DIALOG_PRESENTATION);
@@ -54,8 +70,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
   private readonly drag = new SheetDrag();
   private readonly dragOffset = signal(0);
+  private readonly sheetPull = signal(0);
   protected readonly dragging = signal(false);
+  private readonly exit = signal<SheetExit>('open');
+  protected readonly leaving = computed(() => this.exit() !== 'open');
+  protected readonly askingToDiscard = signal(false);
+  protected readonly discardTitleId = `dialog-discard-title-${++nextDialog}`;
+  protected readonly pull = computed(() => Math.max(this.pulledAway(), this.sheetPull()));
   protected readonly dragTranslate = computed(() => {
+    if (this.leaving()) {
+      return '0 100%';
+    }
     const offset = this.dragOffset();
     return offset > 0 ? `0 ${offset}px` : null;
   });
@@ -63,20 +88,30 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
   private readonly historyEntry: DialogHistoryListener = {
-    stepBack: () => undefined,
+    stepBack: () => this.steppedBackByHistory(),
     close: () => this.closedByBack(),
   };
   private readonly suspension = inject(DIALOG_SUSPENSION);
+  private readonly layout = inject(CompactLayout);
+  private readonly modality = inject(InputModality);
   private dragPointer: number | null = null;
+  private touchOrigin: TouchOrigin | null = null;
+  private touchIntent: PullIntent = 'content';
   private pressStartedOnBackdrop = false;
   private destroyed = false;
   private viewReady = false;
   private steppedAside = false;
+  private entryTakenBackWhileLeaving = false;
+  private slideTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     effect(() => {
       const suspended = this.suspension();
       untracked(() => this.follow(suspended));
+    });
+    effect(() => {
+      const depth = this.depth();
+      untracked(() => this.showDepth(depth));
     });
   }
 
@@ -85,15 +120,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (this.suspension()) {
       this.steppedAside = true;
     } else {
-      this.element().nativeElement.showModal();
+      this.showModal();
     }
     if (this.pushesHistory()) {
       this.history.open(this.historyEntry);
+      this.showDepth(this.depth());
     }
   }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    clearTimeout(this.slideTimer);
     if (this.pushesHistory()) {
       this.history.close(this.historyEntry);
     }
@@ -109,7 +146,12 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected dismiss(): void {
-    if (this.dismissible()) {
+    if (!this.dismissible() || this.leaving()) {
+      return;
+    }
+    if (this.slidesAway()) {
+      this.slideAway();
+    } else {
       this.dismissed.emit();
     }
   }
@@ -118,7 +160,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (this.steppedAside) {
       return;
     }
-    if (this.dismissible()) {
+    if (this.leaving()) {
+      this.slidDown();
+    } else if (this.dismissible()) {
       this.dismissed.emit();
     } else if (!this.destroyed) {
       this.element().nativeElement.showModal();
@@ -128,6 +172,9 @@ export class Dialog implements AfterViewInit, OnDestroy {
   protected onCancel(event: Event): void {
     if (!this.dismissible()) {
       event.preventDefault();
+    } else if (event.cancelable && !this.leaving() && this.slidesAway()) {
+      event.preventDefault();
+      this.slideAway();
     }
   }
 
@@ -143,19 +190,18 @@ export class Dialog implements AfterViewInit, OnDestroy {
   }
 
   protected startDrag(event: PointerEvent): void {
-    if (!this.dismissible() || !event.isPrimary || event.button !== 0) {
+    if (!event.isPrimary || event.button !== 0 || this.leaving()) {
       return;
     }
     event.preventDefault();
     (event.target as Element).setPointerCapture?.(event.pointerId);
     this.dragPointer = event.pointerId;
-    this.drag.start(event.clientY, event.timeStamp);
-    this.dragging.set(true);
+    this.beginPull(event.clientY, event.timeStamp);
   }
 
   protected followDrag(event: PointerEvent): void {
     if (this.dragging() && event.pointerId === this.dragPointer) {
-      this.dragOffset.set(this.drag.move(event.clientY, event.timeStamp));
+      this.pullTo(event.clientY, event.timeStamp);
     }
   }
 
@@ -163,12 +209,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     if (!this.dragging() || event.pointerId !== this.dragPointer) {
       return;
     }
-    const height = this.panel().nativeElement.getBoundingClientRect().height;
-    const release = this.drag.end(height, event.timeStamp);
-    this.stopDrag();
-    if (release === 'dismiss') {
-      this.dismiss();
-    }
+    this.letGo(event.timeStamp);
   }
 
   protected cancelDrag(event: PointerEvent): void {
@@ -177,6 +218,83 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     this.drag.cancel();
     this.stopDrag();
+  }
+
+  protected touchStarted(event: TouchEvent): void {
+    if (event.touches.length !== 1) {
+      this.abandonTouch();
+      return;
+    }
+    const target = event.target as Element;
+    const panel = this.panel().nativeElement;
+    const pullable =
+      this.look() === 'sheet' &&
+      this.layout.isCompact() &&
+      !this.leaving() &&
+      target.closest('.dialog-grabber') === null &&
+      target.closest('.dialog-panel') === panel &&
+      canPullSheetFrom(target, panel);
+    if (!pullable) {
+      this.abandonTouch();
+      return;
+    }
+    const finger = event.touches[0];
+    this.touchOrigin = { x: finger.clientX, y: finger.clientY, time: event.timeStamp };
+    this.touchIntent = 'undecided';
+  }
+
+  protected touchMoved(event: TouchEvent): void {
+    const origin = this.touchOrigin;
+    if (origin === null || this.touchIntent === 'content' || event.touches.length !== 1) {
+      return;
+    }
+    const finger = event.touches[0];
+    if (this.touchIntent === 'undecided') {
+      const intent = pullIntent(origin, finger.clientX, finger.clientY, event.timeStamp);
+      if (intent === 'undecided') {
+        if (finger.clientY >= origin.y) {
+          event.preventDefault();
+        }
+        return;
+      }
+      this.touchIntent = intent;
+      if (intent === 'content') {
+        return;
+      }
+      this.beginPull(origin.y, origin.time);
+    }
+    event.preventDefault();
+    this.pullTo(finger.clientY, event.timeStamp);
+  }
+
+  protected touchEnded(event: TouchEvent): void {
+    if (event.touches.length > 0) {
+      return;
+    }
+    const pulled = this.touchIntent === 'sheet' && this.dragging();
+    this.touchOrigin = null;
+    this.touchIntent = 'content';
+    if (pulled) {
+      this.letGo(event.timeStamp);
+    }
+  }
+
+  protected abandonTouch(): void {
+    if (this.touchIntent === 'sheet') {
+      this.drag.cancel();
+      this.stopDrag();
+    }
+    this.touchOrigin = null;
+    this.touchIntent = 'content';
+  }
+
+  protected keepWriting(): void {
+    this.askingToDiscard.set(false);
+  }
+
+  protected discard(): void {
+    this.askingToDiscard.set(false);
+    this.dismiss();
   }
 
   protected keepFocusAboveActions(event: FocusEvent): void {
@@ -195,6 +313,27 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
+  private showModal(): void {
+    const dialog = this.element().nativeElement;
+    dialog.showModal();
+    if (this.modality.lastPressByPointer()) {
+      this.focusTitle(dialog);
+    }
+  }
+
+  private focusTitle(dialog: HTMLDialogElement): void {
+    const [titleId] = this.labelledBy().split(/\s+/);
+    const title = this.document.getElementById(titleId);
+    if (title === null || !dialog.contains(title)) {
+      dialog.focus({ preventScroll: true });
+      return;
+    }
+    if (!title.hasAttribute('tabindex')) {
+      title.setAttribute('tabindex', '-1');
+    }
+    title.focus({ preventScroll: true });
+  }
+
   private follow(suspended: boolean): void {
     if (!this.viewReady || this.destroyed) {
       return;
@@ -208,20 +347,118 @@ export class Dialog implements AfterViewInit, OnDestroy {
     } else if (!suspended && this.steppedAside) {
       this.steppedAside = false;
       if (!dialog.open) {
-        dialog.showModal();
+        this.showModal();
       }
     }
+  }
+
+  private beginPull(y: number, time: number): void {
+    this.drag.start(y, time, !this.dismissible() || this.unsavedInput());
+    this.dragging.set(true);
+  }
+
+  private pullTo(y: number, time: number): void {
+    const offset = this.drag.move(y, time);
+    this.dragOffset.set(offset);
+    this.sheetPull.set(Math.min(1, offset / Math.max(1, this.panelHeight())));
+  }
+
+  private letGo(time: number): void {
+    const height = this.panelHeight();
+    const release = this.drag.end(height, time);
+    this.stopDrag();
+    if (release !== 'dismiss' || !this.dismissible()) {
+      return;
+    }
+    if (this.unsavedInput()) {
+      this.askingToDiscard.set(true);
+    } else {
+      this.dismiss();
+    }
+  }
+
+  private slidesAway(): boolean {
+    const view = this.document.defaultView;
+    return (
+      this.look() === 'sheet' &&
+      this.layout.isCompact() &&
+      !this.steppedAside &&
+      this.element().nativeElement.open &&
+      view?.matchMedia?.(LESS_MOTION).matches === false
+    );
+  }
+
+  private slideAway(): void {
+    this.exit.set('sliding');
+    this.sheetPull.set(1);
+    this.element().nativeElement.focus({ preventScroll: true });
+    afterNextRender(
+      () => {
+        const panel = this.panel().nativeElement;
+        const longest = longestTransitionMs(getComputedStyle(panel).transitionDuration);
+        const slide = panel.getAnimations?.().find(slidesPanel);
+        const slidDown = (): void => this.slidDown();
+        (slide?.finished ?? Promise.resolve()).then(slidDown, slidDown);
+        this.slideTimer = setTimeout(slidDown, longest + SLIDE_GRACE_MS);
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private slidDown(): void {
+    if (this.exit() !== 'sliding' || this.destroyed) {
+      return;
+    }
+    clearTimeout(this.slideTimer);
+    this.exit.set('down');
+    this.dismissed.emit();
+    afterNextRender(() => this.comeBackUp(), { injector: this.injector });
+  }
+
+  private comeBackUp(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.exit.set('open');
+    this.sheetPull.set(0);
+    if (!this.steppedAside && !this.element().nativeElement.open) {
+      this.showModal();
+    }
+    if (this.entryTakenBackWhileLeaving) {
+      this.entryTakenBackWhileLeaving = false;
+      this.history.open(this.historyEntry);
+    }
+  }
+
+  private panelHeight(): number {
+    return this.panel().nativeElement.getBoundingClientRect().height;
   }
 
   private stopDrag(): void {
     this.dragPointer = null;
     this.dragging.set(false);
     this.dragOffset.set(0);
+    this.sheetPull.set(0);
+  }
+
+  private showDepth(depth: number): void {
+    if (this.viewReady && !this.destroyed && this.pushesHistory()) {
+      this.history.showStep(depth, this.historyEntry);
+    }
+  }
+
+  private steppedBackByHistory(): void {
+    this.steppedBack.emit();
+    afterNextRender(() => this.showDepth(this.depth()), { injector: this.injector });
   }
 
   private closedByBack(): void {
     if (!this.steppedAside) {
       this.dismiss();
+    }
+    if (this.leaving()) {
+      this.entryTakenBackWhileLeaving = true;
+      return;
     }
     afterNextRender(
       () => {
@@ -232,4 +469,22 @@ export class Dialog implements AfterViewInit, OnDestroy {
       { injector: this.injector },
     );
   }
+}
+
+function slidesPanel(animation: Animation): boolean {
+  return 'transitionProperty' in animation && animation.transitionProperty === 'translate';
+}
+
+function longestTransitionMs(durations: string): number {
+  return Math.max(
+    0,
+    ...durations
+      .split(',')
+      .map((duration) => duration.trim())
+      .filter((duration) => duration !== '')
+      .map((duration) =>
+        duration.endsWith('ms') ? parseFloat(duration) : parseFloat(duration) * 1000,
+      )
+      .filter((milliseconds) => Number.isFinite(milliseconds)),
+  );
 }

@@ -2,6 +2,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { defer, EMPTY, expand, Observable, race, switchMap, take, timer } from 'rxjs';
 import { LiveUpdates } from '../../core/live/live-updates';
+import type { SavedFile } from '../../core/files/file-download';
 
 export type DonationStatus = 'RECEIVED' | 'REFUNDED';
 
@@ -53,10 +54,7 @@ export interface BankCheckResponse {
   checking: boolean;
 }
 
-export interface DownloadedFile {
-  blob: Blob;
-  fileName: string;
-}
+export type DownloadedFile = SavedFile;
 
 const EXTENDED_FILE_NAME = /(?:^|;)\s*filename\*\s*=\s*utf-8''([^;\s]+)/i;
 const PLAIN_FILE_NAME = /(?:^|;)\s*filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i;

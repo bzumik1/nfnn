@@ -13,8 +13,8 @@
     @if (variableSymbol(); as symbol) {
       <li i18n="@@donor.bankAccounts.help.bySymbol">
         <span class="help-lead">Jak se k vám dostane můj dar?</span> Platbu s vaším variabilním
-        symbolem <strong class="help-symbol">{{ symbol }}</strong> přiřadíme vám, ať přijde z
-        jakéhokoli účtu.
+        symbolem <strong class="help-symbol ui-figures">{{ symbol }}</strong> přiřadíme vám, ať
+        přijde z jakéhokoli účtu.
       </li>
     } @else {
       <li i18n="@@donor.bankAccounts.help.bySymbolWithoutNumber">
@@ -25,8 +25,8 @@
     @if (variableSymbol(); as symbol) {
       <li i18n="@@donor.bankAccounts.help.symbolInMessage">
         <span class="help-lead">Moje banka nemá pole pro variabilní symbol</span> Napište symbol
-        <strong class="help-symbol">{{ symbol }}</strong> do zprávy pro příjemce. Platbu vám
-        přiřadíme stejně, jako kdyby byl v poli pro symbol.
+        <strong class="help-symbol ui-figures">{{ symbol }}</strong> do zprávy pro příjemce. Platbu
+        vám přiřadíme stejně, jako kdyby byl v poli pro symbol.
       </li>
     } @else {
       <li i18n="@@donor.bankAccounts.help.symbolInMessageWithoutNumber">
@@ -43,7 +43,7 @@
     @if (variableSymbol(); as symbol) {
       <li i18n="@@donor.bankAccounts.help.otherSymbol">
         <span class="help-lead">Posílám trvalým příkazem se starým symbolem</span> Nejjistější je
-        změnit v příkazu symbol na váš <strong class="help-symbol">{{ symbol }}</strong
+        změnit v příkazu symbol na váš <strong class="help-symbol ui-figures">{{ symbol }}</strong
         >. Jinak pošlete z účtu 1&nbsp;Kč se zprávou z QR kódu v „Přidat účet“ (běžný dar nestačí) a
         my se vás u účtu obvykle zeptáme, jestli jsou platby se starým symbolem vaše.
       </li>

@@ -115,11 +115,20 @@ public class AdminAdministratorsStepDefinitions {
 
     @Then("the administrator response names {string} without two-factor authentication")
     public void theAdministratorResponseNamesWithoutTwoFactorAuthentication(String alias) {
+        assertAdministratorResponseNames(alias, false);
+    }
+
+    @Then("the administrator response names {string} with two-factor authentication")
+    public void theAdministratorResponseNamesWithTwoFactorAuthentication(String alias) {
+        assertAdministratorResponseNames(alias, true);
+    }
+
+    private void assertAdministratorResponseNames(String alias, boolean secondFactorEnabled) {
         JsonNode response = api.lastResponseJson();
         assertThat(response.get("donorId").asString()).isEqualTo(scenarioDonors.idOf(alias).toString());
         assertThat(response.get("email").asString()).isEqualTo(scenarioDonors.credentialsOf(alias).email());
         assertThat(response.get("name").asString()).isNotBlank();
-        assertThat(response.get("secondFactorEnabled").asBoolean()).isFalse();
+        assertThat(response.get("secondFactorEnabled").asBoolean()).isEqualTo(secondFactorEnabled);
     }
 
     @Then("the admin action {string} by {string} on {string} is recorded")

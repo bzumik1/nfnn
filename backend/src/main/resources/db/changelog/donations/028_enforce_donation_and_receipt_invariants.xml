@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="028-check-donation-columns" author="nfnn">
+        <sql>alter table donor_record add constraint ck_donor_record_type check (type in ('PERSON', 'COMPANY')) not valid</sql>
+        <sql>alter table donor_record add constraint ck_donor_record_variable_symbol check (variable_symbol ~ '^[1-9][0-9]{0,9}$') not valid</sql>
+        <sql>alter table donor_record add constraint ck_donor_record_preferred_locale check (preferred_locale in ('cs', 'en')) not valid</sql>
+        <sql>alter table donor_record add constraint ck_donor_record_company_identifier
+            check ((company_identifier is null or (type = 'COMPANY' and company_identifier ~ '^[0-9]{8}$'))
+                and (type &lt;&gt; 'COMPANY' or company_identifier is not null or erased_at is not null)) not valid</sql>
+        <sql>alter table bank_payment add constraint ck_bank_payment_currency check (currency = 'CZK') not valid</sql>
+        <sql>alter table bank_payment add constraint ck_bank_payment_matching_symbol check (matching_variable_symbol ~ '^[1-9][0-9]{0,9}$') not valid</sql>
+        <sql>alter table donation add constraint ck_donation_status check (status in ('RECEIVED', 'REFUNDED')) not valid</sql>
+        <sql>alter table donation add constraint ck_donation_source check (source in ('BANK_TRANSFER', 'MANUAL')) not valid</sql>
+        <sql>alter table donation add constraint ck_donation_currency check (currency = 'CZK') not valid</sql>
+        <sql>alter table issued_receipt add constraint ck_issued_receipt_locale check (locale in ('cs', 'en')) not valid</sql>
+
+        <sql>alter table donor_record validate constraint ck_donor_record_type</sql>
+        <sql>alter table donor_record validate constraint ck_donor_record_variable_symbol</sql>
+        <sql>alter table donor_record validate constraint ck_donor_record_preferred_locale</sql>
+        <sql>alter table donor_record validate constraint ck_donor_record_company_identifier</sql>
+        <sql>alter table bank_payment validate constraint ck_bank_payment_currency</sql>
+        <sql>alter table bank_payment validate constraint ck_bank_payment_matching_symbol</sql>
+        <sql>alter table donation validate constraint ck_donation_status</sql>
+        <sql>alter table donation validate constraint ck_donation_source</sql>
+        <sql>alter table donation validate constraint ck_donation_currency</sql>
+        <sql>alter table issued_receipt validate constraint ck_issued_receipt_locale</sql>
+    </changeSet>
+
+    <changeSet id="028-tie-donations-to-their-donor-and-payment" author="nfnn">
+        <sql>alter table donor_sender_account add constraint uq_donor_sender_account_of_donor unique (id, donor_id)</sql>
+        <sql>alter table donor_symbol_claim add constraint uq_donor_symbol_claim_of_donor unique (id, donor_id)</sql>
+        <sql>alter table bank_payment add constraint uq_bank_payment_terms unique (id, amount_minor, currency, booked_on)</sql>
+        <sql>create index ix_donation_sender_account_of_donor on donation (sender_account_id, donor_id)</sql>
+        <sql>create index ix_donation_symbol_claim_of_donor on donation (symbol_claim_id, donor_id)</sql>
+        <sql>create index ix_donation_bank_payment_terms on donation (bank_payment_id, amount_minor, currency, received_on)</sql>
+
+        <sql>alter table donation add constraint fk_donation_sender_account_of_donor foreign key (sender_account_id, donor_id)
+            references donor_sender_account (id, donor_id) not valid</sql>
+        <sql>alter table donation add constraint fk_donation_symbol_claim_of_donor foreign key (symbol_claim_id, donor_id)
+            references donor_symbol_claim (id, donor_id) not valid</sql>
+        <sql>alter table donation add constraint fk_donation_bank_payment_terms foreign key (bank_payment_id, amount_minor, currency, received_on)
+            references bank_payment (id, amount_minor, currency, booked_on) not valid</sql>
+        <sql>alter table donation validate constraint fk_donation_sender_account_of_donor</sql>
+        <sql>alter table donation validate constraint fk_donation_symbol_claim_of_donor</sql>
+        <sql>alter table donation validate constraint fk_donation_bank_payment_terms</sql>
+
+        <sql>alter table donation drop constraint fk_donation_sender_account</sql>
+        <sql>alter table donation drop constraint fk_donation_symbol_claim</sql>
+        <sql>alter table donation drop constraint fk_donation_bank_payment</sql>
+    </changeSet>
+
+    <changeSet id="028-drop-index-donation-sender-account" author="nfnn">
+        <preConditions onFail="MARK_RAN">
+            <indexExists tableName="donation" indexName="ix_donation_sender_account"/>
+        </preConditions>
+        <dropIndex tableName="donation" indexName="ix_donation_sender_account"/>
+    </changeSet>
+
+    <changeSet id="028-drop-index-donation-symbol-claim" author="nfnn">
+        <preConditions onFail="MARK_RAN">
+            <indexExists tableName="donation" indexName="ix_donation_symbol_claim"/>
+        </preConditions>
+        <dropIndex tableName="donation" indexName="ix_donation_symbol_claim"/>
+    </changeSet>
+
+    <changeSet id="028-keep-issued-receipts-as-issued" author="nfnn">
+        <sql splitStatements="false"><![CDATA[
+create function issued_receipt_keeps_what_it_certifies() returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $$
+begin
+  if exists (select from pg_locks
+             where locktype = 'advisory' and pid = pg_backend_pid() and granted
+               and classid = 0 and objid = 20261110 and objsubid = 1) then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+  if tg_op = 'UPDATE' then
+    if (new.id, new.donor_id, new.kind, new.donation_id, new.receipt_year, new.number, new.issued_on, new.issued_at, new.locale,
+        new.fingerprint, new.schema_version, new.frozen, new.signature_image_sha256, new.portrait_image_sha256, new.signing_key_id,
+        new.proof, new.status_sha256, new.supersedes_id)
+       is not distinct from
+       (old.id, old.donor_id, old.kind, old.donation_id, old.receipt_year, old.number, old.issued_on, old.issued_at, old.locale,
+        old.fingerprint, old.schema_version, old.frozen, old.signature_image_sha256, old.portrait_image_sha256, old.signing_key_id,
+        old.proof, old.status_sha256, old.supersedes_id)
+       and (old.status = 'ACTIVE'
+            or (new.status, new.superseded_at, new.withdrawn_at, new.withdrawal_reason)
+               is not distinct from (old.status, old.superseded_at, old.withdrawn_at, old.withdrawal_reason)) then
+      return new;
+    end if;
+  end if;
+  raise exception 'issued_receipt % refused: an issued receipt keeps what it certifies and leaves ACTIVE at most once', tg_op;
+end
+$$
+        ]]></sql>
+        <sql>create trigger issued_receipt_keeps_its_rows before update or delete on issued_receipt for each row execute function issued_receipt_keeps_what_it_certifies()</sql>
+        <sql>create trigger issued_receipt_keeps_its_table before truncate on issued_receipt for each statement execute function issued_receipt_keeps_what_it_certifies()</sql>
+    </changeSet>
+
+</databaseChangeLog>

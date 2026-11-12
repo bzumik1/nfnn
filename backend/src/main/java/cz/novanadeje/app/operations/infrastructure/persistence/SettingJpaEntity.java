@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
-import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,7 +7,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
-import java.util.Optional;
 
 @Entity
 @Table(name = "operations_setting")
@@ -40,9 +38,5 @@ class SettingJpaEntity {
         entity.sealed = setting.sealed();
         entity.updatedAt = setting.updatedAt();
         return entity;
-    }
-
-    Optional<StoredSetting> toDomain() {
-        return Setting.named(name).map(setting -> new StoredSetting(setting, value, sealed, updatedAt));
     }
 }

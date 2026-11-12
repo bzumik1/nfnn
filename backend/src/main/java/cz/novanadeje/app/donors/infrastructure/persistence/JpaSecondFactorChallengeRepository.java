@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
 import org.springframework.stereotype.Repository;
@@ -35,5 +36,15 @@ class JpaSecondFactorChallengeRepository implements SecondFactorChallengeReposit
     @Override
     public boolean markUsed(UUID challengeId, Instant at) {
         return jpa.markUsed(challengeId, at) == 1;
+    }
+
+    @Override
+    public int deleteExpiredBefore(Instant cutoff) {
+        return jpa.deleteExpiredBefore(cutoff);
+    }
+
+    @Override
+    public void deleteAllOfWithoutWaiting(DonorId donorId) {
+        jpa.deleteUnlockedOf(donorId.value());
     }
 }

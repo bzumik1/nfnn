@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="021-drop-refresh-token-donor-index" author="nfnn">
+        <preConditions onFail="MARK_RAN">
+            <indexExists tableName="donor_refresh_token" indexName="ix_donor_refresh_token_donor"/>
+        </preConditions>
+        <dropIndex tableName="donor_refresh_token" indexName="ix_donor_refresh_token_donor"/>
+    </changeSet>
+
+</databaseChangeLog>

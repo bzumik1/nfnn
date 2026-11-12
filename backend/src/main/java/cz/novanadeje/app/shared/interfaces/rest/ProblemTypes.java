@@ -13,6 +13,7 @@ public final class ProblemTypes {
     public static final URI FORBIDDEN = of("auth", "forbidden");
     public static final URI UPLOAD_TOO_LARGE = of("upload-too-large");
     public static final URI INTERNAL_ERROR = of("internal-error");
+    public static final URI SERVER_BUSY = of("server-busy");
 
     private ProblemTypes() {
     }

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.application.signing;
 
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 
 import java.time.Instant;
@@ -20,7 +21,12 @@ final class ListedTrail implements AdminActionTrail {
     }
 
     @Override
-    public List<AdminActionEntry> findAllNewestFirst() {
+    public List<AdminActionEntry> findPerformedBefore(Instant before, UUID beforeId, int limit) {
+        throw new UnsupportedOperationException("the key history asks by action");
+    }
+
+    @Override
+    public List<AdminActionSummary> findAllSummariesNewestFirst() {
         throw new UnsupportedOperationException("the key history asks by action");
     }
 

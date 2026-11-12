@@ -35,18 +35,9 @@ describe('Given the app opened from its icon on the home screen', () => {
     return TestBed.inject(Router).serializeUrl(result);
   }
 
-  it('when nobody is signed in on this device, then it opens the home page with the sign-in dialog', async () => {
+  it('when nobody is signed in on this device, then it opens the home page without the sign-in dialog', async () => {
     expect(await landing()).toBe('/');
-    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
-  });
-
-  it('when nobody is signed in and the visitor signs in through the dialog, then the app opens their start again', async () => {
-    await landing();
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-
-    TestBed.inject(LoginDialogService).signedIn();
-
-    expect(navigate).toHaveBeenCalledWith('/aplikace');
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(false);
   });
 
   it('when a donor has a session to restore, then it opens their overview', async () => {
@@ -81,7 +72,7 @@ describe('Given the app opened from its icon on the home screen', () => {
       );
 
     expect(await result).toBe('/');
-    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(true);
+    expect(TestBed.inject(LoginDialogService).isOpen()).toBe(false);
   });
 
   it('when a donor has a session to restore, then no sign-in dialog opens', async () => {

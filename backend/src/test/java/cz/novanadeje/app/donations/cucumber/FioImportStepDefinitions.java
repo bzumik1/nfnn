@@ -121,6 +121,16 @@ public class FioImportStepDefinitions {
                 .build());
     }
 
+    @Given("the bank account has a movement {long} on {date} named {string} with the message {string}, where {string} is a NUL character")
+    public void theBankAccountHasAMovementWithNulCharacters(long id, LocalDate date, String name, String message,
+                                                           String marker) {
+        fio.addMovement(FioMovements.incoming(id, date, "500.00")
+                .from("2900233333", "2010")
+                .named(name.replace(marker, "\u0000"))
+                .withMessage(message.replace(marker, "\u0000"))
+                .build());
+    }
+
     @Given("the foundation wants bank history from {date}")
     public void theFoundationWantsBankHistoryFrom(LocalDate from) {
         settings = settings.withHistoryFrom(from);
@@ -215,6 +225,14 @@ public class FioImportStepDefinitions {
         assertThat(payment.messageForRecipient()).hasValueSatisfying(message -> assertThat(message).hasSize(messageLength));
         assertThat(payment.counterpartyAccount()).hasValueSatisfying(account -> assertThat(account).hasSize(accountLength));
         assertThat(payment.sender()).isEmpty();
+    }
+
+    @Then("bank payment {long} is stored with the name {string} and the message {string}")
+    public void bankPaymentIsStoredWithNameAndMessage(long transactionId, String name, String message) {
+        assertThat(jdbc.sql("select counterparty_name, message_for_recipient from bank_payment where bank_transaction_id = ?")
+                .param(transactionId)
+                .query((row, number) -> List.of(row.getString("counterparty_name"), row.getString("message_for_recipient")))
+                .single()).containsExactly(name, message);
     }
 
     @Then("no bank payment {long} is stored")

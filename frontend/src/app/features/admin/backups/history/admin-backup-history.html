@@ -1,0 +1,92 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.backups.history.heading">
+    Všechny zálohy
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.backups.history.intro">
+    Nejnovější nahoře. Klepnutím na zálohu ji stáhnete nebo z ní web obnovíte.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.backups.history.loading">
+        Načítáme zálohy…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.backups.history.failed">Zálohy se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.backups.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (days().length === 0) {
+        <p class="empty" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
+      } @else {
+        <div class="ui-groups groups">
+          @for (day of days(); track day.day) {
+            <section [attr.aria-labelledby]="'den-' + day.day">
+              <h2 class="ui-group-title" [id]="'den-' + day.day">
+                <span class="day-title">{{ day.title }}</span>
+                ·
+                <span
+                  class="day-count"
+                  i18n="@@admin.backups.history.count"
+                  >{day.backups.length, plural,
+                    one {1 záloha}
+                    few {{{ day.backups.length }} zálohy}
+                    other {{{ day.backups.length }} záloh}
+                  }</span
+                >
+              </h2>
+              <ul class="ui-list ui-list--inset">
+                @for (entry of day.backups; track entry.backup.fileName) {
+                  <li>
+                    <button type="button" class="ui-list__row" (click)="open(entry.backup)">
+                      <span class="ui-list__title ui-figures">{{ entry.time }}</span>
+                      <span class="ui-list__meta">{{ kindName(entry.backup) }}</span>
+                      <span class="ui-list__value">{{ size(entry.backup) }}</span>
+                      <svg
+                        class="ui-list__chevron"
+                        aria-hidden="true"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+</div>
+
+@if (opened(); as backup) {
+  <app-backup-sheet
+    [backup]="backup"
+    [downloading]="downloads.downloading() === backup.fileName"
+    [failure]="downloads.failure()"
+    [restoreBlocked]="restoreBlocked()"
+    (download)="downloads.download(backup)"
+    (restore)="restore()"
+    (dismissed)="close()"
+  />
+}

@@ -26,6 +26,12 @@
   filter: brightness(var(--pressed-brightness));
 }
 
+@mixin fades {
+  background-image: none;
+  opacity: var(--pressed-opacity);
+  transition: none;
+}
+
 @mixin shrinks {
   background-image: none;
   transform: scale(var(--pressed-scale));

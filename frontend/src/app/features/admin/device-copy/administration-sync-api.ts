@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import type { PasskeyConfirmation } from '../../../core/auth/donor';
 
 export const MAX_CHUNKS_PER_REQUEST = 64;
 
@@ -53,5 +54,9 @@ export class AdministrationSyncApi {
 
   unlock(password: string, secondFactorCode: string): Observable<void> {
     return this.http.post<void>(`${CURRENT_DEVICE}/unlock`, { password, secondFactorCode });
+  }
+
+  unlockWithPasskey(passkey: PasskeyConfirmation): Observable<void> {
+    return this.http.post<void>(`${CURRENT_DEVICE}/unlock`, { passkey });
   }
 }

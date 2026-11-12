@@ -1,8 +1,14 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpHeaders,
+  HttpRequest,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { serviceWorkerBypassInterceptor } from './service-worker-bypass';
+import { mayComeFromServiceWorker, serviceWorkerBypassInterceptor } from './service-worker-bypass';
 
 describe('Given the service worker bypass interceptor', () => {
   let client: HttpClient;
@@ -40,6 +46,8 @@ describe('Given the service worker bypass interceptor', () => {
       '/api/content/media/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
       '/api/content/media/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b?w=480',
       '/api/donations/payment-details',
+      '/api/donations/bank-logos',
+      '/api/donations/bank-logos/images/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
     ])('then %s may come from the service worker', (url) => {
       expect(bypassOf('GET', url)).toBeNull();
     });
@@ -58,6 +66,10 @@ describe('Given the service worker bypass interceptor', () => {
       '/api/content/media/0190a1b2/original',
       '/api/donations/payment-details/qr',
       '/api/operations/setup/status',
+      '/api/donations/bank-codes',
+      '/api/donations/bank-logos?code=0800',
+      '/api/donations/bank-logos/images/0190a1b2/original',
+      '/api/admin/donations/bank-logos',
     ])('then %s goes past the service worker straight to the network', (url) => {
       expect(bypassOf('GET', url)).toBe('true');
     });
@@ -69,5 +81,14 @@ describe('Given the service worker bypass interceptor', () => {
 
   it('when the app asks for a file outside the API, then the service worker may answer it', () => {
     expect(bypassOf('GET', '/receipt-fonts/body.ttf')).toBeNull();
+  });
+
+  it('when the app asks a public answer past the service worker on purpose, then that answer comes from the network', () => {
+    const pastTheWorker = new HttpRequest('GET', '/api/content/news', {
+      headers: new HttpHeaders({ 'ngsw-bypass': 'true' }),
+    });
+
+    expect(mayComeFromServiceWorker(pastTheWorker)).toBe(false);
+    expect(bypassOf('GET', '/api/content/news')).toBeNull();
   });
 });

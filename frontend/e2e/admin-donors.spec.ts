@@ -3,11 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { readPdf } from '../src/app/features/donations/receipt-pdf/testing/pdf-reader';
 import { expect, test } from './fixtures';
 import {
+  administrationCopyGift,
   administrator,
   bankAccountItem,
   donationItem,
   mockDonorApi,
   problem,
+  serveAdministrationCopy,
   session,
 } from './donor-session';
 import {
@@ -538,6 +540,55 @@ test.describe('Given an administrator on the donors page', () => {
     );
     await expect(accountsCard).toContainText('2900233333/2010');
     await expect(accountsCard.getByRole('button', { name: 'Odebrat účet' })).toBeFocused();
+  });
+
+  test('when the copy on this device holds gifts, then before any search the donors who gave last are listed newest first and one opens the card', async ({
+    page,
+  }) => {
+    await serveAdministrationCopy(page, {
+      donations: {
+        'donations:2026-09': [
+          administrationCopyGift(
+            '0192f0f1-0000-7000-8000-0000000000a1',
+            janaAccount.donorId,
+            '2026-09-20',
+            20000,
+          ),
+        ],
+        'donations:2026-10': [
+          administrationCopyGift(
+            '0192f0f1-0000-7000-8000-0000000000a2',
+            PETR_ID,
+            '2026-10-25',
+            123450,
+          ),
+        ],
+      },
+      donors: { 'accounts:2026-10': [janaAccount, petrAccount] },
+    });
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+
+    await page.goto('/sprava/darci');
+
+    await expect(page.getByRole('heading', { level: 3, name: 'Naposledy přispěli' })).toBeVisible();
+    const rows = page.locator('tbody tr');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText('Petr Svoboda');
+    await expect(rows.nth(0)).toContainText('1 234,50 Kč');
+    await expect(rows.nth(0)).toContainText('25. 10. 2026');
+    await expect(rows.nth(1)).toContainText('Jana Nováková');
+    await expect(rows.nth(1)).toContainText('200 Kč');
+
+    await rows.nth(0).getByRole('link', { name: 'Petr Svoboda' }).click();
+    await expect(page).toHaveURL(new RegExp(`/sprava/darci/${PETR_ID}$`));
+    await expect(page.getByRole('heading', { level: 1, name: 'Petr Svoboda' })).toBeFocused();
   });
 
   test('when the donor does not exist, then one card says so and leads back to the search', async ({

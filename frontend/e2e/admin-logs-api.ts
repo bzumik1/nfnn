@@ -8,7 +8,8 @@ export const DIAGNOSTICS = '/api/admin/operations/diagnostics';
 
 const TAIL = Array.from(
   { length: 40 },
-  (_, index) => `2026-10-23T10:00:${String(index).padStart(2, '0')} INFO line ${index}`,
+  (_, index) =>
+    `2026-10-23T10:00:${String(index).padStart(2, '0')}.000+02:00  INFO 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.a.i.ImportBankPaymentsService    : line ${index}`,
 ).join('\n');
 
 export function logsApi(): Record<string, unknown> {
@@ -78,9 +79,19 @@ export function logsApi(): Record<string, unknown> {
         maxConnections: 10,
       },
       disks: [
-        { path: '/logs', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
-        { path: '/backups', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
-        { path: '/restore', mounted: true, freeBytes: 12_000_000_000, totalBytes: 250_000_000_000 },
+        { path: '/logs', mounted: true, freeBytes: 120_000_000_000, totalBytes: 250_000_000_000 },
+        {
+          path: '/backups',
+          mounted: true,
+          freeBytes: 120_000_000_000,
+          totalBytes: 250_000_000_000,
+        },
+        {
+          path: '/restore',
+          mounted: true,
+          freeBytes: 120_000_000_000,
+          totalBytes: 250_000_000_000,
+        },
       ],
       logLevelOverrides: [],
     },
@@ -94,12 +105,13 @@ export async function routeLogsApi(page: RouteTarget): Promise<void> {
     (route) => route.fulfill({ json: api['files'] }),
   );
   await page.route(
-    (url) => url.pathname === `${LOGS}/backend.log`,
+    (url) => url.pathname.startsWith(`${LOGS}/`) && !url.pathname.endsWith('/search'),
     (route) => {
-      const from = new URL(route.request().url()).searchParams.get('from');
+      const url = new URL(route.request().url());
+      const from = url.searchParams.get('from');
       return route.fulfill({
         json: {
-          name: 'backend.log',
+          name: decodeURIComponent(url.pathname.slice(LOGS.length + 1)),
           sizeBytes: 52000,
           from: from === null ? 32000 : Number(from),
           to: from === null ? 52000 : Number(from) + 20000,
@@ -118,8 +130,14 @@ export async function routeLogsApi(page: RouteTarget): Promise<void> {
           name: 'backend.log',
           sizeBytes: 52000,
           matches: [
-            { offset: 51000, line: '2026-10-23T10:00:38 WARN Fio refused the request (409)' },
-            { offset: 40000, line: '2026-10-23T09:00:00 WARN Fio refused the request (409)' },
+            {
+              offset: 51000,
+              line: '2026-10-23T10:00:38.000+02:00 ERROR 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio refused the request (409)',
+            },
+            {
+              offset: 40000,
+              line: '2026-10-23T09:00:00.000+02:00 ERROR 1 --- [nova-nadeje] [scheduling-1] c.n.a.d.i.fio.FioBankStatementSource     : Fio refused the request (409)',
+            },
           ],
           moreOlder: false,
           scannedFrom: 0,

@@ -112,8 +112,8 @@ class JpaDonorDeviceRepositoryTest {
         DonorDevice live = deviceWithToken(jana, NOW, TTL);
         DonorDevice spent = deviceWithToken(jana, NOW.minus(TTL).minusSeconds(1), TTL);
         DonorDevice ended = deviceWithToken(jana, NOW, TTL);
-        ended.end(DeviceSignOutReason.SIGNED_OUT, NOW);
-        devices.save(ended);
+        flushAndClear();
+        devices.endIfActive(ended.id(), DeviceSignOutReason.SIGNED_OUT, NOW);
         DonorDevice petrs = deviceWithToken(petr, NOW, TTL);
         flushAndClear();
 
@@ -144,12 +144,11 @@ class JpaDonorDeviceRepositoryTest {
     @DisplayName("Given devices ended before and after the cutoff and an active one, when the ended ones are deleted, then only those ended before go with their tokens")
     void should_delete_only_devices_ended_before_cutoff_when_deleted_given_mixed_devices() {
         DonorDevice old = deviceWithToken(jana, NOW, TTL);
-        old.end(DeviceSignOutReason.EXPIRED, NOW.plusSeconds(10));
-        devices.save(old);
         DonorDevice recent = deviceWithToken(jana, NOW, TTL);
-        recent.end(DeviceSignOutReason.EXPIRED, NOW.plusSeconds(30));
-        devices.save(recent);
         DonorDevice active = deviceWithToken(jana, NOW, TTL);
+        flushAndClear();
+        devices.endIfActive(old.id(), DeviceSignOutReason.EXPIRED, NOW.plusSeconds(10));
+        devices.endIfActive(recent.id(), DeviceSignOutReason.EXPIRED, NOW.plusSeconds(30));
         flushAndClear();
 
         int deleted = devices.deleteEndedBefore(NOW.plusSeconds(20));
@@ -186,6 +185,25 @@ class JpaDonorDeviceRepositoryTest {
         DonorDevice foundLaptop = devices.findById(laptop.id()).orElseThrow();
         assertThat(foundLaptop.endReason()).contains(DeviceSignOutReason.EXPIRED);
         assertThat(foundLaptop.endedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
+    @DisplayName("Given an active device read before another sign-out ended it, when its use is recorded and it is saved, then the end and its reason stay and only the time of use moves")
+    void should_keep_end_when_saved_given_device_ended_after_it_was_read() {
+        DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
+        devices.save(phone);
+        flushAndClear();
+        DonorDevice readBeforeTheEnd = devices.findById(phone.id()).orElseThrow();
+        assertThat(devices.endIfActive(phone.id(), DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.plusSeconds(5))).isTrue();
+
+        readBeforeTheEnd.recordUse(NOW.plusSeconds(10));
+        devices.save(readBeforeTheEnd);
+        flushAndClear();
+
+        DonorDevice found = devices.findById(phone.id()).orElseThrow();
+        assertThat(found.endedAt()).contains(NOW.plusSeconds(5));
+        assertThat(found.endReason()).contains(DeviceSignOutReason.REMOTE_SIGN_OUT);
+        assertThat(found.lastUsedAt()).isEqualTo(NOW.plusSeconds(10));
     }
 
     @Test

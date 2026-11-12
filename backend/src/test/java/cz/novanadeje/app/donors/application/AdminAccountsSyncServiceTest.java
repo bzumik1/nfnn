@@ -6,7 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
-import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -86,12 +86,12 @@ class AdminAccountsSyncServiceTest {
         admin.verifyEmail(NOW);
         admin.grantAdministration();
         Donor jana = donor("jana@example.cz", "4821937561");
-        AdminActionEntry entry = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "PAIR_PAYMENT", Optional.empty(), "{}", NOW, Optional.empty());
+        AdminActionSummary entry = new AdminActionSummary(UUID.randomUUID(), admin.id().value(), "PAIR_PAYMENT", Optional.empty(), NOW, Optional.empty());
         when(donors.findById(admin.id())).thenReturn(Optional.of(admin));
         when(donors.findAll()).thenReturn(List.of(admin, jana));
         when(secondFactors.findDonorsWithEnabledFactor()).thenReturn(Set.of(jana.id()));
         when(passkeys.countByDonors()).thenReturn(Map.of(jana.id(), 2));
-        when(trail.findAllNewestFirst()).thenReturn(List.of(entry));
+        when(trail.findAllSummariesNewestFirst()).thenReturn(List.of(entry));
 
         AdminAccountsSyncSnapshot snapshot = service.snapshotFor(admin.id());
 

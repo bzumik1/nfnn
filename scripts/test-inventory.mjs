@@ -131,7 +131,7 @@ for (const [name, path] of needed.flatMap(([name, value]) =>
 )) {
   if (!existsSync(at(path))) {
     console.error(
-      `Missing ${name} report ${path}; see .claude/rules/testing.md "Regression against v2"`,
+      `Missing ${name} report ${path}; see .claude/rules/testing-regression.md "Regression against v2"`,
     );
     process.exit(1);
   }

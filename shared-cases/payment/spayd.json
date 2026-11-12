@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The SPAYD text of a payment QR that the browser composes with spayd() (features/donations/spayd.ts) from what GET /api/donations/payment-details serves and the payment's amount in hellers, variable symbol and purpose (DONATION when left out), or its refusal as the fields it refuses. details names the case of payment/details.json whose answer the browser holds, so the recipient cases chain from the name the backend writes as SPAYD text; servedDetails is an answer the backend never gives (PaymentDetails refuses it at startup), which spayd() refuses rather than send. spayd() has no text rules of its own: it writes ACC, AM (crowns with two decimals, 1 heller to 9 999 999,99 Kč, the 10 characters SPAYD allows), CC, X-VS (only with a symbol, 1 to 10 digits; an account verification needs one), RN (left out when empty) and MSG (the purpose's message) as they come, and refuses details that are not SPAYD text (upper-case 0-9 A-Z $ + - . / : with single spaces, at most 35 characters for RN, 1 to 60 for both messages, whichever purpose is asked), a currency that is not three capital letters, and an account whose IBAN is not the IBAN of its Czech account number (payment/account.json, the pairing BankAccount enforces at startup), so the whole text stays in the QR alphanumeric set, no value can carry the separator * and the QR pays the account number people read. The donation form's own limits (whole crowns from 1 to 1 000 000 Kč) are the payment panel's, outside these cases. Only the browser runs the cases (spayd.spec.ts); the backend's DonationPurposeSharedCasesTest reads the account-verification cases and checks that the import recognises their message at the verification amount. qr/payment.json encodes each text into its QR symbol under the same case name",
+  "logic": "The SPAYD text of a payment QR that the browser composes with spayd() (features/donations/spayd.ts) from what GET /api/donations/payment-details serves and the payment's amount in hellers, variable symbol and purpose (DONATION when left out), or its refusal as the fields it refuses. details names the case of payment/details.json whose answer the browser holds, so the recipient cases chain from the name the backend writes as SPAYD text; servedDetails is an answer the backend never gives (PaymentDetails refuses it at startup), which spayd() refuses rather than send. spayd() has no text rules of its own: it writes ACC, AM (crowns with two decimals, 1 heller to 9 999 999,99 Kč, the 10 characters SPAYD allows), CC, PT:IP (asks the payer's bank for an instant payment where it offers one: Jakub 2026-11-06), X-VS (only with a symbol, 1 to 10 digits; an account verification needs one), RN (left out when empty) and MSG (the purpose's message) as they come, and refuses details that are not SPAYD text (upper-case 0-9 A-Z $ + - . / : with single spaces, at most 35 characters for RN, 1 to 60 for both messages, whichever purpose is asked), a currency that is not three capital letters, and an account whose IBAN is not the IBAN of its Czech account number (payment/account.json, the pairing BankAccount enforces at startup), so the whole text stays in the QR alphanumeric set, no value can carry the separator * and the QR pays the account number people read. The donation form's own limits (whole crowns from 1 to 1 000 000 Kč) are the payment panel's, outside these cases. Only the browser runs the cases (spayd.spec.ts); the backend's DonationPurposeSharedCasesTest reads the account-verification cases and checks that the import recognises their message at the verification amount. qr/payment.json encodes each text into its QR symbol under the same case name",
   "cases": [
     {
       "name": "1 Kč without a variable symbol",
@@ -9,7 +9,7 @@
         "amountMinor": 100
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -19,7 +19,7 @@
         "amountMinor": 1
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:0.01*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:0.01*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -29,7 +29,7 @@
         "amountMinor": 10000
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:100.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:100.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -39,7 +39,7 @@
         "amountMinor": 50000
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -49,7 +49,7 @@
         "amountMinor": 100000
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -59,7 +59,7 @@
         "amountMinor": 123400
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -69,7 +69,7 @@
         "amountMinor": 100000000
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000000.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000000.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -79,7 +79,7 @@
         "amountMinor": 999999999
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:9999999.99*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:9999999.99*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -90,7 +90,7 @@
         "variableSymbol": "7"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:7*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:7*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -101,7 +101,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -112,7 +112,7 @@
         "variableSymbol": "0012345678"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:0012345678*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:0012345678*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -124,7 +124,7 @@
         "purpose": "DONATION"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1000.00*CC:CZK*PT:IP*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -136,7 +136,7 @@
         "purpose": "ACCOUNT_VERIFICATION"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -148,7 +148,7 @@
         "purpose": "ACCOUNT_VERIFICATION"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*X-VS:4815162342*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:1234.00*CC:CZK*PT:IP*X-VS:4815162342*RN:NADACNI FOND NOVA NADEJE*MSG:OVERENI UCTU NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -260,7 +260,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK PRATEL SKOLY TISNOV 1234 ABC*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*RN:SPOLEK PRATEL SKOLY TISNOV 1234 ABC*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -271,7 +271,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE PRO DETI A*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*RN:NADACNI FOND NOVA NADEJE PRO DETI A*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -282,7 +282,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:ZLUTOUCKY KUN 100 + HVEZDA SPOL.*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*RN:ZLUTOUCKY KUN 100 + HVEZDA SPOL.*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -293,7 +293,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*RN:SPOLEK RODICU PRI SKOLE TISNOV 123*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*RN:SPOLEK RODICU PRI SKOLE TISNOV 123*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -304,7 +304,7 @@
         "variableSymbol": "1234567890"
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*X-VS:1234567890*MSG:DAR NADACNI FOND NOVA NADEJE"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*X-VS:1234567890*MSG:DAR NADACNI FOND NOVA NADEJE"
       }
     },
     {
@@ -326,7 +326,7 @@
         "amountMinor": 50000
       },
       "expected": {
-        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE PRO DETI A MLADEZ Z TISNOVA 123"
+        "spayd": "SPD*1.0*ACC:CZ2620100000005544332217*AM:500.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE PRO DETI A MLADEZ Z TISNOVA 123"
       }
     },
     {

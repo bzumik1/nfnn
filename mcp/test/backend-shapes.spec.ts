@@ -165,6 +165,30 @@ describe('Given recorded transcripts', () => {
     expect(problems).toEqual([]);
   });
 
+  it('when a call whose path holds a name is declared as added since v2 with a * where the name goes, as the comparison with v2 declares it, then the check accepts it, and only for that path', () => {
+    const logo = {
+      ...OVERVIEW,
+      method: 'PUT',
+      template: '/api/admin/donations/bank-logos/{name}',
+      source: 'w.ts:3',
+    };
+    const refresh = {
+      ...OVERVIEW,
+      method: 'POST',
+      template: '/api/admin/donations/bank-logos/{name}/refresh',
+      source: 'w.ts:9',
+    };
+    const problems = checkBackendShapes({
+      calls: [OVERVIEW, logo, refresh],
+      recorded: recorded(),
+      fixtures: [],
+      addedSinceV2: ['PUT /api/admin/donations/bank-logos/*'],
+    });
+    expect(problems).toEqual([
+      'POST /api/admin/donations/bank-logos/{name}/refresh (w.ts:9) is called by the connector, but no transcript records it',
+    ]);
+  });
+
   it('when a fixture has the recorded shape with fewer fields, then the check passes', () => {
     const problems = checkBackendShapes({
       calls: [OVERVIEW],

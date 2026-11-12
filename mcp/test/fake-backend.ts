@@ -24,6 +24,7 @@ export const CURRENT_VERSION = '5e1c0a9f3b7d2486';
 export const PERSON_ID = '019a0000-0000-7000-8000-000000000007';
 export const SIGNED_PERSON_ID = '019a0000-0000-7000-8000-000000000008';
 export const PUSH_SUBSCRIPTION_ID = '019a0000-0000-7000-8000-000000000027';
+const BANK_LOGO_SOURCE = 'https://is1-ssl.mzstatic.com/image/thumb/csas/512x512bb.jpg';
 const STORED_NOW: Record<string, unknown> = {
   'PUT /api/admin/donations/report/settings': {
     recipients: ['info@nfnn.cz'],
@@ -325,8 +326,16 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         200,
         {
           items: [
-            { action: 'SEND_MONTHLY_REPORT', performedAt: '2026-10-23T07:30:00.123456Z' },
-            { action: 'PAIR_PAYMENT', performedAt: '2026-10-23T06:00:00.654321Z' },
+            {
+              id: '019a1c00-0000-7000-8000-00000000e001',
+              action: 'SEND_MONTHLY_REPORT',
+              performedAt: '2026-10-23T07:30:00.123456Z',
+            },
+            {
+              id: '019a1c00-0000-7000-8000-00000000e002',
+              action: 'PAIR_PAYMENT',
+              performedAt: '2026-10-23T06:00:00.654321Z',
+            },
           ],
           hasMore: true,
         },
@@ -363,6 +372,25 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case 'PUT /api/admin/donations/report/settings':
       return [200, JSON.parse(body)];
+    case 'GET /api/admin/donations/bank-logos':
+      return [200, { items: [bankLogo(BANK_LOGO_SOURCE)] }];
+    case 'PUT /api/admin/donations/bank-logos/0800': {
+      const sourceUrl =
+        (JSON.parse(body || '{}') as { sourceUrl?: string }).sourceUrl ?? BANK_LOGO_SOURCE;
+      return sourceUrl.includes('redirects')
+        ? [
+            502,
+            problem(
+              502,
+              'donations/bank-logo-unavailable',
+              'Logo banky se nepodařilo stáhnout',
+              'Adresa přesměrovává jinam. Zadejte přímou adresu obrázku. Nic se neuložilo a dosavadní logo zůstává.',
+            ),
+          ]
+        : [200, bankLogo(sourceUrl)];
+    }
+    case 'POST /api/admin/donations/bank-logos/0800/refresh':
+      return [200, bankLogo(BANK_LOGO_SOURCE)];
     case 'PUT /api/admin/operations/backups/schedule':
       return [
         200,
@@ -453,6 +481,32 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       ];
     case `POST /api/admin/donations/donors/${DONOR_ID}/bank-accounts/${PAYMENT_ID}/reconnect`:
       return [204, undefined];
+    case 'GET /api/admin/donations/report/sent':
+      return [
+        200,
+        {
+          month: '2026-10',
+          firstSentAt: '2026-11-01T06:00:00Z',
+          deliveries: [
+            {
+              sentAt: '2026-11-02T11:00:00Z',
+              byHand: true,
+              recipientCount: 1,
+              content: {
+                donors: { registered: 2, newInMonth: 2 },
+                donations: {
+                  received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+                  paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+                  receivedInYear: { count: 3, totalMinor: 85000, currency: 'CZK' },
+                },
+                unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+                bankImport: { lastSucceededAt: '2026-11-02T11:00:00Z', lastFailure: null },
+              },
+            },
+          ],
+          recomputed: null,
+        },
+      ];
     case 'GET /api/admin/donations/report':
       return [200, { settings: { recipients: ['info@nfnn.cz'], sendDay: 1 }, sentReports: [] }];
     case 'GET /api/admin/donations/receipt-signatory':
@@ -1058,6 +1112,20 @@ export function metadata(): Record<string, unknown> {
     scopes_supported: ['admin:read', 'admin:write'],
     client_id_metadata_document_supported: true,
     authorization_response_iss_parameter_supported: true,
+  };
+}
+
+function bankLogo(sourceUrl: string): Record<string, unknown> {
+  return {
+    code: '0800',
+    bankName: 'Česká spořitelna, a.s.',
+    sourceUrl,
+    version: CURRENT_VERSION,
+    imageId: '019a0000-0000-7000-8000-000000000031',
+    imageSha256: 'a'.repeat(64),
+    fetchedAt: '2026-11-04T09:00:00Z',
+    checkedAt: '2026-11-04T09:00:00Z',
+    lastFailure: null,
   };
 }
 

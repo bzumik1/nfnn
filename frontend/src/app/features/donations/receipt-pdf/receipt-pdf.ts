@@ -54,14 +54,19 @@ export class ReceiptPdfFailure extends Error {
   }
 }
 
-const REPORTED_AS: Readonly<Record<ReceiptPdfFailureReason, ErrorKind | null>> = {
+type ReportedFailure = Exclude<ReceiptPdfFailureReason, 'unprintable'>;
+
+const REPORTED_AS: Readonly<Record<ReportedFailure, ErrorKind>> = {
   'tools-missing': 'pdf-load',
   fonts: 'pdf-load',
   image: 'pdf-render',
   drawing: 'pdf-render',
   style: 'pdf-render',
-  unprintable: null,
 };
+
+function reported(reason: ReceiptPdfFailureReason): reason is ReportedFailure {
+  return reason !== 'unprintable';
+}
 
 export interface ReceiptPdfEnvironment {
   worker(): ReceiptWorker;
@@ -332,9 +337,9 @@ export class ReceiptPdf {
     if (!(failure instanceof ReceiptPdfFailure)) {
       return;
     }
-    const kind = REPORTED_AS[failure.reason];
-    if (kind !== null) {
-      this.reporter.report(kind, 'global', { name: failure.errorName });
+    const reason = failure.reason;
+    if (reported(reason)) {
+      this.reporter.report(REPORTED_AS[reason], 'global', { name: failure.errorName }, reason);
     }
   }
 

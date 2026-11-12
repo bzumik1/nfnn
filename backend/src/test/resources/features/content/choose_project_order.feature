@@ -68,7 +68,7 @@ Feature: An administrator chooses how the site orders the projects
     When "Jana" asks for the 1 newest admin actions
     Then the admin actions are:
       | action               | summary                                                                                   |
-      | CHANGE_PROJECT_ORDER | Řazení projektů na webu změněno z „podle roku, v něm podle kategorie“ na „podle roku“. |
+      | CHANGE_PROJECT_ORDER | Řazení příběhů na webu změněno z „podle roku, v něm podle kategorie“ na „podle roku“. |
     When "Jana" asks for the project order
     Then the project order is "YEAR"
     When someone without a token asks for the projects

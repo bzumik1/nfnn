@@ -16,7 +16,7 @@
         <em><ng-container *ngTemplateOutlet="inlines; context: { $implicit: node.children }" /></em>
       }
       @case ('link') {
-        <a [href]="node.href"
+        <a [href]="node.href" (click)="follow($event, node.href)"
           ><ng-container *ngTemplateOutlet="inlines; context: { $implicit: node.children }"
         /></a>
       }

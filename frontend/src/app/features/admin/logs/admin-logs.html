@@ -5,504 +5,263 @@
     vy tu nic nastavovat nemusíte.
   </p>
 
-  @switch (state()) {
-    @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.logs.loading">Načítáme logy…</p>
-    }
-    @case ('error') {
-      <div class="ui-load-state ui-load-state--error" role="alert">
-        <p i18n="@@admin.logs.error.text">Logy a diagnostiku se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.logs.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
-    }
-    @case ('ready') {
-      <section class="ui-card" aria-labelledby="logs-files-title">
-        <h2 id="logs-files-title" class="ui-card__title" i18n="@@admin.logs.files.title">
-          Soubory logu
-        </h2>
-        @if (!available()) {
-          <p class="ui-card__body unavailable" role="alert" i18n="@@admin.logs.files.unavailable">
-            Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
-            složku /DATA/AppData/nfnn/logs jako /logs.
+  <div class="ui-groups groups">
+    <section class="health" aria-labelledby="logs-health-title">
+      <h2 id="logs-health-title" class="ui-group-title" i18n="@@admin.logs.health.title">
+        Stav serveru
+      </h2>
+      @switch (healthState()) {
+        @case ('loading') {
+          <p class="ui-load-state" role="status" i18n="@@admin.logs.health.loading">
+            Zjišťujeme stav serveru…
           </p>
-        } @else if (files().length === 0) {
-          <p class="ui-card__body ui-card__intro" i18n="@@admin.logs.files.none">
-            Složka logů je prázdná.
-          </p>
-        } @else {
-          <table>
-            <thead>
-              <tr>
-                <th i18n="@@admin.logs.files.col.file">Soubor</th>
-                <th i18n="@@admin.logs.files.col.changedAt">Změněno</th>
-                <th i18n="@@admin.logs.files.col.size">Velikost</th>
-                <th class="visually-hidden" i18n="@@admin.logs.files.col.actions">Akce</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (file of files(); track file.name) {
-                <tr [class.selected]="file.name === selectedFile()">
-                  <td data-label="Soubor" i18n-data-label="@@admin.logs.files.col.file">
-                    <span class="file-name">{{ file.name }}</span>
-                    @if (file.compressed) {
-                      <span class="badge" i18n="@@admin.logs.files.compressed">komprimovaný</span>
-                    }
-                  </td>
-                  <td
-                    class="changed"
-                    data-label="Změněno"
-                    i18n-data-label="@@admin.logs.files.col.changedAt"
-                  >
-                    {{ time(file.changedAt) }}
-                  </td>
-                  <td data-label="Velikost" i18n-data-label="@@admin.logs.files.col.size">
-                    {{ size(file.sizeBytes) }}
-                  </td>
-                  <td class="row-actions">
-                    <button
-                      appNeedsConnection
-                      type="button"
-                      class="ui-button"
-                      [attr.aria-label]="openLabel(file)"
-                      [attr.aria-pressed]="file.name === selectedFile()"
-                      (click)="open(file.name)"
-                      i18n="@@admin.logs.files.open"
-                    >
-                      Zobrazit
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
         }
-      </section>
-
-      @if (selectedFile(); as file) {
-        <section class="ui-card" aria-labelledby="logs-window-title">
-          <h2 id="logs-window-title" class="ui-card__title">
-            <ng-container i18n="@@admin.logs.window.title">Výpis</ng-container>
-            <span class="file-name title-file">{{ file }}</span>
-          </h2>
-          <div class="ui-card__body">
-            <form
-              #searchForm="ngForm"
-              class="search-form"
-              appFocusFirstInvalid
-              (ngSubmit)="find(searchForm)"
-              novalidate
+        @case ('error') {
+          <div class="ui-load-state ui-load-state--error" role="alert">
+            <p i18n="@@admin.logs.health.failed">Stav serveru se nepodařilo zjistit.</p>
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadHealth()"
+              i18n="@@admin.logs.error.retry"
             >
-              <app-form-field
-                label="Hledat"
-                i18n-label="@@admin.logs.search.label"
-                hint="Text nebo regulární výraz; velikost písmen nerozhoduje. Najde se nejvýš 50 nejnovějších řádků, starší načtete tlačítkem."
-                i18n-hint="@@admin.logs.search.hint"
-                [messages]="searchMessages"
-              >
-                <input
-                  appFormControl
-                  id="log-search"
-                  name="pattern"
-                  type="search"
-                  autocomplete="off"
-                  spellcheck="false"
-                  maxlength="200"
-                  [(ngModel)]="pattern"
-                  required
-                />
-              </app-form-field>
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button"
-                [disabled]="searchState() === 'loading'"
-              >
-                @if (searchState() === 'loading') {
-                  <ng-container i18n="@@admin.logs.search.busy">Hledáme…</ng-container>
-                } @else {
-                  <ng-container i18n="@@admin.logs.search.submit">Hledat</ng-container>
-                }
-              </button>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button ui-button--quiet browser-errors"
-                [disabled]="searchState() === 'loading'"
-                (click)="findBrowserErrors()"
-                i18n="@@admin.logs.search.browserErrors"
-              >
-                Chyby z prohlížečů
-              </button>
-            </form>
-            @if (searchState() === 'error') {
-              <p class="ui-notice ui-notice--alert" role="alert">{{ searchError() }}</p>
-            }
-            <div role="status">
-              @if (search()) {
-                @if (matches().length === 0) {
-                  <p class="ui-card__intro" i18n="@@admin.logs.search.none">
-                    Nic takového v logu není.
-                  </p>
-                } @else {
-                  <p class="ui-card__intro" i18n="@@admin.logs.search.count">
-                    {matches().length, plural,
-                      one {1 řádek, nejnovější první. Kliknutím ho zobrazíte i s okolím.}
-                      few {
-                        {{ matches().length }} řádky, nejnovější první. Kliknutím zobrazíte řádek i
-                        s okolím.
-                      }
-                      other {
-                        {{ matches().length }} řádků, nejnovější první. Kliknutím zobrazíte řádek i
-                        s okolím.
-                      }
-                    }
-                  </p>
-                }
-              }
-            </div>
-            @if (search(); as result) {
-              <div class="matches">
-                @if (matches().length > 0) {
-                  <ul class="match-list">
-                    @for (match of matches(); track match.offset) {
-                      <li>
-                        <button
-                          appNeedsConnection
-                          type="button"
-                          class="match"
-                          (click)="showMatch(match)"
-                        >
-                          {{ match.line }}
-                        </button>
-                      </li>
-                    }
-                  </ul>
-                  @if (result.moreOlder) {
-                    <button
-                      appNeedsConnection
-                      type="button"
-                      class="ui-button"
-                      [disabled]="searchState() === 'loading'"
-                      (click)="olderMatches()"
-                      i18n="@@admin.logs.search.older"
-                    >
-                      Načíst starší shody
-                    </button>
-                  }
-                }
-              </div>
-            }
-
-            <div class="pager">
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button"
-                [disabled]="windowState() === 'loading' || !window()?.hasOlder"
-                (click)="older()"
-                i18n="@@admin.logs.window.older"
-              >
-                ← Starší
-              </button>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button"
-                [disabled]="windowState() === 'loading' || !window()?.hasNewer"
-                (click)="newer()"
-                i18n="@@admin.logs.window.newer"
-              >
-                Novější →
-              </button>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button"
-                [disabled]="windowState() === 'loading'"
-                (click)="toEnd()"
-                i18n="@@admin.logs.window.end"
-              >
-                Na konec
-              </button>
-              <span class="range" aria-live="polite">{{ windowRange() }}</span>
-            </div>
-            <div role="status">
-              @if (windowState() === 'loading') {
-                <p class="ui-card__intro" i18n="@@admin.logs.window.loading">Načítáme výpis…</p>
-              }
-            </div>
-            @if (windowState() === 'error') {
-              <p class="ui-notice ui-notice--alert" role="alert">{{ windowError() }}</p>
-            }
-            @if (window(); as window) {
-              <div class="window-copy">
-                <app-copy-button
-                  [value]="window.text"
-                  what="výpis logu"
-                  i18n-what="@@admin.logs.window.copyWhat"
-                />
-              </div>
-              <pre class="log-text" tabindex="0">{{ window.text }}</pre>
-            }
+              Zkusit znovu
+            </button>
           </div>
-        </section>
+        }
+        @case ('ready') {
+          @if (health(); as health) {
+            <ul class="ui-list ui-list--inset">
+              <li>
+                <a class="ui-list__row" routerLink="/sprava/logy/stav">
+                  <span class="ui-list__lead"><app-health-icon [kind]="health.kind" /></span>
+                  <span class="ui-list__title">{{ healthTitle(health.kind) }}</span>
+                  <span class="ui-list__meta">{{ healthSummary() }}</span>
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </a>
+              </li>
+            </ul>
+          }
+        }
       }
+    </section>
 
-      <section class="ui-card" aria-labelledby="logs-levels-title">
-        <h2 id="logs-levels-title" class="ui-card__title" i18n="@@admin.logs.level.title">
-          Úroveň logování
-        </h2>
-        <div class="ui-card__body">
-          <p class="ui-card__intro" i18n="@@admin.logs.level.intro">
-            Podrobnější logování (DEBUG, TRACE) zapněte jen na dobu hledání chyby: po uplynutí času
-            i po restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
-          </p>
-          <app-live-notice [notice]="levelNotice()" />
-          <form
-            #levelForm="ngForm"
-            class="level-form"
-            appFocusFirstInvalid
-            (ngSubmit)="setLevel(levelForm)"
-            novalidate
-          >
-            <app-form-field
-              label="Logger"
-              i18n-label="@@admin.logs.level.logger"
-              hint="ROOT, balíček nebo třída, třeba cz.novanadeje.app nebo org.hibernate.SQL."
-              i18n-hint="@@admin.logs.level.logger.hint"
-              [messages]="loggerMessages"
-            >
-              <input
-                appFormControl
-                id="log-level-logger"
-                name="logger"
-                type="text"
-                list="log-level-loggers"
-                autocomplete="off"
-                spellcheck="false"
-                maxlength="200"
-                [pattern]="loggerPattern"
-                [(ngModel)]="logger"
-                required
-              />
-              <datalist id="log-level-loggers">
-                @for (entry of loggers(); track entry.logger) {
-                  <option [value]="entry.logger"></option>
-                }
-              </datalist>
-            </app-form-field>
-            <app-form-field label="Úroveň" i18n-label="@@admin.logs.level.level">
-              <select appFormControl id="log-level-level" name="level" [(ngModel)]="level">
-                @for (option of levels; track option) {
-                  <option [ngValue]="option">{{ option }}</option>
-                }
-              </select>
-            </app-form-field>
-            <app-form-field
-              label="Na kolik minut"
-              i18n-label="@@admin.logs.level.minutes"
-              [messages]="minutesMessages"
-            >
-              <input
-                appFormControl
-                id="log-level-minutes"
-                name="minutes"
-                type="number"
-                inputmode="numeric"
-                min="1"
-                [max]="maxMinutes"
-                [(ngModel)]="minutes"
-                required
-              />
-            </app-form-field>
-            <button
-              appNeedsConnection
-              type="submit"
-              class="ui-button ui-button--primary"
-              [disabled]="levelState() === 'loading'"
-            >
-              @if (levelState() === 'loading') {
-                <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.logs.level.submit">Nastavit</ng-container>
-              }
-            </button>
-          </form>
-
-          <table class="levels">
-            <thead>
-              <tr>
-                <th i18n="@@admin.logs.level.col.logger">Logger</th>
-                <th i18n="@@admin.logs.level.col.configured">Nastaveno</th>
-                <th i18n="@@admin.logs.level.col.effective">Platí</th>
-                <th i18n="@@admin.logs.level.col.override">Dočasně</th>
-                <th class="visually-hidden" i18n="@@admin.logs.level.col.actions">Akce</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (entry of loggers(); track entry.logger) {
-                <tr [class.overridden]="entry.override !== null">
-                  <td data-label="Logger" i18n-data-label="@@admin.logs.level.col.logger">
-                    <span class="file-name">{{ entry.logger }}</span>
-                  </td>
-                  <td data-label="Nastaveno" i18n-data-label="@@admin.logs.level.col.configured">
-                    @if (entry.configuredLevel; as configured) {
-                      {{ configured }}
-                    } @else {
-                      <span class="muted" i18n="@@admin.logs.level.inherited">zděděno</span>
-                    }
-                  </td>
-                  <td data-label="Platí" i18n-data-label="@@admin.logs.level.col.effective">
-                    {{ entry.effectiveLevel }}
-                  </td>
-                  <td data-label="Dočasně" i18n-data-label="@@admin.logs.level.col.override">
-                    @if (entry.override) {
-                      {{ describeOverride(entry) }}
-                    } @else {
-                      <span class="muted">–</span>
-                    }
-                  </td>
-                  <td class="row-actions">
-                    @if (entry.override) {
-                      <button
-                        appNeedsConnection
-                        type="button"
-                        class="ui-button"
-                        [disabled]="resetting() !== null"
-                        [attr.aria-label]="resetLabel(entry)"
-                        (click)="reset(entry)"
-                      >
-                        @if (resetting() === entry.logger) {
-                          <ng-container i18n="@@admin.logs.level.resetting">Vracíme…</ng-container>
-                        } @else {
-                          <ng-container i18n="@@admin.logs.level.resetNow">Vrátit</ng-container>
-                        }
-                      </button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="ui-card" aria-labelledby="logs-diagnostics-title">
-        <h2
-          id="logs-diagnostics-title"
-          class="ui-card__title"
-          i18n="@@admin.logs.diagnostics.title"
-        >
-          Stav aplikace
-        </h2>
-        <div class="ui-card__body">
-          @if (diagnostics(); as diagnostics) {
-            <p class="ui-card__intro" i18n="@@admin.logs.diagnostics.asOf">
-              Stav k {{ time(diagnostics.now) }}.
-            </p>
-            <dl class="runs">
-              @for (row of jvmRows(); track row.label) {
-                <div class="run">
-                  <dt>{{ row.label }}</dt>
-                  <dd>{{ row.value }}</dd>
-                </div>
-              }
-              <div class="run">
-                <dt i18n="@@admin.logs.diagnostics.database">Databáze</dt>
-                <dd [class.danger]="!diagnostics.database.reachable">{{ databaseText() }}</dd>
-              </div>
-              <div class="run">
-                <dt i18n="@@admin.logs.diagnostics.disks">Složky</dt>
-                <dd>
-                  <ul class="disks">
-                    @for (disk of diagnostics.disks; track disk.path) {
-                      <li [class.danger]="!disk.mounted">{{ diskText(disk) }}</li>
-                    }
-                  </ul>
-                </dd>
-              </div>
-              <div class="run">
-                <dt i18n="@@admin.logs.diagnostics.overrides">Dočasné úrovně</dt>
-                <dd>
-                  @if (overrides().length === 0) {
-                    <ng-container i18n="@@admin.logs.diagnostics.overrides.none"
-                      >Žádné.</ng-container
-                    >
-                  } @else {
-                    <ul class="disks">
-                      @for (entry of overrides(); track entry.logger) {
-                        <li>
-                          <span class="file-name">{{ entry.logger }}</span>
-                          {{ entry.override?.level }} {{ describeOverride(entry) }}
-                        </li>
-                      }
-                    </ul>
-                  }
-                </dd>
-              </div>
-            </dl>
-          }
-          @if (diagnosticsState() === 'error') {
-            <p
-              class="ui-notice ui-notice--alert"
-              role="alert"
-              i18n="@@admin.logs.diagnostics.failed"
-            >
-              Stav aplikace se nepodařilo obnovit.
-            </p>
-          }
-          <div class="actions">
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button"
-              [disabled]="diagnosticsState() === 'loading'"
-              (click)="refreshDiagnostics()"
-            >
-              @if (diagnosticsState() === 'loading') {
-                <ng-container i18n="@@admin.logs.diagnostics.refreshing">Obnovujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.logs.diagnostics.refresh">Obnovit stav</ng-container>
-              }
-            </button>
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button"
-              [disabled]="threadsState() === 'loading'"
-              [attr.aria-expanded]="threads() !== null"
-              aria-controls="logs-threads"
-              (click)="toggleThreads()"
-            >
-              @if (threadsState() === 'loading') {
-                <ng-container i18n="@@admin.logs.threads.busy">Načítáme vlákna…</ng-container>
-              } @else if (threads() !== null) {
-                <ng-container i18n="@@admin.logs.threads.hide">Skrýt výpis vláken</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.logs.threads.show">Zobrazit výpis vláken</ng-container>
-              }
-            </button>
-          </div>
-          @if (threadsState() === 'error') {
-            <p class="ui-notice ui-notice--alert" role="alert" i18n="@@admin.logs.threads.failed">
-              Výpis vláken se nepodařilo načíst.
-            </p>
-          }
-          <div id="logs-threads">
-            @if (threads(); as dump) {
-              <pre class="log-text" tabindex="0">{{ dump }}</pre>
-            }
-          </div>
-        </div>
-      </section>
+    @if (showsToday()) {
+      <app-logs-today [today]="today()" />
     }
-  }
+
+    <section class="files" aria-labelledby="logs-files-title">
+      <h2 id="logs-files-title" class="ui-group-title" i18n="@@admin.logs.files.title">
+        Soubory logu
+      </h2>
+      @switch (filesState()) {
+        @case ('loading') {
+          <p class="ui-load-state" role="status" i18n="@@admin.logs.files.loading">
+            Načítáme soubory…
+          </p>
+        }
+        @case ('error') {
+          <div class="ui-load-state ui-load-state--error" role="alert">
+            <p i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-button ui-button--small"
+              (click)="loadFiles()"
+              i18n="@@admin.logs.error.retry"
+            >
+              Zkusit znovu
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (!available()) {
+            <p
+              class="ui-callout ui-callout--danger"
+              role="alert"
+              i18n="@@admin.logs.files.unavailable"
+            >
+              Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
+              složku /DATA/AppData/nfnn/logs jako /logs.
+            </p>
+          } @else if (files().length === 0) {
+            <p class="empty" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
+          } @else {
+            <ul class="ui-list ui-list--inset">
+              @for (file of current(); track file.name) {
+                <li>
+                  <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">
+                    <span class="ui-list__lead row-icon" aria-hidden="true">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                        <path d="M14 3v5h5M9 13h6M9 17h6" />
+                      </svg>
+                    </span>
+                    <span class="ui-list__title ui-mono file-name">{{ file.name }}</span>
+                    <span class="ui-list__meta">{{ fileMeta(file) }}</span>
+                    <svg
+                      class="ui-list__chevron"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </a>
+                </li>
+              }
+              @if (olderCount() > 0) {
+                <li>
+                  <a class="ui-list__row" [routerLink]="filesPath">
+                    <span class="ui-list__lead row-icon" aria-hidden="true">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <rect x="3" y="4" width="18" height="5" rx="1" />
+                        <path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4" />
+                      </svg>
+                    </span>
+                    <span class="ui-list__title" i18n="@@admin.logs.files.older"
+                      >Starší soubory</span
+                    >
+                    <span class="ui-list__value">{{ olderCount() }}</span>
+                    <svg
+                      class="ui-list__chevron"
+                      aria-hidden="true"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    </section>
+
+    <section class="tools" aria-labelledby="logs-tools-title">
+      <h2 id="logs-tools-title" class="ui-group-title" i18n="@@admin.logs.tools.title">Nástroje</h2>
+      <ul class="ui-list ui-list--inset">
+        <li>
+          <a class="ui-list__row" routerLink="/sprava/logy/urovne">
+            <span class="ui-list__lead row-icon" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+                <circle cx="16" cy="6" r="2" />
+                <circle cx="10" cy="12" r="2" />
+                <circle cx="18" cy="18" r="2" />
+              </svg>
+            </span>
+            <span class="ui-list__title" i18n="@@admin.logs.tools.levels">Úrovně logování</span>
+            @if (overrides() > 0) {
+              <span class="ui-list__value" i18n="@@admin.logs.tools.levels.overrides"
+                >{{ overrides() }} dočasně</span
+              >
+            }
+            <svg
+              class="ui-list__chevron"
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a class="ui-list__row" routerLink="/sprava/logy/vlakna">
+            <span class="ui-list__lead row-icon" aria-hidden="true">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 6c4 0 4 4 8 4s4-4 8-4M4 12c4 0 4 4 8 4s4-4 8-4M4 18h16" />
+              </svg>
+            </span>
+            <span class="ui-list__title" i18n="@@admin.logs.tools.threads">Výpis vláken</span>
+            <svg
+              class="ui-list__chevron"
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </a>
+        </li>
+      </ul>
+    </section>
+  </div>
 </div>

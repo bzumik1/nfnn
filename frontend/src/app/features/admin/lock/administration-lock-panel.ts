@@ -35,6 +35,10 @@ const CODE_MESSAGES: FieldMessages = {
   pattern: $localize`:@@donor.form.code.invalid:Kód má přesně šest číslic.`,
 };
 
+const PASSKEY_FAILED = $localize`:@@admin.lock.passkey.failed:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo použijte heslo.`;
+
+const PASSKEY_FAILED_ONLY = $localize`:@@admin.lock.passkey.failedOnly:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo se odhlaste a přihlaste znovu.`;
+
 const UNLOCK_FAILED = $localize`:@@admin.lock.password.failed:Správu se nepodařilo odemknout. Zkuste to prosím znovu.`;
 
 type View = 'locked' | 'password';
@@ -68,6 +72,7 @@ export class AdministrationLockPanel {
   protected readonly view = signal<View>('locked');
   protected readonly online = signal(this.window?.navigator.onLine !== false);
   protected readonly passkeyUnlocks = signal(false);
+  protected readonly accountPasskeyUnlocks = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly email = computed(() => this.auth.donor()?.email ?? '');
@@ -75,8 +80,11 @@ export class AdministrationLockPanel {
     const donor = this.auth.donor();
     return donor !== null && donor.hasPassword && donor.secondFactor.enabled;
   });
+  protected readonly offersPasskey = computed(
+    () => this.passkeyUnlocks() || this.accountPasskeyUnlocks(),
+  );
   protected readonly nothingUnlocks = computed(
-    () => !this.passkeyUnlocks() && !this.passwordUnlocks(),
+    () => !this.offersPasskey() && !this.passwordUnlocks(),
   );
 
   protected password = '';
@@ -86,7 +94,7 @@ export class AdministrationLockPanel {
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
     const supported = inject(PasskeyAuthenticator).supported();
     if (supported) {
-      void this.lock.passkeyUnlocks().then((unlocks) => this.passkeyUnlocks.set(unlocks));
+      this.offerPasskeys();
     }
     const changed = () => this.online.set(this.window?.navigator.onLine !== false);
     this.window?.addEventListener('online', changed);
@@ -106,12 +114,36 @@ export class AdministrationLockPanel {
     const unlocked = await this.lock.unlockWithPasskey();
     this.busy.set(false);
     if (!unlocked) {
-      this.error.set(
-        this.passwordUnlocks()
-          ? $localize`:@@admin.lock.passkey.failed:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo použijte heslo.`
-          : $localize`:@@admin.lock.passkey.failedOnly:Přístupový klíč správu neodemkl. Zkuste to znovu, nebo se odhlaste a přihlaste znovu.`,
-      );
+      this.error.set(this.passkeyFailure());
     }
+  }
+
+  protected async withAccountPasskey(): Promise<void> {
+    if (this.busy() || !this.online()) {
+      return;
+    }
+    this.error.set('');
+    this.busy.set(true);
+    try {
+      if (!(await this.lock.unlockWithAccountPasskey())) {
+        this.error.set(this.passkeyFailure());
+      }
+    } catch (failure: unknown) {
+      this.error.set(describeProblem(failure, this.passkeyFailure()));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private offerPasskeys(): void {
+    void this.lock.passkeyUnlocks().then((unlocks) => this.passkeyUnlocks.set(unlocks));
+    void this.lock
+      .accountPasskeyUnlocks()
+      .then((unlocks) => this.accountPasskeyUnlocks.set(unlocks));
+  }
+
+  private passkeyFailure(): string {
+    return this.passwordUnlocks() ? PASSKEY_FAILED : PASSKEY_FAILED_ONLY;
   }
 
   protected usePassword(): void {

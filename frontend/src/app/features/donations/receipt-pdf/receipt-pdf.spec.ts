@@ -2,6 +2,7 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Subscription } from 'rxjs';
+import { DiagnosticEvents } from '../../../core/diagnostics/diagnostic-events';
 import { FrozenReceipt, IssuedReceipt } from './frozen-receipt';
 import {
   RECEIPT_PDF_ENVIRONMENT,
@@ -214,6 +215,21 @@ describe('Given the browser receipt PDF', () => {
         environment.last().say({ kind: 'failed', reason: 'drawing', name: 'RangeError' });
 
         expect(reports.bodies()).toEqual([closedReport('pdf-render', 'RangeError')]);
+      });
+
+      it('inside the layout, then the diagnostic file lists the failure with its closed reason', () => {
+        environment.last().say({ kind: 'ready' });
+        environment.last().say({ kind: 'failed', reason: 'drawing', name: 'RangeError' });
+
+        expect(TestBed.inject(DiagnosticEvents).listed()).toEqual([
+          {
+            secondsAgo: 0,
+            kind: 'pdf-render',
+            place: 'global',
+            name: 'RangeError',
+            detail: 'drawing',
+          },
+        ]);
       });
     });
 

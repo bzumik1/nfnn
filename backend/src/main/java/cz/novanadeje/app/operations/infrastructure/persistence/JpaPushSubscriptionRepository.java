@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,8 +19,6 @@ import java.util.UUID;
 
 @Repository
 class JpaPushSubscriptionRepository implements PushSubscriptionRepository {
-
-    static final long WRITE_LOCK_KEY = 20261105L;
 
     private final PushSubscriptionJpaRepository jpa;
     private final EntityManager entityManager;
@@ -52,7 +51,7 @@ class JpaPushSubscriptionRepository implements PushSubscriptionRepository {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void lockWrites() {
-        entityManager.createNativeQuery("select 1 from pg_advisory_xact_lock(:key)").setParameter("key", WRITE_LOCK_KEY).getSingleResult();
+        AdvisoryLock.PUSH_SUBSCRIPTION_WRITES.acquireFor(entityManager);
     }
 
     @Override

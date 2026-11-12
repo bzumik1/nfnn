@@ -1,0 +1,72 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.files.older.heading">
+    Starší soubory
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.logs.files.older.intro">
+    Logy z předchozích dnů, uložené a zkomprimované zvlášť. Nejnovější jsou nahoře.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" role="status" i18n="@@admin.logs.files.loading">Načítáme soubory…</p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.logs.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (!available()) {
+        <p class="ui-callout ui-callout--danger" role="alert" i18n="@@admin.logs.files.unavailable">
+          Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
+          složku /DATA/AppData/nfnn/logs jako /logs.
+        </p>
+      } @else if (groups().length === 0) {
+        <p class="empty" i18n="@@admin.logs.files.older.none">Starší soubory zatím nejsou.</p>
+      } @else {
+        <div class="ui-groups groups">
+          @for (group of groups(); track group.series) {
+            <section [attr.aria-labelledby]="'older-' + $index">
+              <h2 class="ui-group-title" [id]="'older-' + $index">
+                {{ groupTitle(group.series) }}
+              </h2>
+              <ul class="ui-list ui-list--inset">
+                @for (file of group.files; track file.name) {
+                  <li>
+                    <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">
+                      <span class="ui-list__title ui-mono file-name">{{ file.name }}</span>
+                      <span class="ui-list__meta">{{ fileMeta(file) }}</span>
+                      <svg
+                        class="ui-list__chevron"
+                        aria-hidden="true"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </a>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    }
+  }
+</div>

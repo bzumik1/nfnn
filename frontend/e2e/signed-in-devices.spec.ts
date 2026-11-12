@@ -1,5 +1,11 @@
 import { expect, test } from './fixtures';
-import { mockDonorApi, openDonorSection, signedInDevices, signIn } from './donor-session';
+import {
+  longUnusedDevices,
+  mockDonorApi,
+  openDonorSection,
+  signedInDevices,
+  signIn,
+} from './donor-session';
 
 test.describe('Given a donor signed in on a Mac and an iPhone', () => {
   test('when they sign out the iPhone from the account, then the API is told and only this Mac stays', async ({
@@ -62,5 +68,48 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
     await expect(devices.locator('.device')).toHaveCount(1);
     await expect(devices.getByText('Ostatní zařízení jsou odhlášená.')).toBeVisible();
     expect(deleted).toEqual(['DELETE /api/donors/me/devices']);
+  });
+
+  test('when two older sign-ins lie folded, then the donor opens them, sees the installed app named so and signs one out', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    let listed = [...signedInDevices, ...longUnusedDevices];
+    const deleted: string[] = [];
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/devices',
+      (route) => route.fulfill({ json: { items: listed } }),
+    );
+    await page.route(
+      (url) => url.pathname.startsWith('/api/donors/me/devices/'),
+      async (route) => {
+        const path = new URL(route.request().url()).pathname;
+        deleted.push(`${route.request().method()} ${path}`);
+        listed = listed.filter((device) => !path.endsWith(device.id));
+        await route.fulfill({ status: 204 });
+      },
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+
+    const devices = page.locator('.devices');
+    await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari', 'iPhone · Safari']);
+    const older = devices.getByRole('button', { name: /Starší \(2\)/ });
+    await expect(older).toHaveAttribute('aria-expanded', 'false');
+
+    await older.click();
+
+    await expect(older).toHaveAttribute('aria-expanded', 'true');
+    await expect(devices.locator('#devices-older .device-name')).toHaveText([
+      'iPhone · aplikace',
+      'Windows · Edge',
+    ]);
+
+    await devices.getByRole('button', { name: 'Odhlásit iPhone · aplikace' }).click();
+
+    await expect(devices.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
+    await expect(devices.getByRole('button', { name: /Starší \(1\)/ })).toBeVisible();
+    await expect(devices.getByRole('button', { name: 'Odhlásit Windows · Edge' })).toBeFocused();
+    expect(deleted).toEqual([`DELETE /api/donors/me/devices/${longUnusedDevices[0].id}`]);
   });
 });

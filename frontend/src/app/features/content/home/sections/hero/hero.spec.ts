@@ -2,19 +2,23 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { CompactLayout } from '../../../../../core/layout/compact-layout';
+import { ShortViewport } from '../../../../../core/layout/short-viewport';
 import { Hero } from './hero';
 
 describe('Given the hero', () => {
   let fixture: ComponentFixture<Hero>;
   const compact = signal(false);
+  const short = signal(false);
 
   beforeEach(async () => {
     compact.set(false);
+    short.set(false);
     await TestBed.configureTestingModule({
       imports: [Hero],
       providers: [
         provideRouter([]),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        { provide: ShortViewport, useValue: { isShort: short.asReadonly() } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(Hero);
@@ -54,5 +58,23 @@ describe('Given the hero', () => {
 
     expect(host.querySelectorAll('a')).toHaveLength(0);
     expect(host.querySelector('h1')?.textContent?.trim()).toBe('Nová naděje');
+  });
+
+  it('when a wide phone lies on its side, so the window is short, then it shows no actions either, because the tab bar under it offers them and they would not fit', async () => {
+    short.set(true);
+    await fixture.whenStable();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelectorAll('a')).toHaveLength(0);
+    expect(host.querySelector('h1')?.textContent?.trim()).toBe('Nová naděje');
+  });
+
+  it('when the window is short, then the lead stays in the page for screen readers', async () => {
+    short.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Pomáháme zdravotně postiženým dětem k lepšímu životu.',
+    );
   });
 });

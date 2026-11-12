@@ -1,0 +1,42 @@
+<app-dialog labelledBy="backup-sheet-title" presentation="sheet" (dismissed)="dismissed.emit()">
+  <h2 id="backup-sheet-title" class="ui-dialog__title backup-title">{{ createdAt() }}</h2>
+  <p class="backup-meta">{{ meta() }}</p>
+  <p class="backup-file ui-mono">{{ backup().fileName }}</p>
+
+  <div class="backup-action">
+    <button
+      appNeedsConnection
+      type="button"
+      class="ui-button ui-button--block"
+      [disabled]="downloading()"
+      (click)="download.emit()"
+    >
+      @if (downloading()) {
+        <ng-container i18n="@@admin.backups.download.busy">Stahujeme…</ng-container>
+      } @else {
+        <ng-container i18n="@@admin.backups.download.start">Stáhnout</ng-container>
+      }
+    </button>
+    @if (failure(); as failure) {
+      <p class="ui-field-error" role="alert">{{ failure }}</p>
+    }
+    <p class="backup-hint" i18n="@@admin.backups.sheet.downloadHint">
+      Záloha je zašifrovaná. Uložte ji mimo server; otevřít jde jen s klíčem k zálohám.
+    </p>
+  </div>
+
+  <div class="backup-action">
+    <button
+      type="button"
+      class="ui-button ui-button--block ui-button--danger-outline"
+      [disabled]="restoreBlocked()"
+      (click)="restore.emit()"
+      i18n="@@admin.backups.sheet.restore"
+    >
+      Obnovit web z této zálohy…
+    </button>
+    <p class="backup-hint" i18n="@@admin.backups.sheet.restoreHint">
+      Než obnova začne, ukážeme, co se ztratí a co zůstane, a zeptáme se znovu.
+    </p>
+  </div>
+</app-dialog>

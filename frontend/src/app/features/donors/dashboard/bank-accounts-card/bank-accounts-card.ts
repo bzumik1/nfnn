@@ -48,6 +48,9 @@ import {
   SymbolClaimConfirmation,
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
+import { BankNames } from '../../../donations/bank-names';
+import { bankCodeOf } from '../../../donations/czech-account';
+import { BankLogo } from '../../../donations/bank-logo/bank-logo';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -128,6 +131,7 @@ const PAYMENT_WATCH_CHECKS = 20;
     QrCode,
     SymbolClaim,
     NeedsConnection,
+    BankLogo,
   ],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
@@ -140,6 +144,7 @@ export class BankAccountsCard {
   private readonly live = inject(LiveUpdates);
   private readonly document = inject(DOCUMENT);
   private readonly auth = inject(AuthStore);
+  private readonly bankNames = inject(BankNames);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -221,6 +226,11 @@ export class BankAccountsCard {
   private liveWatch: Subscription | undefined;
 
   constructor() {
+    effect(() => {
+      for (const account of this.accounts()) {
+        this.bankNames.require(account.accountNumber);
+      }
+    });
     this.fetch();
     effect(() => {
       if (this.newlyVerifiedId() !== null) {
@@ -346,6 +356,14 @@ export class BankAccountsCard {
 
   protected labelModifier(account: BankAccountItem): string {
     return `account-status--${labelOf(account)}`;
+  }
+
+  protected bankName(account: BankAccountItem): string | null {
+    return this.bankNames.nameOf(account.accountNumber);
+  }
+
+  protected isCzech(account: BankAccountItem): boolean {
+    return bankCodeOf(account.accountNumber) !== null;
   }
 
   protected formatDate(isoDate: string): string {
