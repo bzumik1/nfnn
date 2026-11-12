@@ -1796,6 +1796,7 @@ describe('Given an administrator on a donor card with the administration copy on
   let fixture: ComponentFixture<AdminDonorDetail>;
   let http: HttpTestingController;
   let offline: ReturnType<typeof signal<boolean>>;
+  let cause: ReturnType<typeof signal<'network' | 'server'>>;
   let refresh: ReturnType<typeof vi.fn<(startingNow?: boolean) => Promise<string>>>;
   const account = donorAccount();
   const record = {
@@ -1813,6 +1814,7 @@ describe('Given an administrator on a donor card with the administration copy on
   async function open(deviceOffline: boolean, erasedAt: string | null = null): Promise<void> {
     localStorage.clear();
     offline = signal(deviceOffline);
+    cause = signal<'network' | 'server'>('network');
     refresh = vi.fn<(startingNow?: boolean) => Promise<string>>().mockResolvedValue('unchanged');
     const contents: CopyContents = {
       chunks: [
@@ -1844,7 +1846,7 @@ describe('Given an administrator on a donor card with the administration copy on
         { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
         {
           provide: Connectivity,
-          useValue: { offline: offline.asReadonly(), cause: signal('network').asReadonly() },
+          useValue: { offline: offline.asReadonly(), cause: cause.asReadonly() },
         },
         {
           provide: AdministrationCopyDownload,
@@ -1926,11 +1928,16 @@ describe('Given an administrator on a donor card with the administration copy on
     await settle();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, jakmile bude zařízení online.',
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
     );
     expect(fixture.nativeElement.textContent).not.toContain(
       'Účty, dary a potvrzení se nepodařilo načíst.',
     );
+    const alerts = Array.from(
+      fixture.nativeElement.querySelectorAll('[role="alert"]') as NodeListOf<HTMLElement>,
+    ).map((alert) => alert.textContent ?? '');
+    expect(alerts.filter((text) => text.includes('v zařízení nejsou'))).toEqual([]);
+    expect(alerts.filter((text) => text.includes('Zkusit znovu'))).toEqual([]);
 
     offline.set(false);
     await settle();
@@ -1948,6 +1955,78 @@ describe('Given an administrator on a donor card with the administration copy on
     await settle();
 
     expect(fixture.nativeElement.textContent).not.toContain('v zařízení nejsou');
+    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+  });
+
+  it("when the erased donor's card fails to load before the device knows it is offline, then the card waits for the connection once it does and loads by itself when it returns", async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení se nepodařilo načíst.',
+    );
+
+    offline.set(true);
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až budete online.',
+    );
+
+    offline.set(false);
+    await settle();
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          donor: {
+            ...donorDetail().donor,
+            name: 'Vymazaný dárce',
+            erasedAt: '2026-10-01T08:00:00Z',
+          },
+        }),
+      ),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
+  });
+
+  it("when the erased donor's card cannot be read because the server does not answer, then the card says it loads once the server answers again", async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    cause.set('server');
+    offline.set(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(null, { status: 0, statusText: 'Unknown Error' }),
+    );
+    await settle();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, až server zase odpoví.',
+    );
+    expect(fixture.nativeElement.textContent).not.toContain('až budete online');
+  });
+
+  it('when the card is read again before the first read of a card the copy leaves to the server answered, then the newer answer shows the card instead of loading for ever', async () => {
+    await open(false, '2026-10-01T08:00:00Z');
+    const older = await vi.waitFor(() => http.expectOne(DETAIL_URL));
+
+    fixture.componentInstance['readCard']();
+    await settle();
+
+    expect(older.cancelled).toBe(true);
+    await vi.waitFor(() =>
+      http.expectOne(DETAIL_URL).flush(
+        donorDetail({
+          donor: {
+            ...donorDetail().donor,
+            name: 'Vymazaný dárce',
+            erasedAt: '2026-10-01T08:00:00Z',
+          },
+        }),
+      ),
+    );
+    await settle();
+    expect(fixture.nativeElement.textContent).not.toContain('Načítáme účty, dary a potvrzení');
     expect(fixture.nativeElement.textContent).toContain('Bankovní účty jsme s osobními údaji');
   });
 

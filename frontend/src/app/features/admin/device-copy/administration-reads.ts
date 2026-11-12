@@ -58,6 +58,7 @@ export const REFRESH_AFTER_MS = 60_000;
 export const FORCED_REFRESH_GAP_MS = 30_000;
 export const RATE_LIMITED_PAUSE_MS = 5 * 60_000;
 export const CHECKS_CHANNEL = 'nfnn.administration-checks';
+export const MISMATCH_REPORT_PAUSE_MS = 60 * 60_000;
 
 export type BankAccountsSource = 'server' | 'pending' | 'offline' | 'failed';
 
@@ -81,6 +82,7 @@ interface CopyImportStateRow extends Omit<StoredImportState, 'lastFailure'> {
 
 interface CheckMessage {
   readonly copyId: string;
+  readonly storedAt: string | null;
   readonly kind: 'checked' | 'rate-limited';
   readonly at: number;
 }
@@ -104,7 +106,8 @@ export class AdministrationReads {
   private startedAt = Number.NEGATIVE_INFINITY;
   private failedAt = Number.NEGATIVE_INFINITY;
   private pausedUntil = Number.NEGATIVE_INFINITY;
-  private reportedDisagreement: unknown = null;
+  private reportedDisagreement: string | null = null;
+  private reportedDisagreementAt = Number.NEGATIVE_INFINITY;
 
   private readonly payments = this.copy.rows<CopyPaymentRow>('donations', 'payments');
   private readonly donations = this.copy.rows<CopyDonationRow>('donations', 'donations');
@@ -125,7 +128,8 @@ export class AdministrationReads {
     return {
       rows,
       today: summary.today,
-      agrees: canonicalRows(years) === canonicalRows(summary.byYear),
+      years,
+      agrees: canonicalRows(years) === canonicalRows(projected(summary.byYear, years) as unknown[]),
     };
   });
 
@@ -200,10 +204,14 @@ export class AdministrationReads {
           return null;
         }
         if (!held.agrees) {
-          this.reportDisagreement(held);
+          this.reportDisagreement();
           return null;
         }
-        return yearOverview(held.rows, held.today, year);
+        const asked = year ?? held.years[0]?.year;
+        const compiled = held.years.find((entry) => entry.year === asked);
+        return compiled === undefined
+          ? yearOverview(held.rows, held.today, year)
+          : { ...compiled, availableYears: held.years.map((entry) => entry.year) };
       },
       () => this.api.overview(year),
     );
@@ -348,13 +356,19 @@ export class AdministrationReads {
       this.startedAt = Number.NEGATIVE_INFINITY;
       this.failedAt = Number.NEGATIVE_INFINITY;
       this.pausedUntil = Number.NEGATIVE_INFINITY;
+      this.reportedDisagreement = null;
       this.freshFor = this.download.writesAtStart(opened) ?? this.writes.made();
     }
   }
 
   private tellOtherTabs(opened: OpenedCopy | null, kind: CheckMessage['kind'], at: number): void {
     if (opened !== null) {
-      this.checks?.postMessage({ copyId: opened.store.copyId, kind, at } satisfies CheckMessage);
+      this.checks?.postMessage({
+        copyId: opened.store.copyId,
+        storedAt: this.copy.storedAt(),
+        kind,
+        at,
+      } satisfies CheckMessage);
     }
   }
 
@@ -366,6 +380,9 @@ export class AdministrationReads {
     this.forgetAnotherCopy(opened);
     const now = Date.now();
     if (message.kind === 'checked') {
+      if (message.storedAt !== this.copy.storedAt()) {
+        return;
+      }
       this.checkedAt = Math.max(this.checkedAt, Math.min(message.at, now));
     } else {
       this.pausedUntil = Math.max(
@@ -375,11 +392,18 @@ export class AdministrationReads {
     }
   }
 
-  private reportDisagreement(held: object): void {
-    if (this.reportedDisagreement !== held) {
-      this.reportedDisagreement = held;
-      this.reporter.report('device-copy-mismatch', 'global');
+  private reportDisagreement(): void {
+    const contents = `${this.vault.administration()?.store.copyId ?? ''} ${this.copy.storedAt() ?? ''}`;
+    const now = Date.now();
+    if (
+      this.reportedDisagreement === contents ||
+      now - this.reportedDisagreementAt < MISMATCH_REPORT_PAUSE_MS
+    ) {
+      return;
     }
+    this.reportedDisagreement = contents;
+    this.reportedDisagreementAt = now;
+    this.reporter.report('device-copy-mismatch', 'global');
   }
 
   private listsErasedGifts(
@@ -446,10 +470,27 @@ function isCheckMessage(message: unknown): message is CheckMessage {
   const candidate = message as Record<string, unknown>;
   return (
     typeof candidate['copyId'] === 'string' &&
+    (typeof candidate['storedAt'] === 'string' || candidate['storedAt'] === null) &&
     (candidate['kind'] === 'checked' || candidate['kind'] === 'rate-limited') &&
     typeof candidate['at'] === 'number' &&
     Number.isFinite(candidate['at'])
   );
+}
+
+function projected(source: unknown, shape: unknown): unknown {
+  if (Array.isArray(source) && Array.isArray(shape)) {
+    return source.map((item: unknown, index) => projected(item, shape[index] ?? shape[0]));
+  }
+  if (isRecord(source) && isRecord(shape)) {
+    return Object.fromEntries(
+      Object.keys(shape).map((key) => [key, projected(source[key], shape[key])]),
+    );
+  }
+  return source;
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function latest(first: string | null, second: string | null): string | null {

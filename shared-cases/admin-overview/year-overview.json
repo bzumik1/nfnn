@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The administration's year overview that GET /api/admin/donations/overview[?year=] answers (AdminOverviewService over the real queries, then YearOverview.compile): input.year is the requested year or null; the expected value is the answer as sent. The rows hold only the columns the computation reads: a runner fills every other column with any valid value. A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, and unpairedByAdminAt, the instant an administrator unpaired it or null); a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's.",
+  "logic": "The administration's year overview that GET /api/admin/donations/overview[?year=] answers (AdminOverviewService over the real queries, then YearOverview.compile): input.year is the requested year or null; the expected value is the answer as sent. The rows hold only the columns the computation reads: a runner fills every other column with any valid value. A donor is a donor_record row (registeredAt and erasedAt instants); a payment a bank_payment row (bookedOn, amountMinor, and unpairedByAdminAt, the instant an administrator unpaired it or null); a donation a donation row of a donor, with the payment it was paired from (a bank transfer) or none (MANUAL), status RECEIVED or REFUNDED and purpose GENERAL or ACCOUNT_VERIFICATION. A payment no donation points to is unpaired. now is the server clock; the foundation's calendar is Prague's. Since 2.20b input.chunks holds the rows of the administration's device copy the browser computes the same overview from (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm> and donations/donor-records:<yyyy-mm>, keyed <part>/<chunk id> as the device stores them, ids aliased as CaseRows names them): the backend runner checks that the copy holds exactly these chunks, and the browser compiles the expected overview and every offered year from them for the Prague day of now.",
   "cases": [
     {
       "name": "an empty database in March",
@@ -9,7 +9,8 @@
         "donors": [],
         "payments": [],
         "donations": [],
-        "year": null
+        "year": null,
+        "chunks": {}
       },
       "expected": {
         "year": 2026,
@@ -225,7 +226,282 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-01-05",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-05T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-02": [
+            {
+              "id": "donation:5",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p5",
+              "receivedAt": "2026-02-11",
+              "amountMinor": 100000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-11T12:00:00Z"
+            },
+            {
+              "id": "donation:4",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p4",
+              "receivedAt": "2026-02-10",
+              "amountMinor": 100,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "ACCOUNT_VERIFICATION",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-10T12:00:00Z"
+            },
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-02-06",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-06T12:00:00Z"
+            },
+            {
+              "id": "donation:2",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-02-05",
+              "amountMinor": 125050,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-05T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-03": [
+            {
+              "id": "donation:6",
+              "donorId": "donor:firma",
+              "paymentId": null,
+              "receivedAt": "2026-03-02",
+              "amountMinor": 1000000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "MANUAL",
+              "purpose": "GENERAL",
+              "pairedBy": null,
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-05T09:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-10T12:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:firma",
+              "name": "Dárce firma",
+              "type": "PERSON",
+              "variableSymbol": "4000000003",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-01T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p6",
+              "bankTransactionId": 26000000009,
+              "bookedOn": "2026-01-20",
+              "amountMinor": 3000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-20T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "76a04c0d2259c237"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-01-05",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-05T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "cd95ef1f60596cf0"
+            }
+          ],
+          "donations/payments:2026-02": [
+            {
+              "id": "payment:p7",
+              "bankTransactionId": 26000000010,
+              "bookedOn": "2026-02-20",
+              "amountMinor": 4550,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-20T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "07f799ea172a935f"
+            },
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000008,
+              "bookedOn": "2026-02-11",
+              "amountMinor": 100000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-11T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "734764332d900e94"
+            },
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2026-02-10",
+              "amountMinor": 100,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-10T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "9dabe4ebc8bd945a"
+            },
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2026-02-06",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-06T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "953d605bf86da61f"
+            },
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2026-02-05",
+              "amountMinor": 125050,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-05T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "cd15872653b6ebde"
+            }
+          ],
+          "donations/payments:2026-03": [
+            {
+              "id": "payment:p8",
+              "bankTransactionId": 26000000011,
+              "bookedOn": "2026-03-03",
+              "amountMinor": 7000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-03-03T12:00:00Z",
+              "unpairedByAdminAt": "2026-03-03T13:00:00Z",
+              "accountVerification": false,
+              "version": "06fc599839631a72"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -441,7 +717,282 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": 2026
+        "year": 2026,
+        "chunks": {
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-01-05",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-05T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-02": [
+            {
+              "id": "donation:5",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p5",
+              "receivedAt": "2026-02-11",
+              "amountMinor": 100000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-11T12:00:00Z"
+            },
+            {
+              "id": "donation:4",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p4",
+              "receivedAt": "2026-02-10",
+              "amountMinor": 100,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "ACCOUNT_VERIFICATION",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-10T12:00:00Z"
+            },
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-02-06",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-06T12:00:00Z"
+            },
+            {
+              "id": "donation:2",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-02-05",
+              "amountMinor": 125050,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-05T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-03": [
+            {
+              "id": "donation:6",
+              "donorId": "donor:firma",
+              "paymentId": null,
+              "receivedAt": "2026-03-02",
+              "amountMinor": 1000000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "MANUAL",
+              "purpose": "GENERAL",
+              "pairedBy": null,
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-05T09:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-10T12:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:firma",
+              "name": "Dárce firma",
+              "type": "PERSON",
+              "variableSymbol": "4000000003",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-01T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p6",
+              "bankTransactionId": 26000000009,
+              "bookedOn": "2026-01-20",
+              "amountMinor": 3000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-20T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "76a04c0d2259c237"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-01-05",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-05T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "cd95ef1f60596cf0"
+            }
+          ],
+          "donations/payments:2026-02": [
+            {
+              "id": "payment:p7",
+              "bankTransactionId": 26000000010,
+              "bookedOn": "2026-02-20",
+              "amountMinor": 4550,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-20T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "07f799ea172a935f"
+            },
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000008,
+              "bookedOn": "2026-02-11",
+              "amountMinor": 100000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-11T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "734764332d900e94"
+            },
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2026-02-10",
+              "amountMinor": 100,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-10T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "9dabe4ebc8bd945a"
+            },
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2026-02-06",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-06T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "953d605bf86da61f"
+            },
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2026-02-05",
+              "amountMinor": 125050,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-05T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "cd15872653b6ebde"
+            }
+          ],
+          "donations/payments:2026-03": [
+            {
+              "id": "payment:p8",
+              "bankTransactionId": 26000000011,
+              "bookedOn": "2026-03-03",
+              "amountMinor": 7000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-03-03T12:00:00Z",
+              "unpairedByAdminAt": "2026-03-03T13:00:00Z",
+              "accountVerification": false,
+              "version": "06fc599839631a72"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -602,7 +1153,177 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-01-31",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-31T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-02": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-02-01",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-02-01T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-31T22:59:59Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-31T23:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:eva",
+              "name": "Dárce eva",
+              "type": "PERSON",
+              "variableSymbol": "4000000003",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-29T00:30:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-04": [
+            {
+              "donorId": "donor:ota",
+              "name": "Dárce ota",
+              "type": "PERSON",
+              "variableSymbol": "4000000004",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-31T22:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2026-01-31",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "e462f43490d1eeb9"
+            }
+          ],
+          "donations/payments:2026-02": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2026-02-28",
+              "amountMinor": 3000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-28T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "64221e0b870ae026"
+            },
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2026-02-01",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-02-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "6b59bf58701c6ff0"
+            }
+          ],
+          "donations/payments:2026-03": [
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000008,
+              "bookedOn": "2026-03-01",
+              "amountMinor": 4000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-03-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "2a04d6a7a910ec8b"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -767,7 +1488,126 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2025-12": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2025-12-31",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-12-31T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-01-01",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-01T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2025-12": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-12-31T22:59:59Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-12-31T23:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2025-12": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2025-12-31",
+              "amountMinor": 3000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "6757b0a8df8fd4c5"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2025-12-31",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "8effb855101fed46"
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-01-01",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "2f8e70511f1bf8a6"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -894,7 +1734,179 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": 2025
+        "year": 2025,
+        "chunks": {
+          "donations/donations:2025-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-01-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-06": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-06-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-12": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-12-31T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2024-11": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2024-11-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2025-06": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-06-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2024-03": [
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2024-03-01",
+              "amountMinor": 5000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2024-03-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "54ac6a4f6719b0c0"
+            }
+          ],
+          "donations/payments:2025-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-01-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "f4ab7f3f1dad1c56"
+            }
+          ],
+          "donations/payments:2025-06": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-06-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "361ec3fabc3a4a97"
+            }
+          ],
+          "donations/payments:2025-07": [
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2025-07-07",
+              "amountMinor": 6000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-07-07T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "dbda59e3ad36e287"
+            }
+          ],
+          "donations/payments:2025-12": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "e6f4468553380301"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2025,
@@ -1242,7 +2254,179 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2025-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-01-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-06": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-06-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-12": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-12-31T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2024-11": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2024-11-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2025-06": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-06-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2024-03": [
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2024-03-01",
+              "amountMinor": 5000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2024-03-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "54ac6a4f6719b0c0"
+            }
+          ],
+          "donations/payments:2025-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-01-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "f4ab7f3f1dad1c56"
+            }
+          ],
+          "donations/payments:2025-06": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-06-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "361ec3fabc3a4a97"
+            }
+          ],
+          "donations/payments:2025-07": [
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2025-07-07",
+              "amountMinor": 6000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-07-07T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "dbda59e3ad36e287"
+            }
+          ],
+          "donations/payments:2025-12": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "e6f4468553380301"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -1390,7 +2574,179 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": 2027
+        "year": 2027,
+        "chunks": {
+          "donations/donations:2025-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-01-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-06": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-06-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-12": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-12-31T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2024-11": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2024-11-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2025-06": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-06-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2024-03": [
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2024-03-01",
+              "amountMinor": 5000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2024-03-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "54ac6a4f6719b0c0"
+            }
+          ],
+          "donations/payments:2025-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2025-01-02",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-01-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "f4ab7f3f1dad1c56"
+            }
+          ],
+          "donations/payments:2025-06": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2025-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-06-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "361ec3fabc3a4a97"
+            }
+          ],
+          "donations/payments:2025-07": [
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2025-07-07",
+              "amountMinor": 6000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-07-07T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "dbda59e3ad36e287"
+            }
+          ],
+          "donations/payments:2025-12": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2025-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "e6f4468553380301"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2027,
@@ -1485,7 +2841,145 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-06": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-06-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-12": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-12-31T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-06": [
+            {
+              "donorId": "donor:petr",
+              "name": "Vymazaný dárce",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Vymazáno",
+                "city": "Vymazáno",
+                "postalCode": "00000"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-06-15T10:00:00Z",
+              "erasedAt": "2026-11-01T10:00:00Z"
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2026-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "d5e6a693147ddfd3"
+            }
+          ],
+          "donations/payments:2026-06": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-06-15",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": null,
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-06-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "59e8f59ab5331eba"
+            }
+          ],
+          "donations/payments:2026-12": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2026-12-31",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-12-31T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "d28bc99f2927c68b"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -1784,7 +3278,60 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-15T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2026-01": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000002,
+              "bookedOn": "2026-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-01-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "a2283a3074a7e34e"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -1929,7 +3476,126 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2028-02": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2028-02-29",
+              "amountMinor": 29029,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2028-02-29T12:00:00Z"
+            }
+          ],
+          "donations/donations:2028-03": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p2",
+              "receivedAt": "2028-03-01",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2028-03-01T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2028-02": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2028-02-28T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2028-03": [
+            {
+              "donorId": "donor:petr",
+              "name": "Dárce petr",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2028-02-29T23:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2028-02": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2028-02-29",
+              "amountMinor": 2900,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2028-02-29T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "c0242315e2ef7bd4"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2028-02-29",
+              "amountMinor": 29029,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2028-02-29T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "21744be8346a8d83"
+            }
+          ],
+          "donations/payments:2028-03": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2028-03-01",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2028-03-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "cb6d3b43d64db707"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2028,
@@ -2068,7 +3734,107 @@
             "purpose": "GENERAL"
           }
         ],
-        "year": null
+        "year": null,
+        "chunks": {
+          "donations/donations:2026-06": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:firma",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-06-02",
+              "amountMinor": 99999999,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-06-02T12:00:00Z"
+            },
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-06-01",
+              "amountMinor": 100000000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-06-01T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:jana",
+              "name": "Dárce jana",
+              "type": "PERSON",
+              "variableSymbol": "4000000001",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:firma",
+              "name": "Dárce firma",
+              "type": "PERSON",
+              "variableSymbol": "4000000002",
+              "companyIdentifier": null,
+              "address": {
+                "street": "Dlouhá 12",
+                "city": "Ústí nad Labem",
+                "postalCode": "400 01"
+              },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2026-06": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-06-02",
+              "amountMinor": 99999999,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-06-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "abadeea4e98c0dac"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2026-06-01",
+              "amountMinor": 100000000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-06-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "d22c4c5cd2095b30"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2026,
@@ -2237,7 +4003,43 @@
           }
         ],
         "donations": [],
-        "year": 2024
+        "year": 2024,
+        "chunks": {
+          "donations/payments:2024-07": [
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000001,
+              "bookedOn": "2024-07-01",
+              "amountMinor": 5000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2024-07-01T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "08246287b3cdc251"
+            }
+          ],
+          "donations/payments:2024-08": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000002,
+              "bookedOn": "2024-08-01",
+              "amountMinor": 6000,
+              "currency": "CZK",
+              "variableSymbol": null,
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2024-08-01T12:00:00Z",
+              "unpairedByAdminAt": "2024-08-01T13:00:00Z",
+              "accountVerification": false,
+              "version": "6a4f9e078314ce5e"
+            }
+          ]
+        }
       },
       "expected": {
         "year": 2024,

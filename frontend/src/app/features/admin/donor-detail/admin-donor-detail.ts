@@ -22,7 +22,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { from, Observable, Subscription, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
-import { Connectivity } from '../../../core/connectivity/connectivity';
+import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
@@ -163,8 +163,12 @@ export class AdminDonorDetail {
   protected readonly accountState = signal<LoadState>('loading');
   protected readonly account = signal<DonorAccountResponse | null>(null);
   protected readonly donationsState = signal<LoadState>('loading');
-  protected readonly donationsAwaitConnection = signal(false);
+  private readonly donationsUnreachable = signal(false);
+  protected readonly donationsAwaitConnection = computed(
+    () => this.donationsUnreachable() && this.connectivity.offline(),
+  );
   private cardRead: Subscription | null = null;
+  private onCardLoaded: (() => void) | undefined;
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly bankAccountsSource = signal<BankAccountsSource>('server');
   protected readonly cardNotice = signal<CardNotice | null>(null);
@@ -264,7 +268,7 @@ export class AdminDonorDetail {
     effect(() => {
       const offline = this.connectivity.offline();
       untracked(() => {
-        if (wasOffline && !offline && this.donationsAwaitConnection()) {
+        if (wasOffline && !offline && this.donationsUnreachable()) {
           this.loadDonations();
         } else if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
           this.bankAccountsSource.set('pending');
@@ -367,28 +371,8 @@ export class AdminDonorDetail {
     if (onLoaded !== undefined) {
       this.reads.changed();
     }
-    this.donationsAwaitConnection.set(false);
-    let loaded = onLoaded;
-    this.cardRead?.unsubscribe();
-    this.cardRead = this.reads
-      .donorCard(this.donorId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ detail, bankAccounts }) => {
-          this.detail.set(detail);
-          this.bankAccountsSource.set(bankAccounts);
-          this.donationsState.set('ready');
-          this.loadWithdrawnKeysFor(detail);
-          if (bankAccounts !== 'pending') {
-            loaded?.();
-            loaded = undefined;
-          }
-        },
-        error: (failure: unknown) => {
-          this.donationsAwaitConnection.set(this.connectivity.offline());
-          this.donationsState.set(this.stateAfter(failure));
-        },
-      });
+    this.onCardLoaded = onLoaded;
+    this.readCard();
   }
 
   private loadWithdrawnKeysFor(detail: AdminDonorDetailResponse): void {
@@ -456,6 +440,7 @@ export class AdminDonorDetail {
   }
 
   private readCard(retried = false): void {
+    this.donationsUnreachable.set(false);
     this.cardRead?.unsubscribe();
     this.cardRead = this.reads
       .donorCard(this.donorId)
@@ -464,6 +449,7 @@ export class AdminDonorDetail {
         next: ({ detail, bankAccounts }) => {
           this.detail.set(detail);
           this.bankAccountsSource.set(bankAccounts);
+          this.donationsState.set('ready');
           if (retried && bankAccounts === 'server') {
             this.cardNotice.set({
               card: 'accounts',
@@ -474,9 +460,14 @@ export class AdminDonorDetail {
             });
           }
           this.loadWithdrawnKeysFor(detail);
+          if (bankAccounts !== 'pending') {
+            const loaded = this.onCardLoaded;
+            this.onCardLoaded = undefined;
+            loaded?.();
+          }
         },
         error: (failure: unknown) => {
-          this.donationsAwaitConnection.set(this.connectivity.offline());
+          this.donationsUnreachable.set(isUnreachable(failure) || this.connectivity.offline());
           this.donationsState.set(this.stateAfter(failure));
         },
       });

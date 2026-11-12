@@ -22,6 +22,7 @@ import {
 import {
   AdministrationReads,
   FORCED_REFRESH_GAP_MS,
+  MISMATCH_REPORT_PAUSE_MS,
   RATE_LIMITED_PAUSE_MS,
   REFRESH_AFTER_MS,
 } from './administration-reads';
@@ -218,9 +219,13 @@ describe('Given the administration pages reading through the copy on this device
   }
 
   function open(held: CopyContents, copyId = 'copy-1'): void {
+    openWith(signal(held), copyId);
+  }
+
+  function openWith(held: ReturnType<typeof signal<CopyContents>>, copyId = 'copy-1'): void {
     const store = {
       copyId,
-      contents: signal(held).asReadonly(),
+      contents: held.asReadonly(),
     } as unknown as AccountStore;
     opened.set({
       store,
@@ -351,7 +356,12 @@ describe('Given the administration pages reading through the copy on this device
       expect(tabs.posted).toEqual([
         {
           name: 'nfnn.administration-checks',
-          message: { copyId: 'copy-1', kind: 'rate-limited', at: expect.any(Number) },
+          message: {
+            copyId: 'copy-1',
+            storedAt: '2026-10-20T08:00:00.000Z',
+            kind: 'rate-limited',
+            at: expect.any(Number),
+          },
         },
       ]);
       expect((tabs.posted[0].message as { at: number }).at).toBeGreaterThanOrEqual(
@@ -379,6 +389,7 @@ describe('Given the administration pages reading through the copy on this device
     it('and another tab found the same copy unchanged, then this tab reads the copy for a minute without a refresh of its own, but a change made here still refreshes it', async () => {
       tabs.fromAnotherTab('nfnn.administration-checks', {
         copyId: 'copy-1',
+        storedAt: '2026-10-20T08:00:00.000Z',
         kind: 'checked',
         at: Date.now(),
       });
@@ -391,9 +402,53 @@ describe('Given the administration pages reading through the copy on this device
       expect(refresh.mock.calls).toEqual([[true]]);
     });
 
+    it('and the server refused a refresh as too many and then another copy opens, then the new copy is refreshed at once', async () => {
+      refresh.mockResolvedValue('rate-limited');
+      const refused = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+      await refused;
+
+      open(contents(), 'copy-2');
+      refresh.mockResolvedValue('unchanged');
+      const fromCopy = await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh).toHaveBeenCalledTimes(2);
+      expect(fromCopy.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
+    it('and another tab tells of a check or a pause far in the future, then this tab trusts it only as far as now and five minutes from now', async () => {
+      tabs.fromAnotherTab('nfnn.administration-checks', {
+        copyId: 'copy-1',
+        storedAt: '2026-10-20T08:00:00.000Z',
+        kind: 'checked',
+        at: Date.now() + 24 * 60 * 60_000,
+      });
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh).not.toHaveBeenCalled();
+
+      vi.setSystemTime(Date.now() + REFRESH_AFTER_MS);
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh).toHaveBeenCalledTimes(1);
+
+      tabs.fromAnotherTab('nfnn.administration-checks', {
+        copyId: 'copy-1',
+        storedAt: null,
+        kind: 'rate-limited',
+        at: Date.now() + 24 * 60 * 60_000,
+      });
+      vi.setSystemTime(Date.now() + RATE_LIMITED_PAUSE_MS);
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh).toHaveBeenCalledTimes(2);
+    });
+
     it('and another tab was refused as too many, then this tab asks the server instead of refreshing', async () => {
       tabs.fromAnotherTab('nfnn.administration-checks', {
         copyId: 'copy-1',
+        storedAt: null,
         kind: 'rate-limited',
         at: Date.now() + RATE_LIMITED_PAUSE_MS,
       });
@@ -418,16 +473,23 @@ describe('Given the administration pages reading through the copy on this device
       expect(tabs.posted).toEqual([
         {
           name: 'nfnn.administration-checks',
-          message: { copyId: 'copy-1', kind: 'checked', at: Date.now() - REFRESH_AFTER_MS },
+          message: {
+            copyId: 'copy-1',
+            storedAt: '2026-10-20T08:00:00.000Z',
+            kind: 'checked',
+            at: Date.now() - REFRESH_AFTER_MS,
+          },
         },
       ]);
     });
 
     it('and another tab tells of another copy or sends something else, then this tab takes no notice', async () => {
       for (const message of [
-        { copyId: 'copy-9', kind: 'checked', at: Date.now() },
-        { copyId: 'copy-1', kind: 'deleted', at: Date.now() },
-        { copyId: 'copy-1', kind: 'checked', at: 'now' },
+        { copyId: 'copy-9', storedAt: '2026-10-20T08:00:00.000Z', kind: 'checked', at: Date.now() },
+        { copyId: 'copy-1', storedAt: '2026-10-19T08:00:00.000Z', kind: 'checked', at: Date.now() },
+        { copyId: 'copy-1', kind: 'checked', at: Date.now() },
+        { copyId: 'copy-1', storedAt: '2026-10-20T08:00:00.000Z', kind: 'deleted', at: Date.now() },
+        { copyId: 'copy-1', storedAt: '2026-10-20T08:00:00.000Z', kind: 'checked', at: 'now' },
         null,
       ]) {
         tabs.fromAnotherTab('nfnn.administration-checks', message);
@@ -723,6 +785,54 @@ describe('Given the administration pages reading through the copy on this device
       expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
     });
 
+    it('and the summary of the server carries a field the copy does not compute, then the copy still agrees and answers', async () => {
+      open(
+        heldWith((byYear) =>
+          byYear.map((entry) => ({
+            ...entry,
+            refunded: { count: 0, totalMinor: 0, currency: 'CZK' },
+            months: (entry as { months: readonly object[] }).months.map((month) => ({
+              ...month,
+              refunded: 0,
+            })),
+          })),
+        ),
+      );
+
+      const overview = await firstValueFrom(reads.overview());
+
+      expect(overview.year).toBe(2026);
+      expect(overview).not.toHaveProperty('refunded');
+      expect(reporter.report).not.toHaveBeenCalled();
+    });
+
+    it('and the copy differs from the summary again after an hour with other contents, then the difference is reported again, but not sooner', async () => {
+      const differing = heldWith((byYear) =>
+        byYear.map((entry, index) => (index === 0 ? { ...entry, newDonors: 7 } : entry)),
+      );
+      const held = signal<CopyContents>(differing);
+      openWith(held);
+      const serverAnswers = async () => {
+        const answer = firstValueFrom(reads.overview());
+        await vi.waitFor(() =>
+          http
+            .expectOne((request) => request.url === '/api/admin/donations/overview')
+            .flush({ year: 2026 }),
+        );
+        await answer;
+      };
+
+      await serverAnswers();
+      held.set({ ...differing, storedAt: '2026-10-20T08:30:00.000Z' });
+      await serverAnswers();
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(Date.now() + MISMATCH_REPORT_PAUSE_MS);
+      held.set({ ...differing, storedAt: '2026-10-20T09:30:00.000Z' });
+      await serverAnswers();
+      expect(reporter.report).toHaveBeenCalledTimes(2);
+    });
+
     it('and the copy holds no summary, then the server answers', async () => {
       open({ ...contents(), summary: { donations: null } });
 
@@ -787,6 +897,28 @@ describe('Given the administration pages reading through the copy on this device
         },
       });
       expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+    });
+
+    it("and the copy was stored before its rows left out the failure's text, then the copy still answers without it", async () => {
+      const held = contents();
+      open({
+        ...held,
+        chunks: [
+          ...held.chunks,
+          {
+            id: 'donations/import-state',
+            rowsSha256: 'i',
+            rows: [
+              { ...STORED, lastFailure: { ...STORED.lastFailure, message: 'Token není platný' } },
+            ],
+          },
+        ],
+      });
+      offline.set(true);
+
+      const read = await firstValueFrom(reads.importState());
+
+      expect(read.state.lastFailure?.message).toBeNull();
     });
 
     it('and the server cannot be reached, then the copy answers it', async () => {

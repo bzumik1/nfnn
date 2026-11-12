@@ -41,7 +41,11 @@ const importState = {
   coveredTo: '2026-10-17',
   lastAttemptedAt: '2026-10-18T10:00:00Z',
   lastSucceededAt: '2026-10-17T10:00:00Z',
-  lastFailure: { kind: 'UNAUTHORIZED', attemptedAt: '2026-10-18T10:00:00Z' },
+  lastFailure: {
+    kind: 'UNAUTHORIZED',
+    message: 'Fio refused the token',
+    attemptedAt: '2026-10-18T10:00:00Z',
+  },
   consecutiveFailures: 1,
   reportedOutage: 'UNAUTHORIZED',
   balance: null,
@@ -204,7 +208,9 @@ test.describe('Given an administrator whose device keeps the administration copy
 
     const importCard = page.locator('.ui-card[aria-labelledby="admin-import-title"]');
     await expect(importCard).toContainText('Fio odmítlo token');
-    await expect(importCard).not.toContainText('12:00 (');
+    await expect(importCard).not.toContainText('Fio refused');
+    await expect(page.getByRole('row').filter({ hasText: 'říjen 2026' })).toContainText(/500\sKč/);
+    await expect(page.getByText('1 platba čeká na přiřazení')).toBeVisible();
     expect(serverReads).toEqual([]);
     await context.setOffline(false);
   });

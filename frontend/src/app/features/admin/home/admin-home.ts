@@ -4,14 +4,17 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
+import { forkJoin, map, Observable, of, Subscription, switchMap } from 'rxjs';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { Router, RouterLink } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -37,7 +40,11 @@ import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
 import { unpublishedKeyIds } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { HistoryImport } from './history-import/history-import';
-import { AdministrationReads, type StoredImportState } from '../device-copy/administration-reads';
+import {
+  AdministrationReads,
+  type ImportStateRead,
+  type StoredImportState,
+} from '../device-copy/administration-reads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -87,6 +94,8 @@ interface SinceFigure {
 export class AdminHome {
   private readonly api = inject(AdminApi);
   private readonly reads = inject(AdministrationReads);
+  private readonly connectivity = inject(Connectivity);
+  private overviewRead: Subscription | null = null;
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -100,9 +109,10 @@ export class AdminHome {
   protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');
   protected readonly importState = signal<ImportStateResponse | StoredImportState | null>(null);
+  private readonly importRead = signal<ImportStateRead | null>(null);
   protected readonly historyState = computed(() => {
-    const state = this.importState();
-    return state !== null && 'defaultHistoryFrom' in state ? state : null;
+    const read = this.importRead();
+    return read?.source === 'server' ? read.state : null;
   });
   protected readonly overviewState = signal<LoadState>('loading');
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
@@ -252,12 +262,23 @@ export class AdminHome {
     this.loadAdministrators();
     this.loadSigningKeys();
     this.loadSignatory();
+    let wasOffline = this.connectivity.offline();
+    effect(() => {
+      const offline = this.connectivity.offline();
+      untracked(() => {
+        if (wasOffline && !offline && this.importRead()?.source === 'copy') {
+          this.load();
+        }
+        wasOffline = offline;
+      });
+    });
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
   protected loadOverview(year: number | null = null): void {
     this.overviewState.set('loading');
-    this.reads
+    this.overviewRead?.unsubscribe();
+    this.overviewRead = this.reads
       .overview(year)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -424,8 +445,9 @@ export class AdminHome {
       .importState()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ state }) => {
-          this.importState.set(state);
+        next: (read) => {
+          this.importRead.set(read);
+          this.importState.set(read.state);
           this.state.set('ready');
         },
         error: (failure: unknown) => {

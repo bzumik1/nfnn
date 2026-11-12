@@ -20,9 +20,10 @@
         "input": {
           "type": "object",
           "$ref": "../defs/rows.schema.json",
-          "required": ["year"],
+          "required": ["year", "chunks"],
           "properties": {
-            "year": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/year" }, { "type": "null" }] }
+            "year": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/year" }, { "type": "null" }] },
+            "chunks": { "$ref": "../defs/admin-copy.schema.json#/$defs/chunks" }
           },
           "unevaluatedProperties": false
         },

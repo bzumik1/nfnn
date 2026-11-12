@@ -1198,7 +1198,11 @@ describe('Given an administrator on the administration home with the administrat
     coveredTo: '2026-10-17',
     lastAttemptedAt: '2026-10-18T10:00:00Z',
     lastSucceededAt: '2026-10-17T10:00:00Z',
-    lastFailure: { kind: 'UNAUTHORIZED', attemptedAt: '2026-10-18T10:00:00Z' },
+    lastFailure: {
+      kind: 'UNAUTHORIZED',
+      message: 'Fio refused the token',
+      attemptedAt: '2026-10-18T10:00:00Z',
+    },
     consecutiveFailures: 1,
     reportedOutage: 'UNAUTHORIZED',
     balance: null,
@@ -1206,10 +1210,12 @@ describe('Given an administrator on the administration home with the administrat
   let fixture: ComponentFixture<AdminHome>;
   let http: HttpTestingController;
   let refresh: ReturnType<typeof vi.fn>;
+  let offline: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
     localStorage.clear();
     refresh = vi.fn().mockResolvedValue('unchanged');
+    offline = signal(true);
     const rows = { payments: [PAID, UNPAIRED], donations: [GIFT], donorRecords: [RECORD] };
     const contents: CopyContents = {
       chunks: [
@@ -1246,7 +1252,7 @@ describe('Given an administrator on the administration home with the administrat
         {
           provide: Connectivity,
           useValue: {
-            offline: signal(true).asReadonly(),
+            offline: offline.asReadonly(),
             cause: signal('network').asReadonly(),
           },
         },
@@ -1292,8 +1298,34 @@ describe('Given an administrator on the administration home with the administrat
     );
     expect(text('.overview-table tbody tr')).toContain('říjen 2026');
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).toContain('Poslední chyba');
-    expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('12:00 (');
+    expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('Fio refused');
     expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+  });
+
+  it("when the device comes back online, then the import state is read from the server again, with the failure's text and the part for older payments the copy does not hold", async () => {
+    expect(fixture.nativeElement.querySelector('app-history-import')).toBeNull();
+
+    offline.set(false);
+    fixture.detectChanges();
+    await vi.waitFor(() =>
+      http.expectOne(IMPORT_STATE_URL).flush(
+        importState({
+          lastFailure: {
+            kind: 'UNAUTHORIZED',
+            message: 'Fio refused the token',
+            attemptedAt: '2026-10-18T10:00:00Z',
+          },
+          defaultHistoryFrom: '2025-01-01',
+        }),
+      ),
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(text('.ui-card[aria-labelledby="admin-import-title"]')).toContain(
+      '(Fio refused the token)',
+    );
+    expect(fixture.nativeElement.querySelector('app-history-import')).not.toBeNull();
   });
 });

@@ -34,24 +34,39 @@ export function yearOverview(
 ): AdminOverviewResponse {
   const availableYears = offeredYears(rows, today);
   const year = requested ?? availableYears[0];
-  return { ...overviewOf(rows, today, year), availableYears };
+  return { ...overviewOf(prepared(rows), today, year), availableYears };
 }
 
 export function everyOfferedYear(rows: OverviewRows, today: string): YearOverviewOfCopy[] {
-  return offeredYears(rows, today).map((year) => overviewOf(rows, today, year));
+  const held = prepared(rows);
+  return offeredYears(rows, today).map((year) => overviewOf(held, today, year));
 }
 
-function overviewOf(rows: OverviewRows, today: string, year: number): YearOverviewOfCopy {
-  const paired = new Set(rows.donations.flatMap((donation) => donation.paymentId ?? []));
+interface PreparedRows {
+  readonly rows: OverviewRows;
+  readonly paired: ReadonlySet<string>;
+  readonly registrationDays: readonly string[];
+}
+
+function prepared(rows: OverviewRows): PreparedRows {
+  return {
+    rows,
+    paired: new Set(rows.donations.flatMap((donation) => donation.paymentId ?? [])),
+    registrationDays: rows.donorRecords
+      .map((record) => pragueDay(record.registeredAt))
+      .sort((first, second) => (first < second ? -1 : first > second ? 1 : 0)),
+  };
+}
+
+function overviewOf(held: PreparedRows, today: string, year: number): YearOverviewOfCopy {
+  const { rows, paired, registrationDays } = held;
   const received = rows.donations.filter(
     (donation) => donation.status === 'RECEIVED' && yearOf(donation.receivedAt) === year,
   );
   const unpaired = rows.payments.filter(
     (payment) => !paired.has(payment.id) && yearOf(payment.bookedOn) === year,
   );
-  const registrationDays = rows.donorRecords.map((record) => pragueDay(record.registeredAt));
-  const registeredBefore = (firstDay: string): number =>
-    registrationDays.filter((day) => day < firstDay).length;
+  const registeredBefore = (firstDay: string): number => countBefore(registrationDays, firstDay);
   const months: MonthOverviewResponse[] = [];
   let started = 0;
   for (let month = 1; month <= MONTHS_IN_YEAR; month++) {
@@ -89,6 +104,20 @@ function overviewOf(rows: OverviewRows, today: string, year: number): YearOvervi
     unpaired: yearUnpaired,
     months,
   };
+}
+
+function countBefore(sortedDays: readonly string[], firstDay: string): number {
+  let low = 0;
+  let high = sortedDays.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (sortedDays[middle] < firstDay) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
 }
 
 function tally(rows: readonly { readonly amountMinor: number }[]): TallyResponse {

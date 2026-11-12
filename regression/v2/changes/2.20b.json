@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/device-copy/administration-reads.spec.ts > Given the administration pages reading through the copy on this device > when a copy is open and online > and something changed, then the copy is refreshed at once, and the server answers when that refresh fails",
+    "replacement": "src/app/features/admin/device-copy/administration-reads.spec.ts > Given the administration pages reading through the copy on this device > when a copy is open and online > and something changed after the last refresh started at least half a minute ago, then the copy is refreshed at once, and the server answers when that refresh fails",
+    "reason": "2.20b keeps half a minute between forced refreshes of the administration copy (a hand-off of 2.20a), so the test of a refresh after a change names the gap it now starts after; the same test runs under the new name, and a change within the gap has a test of its own",
+    "contract": "docs/frontend-overview.md, AdministrationReads"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/admin-overview/year-overview.json",
+    "reason": "2.20b: the browser computes the year overview of /sprava from the administration copy, so every case gains input.chunks, the rows of the copy's payments, gifts and donor records; the backend runner checks the copy holds exactly these chunks and the browser compiles the expected overview from them; no expected value changes",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/admin-overview/year-overview.schema.json",
+    "reason": "2.20b: the case input requires chunks, in the shape of admin-copy.schema.json",
+    "contract": "docs/system-overview.md, Shared cases"
+  }
+]
