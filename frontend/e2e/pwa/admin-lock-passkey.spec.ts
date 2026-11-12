@@ -188,8 +188,20 @@ async function createAdministratorPasskey(page: Page): Promise<void> {
   }, userHandleBytes(administrator.id));
 }
 
+function administrationRecords(dump: Record<string, Record<string, readonly unknown[]>>): number {
+  const entries = Object.values(dump).flatMap((stores) =>
+    Object.values(stores).flat(),
+  ) as StoredEntry[];
+  const administration = entries.find((entry) => entry?.kind === 'administration');
+  return entries.filter(
+    (entry) => entry?.recordId !== undefined && entry.copyId === administration?.copyId,
+  ).length;
+}
+
 interface StoredEntry {
   readonly kind?: string;
+  readonly copyId?: string;
+  readonly recordId?: string;
   readonly wraps?: readonly { readonly kind: string }[];
 }
 
@@ -322,7 +334,13 @@ test.describe('Given an administrator whose copy of the administration is kept u
     );
     await context.route(
       (url) => url.pathname === '/api/admin/donations/payments',
-      (route) => route.fulfill({ json: { year: null, availableYears: [], items: [] } }),
+      (route) => {
+        const unpaired = new URL(route.request().url()).searchParams.get('pairing') === 'unpaired';
+        const items = unpaired ? [{ ...PAYMENT, donation: null }] : [];
+        return route.fulfill({
+          json: { year: null, availableYears: [], items, total: items.length },
+        });
+      },
     );
     await context.route(
       (url) => url.pathname === '/api/donations/bank-logos',
@@ -347,6 +365,7 @@ test.describe('Given an administrator whose copy of the administration is kept u
       .click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['prf']);
+    await expect.poll(async () => administrationRecords(await idbDump())).toBe(2);
     await page.goto('/sprava/platby');
     await page.getByRole('button', { name: 'Odemknout přístupovým klíčem' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
