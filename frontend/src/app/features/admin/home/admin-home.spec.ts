@@ -25,6 +25,7 @@ import {
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
+import { ImportStateResponse } from '../admin-api';
 import { AdministrationVisit, type VisitState } from '../device-copy/administration-visit';
 import { AdminHome } from './admin-home';
 import { Connectivity } from '../../../core/connectivity/connectivity';
@@ -167,10 +168,12 @@ describe('Given an administrator on the administration home', () => {
         coveredTo: '2026-10-17',
         lastAttemptedAt: '2026-10-18T08:05:30Z',
         lastSucceededAt: '2026-10-18T08:05:30Z',
+        balance: { amountMinor: 12_345_678, readAt: '2026-10-18T08:05:30Z' },
       }),
     );
 
     expect(dataRows()).toEqual({
+      'Zůstatek účtu': '123 456,78 Kč · k 18. 10. 2026 10:05',
       'Stažené období': '20. 7. 2026 – 17. 10. 2026',
       'Poslední úspěšné stažení': '18. 10. 2026 10:05',
       'Poslední pokus': '18. 10. 2026 10:05',
@@ -291,6 +294,7 @@ describe('Given an administrator on the administration home', () => {
       '/sprava/nastaveni',
     );
     expect(dataRows()).toEqual({
+      'Zůstatek účtu': 'zatím neznámý',
       'Stažené období': 'zatím nic',
       'Poslední úspěšné stažení': 'zatím žádné',
       'Poslední pokus': 'zatím žádný',
@@ -329,6 +333,29 @@ describe('Given an administrator on the administration home', () => {
     expect(
       fixture.nativeElement.querySelector('[aria-labelledby="admin-import-title"] .healthy'),
     ).toBeNull();
+  });
+
+  it('when the last import failed, then the last known balance keeps its time and says it may be out of date', async () => {
+    await respond(
+      importState({
+        lastAttemptedAt: '2026-10-18T09:00:00Z',
+        lastFailure: { kind: 'TRANSPORT', message: null, attemptedAt: '2026-10-18T09:00:00Z' },
+        consecutiveFailures: 1,
+        balance: { amountMinor: 50_000, readAt: '2026-10-17T10:00:00Z' },
+      }),
+    );
+
+    expect(dataRows()['Zůstatek účtu']).toBe(
+      '500 Kč · k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)',
+    );
+  });
+
+  it('when an older server sends no balance, then the row says the balance is not known yet', async () => {
+    const olderAnswer: Partial<ImportStateResponse> = importState();
+    delete olderAnswer.balance;
+    await respond(olderAnswer);
+
+    expect(dataRows()['Zůstatek účtu']).toBe('zatím neznámý');
   });
 
   it('when the bank does not answer repeatedly, then the warning says the web retries by itself and leads nowhere', async () => {

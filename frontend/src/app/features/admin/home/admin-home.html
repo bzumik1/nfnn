@@ -60,6 +60,21 @@
           }
           <dl class="admin-data">
             <div>
+              <dt i18n="@@admin.home.import.balance">Zůstatek účtu</dt>
+              <dd>
+                @if (balance(); as balance) {
+                  {{ balance }}
+                  @if (balanceMayBeOutdated()) {
+                    <span class="admin-failure-message" i18n="@@admin.home.import.balance.outdated"
+                      >(poslední známý, nemusí být aktuální)</span
+                    >
+                  }
+                } @else {
+                  <ng-container i18n="@@admin.home.import.balance.none">zatím neznámý</ng-container>
+                }
+              </dd>
+            </div>
+            <div>
               <dt i18n="@@admin.home.import.covered">Stažené období</dt>
               <dd>
                 @if (coveredPeriod(); as period) {

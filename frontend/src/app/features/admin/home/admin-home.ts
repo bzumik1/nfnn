@@ -154,6 +154,13 @@ export class AdminHome {
       ? `${formatDonationDate(state.coveredFrom)} – ${formatDonationDate(state.coveredTo)}`
       : null;
   });
+  protected readonly balance = computed(() => {
+    const balance = this.importState()?.balance;
+    return balance
+      ? `${formatMinorUnits(balance.amountMinor)}\u00a0Kč · k ${formatBankTime(balance.readAt)}`
+      : null;
+  });
+  protected readonly balanceMayBeOutdated = computed(() => this.importState()?.lastFailure != null);
   protected readonly lastSuccess = computed(() => time(this.importState()?.lastSucceededAt));
   protected readonly lastAttempt = computed(() => time(this.importState()?.lastAttemptedAt));
   protected readonly lastFailure = computed(() => {
