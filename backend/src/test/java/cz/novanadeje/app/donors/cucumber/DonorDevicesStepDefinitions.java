@@ -4,6 +4,7 @@ import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.donors.application.DonorSessionCleanupService;
+import cz.novanadeje.app.support.MutableClock;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -38,28 +40,75 @@ public class DonorDevicesStepDefinitions {
     private static final Map<String, String> USER_AGENTS = Map.of(
             "iPhone", "Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1",
             "Mac", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:145.0) Gecko/20100101 Firefox/145.0",
-            "Windows", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0");
+            "Windows", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0",
+            "iPad", "Mozilla/5.0 (iPad; CPU OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1",
+            "Android", "Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36");
 
     private final ApiClient api;
     private final ScenarioDonors donors;
     private final TotpCodes totpCodes;
     private final JdbcClient jdbc;
     private final DonorSessionCleanupService cleanup;
+    private final MutableClock clock;
     private final Map<String, Session> sessions = new HashMap<>();
 
     public DonorDevicesStepDefinitions(ApiClient api, ScenarioDonors donors, TotpCodes totpCodes, JdbcClient jdbc,
-                                       DonorSessionCleanupService cleanup) {
+                                       DonorSessionCleanupService cleanup, MutableClock clock) {
         this.api = api;
         this.donors = donors;
         this.totpCodes = totpCodes;
         this.jdbc = jdbc;
         this.cleanup = cleanup;
+        this.clock = clock;
     }
 
     @Given("{string} signs in on the {string}")
     public void signsInOnThe(String alias, String device) {
         ScenarioDonors.Credentials credentials = donors.credentialsOf(alias);
         signIn(alias, device, Map.of("email", credentials.email(), "password", credentials.password()));
+    }
+
+    @Given("{string} signs in on the {string} and is remembered")
+    public void signsInOnTheAndIsRemembered(String alias, String device) {
+        signsInOnTheWithTheSession(alias, device, "REMEMBERED");
+    }
+
+    @Given("{string} signs in on the {string} in a browser that forgets her")
+    public void signsInOnTheInABrowserThatForgetsHer(String alias, String device) {
+        signsInOnTheWithTheSession(alias, device, "BROWSER");
+    }
+
+    @Given("{string} signs in on the {string} in the installed app")
+    public void signsInOnTheInTheInstalledApp(String alias, String device) {
+        signsInOnTheWithTheSession(alias, device, "APP");
+    }
+
+    @When("{int} days pass with the nightly clean-up")
+    public void daysPassWithTheNightlyCleanUp(int days) {
+        for (int day = 0; day < days; day++) {
+            clock.advance(Duration.ofDays(1));
+            cleanup.cleanUp();
+        }
+    }
+
+    @When("another day passes with the nightly clean-up")
+    public void anotherDayPassesWithTheNightlyCleanUp() {
+        daysPassWithTheNightlyCleanUp(1);
+    }
+
+    @Then("the devices answer:")
+    public void theDevicesAnswer(List<Map<String, String>> rows) {
+        List<Map<String, String>> answered = new ArrayList<>();
+        for (Map<String, String> row : rows) {
+            theDeviceAsksTheStatusOfItsSignIn(row.get("device"));
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The %s was answered %s", row.get("device"), api.lastResponse().getBody())
+                    .isEqualTo(200);
+            JsonNode answer = api.lastResponseJson();
+            assertThat(answer.propertyNames()).containsExactlyInAnyOrder("status", "administrator");
+            answered.add(Map.of("device", row.get("device"), "status", answer.get("status").asString(),
+                    "administrator", String.valueOf(answer.get("administrator").asBoolean())));
+        }
+        assertThat(answered).containsExactlyElementsOf(rows);
     }
 
     @Given("{string} signs in on the {string} with the session {string}")
@@ -353,6 +402,8 @@ public class DonorDevicesStepDefinitions {
             return switch (name) {
                 case "iPhone" -> "IPHONE";
                 case "Mac" -> "MAC";
+                case "iPad" -> "IPAD";
+                case "Android" -> "ANDROID";
                 default -> "WINDOWS";
             };
         }

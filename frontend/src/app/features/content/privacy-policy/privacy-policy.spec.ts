@@ -162,6 +162,9 @@ describe('Given the privacy policy page', () => {
     expect(paragraph).toContain(
       'Když správci roli odebereme, aplikace mu kopii správy už neotevře ani do ní nic nestáhne',
     );
+    expect(paragraph).toContain(
+      'jeho vlastní dárcovská kopie po odebrání role zůstane. Výmaz vašich údajů se do kopií promítne při jejich příští synchronizaci.',
+    );
   });
 
   it('when it renders, then the cookies section names the verification keys kept in the browser', () => {
@@ -382,7 +385,7 @@ describe('Given the privacy policy page', () => {
     expect(sectionText('Jak dlouho údaje uchováváme')).toContain('zálohy');
   });
 
-  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators', () => {
+  it('when it renders, then it says an erasure keeps the issued receipts on the server unchanged, with the name and address on them, and the history of the administrators, and deletes the copies on the devices', () => {
     const erasure =
       texts('#prava p').find((paragraph) => paragraph.includes('Zrušení dárcovského účtu')) ?? '';
 
@@ -398,7 +401,13 @@ describe('Given the privacy policy page', () => {
     expect(erasure).toContain(
       'Na serveru zůstane i záznam o tom, co správci webu udělali, včetně vašeho výmazu; může uvádět i číslo vašeho bankovního účtu.',
     );
-    expect(erasure).not.toContain('zařízení');
+    expect(erasure).toContain(
+      'Kopii vašich údajů, kterou si dárcovský portál uložil do zařízení, kde jste byli přihlášení, zařízení zpravidla smaže, až se příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
+    );
+    expect(erasure).toContain('Potvrzení, která jste si sami stáhli, zůstávají u vás.');
+    expect(erasure).toContain(
+      'Do kopií správy v zařízeních správců se výmaz promítne při jejich příští synchronizaci; historie změn správy v nich zůstává stejně jako na serveru.',
+    );
   });
 
   it('when it renders, then it says the backups on the server are deleted after about a month, so deleted data leave them by then', () => {
