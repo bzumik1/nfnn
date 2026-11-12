@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "added",
+    "path": "GET /api/donors/me/devices",
+    "scenario": "donors/donor_devices: *",
+    "field": "$.items[].session",
+    "reason": "Jakub 2026-11-11 (PR #574): the account's device list names the installed app apart from a browser, so each device carries the kind of session it already keeps (APP, REMEMBERED, BROWSER, PUBLIC); nothing new is stored",
+    "contract": "docs/api-contract.md, Devices; docs/security-overview.md, Devices"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorDevicesServiceTest > Given three signed-in devices, when they are listed from one of them, then that one comes first marked current and the rest follow by their last use",
+    "replacement": "donors.application.DonorDevicesServiceTest > Given three signed-in devices, when they are listed from one of them, then that one comes first marked current and the rest follow by their last use, each with its kind of session",
+    "reason": "PR #574 (Jakub 2026-11-11): each listed device carries its kind of session",
+    "contract": "docs/api-contract.md, Devices"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when the list is loading, then the card says so under its own heading and names browsers only",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when the list is loading, then the card says so under its own heading and names browsers and apps",
+    "reason": "PR #574 (Jakub 2026-11-11): the list names the installed app, so the intro says browsers and apps",
+    "contract": "docs/frontend-overview.md, donor area, details/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > then each row names the device, the browser and the times in Prague",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > then each row names the device, the browser, the kind of sign-in and the times in Prague",
+    "reason": "PR #574 (Jakub 2026-11-11): each row shows the last use, then the sign-in with the kind of session",
+    "contract": "docs/frontend-overview.md, donor area, details/"
+  }
+]
