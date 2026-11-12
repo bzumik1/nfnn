@@ -1426,7 +1426,7 @@ describe('Given an administrator editing a published news article on a device th
 
     it('then the page offers it above the form, which still shows the saved text', () => {
       expect(text(fixture, 'app-draft-offer')).toContain('Máte tu rozepsané úpravy');
-      expect(text(fixture, 'app-draft-offer')).toContain('z 06. 11. 2026 10:00');
+      expect(text(fixture, 'app-draft-offer')).toContain('z 6. 11. 2026 10:00');
       expect(text(fixture, 'app-draft-offer')).not.toContain('Uložená verze se od té doby změnila');
       expect(element<HTMLInputElement>(fixture, '#news-title').value).toBe('Zahrada pro děti');
     });
