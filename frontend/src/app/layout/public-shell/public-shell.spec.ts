@@ -14,6 +14,7 @@ import { filter, firstValueFrom } from 'rxjs';
 import { Location } from '@angular/common';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
+import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PublicShell } from './public-shell';
 
 describe('Given the public shell', () => {
@@ -56,6 +57,15 @@ describe('Given the public shell', () => {
     expect(click.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(host.querySelector('main'));
     fixture.nativeElement.remove();
+  });
+
+  it('when it goes, on the way into the donor area, then the pages of the tabs it kept go with it', () => {
+    const forget = vi.spyOn(TestBed.inject(KeptTabPages), 'forget');
+    const fixture = render();
+
+    fixture.destroy();
+
+    expect(forget).toHaveBeenCalledOnce();
   });
 });
 

@@ -85,15 +85,20 @@ describe('Given the payment panel on a phone or a tablet', () => {
         }
       },
     });
-    vi.stubGlobal('URL', {
-      ...URL,
-      createObjectURL: (blob: Blob) => {
-        const url = `blob:nfnn/${blobs.size + 1}`;
-        blobs.set(url, blob);
-        return url;
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static override createObjectURL(blob: Blob): string {
+          const url = `blob:nfnn/${blobs.size + 1}`;
+          blobs.set(url, blob);
+          return url;
+        }
+
+        static override revokeObjectURL(): void {
+          return;
+        }
       },
-      revokeObjectURL: () => undefined,
-    });
+    );
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
       this: HTMLAnchorElement,
     ) {

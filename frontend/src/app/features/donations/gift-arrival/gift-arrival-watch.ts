@@ -99,6 +99,11 @@ export class GiftArrivalWatch {
     this.kick(false);
   }
 
+  pageLeft(): void {
+    clearTimeout(this.dwell);
+    this.end();
+  }
+
   dismiss(): void {
     this.shown.set(null);
     this.thankedDonor = null;

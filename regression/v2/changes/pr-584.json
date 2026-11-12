@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a visitor who moves through the tabs and back > when they press Zpět with the keyboard on an article opened from the list, then the list returns and its heading takes the focus",
+    "replacement": "e2e/app-shell.spec.ts > Given a visitor who moves through the tabs and back > when they press Zpět with the keyboard on an article opened from the list, then the list returns and the link to that article takes the focus",
+    "reason": "PR #584: the list a tab keeps is drawn at once when Zpět leaves an article, so PageFocus (#341) focuses the link to the article left, as it was built to, instead of the list's heading it fell back to while a rebuilt list was still empty; the test's name says so",
+    "contract": "docs/frontend-overview.md, Switching tabs"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a visitor who moves through the tabs and back > when they press Zpět with the keyboard on an article opened from the list, then the list returns and its heading takes the focus #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a visitor who moves through the tabs and back > when they press Zpět with the keyboard on an article opened from the list, then the list returns and the link to that article takes the focus #2",
+    "reason": "PR #584: the list a tab keeps is drawn at once when Zpět leaves an article, so PageFocus (#341) focuses the link to the article left, as it was built to, instead of the list's heading it fell back to while a rebuilt list was still empty; the test's name says so",
+    "contract": "docs/frontend-overview.md, Switching tabs"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when a finger drags the article past half the width and rests, then the list shows under it and follows, and on letting go the list returns with its heading focused",
+    "replacement": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when a finger drags the article past half the width and rests, then the list shows under it and follows, and on letting go the list returns with the link to that article focused",
+    "reason": "PR #584: the list a tab keeps is drawn at once when Zpět leaves an article, so PageFocus (#341) focuses the link to the article left, as it was built to, instead of the list's heading it fell back to while a rebuilt list was still empty; the test's name says so",
+    "contract": "docs/frontend-overview.md, Switching tabs"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/page-transitions.spec.ts > Given a visitor reading the news on a phone > when they press Zpět on the article, then the article slides away off the list and the list heading takes the focus",
+    "replacement": "e2e/page-transitions.spec.ts > Given a visitor reading the news on a phone > when they press Zpět on the article, then the article slides away off the list and the link to that article takes the focus",
+    "reason": "PR #584: the list a tab keeps is drawn at once when Zpět leaves an article, so PageFocus (#341) focuses the link to the article left, as it was built to, instead of the list's heading it fell back to while a rebuilt list was still empty; the test's name says so",
+    "contract": "docs/frontend-overview.md, Switching tabs"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/page-transitions.spec.ts > Given a visitor reading the news on a phone > when they press Zpět on the article, then the article slides away off the list and the list heading takes the focus #2",
+    "replacement": "e2e/page-transitions.spec.ts > Given a visitor reading the news on a phone > when they press Zpět on the article, then the article slides away off the list and the link to that article takes the focus #2",
+    "reason": "PR #584: the list a tab keeps is drawn at once when Zpět leaves an article, so PageFocus (#341) focuses the link to the article left, as it was built to, instead of the list's heading it fell back to while a rebuilt list was still empty; the test's name says so",
+    "contract": "docs/frontend-overview.md, Switching tabs"
+  }
+]

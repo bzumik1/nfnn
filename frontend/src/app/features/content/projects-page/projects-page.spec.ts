@@ -2,9 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, RouteReuseStrategy } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
 import { ProjectResponse } from '../projects-api';
 import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
 import { newsArticle } from '../testing/news-fixtures';
@@ -305,5 +306,79 @@ describe('Given the Pomáháme tab', () => {
 
     expect(page.querySelector('.ui-eyebrow')?.closest('app-donate-band')).not.toBeNull();
     expect(page.querySelector('.stories-intro .ui-eyebrow')).toBeNull();
+  });
+});
+
+describe('Given Pomáháme kept while the visitor is on another tab', () => {
+  let http: HttpTestingController;
+  let harness: RouterTestingHarness;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([
+          { path: 'projekty', component: ProjectsPage },
+          { path: 'o-nas', component: Elsewhere },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(false).asReadonly() } },
+        { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/projekty');
+    answerStories([STORIES[0]]);
+    await harness.fixture.whenStable();
+    await harness.navigateByUrl('/o-nas');
+  });
+
+  afterEach(() => http.verify());
+
+  function answerStories(stories: ProjectResponse[]): void {
+    http
+      .match((request) => request.url === '/api/content/home')
+      .forEach((request) => request.flush({ news: [], projects: [] }));
+    http
+      .expectOne((request) => request.url === '/api/content/news')
+      .flush({ items: [], page: 0, size: 50, total: 0, hasMore: false });
+    http
+      .expectOne((request) => request.url === '/api/content/projects')
+      .flush({ items: stories, page: 0, size: 50, total: stories.length, hasMore: false });
+  }
+
+  async function titles(): Promise<string[]> {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    return [...harness.routeNativeElement!.querySelectorAll('.tile-title')].map((title) =>
+      (title.textContent ?? '').trim(),
+    );
+  }
+
+  it('when the visitor returns, then the stories they saw stay shown while the stories are asked for again', async () => {
+    await harness.navigateByUrl('/projekty');
+
+    expect(await titles()).toEqual(['Děti s rakovinou']);
+    expect(harness.routeNativeElement!.textContent).not.toContain('Načítáme');
+
+    answerStories([STORIES[1], STORIES[0]]);
+    expect(await titles()).toEqual(['Sofinka', 'Děti s rakovinou']);
+  });
+
+  it('when the stories cannot be asked for again, then the stories they saw stay shown', async () => {
+    await harness.navigateByUrl('/projekty');
+    http
+      .match((request) => request.url === '/api/content/home')
+      .forEach((request) => request.flush({ news: [], projects: [] }));
+    http
+      .expectOne((request) => request.url === '/api/content/news')
+      .flush({ items: [], page: 0, size: 50, total: 0, hasMore: false });
+    http
+      .expectOne((request) => request.url === '/api/content/projects')
+      .flush(null, { status: 500, statusText: 'Error' });
+
+    expect(await titles()).toEqual(['Děti s rakovinou']);
+    expect(harness.routeNativeElement!.querySelector('[role="alert"]')).toBeNull();
   });
 });

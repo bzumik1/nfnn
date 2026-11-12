@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, RouteReuseStrategy, withInMemoryScrolling } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
+import { KeptTabPages } from './kept-tab-pages';
 import { TabMemory } from './tab-memory';
 
 @Component({ template: '' })
@@ -62,11 +64,121 @@ describe('Given the memory of the tabs', () => {
     expect(memory.isAtRoot(donate)).toBe(false);
   });
 
+  it('when a section of a tab was opened, then the tab returns to its page without the section', async () => {
+    await router.navigateByUrl('/o-nas#kontakt');
+    await router.navigateByUrl('/prispet');
+
+    expect(memory.urlFor(about)).toBe('/o-nas');
+  });
+
   it('when a page outside the tabs is shown, then no tab is current', async () => {
     await router.navigateByUrl('/o-nas');
     await router.navigateByUrl('/darce/prehled');
 
     expect(memory.currentTab()).toBeNull();
     expect(memory.urlFor(about)).toBe('/o-nas');
+  });
+});
+
+describe('Given pages of the tabs kept while the visitor is away', () => {
+  let harness: RouterTestingHarness;
+  let memory: TabMemory;
+  let scrolledTo: ScrollToOptions[];
+
+  beforeEach(async () => {
+    scrolledTo = [];
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        scrolledTo.push(options);
+      }
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          APP_TABS.map((tab) => ({ path: tab.path.slice(1), component: Blank })),
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
+        { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+      ],
+    });
+    memory = TestBed.inject(TabMemory);
+    harness = await RouterTestingHarness.create();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  });
+
+  function scrolledBy(top: number): void {
+    Object.defineProperty(window, 'scrollY', { value: top, configurable: true });
+  }
+
+  async function navigateAndRender(url: string): Promise<void> {
+    await harness.navigateByUrl(url);
+    TestBed.tick();
+  }
+
+  it('when the visitor switches back by the tab bar, then the tab opens where they left it, at once and without the router scrolling', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    await memory.open(APP_TABS[0]);
+    scrolledBy(0);
+    scrolledTo = [];
+
+    await memory.open(APP_TABS[1]);
+    TestBed.tick();
+
+    expect(navigate).toHaveBeenLastCalledWith('/aktuality', { scroll: 'manual' });
+    expect(scrolledTo).toEqual([
+      { top: 420, behavior: 'instant' },
+      { top: 420, behavior: 'instant' },
+    ]);
+  });
+
+  it('when the visitor opens a tab not seen before, then it opens at its top', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+
+    await memory.open(APP_TABS[2]);
+    TestBed.tick();
+
+    expect(scrolledTo.at(-1)).toEqual({ top: 0, behavior: 'instant' });
+  });
+
+  it('when a link leads back to a kept page, then it is put back where it was left, at once', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    await navigateAndRender('/o-nas');
+    scrolledBy(0);
+
+    await navigateAndRender('/aktuality');
+
+    expect(scrolledTo.at(-1)).toEqual({ top: 420, behavior: 'instant' });
+  });
+
+  it('when a link leads to a section of a kept page, then the page is left to the section rather than put back where it was', async () => {
+    await harness.navigateByUrl('/o-nas');
+    scrolledBy(420);
+    await navigateAndRender('/aktuality');
+    scrolledTo = [];
+
+    await navigateAndRender('/o-nas#kontakt');
+
+    expect(scrolledTo).not.toContainEqual({ top: 420, behavior: 'instant' });
+  });
+
+  it('when the kept pages were let go, then the tab opens at its top', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    await memory.open(APP_TABS[0]);
+    TestBed.inject(KeptTabPages).forget();
+    scrolledBy(0);
+
+    await memory.open(APP_TABS[1]);
+    TestBed.tick();
+
+    expect(scrolledTo.at(-1)).toEqual({ top: 0, behavior: 'instant' });
   });
 });

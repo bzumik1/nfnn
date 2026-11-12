@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { whenLeft, whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 
 export const NOT_FOUND_TITLE = $localize`:@@content.notFound.pageTitle:Stránka nenalezena | Nová naděje – nadační fond`;
 
@@ -23,11 +24,24 @@ export class NotFound implements OnInit, OnDestroy {
 
   readonly missing = input<'news' | 'project' | null>(null);
 
+  constructor() {
+    whenLeft(() => this.letIndex());
+    whenShownAgain(() => this.keepFromIndex());
+  }
+
   ngOnInit(): void {
-    this.meta.updateTag({ name: 'robots', content: 'noindex' });
+    this.keepFromIndex();
   }
 
   ngOnDestroy(): void {
+    this.letIndex();
+  }
+
+  private keepFromIndex(): void {
+    this.meta.updateTag({ name: 'robots', content: 'noindex' });
+  }
+
+  private letIndex(): void {
     this.meta.removeTag('name="robots"');
   }
 }

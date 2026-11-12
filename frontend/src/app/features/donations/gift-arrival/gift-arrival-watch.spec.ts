@@ -282,6 +282,14 @@ describe('Given the watch for an arriving gift', () => {
       expect(feed.asks).toBe(0);
     });
 
+    it('then leaving the page that holds the panel ends the watch, as closing it did', async () => {
+      watch.pageLeft();
+
+      expect(feed.following).toBe(0);
+      await advance(GIFT_WATCH_MS);
+      expect(feed.asks).toBe(0);
+    });
+
     it('then disabling the panel ends the watch', async () => {
       watch.enable(false);
 

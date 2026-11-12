@@ -101,7 +101,7 @@ test.describe('Given the app on the home screen of a phone with an article opene
     );
   });
 
-  test('when a finger drags the article past half the width and rests, then the list shows under it and follows, and on letting go the list returns with its heading focused', async ({
+  test('when a finger drags the article past half the width and rests, then the list shows under it and follows, and on letting go the list returns with the link to that article focused', async ({
     page,
   }) => {
     await openArticleFromList(page);
@@ -122,7 +122,9 @@ test.describe('Given the app on the home screen of a phone with an article opene
     await finger.up();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
+    await expect(
+      page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
+    ).toBeFocused();
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 

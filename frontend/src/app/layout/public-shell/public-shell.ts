@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
@@ -17,6 +18,7 @@ import {
   RouterOutlet,
 } from '@angular/router';
 import { CompactLayout } from '../../core/layout/compact-layout';
+import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PageFocus } from '../../core/navigation/page-focus';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
@@ -50,6 +52,8 @@ export class PublicShell {
 
   constructor() {
     inject(SetupRedirect).checkOnce();
+    const keptTabPages = inject(KeptTabPages);
+    inject(DestroyRef).onDestroy(() => keptTabPages.forget());
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationEnd && this.pageFocus.movesOnLastNavigation()) {
         const fragment = this.router.parseUrl(event.urlAfterRedirects).fragment;

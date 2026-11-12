@@ -1,4 +1,4 @@
-import { DestroyRef, Directive, inject } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 import { NgForm } from '@angular/forms';
 
 import { DirtyForms } from './dirty-forms';
@@ -10,7 +10,10 @@ export class TrackedForm {
     if (form === null) {
       return;
     }
-    const unregister = inject(DirtyForms).register(() => form.dirty === true);
+    const element = inject<ElementRef<HTMLFormElement>>(ElementRef).nativeElement;
+    const unregister = inject(DirtyForms).register(
+      () => form.dirty === true && element.isConnected,
+    );
     inject(DestroyRef).onDestroy(unregister);
   }
 }

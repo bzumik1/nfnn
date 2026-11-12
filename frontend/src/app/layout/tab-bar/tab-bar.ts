@@ -12,7 +12,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { SoftKeyboard } from '../../core/layout/soft-keyboard';
 import { APP_TABS, AppTab, AppTabId } from '../../core/navigation/app-tabs';
 import { BackTarget } from '../../core/navigation/back-target';
@@ -32,7 +31,6 @@ const CLICK_AFTER_DRAG_MS = 400;
 export class TabBar {
   protected readonly star = FOUNDATION_STAR;
   protected readonly starGlyphViewBox = '1238.5 130.6 553 553';
-  private readonly router = inject(Router);
   protected readonly memory = inject(TabMemory);
   protected readonly keyboard = inject(SoftKeyboard);
   private readonly document = inject(DOCUMENT);
@@ -89,7 +87,7 @@ export class TabBar {
       this.backTarget.toTabRoot(tab.path);
       return;
     }
-    void this.router.navigateByUrl(this.memory.urlFor(tab));
+    void this.memory.open(tab);
   }
 
   private letGo(index: number | null): void {
@@ -101,7 +99,7 @@ export class TabBar {
       return;
     }
     this.chosen.set(tab.id);
-    void this.router.navigateByUrl(this.memory.urlFor(tab)).finally(() => this.chosen.set(null));
+    void this.memory.open(tab).finally(() => this.chosen.set(null));
   }
 
   private scrollToTop(): void {
