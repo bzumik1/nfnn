@@ -30,6 +30,7 @@ export const PAGE_TRANSITION_LONGEST_MS = 2000;
 export const PAGE_COVER_LONGEST_MS = 5000;
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 
 interface Running {
   readonly kind: PageTransitionKind;
@@ -84,7 +85,7 @@ export class PageTransitions {
       first: event.id === 1 || !this.router.navigated,
       reducedMotion: view?.matchMedia?.(LESS_MOTION).matches !== false,
       compact: this.compact(),
-      dialogOpen: this.document.querySelector('dialog[open]') !== null,
+      dialogOpen: this.document.querySelector(SHOWN_DIALOG) !== null,
       trigger: this.trigger,
       back: extras.info === BACK_NAVIGATION,
       replaceUrl: extras.replaceUrl === true,
@@ -143,6 +144,7 @@ export class PageTransitions {
       view.clearTimeout(this.finishing);
     }
     this.finishing = view.setTimeout(() => this.finish(), PAGE_TRANSITION_LONGEST_MS);
+    view.getComputedStyle(page).getPropertyValue('animation-name');
     const motions = typeof page.getAnimations === 'function' ? page.getAnimations() : [];
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(() => {
       if (this.running === running) {
