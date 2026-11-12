@@ -68,4 +68,16 @@ describe('Given a page with two tracked forms', () => {
 
     expect(dirtyForms.any()).toBe(false);
   });
+
+  it('when the page holding the half-typed form is kept out of view while another tab is shown, then nothing in view is half-typed', () => {
+    type('message', 'Dobrý den');
+    const page = fixture.nativeElement as HTMLElement;
+    const place = page.parentElement!;
+
+    page.remove();
+
+    expect(dirtyForms.any()).toBe(false);
+    place.append(page);
+    expect(dirtyForms.any()).toBe(true);
+  });
 });

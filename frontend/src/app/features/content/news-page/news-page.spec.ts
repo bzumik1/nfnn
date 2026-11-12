@@ -4,9 +4,21 @@ import {
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  ParamMap,
+  provideRouter,
+  RouteReuseStrategy,
+} from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { ProjectResponse } from '../projects-api';
 import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
@@ -17,6 +29,10 @@ import { PROBE_PATH } from '../../../core/connectivity/connectivity';
 import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
+import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+
+@Component({ template: '' })
+class OtherTab {}
 
 const NEWS = (page: number) => `/api/content/news?page=${page}&size=10`;
 const PROJECTS = (page: number) => `/api/content/projects?page=${page}&size=50`;
@@ -561,5 +577,83 @@ describe('Given a visitor opening Aktuality', () => {
     expect(text(root, '[role="alert"]')).toBe(
       'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',
     );
+  });
+});
+
+describe('Given Aktuality kept while the visitor is on another tab', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+
+  async function openAndLeave(stories: (request: TestRequest) => void): Promise<void> {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([
+          { path: 'aktuality', component: NewsPage },
+          { path: 'o-nas', component: OtherTab },
+        ]),
+        { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/aktuality');
+    http.expectOne(NEWS(0)).flush(page([lookBack2025, lookBack2024], 0, 2));
+    stories(http.expectOne(PROJECTS(0)));
+    await harness.fixture.whenStable();
+    await harness.navigateByUrl('/o-nas');
+  }
+
+  function storiesArrive(request: TestRequest): void {
+    request.flush(page([sofinka], 0, 1, 50));
+  }
+
+  async function returned(): Promise<HTMLElement> {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    return harness.routeNativeElement!;
+  }
+
+  afterEach(() => http.verify());
+
+  it('when the visitor returns, then the news they saw stay shown while the news are asked for again', async () => {
+    await openAndLeave(storiesArrive);
+
+    await harness.navigateByUrl('/aktuality');
+    const asked = http.expectOne(NEWS(0));
+    const shown = await returned();
+
+    expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    expect(shown.textContent).not.toContain('Načítáme aktuality');
+
+    asked.flush(page([lookBack2023, lookBack2025, lookBack2024], 0, 3));
+    expect(text(await returned(), '.featured h2')).toBe('Ohlédnutí za rokem 2023');
+  });
+
+  it('when the stories failed before, then the news stay shown while the stories are asked for again', async () => {
+    await openAndLeave((request) => request.flush(null, { status: 500, statusText: 'Error' }));
+
+    await harness.navigateByUrl('/aktuality');
+    http.expectOne(NEWS(0)).flush(page([lookBack2025, lookBack2024], 0, 2));
+    const stories = http.expectOne(PROJECTS(0));
+    const shown = await returned();
+
+    expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    expect(shown.textContent).not.toContain('Načítáme aktuality');
+
+    stories.flush(page([sofinka], 0, 1, 50));
+    expect(text(await returned(), 'app-year-stories h2')).toBe('Příběhy z roku 2025');
+  });
+
+  it('when the news cannot be asked for again, then the news they saw stay shown', async () => {
+    await openAndLeave(storiesArrive);
+
+    await harness.navigateByUrl('/aktuality');
+    http.expectOne(NEWS(0)).flush(null, { status: 0, statusText: 'Unknown Error' });
+    const shown = await returned();
+
+    expect(text(shown, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    expect(shown.querySelector('[role="alert"]')).toBeNull();
   });
 });

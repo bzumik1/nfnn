@@ -1,9 +1,9 @@
 import { HttpBackend, HttpClient, HttpXhrBackend } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component, ErrorHandler } from '@angular/core';
+import { Component, ErrorHandler, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { REMOVE_STYLES_ON_COMPONENT_DESTROY } from '@angular/platform-browser';
-import { provideRouter, Router, RouterPreloader } from '@angular/router';
+import { provideRouter, Router, RouteReuseStrategy, RouterPreloader } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -14,6 +14,7 @@ import {
   connectivityAtStart,
   dialogHistoryAtStart,
   keptPageStyles,
+  keptTabPages,
   navigationAtStart,
   tabPagesPreloading,
 } from './app.config';
@@ -23,6 +24,8 @@ import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
+import { KEPT_PAGES_OWNER, KeptTabPages } from './core/navigation/kept-tab-pages';
+import { AuthStore } from './core/auth/auth-store';
 import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
@@ -154,6 +157,22 @@ describe('Given the transitions between pages', () => {
 
   it('when the app starts, then the transitions follow its navigations', () => {
     expect(appConfig.providers).toContain(pageTransitionsAtStart);
+  });
+});
+
+describe('Given the pages of the tabs', () => {
+  it('when the app starts, then the router keeps them while another tab is shown, for the donor signed in when they were shown', () => {
+    const donor = signal<{ id: string } | null>({ id: 'jana' });
+    TestBed.configureTestingModule({
+      providers: [keptTabPages, { provide: AuthStore, useValue: { donor } }],
+    });
+
+    expect(TestBed.inject(RouteReuseStrategy)).toBe(TestBed.inject(KeptTabPages));
+    const owner = TestBed.inject(KEPT_PAGES_OWNER);
+    expect(owner()).toBe('jana');
+    donor.set(null);
+    expect(owner()).toBeNull();
+    expect(appConfig.providers).toContain(keptTabPages);
   });
 });
 

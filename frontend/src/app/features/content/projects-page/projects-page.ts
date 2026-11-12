@@ -11,7 +11,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { map, Subscription } from 'rxjs';
+import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
@@ -55,6 +56,7 @@ export class ProjectsPage {
   private readonly store = inject(PublishedStoriesStore);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private storiesLoad = Subscription.EMPTY;
 
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly state = signal<LoadState>(this.store.stories() ? 'ready' : 'loading');
@@ -112,6 +114,11 @@ export class ProjectsPage {
 
   constructor() {
     this.load();
+    whenShownAgain(() => {
+      if (this.storiesLoad.closed) {
+        this.load();
+      }
+    });
     inject(HomeApi)
       .load()
       .pipe(takeUntilDestroyed())
@@ -160,7 +167,8 @@ export class ProjectsPage {
   }
 
   private load(): void {
-    this.store
+    this.storiesLoad.unsubscribe();
+    this.storiesLoad = this.store
       .load()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

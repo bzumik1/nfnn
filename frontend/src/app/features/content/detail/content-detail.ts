@@ -12,8 +12,9 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { map, Observable } from 'rxjs';
+import { map, Observable, Subscription } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { whenLeft, whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { NewsApi } from '../news-api';
 import { NOT_FOUND_TITLE, NotFound } from '../not-found/not-found';
 import { ProjectsApi } from '../projects-api';
@@ -45,9 +46,17 @@ export class ContentDetail {
   protected readonly kind: ContentKind = this.route.snapshot.data['kind'] as ContentKind;
   protected readonly state = signal<LoadState>('loading');
   protected readonly page = signal<ContentPage | null>(null);
+  private articleLoad = Subscription.EMPTY;
 
   constructor() {
     this.load();
+    whenLeft(() => this.articleLoad.unsubscribe());
+    whenShownAgain(() => {
+      queueMicrotask(() => this.nameTabAfterPage());
+      if (this.articleLoad.closed) {
+        this.load(true);
+      }
+    });
     effect(() => {
       if (this.state() === 'ready') {
         afterNextRender(() => this.article()?.focusHeading(), { injector: this.injector });
@@ -59,21 +68,36 @@ export class ContentDetail {
     this.load();
   }
 
-  private load(): void {
+  private nameTabAfterPage(): void {
+    const page = this.page();
+    if (this.state() === 'missing') {
+      this.titleService.setTitle(NOT_FOUND_TITLE);
+    } else if (page !== null) {
+      this.titleService.setTitle(`${page.title} | ${SITE_NAME}`);
+    }
+  }
+
+  private load(quietly = false): void {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';
-    this.state.set('loading');
-    this.fetch(slug)
+    this.articleLoad.unsubscribe();
+    if (!quietly) {
+      this.state.set('loading');
+    }
+    this.articleLoad = this.fetch(slug)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
           this.page.set(page);
-          this.titleService.setTitle(`${page.title} | ${SITE_NAME}`);
+          this.nameTabAfterPage();
           this.state.set('ready');
           if (page.slug !== slug) {
             void this.router.navigate([page.backPath, page.slug], { replaceUrl: true });
           }
         },
         error: (failure: unknown) => {
+          if (quietly && this.state() === 'ready') {
+            return;
+          }
           const missing =
             problemTypeEndsWith(failure, 'content/news-not-found') ||
             problemTypeEndsWith(failure, 'content/project-not-found');

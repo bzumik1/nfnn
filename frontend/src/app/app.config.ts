@@ -14,6 +14,7 @@ import {
   InMemoryScrollingOptions,
   NavigationErrorHandlerFeature,
   provideRouter,
+  RouteReuseStrategy,
   withInMemoryScrolling,
   withNavigationErrorHandler,
   withPreloading,
@@ -30,6 +31,7 @@ import { BackTarget } from './core/navigation/back-target';
 import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
+import { KEPT_PAGES_OWNER, KeptTabPages } from './core/navigation/kept-tab-pages';
 import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
@@ -67,6 +69,17 @@ export const tabPagesPreloading = withPreloading(TabPagesPreloading);
 export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
   (error) => void inject(ChunkLoadRecovery).handleNavigationError(error),
 );
+
+export const keptTabPages: Provider[] = [
+  { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+  {
+    provide: KEPT_PAGES_OWNER,
+    useFactory: () => {
+      const auth = inject(AuthStore);
+      return () => auth.donor()?.id ?? null;
+    },
+  },
+];
 
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
@@ -123,6 +136,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature, tabPagesPreloading),
+    keptTabPages,
     appHttpClient,
     provideAppServiceWorker(),
     provideAppInitializer(() => {
