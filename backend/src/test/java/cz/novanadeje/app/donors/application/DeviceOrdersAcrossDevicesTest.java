@@ -11,7 +11,10 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.donors.domain.SecondFactor;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -83,6 +86,7 @@ class DeviceOrdersAcrossDevicesTest {
             new Transition(DeviceStatus.SIGNED_OUT, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN),
             new Transition(DeviceStatus.WIPE_ALL, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN),
             new Transition(DeviceStatus.WIPE_ADMINISTRATION, StepKind.TIME_PASSES, DeviceStatus.UNKNOWN));
+    private static final TotpSecret AUTHENTICATOR_SECRET = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
     private static final List<SessionKind> KINDS_THAT_KEEP_A_COPY = List.of(SessionKind.BROWSER, SessionKind.REMEMBERED, SessionKind.APP);
 
     @Autowired
@@ -103,6 +107,8 @@ class DeviceOrdersAcrossDevicesTest {
     private DonorRepository donors;
     @Autowired
     private DonorDeviceRepository devices;
+    @Autowired
+    private SecondFactorRepository secondFactors;
     @Autowired
     private MutableClock clock;
     @Autowired
@@ -169,6 +175,9 @@ class DeviceOrdersAcrossDevicesTest {
             this.jana = new Account(register("Jana Nováková", "jana@example.cz", "4821937561"));
             this.petr = new Account(register("Petr Svoboda", "petr@example.cz", "5931048672"));
             this.acting = register("Eva Správcová", "eva@example.cz", "6041159783");
+            Donor administrator = donors.findById(acting).orElseThrow();
+            administrator.grantAdministration();
+            donors.save(administrator);
         }
 
         void play() {
@@ -433,6 +442,7 @@ class DeviceOrdersAcrossDevicesTest {
                     new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(symbol), LocaleCode.CS, now);
             donor.verifyEmail(now);
             donors.save(donor);
+            secondFactors.save(SecondFactor.reconstitute(donor.id(), AUTHENTICATOR_SECRET, now, now, null));
             return donor.id();
         }
     }
