@@ -39,7 +39,6 @@ import {
   signIn,
   session,
   openUnlockedAdministrationPage,
-  serveAdministrationCopy,
 } from './donor-session';
 import {
   chunkLoadNotice,
