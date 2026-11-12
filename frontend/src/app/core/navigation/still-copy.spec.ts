@@ -26,7 +26,7 @@ describe('Given the page a visitor leaves', () => {
   it('when it is copied, then the copy looks the same but holds no id, name or autofocus a live page needs', () => {
     (shell.querySelector('#castka') as HTMLInputElement).value = '500';
 
-    const copy = stillCopyOf(shell, { withTabBar: true });
+    const copy = stillCopyOf(shell);
 
     expect(copy.querySelector('h1')?.textContent).toBe('Článek');
     expect(copy.querySelectorAll('main [id]:not(svg *), [name], [autofocus]')).toHaveLength(0);
@@ -36,20 +36,28 @@ describe('Given the page a visitor leaves', () => {
   });
 
   it('when it is copied, then the ids inside a drawing stay, so its gradients still draw', () => {
-    expect(stillCopyOf(shell, { withTabBar: true }).querySelector('#prechod')).not.toBeNull();
+    expect(stillCopyOf(shell).querySelector('#prechod')).not.toBeNull();
   });
 
   it('when it is copied, then nothing in the copy loads a frame again', () => {
-    expect(stillCopyOf(shell, { withTabBar: true }).querySelector('iframe')).toBeNull();
+    expect(stillCopyOf(shell).querySelector('iframe')).toBeNull();
   });
 
-  it('when the page after it shows the tab bar too, then the copy leaves the tab bar to the live page', () => {
-    expect(stillCopyOf(shell, { withTabBar: false }).querySelector('app-tab-bar')).toBeNull();
-    expect(stillCopyOf(shell, { withTabBar: true }).querySelector('app-tab-bar')).not.toBeNull();
+  it('when a sheet is open over the page, then the copy holds the page without the sheet', () => {
+    const sheet = document.createElement('dialog');
+    sheet.setAttribute('open', '');
+    sheet.textContent = 'Účet';
+    shell.append(sheet);
+
+    const copy = stillCopyOf(shell);
+
+    expect(copy.querySelector('dialog')).toBeNull();
+    expect(copy.querySelector('h1')?.textContent).toBe('Článek');
+    expect(copy.querySelector('app-tab-bar')).not.toBeNull();
   });
 
   it('when it is copied, then the page itself is left as it was', () => {
-    stillCopyOf(shell, { withTabBar: false });
+    stillCopyOf(shell);
 
     expect(shell.querySelector('#obsah')).not.toBeNull();
     expect(shell.querySelector('app-tab-bar')).not.toBeNull();

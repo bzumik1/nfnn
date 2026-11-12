@@ -20,6 +20,37 @@
   box-shadow: var(--shadow-page-edge);
 }
 
+@media (display-mode: standalone) {
+  .page-transition__page--over {
+    border-start-start-radius: var(--radius-page-card);
+    border-end-start-radius: var(--radius-page-card);
+  }
+}
+
+.page-transition__scroller .back-button {
+  visibility: hidden;
+}
+
+.page-transition__bar,
+.page-transition__bar-part {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.page-transition__bar-part {
+  visibility: hidden;
+
+  .app-header::before,
+  .app-header::after {
+    display: none;
+  }
+
+  .back-button {
+    visibility: visible;
+  }
+}
+
 .page-transition__scroller {
   position: absolute;
   inset: 0;
@@ -54,7 +85,8 @@
 
 .page-transition--moving {
   .page-transition__page,
-  .page-transition__dim {
+  .page-transition__dim,
+  .page-transition__bar-part {
     animation-duration: var(--duration-page);
     animation-timing-function: var(--ease-page);
     animation-fill-mode: both;
@@ -82,6 +114,14 @@
 
   &.page-transition--pop .page-transition__dim {
     animation-name: page-undim;
+  }
+
+  .page-transition__bar-part--leaving {
+    animation-name: page-undim;
+  }
+
+  .page-transition__bar-part--arriving {
+    animation-name: page-dim;
   }
 }
 

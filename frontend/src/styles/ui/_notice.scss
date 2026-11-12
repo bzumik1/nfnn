@@ -109,7 +109,7 @@
   }
 }
 
-html:has(app-tab-bar) .ui-notice--floating {
+html:has(app-root app-tab-bar) .ui-notice--floating {
   bottom: calc(var(--tab-bar-clearance) + var(--space-2));
 }
 
@@ -128,13 +128,13 @@ html:has(app-tab-bar) .ui-notice--floating {
 .has-floating-notice {
   scroll-padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
 
-  &:has(app-tab-bar) {
+  &:has(app-root app-tab-bar) {
     scroll-padding-bottom: calc(
       var(--floating-notice-height) + var(--space-8) + var(--tab-bar-clearance)
     );
   }
 
-  body:not(:has(app-site-footer, app-landing)) {
+  body:not(:has(app-root :is(app-site-footer, app-landing))) {
     padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
   }
 }
@@ -145,14 +145,14 @@ html:has(app-tab-bar) .ui-notice--floating {
       env(safe-area-inset-bottom)
   );
 
-  body:not(:has(app-site-footer, app-landing)) {
+  body:not(:has(app-root :is(app-site-footer, app-landing))) {
     padding-bottom: calc(
       var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) + var(--space-4) +
         env(safe-area-inset-bottom)
     );
   }
 
-  &:has(app-tab-bar) {
+  &:has(app-root app-tab-bar) {
     scroll-padding-bottom: calc(
       var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) + var(--space-4) +
         var(--tab-bar-clearance)

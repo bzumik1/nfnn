@@ -19,7 +19,7 @@ import {
   Scroll,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
-import { BACK_NAVIGATION, BackDestination, BackTarget } from './back-target';
+import { APP_DEPTH_KEY, BACK_NAVIGATION, BackDestination, BackTarget } from './back-target';
 import { SwipeSettle } from './back-swipe';
 import { NavigationFacts, PageTransitionKind, pageTransitionFor } from './page-transition-kind';
 import { chromeOf, RouteChrome } from './route-chrome';
@@ -32,11 +32,11 @@ export const PAGE_COVER_LONGEST_MS = 5000;
 export const KEPT_PAGES = 3;
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
 const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 
 interface Running {
   readonly kind: PageTransitionKind;
-  readonly withTabBar: boolean;
   readonly overlay: HTMLElement;
   readonly swiping: boolean;
   revealed: boolean;
@@ -46,7 +46,17 @@ interface KeptPage {
   readonly copy: HTMLElement | null;
   readonly scrollY: number;
   readonly ground: string;
-  readonly withTabBar: boolean;
+  readonly width: number;
+}
+
+interface PlacedPage {
+  readonly box: HTMLElement;
+  readonly copy: HTMLElement | null;
+}
+
+interface BarParts {
+  readonly leaving: HTMLElement | null;
+  readonly arriving: HTMLElement | null;
 }
 
 export interface SwipePreview {
@@ -112,14 +122,16 @@ export class PageTransitions {
     ) {
       return null;
     }
-    const behind = destination.kind === 'step' ? this.kept.get(destination.depth) : undefined;
-    const withTabBar = behind?.withTabBar ?? false;
-    const overlay = this.overlay('pop', withTabBar);
+    const behind = destination.kind === 'step' ? this.keptAt(destination.depth, view) : null;
+    const overlay = this.overlay('pop');
     overlay.classList.add(`${PAGE_TRANSITION_CLASS}--swipe`);
-    const under = this.place(overlay, behind ?? this.placeholder(), 'under');
-    const over = this.place(overlay, this.keep(layer, withTabBar), 'over');
+    const arriving = this.place(overlay, behind ?? this.placeholder(), 'under');
+    const leaving = this.place(overlay, this.keep(layer), 'over');
+    const bar = this.dressChrome(overlay, leaving, arriving);
+    const under = arriving.box;
+    const over = leaving.box;
     const dim = under.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__dim`);
-    const running: Running = { kind: 'pop', withTabBar, overlay, swiping: true, revealed: false };
+    const running: Running = { kind: 'pop', overlay, swiping: true, revealed: false };
     this.running = running;
     const width = Math.max(1, view.innerWidth);
     const settle = async (end: SwipeSettle): Promise<void> => {
@@ -135,6 +147,7 @@ export class PageTransitions {
         over.animate([{ transform: `translateX(${end.to}px)` }], timing),
         under.animate([{ transform: end.completes ? 'none' : parallaxAt(0) }], timing),
         ...(dim === null ? [] : [dim.animate([{ opacity: end.completes ? 0 : 1 }], timing)]),
+        ...barMotions(bar, end.completes ? 1 : 0, timing),
       ];
       await Promise.race([
         Promise.allSettled(motions.map((motion) => motion.finished)),
@@ -160,6 +173,7 @@ export class PageTransitions {
         if (dim !== null) {
           dim.style.opacity = String(1 - progress);
         }
+        followBar(bar, progress);
       },
       settle,
       slideBack: () =>
@@ -193,17 +207,28 @@ export class PageTransitions {
       from: { url: this.router.url, parent: this.chrome().parent },
       to: { url: event.urlAfterRedirects, parent: destination.parent },
     });
-    if (kind === null || layer === null || view === null) {
+    if (layer === null || view === null || !this.compact() || !motionAllowed(view)) {
       return;
     }
-    const withTabBar = this.chrome().tabBar !== destination.tabBar;
-    const overlay = this.overlay(kind, withTabBar);
-    const left = this.keep(layer, withTabBar);
+    const deepens =
+      !extras.skipLocationChange &&
+      this.trigger === 'imperative' &&
+      extras.info !== BACK_NAVIGATION &&
+      (!extras.replaceUrl || depthIn(extras.state) >= this.backTarget.nextDepth());
+    if (kind === null) {
+      if (deepens) {
+        this.keepBehind(this.backTarget.nextDepth() - 1, this.keep(layer));
+      }
+      return;
+    }
+    const overlay = this.overlay(kind);
+    const left = this.keep(layer);
     if (kind === 'push') {
       this.keepBehind(this.backTarget.nextDepth() - 1, left);
     }
-    this.place(overlay, left, kind === 'push' ? 'under' : 'over');
-    this.running = { kind, withTabBar, overlay, swiping: false, revealed: false };
+    const placed = this.place(overlay, left, kind === 'push' ? 'under' : 'over');
+    this.dressChrome(overlay, placed, null);
+    this.running = { kind, overlay, swiping: false, revealed: false };
     this.finishing = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
   }
 
@@ -238,13 +263,15 @@ export class PageTransitions {
         this.finish();
         return;
       }
-      const page = this.place(
+      const shown = this.place(
         running.overlay,
-        this.keep(layer, running.withTabBar),
+        this.keep(layer),
         running.kind === 'push' ? 'over' : 'under',
       );
+      const left = this.placedPage(running.overlay, running.kind === 'push' ? 'under' : 'over');
+      this.dressChrome(running.overlay, left, shown);
       running.overlay.classList.add(`${PAGE_TRANSITION_CLASS}--moving`);
-      this.finishWhenStill(running, page, view);
+      this.finishWhenStill(running, shown.box, view);
     });
   }
 
@@ -262,27 +289,37 @@ export class PageTransitions {
     });
   }
 
-  private overlay(kind: PageTransitionKind, withTabBar: boolean): HTMLElement {
+  private overlay(kind: PageTransitionKind): HTMLElement {
     const overlay = this.document.createElement('div');
     overlay.className = `${PAGE_TRANSITION_CLASS} ${PAGE_TRANSITION_CLASS}--${kind}`;
-    overlay.classList.toggle(`${PAGE_TRANSITION_CLASS}--under-tab-bar`, !withTabBar);
     overlay.setAttribute('aria-hidden', 'true');
     overlay.inert = true;
     this.document.body.append(overlay);
     return overlay;
   }
 
-  private keep(layer: HTMLElement, withTabBar: boolean): KeptPage {
+  private keep(layer: HTMLElement): KeptPage {
+    const view = this.document.defaultView;
     return {
-      copy: stillCopyOf(layer, { withTabBar }),
-      scrollY: this.document.defaultView?.scrollY ?? 0,
+      copy: stillCopyOf(layer),
+      scrollY: view?.scrollY ?? 0,
       ground: this.groundColour(),
-      withTabBar,
+      width: view?.innerWidth ?? 0,
     };
   }
 
   private placeholder(): KeptPage {
-    return { copy: null, scrollY: 0, ground: this.groundColour(), withTabBar: false };
+    return {
+      copy: null,
+      scrollY: 0,
+      ground: this.groundColour(),
+      width: this.document.defaultView?.innerWidth ?? 0,
+    };
+  }
+
+  private keptAt(depth: number, view: Window): KeptPage | null {
+    const kept = this.kept.get(depth);
+    return kept !== undefined && kept.width === view.innerWidth ? kept : null;
   }
 
   private keepBehind(depth: number, page: KeptPage): void {
@@ -297,14 +334,15 @@ export class PageTransitions {
     }
   }
 
-  private place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): HTMLElement {
+  private place(overlay: HTMLElement, kept: KeptPage, position: 'under' | 'over'): PlacedPage {
     const page = this.document.createElement('div');
     page.className = `${PAGE_TRANSITION_CLASS}__page ${PAGE_TRANSITION_CLASS}__page--${position}`;
     page.style.backgroundColor = kept.ground;
     const scroller = this.document.createElement('div');
     scroller.className = `${PAGE_TRANSITION_CLASS}__scroller`;
-    if (kept.copy !== null) {
-      scroller.append(kept.copy);
+    const copy = kept.copy === null ? null : (kept.copy.cloneNode(true) as HTMLElement);
+    if (copy !== null) {
+      scroller.append(copy);
     }
     page.append(scroller);
     if (position === 'under') {
@@ -316,7 +354,81 @@ export class PageTransitions {
       overlay.append(page);
     }
     scroller.scrollTop = kept.scrollY;
-    return page;
+    return { box: page, copy };
+  }
+
+  private placedPage(overlay: HTMLElement, position: 'under' | 'over'): PlacedPage | null {
+    const box = overlay.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__page--${position}`);
+    if (box === null) {
+      return null;
+    }
+    const scroller = box.querySelector(`.${PAGE_TRANSITION_CLASS}__scroller`);
+    return { box, copy: (scroller?.firstElementChild as HTMLElement | null) ?? null };
+  }
+
+  private dressChrome(
+    overlay: HTMLElement,
+    leaving: PlacedPage | null,
+    arriving: PlacedPage | null,
+  ): BarParts {
+    const leavingBar = leaving?.copy?.querySelector('.back-button') ?? null;
+    const arrivingBar = arriving?.copy?.querySelector('.back-button') ?? null;
+    const bothTabBars =
+      leaving?.copy?.querySelector('app-tab-bar') && arriving?.copy?.querySelector('app-tab-bar');
+    if (bothTabBars) {
+      leaving?.copy?.querySelectorAll('app-tab-bar').forEach((bar) => bar.remove());
+      arriving?.copy?.querySelectorAll('app-tab-bar').forEach((bar) => bar.remove());
+    }
+    overlay.classList.toggle(`${PAGE_TRANSITION_CLASS}--under-tab-bar`, Boolean(bothTabBars));
+    overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
+    const bar = this.document.createElement('div');
+    bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
+    overlay.append(bar);
+    const arrivingPart =
+      arrivingBar === null ? null : this.barPart(bar, arriving!.copy!, 'arriving');
+    const leavingPart = leavingBar === null ? null : this.barPart(bar, leaving!.copy!, 'leaving');
+    if (
+      leavingPart !== null &&
+      arrivingPart !== null &&
+      this.looksAlike(leavingPart, arrivingPart)
+    ) {
+      arrivingPart.remove();
+      leavingPart.classList.add(`${PAGE_TRANSITION_CLASS}__bar-part--still`);
+      return { leaving: null, arriving: null };
+    }
+    return { leaving: leavingPart, arriving: arrivingPart };
+  }
+
+  private barPart(bar: HTMLElement, copy: HTMLElement, side: 'leaving' | 'arriving'): HTMLElement {
+    const part = this.document.createElement('div');
+    part.className = `${PAGE_TRANSITION_CLASS}__bar-part ${PAGE_TRANSITION_CLASS}__bar-part--${side}`;
+    const header = copy.querySelector('app-header');
+    if (header !== null) {
+      part.append(header.cloneNode(true));
+    }
+    bar.append(part);
+    return part;
+  }
+
+  private looksAlike(leaving: HTMLElement, arriving: HTMLElement): boolean {
+    const view = this.document.defaultView;
+    const first = leaving.querySelector('.back-button');
+    const second = arriving.querySelector('.back-button');
+    if (view === null || first === null || second === null) {
+      return false;
+    }
+    const one = view.getComputedStyle(first);
+    const other = view.getComputedStyle(second);
+    const box = first.getBoundingClientRect();
+    const otherBox = second.getBoundingClientRect();
+    return (
+      LOOKS.every(
+        (property) => one.getPropertyValue(property) === other.getPropertyValue(property),
+      ) &&
+      box.left === otherBox.left &&
+      box.top === otherBox.top &&
+      box.width === otherBox.width
+    );
   }
 
   private pageDurationMs(): number {
@@ -354,6 +466,38 @@ export class PageTransitions {
     this.running = null;
     this.handingOver = false;
   }
+}
+
+function motionAllowed(view: Window): boolean {
+  return view.matchMedia?.(LESS_MOTION).matches === false;
+}
+
+function depthIn(state: unknown): number {
+  const depth =
+    typeof state === 'object' && state !== null
+      ? (state as Record<string, unknown>)[APP_DEPTH_KEY]
+      : undefined;
+  return typeof depth === 'number' ? depth : 0;
+}
+
+function followBar(bar: BarParts, progress: number): void {
+  if (bar.leaving !== null) {
+    bar.leaving.style.opacity = String(1 - progress);
+  }
+  if (bar.arriving !== null) {
+    bar.arriving.style.opacity = String(progress);
+  }
+}
+
+function barMotions(
+  bar: BarParts,
+  progress: number,
+  timing: KeyframeAnimationOptions,
+): Animation[] {
+  return [
+    ...(bar.leaving === null ? [] : [bar.leaving.animate([{ opacity: 1 - progress }], timing)]),
+    ...(bar.arriving === null ? [] : [bar.arriving.animate([{ opacity: progress }], timing)]),
+  ];
 }
 
 function parallaxAt(progress: number): string {
