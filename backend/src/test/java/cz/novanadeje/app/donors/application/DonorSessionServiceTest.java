@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DeviceStatusSecret;
 import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -101,6 +102,32 @@ class DonorSessionServiceTest {
     }
 
     @Test
+    @DisplayName("Given a donor, when they sign in, then the new device stores only the hash of a fresh device secret and the answer carries the secret")
+    void should_store_hash_and_hand_out_device_secret_when_signed_in() {
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.APP);
+
+        ArgumentCaptor<DonorDevice> stored = ArgumentCaptor.forClass(DonorDevice.class);
+        verify(devices).save(stored.capture());
+        DeviceStatusSecret secret = tokens.deviceSecret().orElseThrow();
+        assertThat(stored.getValue().statusSecretHash()).contains(secret.hash());
+    }
+
+    @Test
+    @DisplayName("Given a donor on a public computer, when they sign in, then the device gets no device secret, since it keeps nothing")
+    void should_hand_out_no_device_secret_when_signed_in_given_public_computer() {
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
+
+        IssuedTokens tokens = service.signIn(donor(), false, DeviceDescription.UNKNOWN, SessionKind.PUBLIC);
+
+        ArgumentCaptor<DonorDevice> stored = ArgumentCaptor.forClass(DonorDevice.class);
+        verify(devices).save(stored.capture());
+        assertThat(tokens.deviceSecret()).isEmpty();
+        assertThat(stored.getValue().statusSecretHash()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a usable token, when the session is refreshed, then the old token is used up and a new one issued")
     void should_use_up_old_and_issue_new_when_refreshed_given_usable_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
@@ -116,6 +143,7 @@ class DonorSessionServiceTest {
         verify(signOuts, never()).endAllOf(any(), any(), any());
         assertThat(refreshed.donor().id()).isEqualTo(DONOR);
         assertThat(refreshed.tokens().refreshToken()).isNotEqualTo(secret.value());
+        assertThat(refreshed.tokens().deviceSecret()).isEmpty();
         verify(donors, never()).recordSignIn(any(), any());
     }
 
@@ -666,7 +694,7 @@ class DonorSessionServiceTest {
         UUID successorId = UUID.randomUUID();
         RefreshToken legacy = legacyUsedWithin(secret, successorId);
         DonorDevice petrs = DonorDevice.reconstitute(DEVICE, DonorId.newId(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)),
-                NOW.minus(Duration.ofDays(1)), null, null);
+                NOW.minus(Duration.ofDays(1)), null, null, null, null);
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(legacy));
         when(refreshTokens.findById(successorId)).thenReturn(Optional.of(successorOnDevice(successorId)));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(petrs));
@@ -724,8 +752,9 @@ class DonorSessionServiceTest {
     void should_issue_on_same_device_when_continued_given_active_own_device() {
         when(accessTokens.issue(DONOR, Set.of(Role.DONOR), DEVICE, NOW)).thenReturn(new IssuedAccessToken("access", NOW.plus(Duration.ofMinutes(15))));
 
-        service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
+        IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.of(DEVICE), DeviceDescription.UNKNOWN));
 
+        assertThat(tokens.deviceSecret()).isEmpty();
         ArgumentCaptor<DonorDevice> device = ArgumentCaptor.forClass(DonorDevice.class);
         verify(devices).save(device.capture());
         assertThat(device.getValue().id()).isEqualTo(DEVICE);
@@ -899,6 +928,7 @@ class DonorSessionServiceTest {
 
         IssuedTokens tokens = service.continueOn(donor(), false, new RequestingDevice(Optional.empty(), DeviceDescription.UNKNOWN));
 
+        assertThat(tokens.deviceSecret()).isEmpty();
         assertThat(tokens.session()).isEqualTo(SessionKind.BROWSER);
         assertThat(tokens.refreshTokenExpiresAt()).isEqualTo(NOW.plus(Duration.ofHours(12)));
     }
@@ -927,7 +957,7 @@ class DonorSessionServiceTest {
     }
 
     private static DonorDevice deviceOf(SessionKind kind, Instant signedInAt) {
-        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, kind, signedInAt, signedInAt, null, null);
+        return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, kind, signedInAt, signedInAt, null, null, null, null);
     }
 
     private static RefreshToken rotated(RefreshTokenSecret secret, Instant usedAt, UUID successor, boolean secondFactorVerified) {
@@ -949,7 +979,7 @@ class DonorSessionServiceTest {
 
     private static DonorDevice signedInDevice() {
         return DonorDevice.reconstitute(DEVICE, DONOR, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED, NOW.minus(Duration.ofDays(2)), NOW.minus(Duration.ofDays(1)),
-                null, null);
+                null, null, null, null);
     }
 
     private static Donor administrator() {

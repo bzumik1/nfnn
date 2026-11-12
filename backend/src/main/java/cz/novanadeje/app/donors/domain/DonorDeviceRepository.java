@@ -10,6 +10,14 @@ public interface DonorDeviceRepository {
 
     Optional<DonorDevice> findById(DeviceId id);
 
+    Optional<DonorDevice> findByStatusSecretHash(String statusSecretHash);
+
+    void directWipe(DeviceId id, DeviceWipe wipe);
+
+    void directWipeOfDonor(DonorId donorId, DeviceWipe wipe);
+
+    void reduceErasedOf(DonorId donorId, Instant at);
+
     boolean endIfActive(DeviceId id, DeviceSignOutReason reason, Instant at);
 
     List<DonorDevice> findSignedInOf(DonorId donorId, Instant now);

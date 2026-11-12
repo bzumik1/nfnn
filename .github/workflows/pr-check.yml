@@ -1169,6 +1169,8 @@ jobs:
           grep -qE ' POST /mcp 401 ' "$logs/nginx-access.log" || { echo "::error::the access log misses the connector's 401"; cat "$logs/nginx-access.log"; exit 1; }
           curl -fsS -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' --data "{\"digest\":\"$(printf '%064d' 0)\"}" http://localhost:8089/api/donations/receipts/status
           grep -qE ' POST /api/donations/receipts/status 200 [0-9]+\.[0-9]{3} ' "$logs/nginx-access.log" || { echo "::error::the access log misses the receipt status question or still records the size of its answer, which tells the four answers apart"; grep 'receipts/status' "$logs/nginx-access.log"; exit 1; }
+          curl -fsS -o /dev/null --max-time 10 -X POST -H 'Content-Type: application/json' --data "{\"deviceSecret\":\"$(printf 'A%.0s' $(seq 43))\"}" http://localhost:8089/api/donors/devices/status
+          grep -qE ' POST /api/donors/devices/status 200 [0-9]+\.[0-9]{3} ' "$logs/nginx-access.log" || { echo "::error::the access log misses the device status question or still records the size of its answer, which tells the five answers apart"; cat "$logs/nginx-access.log"; exit 1; }
           if grep -nE 'not-in-the-log|([0-9]{1,3}\.){3}[0-9]{1,3}' "$logs/nginx-access.log"; then
             echo "::error::the access log must name no client address, no query string and no healthcheck from inside the container"
             exit 1

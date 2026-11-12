@@ -158,8 +158,9 @@ describe('Given the version interceptor', () => {
       '/api/donors/auth/refresh',
       '/api/donors/auth/logout',
       '/api/donations/receipts/status',
+      '/api/donors/devices/status',
     ]) {
-      it(`then keeping or ending the session or asking a receipt's status (${path}) still works`, () => {
+      it(`then keeping or ending the session or asking a receipt's or a device's status (${path}) still works`, () => {
         client.post(path, null).subscribe();
 
         http.expectOne(path).flush(null);
