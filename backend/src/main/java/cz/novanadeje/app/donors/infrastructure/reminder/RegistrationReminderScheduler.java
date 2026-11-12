@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.reminder;
 
 import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.DonorRegistrationReminderService;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 class RegistrationReminderScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationReminderScheduler.class);
-    private static final String FOUNDATION_ZONE = "Europe/Prague";
 
     private final DonorRegistrationReminderService service;
     private final DonorRegistrationExpiryService expiry;
@@ -21,7 +21,7 @@ class RegistrationReminderScheduler {
         this.expiry = expiry;
     }
 
-    @Scheduled(cron = "${app.donors.registration-reminder.cron}", zone = FOUNDATION_ZONE)
+    @Scheduled(cron = "${app.donors.registration-reminder.cron}", zone = FoundationZone.ID)
     void tendUnconfirmedRegistrations() {
         deleteExpiredRegistrations();
         remindUnconfirmedRegistrations();

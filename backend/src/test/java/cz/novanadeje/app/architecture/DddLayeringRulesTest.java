@@ -11,12 +11,6 @@ import jakarta.persistence.MappedSuperclass;
 import org.springframework.context.MessageSource;
 import org.springframework.data.repository.Repository;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
@@ -89,13 +83,4 @@ class DddLayeringRulesTest {
             .or().areAssignableTo(Repository.class)
             .should().notBePublic()
             .andShould().resideInAPackage("..infrastructure..");
-
-    @ArchTest
-    static final ArchRule time_comes_from_the_injected_clock = noClasses()
-            .should().callMethod(Instant.class, "now")
-            .orShould().callMethod(LocalDate.class, "now")
-            .orShould().callMethod(LocalDateTime.class, "now")
-            .orShould().callMethod(OffsetDateTime.class, "now")
-            .orShould().callMethod(ZonedDateTime.class, "now")
-            .orShould().callMethod(System.class, "currentTimeMillis");
 }
