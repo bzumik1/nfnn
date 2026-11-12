@@ -15,7 +15,7 @@ import {
   chunkLoadNotice,
   chunkLoadPageHeading,
   openAboutThenLoseNewChunks,
-  openPolicyFromFooter,
+  openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
 import { serveNewerApiGeneration, updateNotice } from './app-update';
@@ -215,7 +215,7 @@ test.describe('Given the site built with another theme', () => {
     page,
   }) => {
     await openAboutThenLoseNewChunks(page);
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
@@ -226,7 +226,7 @@ test.describe('Given the site built with another theme', () => {
   }) => {
     await withoutSessionStorage(page);
     await openAboutThenLoseNewChunks(page);
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);

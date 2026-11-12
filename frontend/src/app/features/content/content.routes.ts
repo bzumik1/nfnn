@@ -20,7 +20,7 @@ export const contentRoutes: Routes = [
   {
     path: 'o-nas',
     title: $localize`:@@content.about.pageTitle:O nás | Nová naděje – nadační fond`,
-    data: { ...LIGHT_HEAD, phoneFooter: true, ...LOADED_AHEAD },
+    data: { ...LIGHT_HEAD, ...LOADED_AHEAD },
     loadComponent: () => import('./about-page/about-page').then((m) => m.AboutPage),
   },
   {

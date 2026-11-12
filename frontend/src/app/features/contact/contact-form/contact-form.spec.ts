@@ -69,6 +69,73 @@ describe('Given the contact form', () => {
     expect(link.getAttribute('href')).toBe('/zasady-ochrany-osobnich-udaju');
   });
 
+  it('when it is shown, then a grey note under the details for accountants links the privacy policy of the whole site', () => {
+    const note = element('.contact-legal');
+
+    expect(element('app-accounting-details').nextElementSibling).toBe(note);
+    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Jak nakládáme s osobními údaji, popisují zásady ochrany osobních údajů.',
+    );
+    expect(note.querySelector('a')?.getAttribute('href')).toBe('/zasady-ochrany-osobnich-udaju');
+  });
+
+  describe('when the page scrolls it into view', () => {
+    type Watch = (entries: { isIntersecting: boolean }[]) => void;
+    let watch: Watch | null;
+    let watched: Element | null;
+    let disconnected: boolean;
+    let shown: ComponentFixture<ContactForm>;
+
+    beforeEach(async () => {
+      watch = null;
+      watched = null;
+      disconnected = false;
+      vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+          constructor(callback: Watch) {
+            watch = callback;
+          }
+
+          observe(target: Element): void {
+            watched = target;
+          }
+
+          disconnect(): void {
+            disconnected = true;
+          }
+        },
+      );
+      shown = TestBed.createComponent(ContactForm);
+      shown.detectChanges();
+      await shown.whenStable();
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      document.documentElement.classList.remove('contact-in-view');
+    });
+
+    it('then the page says so, for Safari to paint the strip under its toolbar in the colour of the section, and stops saying it once the section leaves the screen', () => {
+      expect(watched).toBe(shown.nativeElement.querySelector('#kontakt'));
+      watch!([{ isIntersecting: true }]);
+      const inView = document.documentElement.classList.contains('contact-in-view');
+      watch!([{ isIntersecting: false }]);
+
+      expect(inView).toBe(true);
+      expect(document.documentElement.classList.contains('contact-in-view')).toBe(false);
+    });
+
+    it('and the page without the section opens, then the page forgets it and the section stops watching', () => {
+      watch!([{ isIntersecting: true }]);
+
+      shown.destroy();
+
+      expect(document.documentElement.classList.contains('contact-in-view')).toBe(false);
+      expect(disconnected).toBe(true);
+    });
+  });
+
   it('when submitted with a name, an email and a message, then it posts them with an empty honeypot and shows the thank-you', async () => {
     await fillInValidMessage();
 
@@ -106,6 +173,12 @@ describe('Given the contact form', () => {
 
       expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
         'Zpráva odeslána! Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
+      );
+    });
+
+    it('then the note linking the privacy policy stays under the details for accountants', () => {
+      expect(element('.contact-legal a')?.getAttribute('href')).toBe(
+        '/zasady-ochrany-osobnich-udaju',
       );
     });
 

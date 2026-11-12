@@ -324,7 +324,7 @@ describe('Given the public shell around the pages of the tabs', () => {
             component: TabPage,
             data: { landing: true, head: 'photo' },
           },
-          { path: 'o-nas', component: TabPage, data: { head: 'light', phoneFooter: true } },
+          { path: 'o-nas', component: TabPage, data: { head: 'light' } },
           { path: 'aktuality', component: TabPage },
           { path: 'pripojeni', component: TabPage, data: { tabBar: false } },
         ]),
@@ -357,27 +357,23 @@ describe('Given the public shell around the pages of the tabs', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('when a page of a tab opens, then the header, the tab bar and the footer frame it', async () => {
-    const shell = await openAt('/aktuality');
+  it('when a page of a tab opens on a phone or a wider screen, then the header and the tab bar frame it, with no footer under it and room for the bar at its end', async () => {
+    for (const phone of [false, true]) {
+      compact.set(phone);
+      const shell = await openAt(phone ? '/o-nas' : '/aktuality');
 
-    expect(shell.querySelector('header')).not.toBeNull();
-    expect(shell.querySelector('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
-    expect(shell.querySelector('app-site-footer')).not.toBeNull();
+      expect(shell.querySelector('header')).not.toBeNull();
+      expect(shell.querySelector('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
+      expect(shell.querySelector('footer, [role="contentinfo"]')).toBeNull();
+      expect(shell.querySelector('main')?.classList).toContain('with-tab-bar');
+    }
   });
 
-  it('when the landing page opens, then it shows no footer under the photo, which keeps the room for the bar itself', async () => {
+  it('when the landing page opens, then the photo keeps the room for the bar itself', async () => {
     const shell = await openAt('/');
 
-    expect(shell.querySelector('app-site-footer')).toBeNull();
     expect(shell.querySelector('main')?.classList).not.toContain('with-tab-bar');
     expect(shell.querySelector('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
-  });
-
-  it('when a page of a tab opens on a phone, then only the About page ends with the footer', async () => {
-    compact.set(true);
-
-    expect((await openAt('/aktuality')).querySelector('app-site-footer')).toBeNull();
-    expect((await openAt('/o-nas')).querySelector('app-site-footer')).not.toBeNull();
   });
 
   it('when a page asks for no tab bar, then the shell leaves it out', async () => {

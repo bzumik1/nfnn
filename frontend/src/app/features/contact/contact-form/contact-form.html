@@ -1,4 +1,4 @@
-<section id="kontakt" class="contact section-pad">
+<section #section id="kontakt" class="contact section-pad">
   <div class="two-col ui-container">
     <div class="contact-left">
       <p class="ui-eyebrow ui-eyebrow--accent-on-inverse" i18n="@@home.contact.eyebrow">
@@ -199,6 +199,12 @@
       }
     </div>
 
-    <app-accounting-details />
+    <div class="contact-about">
+      <app-accounting-details />
+      <p class="contact-legal ui-footnote ui-footnote--on-inverse" i18n="@@home.contact.legal">
+        Jak nakládáme s osobními údaji, popisují
+        <a routerLink="/zasady-ochrany-osobnich-udaju">zásady ochrany osobních údajů</a>.
+      </p>
+    </div>
   </div>
 </section>

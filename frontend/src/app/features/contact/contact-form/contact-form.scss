@@ -1,8 +1,17 @@
 @use 'breakpoints' as bp;
 
+:host {
+  display: block;
+}
+
 .contact {
   padding: var(--space-27) 0;
   background: var(--color-surface-inverse);
+}
+
+:host-context(main.with-tab-bar) .contact {
+  margin-bottom: calc(-1 * var(--tab-bar-clearance));
+  padding-bottom: calc(var(--space-27) + var(--tab-bar-clearance));
 }
 
 .two-col {
@@ -196,13 +205,21 @@ app-form-field {
   font-family: var(--font-sans);
 }
 
-app-accounting-details {
+.contact-about {
   grid-area: accounting;
+}
+
+.contact-legal {
+  margin: var(--space-2) var(--space-6) 0;
 }
 
 @include bp.down(tablet) {
   .contact {
     padding: var(--space-16) 0;
+  }
+
+  :host-context(main.with-tab-bar) .contact {
+    padding-bottom: calc(var(--space-16) + var(--tab-bar-clearance));
   }
 
   .two-col {

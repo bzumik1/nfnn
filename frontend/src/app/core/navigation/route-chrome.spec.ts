@@ -38,7 +38,6 @@ describe('Given the chrome a route asks for', () => {
       head: 'dark',
       tabBar: true,
       landing: false,
-      phoneFooter: false,
       backOnWide: true,
     });
   });

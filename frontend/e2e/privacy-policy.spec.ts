@@ -3,21 +3,39 @@ import { expect, test } from './fixtures';
 const policyHeading = { level: 1, name: 'Zásady ochrany osobních údajů' } as const;
 
 test.describe('Given a visitor at the bottom of the About page', () => {
-  test('when they click the privacy policy link in the footer, then the policy opens scrolled to the top', async ({
+  test('when they click the privacy policy link in the note under the contact section, then the policy opens scrolled to the top', async ({
     page,
   }) => {
     await page.goto('/o-nas');
-    const footerLink = page
-      .getByRole('contentinfo')
-      .getByRole('link', { name: 'Zásady ochrany osobních údajů' });
-    await footerLink.scrollIntoViewIfNeeded();
+    const noteLink = page
+      .locator('#kontakt .contact-legal')
+      .getByRole('link', { name: 'zásady ochrany osobních údajů' });
+    await noteLink.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
-    await footerLink.click();
+    await noteLink.click();
 
     await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju$/);
     await expect(page.getByRole('heading', policyHeading)).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
+});
+
+test.describe('Given a visitor on Přispět', () => {
+  test('when they click the policy link in the note on what comes next, then the policy opens at the data it processes', async ({
+    page,
+  }) => {
+    await page.goto('/prispet');
+
+    await page
+      .locator('#prispet .donate-privacy')
+      .getByRole('link', { name: 'zásady ochrany osobních údajů' })
+      .click();
+
+    await expect(page).toHaveURL(/\/zasady-ochrany-osobnich-udaju#udaje$/);
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Jaké údaje zpracováváme a proč' }),
+    ).toBeInViewport();
   });
 });
 

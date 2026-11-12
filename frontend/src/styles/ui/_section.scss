@@ -21,6 +21,25 @@
   color: var(--color-accent-on-inverse);
 }
 
+.ui-footnote {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-subtle);
+
+  a {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+  }
+}
+
+.ui-footnote--on-inverse {
+  color: color-mix(in srgb, var(--color-on-inverse) 60%, transparent);
+
+  a {
+    color: var(--color-accent-on-inverse);
+  }
+}
+
 .ui-intro {
   padding-block: calc(var(--page-top) + var(--space-10)) var(--space-10);
 }
