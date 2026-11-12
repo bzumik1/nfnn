@@ -276,9 +276,16 @@ export interface Waits {
 const CLICKED_GLOBAL = '__deviceClicked';
 const CLICK_WAIT_MS = 2_000;
 
-const WATCH_CLICK = `
+export const WATCH_CLICK = `
+const element = arguments[0];
 window.${CLICKED_GLOBAL} = false;
-arguments[0].addEventListener('click', () => { window.${CLICKED_GLOBAL} = true; }, { once: true, capture: true });`;
+element.addEventListener('click', () => { window.${CLICKED_GLOBAL} = true; }, { once: true, capture: true });
+return [
+  element.isConnected ? 'attached' : 'detached',
+  element.disabled ? 'disabled' : 'enabled',
+  navigator.onLine ? 'online' : 'offline',
+  document.visibilityState,
+].join(', ');`;
 
 interface Press {
   name: string;
@@ -358,7 +365,7 @@ export function webDriverUi(
       );
       await driver.executeAsync(NEXT_FRAMES);
       for (const press of PRESSES) {
-        await driver.execute(WATCH_CLICK, element);
+        const before = await driver.execute<string>(WATCH_CLICK, element);
         const pressed = await press
           .run(driver, element)
           .then(() => undefined)
@@ -368,7 +375,7 @@ export function webDriverUi(
           return;
         }
         waits.presses.push(
-          `${described(target)}: ${press.name} gave no click${pressed ? ` (${pressed})` : ''}`,
+          `${described(target)}: ${press.name} gave no click${pressed ? ` (${pressed})` : ''}; before it: ${before}`,
         );
       }
       const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);
