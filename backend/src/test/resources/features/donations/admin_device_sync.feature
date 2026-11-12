@@ -37,7 +37,7 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And every receipt of the administration device's chunk "receipts:2026" names the verification key its donor card names
     And the administration device's chunk "symbol-claims" holds every older-symbol answer the administration lists
     And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments and the text of the failure
-    And the administration device's chunk "report-settings" holds the monthly report settings and the sent reports the administration reads
+    And the administration device's chunk "report-settings" holds the monthly report settings, the sent reports, the next report and the last ended month the administration reads
     And the administration device's summary lists the years "2026, 2025"
     And the administration device's summary of every year is the administration's overview of that year
     And the administration device's summary names the day 2026-10-17 and the first receipt year the donor card reads

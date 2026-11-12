@@ -14,6 +14,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,13 +36,13 @@ class AdminActionSummaries {
     }
 
     String summary(AdminActionView view, Locale requested) {
+        return sentence(view, requested).orElse(view.details());
+    }
+
+    Optional<String> sentence(AdminActionView view, Locale requested) {
         Locale locale = Locale.ENGLISH.getLanguage().equals(requested.getLanguage()) ? Locale.ENGLISH : CZECH;
-        return view.facts()
-                .map(facts -> {
-                    String template = messages.getMessage(PREFIX + "summary." + facts.summaryKey(), null, null, locale);
-                    return template == null ? view.details() : fill(template, facts, view, locale);
-                })
-                .orElse(view.details());
+        return view.facts().flatMap(facts -> Optional.ofNullable(messages.getMessage(PREFIX + "summary." + facts.summaryKey(), null, null, locale))
+                .map(template -> fill(template, facts, view, locale)));
     }
 
     private String fill(String template, AdminActionFacts facts, AdminActionView view, Locale locale) {

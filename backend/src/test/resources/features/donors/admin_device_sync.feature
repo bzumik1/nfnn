@@ -59,13 +59,18 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And a person "Jana" is registered
     And a person "Andrea" is registered
     And "Andrea" is an administrator
+    And "Jana" enables the second factor
+    And "Andrea" makes "Jana" an administrator
+    And "Andrea" removes "Jana" from the administrators
     And an administration device of "Andrea" syncs the donors
+    And the administration device's audit names "Jana" in 2 summaries
     When "Andrea" erased the donor "Jana"
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-10, audit:2026-10"
     And the administration device's chunks of accounts hold 2 accounts
     And the administration device's chunks of accounts hold every account as the administration reads it
     And the administration device's chunks of the audit hold every action the administration lists, without details
+    And the administration device's audit names "Jana" in 3 summaries only as erased, never by name
 
   Scenario: An administrator whose role was removed learns it at the next sync while the token is still valid, and the device keeps nothing
     Given today is 2026-10-17

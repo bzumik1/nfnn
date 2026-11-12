@@ -54,12 +54,7 @@ public class AdministratorActivityService {
                 .toList();
         Map<UUID, Donor> donorsById = donors.findByIds(named).stream().collect(Collectors.toMap(donor -> donor.id().value(), Function.identity()));
         List<AdminActionView> items = page.stream()
-                .map(entry -> {
-                    Optional<AdminActionFacts> facts = factsById.get(entry.id());
-                    return new AdminActionView(entry.id(), entry.adminId(), Optional.ofNullable(donorsById.get(entry.adminId())), entry.action(),
-                            entry.subjectId(), entry.details(), entry.performedAt(), entry.client(), facts,
-                            facts.flatMap(AdminActionFacts::donor).map(donorsById::get));
-                })
+                .map(entry -> AdminActionView.of(entry, factsById.get(entry.id()), donorsById))
                 .toList();
         return new AdministratorActivity(items, entries.size() > limit);
     }

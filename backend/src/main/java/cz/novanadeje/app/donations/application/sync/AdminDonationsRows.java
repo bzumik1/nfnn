@@ -1,10 +1,13 @@
 package cz.novanadeje.app.donations.application.sync;
 
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
+import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.LinkRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.NextReportRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSectionsRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsVersionRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SentReportRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
@@ -16,6 +19,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.SentReport;
 import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
@@ -71,16 +75,17 @@ public class AdminDonationsRows {
         return new SymbolClaimRow(row.id(), row.donorId(), row.accountNumber(), row.variableSymbol(), row.answer(), row.answeredAt(), versionOf(row));
     }
 
-    public ReportSettingsRow reportSettings(StoredReportSettings stored, List<SentReport> sent) {
+    public ReportSettingsRow reportSettings(StoredReportSettings stored, List<SentReport> sent, ReportAdministrationView.NextReport next,
+                                            ReportMonth lastEnded) {
         ReportSettings settings = stored.settings();
         return new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
                 stored.changedAt().orElse(null), sent.stream().map(report -> new SentReportRow(report.month().toString(), report.sentAt())).toList(),
-                reportSettingsVersion(stored));
+                new NextReportRow(next.month().toString(), next.dueOn()), lastEnded.toString(), reportSettingsVersion(stored));
     }
 
     public String reportSettingsVersion(StoredReportSettings stored) {
         ReportSettings settings = stored.settings();
-        return versionOf(new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
+        return versionOf(new ReportSettingsVersionRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
                 stored.changedAt().orElse(null), List.of(), null));
     }
 

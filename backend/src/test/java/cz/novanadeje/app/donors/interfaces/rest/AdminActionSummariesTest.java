@@ -241,6 +241,25 @@ class AdminActionSummariesTest {
     }
 
     @Test
+    @DisplayName("Given a record whose details have no known shape, when its sentence for a device copy is asked, then there is none, so the details stay on the server")
+    void should_give_no_sentence_when_written_for_a_copy_given_unknown_shape() {
+        AdminActionView view = view("SOMETHING_NEW", "Something happened to " + ID, Optional.empty());
+
+        assertThat(summaries.sentence(view, CZECH)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a record with known details about an erased donor, when its sentence for a device copy is asked, then it is the list's sentence, without the name")
+    void should_give_the_list_sentence_when_written_for_a_copy_given_known_details() {
+        Donor erased = petr();
+        erased.erase(NOW);
+        AdminActionView view = view("GRANT_ADMINISTRATION", "Role správce udělena dárci " + PETR, Optional.of(erased));
+
+        assertThat(summaries.sentence(view, CZECH)).contains("Role správce udělena dárci (osobní údaje vymazány).");
+        assertThat(summaries.sentence(view, CZECH)).contains(summaries.summary(view, CZECH));
+    }
+
+    @Test
     @DisplayName("Given a language without its own texts, when a record is summarized, then the Czech sentence is shown")
     void should_write_czech_when_summarized_given_other_language() {
         AdminActionView view = view("GRANT_ADMINISTRATION", "Role správce udělena dárci " + PETR, Optional.of(petr()));

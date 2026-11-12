@@ -41,10 +41,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class AdministrationDeviceStepDefinitions {
 
-    private static final Set<String> AREAS = Set.of("donations", "donors");
+    private static final Set<String> AREAS = Set.of("donations", "donors", "content", "operations");
     private static final List<String> PAYMENT_FIELDS = List.of("id", "bankTransactionId", "bookedOn", "amountMinor", "currency", "variableSymbol",
             "counterpartyAccount", "counterpartyName", "messageForRecipient", "importedAt", "unpairedByAdminAt", "accountVerification", "version");
-    private static final List<String> AUDIT_FIELDS = List.of("id", "adminId", "action", "subjectId", "performedAt", "client");
+    private static final List<String> AUDIT_FIELDS = List.of("id", "adminId", "action", "subjectId", "donorId", "summary", "performedAt",
+            "client");
     private static final List<String> SYMBOL_CLAIM_FIELDS = List.of("id", "donorId", "variableSymbol", "answer", "answeredAt");
     private static final int MINIMUM_SECRET_LENGTH = 8;
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -58,6 +59,7 @@ public class AdministrationDeviceStepDefinitions {
     private final Clock clock;
     private final Map<String, Device> devices = new LinkedHashMap<>();
     private final Map<String, String> devicelessTokens = new HashMap<>();
+    private final Map<String, String> erasedNames = new HashMap<>();
     private Device device;
 
     public AdministrationDeviceStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, JdbcClient jdbc, JwtEncoder encoder,
@@ -155,10 +157,15 @@ public class AdministrationDeviceStepDefinitions {
     @When("{string} asks for {int} of the administration's {word} sync chunks")
     public void asksForManyOfTheAdministrationsSyncChunks(String alias, int count, String area) {
         act(alias);
-        String prefix = "donations".equals(area) ? "payments:" : "audit:";
-        api.get(chunksPath(area) + IntStream.range(0, count)
-                .mapToObj(month -> prefix + (2000 + month / 12) + "-" + String.format("%02d", month % 12 + 1))
-                .collect(Collectors.joining(",")));
+        api.get(chunksPath(area) + IntStream.range(0, count).mapToObj(index -> chunkIdOf(area, index)).collect(Collectors.joining(",")));
+    }
+
+    private static String chunkIdOf(String area, int index) {
+        return switch (area) {
+            case "content" -> List.of("news", "projects", "project-order", "about", "donate-band", "people").get(index % 6);
+            case "operations" -> List.of("settings", "backups").get(index % 2);
+            default -> ("donations".equals(area) ? "payments:" : "audit:") + (2000 + index / 12) + "-" + String.format("%02d", index % 12 + 1);
+        };
     }
 
     @When("someone without a token asks for the administration's {word} sync manifest")
@@ -418,13 +425,15 @@ public class AdministrationDeviceStepDefinitions {
         assertThat(failure.get("attemptedAt").asString()).isEqualTo(attemptedAt);
     }
 
-    @Then("the administration device's chunk {string} holds the monthly report settings and the sent reports the administration reads")
+    @Then("the administration device's chunk {string} holds the monthly report settings, the sent reports, the next report and the last ended month the administration reads")
     public void theAdministrationDevicesChunkHoldsTheReportSettings(String id) {
         api.get("/api/admin/donations/report");
         JsonNode report = api.lastResponseJson();
         ObjectNode expected = JsonNodeFactory.instance.objectNode();
         report.get("settings").properties().forEach(field -> expected.set(field.getKey(), field.getValue()));
         expected.set("sentReports", report.get("sentReports"));
+        expected.set("nextReport", report.get("nextReport"));
+        expected.set("lastEndedMonth", report.get("lastEndedMonth"));
         assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(expected);
     }
 
@@ -458,7 +467,7 @@ public class AdministrationDeviceStepDefinitions {
     public void theAdministrationDevicesChunksOfTheAuditHoldEveryAction() {
         api.get("/api/admin/donors/actions?limit=200");
         Map<String, List<JsonNode>> listed = new TreeMap<>();
-        api.lastResponseJson().get("items").forEach(item -> listed.put(item.get("id").asString(), fields(item, AUDIT_FIELDS)));
+        api.lastResponseJson().get("items").forEach(item -> listed.put(item.get("id").asString(), fields(withoutUntemplatedSummary(item), AUDIT_FIELDS)));
         Map<String, List<JsonNode>> held = new TreeMap<>();
         rowsOfChunks("audit:").forEach((id, rows) -> rows.forEach(row -> {
             assertThat(fieldNames(row)).containsExactlyInAnyOrderElementsOf(AUDIT_FIELDS);
@@ -467,6 +476,32 @@ public class AdministrationDeviceStepDefinitions {
         }));
         assertThat(listed).isNotEmpty();
         assertThat(held).isEqualTo(listed);
+    }
+
+    @Then("the administration device's audit names {string} in {int} summaries")
+    public void theAdministrationDevicesAuditNamesInSummaries(String alias, int count) {
+        String name = jdbc.sql("select name from donor where id = :id").param("id", donors.idOf(alias)).query(String.class).single();
+        List<JsonNode> naming = auditRowsAbout(alias);
+        assertThat(naming).hasSize(count);
+        naming.forEach(row -> assertThat(row.get("summary").asString()).contains(name));
+        erasedNames.put(alias, name);
+    }
+
+    @Then("the administration device's audit names {string} in {int} summaries only as erased, never by name")
+    public void theAdministrationDevicesAuditNamesOnlyAsErased(String alias, int count) {
+        String name = erasedNames.get(alias);
+        assertThat(name).as("the name the device's audit named before the erasure").isNotBlank();
+        List<JsonNode> naming = auditRowsAbout(alias);
+        assertThat(naming).hasSize(count);
+        naming.stream().filter(row -> !row.get("action").asString().equals("ERASE_DONOR"))
+                .forEach(row -> assertThat(row.get("summary").asString()).contains("(osobní údaje vymazány)"));
+        String held = device.chunks.values().stream().map(JsonNode::toString).collect(Collectors.joining("\n"));
+        assertThat(held).doesNotContain(name);
+    }
+
+    private List<JsonNode> auditRowsAbout(String alias) {
+        return rowsOfChunks("audit:").values().stream().flatMap(List::stream)
+                .filter(row -> row.get("donorId").isString() && row.get("donorId").asString().equals(donors.idOf(alias).toString())).toList();
     }
 
     @Then("no chunk on the administration device holds a stored secret or an audit detail")
@@ -500,11 +535,58 @@ public class AdministrationDeviceStepDefinitions {
                 .doesNotContain("\"details\"");
     }
 
+    @Then("the administration device's chunk {string} holds the items the administration reads at {string}")
+    public void theAdministrationDevicesChunkHoldsTheItemsTheAdministrationReadsAt(String id, String path) {
+        assertThat(api.get(path).getStatusCode().value()).isEqualTo(200);
+        List<JsonNode> listed = api.lastResponseJson().get("items").valueStream().toList();
+        assertThat(listed).isNotEmpty();
+        assertThat(chunk(id).get("rows").valueStream().toList()).containsExactlyElementsOf(listed);
+    }
+
+    @Then("the administration device's chunk {string} holds what the administration reads at {string}")
+    public void theAdministrationDevicesChunkHoldsWhatTheAdministrationReadsAt(String id, String path) {
+        assertThat(api.get(path).getStatusCode().value()).isEqualTo(200);
+        assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(api.lastResponseJson());
+    }
+
+    @Then("the administration device's chunk {string} holds what the administration reads at {string}, each run without its error text")
+    public void theAdministrationDevicesChunkHoldsWhatTheAdministrationReadsAtWithoutRunErrors(String id, String path) {
+        assertThat(api.get(path).getStatusCode().value()).isEqualTo(200);
+        ObjectNode expected = ((ObjectNode) api.lastResponseJson()).deepCopy();
+        Stream.of("lastBackup", "lastTestRestore", "lastRestore").forEach(run -> {
+            if (expected.get(run) instanceof ObjectNode held) {
+                held.putNull("error");
+            }
+        });
+        assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(expected);
+    }
+
+    @Then("the administration reads the error {string} of the last backup at {string}")
+    public void theAdministrationReadsTheErrorOfTheLastBackupAt(String error, String path) {
+        assertThat(api.get(path).getStatusCode().value()).isEqualTo(200);
+        assertThat(api.lastResponseJson().get("lastBackup").get("error").asString()).isEqualTo(error);
+    }
+
+    @Then("no chunk on the administration device holds the text {string}")
+    public void noChunkOnTheAdministrationDeviceHoldsTheText(String text) {
+        assertThat(device.chunks).isNotEmpty();
+        device.chunks.forEach((id, chunk) -> assertThat(chunk.toString()).as("the chunk %s", id).doesNotContain(text));
+    }
+
     @Then("the administration's chunks answer holds {string} and lists {string} as missing")
     public void theAdministrationsChunksAnswerHoldsAndListsAsMissing(String held, String missing) {
         JsonNode answer = api.lastResponseJson();
         assertThat(answer.get("chunks").valueStream().map(chunk -> chunk.get("id").asString()).toList()).containsExactlyElementsOf(list(held));
         assertThat(answer.get("missing").valueStream().map(JsonNode::asString).toList()).containsExactlyElementsOf(list(missing));
+    }
+
+    private static JsonNode withoutUntemplatedSummary(JsonNode item) {
+        if (!item.get("summary").equals(item.get("details"))) {
+            return item;
+        }
+        ObjectNode copy = (ObjectNode) item.deepCopy();
+        copy.putNull("summary");
+        return copy;
     }
 
     private List<JsonNode> listedPayments() {

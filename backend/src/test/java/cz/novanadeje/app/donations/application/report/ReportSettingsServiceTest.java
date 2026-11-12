@@ -145,9 +145,10 @@ class ReportSettingsServiceTest {
     }
 
     @Test
-    @DisplayName("Given another version than the stored settings', when the settings are changed, then it is refused with the stored version and row, and nothing is saved or audited")
+    @DisplayName("Given another version than the stored settings', when the settings are changed, then it is refused with the stored version and row with its next report, and nothing is saved or audited")
     void should_refuse_and_keep_settings_when_changed_given_another_version() {
-        String stored = service.view().settingsVersion();
+        ReportAdministrationView view = service.view();
+        String stored = view.settingsVersion();
 
         assertThatThrownBy(() -> service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.of("0000000000000000")))
                 .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
@@ -155,6 +156,9 @@ class ReportSettingsServiceTest {
                     assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(ReportSettingsRow.class, row -> {
                         assertThat(row.recipients()).containsExactly("info@nfnn.cz");
                         assertThat(row.version()).isEqualTo(stored);
+                        assertThat(row.nextReport().month()).isEqualTo(view.nextReport().month().toString());
+                        assertThat(row.nextReport().dueOn()).isEqualTo(view.nextReport().dueOn());
+                        assertThat(row.lastEndedMonth()).isEqualTo(view.lastEndedMonth().toString());
                     });
                 });
         verify(settings).lockForChange();

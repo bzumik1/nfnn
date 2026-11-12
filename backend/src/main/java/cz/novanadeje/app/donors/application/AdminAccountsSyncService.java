@@ -13,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminAccountsSyncService {
@@ -36,9 +39,14 @@ public class AdminAccountsSyncService {
         }
         Set<DonorId> enabled = secondFactors.findDonorsWithEnabledFactor();
         Map<DonorId, Integer> counts = passkeys.countByDonors();
-        List<DonorAccountView> accounts = donors.findAll().stream()
+        List<Donor> everyone = donors.findAll();
+        Map<UUID, Donor> donorsById = everyone.stream().collect(Collectors.toMap(donor -> donor.id().value(), Function.identity()));
+        List<DonorAccountView> accounts = everyone.stream()
                 .map(donor -> new DonorAccountView(donor, enabled.contains(donor.id()), counts.getOrDefault(donor.id(), 0)))
                 .toList();
-        return new AdminAccountsSyncSnapshot(subject, true, accounts, trail.findAllSummariesNewestFirst());
+        List<AdminActionView> actions = trail.findAllNewestFirst().stream()
+                .map(entry -> AdminActionView.of(entry, AdminActionFacts.read(entry.action(), entry.details()), donorsById))
+                .toList();
+        return new AdminAccountsSyncSnapshot(subject, true, accounts, actions);
     }
 }

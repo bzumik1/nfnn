@@ -164,6 +164,10 @@ Feature: An administrator connects an application such as Claude to the administ
       | GET    | /api/admin/donations/sync/chunks                                    |
       | GET    | /api/admin/donors/sync                                              |
       | GET    | /api/admin/donors/sync/chunks                                       |
+      | GET    | /api/admin/content/sync                                             |
+      | GET    | /api/admin/content/sync/chunks                                      |
+      | GET    | /api/admin/operations/sync                                          |
+      | GET    | /api/admin/operations/sync/chunks                                   |
 
   Scenario: A connected application issues a first receipt and gets it again, but replacing an issued receipt is left to the browser
     Given today is 2026-12-20
