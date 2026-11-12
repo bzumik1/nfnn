@@ -213,25 +213,33 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     expect((await deviceRecord(page)).unsubscribed).toBe(0);
   });
 
-  test('when an alert arrives while the app is open, then the icon badge shows the open alerts', async ({
+  test('when an alert arrives while the app is open, then the icon badge shows the open alerts and follows the server', async ({
     page,
   }) => {
-    await servePush(page, pushView());
+    let openAlerts: object[] = [];
+    await page.route(
+      (url) => url.pathname === PUSH,
+      (route) => route.fulfill({ json: pushView({ openAlerts }) }),
+    );
     await page.goto('/sprava/upozorneni');
     await expect(page.getByRole('region', { name: 'Co se hlídá' })).toContainText('Bez poruchy');
-    await expect.poll(async () => (await deviceRecord(page)).badges).toEqual([null, null]);
+    const lastBadge = async () => (await deviceRecord(page)).badges.at(-1);
+    await expect.poll(lastBadge).toBeNull();
 
-    await workerPosts(page, {
-      type: 'PUSH',
-      data: alertMessage('backups-outage', 2),
-    });
+    openAlerts = [
+      { area: 'backups', since: '2026-11-04T05:15:00Z' },
+      { area: 'mail', since: '2026-11-04T05:20:00Z' },
+    ];
+    await workerPosts(page, { type: 'PUSH', data: alertMessage('backups-outage', 2) });
+    await expect.poll(lastBadge).toBe(2);
     await workerPosts(page, { type: 'PUSH', data: { kind: 'test', count: 'many' } });
-    await workerPosts(page, {
-      type: 'PUSH',
-      data: alertMessage('backups-recovered', 0),
-    });
 
-    await expect.poll(async () => (await deviceRecord(page)).badges).toEqual([null, null, 2, null]);
+    openAlerts = [];
+    await workerPosts(page, { type: 'PUSH', data: alertMessage('backups-recovered', 0) });
+    await expect.poll(lastBadge).toBeNull();
+    expect(
+      (await deviceRecord(page)).badges.filter((badge) => badge !== null && badge !== 2),
+    ).toEqual([]);
   });
 
   test('when an alert notification is clicked while the app is open, then the app opens the page of its kind and never an address from the message', async ({
@@ -263,6 +271,16 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     );
     await expect(device.getByRole('button')).toHaveCount(0);
     expect((await deviceRecord(page)).permissionRequests).toBe(0);
+  });
+
+  test('when the app opens on a public page after the fault was resolved, then the icon badge is cleared by what the server says', async ({
+    page,
+  }) => {
+    await servePush(page, pushView({ openAlerts: [] }));
+
+    await page.goto('/o-nas');
+
+    await expect.poll(async () => (await deviceRecord(page)).badges).toEqual([null]);
   });
 
   test('when the administration opens on any page, then the icon badge shows the open alerts', async ({

@@ -1,3 +1,4 @@
+import { OpenAlert, OpenAlertArea } from '../../core/push/open-alerts-api';
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
 import { ifMatch } from '../../core/version/row-version';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -55,7 +56,7 @@ export interface HistoryImportResponse {
   finishedAt: string | null;
 }
 
-export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
+export type PushAlertArea = OpenAlertArea;
 
 export type PushAlertSwitches = Record<PushAlertArea, boolean>;
 
@@ -71,10 +72,7 @@ export interface PushSubscriptionResponse {
   current: boolean;
 }
 
-export interface OpenAlertResponse {
-  area: PushAlertArea;
-  since: string;
-}
+export type OpenAlertResponse = OpenAlert;
 
 export interface AdminPushResponse {
   publicKey: string;

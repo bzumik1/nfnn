@@ -44,6 +44,7 @@ import { keptAnswerRefreshInterceptor } from './core/connectivity/kept-answer-re
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
+import { OpenAlerts } from './core/push/open-alerts';
 import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
 import { inputModalityAtStart } from './core/input/input-modality';
 import { AppUpdates } from './core/updates/app-updates';
@@ -147,6 +148,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       inject(AppBadge).start();
+      inject(OpenAlerts).start();
       inject(AlertNotificationClicks).start();
     }),
     provideAppInitializer(() => inject(AuthStore).restore()),
