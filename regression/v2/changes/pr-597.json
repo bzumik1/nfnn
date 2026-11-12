@@ -10,5 +10,29 @@
     "caseFile": "shared-cases/schemas/push/notification.schema.json",
     "reason": "Jakub 2026-11-12: a donor notification opens a route of the donor's account, so the schema takes routes under /darce besides /sprava",
     "contract": "docs/api-contract.md, Push notifications of donors"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.PushKeyServiceTest > Given push keys sealed by another settings key, when they are asked for, then new keys replace them, every subscription is removed and one warning without a key is logged",
+    "reason": "Jakub 2026-11-12: donors get push notifications in their own table and without a count, so the test now also proves the donor's side and its name says so",
+    "replacement": "operations.application.push.PushKeyServiceTest > Given push keys sealed by another settings key, when they are asked for, then new keys replace them, every administrator's and donor's subscription is removed and one warning without a key is logged",
+    "contract": "docs/security-overview.md, Push notifications of donors (Web Push)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.push.WebPushDeliveryTest > Given every kind of alert with the largest count, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size",
+    "reason": "Jakub 2026-11-12: donors get push notifications in their own table and without a count, so the test now also proves the donor's side and its name says so",
+    "replacement": "operations.infrastructure.push.WebPushDeliveryTest > Given every kind of alert with the largest count and every kind of donor notification, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size, and only the alerts carry a count",
+    "contract": "docs/api-contract.md, Push notifications of donors"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.schema.RestoreRevocationSqlTest > Given a restored copy with a live browser session, a connected application, a rotated token, an expired one, a push subscription and a device and token that ended before, when the sessions end, then every refresh token is revoked, every active device ends as expired, the push subscription goes, what ended before keeps its end and only the two live sessions are counted",
+    "reason": "Jakub 2026-11-12: donors get push notifications in their own table and without a count, so the test now also proves the donor's side and its name says so",
+    "replacement": "shared.infrastructure.schema.RestoreRevocationSqlTest > Given a restored copy with a live browser session, a connected application, a rotated token, an expired one, an administrator's and a donor's push subscription and a device and token that ended before, when the sessions end, then every refresh token is revoked, every active device ends as expired, both push subscriptions go, what ended before keeps its end and only the two live sessions are counted",
+    "contract": "docs/security-overview.md, Push notifications of donors (Web Push)"
   }
 ]
