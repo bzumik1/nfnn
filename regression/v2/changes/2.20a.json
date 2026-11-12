@@ -21,7 +21,7 @@
     "kind": "shared-case",
     "caseFile": "shared-cases/schemas/defs/*",
     "reason": "2.20a: rows.schema.json gains the optional columns the new cases write (donor names, types, symbols, accounts, payment senders and messages, how a gift was paired, bank account links and older-symbol answers); admin-copy.schema.json holds the copy's chunks and rows they share",
-    "contract": "testing.md, Logic on both sides"
+    "contract": "docs/system-overview.md, Shared cases"
   },
   {
     "path": "GET /api/admin/donations/sync",

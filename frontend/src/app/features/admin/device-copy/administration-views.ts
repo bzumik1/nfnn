@@ -101,6 +101,7 @@ const CROWNS = /^(\d{1,12})(?:[.,](\d{1,2}))?(?:kc|czk)?$/;
 const HELLERS_PER_CROWN = 100;
 const INSTANT_FRACTION = /^(.*:\d{2})(?:\.(\d{1,9}))?Z$/;
 const NANOSECOND_DIGITS = 9;
+const CZECH_ORDER = new Intl.Collator('cs');
 const SPACE = 0x20;
 const JAVA_WHITESPACE = new Set([
   0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x1680, 0x2000, 0x2001, 0x2002,
@@ -188,7 +189,7 @@ export function donorRecordSearch(
     )
     .sort(
       (first, second) =>
-        byCodePoints(first.name, second.name) || byText(first.donorId, second.donorId),
+        inCzechOrder(first.name, second.name) || byText(first.donorId, second.donorId),
     )
     .slice(0, DONOR_RECORD_SEARCH_LIMIT)
     .map((record): AdminDonorResponse => ({
@@ -217,7 +218,7 @@ export function accountSearch(
     )
     .sort(
       (first, second) =>
-        byCodePoints(first.name, second.name) || byCodePoints(first.email, second.email),
+        inCzechOrder(first.name, second.name) || byCodePoints(first.email, second.email),
     );
   const start = page * limit;
   return { items: found.slice(start, start + limit), hasMore: found.length > start + limit };
@@ -418,6 +419,10 @@ function fixedWidth(instant: string): string {
   return fraction === null
     ? instant
     : `${fraction[1]}.${(fraction[2] ?? '').padEnd(NANOSECOND_DIGITS, '0')}Z`;
+}
+
+function inCzechOrder(first: string, second: string): number {
+  return CZECH_ORDER.compare(first, second) || byCodePoints(first, second);
 }
 
 function byCodePoints(first: string, second: string): number {
