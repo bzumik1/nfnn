@@ -126,6 +126,7 @@ export class RouteHost {
   private readonly appShell: string;
   private handlers: { matches: (url: URL) => boolean; handler: Handler }[] = [];
   private open = 0;
+  private answers: string[] = [];
   private page: PageState = { textScale: 100, rememberedSession: false };
 
   readonly routes: RouteTarget = {
@@ -144,6 +145,7 @@ export class RouteHost {
       response.shouldKeepAlive = false;
       this.open++;
       response.on('close', () => this.open--);
+      response.on('finish', () => this.keepAnswer(request, response));
       this.answer(request, response).catch((error: unknown) => {
         if (!response.headersSent) {
           response.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -165,6 +167,7 @@ export class RouteHost {
 
   reset(textScale: number): void {
     this.handlers = [];
+    this.answers = [];
     this.page = { textScale, rememberedSession: false };
   }
 
@@ -174,6 +177,17 @@ export class RouteHost {
 
   inFlight(): number {
     return this.open;
+  }
+
+  answered(): string[] {
+    return [...this.answers];
+  }
+
+  private keepAnswer(request: IncomingMessage, response: ServerResponse): void {
+    const { pathname } = new URL(request.url ?? '/', 'http://host');
+    if (pathname.startsWith('/api/')) {
+      this.answers.push(`${request.method ?? 'GET'} ${pathname} ${response.statusCode}`);
+    }
   }
 
   private async answer(request: IncomingMessage, response: ServerResponse): Promise<void> {

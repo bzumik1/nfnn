@@ -38,6 +38,8 @@ import {
   signedInDevices,
   signIn,
   session,
+  openUnlockedAdministrationPage,
+  serveAdministrationCopy,
 } from './donor-session';
 import {
   chunkLoadNotice,
@@ -1989,6 +1991,156 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when the administration reads its copy offline, then the parts waiting for the server, the history without details, a failed backup without its text, the stories and the people break no rule', async ({
+    page,
+    context,
+  }) => {
+    const failedRun = {
+      outcome: 'FAILED',
+      startedAt: '2026-10-23T01:00:00Z',
+      finishedAt: '2026-10-23T01:00:03Z',
+      fileName: null,
+      sizeBytes: null,
+      tables: null,
+      requestId: null,
+      error: null,
+    };
+    await serveAdministrationCopy(page, {
+      donations: {},
+      donors: {
+        'accounts:2026-01': [
+          {
+            donorId: administrator.id,
+            type: 'PERSON',
+            name: 'Jana Nováková',
+            companyIdentifier: null,
+            address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+            email: administrator.email,
+            variableSymbol: '4821937560',
+            preferredLocale: 'cs',
+            registeredAt: '2026-01-15T10:00:00Z',
+            emailVerified: true,
+            administrator: true,
+            secondFactorEnabled: true,
+            passkeys: 0,
+            erasedAt: null,
+          },
+        ],
+        'audit:2026-10': [
+          {
+            id: '019a1c00-0000-7000-8000-00000000e001',
+            adminId: administrator.id,
+            action: 'PAIR_PAYMENT',
+            subjectId: '019a1c00-0000-7000-8000-000000001001',
+            donorId: null,
+            summary: null,
+            performedAt: '2026-10-22T10:00:00Z',
+            client: null,
+          },
+        ],
+      },
+      content: {
+        people: [
+          {
+            members: [
+              {
+                id: '0199f3e0-0000-7000-8000-00000000e001',
+                name: 'Eva Vzorová',
+                role: 'Zakladatelka',
+                position: 0,
+                onBoard: true,
+                boardNote: null,
+                featured: true,
+                portrait: null,
+                webSignature: null,
+                personalEmail: null,
+                fundEmail: null,
+                linkedToAccount: false,
+              },
+            ],
+            note: null,
+            footnote: null,
+            noteVersion: 'a',
+            footnoteVersion: 'b',
+          },
+        ],
+      },
+      operations: {
+        settings: [adminSettings],
+        backups: [
+          {
+            available: true,
+            backups: [],
+            lastBackup: failedRun,
+            lastTestRestore: null,
+            lastRestore: null,
+            restoreFiles: [],
+            pendingRequests: 0,
+            restorePending: false,
+            problems: ['BACKUP_FAILED'],
+            schedule: {
+              backupTime: '03:00',
+              testRestoreDay: 7,
+              testRestoreTime: '04:00',
+              applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+            },
+            key: { available: true, confirmed: true, confirmedAt: '2026-10-23T08:00:00Z' },
+          },
+        ],
+      },
+    });
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await openUnlockedAdministrationPage(page, '/sprava/vice', 'Občas a pro technika');
+    const nav = page.getByRole('navigation', { name: 'Správa' });
+    for (const link of ['Nastavení', 'Historie změn', 'Zálohy', 'Pomáháme', 'Lidé fondu']) {
+      await nav.getByRole('link', { name: link, exact: true }).click();
+      await expect(page.getByRole('heading', { level: 1, name: link })).toBeVisible();
+    }
+    await page.route(
+      (url) => url.pathname.startsWith('/api/'),
+      (route) => route.abort('internetdisconnected'),
+    );
+    await context.setOffline(true);
+    await nav.getByRole('link', { name: 'Nastavení', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+    ).toBeVisible();
+    await expect(page.getByText('Klíč ukážeme, až budete online.')).toBeVisible();
+    await expect(
+      page.getByText('Kdo potvrzení podepisuje, ukážeme, až budete online.'),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Historie změn', exact: true }).click();
+    await expect(page.getByRole('cell', { name: 'Přiřazení platby dárci' })).toBeVisible();
+    await page.getByText('Technické podrobnosti', { exact: true }).first().click();
+    await expect(page.getByText('Podrobnosti ukážeme, až budete online.').first()).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Zálohy', exact: true }).click();
+    await expect(page.getByText('Podrobnosti chyby ukážeme, až budete online.')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Pomáháme', exact: true }).click();
+    await expect(page.getByText('Řazení ukážeme, až budete online.')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await nav.getByRole('link', { name: 'Lidé fondu', exact: true }).click();
+    await page
+      .getByRole('button', { name: /Upravit/ })
+      .first()
+      .click();
+    await expect(
+      page.getByText('Kdo potvrzení podepisuje, ukážeme, až budete online.'),
+    ).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+    await context.setOffline(false);
+  });
+
   test('when an administrator watches the backups, then the page with its problems and busy action breaks no rule', async ({
     page,
   }) => {
@@ -2357,6 +2509,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2433,6 +2588,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -2766,6 +2924,9 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
               },
             ],
             note: 'Děkujeme všem, kdo pomáhají s námi.',
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
           },
         }),
     );
@@ -3450,7 +3611,13 @@ test.describe('Given a donor whose unsaved edit of the data on the receipt is ke
   }) => {
     await page.unroute('**/api/donors/auth/refresh');
     await page.route('**/api/donors/auth/refresh', (route) =>
-      route.fulfill(session(200, { ...donor, address: { ...donor.address, city: 'Děčín' } })),
+      route.fulfill(
+        session(200, {
+          ...donor,
+          address: { ...donor.address, city: 'Děčín' },
+          version: '00000000000000d9',
+        }),
+      ),
     );
     await page.reload();
     const offer = page.locator('app-draft-offer');
@@ -3460,6 +3627,41 @@ test.describe('Given a donor whose unsaved edit of the data on the receipt is ke
     await page.getByRole('button', { name: 'Uložit údaje' }).click();
 
     await expect(page.locator('.profile-stale')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the profile changed meanwhile in another window and the save is refused, then the warning in the form has no violations', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            body: JSON.stringify({
+              type: 'https://nfnn.cz/problems/donors/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              status: 409,
+              version: '00000000000000d9',
+              current: {
+                name: donor.name,
+                street: donor.address.street,
+                city: 'Děčín',
+                postalCode: donor.address.postalCode,
+                preferredLocale: 'en',
+              },
+            }),
+          })
+        : route.fallback(),
+    );
+
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Mezitím se uložené údaje změnily' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uložit své úpravy' })).toBeEnabled();
+    await expect(page.getByLabel('Ulice a číslo')).toHaveValue('Krátká 3');
     expect(await violations(page)).toEqual([]);
   });
 });

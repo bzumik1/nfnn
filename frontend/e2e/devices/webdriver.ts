@@ -276,9 +276,52 @@ export interface Waits {
 const CLICKED_GLOBAL = '__deviceClicked';
 const CLICK_WAIT_MS = 2_000;
 
-const WATCH_CLICK = `
+export const FORGET_STORED_DATA = `
+const done = arguments[arguments.length - 1];
+const waitMs = arguments[0];
+const forgotten = (name) =>
+  new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase(name);
+    const timer = setTimeout(() => resolve(name + ': blocked'), waitMs);
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+    request.onerror = () => {
+      clearTimeout(timer);
+      resolve(name + ': ' + (request.error ? request.error.name : 'failed'));
+    };
+  });
+indexedDB
+  .databases()
+  .then((databases) => Promise.all(databases.map((database) => forgotten(database.name))))
+  .then(
+    (kept) => done(kept.filter((name) => name !== null)),
+    (error) => done([String(error)]),
+  );`;
+
+export const HELD_LOCKS = `
+const done = arguments[arguments.length - 1];
+const names = (locks) => locks.map((lock) => lock.name).join(', ') || 'none';
+if (!navigator.locks) {
+  done('no Web Locks');
+} else {
+  navigator.locks.query().then(
+    (state) => done('held: ' + names(state.held) + '; waiting: ' + names(state.pending)),
+    (error) => done(String(error)),
+  );
+}`;
+
+export const WATCH_CLICK = `
+const element = arguments[0];
 window.${CLICKED_GLOBAL} = false;
-arguments[0].addEventListener('click', () => { window.${CLICKED_GLOBAL} = true; }, { once: true, capture: true });`;
+element.addEventListener('click', () => { window.${CLICKED_GLOBAL} = true; }, { once: true, capture: true });
+return [
+  element.isConnected ? 'attached' : 'detached',
+  element.disabled ? 'disabled' : 'enabled',
+  navigator.onLine ? 'online' : 'offline',
+  document.visibilityState,
+].join(', ');`;
 
 interface Press {
   name: string;
@@ -358,7 +401,7 @@ export function webDriverUi(
       );
       await driver.executeAsync(NEXT_FRAMES);
       for (const press of PRESSES) {
-        await driver.execute(WATCH_CLICK, element);
+        const before = await driver.execute<string>(WATCH_CLICK, element);
         const pressed = await press
           .run(driver, element)
           .then(() => undefined)
@@ -368,7 +411,7 @@ export function webDriverUi(
           return;
         }
         waits.presses.push(
-          `${described(target)}: ${press.name} gave no click${pressed ? ` (${pressed})` : ''}`,
+          `${described(target)}: ${press.name} gave no click${pressed ? ` (${pressed})` : ''}; before it: ${before}`,
         );
       }
       const atCentre = await driver.execute<string>(ELEMENT_AT_CENTRE, element);

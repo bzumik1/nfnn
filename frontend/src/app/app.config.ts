@@ -14,6 +14,7 @@ import {
   InMemoryScrollingOptions,
   NavigationErrorHandlerFeature,
   provideRouter,
+  RouteReuseStrategy,
   withInMemoryScrolling,
   withNavigationErrorHandler,
   withPreloading,
@@ -30,6 +31,7 @@ import { BackTarget } from './core/navigation/back-target';
 import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
+import { KEPT_PAGES_OWNER, KeptTabPages } from './core/navigation/kept-tab-pages';
 import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
@@ -42,12 +44,14 @@ import { keptAnswerRefreshInterceptor } from './core/connectivity/kept-answer-re
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
+import { OpenAlerts } from './core/push/open-alerts';
 import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
 import { inputModalityAtStart } from './core/input/input-modality';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { heldRecordRetryInterceptor } from './core/version/held-record-retry';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { windowControlsAtStart } from './core/layout/window-controls';
@@ -68,10 +72,22 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
   (error) => void inject(ChunkLoadRecovery).handleNavigationError(error),
 );
 
+export const keptTabPages: Provider[] = [
+  { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+  {
+    provide: KEPT_PAGES_OWNER,
+    useFactory: () => {
+      const auth = inject(AuthStore);
+      return () => auth.donor()?.id ?? null;
+    },
+  },
+];
+
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
   withInterceptors([
     keptPublicAnswersInterceptor,
+    heldRecordRetryInterceptor,
     authInterceptor,
     versionInterceptor,
     keptAnswerRefreshInterceptor,
@@ -123,6 +139,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature, tabPagesPreloading),
+    keptTabPages,
     appHttpClient,
     provideAppServiceWorker(),
     provideAppInitializer(() => {
@@ -131,6 +148,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       inject(AppBadge).start();
+      inject(OpenAlerts).start();
       inject(AlertNotificationClicks).start();
     }),
     provideAppInitializer(() => inject(AuthStore).restore()),

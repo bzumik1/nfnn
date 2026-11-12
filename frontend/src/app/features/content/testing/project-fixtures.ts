@@ -1,8 +1,8 @@
-import { ProjectResponse, UploadedImageResponse } from '../projects-api';
+import { AdminProjectResponse, UploadedImageResponse } from '../projects-api';
 
 export const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
 
-export function project(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
+export function project(overrides: Partial<AdminProjectResponse> = {}): AdminProjectResponse {
   return {
     id: '0199f3e0-0000-7000-8000-00000000c001',
     slug: 'zahrada-pro-deti',
@@ -27,7 +27,7 @@ export function project(overrides: Partial<ProjectResponse> = {}): ProjectRespon
   };
 }
 
-export function draftProject(overrides: Partial<ProjectResponse> = {}): ProjectResponse {
+export function draftProject(overrides: Partial<AdminProjectResponse> = {}): AdminProjectResponse {
   return project({
     id: '0199f3e0-0000-7000-8000-00000000c002',
     slug: 'beneficni-koncert',

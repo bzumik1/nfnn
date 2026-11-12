@@ -22,7 +22,7 @@ import {
   EmptyError,
 } from 'rxjs';
 import { Connectivity, isUnreachable } from '../connectivity/connectivity';
-import { AuthApi } from './auth-api';
+import { AuthApi, type StoredProfile } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AdministrationAccess } from './administration-access';
@@ -257,8 +257,18 @@ export class AuthStore {
     );
   }
 
-  updateProfile(request: UpdateDonorProfileRequest): Observable<Donor> {
-    return this.api.updateProfile(request).pipe(tap((donor) => this.currentDonor.set(donor)));
+  updateProfile(
+    request: UpdateDonorProfileRequest,
+    version: string,
+    held: StoredProfile | null,
+  ): Observable<Donor> {
+    return this.api
+      .updateProfile(request, version, held)
+      .pipe(tap((donor) => this.currentDonor.set(donor)));
+  }
+
+  reloadStoredProfile(): Observable<Donor> {
+    return this.api.profile().pipe(tap((donor) => this.currentDonor.set(donor)));
   }
 
   changePassword(request: ChangePasswordRequest): Observable<Donor> {

@@ -33,6 +33,8 @@ import type { AccountStore, CopyContents } from '../../../core/device/store/acco
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { everyOfferedYear } from '../device-copy/administration-overview';
+import { OpenAlert } from '../../../core/push/open-alerts-api';
+import { OpenAlerts } from '../../../core/push/open-alerts';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -44,6 +46,8 @@ const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
+  const openAlerts = signal<readonly OpenAlert[] | null>(null);
+  const refresh = vi.fn();
   let fixture: ComponentFixture<AdminHome>;
   let http: HttpTestingController;
   let store: AuthStore;
@@ -51,12 +55,15 @@ describe('Given an administrator on the administration home', () => {
   beforeEach(async () => {
     localStorage.clear();
     compact.set(false);
+    openAlerts.set(null);
+    refresh.mockClear();
     await TestBed.configureTestingModule({
       imports: [AdminHome],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly(), refresh } },
         provideRouter([]),
         {
           provide: AdministrationVisit,
@@ -593,6 +600,31 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
     }
 
+    it('then the open faults are read again, so a fault fixed meanwhile leaves the card', () => {
+      expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('then a fault of the mail sending that the badge of the app icon counts gets a row and a link to the settings', async () => {
+      openAlerts.set([{ area: 'mail', since: '2026-11-12T05:15:00Z' }]);
+      await sources();
+
+      expect(items()).toEqual([
+        'Upozornění: E-maily se neodesílají Poštovní server od 12. 11. 2026 6:15 odmítá zprávy. Co udělat: Zkontrolujte nastavení pošty a pošlete zkušební e-mail.',
+        'Otevřít Nastavení',
+      ]);
+      expect(links()).toEqual(['/sprava/nastaveni']);
+    });
+
+    it('then the import and the backups that the badge counts are named by their own rows, not twice', async () => {
+      openAlerts.set([
+        { area: 'bankImport', since: '2026-11-12T05:15:00Z' },
+        { area: 'backups', since: '2026-11-12T05:15:00Z' },
+      ]);
+      await sources();
+
+      expect(items().some((item) => item.includes('E-maily'))).toBe(false);
+    });
+
     it('then the group is named by its heading and while they load its row says so', () => {
       expect(attention().getAttribute('aria-labelledby')).toBe('admin-attention-title');
       expect(text('#admin-attention-title')).toBe('Co potřebuje vaši pozornost');
@@ -1094,6 +1126,8 @@ describe('Given an administrator on the administration home with the administrat
         { id: 'donations/donations:2026-10', rowsSha256: 'b', rows: [GIFT] },
         { id: 'donations/donor-records:2026-01', rowsSha256: 'c', rows: [RECORD] },
         { id: 'donations/import-state', rowsSha256: 'd', rows: [STORED_IMPORT] },
+        { id: 'operations/settings', rowsSha256: 'e', rows: [{}] },
+        { id: 'operations/backups', rowsSha256: 'f', rows: [backupsView()] },
       ],
       summary: {
         donations: {
@@ -1182,6 +1216,13 @@ describe('Given an administrator on the administration home with the administrat
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('Fio refused');
     expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+  });
+
+  it('when the device is offline, then the backups card shows the last backup of the copy without asking the server', () => {
+    expect(http.match('/api/admin/operations/backups')).toEqual([]);
+    expect(text('.ui-card[aria-labelledby="admin-backups-title"]')).toContain(
+      '23. 10. 2026 3:00 (2 kB)',
+    );
   });
 
   it("when the device comes back online, then the import state is read from the server again, with the failure's text and the part for older payments the copy does not hold", async () => {

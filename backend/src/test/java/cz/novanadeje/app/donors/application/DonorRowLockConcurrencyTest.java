@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
@@ -105,7 +106,7 @@ class DonorRowLockConcurrencyTest {
         inTransaction(() -> resetTokens.save(PasswordResetToken.issue(link, petr.id(), clock.instant(), Duration.ofHours(1))));
 
         Future<?> profileSave = whileHeldBy(() -> passwordResets.confirmReset(link.value(), "a brand new horse battery"),
-                () -> profiles.updateProfile(petr.id(), Set.of(Role.DONOR), NEW_PROFILE));
+                () -> profiles.updateProfile(petr.id(), Set.of(Role.DONOR), NEW_PROFILE, ExpectedVersion.none()));
 
         profileSave.get(30, TimeUnit.SECONDS);
         assertThat(column("password_hash")).isNotEqualTo(OLD_HASH).startsWith("$2");
@@ -116,7 +117,7 @@ class DonorRowLockConcurrencyTest {
     @DisplayName("Given an erasure written but not committed yet, when the donor's open tab saves the profile meanwhile, then the save is refused as already erased and neither the account nor the donations record gets the personal data back")
     void should_refuse_profile_and_keep_erasure_when_saved_during_erasure_given_erasure_not_committed() {
         Future<?> profileSave = whileHeldBy(() -> erasures.erase(jana.id(), petr.id()),
-                () -> profiles.updateProfile(petr.id(), Set.of(Role.DONOR), NEW_PROFILE));
+                () -> profiles.updateProfile(petr.id(), Set.of(Role.DONOR), NEW_PROFILE, ExpectedVersion.none()));
 
         assertThatThrownBy(() -> profileSave.get(30, TimeUnit.SECONDS))
                 .isInstanceOf(ExecutionException.class)

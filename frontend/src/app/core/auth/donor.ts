@@ -37,6 +37,7 @@ export interface Donor {
   hasPassword: boolean;
   secondFactor: SecondFactorState;
   pendingEmailChange: PendingEmailChange | null;
+  version: string;
 }
 
 export interface RegisterDonorRequest {

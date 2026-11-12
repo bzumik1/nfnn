@@ -1,11 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { heldRecordOf } from '../../core/version/row-version';
 import {
   ProjectOrderResponse,
   ProjectsApi,
   ProjectResponse,
   slugFromText,
+  storedProjectOf,
   UploadedImageResponse,
 } from './projects-api';
 import { project, uploadedImage } from './testing/project-fixtures';
@@ -27,13 +29,26 @@ describe('Given the projects API', () => {
   it('when a project is published, then it posts the date with the version read to the publish endpoint and hands the project on', () => {
     let received: ProjectResponse | undefined;
     api
-      .publish(project().id, '2026-10-20', '9d4b2e7a1c0f5836')
+      .publish(project().id, '2026-10-20', '9d4b2e7a1c0f5836', storedProjectOf(project()))
       .subscribe((response) => (received = response));
 
     const request = http.expectOne(`/api/admin/content/projects/${project().id}/publish`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ publishedOn: '2026-10-20' });
     expect(request.request.headers.get('If-Match')).toBe('"9d4b2e7a1c0f5836"');
+    expect(heldRecordOf(request.request.context)).toEqual({
+      id: project().id,
+      slug: project().slug,
+      title: project().title,
+      year: project().year,
+      category: project().category,
+      tag: project().tag,
+      perex: project().perex,
+      body: project().body,
+      coverImage: project().coverImage?.id ?? null,
+      coverImageAlt: project().coverImage?.alt ?? null,
+      publishedOn: project().publishedOn,
+    });
     request.flush(project());
 
     expect(received).toEqual(project());

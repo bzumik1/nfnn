@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { readPdf } from '../src/app/features/donations/receipt-pdf/testing/pdf-reader';
-import { administrator, mockDonorApi, session } from './donor-session';
+import { administrator, mockDonorApi, session, whenAdministrationCopied } from './donor-session';
 import { expect, test } from './fixtures';
 import { syntheticPortrait, syntheticSignature } from './receipt-issuing';
 import { donorIdOf, FOUR_DONORS, mockYearlyReceipts, receiptNumberOf } from './yearly-receipts';
@@ -26,10 +26,12 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
     page,
   }) => {
     const calls = await mockYearlyReceipts(page, { donors: FOUR_DONORS, withArt: true });
+    const copied = whenAdministrationCopied(page);
 
     await page.goto('/sprava/hromadna-potvrzeni');
     await expect(page).toHaveTitle('Hromadná potvrzení | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Hromadná potvrzení' })).toBeFocused();
+    await copied();
     await expect(page.getByLabel('Rok', { exact: true })).toHaveValue(/2026/);
     await expect(page.locator('.donors-table tbody tr td:first-child')).toHaveText([
       'Adámek Jan',

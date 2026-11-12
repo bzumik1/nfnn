@@ -43,3 +43,30 @@ export function settled(page: Page, inFlight: () => number, timeoutMs: number): 
     timeoutMs,
   });
 }
+
+export function openRequests(page: Page): () => string[] {
+  const open = new Set<Request>();
+  page.on('request', (request) => open.add(request));
+  page.on('requestfinished', (request) => open.delete(request));
+  page.on('requestfailed', (request) => open.delete(request));
+  return () =>
+    [...open].map((request) => {
+      const url = new URL(request.url());
+      return `${request.method()} ${url.origin}${url.pathname}`;
+    });
+}
+
+export async function quietNetwork(
+  page: Page,
+  open: () => string[],
+  timeoutMs: number,
+): Promise<void> {
+  try {
+    await page.waitForLoadState('networkidle', { timeout: timeoutMs });
+  } catch {
+    const document = await page.evaluate(() => window.document.readyState).catch(() => 'gone');
+    throw new Error(
+      `the network did not go quiet within ${timeoutMs} ms (document ${document}); still open: ${open().join(', ') || 'nothing'}`,
+    );
+  }
+}

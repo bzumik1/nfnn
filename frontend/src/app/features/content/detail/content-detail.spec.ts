@@ -1,16 +1,29 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import {
+  ActivatedRoute,
+  convertToParamMap,
+  provideRouter,
+  Router,
+  RouteReuseStrategy,
+} from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { IMAGE_ID, newsArticle } from '../testing/news-fixtures';
 import { project } from '../testing/project-fixtures';
 import { ContentDetail } from './content-detail';
+import { NOT_FOUND_TITLE } from '../not-found/not-found';
 import { ContentKind } from './content-page';
 import { PROBE_PATH } from '../../../core/connectivity/connectivity';
 import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
 import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
 import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
+import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
+
+@Component({ template: '' })
+class OtherTab {}
 
 function problem(status: number, type: string) {
   return {
@@ -263,5 +276,105 @@ describe('Given a visitor opening a news article the service worker kept from an
     await settle(fixture);
 
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti je hotová');
+  });
+});
+
+describe('Given an article kept while the visitor is on another tab', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  const ARTICLE = '/api/content/news/zahrada-pro-deti';
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([
+          {
+            path: 'aktuality/:slug',
+            title: 'Aktualita | Nová naděje – nadační fond',
+            data: { kind: 'news' },
+            component: ContentDetail,
+          },
+          { path: 'o-nas', title: 'O nás | Nová naděje – nadační fond', component: OtherTab },
+        ]),
+        { provide: RouteReuseStrategy, useExisting: KeptTabPages },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
+  });
+
+  afterEach(() => http.verify());
+
+  async function shown(): Promise<HTMLElement> {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    return harness.routeNativeElement!;
+  }
+
+  async function readAndLeave(): Promise<void> {
+    http.expectOne(ARTICLE).flush(newsArticle());
+    await harness.fixture.whenStable();
+    await harness.navigateByUrl('/o-nas');
+  }
+
+  it('when the visitor returns, then the tab is named after the article at once and the article is asked for again behind it', async () => {
+    await readAndLeave();
+
+    await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
+    const asked = http.expectOne(ARTICLE);
+
+    expect(TestBed.inject(Title).getTitle()).toBe('Zahrada pro děti | Nová naděje – nadační fond');
+    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
+
+    asked.flush(newsArticle({ title: 'Zahrada pro děti je hotová' }));
+    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe(
+      'Zahrada pro děti je hotová',
+    );
+  });
+
+  it('when the article cannot be asked for again, then the article they saw stays shown', async () => {
+    await readAndLeave();
+
+    await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
+    http.expectOne(ARTICLE).flush(null, { status: 0, statusText: 'Unknown Error' });
+
+    const page = await shown();
+    expect(page.querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('when a missing article is left for another tab, then that page is not kept from search engines, and on return the article is again named as missing', async () => {
+    const gone = problem(404, 'content/news-not-found');
+    http.expectOne(ARTICLE).flush(gone.body, gone.options);
+    await harness.fixture.whenStable();
+    const robots = () => document.head.querySelector('meta[name="robots"]');
+    expect(robots()).not.toBeNull();
+
+    await harness.navigateByUrl('/o-nas');
+    expect(robots()).toBeNull();
+
+    await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
+    await Promise.resolve();
+    expect(TestBed.inject(Title).getTitle()).toBe(NOT_FOUND_TITLE);
+    expect(robots()).not.toBeNull();
+
+    http.expectOne(ARTICLE).flush(gone.body, gone.options);
+    await shown();
+    expect(TestBed.inject(Title).getTitle()).toBe(NOT_FOUND_TITLE);
+  });
+
+  it('when the visitor leaves before the article arrives, then its answer neither names the tab nor leads anywhere, and it is asked for again on return', async () => {
+    const pending = http.expectOne(ARTICLE);
+    await harness.navigateByUrl('/o-nas');
+
+    expect(pending.cancelled).toBe(true);
+    expect(TestBed.inject(Title).getTitle()).toBe('O nás | Nová naděje – nadační fond');
+
+    await harness.navigateByUrl('/aktuality/zahrada-pro-deti');
+    http.expectOne(ARTICLE).flush(newsArticle());
+    expect((await shown()).querySelector('h1')?.textContent?.trim()).toBe('Zahrada pro děti');
   });
 });

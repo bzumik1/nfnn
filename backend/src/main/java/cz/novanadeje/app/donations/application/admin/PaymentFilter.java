@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
-import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 
@@ -68,14 +67,13 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
 
     private static Stream<String> searchable(AdminPaymentView view) {
         BankPayment payment = view.payment();
-        Optional<String> account = payment.sender().map(SenderAccount::display)
-                .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)));
+        Optional<String> account = payment.payerAccount();
         if (view.payerWithheld()) {
             return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(),
-                    view.donation().flatMap(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
+                    view.donation().map(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
         }
         return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(), account, payment.counterpartyName(),
-                        payment.messageForRecipient(), view.donation().flatMap(PairedDonationView::donor).map(DonorRecord::name))
+                        payment.messageForRecipient(), view.donation().map(PairedDonationView::donor).map(DonorRecord::name))
                 .flatMap(Optional::stream);
     }
 

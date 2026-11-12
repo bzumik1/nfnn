@@ -1,3 +1,4 @@
+import { OpenAlert, OpenAlertArea } from '../../core/push/open-alerts-api';
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
 import { ifMatch } from '../../core/version/row-version';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -55,7 +56,7 @@ export interface HistoryImportResponse {
   finishedAt: string | null;
 }
 
-export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
+export type PushAlertArea = OpenAlertArea;
 
 export type PushAlertSwitches = Record<PushAlertArea, boolean>;
 
@@ -71,10 +72,7 @@ export interface PushSubscriptionResponse {
   current: boolean;
 }
 
-export interface OpenAlertResponse {
-  area: PushAlertArea;
-  since: string;
-}
+export type OpenAlertResponse = OpenAlert;
 
 export interface AdminPushResponse {
   publicKey: string;
@@ -188,6 +186,28 @@ export interface SymbolClaimResponse {
   answeredAt: string;
   donationCount: number;
 }
+
+export interface StoredSymbolClaim {
+  readonly id: string;
+  readonly donorId: string;
+  readonly accountNumber: string;
+  readonly variableSymbol: string;
+  readonly answer: SymbolClaimAnswer;
+  readonly answeredAt: string;
+}
+
+export function storedSymbolClaimOf(claim: SymbolClaimResponse): StoredSymbolClaim {
+  return {
+    id: claim.id,
+    donorId: claim.donorId,
+    accountNumber: claim.account,
+    variableSymbol: claim.variableSymbol,
+    answer: claim.answer,
+    answeredAt: claim.answeredAt,
+  };
+}
+
+const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports', 'nextReport', 'lastEndedMonth'];
 
 export type BankLogoFailure =
   | 'status'
@@ -520,6 +540,11 @@ export interface AdminSettingResponse {
 export interface AdminSettingsResponse {
   settings: AdminSettingResponse[];
   secretsCanBeStored: boolean;
+  version: string;
+}
+
+export interface AdminSettingsSavedResponse extends SettingsSavedResponse {
+  version: string;
 }
 
 export type ReceiptSignatureKind = 'RASTER' | 'VECTOR';
@@ -888,11 +913,14 @@ export class AdminApi {
     code: string,
     sourceUrl: string,
     version: string | null,
+    held: AdminBankLogoResponse | null,
   ): Observable<AdminBankLogoResponse> {
     return this.http.put<AdminBankLogoResponse>(
       bankLogoUrl(code),
       { sourceUrl },
-      version === null ? { headers: new HttpHeaders({ 'If-None-Match': '*' }) } : ifMatch(version),
+      version === null
+        ? { headers: new HttpHeaders({ 'If-None-Match': '*' }) }
+        : ifMatch(version, held),
     );
   }
 
@@ -900,26 +928,38 @@ export class AdminApi {
     return this.http.post<AdminBankLogoResponse>(`${bankLogoUrl(code)}/refresh`, null);
   }
 
-  removeBankLogo(code: string, version: string): Observable<void> {
-    return this.http.delete<void>(bankLogoUrl(code), ifMatch(version));
+  removeBankLogo(
+    code: string,
+    version: string,
+    held: AdminBankLogoResponse | null,
+  ): Observable<void> {
+    return this.http.delete<void>(bankLogoUrl(code), ifMatch(version, held));
   }
 
   symbolClaims(): Observable<SymbolClaimListResponse> {
     return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
   }
 
-  reverseSymbolClaim(claimId: string, version: string): Observable<void> {
+  reverseSymbolClaim(
+    claimId: string,
+    version: string,
+    held: SymbolClaimResponse | null,
+  ): Observable<void> {
     return this.http.post<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}/reverse`,
       null,
-      ifMatch(version),
+      ifMatch(version, held === null ? null : storedSymbolClaimOf(held)),
     );
   }
 
-  deleteSymbolClaim(claimId: string, version: string): Observable<void> {
+  deleteSymbolClaim(
+    claimId: string,
+    version: string,
+    held: SymbolClaimResponse | null,
+  ): Observable<void> {
     return this.http.delete<void>(
       `/api/admin/donations/symbol-claims/${encodeURIComponent(claimId)}`,
-      ifMatch(version),
+      ifMatch(version, held === null ? null : storedSymbolClaimOf(held)),
     );
   }
 
@@ -956,11 +996,12 @@ export class AdminApi {
   changeReportSettings(
     request: ReportSettingsRequest,
     version: string,
+    held: ReportSettingsResponse | null,
   ): Observable<ReportSettingsResponse> {
     return this.http.put<ReportSettingsResponse>(
       '/api/admin/donations/report/settings',
       request,
-      ifMatch(version),
+      ifMatch(version, held, REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER),
     );
   }
 
@@ -1074,8 +1115,15 @@ export class AdminApi {
     return this.http.get<AdminSettingsResponse>('/api/admin/operations/settings');
   }
 
-  changeSettings(changes: SettingValueRequest[]): Observable<SettingsSavedResponse> {
-    return this.http.put<SettingsSavedResponse>('/api/admin/operations/settings', { changes });
+  changeSettings(
+    changes: SettingValueRequest[],
+    version: string,
+  ): Observable<AdminSettingsSavedResponse> {
+    return this.http.put<AdminSettingsSavedResponse>(
+      '/api/admin/operations/settings',
+      { changes },
+      ifMatch(version),
+    );
   }
 
   receiptSignatory(): Observable<ReceiptSignatoryResponse> {

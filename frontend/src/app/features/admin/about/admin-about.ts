@@ -36,6 +36,7 @@ import {
 } from '../../content/about-api';
 import { MAX_IMAGE_BYTES, NewsApi } from '../../content/news-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -70,6 +71,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 })
 export class AdminAbout {
   private readonly api = inject(AboutApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly media = inject(NewsApi);
   private readonly photos = inject(PhotosApi);
   private readonly auth = inject(AuthStore);
@@ -131,8 +133,8 @@ export class AdminAbout {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
-      .load()
+    this.reads
+      .about()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (about) => {

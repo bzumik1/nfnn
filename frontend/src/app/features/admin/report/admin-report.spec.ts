@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -14,6 +15,12 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminReport } from './admin-report';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 
 const REPORT_URL = '/api/admin/donations/report';
 const SETTINGS_URL = '/api/admin/donations/report/settings';
@@ -353,6 +360,7 @@ describe('Given an administrator on the monthly report page', () => {
       await submit();
       const request = http.expectOne(SETTINGS_URL);
       expect(request.request.headers.get('If-Match')).toBe(`"${reportView().settings.version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(reportView().settings);
       const refusal = problem(
         409,
         'donations/changed-meanwhile',
@@ -386,6 +394,7 @@ describe('Given an administrator on the monthly report page', () => {
 
       const request = http.expectOne(SETTINGS_URL);
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.recipients).toEqual(['pavel@example.cz']);
       expect(button('Ukládáme…').disabled).toBe(true);
       request.flush({});
@@ -725,5 +734,41 @@ describe('Given an administrator changing the monthly report on a device that ke
 
     expect(shelf.draftOf('administration', 'report-settings')).toBeNull();
     expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('info@nfnn.cz');
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  afterEach(() => vi.useRealTimers());
+
+  async function openReport(now: string) {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) });
+    const { settings, sentReports, nextReport, lastEndedMonth } = reportView();
+    return openOfflineFromCopy(
+      AdminReport,
+      copyOf({
+        'donations/report-settings': [{ ...settings, sentReports, nextReport, lastEndedMonth }],
+      }),
+    );
+  }
+
+  it('when the monthly e-mail opens, then its settings and the next report come from the copy', async () => {
+    const { page, http } = await openReport('2026-09-20T10:00:00Z');
+
+    expect(textOf(page)).toContain('info@nfnn.cz');
+    expect(textOf(page.querySelector('.next-report'))).toBe(
+      'Příští přehled za září 2026 odejde 1. 10. 2026 v 7:00.',
+    );
+    expect(page.querySelector('.ui-load-state--error')).toBeNull();
+    waitsForConnection(page, 'Uložit nastavení');
+    http.verify();
+  });
+
+  it('when the next report of the copy was due before today, then the page says when it was due by the copy and that whether it went shows when online', async () => {
+    const { page, http } = await openReport('2026-11-12T10:00:00Z');
+
+    expect(textOf(page.querySelector('.next-report'))).toBe(
+      'Podle údajů z 12. 11. 2026 9:00 měl přehled za září 2026 odejít 1. 10. 2026 v 7:00; jestli odešel, ukážeme, až budete online.',
+    );
+    http.verify();
   });
 });

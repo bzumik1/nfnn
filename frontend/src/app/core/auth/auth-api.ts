@@ -12,6 +12,7 @@ import {
   ConnectedAppList,
   SignedInDeviceList,
   Donor,
+  DonorLocale,
   RedirectResponse,
   EmailChangeRequest,
   PasskeyAssertionCredential,
@@ -26,6 +27,25 @@ import {
   SecondFactorRecovery,
   UpdateDonorProfileRequest,
 } from './donor';
+import { ifMatch } from '../version/row-version';
+
+export interface StoredProfile {
+  readonly name: string;
+  readonly street: string;
+  readonly city: string;
+  readonly postalCode: string;
+  readonly preferredLocale: DonorLocale;
+}
+
+export function storedProfileOf(donor: Donor): StoredProfile {
+  return {
+    name: donor.name,
+    street: donor.address.street,
+    city: donor.address.city,
+    postalCode: donor.address.postalCode,
+    preferredLocale: donor.preferredLocale,
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
@@ -140,8 +160,12 @@ export class AuthApi {
     return this.http.get<Donor>('/api/donors/me');
   }
 
-  updateProfile(request: UpdateDonorProfileRequest): Observable<Donor> {
-    return this.http.patch<Donor>('/api/donors/me', request);
+  updateProfile(
+    request: UpdateDonorProfileRequest,
+    version: string,
+    held: StoredProfile | null,
+  ): Observable<Donor> {
+    return this.http.patch<Donor>('/api/donors/me', request, ifMatch(version, held));
   }
 
   changePassword(request: ChangePasswordRequest): Observable<AuthResponse> {

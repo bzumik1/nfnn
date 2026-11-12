@@ -35,6 +35,10 @@ public class SettingsWriter {
         repository.lockForChange();
     }
 
+    public List<StoredSetting> stored() {
+        return repository.findAll();
+    }
+
     public Map<Setting, String> storedValues() {
         Map<Setting, String> values = new EnumMap<>(Setting.class);
         for (StoredSetting stored : repository.findAll()) {

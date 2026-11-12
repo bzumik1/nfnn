@@ -21,8 +21,9 @@ import {
 } from '../../admin-api';
 import { SignatureArtwork } from '../../receipt-signature/signature-artwork';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
 
-type LoadState = 'loading' | 'ready' | 'error';
+type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 interface SignatureBlock {
   signatory: ChosenReceiptSignatoryResponse;
@@ -46,6 +47,10 @@ export class ReceiptSignatory {
   private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.state() === 'offline',
+    () => this.load(),
+  );
   protected readonly block = signal<SignatureBlock | null>(null);
   protected readonly signatureLabel = $localize`:@@admin.signatory.signatureAlt:Podpis na potvrzení`;
 
@@ -78,10 +83,10 @@ export class ReceiptSignatory {
                 this.block.set(block);
                 this.state.set('ready');
               },
-              error: () => this.state.set('error'),
+              error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
             });
         },
-        error: () => this.state.set('error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       });
   }
 

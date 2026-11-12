@@ -37,9 +37,11 @@ public class SettingsStepDefinitions {
     private final JdbcClient jdbc;
     private final ScenarioDonors donors;
     private final BackupKeySource backupKeys;
+    private final SettingsRowVersions versions;
 
     public SettingsStepDefinitions(ApiClient api, DonorSessions sessions, RecordingSetupCodeAnnouncer announcer,
-                                   RecordingApplicationRestarter restarter, JdbcClient jdbc, ScenarioDonors donors, BackupKeySource backupKeys) {
+                                   RecordingApplicationRestarter restarter, JdbcClient jdbc, ScenarioDonors donors, BackupKeySource backupKeys,
+                                   SettingsRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.announcer = announcer;
@@ -47,6 +49,7 @@ public class SettingsStepDefinitions {
         this.jdbc = jdbc;
         this.donors = donors;
         this.backupKeys = backupKeys;
+        this.versions = versions;
     }
 
     @Before
@@ -256,14 +259,14 @@ public class SettingsStepDefinitions {
     @When("{string} changes the settings:")
     public void changesTheSettings(String alias, DataTable changes) {
         sessions.actAs(alias);
-        api.put(SETTINGS, Map.of("changes", values(changes)));
+        api.put(SETTINGS, Map.of("changes", values(changes)), versions.ifMatchOfStored());
     }
 
     @When("{string} changes the settings in {string}:")
     public void changesTheSettingsIn(String alias, String language, DataTable changes) {
         sessions.actAs(alias);
         api.acceptLanguage(language);
-        api.put(SETTINGS, Map.of("changes", values(changes)));
+        api.put(SETTINGS, Map.of("changes", values(changes)), versions.ifMatchOfStored());
     }
 
     @Then("the setting {string} reads {string}")

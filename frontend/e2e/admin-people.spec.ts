@@ -98,7 +98,15 @@ test.describe('Given an administrator who keeps the people of the foundation', (
         const request = route.request();
         const path = new URL(request.url()).pathname;
         if (request.method() === 'GET') {
-          return route.fulfill({ json: { members: saved ? [saved] : [], note: null } });
+          return route.fulfill({
+            json: {
+              members: saved ? [saved] : [],
+              note: null,
+              footnote: null,
+              noteVersion: '6a0c1e3f9b2d4875',
+              footnoteVersion: '1f8e2d7c4b6a9035',
+            },
+          });
         }
         sent.push([request.method(), path, request.postDataJSON()]);
         if (request.method() === 'POST' && path === PEOPLE) {
@@ -188,7 +196,16 @@ test.describe('Given an administrator who chooses who signs the receipts', () =>
     await rememberedSession(page);
     await page.route(
       (url) => url.pathname === PEOPLE,
-      (route) => route.fulfill({ json: { members: [member(EVA)], note: null } }),
+      (route) =>
+        route.fulfill({
+          json: {
+            members: [member(EVA)],
+            note: null,
+            footnote: null,
+            noteVersion: '6a0c1e3f9b2d4875',
+            footnoteVersion: '1f8e2d7c4b6a9035',
+          },
+        }),
     );
   });
 

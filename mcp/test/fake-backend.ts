@@ -440,11 +440,11 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [200, people()];
     case 'PUT /api/admin/content/people/note': {
       const note = JSON.parse(body) as Record<string, unknown>;
-      return [200, { text: note['text'] ?? null }];
+      return [200, { text: note['text'] ?? null, version: CURRENT_VERSION }];
     }
     case 'PUT /api/admin/content/people/footnote': {
       const footnote = JSON.parse(body) as Record<string, unknown>;
-      return [200, { text: footnote['text'] ?? null }];
+      return [200, { text: footnote['text'] ?? null, version: CURRENT_VERSION }];
     }
     case 'GET /api/admin/content/about':
       return [
@@ -1230,7 +1230,9 @@ function people(): Record<string, unknown> {
       person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
     ],
     note: 'Děkujeme všem, kdo pomáhají s námi.',
+    noteVersion: CURRENT_VERSION,
     footnote: 'Web zajišťuje bez nároku na odměnu Petr Vzor.',
+    footnoteVersion: CURRENT_VERSION,
   };
 }
 

@@ -5,6 +5,8 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
+import { storedNewsArticleOf } from '../../content/news-api';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -22,6 +24,16 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminNewsEditor } from './admin-news-editor';
+import {
+  COPY_STORED_AT,
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+  textOf,
+} from '../device-copy/testing/opened-copy';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
+import { newsArticle as heldArticle } from '../../content/testing/news-fixtures';
+import { person as heldPerson } from '../../content/testing/people-fixtures';
 
 const NEWS_URL = '/api/admin/content/news';
 const MEDIA_URL = '/api/admin/content/media';
@@ -874,6 +886,7 @@ describe('Given an administrator editing a published news article', () => {
       await submit(fixture);
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${newsArticle().version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(storedNewsArticleOf(newsArticle()));
       request.flush(
         {
           type: 'https://nfnn.cz/problems/content/changed-meanwhile',
@@ -903,6 +916,7 @@ describe('Given an administrator editing a published news article', () => {
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.method).toBe('PUT');
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.title).toBe('Zahrada pro všechny děti');
       request.flush(
         newsArticle({ title: 'Zahrada pro všechny děti', version: 'c3e8a1f05b9d7264' }),
@@ -1699,6 +1713,7 @@ describe('Given an administrator editing a published news article on a device th
       await submit(fixture);
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       request.flush(
         {
           type: 'https://nfnn.cz/problems/content/changed-meanwhile',
@@ -1862,5 +1877,37 @@ describe('Given an administrator opening a new news article with a draft whose p
     expect(text(fixture, '[role="status"]:not(:empty)')).toContain(
       'Datum zveřejnění z rozepsaných úprav už minulo, proto jsme ho posunuli na dnešek.',
     );
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when an article opens, then the editor shows it from the copy with its signers and saving needs a connection', async () => {
+    const article = heldArticle();
+    const { page, http } = await openOfflineFromCopy(
+      AdminNewsEditor,
+      contentCopy({
+        'content/news': [article],
+        'content/people': [
+          {
+            members: [heldPerson()],
+            note: null,
+            footnote: null,
+            noteVersion: 'n',
+            footnoteVersion: 'f',
+          },
+        ],
+      }),
+      { path: 'sprava/aktuality/:id', url: `/sprava/aktuality/${article.id}` },
+    );
+
+    expect((page.querySelector('#news-title') as HTMLInputElement | null)?.value).toBe(
+      article.title,
+    );
+    expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse(COPY_STORED_AT));
+    expect([...page.querySelectorAll('option')].map((option) => textOf(option))).toContainEqual(
+      expect.stringContaining('Eva Vzorová'),
+    );
+    waitsForConnection(page, 'Uložit a ukázat na webu');
+    http.verify();
   });
 });

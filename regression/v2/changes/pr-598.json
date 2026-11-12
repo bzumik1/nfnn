@@ -1,0 +1,66 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the administration starts, then the badge shows the open alerts the server names",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when an administrator opens the app on a public page, then the badge and the open alerts follow the server",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the administration closes before the answer comes, then the badge is left as it is",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when the administrator signs out before the answer comes, then the read is cancelled and nothing more is asked",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the settings cannot be read, then the badge is left as it is and nothing is shown",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when the open alerts cannot be read, then the badge is left as it is",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the tab comes back within a minute, then the server is not asked again",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when the app comes back within a minute, then the server is not asked again",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the tab comes back after a minute, then the badge is read again once",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when the app comes back after a minute and the fault was resolved meanwhile, then the badge is cleared",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/alert-badge-refresh.spec.ts > Given the administration open in a tab > when the administration is left, then a tab coming back asks nothing",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when the administrator signs out before the answer comes, then the read is cancelled and nothing more is asked",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration opens, then it reads the push settings once for the badge of the app icon",
+    "replacement": "src/app/core/push/open-alerts.spec.ts > Given the app open on any page > when an administrator opens the app on a public page, then the badge and the open alerts follow the server",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone",
+    "contract": "docs/frontend-overview.md, core/push/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin-alerts.spec.ts > Given an administrator on the alerts page of a device with a service worker > when an alert arrives while the app is open, then the icon badge shows the open alerts",
+    "replacement": "e2e/admin-alerts.spec.ts > Given an administrator on the alerts page of a device with a service worker > when an alert arrives while the app is open, then the icon badge shows the open alerts and follows the server",
+    "reason": "Jakub 2026-11-12 (the icon kept a 1 of a fault long resolved): PR #598: the badge is refreshed from the server for an administrator on every page by core/push/open-alerts.ts, not only in the administration shell, and features/admin/shell/alert-badge-refresh.ts is gone; every push message the open app hears now also reads the open alerts again, so the journey follows the server's answer",
+    "contract": "docs/frontend-overview.md, core/push/"
+  }
+]

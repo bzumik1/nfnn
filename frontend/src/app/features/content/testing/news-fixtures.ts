@@ -1,8 +1,10 @@
-import { NewsArticleResponse, UploadedImageResponse } from '../news-api';
+import { AdminNewsArticleResponse, UploadedImageResponse } from '../news-api';
 
 export const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
 
-export function newsArticle(overrides: Partial<NewsArticleResponse> = {}): NewsArticleResponse {
+export function newsArticle(
+  overrides: Partial<AdminNewsArticleResponse> = {},
+): AdminNewsArticleResponse {
   return {
     id: '0199f3e0-0000-7000-8000-00000000c001',
     slug: 'zahrada-pro-deti',
@@ -26,7 +28,9 @@ export function newsArticle(overrides: Partial<NewsArticleResponse> = {}): NewsA
   };
 }
 
-export function draftArticle(overrides: Partial<NewsArticleResponse> = {}): NewsArticleResponse {
+export function draftArticle(
+  overrides: Partial<AdminNewsArticleResponse> = {},
+): AdminNewsArticleResponse {
   return newsArticle({
     id: '0199f3e0-0000-7000-8000-00000000c002',
     slug: 'beneficni-koncert',

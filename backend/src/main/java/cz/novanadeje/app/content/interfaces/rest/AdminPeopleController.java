@@ -5,6 +5,7 @@ import cz.novanadeje.app.content.application.people.PeopleAdminService;
 import cz.novanadeje.app.content.application.people.PeopleFootnoteService;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -40,7 +41,7 @@ class AdminPeopleController {
 
     @GetMapping
     PeopleResponse read() {
-        return PeopleResponse.from(people.list(), notes.read(), footnotes.read());
+        return PeopleResponse.from(people.list(), notes.current(), footnotes.current());
     }
 
     @GetMapping("/me")
@@ -56,17 +57,18 @@ class AdminPeopleController {
 
     @PutMapping("/order")
     PeopleResponse order(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PeopleOrderRequest request) {
-        return PeopleResponse.from(people.order(admin(jwt), request.toOrder()), notes.read(), footnotes.read());
+        return PeopleResponse.from(people.order(admin(jwt), request.toOrder()), notes.current(), footnotes.current());
     }
 
     @PutMapping("/note")
-    FoundersNoteResponse changeNote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody FoundersNoteRequest request) {
-        return new FoundersNoteResponse(notes.change(admin(jwt), Optional.ofNullable(request.text())).orElse(null));
+    FoundersNoteResponse changeNote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody FoundersNoteRequest request, ExpectedVersion expected) {
+        return FoundersNoteResponse.from(notes.change(admin(jwt), Optional.ofNullable(request.text()), expected));
     }
 
     @PutMapping("/footnote")
-    PeopleFootnoteResponse changeFootnote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PeopleFootnoteRequest request) {
-        return new PeopleFootnoteResponse(footnotes.change(admin(jwt), Optional.ofNullable(request.text())).orElse(null));
+    PeopleFootnoteResponse changeFootnote(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PeopleFootnoteRequest request,
+                                          ExpectedVersion expected) {
+        return PeopleFootnoteResponse.from(footnotes.change(admin(jwt), Optional.ofNullable(request.text()), expected));
     }
 
     @PutMapping("/{id}")

@@ -5,10 +5,10 @@ import cz.novanadeje.app.operations.application.settings.SettingsView;
 
 import java.util.List;
 
-record SettingsResponse(List<Item> settings, boolean secretsCanBeStored) {
+record SettingsResponse(List<Item> settings, boolean secretsCanBeStored, String version) {
 
     static SettingsResponse from(SettingsView view) {
-        return new SettingsResponse(view.settings().stream().map(Item::from).toList(), view.secretsCanBeStored());
+        return new SettingsResponse(view.settings().stream().map(Item::from).toList(), view.secretsCanBeStored(), view.version());
     }
 
     record Item(String name, String group, boolean secret, String value, boolean configured, boolean stored, boolean unreadable) {

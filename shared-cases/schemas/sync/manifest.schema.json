@@ -44,7 +44,17 @@
       "properties": {
         "subject": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
         "summary": { "$ref": "#/$defs/summary" },
-        "chunks": { "type": "array", "items": { "$ref": "#/$defs/donationsChunk" } }
+        "chunks": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/donationsChunk" },
+              { "$ref": "#/$defs/receiptsChunk" },
+              { "$ref": "#/$defs/bankAccountsChunk" },
+              { "$ref": "#/$defs/symbolClaimsChunk" }
+            ]
+          }
+        }
       }
     },
     "summary": {
@@ -107,8 +117,117 @@
         "source": { "enum": ["BANK_TRANSFER", "MANUAL"] },
         "purpose": { "enum": ["GENERAL", "ACCOUNT_VERIFICATION"] },
         "pairedBy": { "enum": ["VARIABLE_SYMBOL", "SENDER_ACCOUNT", "CONFIRMED_SYMBOL", "MANUAL", null] },
-        "bankAccountId": { "type": "null", "description": "The bank account a donation was paired through; the case rows hold none" },
-        "symbolClaimId": { "type": "null", "description": "The confirmed older symbol a donation was paired by; the case rows hold none" }
+        "bankAccountId": {
+          "oneOf": [{ "type": "string", "pattern": "^link:[a-z][a-z0-9]*$" }, { "type": "null" }],
+          "description": "The bank account link a donation was paired through"
+        },
+        "symbolClaimId": {
+          "oneOf": [{ "type": "string", "pattern": "^claim:[a-z][a-z0-9]*$" }, { "type": "null" }],
+          "description": "The confirmed older symbol a donation was paired by"
+        }
+      }
+    },
+    "receiptsChunk": {
+      "type": "object",
+      "required": ["id", "rowsSha256", "count", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^receipts:\\d{4}$" },
+        "rowsSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "count": { "type": "integer", "minimum": 1 },
+        "rows": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/receiptRow" } }
+      }
+    },
+    "bankAccountsChunk": {
+      "type": "object",
+      "required": ["id", "rowsSha256", "count", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^bank-accounts$" },
+        "rowsSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "count": { "type": "integer", "minimum": 1 },
+        "rows": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bankAccountRow" } }
+      }
+    },
+    "symbolClaimsChunk": {
+      "type": "object",
+      "required": ["id", "rowsSha256", "count", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^symbol-claims$" },
+        "rowsSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "count": { "type": "integer", "minimum": 1 },
+        "rows": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/symbolClaimRow" } }
+      }
+    },
+    "receiptRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "kind", "number", "donationId", "year", "issuedAt", "supersededAt", "receipt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^receipt:[a-z][a-z0-9]*$" },
+        "status": { "enum": ["ACTIVE", "REPLACED", "WITHDRAWN"] },
+        "kind": { "enum": ["SINGLE", "YEARLY"] },
+        "number": { "$ref": "../receipts/v1/frozen.schema.json#/$defs/number" },
+        "donationId": { "oneOf": [{ "type": "string", "pattern": "^donation:[1-9][0-9]*$" }, { "type": "null" }] },
+        "year": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/year" }, { "type": "null" }] },
+        "issuedAt": { "$ref": "../defs/rows.schema.json#/$defs/preciseInstant" },
+        "supersededAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/preciseInstant" }, { "type": "null" }] },
+        "receipt": { "$ref": "../receipts/v1/frozen.schema.json#/$defs/frozen" }
+      }
+    },
+    "bankAccountRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "accountNumber",
+        "status",
+        "verifiedOn",
+        "connectedFrom",
+        "disconnectedOn",
+        "shared",
+        "pairingExcluded",
+        "verificationPaymentOn",
+        "symbolOffer"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^link:[a-z][a-z0-9]*$" },
+        "accountNumber": { "$ref": "../defs/rows.schema.json#/$defs/account" },
+        "status": { "enum": ["ACTIVE", "AWAITING_PAYMENT", "DISCONNECTED"] },
+        "verifiedOn": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "connectedFrom": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "disconnectedOn": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "shared": { "type": "boolean" },
+        "pairingExcluded": { "type": "boolean" },
+        "verificationPaymentOn": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "symbolOffer": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["variableSymbol", "paymentCount", "firstMonth", "lastMonth"],
+              "additionalProperties": false,
+              "properties": {
+                "variableSymbol": { "$ref": "../defs/rows.schema.json#/$defs/variableSymbol" },
+                "paymentCount": { "type": "integer", "minimum": 1 },
+                "firstMonth": { "$ref": "../defs/rows.schema.json#/$defs/month" },
+                "lastMonth": { "$ref": "../defs/rows.schema.json#/$defs/month" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "symbolClaimRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "accountNumber", "variableSymbol", "answer"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^claim:[a-z][a-z0-9]*$" },
+        "accountNumber": { "$ref": "../defs/rows.schema.json#/$defs/account" },
+        "variableSymbol": { "$ref": "../defs/rows.schema.json#/$defs/variableSymbol" },
+        "answer": { "enum": ["CONFIRMED", "DECLINED"] }
       }
     }
   }

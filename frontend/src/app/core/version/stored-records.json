@@ -1,0 +1,86 @@
+{
+  "newsArticle": {
+    "source": "backend/src/main/java/cz/novanadeje/app/content/application/ContentVersions.java",
+    "record": "StoredNewsArticle",
+    "keys": [
+      "id",
+      "slug",
+      "title",
+      "tag",
+      "perex",
+      "body",
+      "coverImage",
+      "coverImageAlt",
+      "signer",
+      "publishedOn",
+      "lookBackYear",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  "project": {
+    "source": "backend/src/main/java/cz/novanadeje/app/content/application/ContentVersions.java",
+    "record": "StoredProject",
+    "keys": [
+      "id",
+      "slug",
+      "title",
+      "year",
+      "category",
+      "tag",
+      "perex",
+      "body",
+      "coverImage",
+      "coverImageAlt",
+      "publishedOn",
+      "createdAt",
+      "updatedAt"
+    ]
+  },
+  "pageText": {
+    "source": "backend/src/main/java/cz/novanadeje/app/content/application/ContentVersions.java",
+    "record": "StoredPageText",
+    "keys": ["text", "updatedAt"]
+  },
+  "profile": {
+    "source": "backend/src/main/java/cz/novanadeje/app/donors/application/ProfileVersions.java",
+    "record": "StoredProfile",
+    "keys": ["name", "street", "city", "postalCode", "preferredLocale"]
+  },
+  "symbolClaim": {
+    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/sync/AdminSyncRows.java",
+    "record": "SymbolClaimRow",
+    "keys": ["id", "donorId", "accountNumber", "variableSymbol", "answer", "answeredAt", "version"]
+  },
+  "reportSettings": {
+    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/sync/AdminSyncRows.java",
+    "record": "ReportSettingsRow",
+    "keys": [
+      "recipients",
+      "sendDay",
+      "sendHour",
+      "sections",
+      "changedAt",
+      "sentReports",
+      "nextReport",
+      "lastEndedMonth",
+      "version"
+    ]
+  },
+  "bankLogo": {
+    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/banklogo/BankLogoAdminRow.java",
+    "record": "BankLogoAdminRow",
+    "keys": [
+      "code",
+      "bankName",
+      "sourceUrl",
+      "sourceAllowed",
+      "version",
+      "imageId",
+      "imageSha256",
+      "fetchedAt",
+      "checkedAt",
+      "lastFailure"
+    ]
+  }
+}

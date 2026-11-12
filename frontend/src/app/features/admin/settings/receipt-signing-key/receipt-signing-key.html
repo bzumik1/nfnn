@@ -119,6 +119,19 @@
         }
       }
     }
+    <div class="signing-key-offline" role="status">
+      @if (state() === 'offline') {
+        @if (onlineAgain.serverAway()) {
+          <p class="signing-key-status" i18n="@@admin.signingKey.serverAway">
+            Klíč ukážeme, až server zase odpoví.
+          </p>
+        } @else {
+          <p class="signing-key-status" i18n="@@admin.signingKey.offline">
+            Klíč ukážeme, až budete online.
+          </p>
+        }
+      }
+    </div>
     <app-live-notice [notice]="notice()" />
   </div>
 </section>

@@ -103,7 +103,7 @@ class CardDriver {
   }
 
   async showDonor(donor: Donor): Promise<void> {
-    TestBed.inject(AuthStore).updateProfile({}).subscribe();
+    TestBed.inject(AuthStore).updateProfile({}, '00000000000000d1', null).subscribe();
     this.http().expectOne(PROFILE_URL).flush(donor);
     await this.settle();
   }
@@ -398,7 +398,7 @@ describe('Given the sign-in and security card of the details page', () => {
         expect(normalized(document.activeElement?.textContent)).toBe(
           'Vypnout dvoufaktorové ověření',
         );
-        store.updateProfile({}).subscribe();
+        store.updateProfile({}, '00000000000000d1', null).subscribe();
         expect(http.expectOne(PROFILE_URL).request.headers.get('Authorization')).toBe(
           'Bearer token-2',
         );
@@ -854,7 +854,7 @@ describe('Given the sign-in and security card of the details page', () => {
         'Heslo jsme změnili. Ostatní přihlášení jsme ukončili, tohle zůstává.',
       );
       expect(normalized(document.activeElement?.textContent)).toBe('Změnit heslo');
-      store.updateProfile({}).subscribe();
+      store.updateProfile({}, '00000000000000d1', null).subscribe();
       expect(http.expectOne(PROFILE_URL).request.headers.get('Authorization')).toBe(
         'Bearer token-2',
       );

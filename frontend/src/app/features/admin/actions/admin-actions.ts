@@ -14,11 +14,16 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { AdminActionResponse, AdminApi } from '../admin-api';
+import { AdminActionResponse } from '../admin-api';
+import {
+  type AdminActionsRead,
+  AdministrationPageReads,
+} from '../device-copy/administration-page-reads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -102,7 +107,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminActions {
-  private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -116,6 +121,8 @@ export class AdminActions {
   protected readonly hasMore = signal(false);
   protected readonly loadingMore = signal(false);
   protected readonly moreFailed = signal(false);
+  private readonly readWithoutDetails = signal<ReadonlySet<string>>(new Set());
+  private readonly connectivity = inject(Connectivity);
 
   constructor() {
     this.load();
@@ -124,11 +131,13 @@ export class AdminActions {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .adminActions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
+          this.readWithoutDetails.set(new Set());
+          this.noteReadWithoutDetails(page);
           this.items.set(page.items);
           this.hasMore.set(page.hasMore);
           this.state.set('ready');
@@ -154,11 +163,12 @@ export class AdminActions {
     }
     this.loadingMore.set(true);
     this.moreFailed.set(false);
-    this.api
+    this.reads
       .adminActions(lastListed)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
+          this.noteReadWithoutDetails(page);
           this.items.update((current) => [...current, ...page.items]);
           this.hasMore.set(page.hasMore);
           this.loadingMore.set(false);
@@ -172,6 +182,22 @@ export class AdminActions {
 
   protected performedAt(item: AdminActionResponse): string {
     return formatBankTime(item.performedAt);
+  }
+
+  protected detailsOnServerOnly(item: AdminActionResponse): boolean {
+    return this.readWithoutDetails().has(item.id);
+  }
+
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
+  }
+
+  private noteReadWithoutDetails(page: AdminActionsRead): void {
+    if (page.fromCopy) {
+      this.readWithoutDetails.update(
+        (held) => new Set([...held, ...page.items.map((item) => item.id)]),
+      );
+    }
   }
 
   protected byServer(item: AdminActionResponse): boolean {

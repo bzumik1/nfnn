@@ -4,9 +4,11 @@ import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
+import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.notification.AccountEmails;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -40,10 +42,12 @@ public class SettingsService {
     private final ApplicationRestarter restarter;
     private final ApplicationEventPublisher events;
     private final TransactionOperations transaction;
+    private final SettingsVersions versions;
     private final Clock clock;
 
     public SettingsService(SettingsWriter writer, CurrentSettings current, SecretSealer sealer, MailServerProbe mailProbe, AccountEmails accountEmails,
-                           ApplicationRestarter restarter, ApplicationEventPublisher events, TransactionOperations transaction, Clock clock) {
+                           ApplicationRestarter restarter, ApplicationEventPublisher events, TransactionOperations transaction, SettingsVersions versions,
+                           Clock clock) {
         this.writer = writer;
         this.current = current;
         this.sealer = sealer;
@@ -52,6 +56,7 @@ public class SettingsService {
         this.restarter = restarter;
         this.events = events;
         this.transaction = transaction;
+        this.versions = versions;
         this.clock = clock;
     }
 
@@ -66,11 +71,11 @@ public class SettingsService {
                             stored.containsKey(setting), unreadable.contains(setting));
                 })
                 .toList();
-        return new SettingsView(views, sealer.available());
+        return new SettingsView(views, sealer.available(), versions.of(SettingsVersions.StoredSettings.of(writer.stored())));
     }
 
     @Transactional
-    public List<Setting> change(UUID adminId, List<SettingChange> changes) {
+    public SavedSettings change(UUID adminId, List<SettingChange> changes, ExpectedVersion expected) {
         List<SettingError> foreign = changes.stream()
                 .filter(change -> !change.setting().isAdministered())
                 .map(change -> SettingError.of(change.setting(), SettingProblem.NOT_IN_ADMINISTRATION))
@@ -80,19 +85,24 @@ public class SettingsService {
         }
         Map<Setting, String> checked = writer.storedValues();
         writer.lockForChange();
+        SettingsVersions.StoredSettings stored = SettingsVersions.StoredSettings.of(writer.stored());
+        String version = versions.of(stored);
+        if (!expected.admits(version)) {
+            throw new SettingsChangedMeanwhile(version, stored);
+        }
         requireTheMailServerUnchangedSince(checked, changes);
         requirePasswordForAnotherMailServer(changes);
         Instant now = clock.instant();
         List<Setting> changed = writer.apply(changes, List.of(), now);
         if (changed.isEmpty()) {
-            return changed;
+            return new SavedSettings(changed, version);
         }
         String names = changed.stream().map(Enum::name).collect(Collectors.joining(", "));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
                 "Změněna nastavení: " + names + "; backend se restartuje, aby je použil", now));
         restarter.restartAfterCommit();
         log.info("Admin {} changed the settings {}; the backend restarts", adminId, names);
-        return changed;
+        return new SavedSettings(changed, versions.of(SettingsVersions.StoredSettings.of(writer.stored())));
     }
 
     public TestEmailResult sendTestEmail(UUID adminId, MailServer server, String sender) {

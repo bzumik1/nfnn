@@ -26,11 +26,21 @@ import {
   draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
-  valuesBase,
 } from '../../../core/drafts/testing/memory-draft-shelf';
+import { heldRecordOf } from '../../../core/version/row-version';
 import { AdminPeople } from './admin-people';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
+import { person as heldPerson } from '../../content/testing/people-fixtures';
 
 const PEOPLE_URL = '/api/admin/content/people';
+const NOTE_VERSION = '00000000000000a1';
+const FOOTNOTE_VERSION = '00000000000000b1';
+const VERSIONS = { noteVersion: NOTE_VERSION, footnoteVersion: FOOTNOTE_VERSION };
 const MEDIA_URL = '/api/admin/content/media';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const RECEIPT_SIGNATURES = '/api/admin/donations/receipt-signatures/';
@@ -199,7 +209,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
 
   beforeEach(async () => {
     ({ fixture, http } = await setUp());
-    http.expectOne(PEOPLE_URL).flush({ members: [], note: null, footnote: null });
+    http.expectOne(PEOPLE_URL).flush({ members: [], note: null, footnote: null, ...VERSIONS });
     await settle(fixture);
   });
 
@@ -290,7 +300,8 @@ describe('Given an administrator and no people of the foundation yet', () => {
     const save = http.expectOne(`${PEOPLE_URL}/note`);
     expect(save.request.method).toBe('PUT');
     expect(save.request.body).toEqual({ text: 'Děkujeme všem.' });
-    save.flush({ text: 'Děkujeme všem.' });
+    expect(save.request.headers.get('If-Match')).toBe(`"${NOTE_VERSION}"`);
+    save.flush({ text: 'Děkujeme všem.', version: '00000000000000a2' });
     await settle(fixture);
     expect(text(fixture, '.ui-notice--status')).toBe('Slovo zakladatelů je uložené a na webu.');
 
@@ -298,7 +309,8 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await submit(fixture, 'form:has(#founders-note)');
     const empty = http.expectOne(`${PEOPLE_URL}/note`);
     expect(empty.request.body).toEqual({ text: null });
-    empty.flush({ text: null });
+    expect(empty.request.headers.get('If-Match')).toBe('"00000000000000a2"');
+    empty.flush({ text: null, version: '00000000000000a3' });
     await settle(fixture);
     expect(text(fixture, '.ui-notice--status')).toBe('Slovo zakladatelů jsme z webu odebrali.');
   });
@@ -310,7 +322,8 @@ describe('Given an administrator and no people of the foundation yet', () => {
     const save = http.expectOne(`${PEOPLE_URL}/footnote`);
     expect(save.request.method).toBe('PUT');
     expect(save.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
-    save.flush({ text: 'Web zajišťuje Petr Vzor.' });
+    expect(save.request.headers.get('If-Match')).toBe(`"${FOOTNOTE_VERSION}"`);
+    save.flush({ text: 'Web zajišťuje Petr Vzor.', version: '00000000000000b2' });
     await settle(fixture);
     expect(text(fixture, '.ui-notice--status')).toBe(
       'Řádek pod správní radou je uložený a na webu.',
@@ -320,7 +333,8 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await submit(fixture, 'form:has(#people-footnote)');
     const empty = http.expectOne(`${PEOPLE_URL}/footnote`);
     expect(empty.request.body).toEqual({ text: null });
-    empty.flush({ text: null });
+    expect(empty.request.headers.get('If-Match')).toBe('"00000000000000b2"');
+    empty.flush({ text: null, version: '00000000000000b3' });
     await settle(fixture);
     expect(text(fixture, '.ui-notice--status')).toBe(
       'Řádek pod správní radou jsme z webu odebrali.',
@@ -345,6 +359,7 @@ describe('Given an administrator and two people of the foundation', () => {
       ],
       note: 'Děkujeme.',
       footnote: 'Web zajišťuje Petr Vzor.',
+      ...VERSIONS,
     });
     await settle(fixture);
   });
@@ -393,6 +408,7 @@ describe('Given an administrator and two people of the foundation', () => {
       members: [{ ...ADAM, position: 0 }, person({ position: 1 })],
       note: 'Děkujeme.',
       footnote: 'Web zajišťuje Petr Vzor.',
+      ...VERSIONS,
     });
     await settle(fixture);
 
@@ -551,7 +567,7 @@ describe('Given an administrator whose people do not load', () => {
     expect(text(fixture, '[role="alert"]')).toContain('Lidi fondu se nepodařilo načíst.');
 
     await press(fixture, 'Zkusit znovu');
-    http.expectOne(PEOPLE_URL).flush({ members: [ADAM], note: null, footnote: null });
+    http.expectOne(PEOPLE_URL).flush({ members: [ADAM], note: null, footnote: null, ...VERSIONS });
     await settle(fixture);
 
     expect(rows(fixture)).toEqual(['Adam Vzor']);
@@ -574,7 +590,9 @@ describe('Given an administrator and two people of the foundation, one of whom s
 
   beforeEach(async () => {
     ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID })));
-    http.expectOne(PEOPLE_URL).flush({ members: [person(), ADAM], note: null });
+    http
+      .expectOne(PEOPLE_URL)
+      .flush({ members: [person(), ADAM], note: null, footnote: null, ...VERSIONS });
     await settle(fixture);
   });
 
@@ -753,7 +771,9 @@ describe('Given an administrator whose check of who signs the receipts fails', (
 
   beforeEach(async () => {
     ({ fixture, http } = await setUp('pending'));
-    http.expectOne(PEOPLE_URL).flush({ members: [person(), ADAM], note: null });
+    http
+      .expectOne(PEOPLE_URL)
+      .flush({ members: [person(), ADAM], note: null, footnote: null, ...VERSIONS });
     http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Server Error' });
     await settle(fixture);
   });
@@ -792,7 +812,9 @@ describe('Given an administrator who opens the signatory before the check of who
 
   beforeEach(async () => {
     ({ fixture, http } = await setUp('pending'));
-    http.expectOne(PEOPLE_URL).flush({ members: [person(), ADAM], note: null });
+    http
+      .expectOne(PEOPLE_URL)
+      .flush({ members: [person(), ADAM], note: null, footnote: null, ...VERSIONS });
     await settle(fixture);
     await click(fixture, `#person-edit-${PERSON_ID}`);
   });
@@ -966,6 +988,145 @@ describe('Given an administrator and people of the foundation with signatures', 
   });
 });
 
+describe('Given an administrator and the texts of the people page saved by someone else meanwhile', () => {
+  let fixture: ComponentFixture<AdminPeople>;
+  let http: HttpTestingController;
+
+  function changedMeanwhile(version: string, current: unknown) {
+    return {
+      body: {
+        type: 'https://nfnn.cz/problems/content/changed-meanwhile',
+        title: 'Mezitím se to změnilo',
+        status: 409,
+        version,
+        current,
+      },
+      options: { status: 409, statusText: 'Conflict' },
+    };
+  }
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp());
+    http.expectOne(PEOPLE_URL).flush({
+      members: [person(), ADAM],
+      note: 'Děkujeme.',
+      footnote: 'Web zajišťuje Petr Vzor.',
+      ...VERSIONS,
+    });
+    await settle(fixture);
+  });
+
+  afterEach(() => verifyLeavingReceiptSignatures(http));
+
+  async function moveWhile(answerVersions: typeof VERSIONS): Promise<void> {
+    await click(fixture, `#person-down-${PERSON_ID}`);
+    http.expectOne(`${PEOPLE_URL}/order`).flush({
+      members: [{ ...ADAM, position: 0 }, person({ position: 1 })],
+      note: 'Děkujeme moc.',
+      footnote: 'Web zajišťuje Petr Vzor.',
+      ...answerVersions,
+    });
+    await settle(fixture);
+  }
+
+  it('when the order is saved while the note is untouched, then the note shows the text and keeps the version the answer names', async () => {
+    await moveWhile({ ...VERSIONS, noteVersion: '00000000000000a5' });
+    expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme moc.');
+
+    await type(fixture, '#founders-note', 'Děkujeme všem.');
+    await submit(fixture, 'form:has(#founders-note)');
+
+    expect(http.expectOne(`${PEOPLE_URL}/note`).request.headers.get('If-Match')).toBe(
+      '"00000000000000a5"',
+    );
+  });
+
+  it('when the order is saved while they are writing the note, then their text stays and the save still names the version they started from', async () => {
+    await type(fixture, '#founders-note', 'Děkujeme všem.');
+    await moveWhile({ ...VERSIONS, noteVersion: '00000000000000a5' });
+    expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe('Děkujeme všem.');
+
+    await submit(fixture, 'form:has(#founders-note)');
+
+    expect(http.expectOne(`${PEOPLE_URL}/note`).request.headers.get('If-Match')).toBe(
+      `"${NOTE_VERSION}"`,
+    );
+  });
+
+  it('when the note save is refused as changed meanwhile, then the dialog keeps their text and saving their version sends the newer version', async () => {
+    await type(fixture, '#founders-note', 'Děkujeme všem dárcům.');
+    await submit(fixture, 'form:has(#founders-note)');
+    const refusal = changedMeanwhile('00000000000000a9', {
+      text: 'Děkujeme moc.',
+      updatedAt: '2026-11-12T08:05:00Z',
+    });
+    http.expectOne(`${PEOPLE_URL}/note`).flush(refusal.body, refusal.options);
+    await settle(fixture);
+
+    const dialog = element(fixture, 'app-changed-meanwhile-dialog dialog');
+    expect(dialog.textContent).toContain('Zatímco jste měli formulář otevřený');
+    expect(dialog.textContent).toContain('Novější verze je z 12. 11. 2026 9:05.');
+    expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe(
+      'Děkujeme všem dárcům.',
+    );
+
+    button(fixture, 'Uložit svou verzi místo novější').click();
+    await settle(fixture);
+    const again = http.expectOne(`${PEOPLE_URL}/note`);
+    expect(again.request.headers.get('If-Match')).toBe('"00000000000000a9"');
+    expect(heldRecordOf(again.request.context)).toEqual({ text: 'Děkujeme moc.' });
+    expect(again.request.body).toEqual({ text: 'Děkujeme všem dárcům.' });
+    again.flush({ text: 'Děkujeme všem dárcům.', version: '00000000000000aa' });
+    await settle(fixture);
+    expect(text(fixture, '.ui-notice--status')).toBe('Slovo zakladatelů je uložené a na webu.');
+  });
+
+  it('when the line under the board is refused and they load the newer one, then the field shows it and the next save sends its version', async () => {
+    await type(fixture, '#people-footnote', 'Web spravuje fond.');
+    await submit(fixture, 'form:has(#people-footnote)');
+    const refusal = changedMeanwhile('00000000000000b9', {
+      text: 'Web spravuje Petr.',
+      updatedAt: '2026-11-12T08:05:00Z',
+    });
+    http.expectOne(`${PEOPLE_URL}/footnote`).flush(refusal.body, refusal.options);
+    await settle(fixture);
+
+    button(fixture, 'Zahodit své úpravy a načíst novější verzi').click();
+    await settle(fixture);
+    http.expectOne(PEOPLE_URL).flush({
+      members: [person(), ADAM],
+      note: 'Děkujeme.',
+      footnote: 'Web spravuje Petr.',
+      noteVersion: NOTE_VERSION,
+      footnoteVersion: '00000000000000b9',
+    });
+    await settle(fixture);
+    expect(element<HTMLTextAreaElement>(fixture, '#people-footnote').value).toBe(
+      'Web spravuje Petr.',
+    );
+
+    await type(fixture, '#people-footnote', 'Web spravuje Petr Vzor.');
+    await submit(fixture, 'form:has(#people-footnote)');
+    expect(http.expectOne(`${PEOPLE_URL}/footnote`).request.headers.get('If-Match')).toBe(
+      '"00000000000000b9"',
+    );
+  });
+
+  it('when they save a text, then the text they started from travels with the write, so a refusal over the same stored text is resent by itself', async () => {
+    await type(fixture, '#founders-note', 'Děkujeme všem.');
+    await submit(fixture, 'form:has(#founders-note)');
+    const note = http.expectOne(`${PEOPLE_URL}/note`);
+    expect(heldRecordOf(note.request.context)).toEqual({ text: 'Děkujeme.' });
+    note.flush({ text: 'Děkujeme všem.', version: '00000000000000a2' });
+
+    await type(fixture, '#people-footnote', '');
+    await submit(fixture, 'form:has(#people-footnote)');
+    const footnote = http.expectOne(`${PEOPLE_URL}/footnote`);
+    expect(heldRecordOf(footnote.request.context)).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
+    footnote.flush({ text: null, version: '00000000000000b2' });
+  });
+});
+
 describe('Given an administrator writing the texts of the people page on a device that keeps drafts', () => {
   let shelf: MemoryDraftShelf;
   let fixture: ComponentFixture<AdminPeople>;
@@ -979,29 +1140,33 @@ describe('Given an administrator writing the texts of the people page on a devic
     }
   }
 
-  async function open(note = 'Děkujeme.', footnote: string | null = null): Promise<void> {
+  async function open(
+    note = 'Děkujeme.',
+    footnote: string | null = null,
+    versions = VERSIONS,
+  ): Promise<void> {
     ({ fixture, http } = await setUp(
       noReceiptSignatory(),
       'none',
       memoryDraftShelfProviders(shelf),
     ));
-    http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote });
+    http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote, ...versions });
     await drafted();
   }
 
-  async function keptNote(text: string, startedFrom: string): Promise<void> {
+  function keptNote(text: string, startedFrom: string): void {
     shelf.seed('administration', {
       key: 'people/note',
-      base: await valuesBase({ text: startedFrom }),
+      base: `version:${startedFrom}`,
       values: { text },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
   }
 
-  async function keptFootnote(text: string, startedFrom: string): Promise<void> {
+  function keptFootnote(text: string, startedFrom: string): void {
     shelf.seed('administration', {
       key: 'people/footnote',
-      base: await valuesBase({ text: startedFrom }),
+      base: `version:${startedFrom}`,
       values: { text },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
@@ -1024,14 +1189,16 @@ describe('Given an administrator writing the texts of the people page on a devic
     expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
 
     await submit(fixture, 'form:has(#founders-note)');
-    http.expectOne(`${PEOPLE_URL}/note`).flush({ text: 'Děkujeme všem dárcům.' });
+    http
+      .expectOne(`${PEOPLE_URL}/note`)
+      .flush({ text: 'Děkujeme všem dárcům.', version: '00000000000000a2' });
     await drafted();
     expect(shelf.draftOf('administration', 'people/note')).toBeNull();
   });
 
   describe('when the device kept a note started from the saved text', () => {
     beforeEach(async () => {
-      await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
+      keptNote('Děkujeme všem dárcům.', NOTE_VERSION);
       await open();
     });
 
@@ -1050,7 +1217,7 @@ describe('Given an administrator writing the texts of the people page on a devic
       await submit(fixture, 'form:has(#founders-note)');
       const save = http.expectOne(`${PEOPLE_URL}/note`);
       expect(save.request.body).toEqual({ text: 'Děkujeme všem dárcům.' });
-      save.flush({ text: 'Děkujeme všem dárcům.' });
+      save.flush({ text: 'Děkujeme všem dárcům.', version: '00000000000000a2' });
       await drafted();
       expect(shelf.draftOf('administration', 'people/note')).toBeNull();
     });
@@ -1069,8 +1236,8 @@ describe('Given an administrator writing the texts of the people page on a devic
 
   describe('when the device kept a note started from a text saved before another change', () => {
     beforeEach(async () => {
-      await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
-      await open('Děkujeme moc.');
+      keptNote('Děkujeme všem dárcům.', NOTE_VERSION);
+      await open('Děkujeme moc.', null, { ...VERSIONS, noteVersion: '00000000000000a9' });
       button(fixture, 'Pokračovat v rozepsaném').click();
       await drafted();
     });
@@ -1084,7 +1251,9 @@ describe('Given an administrator writing the texts of the people page on a devic
 
       button(fixture, 'Uložit svou verzi místo novější').click();
       await settle(fixture);
-      http.expectOne(`${PEOPLE_URL}/note`).flush({ text: 'Děkujeme všem dárcům.' });
+      const overwrite = http.expectOne(`${PEOPLE_URL}/note`);
+      expect(overwrite.request.headers.get('If-Match')).toBe('"00000000000000a9"');
+      overwrite.flush({ text: 'Děkujeme všem dárcům.', version: '00000000000000aa' });
       await drafted();
       expect(shelf.draftOf('administration', 'people/note')).toBeNull();
     });
@@ -1093,7 +1262,13 @@ describe('Given an administrator writing the texts of the people page on a devic
       await submit(fixture, 'form:has(#founders-note)');
       button(fixture, 'Zahodit své úpravy a načíst novější verzi').click();
       await settle(fixture);
-      http.expectOne(PEOPLE_URL).flush({ members: [], note: 'Děkujeme moc.', footnote: null });
+      http.expectOne(PEOPLE_URL).flush({
+        members: [],
+        note: 'Děkujeme moc.',
+        footnote: null,
+        ...VERSIONS,
+        noteVersion: '00000000000000a9',
+      });
       await drafted();
 
       expect(shelf.draftOf('administration', 'people/note')).toBeNull();
@@ -1102,8 +1277,8 @@ describe('Given an administrator writing the texts of the people page on a devic
   });
 
   it('when the device kept a note of an older saved text, then the offer says the saved version changed', async () => {
-    await keptNote('Děkujeme všem dárcům.', 'Děkujeme.');
-    await open('Děkujeme moc.');
+    keptNote('Děkujeme všem dárcům.', NOTE_VERSION);
+    await open('Děkujeme moc.', null, { ...VERSIONS, noteVersion: '00000000000000a9' });
 
     expect(text(fixture, 'form:has(#founders-note) app-draft-offer')).toContain(
       'Uložená verze se od té doby změnila',
@@ -1121,14 +1296,16 @@ describe('Given an administrator writing the texts of the people page on a devic
     expect(shelf.draftOf('administration', 'people/note')).toBeNull();
 
     await submit(fixture, 'form:has(#people-footnote)');
-    http.expectOne(`${PEOPLE_URL}/footnote`).flush({ text: 'Web zajišťuje Petr Vzor.' });
+    http
+      .expectOne(`${PEOPLE_URL}/footnote`)
+      .flush({ text: 'Web zajišťuje Petr Vzor.', version: '00000000000000b2' });
     await drafted();
     expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
   });
 
   describe('when the device kept a line under the board started from the saved text', () => {
     beforeEach(async () => {
-      await keptFootnote('Web zajišťuje Petr Vzor.', '');
+      keptFootnote('Web zajišťuje Petr Vzor.', FOOTNOTE_VERSION);
       await open();
     });
 
@@ -1145,7 +1322,7 @@ describe('Given an administrator writing the texts of the people page on a devic
       await submit(fixture, 'form:has(#people-footnote)');
       const save = http.expectOne(`${PEOPLE_URL}/footnote`);
       expect(save.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
-      save.flush({ text: 'Web zajišťuje Petr Vzor.' });
+      save.flush({ text: 'Web zajišťuje Petr Vzor.', version: '00000000000000b2' });
       await drafted();
       expect(shelf.draftOf('administration', 'people/footnote')).toBeNull();
     });
@@ -1160,8 +1337,11 @@ describe('Given an administrator writing the texts of the people page on a devic
   });
 
   it('when the device kept a line under the board started from a text saved differently since, then saving asks first', async () => {
-    await keptFootnote('Web zajišťuje Petr Vzor.', '');
-    await open('Děkujeme.', 'Web spravuje fond.');
+    keptFootnote('Web zajišťuje Petr Vzor.', FOOTNOTE_VERSION);
+    await open('Děkujeme.', 'Web spravuje fond.', {
+      ...VERSIONS,
+      footnoteVersion: '00000000000000b9',
+    });
     expect(text(fixture, 'form:has(#people-footnote) app-draft-offer')).toContain(
       'Uložená verze se od té doby změnila',
     );
@@ -1174,5 +1354,49 @@ describe('Given an administrator writing the texts of the people page on a devic
     expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
       'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the people open, then they and the founders note come from the copy', async () => {
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminPeople,
+      contentCopy({
+        'content/people': [
+          {
+            members: [heldPerson()],
+            note: 'Slovo zakladatelů z kopie',
+            footnote: null,
+            noteVersion: 'n',
+            footnoteVersion: 'f',
+          },
+        ],
+      }),
+    );
+    http.expectOne('/api/admin/donations/receipt-signatory').error(new ProgressEvent('error'));
+    await settle();
+
+    expect(textOf(page)).toContain('Eva Vzorová');
+    expect((page.querySelector('#founders-note') as HTMLTextAreaElement | null)?.value).toBe(
+      'Slovo zakladatelů z kopie',
+    );
+    waitsForConnection(page, 'Uložit slovo zakladatelů');
+    (page.querySelector(`#person-edit-${heldPerson().id}`) as HTMLButtonElement).click();
+    await settle();
+
+    expect(textOf(page.querySelector('.receipt-offline[role="status"]'))).toBe(
+      'Kdo potvrzení podepisuje, ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.ui-load-state--error, .receipt-error')).toBeNull();
+    http
+      .expectOne((request) => request.url.startsWith(RECEIPT_SIGNATURES))
+      .error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(textOf(page.querySelector('.signature-offline[role="status"]'))).toBe(
+      'Podpis ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.signature-error')).toBeNull();
+    http.verify();
   });
 });

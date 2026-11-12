@@ -4,10 +4,8 @@ import cz.novanadeje.app.donations.application.admin.AdminPaymentList;
 import cz.novanadeje.app.donations.application.admin.AdminPaymentView;
 import cz.novanadeje.app.donations.application.admin.PairedDonationView;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
-import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.DonationStatus;
 import cz.novanadeje.app.donations.domain.donation.PairingMethod;
-import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.shared.domain.Currency;
 
 import java.time.Instant;
@@ -30,9 +28,7 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
 
         static AdminPaymentResponse from(AdminPaymentView view) {
             BankPayment payment = view.payment();
-            String account = payment.sender().map(SenderAccount::display)
-                    .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)))
-                    .orElse(null);
+            String account = payment.payerAccount().orElse(null);
             boolean withheld = view.payerWithheld();
             return new AdminPaymentResponse(payment.id().value(), payment.transactionId().value(), payment.bookedOn(), payment.amount().amountMinor(),
                     payment.amount().currency(), payment.variableSymbol().orElse(null), withheld ? null : account,
@@ -46,7 +42,7 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
 
         static PairedDonationResponse from(PairedDonationView view) {
             return new PairedDonationResponse(view.donation().id().value(), view.donation().donor().value(),
-                    view.donor().map(DonorRecord::name).orElse(null), view.donation().pairedBy().orElse(null), view.donation().status(),
+                    view.donor().name(), view.donation().pairedBy().orElse(null), view.donation().status(),
                     view.donation().recordedAt(), view.receiptIssued());
         }
     }

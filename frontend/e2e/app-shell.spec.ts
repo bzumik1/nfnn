@@ -1,7 +1,7 @@
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, stepBack } from './app-history';
-import { mockDonorApi, signIn } from './donor-session';
+import { mockDonorApi, rememberedDonorSession } from './donor-session';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c001',
@@ -94,7 +94,7 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await publishedArticle(page);
   });
 
-  test('when they press Zpět with the keyboard on an article opened from the list, then the list returns and its heading takes the focus', async ({
+  test('when they press Zpět with the keyboard on an article opened from the list, then the list returns and the link to that article takes the focus', async ({
     page,
   }) => {
     await openArticleFromList(page);
@@ -103,7 +103,9 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
+    await expect(
+      page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
+    ).toBeFocused();
   });
 
   test('when they reload the article and press Zpět, then the list returns without leaving the site', async ({
@@ -151,12 +153,10 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
 test.describe('Given a signed-in donor on a phone who opens a section from the account sheet', () => {
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/o-nas');
-    await signIn(page);
+    await rememberedDonorSession(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await tabs(page).getByRole('link', { name: 'O nás' }).click();
-    await expect(page).toHaveURL('/o-nas');
+    await page.goto('/o-nas');
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toBeVisible();
   });
 
   for (const section of SECTIONS) {
@@ -323,10 +323,10 @@ test.describe('Given a donor in the installed app on a phone with a section open
       Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
     });
     await mockDonorApi(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/o-nas');
-    await signIn(page);
+    await rememberedDonorSession(page, { installed: true });
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/o-nas');
+    await expect(page.getByRole('banner').getByRole('button', { name: 'Účet' })).toBeVisible();
   });
 
   test('when they swipe from the left edge, then the account list returns in the sheet', async ({

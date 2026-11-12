@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.ProfileRowVersions;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
@@ -29,14 +30,17 @@ public class ErasedDonorTabStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
+    private final ProfileRowVersions profileVersions;
     private final Map<String, String> tokensWithoutSession = new HashMap<>();
+    private final Map<String, String> profileVersionsReadBefore = new HashMap<>();
 
-    public ErasedDonorTabStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JwtEncoder encoder, JwtDecoder decoder) {
+    public ErasedDonorTabStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JwtEncoder encoder, JwtDecoder decoder, ProfileRowVersions profileVersions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.encoder = encoder;
         this.decoder = decoder;
+        this.profileVersions = profileVersions;
     }
 
     @Given("{string} keeps an access token that names no session")
@@ -47,18 +51,19 @@ public class ErasedDonorTabStepDefinitions {
         browserToken.getClaims().forEach(claims::claim);
         claims.claims(all -> all.remove(JwtProperties.SESSION_CLAIM));
         tokensWithoutSession.put(alias, encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims.build())).getTokenValue());
+        profileVersionsReadBefore.put(alias, profileVersions.of(scenarioDonors.idOf(alias)));
     }
 
     @When("{string} saves the profile with the name {string}")
     public void savesTheProfileWithTheName(String alias, String name) {
         sessions.actAs(alias);
-        api.patch(PROFILE_PATH, Map.of("name", name));
+        api.patch(PROFILE_PATH, Map.of("name", name), profileVersions.ifMatchOfSignedIn(api));
     }
 
     @When("{string} saves the profile with the name {string} with the token that names no session")
     public void savesTheProfileWithTheTokenThatNamesNoSession(String alias, String name) {
         actWithTheTokenThatNamesNoSession(alias);
-        api.patch(PROFILE_PATH, Map.of("name", name));
+        api.patch(PROFILE_PATH, Map.of("name", name), ApiClient.ifMatch(profileVersionsReadBefore.get(alias)));
     }
 
     @When("{string} removes {string} from the administrators with the token that names no session")

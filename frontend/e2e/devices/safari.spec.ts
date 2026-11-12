@@ -12,9 +12,17 @@ import {
   waitUntilSettled,
 } from './run-step';
 import { STEPS } from './steps';
-import { NEXT_FRAMES, WAIT_MS, WebDriver, webDriverUi } from './webdriver';
+import {
+  FORGET_STORED_DATA,
+  HELD_LOCKS,
+  NEXT_FRAMES,
+  WAIT_MS,
+  WebDriver,
+  webDriverUi,
+} from './webdriver';
 
 const START_TIMEOUT_MS = 600_000;
+const FORGET_WAIT_MS = 5_000;
 const FONTS_READY =
   'const done = arguments[arguments.length - 1]; document.fonts.ready.then(() => done());';
 const COLLECT_FINDINGS = `return (${collectFindings.toString()})(arguments[0]);`;
@@ -52,6 +60,10 @@ const test = testWithoutBrowser.extend<
     host.reset(pose.textScale ?? 100);
     await driver.navigate(`${baseUrl}${BLANK_PATH}`);
     await driver.execute('localStorage.clear(); sessionStorage.clear();');
+    const kept = await driver.executeAsync<string[]>(FORGET_STORED_DATA, FORGET_WAIT_MS);
+    if (kept.length > 0) {
+      throw new Error(`the databases of the step before stayed: ${kept.join(', ')}`);
+    }
     await driver.deleteCookies();
     const askedForServerPayment = await routeApiDefaults(host.routes);
     const waits = { ms: WAIT_MS, presses: [] as string[] };
@@ -88,13 +100,17 @@ const test = testWithoutBrowser.extend<
       console.log(`${testInfo.title}: ${waits.presses.join('; ')}`);
     }
     if (testInfo.status !== testInfo.expectedStatus) {
-      await keepFailedScreen(driver, testInfo);
+      await keepFailedScreen(driver, host, testInfo);
     }
     expect(askedForServerPayment, NO_SERVER_PAYMENT).toEqual([]);
   },
 });
 
-async function keepFailedScreen(driver: WebDriver, testInfo: TestInfo): Promise<void> {
+async function keepFailedScreen(
+  driver: WebDriver,
+  host: RouteHost,
+  testInfo: TestInfo,
+): Promise<void> {
   const shown = testInfo.attachments.some((attachment) => attachment.name === 'screen');
   const screen = shown ? undefined : await driver.screenshot().catch(() => undefined);
   if (screen) {
@@ -105,6 +121,14 @@ async function keepFailedScreen(driver: WebDriver, testInfo: TestInfo): Promise<
     .catch((error: unknown) => [String(error)]);
   await testInfo.attach('events', { body: events.join('\n'), contentType: 'text/plain' });
   console.log(`${testInfo.title}: events before the failure\n${events.join('\n')}`);
+  const locks = await driver
+    .executeAsync<string>(HELD_LOCKS)
+    .catch((error: unknown) => String(error));
+  await testInfo.attach('locks', { body: locks, contentType: 'text/plain' });
+  console.log(`${testInfo.title}: Web Locks at the failure: ${locks}`);
+  const answered = host.answered();
+  await testInfo.attach('answered', { body: answered.join('\n'), contentType: 'text/plain' });
+  console.log(`${testInfo.title}: API answers before the failure\n${answered.join('\n')}`);
 }
 
 test.describe('Given the site in Safari on an iPhone, an iPad or a Mac', () => {

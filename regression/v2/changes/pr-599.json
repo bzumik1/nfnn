@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/still-copy.spec.ts > Given the page a visitor leaves > when the page after it shows the tab bar too, then the copy leaves the tab bar to the live page",
+    "reason": "Jakub 2026-11-12 (exact iOS): whether the tab bar rides with a page is now decided by the transition from both copies (the tab bar thread drops it from /darce and /sprava while the route data keeps it), so a copy always keeps its tab bar and leaves dialogs out instead",
+    "replacement": "src/app/core/navigation/still-copy.spec.ts > Given the page a visitor leaves > when a sheet is open over the page, then the copy holds the page without the sheet",
+    "contract": "docs/frontend-overview.md, page-transitions"
+  }
+]

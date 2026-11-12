@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { heldRecordOf } from '../../core/version/row-version';
 import { PeopleApi, PeopleResponse, PersonRequest } from './people-api';
 import { OTHER_PERSON_ID, person, PERSON_ID, SIGNATURE_ID } from './testing/people-fixtures';
 
@@ -39,13 +40,16 @@ describe('Given the API of the people of the foundation', () => {
 
     const call = http.expectOne(PEOPLE);
     expect(call.request.method).toBe('GET');
-    call.flush({ members: [person()], note: 'Děkujeme.', footnote: 'Web zajišťuje Petr Vzor.' });
-
-    expect(received).toEqual({
+    const people = {
       members: [person()],
       note: 'Děkujeme.',
       footnote: 'Web zajišťuje Petr Vzor.',
-    });
+      noteVersion: '00000000000000a1',
+      footnoteVersion: '00000000000000b1',
+    };
+    call.flush(people);
+
+    expect(received).toEqual(people);
   });
 
   it('when a person is added and updated, then every field goes in the body, the e-mails too', () => {
@@ -63,22 +67,32 @@ describe('Given the API of the people of the foundation', () => {
 
   it('when the people are ordered, the note and the line under the board are saved and a person is removed, then each goes to its own address', () => {
     api.order([OTHER_PERSON_ID, PERSON_ID]).subscribe();
-    api.saveNote(null).subscribe();
-    api.saveFootnote('Web zajišťuje Petr Vzor.').subscribe();
+    api.saveNote(null, '00000000000000a1', { text: 'Děkujeme.' }).subscribe();
+    api.saveFootnote('Web zajišťuje Petr Vzor.', '00000000000000b1', { text: null }).subscribe();
     api.remove(PERSON_ID).subscribe();
 
     const order = http.expectOne(`${PEOPLE}/order`);
     expect(order.request.method).toBe('PUT');
     expect(order.request.body).toEqual({ memberIds: [OTHER_PERSON_ID, PERSON_ID] });
-    order.flush({ members: [], note: null, footnote: null });
+    order.flush({
+      members: [],
+      note: null,
+      footnote: null,
+      noteVersion: '00000000000000a1',
+      footnoteVersion: '00000000000000b1',
+    });
     const note = http.expectOne(`${PEOPLE}/note`);
     expect(note.request.method).toBe('PUT');
     expect(note.request.body).toEqual({ text: null });
-    note.flush({ text: null });
+    expect(note.request.headers.get('If-Match')).toBe('"00000000000000a1"');
+    expect(heldRecordOf(note.request.context)).toEqual({ text: 'Děkujeme.' });
+    note.flush({ text: null, version: '00000000000000a2' });
     const footnote = http.expectOne(`${PEOPLE}/footnote`);
     expect(footnote.request.method).toBe('PUT');
     expect(footnote.request.body).toEqual({ text: 'Web zajišťuje Petr Vzor.' });
-    footnote.flush({ text: 'Web zajišťuje Petr Vzor.' });
+    expect(footnote.request.headers.get('If-Match')).toBe('"00000000000000b1"');
+    expect(heldRecordOf(footnote.request.context)).toEqual({ text: null });
+    footnote.flush({ text: 'Web zajišťuje Petr Vzor.', version: '00000000000000b2' });
     const removed = http.expectOne(`${PEOPLE}/${PERSON_ID}`);
     expect(removed.request.method).toBe('DELETE');
     removed.flush(null);

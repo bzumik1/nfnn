@@ -22,9 +22,11 @@ import tools.jackson.databind.json.JsonMapper;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doAnswer;
@@ -42,6 +44,11 @@ class AdminDonorsSyncTest {
     private static final int WARM_UP_RUNS = 5;
     private static final int TIMED_RUNS = 21;
     private static final long MANIFEST_BUDGET_MILLIS = 100;
+    private static final int CHUNKS_PER_REQUEST = 64;
+    private static final List<String> TIMED_SHAPES = List.of("PAIR_PAYMENT", "UPDATE_NEWS", "CHANGE_REPORT_SETTINGS", "GRANT_ADMINISTRATION",
+            "BACKUP_RESTORE_FAILED");
+    private static final String LONGEST_TITLE = "Letní tábor u rybníka Hejtman, kde děti strávily týden plný her, výletů a táboráků s celou rodinou i přáteli z celého kraje".substring(0, 120);
+    private static final String LONG_RESTORE_ERROR = "pg_restore: error: could not execute query: ERROR:  relation already exists; ".repeat(24);
 
     private final JsonMapper json = JsonMapper.builder().build();
 
@@ -79,7 +86,7 @@ class AdminDonorsSyncTest {
             Thread meanwhile = Thread.ofPlatform().start(() -> insertAction(UUID.randomUUID(), NOW));
             meanwhile.join();
             return call.callRealMethod();
-        }).when(spy).findAllSummariesNewestFirst();
+        }).when(spy).findAllNewestFirst();
 
         JsonNode manifest = answer();
 
@@ -99,13 +106,15 @@ class AdminDonorsSyncTest {
     @Test
     @DisplayName("Given two hundred accounts and a thousand actions, when an administration device asks for the accounts manifest, then the backend answers within 100 ms")
     void should_answer_within_100_ms_when_an_administration_device_asks_for_the_accounts_manifest_given_a_thousand_actions() throws Exception {
-        for (int account = 0; account < TIMED_ACCOUNTS; account++) {
-            insertAccount(new UUID(0x0193_0000_0000_7000L + account, 0x8000_0000_0000_0000L + account), Long.toString(5_000_000_000L + account),
-                    NOW.minus(Duration.ofDays(account)));
-        }
+        List<UUID> accounts = insertTimedAccounts();
         for (int action = 0; action < TIMED_ACTIONS; action++) {
-            insertAction(new UUID(0x0194_0000_0000_7000L + action, 0x8000_0000_0000_0000L + action), NOW.minus(Duration.ofHours(action)));
+            insertAction(new UUID(0x0194_0000_0000_7000L + action, 0x8000_0000_0000_0000L + action), NOW.minus(Duration.ofHours(action)),
+                    TIMED_SHAPES.get(action % TIMED_SHAPES.size()), timedDetails(action, accounts.get(action % accounts.size())));
         }
+        JsonNode manifest = answer("cs");
+        assertThat(manifest.get("chunks").valueStream().filter(chunk -> chunk.get("id").asString().startsWith("audit:")).mapToInt(chunk -> chunk.get("count").asInt())
+                .sum()).as("the actions the manifest covers").isEqualTo(TIMED_ACTIONS);
+        assertThat(summariesOf(manifest)).as("the timed actions each have a summary").hasSize(TIMED_ACTIONS).doesNotContainNull();
         for (int run = 0; run < WARM_UP_RUNS; run++) {
             RateLimiterWindows.reset(List.of(syncRateLimiter));
             answer();
@@ -133,11 +142,78 @@ class AdminDonorsSyncTest {
                 .update();
     }
 
+    @Test
+    @DisplayName("Given actions of every kind the timed trail holds, when one device asks in English and another in Czech, then both get the same digests and the Czech summaries")
+    void should_answer_the_same_digests_and_czech_summaries_when_devices_ask_in_english_and_czech_given_the_trail() throws Exception {
+        List<UUID> accounts = insertTimedAccounts().subList(0, TIMED_SHAPES.size());
+        for (int action = 0; action < TIMED_SHAPES.size(); action++) {
+            insertAction(new UUID(0x0194_0000_0000_7000L + action, 0x8000_0000_0000_0000L + action), NOW.minus(Duration.ofHours(action)),
+                    TIMED_SHAPES.get(action), timedDetails(action, accounts.get(action)));
+        }
+
+        JsonNode inEnglish = answer("en");
+        RateLimiterWindows.reset(List.of(syncRateLimiter));
+        JsonNode inCzech = answer("cs");
+
+        assertThat(inEnglish.get("chunks")).isEqualTo(inCzech.get("chunks"));
+        assertThat(summariesOf(inEnglish)).contains("Role správce udělena dárci Dárce účtu.",
+                "Změněno nastavení měsíčního přehledu: počet příjemců 2, chodí 3. den v měsíci v 7:00 a obsahuje dárce, dary.");
+    }
+
+    private List<UUID> insertTimedAccounts() {
+        List<UUID> accounts = new ArrayList<>();
+        for (int account = 0; account < TIMED_ACCOUNTS; account++) {
+            UUID id = new UUID(0x0193_0000_0000_7000L + account, 0x8000_0000_0000_0000L + account);
+            insertAccount(id, Long.toString(5_000_000_000L + account), NOW.minus(Duration.ofDays(account)));
+            accounts.add(id);
+        }
+        return accounts;
+    }
+
+    private static String timedDetails(int action, UUID donor) {
+        String other = new UUID(0x0195_0000_0000_7000L + action, 0x8000_0000_0000_0000L + action).toString();
+        return switch (TIMED_SHAPES.get(action % TIMED_SHAPES.size())) {
+            case "PAIR_PAYMENT" -> "Platba " + (26_683_551 + action) + " (Money[amountMinor=" + (50_000 + action) + ", currency=CZK], zaúčtována 2026-10-10)"
+                    + " ručně přiřazena dárci " + donor + " jako dar " + other;
+            case "UPDATE_NEWS" -> "Aktualita " + other + " „letni-tabor-" + action + "“ upravena; titulek „" + LONGEST_TITLE + "“";
+            case "BACKUP_RESTORE_FAILED" -> "Obnova ze zálohy nfnn-2026-10-23_0300.dump.age (požadavek " + other + ") selhala: " + LONG_RESTORE_ERROR
+                    + "; data zůstala, jak byla";
+            case "CHANGE_REPORT_SETTINGS" -> "Nastavení měsíčního přehledu změněno: počet příjemců 2; odesílá se 3. den v měsíci v 7:00; části dárci, dary";
+            default -> "Role správce udělena dárci " + donor;
+        };
+    }
+
+    private List<String> summariesOf(JsonNode manifest) throws Exception {
+        String ids = manifest.get("chunks").valueStream().map(chunk -> chunk.get("id").asString()).filter(id -> id.startsWith("audit:"))
+                .collect(Collectors.joining(","));
+        List<String> summaries = new ArrayList<>();
+        for (String batch : ids.isEmpty() ? List.<String>of() : batchesOf(ids)) {
+            RateLimiterWindows.reset(List.of(syncRateLimiter));
+            JsonNode chunks = json.readTree(perform(MANIFEST + "/chunks?ids=" + batch, "en").getContentAsString(StandardCharsets.UTF_8));
+            chunks.get("chunks").forEach(chunk -> chunk.get("rows").forEach(row -> summaries.add(row.get("summary").isNull() ? null : row.get("summary").asString())));
+        }
+        return summaries;
+    }
+
+    private static List<String> batchesOf(String ids) {
+        List<String> all = Arrays.asList(ids.split(","));
+        List<String> batches = new ArrayList<>();
+        for (int start = 0; start < all.size(); start += CHUNKS_PER_REQUEST) {
+            batches.add(String.join(",", all.subList(start, Math.min(all.size(), start + CHUNKS_PER_REQUEST))));
+        }
+        return batches;
+    }
+
     private void insertAction(UUID id, Instant performedAt) {
-        jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (:id, :admin, 'CHANGE_LOG_LEVEL', null, "
-                        + "'{\"logger\":\"cz.novanadeje.app\"}', :at)")
+        insertAction(id, performedAt, "CHANGE_LOG_LEVEL", "{\"logger\":\"cz.novanadeje.app\"}");
+    }
+
+    private void insertAction(UUID id, Instant performedAt, String action, String details) {
+        jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (:id, :admin, :action, null, :details, :at)")
                 .param("id", id)
                 .param("admin", CaseRows.administratorId())
+                .param("action", action)
+                .param("details", details)
                 .param("at", CaseRows.timestamp(performedAt.toString()))
                 .update();
     }
@@ -147,11 +223,19 @@ class AdminDonorsSyncTest {
     }
 
     private JsonNode answer() throws Exception {
-        MockHttpServletResponse response = mockMvc.perform(get(MANIFEST).header("Accept-Language", "cs")
+        return answer("cs");
+    }
+
+    private JsonNode answer(String language) throws Exception {
+        return json.readTree(perform(MANIFEST, language).getContentAsString(StandardCharsets.UTF_8));
+    }
+
+    private MockHttpServletResponse perform(String path, String language) throws Exception {
+        MockHttpServletResponse response = mockMvc.perform(get(path).header("Accept-Language", language)
                         .with(jwt().jwt(token -> token.subject(CaseRows.administratorId().toString()).claims(claims -> claims.remove("scope")))
                                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andReturn().getResponse();
         assertThat(response.getStatus()).as(response.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(200);
-        return json.readTree(response.getContentAsString(StandardCharsets.UTF_8));
+        return response;
     }
 }

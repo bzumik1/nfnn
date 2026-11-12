@@ -11,7 +11,7 @@ public interface AdminActionTrail {
 
     List<AdminActionEntry> findPerformedBefore(Instant before, UUID beforeId, int limit);
 
-    List<AdminActionSummary> findAllSummariesNewestFirst();
+    List<AdminActionEntry> findAllNewestFirst();
 
     long countPerformedSince(UUID adminId, String action, Instant since);
 

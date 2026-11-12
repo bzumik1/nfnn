@@ -29,6 +29,7 @@ import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
 import { formatCrowns } from '../donation-amount';
 import { GiftArrivalWatch } from '../gift-arrival/gift-arrival-watch';
+import { whenLeft } from '../../../core/navigation/kept-tab-pages';
 import { giftArrivalText } from '../gift-arrival/gift-arrival-text';
 import { RepositoryGiftFeed } from '../gift-arrival/repository-gift-feed';
 import { ibanHalves } from '../iban-format';
@@ -276,6 +277,7 @@ export class PaymentPanel {
     effect(() => this.focusAfterRetry(this.state().kind, this.openReady()));
     afterRenderEffect(() => this.prepareImage());
     effect(() => this.giftArrival.enable(this.variableSymbol() !== null));
+    whenLeft(() => this.giftArrival.pageLeft());
     afterNextRender(() => {
       const qrBox = this.qrBox();
       if (qrBox) {

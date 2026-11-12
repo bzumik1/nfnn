@@ -343,11 +343,11 @@ test.describe('Given a signed-in donor', () => {
         return route.fallback();
       }
       const body = route.request().postDataJSON();
-      patched.push(body);
+      patched.push({ ifMatch: route.request().headers()['if-match'], body });
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ...donor, ...body }),
+        body: JSON.stringify({ ...donor, ...body, version: '00000000000000d2' }),
       });
     });
 
@@ -365,9 +365,12 @@ test.describe('Given a signed-in donor', () => {
     await expect(page.getByRole('button', { name: 'Upravit údaje' })).toBeFocused();
     expect(patched).toEqual([
       {
-        name: 'Jana Nováková',
-        address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 01' },
-        preferredLocale: 'en',
+        ifMatch: '"00000000000000d1"',
+        body: {
+          name: 'Jana Nováková',
+          address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 01' },
+          preferredLocale: 'en',
+        },
       },
     ]);
   });

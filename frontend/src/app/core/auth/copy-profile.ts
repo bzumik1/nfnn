@@ -82,6 +82,7 @@ export function donorFromCopy(profile: CopyProfile): Donor {
     hasPassword: false,
     secondFactor: { enabled: false, neededForAdministration: false },
     pendingEmailChange: null,
+    version: '',
   };
 }
 

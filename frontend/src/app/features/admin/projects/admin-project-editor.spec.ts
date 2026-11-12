@@ -5,6 +5,8 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
+import { storedProjectOf } from '../../content/projects-api';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -20,6 +22,12 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminProjectEditor } from './admin-project-editor';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
+import { project as heldProject } from '../../content/testing/project-fixtures';
 
 const PROJECTS_URL = '/api/admin/content/projects';
 const MEDIA_URL = '/api/admin/content/media';
@@ -1212,6 +1220,7 @@ describe('Given an administrator editing a published project on a device that ke
       await submit(fixture);
       const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${project().version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(storedProjectOf(project()));
       expect(request.request.body.title).toBe('Zahrada pro všechny děti');
       request.flush(project({ title: 'Zahrada pro všechny děti', version: '2222222222222222' }));
       await drafted();
@@ -1241,6 +1250,7 @@ describe('Given an administrator editing a published project on a device that ke
     await submit(fixture);
     const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
     expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+    expect(heldRecordOf(request.request.context)).toBeNull();
     request.flush(
       {
         type: 'https://nfnn.cz/problems/content/changed-meanwhile',
@@ -1263,5 +1273,22 @@ describe('Given an administrator editing a published project on a device that ke
     overwrite.flush(project({ title: 'Zahrada pro všechny děti', version: '3333333333333333' }));
     await drafted();
     expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when a story opens, then the editor shows it from the copy', async () => {
+    const story = heldProject();
+    const { page, http } = await openOfflineFromCopy(
+      AdminProjectEditor,
+      contentCopy({ 'content/projects': [story] }),
+      { path: 'sprava/projekty/:id', url: `/sprava/projekty/${story.id}` },
+    );
+
+    expect((page.querySelector('#projects-title') as HTMLInputElement | null)?.value).toBe(
+      story.title,
+    );
+    waitsForConnection(page, 'Uložit a ukázat na webu');
+    http.verify();
   });
 });

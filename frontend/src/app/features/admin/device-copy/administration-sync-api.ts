@@ -5,7 +5,7 @@ import type { PasskeyConfirmation } from '../../../core/auth/donor';
 
 export const MAX_CHUNKS_PER_REQUEST = 64;
 
-export type AdministrationCopyPart = 'donations' | 'donors';
+export type AdministrationCopyPart = 'donations' | 'donors' | 'content' | 'operations';
 
 export interface AdministrationChunkEntry {
   readonly id: string;

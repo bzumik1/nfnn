@@ -1,15 +1,17 @@
 package cz.novanadeje.app.donations.application.sync;
 
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
+import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.LinkRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.NextReportRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSectionsRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsVersionRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SentReportRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
-import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
@@ -17,6 +19,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
+import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.SentReport;
 import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
@@ -72,16 +75,17 @@ public class AdminDonationsRows {
         return new SymbolClaimRow(row.id(), row.donorId(), row.accountNumber(), row.variableSymbol(), row.answer(), row.answeredAt(), versionOf(row));
     }
 
-    public ReportSettingsRow reportSettings(StoredReportSettings stored, List<SentReport> sent) {
+    public ReportSettingsRow reportSettings(StoredReportSettings stored, List<SentReport> sent, ReportAdministrationView.NextReport next,
+                                            ReportMonth lastEnded) {
         ReportSettings settings = stored.settings();
         return new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
                 stored.changedAt().orElse(null), sent.stream().map(report -> new SentReportRow(report.month().toString(), report.sentAt())).toList(),
-                reportSettingsVersion(stored));
+                new NextReportRow(next.month().toString(), next.dueOn()), lastEnded.toString(), reportSettingsVersion(stored));
     }
 
     public String reportSettingsVersion(StoredReportSettings stored) {
         ReportSettings settings = stored.settings();
-        return versionOf(new ReportSettingsRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
+        return versionOf(new ReportSettingsVersionRow(settings.recipients().values(), settings.sendDay(), settings.sendHour(), sectionsOf(settings),
                 stored.changedAt().orElse(null), List.of(), null));
     }
 
@@ -95,9 +99,7 @@ public class AdminDonationsRows {
     }
 
     private static PaymentRow unversioned(BankPayment payment) {
-        String account = payment.sender().map(SenderAccount::display)
-                .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)))
-                .orElse(null);
+        String account = payment.payerAccount().orElse(null);
         return new PaymentRow(payment.id().value(), payment.transactionId().value(), payment.bookedOn(), payment.amount().amountMinor(),
                 payment.amount().currency(), payment.variableSymbol().orElse(null), account, payment.counterpartyName().orElse(null),
                 payment.messageForRecipient().orElse(null), payment.importedAt(), payment.unpairedByAdminAt().orElse(null),

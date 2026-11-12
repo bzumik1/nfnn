@@ -586,6 +586,19 @@
                     </form>
                   }
                 }
+                <div class="receipt-offline" role="status">
+                  @if (signatoryState() === 'offline') {
+                    @if (onlineAgain.serverAway()) {
+                      <p class="field-status" i18n="@@admin.people.receipt.serverAway">
+                        Kdo potvrzení podepisuje, ukážeme, až server zase odpoví.
+                      </p>
+                    } @else {
+                      <p class="field-status" i18n="@@admin.people.receipt.offline">
+                        Kdo potvrzení podepisuje, ukážeme, až budete online.
+                      </p>
+                    }
+                  }
+                </div>
                 <app-live-notice class="card-notice" [notice]="receiptNotice()" />
                 <app-receipt-signature
                   [personId]="member.id"
@@ -779,14 +792,16 @@
     }
   }
 </div>
-@if (staleText()) {
+@if (changedText(); as changed) {
   <app-changed-meanwhile-dialog
     subject="content"
     [keepsDraft]="true"
-    [fromDraft]="true"
+    [fromDraft]="changed.fromDraft"
+    [canOverwrite]="changed.fromDraft || changed.version !== null"
+    [savedAt]="changed.savedAt"
     [busy]="savingNote() || savingFootnote()"
-    (overwriteChosen)="overwriteStaleText()"
-    (reloadChosen)="reloadStaleText()"
-    (dismissed)="staleText.set(null)"
+    (overwriteChosen)="overwriteChangedText()"
+    (reloadChosen)="reloadChangedText()"
+    (dismissed)="changedText.set(null)"
   />
 }

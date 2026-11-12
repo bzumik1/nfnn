@@ -17,6 +17,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
@@ -27,7 +28,12 @@ import {
   pragueDay,
   pragueHour,
 } from '../../donations/donation-date';
-import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
+import {
+  AdminApi,
+  AdminReportResponse,
+  ReportSettingsResponse,
+  SentReportResponse,
+} from '../admin-api';
 import {
   EmailListValidator,
   firstInvalidAddress,
@@ -51,6 +57,7 @@ import {
   DRAFT_RESUMED_TEXT,
   DraftOffer,
 } from '../../../shared/ui/draft-offer/draft-offer';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 interface ReportDraftValues {
   readonly recipients: string;
@@ -93,6 +100,7 @@ const SEND_HOURS = Array.from({ length: 24 }, (_, index) => index);
 })
 export class AdminReport {
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -106,6 +114,8 @@ export class AdminReport {
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly report = signal<AdminReportResponse | null>(null);
+  private readonly heldAt = signal<string | null>(null);
+  private readonly connectivity = inject(Connectivity);
   protected readonly settingsStatus = signal<string | null>(null);
   protected readonly sendNotice = signal<Notice | null>(null);
   protected readonly mailRefused = signal(false);
@@ -167,6 +177,10 @@ export class AdminReport {
       dueOn: formatDonationDate(next.dueOn),
       hour: `${hour}:00`,
       overdue: next.month === report.lastEndedMonth && passed(next.dueOn, hour),
+      heldAt:
+        this.heldAt() !== null && this.connectivity.offline() && passed(next.dueOn, hour)
+          ? time(this.heldAt())
+          : null,
     };
   });
   protected readonly sentReports = computed(() => this.report()?.sentReports ?? []);
@@ -206,17 +220,22 @@ export class AdminReport {
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
+  protected serverAway(): boolean {
+    return this.connectivity.cause() === 'server';
+  }
+
   protected load(): void {
     this.state.set('loading');
     this.fetch();
   }
 
   private fetch(loaded?: () => void, keepsEdits = false): void {
-    this.api
+    this.reads
       .report()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (report) => {
+        next: ({ heldAt, ...report }) => {
+          this.heldAt.set(heldAt);
           const previous = this.report();
           if (keepsEdits && previous !== null && this.settingsForm()?.dirty === true) {
             this.report.set({ ...report, settings: previous.settings });
@@ -316,6 +335,7 @@ export class AdminReport {
     this.changedMeanwhile.set(null);
     this.settingsError.set(null);
     this.draft.discard();
+    this.reads.changed();
     this.fetch(() => {
       this.markSettingsSaved();
       this.settingsStatus.set(
@@ -334,6 +354,11 @@ export class AdminReport {
     });
   }
 
+  private heldSettings(version: string): ReportSettingsResponse | null {
+    const shown = this.report()?.settings ?? null;
+    return shown !== null && shown.version === version ? shown : null;
+  }
+
   private submitSettings(version: string): void {
     this.saving.set(true);
     this.api
@@ -345,6 +370,7 @@ export class AdminReport {
           sections: { ...this.sections },
         },
         version,
+        this.heldSettings(version),
       )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

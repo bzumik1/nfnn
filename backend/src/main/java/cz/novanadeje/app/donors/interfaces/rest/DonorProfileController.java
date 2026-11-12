@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorProfileService;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,7 +28,7 @@ class DonorProfileController {
     }
 
     @PatchMapping
-    DonorResponse update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateDonorProfileRequest request) {
-        return DonorResponse.of(profiles.updateProfile(DonorId.of(jwt.getSubject()), SessionRoles.of(jwt), request.toCommand()));
+    DonorResponse update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateDonorProfileRequest request, ExpectedVersion expected) {
+        return DonorResponse.of(profiles.updateProfile(DonorId.of(jwt.getSubject()), SessionRoles.of(jwt), request.toCommand(), expected));
     }
 }
