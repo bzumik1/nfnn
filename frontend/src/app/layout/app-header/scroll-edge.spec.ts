@@ -95,9 +95,11 @@ describe('Given the edge at the top of a page', () => {
 
     it('and a light ground written as a color() value comes up under it, then the edge knows it is light', async () => {
       const ground = fullWidth(document.createElement('div'));
-      const style = vi
-        .spyOn(window, 'getComputedStyle')
-        .mockReturnValue({ backgroundColor: 'color(srgb 0.95 0.96 0.97)', height: '' } as never);
+      const style = vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+        backgroundColor: 'color(srgb 0.95 0.96 0.97)',
+        height: '',
+        getPropertyValue: () => '',
+      } as never);
       underEdge = [ground, document.body];
 
       scrollTo(900);
@@ -151,6 +153,20 @@ describe('Given the edge at the top of a page', () => {
 
       expect(header.classList).not.toContain(SCROLLED_CLASS);
     });
+  });
+
+  it('when the page rests further down by design, as the landing page does, then the edge stays lowered there and rises only beyond it', async () => {
+    document.documentElement.style.setProperty('--page-resting-scroll', '120px');
+
+    scrollTo(120);
+    await nextFrame();
+    expect(header.classList).not.toContain(SCROLLED_CLASS);
+
+    scrollTo(121);
+    await nextFrame();
+    expect(header.classList).toContain(SCROLLED_CLASS);
+
+    document.documentElement.style.removeProperty('--page-resting-scroll');
   });
 
   it('when the edge is released, then scrolling no longer raises it', async () => {

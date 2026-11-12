@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 
 interface Box {
   left: number;
@@ -28,6 +29,32 @@ const SCREENS = [
 ];
 
 const SHORT_SCREENS = SCREENS.filter((screen) => screen.height <= 500);
+
+const SAFARI_STATUS_BAR = 62;
+const SAFARI_TOOLBAR = 98;
+
+async function photoBox(page: Page): Promise<Box> {
+  return page.locator('#uvod img').evaluate((image) => {
+    const box = image.getBoundingClientRect();
+    return { top: box.top, bottom: box.bottom, left: box.left, right: box.right };
+  });
+}
+
+async function expectNotToMove(
+  page: Page,
+  screen: { width: number; height: number },
+): Promise<void> {
+  const resting = await page.evaluate(() => window.scrollY);
+  await page.mouse.move(screen.width / 2, screen.height / 2);
+  await page.mouse.wheel(0, screen.height);
+  await page.mouse.wheel(0, -screen.height * 2);
+  await page.locator('#uvod h1').click({ position: { x: 1, y: 1 } });
+  for (const key of ['PageDown', 'Space', 'ArrowDown', 'End']) {
+    await page.keyboard.press(key);
+  }
+  await waitWhileNothingMayHappen(page, 400);
+  expect(await page.evaluate(() => window.scrollY), 'the page moved').toBe(resting);
+}
 
 function overlaps(a: Box, b: Box): boolean {
   return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
@@ -88,7 +115,9 @@ async function heroLayout(page: Page, face: Box) {
       shown,
       headerBottom: Math.max(0, ...header),
       tabBarTop: document.querySelector('app-tab-bar nav')?.getBoundingClientRect().top ?? null,
-      scrolls: document.documentElement.scrollHeight > window.innerHeight,
+      scrolls:
+        document.documentElement.scrollHeight > window.innerHeight &&
+        getComputedStyle(document.documentElement).overflowY !== 'hidden',
     };
   }, face);
 }
@@ -159,6 +188,69 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
       });
     });
   }
+
+  for (const screen of SCREENS) {
+    test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) and the visitor tries to move it`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test('then the photo covers the whole screen and the page does not move', async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+        const photo = await photoBox(page);
+        expect(photo.top).toBeLessThanOrEqual(0);
+        expect(photo.bottom).toBeGreaterThanOrEqual(screen.height);
+        expect(photo.left).toBeLessThanOrEqual(0);
+        expect(photo.right).toBeGreaterThanOrEqual(screen.width);
+        await expectNotToMove(page, screen);
+      });
+    });
+  }
+
+  test.describe('when it opens in Safari on an iPhone 18 Pro Max, whose status bar and floating toolbar the iOS 27.2 simulator measured', () => {
+    test.use({ viewport: { width: 440, height: 796 } });
+
+    test('then the photo reaches under the status bar and under the toolbar, and the page still does not move', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      const bleed = await page.evaluate(() => {
+        const tabRule = [...document.styleSheets]
+          .flatMap((sheet) => [...sheet.cssRules])
+          .filter((rule): rule is CSSMediaRule => rule instanceof CSSMediaRule)
+          .filter((rule) => rule.conditionText.includes('not (display-mode: standalone)'))
+          .flatMap((rule) => [...rule.cssRules])
+          .filter((rule): rule is CSSSupportsRule => rule instanceof CSSSupportsRule)
+          .filter((rule) => rule.conditionText.includes('-webkit-touch-callout'))
+          .flatMap((rule) => [...rule.cssRules])
+          .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule)
+          .find((rule) => rule.selectorText === 'html.landing-stage')!;
+        return {
+          top: tabRule.style.getPropertyValue('--page-resting-scroll').trim(),
+          bottom: tabRule.style.getPropertyValue('--page-bleed-bottom').trim(),
+        };
+      });
+      await page.addStyleTag({
+        content: `html.landing-stage { --page-resting-scroll: ${bleed.top}; --page-bleed-bottom: ${bleed.bottom}; }`,
+      });
+      await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+      const photo = await photoBox(page);
+      expect(photo.top, 'the photo stops below the status bar').toBeLessThanOrEqual(
+        -SAFARI_STATUS_BAR,
+      );
+      expect(photo.bottom, 'the photo stops above the toolbar').toBeGreaterThanOrEqual(
+        796 + SAFARI_TOOLBAR,
+      );
+      await expectNotToMove(page, { width: 440, height: 796 });
+    });
+  });
 
   test.describe('when a phone wider than a tablet lies on its side', () => {
     test.use({ viewport: { width: 956, height: 440 } });
