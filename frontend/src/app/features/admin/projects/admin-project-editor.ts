@@ -49,6 +49,7 @@ import {
   SLUG_PATTERN,
   slugFromText,
 } from '../../content/projects-api';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { projectCategoryLabel } from '../../content/project-category';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
@@ -131,6 +132,7 @@ const PUBLISH_DATE_MOVED_TEXT = $localize`:@@admin.projectEditor.draft.dateMoved
 export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly api = inject(ProjectsApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly photos = inject(PhotosApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -350,8 +352,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
 
   protected load(id: string, loaded?: () => void): void {
     this.state.set('loading');
-    this.api
-      .get(id)
+    this.reads
+      .project(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
@@ -797,6 +799,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     this.projectForm()?.form.markAsPristine();
     this.edited.set(false);
+    this.reads.changed();
     this.load(saved.id, () => {
       this.notice.set({
         kind: 'status',

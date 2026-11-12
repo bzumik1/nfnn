@@ -1,0 +1,122 @@
+[
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donations/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].nextReport",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donations/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].lastEndedMonth",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].nextReport",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donations/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].lastEndedMonth",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_stale_writes: *",
+    "field": "$.current.nextReport",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "kind": "added",
+    "path": "PUT /api/admin/donations/report/settings",
+    "scenario": "donations/admin_stale_writes: *",
+    "field": "$.current.lastEndedMonth",
+    "reason": "2.20c: the report-settings row of the administration's device copy carries nextReport and lastEndedMonth as GET /api/admin/donations/report computes them for the server's date, so a device shows the Měsíční e-mail page from its copy without its own clock; the 409 current of the report settings carries the same row",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].summary",
+    "reason": "2.20c: the audit rows of the administration's device copy carry the Czech summary GET /api/admin/donors/actions gives (null where it would be the stored details, which stay on the server, D37) and the donor the entry concerns, so Historie změn lists offline from the copy",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "donors/admin_device_sync: *",
+    "field": "$.chunks[*].rows[*].donorId",
+    "reason": "2.20c: the audit rows of the administration's device copy carry the Czech summary GET /api/admin/donors/actions gives (null where it would be the stored details, which stay on the server, D37) and the donor the entry concerns, so Historie změn lists offline from the copy",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "request",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/sync",
+    "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "added",
+    "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
+    "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.report.ReportSettingsServiceTest > Given another version than the stored settings', when the settings are changed, then it is refused with the stored version and row, and nothing is saved or audited",
+    "reason": "2.20c: the report settings row (and the 409 current) now carries nextReport and lastEndedMonth, so the refusal's row is named with them",
+    "replacement": "donations.application.report.ReportSettingsServiceTest > Given another version than the stored settings', when the settings are changed, then it is refused with the stored version and row with its next report, and nothing is saved or audited"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdminAccountsSyncServiceTest > Given an administrator, a donor with a second factor and passkeys and the trail, when the snapshot is taken, then every account comes with its factor and passkey count, and the whole trail",
+    "reason": "2.20c: the audit rows of the administration's device copy carry the donor each action is about and its Czech summary, so the snapshot test names the donor too",
+    "replacement": "donors.application.AdminAccountsSyncServiceTest > Given an administrator, a donor with a second factor and passkeys and the trail, when the snapshot is taken, then every account comes with its factor and passkey count, and the whole trail with the donor each action is about"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.audit.JpaAdminActionTrailTest > Given three stored actions, when the whole trail is read newest first, then all of them come, the latest first, with their subjects",
+    "reason": "2.20c: the whole trail is read as full entries with details, from which the server builds each row's summary; details still never leave the server (D37)",
+    "replacement": "shared.infrastructure.audit.JpaAdminActionTrailTest > Given three stored actions, when the whole trail is read newest first, then all of them come, the latest first, with their subjects and details"
+  }
+]

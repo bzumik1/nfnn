@@ -42,7 +42,9 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { RestoreDialog } from './restore-dialog';
 import { ADMIN_BACKUP_HISTORY_PATH, RESTORE_STATE_KEY } from './backup-paths';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -53,6 +55,7 @@ interface RunningJob {
 interface RunLine {
   text: string;
   error: string | null;
+  errorOnServerOnly?: boolean;
 }
 
 interface RequestedRestore {
@@ -92,6 +95,7 @@ function failedAt(at: string): string {
 })
 export class AdminBackups {
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly setupApi = inject(SetupApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -114,6 +118,8 @@ export class AdminBackups {
   protected readonly restoreError = signal<string | null>(null);
   protected readonly restoring = signal<RequestedRestore | null>(null);
   protected readonly restoreSlow = signal(false);
+  private readonly errorsOnServerOnly = signal(false);
+  private readonly connectivity = inject(Connectivity);
 
   protected readonly available = computed(() => this.view()?.available ?? false);
   protected readonly backups = computed(() => this.view()?.backups ?? []);
@@ -149,12 +155,13 @@ export class AdminBackups {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .backups()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
           this.view.set(view);
+          this.errorsOnServerOnly.set(view.fromCopy);
           this.state.set('ready');
           this.reportRequestedRestore(view);
           this.askHandedOverRestore(view);
@@ -303,7 +310,10 @@ export class AdminBackups {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (view) => this.view.set(view),
+        next: (view) => {
+          this.view.set(view);
+          this.errorsOnServerOnly.set(false);
+        },
         complete: () => this.finishJob(kind),
         error: (failure: unknown) => {
           this.job.set(null);
@@ -413,15 +423,27 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return {
-        text: $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
-        error: run.error,
-      };
+      return this.failedRun(
+        $localize`:@@admin.backups.lastRestore.failed:Nepovedla se ${at}:time:, data zůstala, jak byla.`,
+        run,
+      );
     }
     return {
       text: $localize`:@@admin.backups.lastRestore.ok:${at}:time: ze zálohy ${run.fileName ?? ''}:file:`,
       error: null,
     };
+  }
+
+  private failedRun(text: string, run: BackupRunResponse): RunLine {
+    return {
+      text,
+      error: run.error,
+      errorOnServerOnly: run.error === null && this.errorsOnServerOnly(),
+    };
+  }
+
+  protected serverAway(): boolean {
+    return !this.connectivity.offline() || this.connectivity.cause() === 'server';
   }
 
   private describeBackup(run: BackupRunResponse | null | undefined): RunLine {
@@ -430,7 +452,7 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: run.error };
+      return this.failedRun(failedAt(at), run);
     }
     return {
       text: $localize`:@@admin.backups.lastBackup.ok:${at}:time: (${formatSize(run.sizeBytes ?? 0)}:size:)`,
@@ -451,7 +473,7 @@ export class AdminBackups {
     }
     const at = formatBankTime(run.finishedAt);
     if (run.outcome === 'FAILED') {
-      return { text: failedAt(at), error: run.error };
+      return this.failedRun(failedAt(at), run);
     }
     return {
       text: $localize`:@@admin.backups.lastTestRestore.ok:${at}:time:, ${run.tables ?? 0}:tables: tabulek ze zálohy ${run.fileName ?? ''}:file:`,

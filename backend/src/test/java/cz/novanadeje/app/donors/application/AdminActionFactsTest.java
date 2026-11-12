@@ -320,4 +320,50 @@ class AdminActionFactsTest {
         assertThat(AdminActionFacts.read("SOMETHING_NEW", "Role správce udělena dárci " + DONOR)).isEmpty();
         assertThat(AdminActionFacts.read("GRANT_ADMINISTRATION", "Role udělena někomu")).isEmpty();
     }
+
+    @ParameterizedTest(name = "{0}: {1}")
+    @MethodSource("czechAndEnglishRecords")
+    @DisplayName("Given any record a shape reads, when its facts are taken for a device, then they hold no bank account and no recipient's address")
+    void should_hold_no_account_or_recipient_when_taken_for_a_device_given_any_record(String action, String details) {
+        AdminActionFacts onADevice = AdminActionFacts.read(action, details).orElseThrow().onADevice();
+
+        assertThat(onADevice.values()).doesNotContainKeys(AdminActionFacts.NEVER_ON_A_DEVICE.toArray(String[]::new));
+        assertThat(onADevice.values().values()).noneMatch(value -> value.contains("@") || value.contains("2900233333"));
+    }
+
+    @Test
+    @DisplayName("Given records that name the report's recipients by address, when their facts are taken for a device, then the recipients become their count under the count's wording")
+    void should_count_the_recipients_when_taken_for_a_device_given_recipients_by_address() {
+        AdminActionFacts settings = AdminActionFacts.read("CHANGE_REPORT_SETTINGS", "Nastavení měsíčního přehledu změněno: příjemci jana@example.cz, "
+                + "petr@example.cz; odesílá se 3. den v měsíci v 7:00; části dárci, dary").orElseThrow().onADevice();
+        AdminActionFacts withoutHour = AdminActionFacts.read("CHANGE_REPORT_SETTINGS", "Monthly report settings changed: recipients jana@example.cz; "
+                + "sent on day 3 of the month; sections donors, unpaired payments").orElseThrow().onADevice();
+        AdminActionFacts sent = AdminActionFacts.read("SEND_MONTHLY_REPORT", "Měsíční přehled za 2026-09 ručně odeslán na jana@example.cz, petr@example.cz")
+                .orElseThrow().onADevice();
+
+        assertThat(settings.summaryKey()).isEqualTo("CHANGE_REPORT_SETTINGS.recipientCount");
+        assertThat(settings.values()).containsExactlyInAnyOrderEntriesOf(Map.of("recipientCount", "2", "day", "3", "hour", "7", "sections", "DONORS,DONATIONS"));
+        assertThat(withoutHour.summaryKey()).isEqualTo("CHANGE_REPORT_SETTINGS.withoutHourRecipientCount");
+        assertThat(withoutHour.values()).containsEntry("recipientCount", "1").doesNotContainKey("recipients");
+        assertThat(sent.summaryKey()).isEqualTo("SEND_MONTHLY_REPORT.recipientCount");
+        assertThat(sent.values()).containsExactlyInAnyOrderEntriesOf(Map.of("month", "2026-09", "recipientCount", "2"));
+    }
+
+    @Test
+    @DisplayName("Given records that name a bank account, when their facts are taken for a device, then the account is left out under a wording without it")
+    void should_leave_out_the_account_when_taken_for_a_device_given_an_account() {
+        AdminActionFacts disconnected = AdminActionFacts.read("DISCONNECT_SENDER_ACCOUNT", "Párování z účtu 2900233333/2010 (propojení " + LINK + ") dárce "
+                + DONOR + " vypnuto").orElseThrow().onADevice();
+
+        assertThat(disconnected.summaryKey()).isEqualTo("DISCONNECT_SENDER_ACCOUNT.withoutAccount");
+        assertThat(disconnected.values()).containsExactlyInAnyOrderEntriesOf(Map.of("donor", DONOR));
+    }
+
+    @Test
+    @DisplayName("Given a record without a bank account or recipients, when its facts are taken for a device, then they are the same facts")
+    void should_keep_the_facts_when_taken_for_a_device_given_nothing_left_out() {
+        AdminActionFacts read = AdminActionFacts.read("GRANT_ADMINISTRATION", "Role správce udělena dárci " + DONOR).orElseThrow();
+
+        assertThat(read.onADevice()).isEqualTo(read);
+    }
 }

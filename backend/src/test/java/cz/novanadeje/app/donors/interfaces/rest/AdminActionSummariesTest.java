@@ -2,6 +2,9 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AdminActionFacts;
 import cz.novanadeje.app.donors.application.AdminActionView;
+import cz.novanadeje.app.donations.domain.donation.PairingMethod;
+import cz.novanadeje.app.donors.domain.DeviceBrowser;
+import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -16,18 +19,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.context.support.StaticMessageSource;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,6 +47,13 @@ class AdminActionSummariesTest {
     private static final Locale CZECH = Locale.forLanguageTag("cs");
     private static final DonorId PETR = DonorId.newId(NOW.minusSeconds(100));
     private static final String ID = "0192f0f1-0000-7000-8000-0000000000aa";
+    private static final String SUMMARY = "admin.action.summary.";
+    private static final Pattern PLACEHOLDER = Pattern.compile("\\{(\\w+)}");
+    private static final Set<String> KEPT_ON_A_DEVICE = Set.of("donor", "amount", "booked", "method", "count", "symbol", "donations", "answers",
+            "recipientCount", "day", "hour", "sections", "month", "on", "width", "height", "number", "replaced", "year", "issued", "unchanged", "skipped",
+            "key", "restore", "fromOrder", "toOrder", "x", "y", "bank", "host", "slug", "title", "from", "to", "file", "bytes", "tables", "sessions",
+            "secrets", "erasures", "credentials", "roles", "adminActions", "receiptNumbersSkipped", "platform", "browser", "logger", "level", "until",
+            "previous", "settings");
 
     private final AdminActionSummaries summaries = new AdminActionSummaries(messages());
 
@@ -241,6 +255,118 @@ class AdminActionSummariesTest {
     }
 
     @Test
+    @DisplayName("Given a record whose details have no known shape, when its sentence for a device copy is asked, then there is none, so the details stay on the server")
+    void should_give_no_sentence_when_written_for_a_copy_given_unknown_shape() {
+        AdminActionView view = view("SOMETHING_NEW", "Something happened to " + ID, Optional.empty());
+
+        assertThat(summaries.sentenceOnADevice(view)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a record with known details about an erased donor, when its sentence for a device copy is asked, then it is the list's sentence, without the name")
+    void should_give_the_list_sentence_when_written_for_a_copy_given_known_details() {
+        Donor erased = petr();
+        erased.erase(NOW);
+        AdminActionView view = view("GRANT_ADMINISTRATION", "Role správce udělena dárci " + PETR, Optional.of(erased));
+
+        assertThat(summaries.sentenceOnADevice(view)).contains("Role správce udělena dárci (osobní údaje vymazány).");
+        assertThat(summaries.sentenceOnADevice(view)).contains(summaries.summary(view, CZECH));
+    }
+
+    @Test
+    @DisplayName("Given records that name a bank account, when their sentences for a device copy are asked, then they read without the account, for a live and an erased donor")
+    void should_leave_out_the_account_when_written_for_a_copy_given_records_naming_an_account() {
+        Donor erased = petr();
+        erased.erase(NOW);
+        String link = "0192f0f1-0000-7000-8000-0000000000bb";
+
+        assertThat(summaries.sentenceOnADevice(view("DISCONNECT_SENDER_ACCOUNT", "Párování z účtu 2900233333/2010 (propojení " + link + ") dárce " + PETR
+                + " vypnuto", Optional.of(petr())))).contains("Párování plateb z jednoho bankovního účtu dárci Petr Svoboda vypnuto.");
+        assertThat(summaries.sentenceOnADevice(view("RECONNECT_SENDER_ACCOUNT", "Párování z účtu 2900233333/2010 (propojení " + link + ") dárce " + PETR
+                + " znovu zapnuto jako propojení " + ID + ", čeká na platbu se symbolem", Optional.of(erased))))
+                .contains("Párování plateb z jednoho bankovního účtu dárci (osobní údaje vymazány) znovu zapnuto; začne platit po platbě z účtu s variabilním "
+                        + "symbolem dárce.");
+        assertThat(summaries.sentenceOnADevice(view("REMOVE_SENDER_ACCOUNT_LINK", "Účet 2900233333/2010 (propojení " + link + ", ACTIVE) odebrán dárci "
+                + PETR + "; smazané dary spárované přes něj: 4, smazané odpovědi o starších symbolech: 1", Optional.of(erased))))
+                .contains("Bankovní účet odebrán dárci (osobní údaje vymazány); smazané dary přiřazené podle účtu: 4, smazané odpovědi o starších symbolech: 1.");
+        assertThat(summaries.sentenceOnADevice(view("RECOVER_SECOND_FACTOR", "Dvoufaktorové ověření správce " + PETR + " vypnuto platbou 1 Kč z ověřeného účtu "
+                + "2900233333/2010; všechna přihlášení ukončena", Optional.of(petr()))))
+                .contains("Dvoufaktorové ověření správce Petr Svoboda vypnuto platbou 1 Kč z ověřeného účtu správce; všechna přihlášení správce skončila.");
+    }
+
+    @Test
+    @DisplayName("Given records that name the report's recipients by address, when their sentences for a device copy are asked, then they count the recipients instead")
+    void should_count_the_recipients_when_written_for_a_copy_given_recipients_by_address() {
+        assertThat(summaries.sentenceOnADevice(view("CHANGE_REPORT_SETTINGS", "Nastavení měsíčního přehledu změněno: příjemci pokladni@example.cz, "
+                + "revize@example.cz; odesílá se 3. den v měsíci v 7:00; části dárci, dary", Optional.empty())))
+                .contains("Změněno nastavení měsíčního přehledu: počet příjemců 2, chodí 3. den v měsíci v 7:00 a obsahuje dárce, dary.");
+        assertThat(summaries.sentenceOnADevice(view("CHANGE_REPORT_SETTINGS", "Monthly report settings changed: recipients pokladni@example.cz; sent on "
+                + "day 3 of the month; sections donors, unpaired payments", Optional.empty())))
+                .contains("Změněno nastavení měsíčního přehledu: počet příjemců 1, chodí 3. den v měsíci a obsahuje dárce, platby bez dárce.");
+        assertThat(summaries.sentenceOnADevice(view("SEND_MONTHLY_REPORT", "Monthly report for 2026-09 sent by hand to pokladni@example.cz", Optional.empty())))
+                .contains("Měsíční přehled za září 2026 ručně odeslán, počet příjemců 1.");
+    }
+
+    @Test
+    @DisplayName("Given an article whose title holds an e-mail address, when its sentence for a device copy is asked, then there is none")
+    void should_give_no_sentence_when_written_for_a_copy_given_an_email_address_in_a_title() {
+        AdminActionView view = view("CREATE_NEWS", "Aktualita " + ID + " „pis-nam“ napsána; titulek „Pište na pokladni@example.cz“", Optional.empty());
+
+        assertThat(summaries.sentence(view, CZECH)).contains("Napsána aktualita „Pište na pokladni@example.cz“.");
+        assertThat(summaries.sentenceOnADevice(view)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given every summary template, when their placeholders are classified, then each is one a device keeps or one it never fills, and every template with the latter has a wording for a device")
+    void should_classify_every_placeholder_when_the_templates_are_read_given_every_summary_template() throws IOException {
+        Properties czech = texts("i18n/messages_cs.properties");
+        Set<String> templates = czech.stringPropertyNames().stream().filter(key -> key.startsWith(SUMMARY)).collect(Collectors.toSet());
+        Set<String> placeholders = templates.stream().flatMap(key -> placeholdersOf(czech.getProperty(key))).collect(Collectors.toSet());
+
+        assertThat(placeholders).isSubsetOf(Stream.concat(KEPT_ON_A_DEVICE.stream(), AdminActionFacts.NEVER_ON_A_DEVICE.stream()).toList());
+        templates.stream().filter(key -> placeholdersOf(czech.getProperty(key)).anyMatch(AdminActionFacts.NEVER_ON_A_DEVICE::contains))
+                .forEach(key -> assertThat(templates).as("the wording for a device of %s", key)
+                        .containsAnyOf(key + ".withoutAccount", key + ".recipientCount", key + "RecipientCount"));
+    }
+
+    @Test
+    @DisplayName("Given every device platform, browser and pairing method, when their texts are looked up, then each has a Czech and an English one")
+    void should_have_czech_and_english_texts_when_looked_up_given_every_platform_browser_and_method() throws IOException {
+        Properties czech = texts("i18n/messages_cs.properties");
+        Properties english = texts("i18n/messages_en.properties");
+        Stream<String> keys = Stream.of(
+                Arrays.stream(DevicePlatform.values()).map(value -> "admin.action.platform." + value.name()),
+                Arrays.stream(DeviceBrowser.values()).map(value -> "admin.action.browser." + value.name()),
+                Arrays.stream(PairingMethod.values()).map(value -> "admin.action.method." + value.name())).flatMap(Function.identity());
+
+        keys.forEach(key -> {
+            assertThat(czech.getProperty(key)).as("the Czech text %s", key).isNotBlank();
+            assertThat(english.getProperty(key)).as("the English text %s", key).isNotBlank();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a record from a device platform no text knows, when it is summarized, then the platform's code stands in for its name")
+    void should_write_the_code_when_summarized_given_a_platform_without_a_text() {
+        AdminActionView view = view("STORE_ADMINISTRATION_COPY", "Kopie správy uložena do zařízení STEAMDECK SAFARI", Optional.empty());
+
+        assertThat(summaries.sentenceOnADevice(view)).contains("Kopie správy uložena do zařízení STEAMDECK · Safari.");
+    }
+
+    @Test
+    @DisplayName("Given a template whose formats are missing, when the record is summarized, then the list shows the stored details and a device copy no sentence, instead of failing")
+    void should_fall_back_when_summarized_given_a_sentence_that_cannot_be_written() {
+        StaticMessageSource incomplete = new StaticMessageSource();
+        incomplete.addMessage("admin.action.summary.PAIR_PAYMENT", CZECH, "Platba {amount} ze dne {booked} ručně přiřazena dárci {donor}.");
+        AdminActionSummaries withoutFormats = new AdminActionSummaries(incomplete);
+        String details = "Platba 26683551 (Money[amountMinor=50000, currency=CZK], zaúčtována 2026-10-10) ručně přiřazena dárci " + PETR + " jako dar " + ID;
+        AdminActionView view = view("PAIR_PAYMENT", details, Optional.of(petr()));
+
+        assertThat(withoutFormats.sentenceOnADevice(view)).isEmpty();
+        assertThat(withoutFormats.summary(view, CZECH)).isEqualTo(details);
+    }
+
+    @Test
     @DisplayName("Given a language without its own texts, when a record is summarized, then the Czech sentence is shown")
     void should_write_czech_when_summarized_given_other_language() {
         AdminActionView view = view("GRANT_ADMINISTRATION", "Role správce udělena dárci " + PETR, Optional.of(petr()));
@@ -265,12 +391,20 @@ class AdminActionSummariesTest {
     }
 
     private static Set<String> historyKeys(String resource) throws IOException {
+        return texts(resource).stringPropertyNames().stream().filter(key -> key.startsWith("admin.action.")).collect(Collectors.toSet());
+    }
+
+    private static Properties texts(String resource) throws IOException {
         Properties properties = new Properties();
         try (Reader reader = new InputStreamReader(Objects.requireNonNull(AdminActionSummariesTest.class.getClassLoader().getResourceAsStream(resource)),
                 StandardCharsets.UTF_8)) {
             properties.load(reader);
         }
-        return properties.stringPropertyNames().stream().filter(key -> key.startsWith("admin.action.")).collect(Collectors.toSet());
+        return properties;
+    }
+
+    private static Stream<String> placeholdersOf(String template) {
+        return PLACEHOLDER.matcher(template).results().map(placeholder -> placeholder.group(1));
     }
 
     private static ResourceBundleMessageSource messages() {

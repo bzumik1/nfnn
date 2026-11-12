@@ -302,5 +302,15 @@
       <summary i18n="@@admin.backups.techDetails">Technické podrobnosti</summary>
       <p class="run-error">{{ line.error }}</p>
     </details>
+  } @else if (line.errorOnServerOnly) {
+    @if (serverAway()) {
+      <p class="run-error-later" i18n="@@admin.backups.errorServerAway">
+        Podrobnosti chyby ukážeme, až server zase odpoví.
+      </p>
+    } @else {
+      <p class="run-error-later" i18n="@@admin.backups.errorNeedsConnection">
+        Podrobnosti chyby ukážeme, až budete online.
+      </p>
+    }
   }
 </ng-template>

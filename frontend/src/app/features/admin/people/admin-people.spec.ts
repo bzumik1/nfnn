@@ -29,6 +29,13 @@ import {
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { heldRecordOf } from '../../../core/version/row-version';
 import { AdminPeople } from './admin-people';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
+import { person as heldPerson } from '../../content/testing/people-fixtures';
 
 const PEOPLE_URL = '/api/admin/content/people';
 const NOTE_VERSION = '00000000000000a1';
@@ -1347,5 +1354,49 @@ describe('Given an administrator writing the texts of the people page on a devic
     expect(element(fixture, 'app-changed-meanwhile-dialog dialog').textContent).toContain(
       'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
     );
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the people open, then they and the founders note come from the copy', async () => {
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminPeople,
+      contentCopy({
+        'content/people': [
+          {
+            members: [heldPerson()],
+            note: 'Slovo zakladatelů z kopie',
+            footnote: null,
+            noteVersion: 'n',
+            footnoteVersion: 'f',
+          },
+        ],
+      }),
+    );
+    http.expectOne('/api/admin/donations/receipt-signatory').error(new ProgressEvent('error'));
+    await settle();
+
+    expect(textOf(page)).toContain('Eva Vzorová');
+    expect((page.querySelector('#founders-note') as HTMLTextAreaElement | null)?.value).toBe(
+      'Slovo zakladatelů z kopie',
+    );
+    waitsForConnection(page, 'Uložit slovo zakladatelů');
+    (page.querySelector(`#person-edit-${heldPerson().id}`) as HTMLButtonElement).click();
+    await settle();
+
+    expect(textOf(page.querySelector('.receipt-offline[role="status"]'))).toBe(
+      'Kdo potvrzení podepisuje, ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.ui-load-state--error, .receipt-error')).toBeNull();
+    http
+      .expectOne((request) => request.url.startsWith(RECEIPT_SIGNATURES))
+      .error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(textOf(page.querySelector('.signature-offline[role="status"]'))).toBe(
+      'Podpis ukážeme, až budete online.',
+    );
+    expect(page.querySelector('.signature-error')).toBeNull();
+    http.verify();
   });
 });

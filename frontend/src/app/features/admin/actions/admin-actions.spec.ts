@@ -9,6 +9,12 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { adminAction } from '../testing/admin-fixtures';
 import { AdminActions } from './admin-actions';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  openWithCopy,
+  textOf,
+} from '../device-copy/testing/opened-copy';
 
 const LIST_URL = '/api/admin/donors/actions';
 
@@ -486,3 +492,122 @@ describe('Given an administrator on the history page where lists show as rows', 
     );
   });
 });
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the history opens, then it lists the entries of the copy with the names from the accounts and says the details show with a connection', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminActions,
+      copyOf({
+        'donors/accounts:2026-01': [
+          {
+            donorId: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+            name: 'Petr Správce',
+            email: 'petr@example.cz',
+          },
+        ],
+        'donors/audit:2026-10': [
+          {
+            id: '0190c3a2-0000-7000-8000-000000000001',
+            adminId: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+            action: 'PAIR_PAYMENT',
+            subjectId: 'payment-1',
+            performedAt: '2026-10-30T10:00:00Z',
+            client: null,
+            summary: 'Platba 500 Kč přiřazena dárci',
+            donorId: null,
+          },
+        ],
+      }),
+    );
+
+    expect(textOf(page)).toContain('Přiřazení platby dárci');
+    expect(textOf(page)).toContain('Petr Správce');
+    expect(textOf(page)).toContain('Platba 500 Kč přiřazena dárci');
+    expect(textOf(page)).toContain('Podrobnosti ukážeme, až budete online.');
+    http.verify();
+  });
+
+  it('when an entry of the copy has no summary, then the row names its action and only the technical details say when they show', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminActions,
+      copyOf({
+        'donors/accounts:2026-01': [],
+        'donors/audit:2026-10': [copyEntry(1, null)],
+      }),
+    );
+
+    expect(textOf(page)).toContain('Přiřazení platby dárci');
+    expect(page.querySelector('.summary')).toBeNull();
+    expect(page.textContent?.match(/ukážeme/g)).toHaveLength(1);
+    http.verify();
+  });
+
+  it('when the server is away rather than the internet, then the details say they show when the server answers again', async () => {
+    const { page, http } = await openOfflineFromCopy(
+      AdminActions,
+      copyOf({ 'donors/accounts:2026-01': [], 'donors/audit:2026-10': [copyEntry(1)] }),
+      undefined,
+      'server',
+    );
+
+    expect(textOf(page)).toContain('Podrobnosti ukážeme, až server zase odpoví.');
+    expect(textOf(page)).not.toContain('až budete online');
+    http.verify();
+  });
+
+  it('when the copy holds more than a page, then "Načíst starší" stays enabled and lists the older entries from the copy', async () => {
+    const entries = Array.from({ length: 51 }, (_, index) => copyEntry(index + 1));
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminActions,
+      copyOf({ 'donors/accounts:2026-01': [], 'donors/audit:2026-10': entries }),
+    );
+    const more = [...page.querySelectorAll('button')].find(
+      (button) => textOf(button) === 'Načíst starší',
+    ) as HTMLButtonElement;
+
+    expect(more.getAttribute('aria-disabled')).not.toBe('true');
+    expect(textOf(page)).not.toContain('Potřebuje připojení');
+    expect(page.querySelectorAll('.summary')).toHaveLength(50);
+    more.click();
+    await settle();
+
+    expect(page.querySelectorAll('.summary')).toHaveLength(51);
+    expect(textOf(page)).not.toContain('Načíst starší');
+    http.verify();
+  });
+});
+
+describe('Given an administrator online whose open copy is fresh', () => {
+  it('when the history opens, then it comes from the server with the technical details of each entry', async () => {
+    const { page, http, settle } = await openWithCopy(
+      AdminActions,
+      copyOf({ 'donors/accounts:2026-01': [], 'donors/audit:2026-10': [copyEntry(1)] }),
+    );
+    http
+      .expectOne((request) => request.url === '/api/admin/donors/actions')
+      .flush({
+        items: [
+          { ...copyEntry(1), adminName: null, adminEmail: null, details: 'paymentId=payment-1' },
+        ],
+        hasMore: false,
+      });
+    await settle();
+
+    expect(textOf(page.querySelector('details'))).toContain('paymentId=payment-1');
+    expect(textOf(page)).not.toContain('ukážeme');
+    http.verify();
+  });
+});
+
+function copyEntry(day: number, summary: string | null = `Souhrn ${day}`) {
+  return {
+    id: `0190c3a2-0000-7000-8000-${String(day).padStart(12, '0')}`,
+    adminId: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+    action: 'PAIR_PAYMENT',
+    subjectId: 'payment-1',
+    performedAt: new Date(Date.UTC(2026, 9, 1) + day * 60_000).toISOString(),
+    client: null,
+    summary,
+    donorId: null,
+  };
+}

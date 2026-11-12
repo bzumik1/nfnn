@@ -76,6 +76,8 @@ enum AdminHandlerReach {
         table.put("DELETE /api/admin/content/projects/{id}", BROWSER_ONLY);
         table.put("POST /api/admin/content/projects/{id}/publish", CONNECTOR);
         table.put("POST /api/admin/content/projects/{id}/unpublish", CONNECTOR);
+        table.put("GET /api/admin/content/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/content/sync/chunks", BROWSER_ONLY);
         table.put("GET /api/admin/donations/bank-logos", CONNECTOR);
         table.put("PUT /api/admin/donations/bank-logos/{code}", CONNECTOR);
         table.put("POST /api/admin/donations/bank-logos/{code}/refresh", CONNECTOR);
@@ -151,6 +153,8 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/operations/settings", CONNECTOR);
         table.put("PUT /api/admin/operations/settings", CONNECTOR_SECRETS_IN_BROWSER_ONLY);
         table.put("POST /api/admin/operations/settings/test-email", CONNECTOR_SECRETS_IN_BROWSER_ONLY);
+        table.put("GET /api/admin/operations/sync", BROWSER_ONLY);
+        table.put("GET /api/admin/operations/sync/chunks", BROWSER_ONLY);
         return Map.copyOf(table);
     }
 }

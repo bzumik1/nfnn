@@ -1,5 +1,6 @@
 /// <reference types="@angular/localize" />
 
+import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -28,7 +29,7 @@ import { FileButton } from '../../../shared/ui/file-button/file-button';
 import { SignatureArtwork } from './signature-artwork';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
-type LoadState = 'loading' | 'ready' | 'error';
+type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const SVG_TYPE = 'image/svg+xml';
@@ -66,6 +67,10 @@ export class ReceiptSignature {
   protected readonly notice = signal<Notice | null>(null);
 
   private pending = new Subscription();
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.state() === 'offline',
+    () => this.load(),
+  );
 
   constructor() {
     effect(() => {
@@ -89,7 +94,7 @@ export class ReceiptSignature {
           this.signature.set(signature);
           this.state.set('ready');
         },
-        error: () => this.state.set('error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       }),
     );
   }

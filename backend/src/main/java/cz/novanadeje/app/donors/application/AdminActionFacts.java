@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
@@ -14,6 +15,9 @@ import java.util.stream.Collectors;
 public record AdminActionFacts(String summaryKey, Map<String, String> values) {
 
     public static final String DONOR = "donor";
+    public static final String ACCOUNT = "account";
+    public static final String RECIPIENTS = "recipients";
+    public static final Set<String> NEVER_ON_A_DEVICE = Set.of(ACCOUNT, RECIPIENTS);
 
     private static final String UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
     private static final String ID = "(?:" + UUID_PATTERN + ")";
@@ -24,6 +28,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
     private static final String WITH_TITLE = "withTitle";
     private static final String INHERITED = "INHERITED";
     private static final String RECIPIENT_COUNT = "recipientCount";
+    private static final String WITHOUT_ACCOUNT = "withoutAccount";
+    private static final String LIST_SEPARATOR = ",\\s*";
 
     private static final Map<String, String> SECTION_CODES = Map.of(
             "dárci", "DONORS", "donors", "DONORS",
@@ -55,6 +61,27 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
 
     public Optional<UUID> donor() {
         return value(DONOR).map(UUID::fromString);
+    }
+
+    public AdminActionFacts onADevice() {
+        Map<String, String> kept = new LinkedHashMap<>(values);
+        String key = summaryKey;
+        if (kept.containsKey(RECIPIENTS)) {
+            kept.put(RECIPIENT_COUNT, Integer.toString(kept.remove(RECIPIENTS).split(LIST_SEPARATOR).length));
+            key = withVariant(key, RECIPIENT_COUNT);
+        }
+        if (kept.remove(ACCOUNT) != null) {
+            key = withVariant(key, WITHOUT_ACCOUNT);
+        }
+        return new AdminActionFacts(key, kept);
+    }
+
+    private static String withVariant(String key, String variant) {
+        int dot = key.indexOf('.');
+        if (dot < 0) {
+            return key + "." + variant;
+        }
+        return key + Character.toUpperCase(variant.charAt(0)) + variant.substring(1);
     }
 
     private static String sectionCodes(String sections) {

@@ -7,6 +7,12 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { draftArticle, newsArticle } from '../../content/testing/news-fixtures';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
+import {
+  contentCopy,
+  COPY_STORED_AT,
+  openedCopyProviders,
+} from '../device-copy/testing/opened-copy';
 import { AdminNews } from './admin-news';
 
 const LIST_URL = '/api/admin/content/news';
@@ -180,6 +186,31 @@ describe('Given an administrator who has just deleted an article', () => {
         fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
       ).trim(),
     ).toBe('Aktualitu „Zahrada pro děti“ jsme smazali.');
+    http.verify();
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the news list opens, then it lists the articles of the copy without asking the server and says how old they are', async () => {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminNews],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        ...openedCopyProviders(contentCopy({ 'content/news': [newsArticle()] }), true),
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AdminNews);
+    for (let round = 0; round < 3; round++) {
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    expect(fixture.nativeElement.querySelector('tbody')?.textContent).toContain('Zahrada pro děti');
+    expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse(COPY_STORED_AT));
     http.verify();
   });
 });

@@ -22,6 +22,12 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminProjectEditor } from './admin-project-editor';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
+import { project as heldProject } from '../../content/testing/project-fixtures';
 
 const PROJECTS_URL = '/api/admin/content/projects';
 const MEDIA_URL = '/api/admin/content/media';
@@ -1267,5 +1273,22 @@ describe('Given an administrator editing a published project on a device that ke
     overwrite.flush(project({ title: 'Zahrada pro všechny děti', version: '3333333333333333' }));
     await drafted();
     expect(shelf.draftOf('administration', key)).toBeNull();
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when a story opens, then the editor shows it from the copy', async () => {
+    const story = heldProject();
+    const { page, http } = await openOfflineFromCopy(
+      AdminProjectEditor,
+      contentCopy({ 'content/projects': [story] }),
+      { path: 'sprava/projekty/:id', url: `/sprava/projekty/${story.id}` },
+    );
+
+    expect((page.querySelector('#projects-title') as HTMLInputElement | null)?.value).toBe(
+      story.title,
+    );
+    waitsForConnection(page, 'Uložit a ukázat na webu');
+    http.verify();
   });
 });

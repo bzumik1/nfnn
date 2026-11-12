@@ -2,7 +2,13 @@ import { Page } from '@playwright/test';
 import { everyOfferedYear } from '../src/app/features/admin/device-copy/administration-overview';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { expect, test } from './fixtures';
-import { administrator, mockDonorApi, signIn } from './donor-session';
+import {
+  administrator,
+  adminSettings,
+  mockDonorApi,
+  signIn,
+  whenAdministrationCopied,
+} from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
 const OVERVIEW = '/api/admin/donations/overview';
@@ -73,6 +79,156 @@ const account = {
   erasedAt: null,
 };
 
+const article = {
+  id: '0199f3e0-0000-7000-8000-00000000c001',
+  slug: 'zahrada-pro-deti',
+  title: 'Zahrada pro děti z kopie',
+  tag: 'Projekt',
+  perex: 'Stavíme zahradu, kde si děti budou hrát.',
+  body: 'První odstavec.',
+  coverImage: null,
+  publishedOn: '2026-10-20',
+  live: true,
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+  signer: null,
+  lookBackYear: null,
+  version: '4c9e1a7b20d3f856',
+};
+
+const story = {
+  id: '0199f3e0-0000-7000-8000-00000000d001',
+  slug: 'pomoc-elisce',
+  title: 'Pomoc Elišce z kopie',
+  year: 2024,
+  category: 'CHILDREN',
+  tag: null,
+  perex: 'Elišce jsme pomohli s rehabilitací.',
+  body: 'První odstavec.',
+  coverImage: null,
+  publishedOn: '2026-10-20',
+  live: true,
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+  version: '5d0f2b8c31e4a967',
+};
+
+const people = {
+  members: [
+    {
+      id: '0199f3e0-0000-7000-8000-00000000e001',
+      name: 'Eva Vzorová z kopie',
+      role: 'Zakladatelka',
+      position: 0,
+      onBoard: true,
+      boardNote: null,
+      featured: true,
+      portrait: null,
+      webSignature: null,
+      personalEmail: null,
+      fundEmail: null,
+      linkedToAccount: false,
+    },
+  ],
+  note: null,
+  footnote: null,
+  noteVersion: '6e1a3c9d42f5b078',
+  footnoteVersion: '7f2b4d0e53a6c189',
+};
+
+const reportSettings = {
+  recipients: ['kopie@example.cz'],
+  sendDay: 1,
+  sendHour: 7,
+  sections: { donors: true, donations: true, unpairedPayments: true, bankImport: true },
+  changedAt: null,
+  sentReports: [{ month: '2026-09', sentAt: '2026-10-01T05:00:12Z' }],
+  nextReport: { month: '2026-10', dueOn: '2026-11-01' },
+  lastEndedMonth: '2026-10',
+  version: '8a3c5e1f64b7d29a',
+};
+
+const failedTestRestore = {
+  outcome: 'FAILED',
+  startedAt: '2026-10-18T02:00:00Z',
+  finishedAt: '2026-10-18T02:00:04Z',
+  fileName: 'nfnn-2026-10-17_0300.dump.age',
+  sizeBytes: null,
+  tables: null,
+  requestId: null,
+  error: null,
+};
+
+const backups = {
+  available: true,
+  backups: [
+    {
+      fileName: 'nfnn-2026-10-17_0300.dump.age',
+      kind: 'DAILY',
+      sizeBytes: 1590,
+      createdAt: '2026-10-17T01:00:03Z',
+    },
+  ],
+  lastBackup: {
+    outcome: 'OK',
+    startedAt: '2026-10-17T01:00:00Z',
+    finishedAt: '2026-10-17T01:00:03Z',
+    fileName: 'nfnn-2026-10-17_0300.dump.age',
+    sizeBytes: 1590,
+    tables: null,
+    requestId: null,
+    error: null,
+  },
+  lastTestRestore: failedTestRestore,
+  lastRestore: null,
+  restoreFiles: [],
+  pendingRequests: 0,
+  restorePending: false,
+  problems: [],
+  schedule: {
+    backupTime: '03:00',
+    testRestoreDay: 7,
+    testRestoreTime: '04:00',
+    applied: { backupTime: '03:00', testRestoreDay: 7, testRestoreTime: '04:00' },
+  },
+  key: { available: true, confirmed: true, confirmedAt: '2026-10-17T08:00:00Z' },
+};
+
+const auditEntry = {
+  id: '019a1c00-0000-7000-8000-00000000f001',
+  adminId: administrator.id,
+  action: 'PAIR_PAYMENT',
+  subjectId: payment.id,
+  donorId: record.donorId,
+  summary: 'Platba 500 Kč přiřazena dárci Jana Nováková',
+  performedAt: '2026-10-17T11:00:00Z',
+  client: null,
+};
+
+const adminAccount = {
+  ...account,
+  donorId: administrator.id,
+  name: 'Správce z kopie',
+  email: administrator.email,
+  administrator: true,
+};
+
+const COPY_READS = [
+  '/api/admin/content/news',
+  `/api/admin/content/news/${article.id}`,
+  '/api/admin/content/projects',
+  '/api/admin/content/project-order',
+  '/api/admin/content/about',
+  '/api/admin/content/donate-band',
+  '/api/admin/content/people',
+  '/api/admin/operations/settings',
+  '/api/admin/operations/backups',
+  '/api/admin/donations/report',
+  '/api/admin/donors/actions',
+];
+
+const SERVER_FIRST_READS = ['/api/admin/donors/actions', '/api/admin/operations/backups'];
+
 interface Chunk {
   readonly id: string;
   readonly rowsSha256: string;
@@ -84,7 +240,11 @@ async function chunk(id: string, rows: readonly unknown[]): Promise<Chunk> {
   return { id, rowsSha256: await rowsSha256(rows), count: rows.length, rows };
 }
 
-async function serveCopy(page: Page, part: 'donations' | 'donors', chunks: Chunk[]) {
+async function serveCopy(
+  page: Page,
+  part: 'donations' | 'donors' | 'content' | 'operations',
+  chunks: Chunk[],
+) {
   const summary =
     part === 'donations' ? { summary: { today: TODAY, receiptsAvailableFrom: 2026, byYear } } : {};
   const head = { subject: administrator.id, administrator: true, ...summary };
@@ -120,8 +280,169 @@ test.describe('Given an administrator whose device keeps the administration copy
       await chunk('payments:2026-10', [payment]),
       await chunk('donor-records:2026-01', [record]),
       await chunk('import-state', [importState]),
+      await chunk('report-settings', [reportSettings]),
     ]);
-    await serveCopy(page, 'donors', [await chunk('accounts:2026-01', [account])]);
+    await serveCopy(page, 'donors', [
+      await chunk('accounts:2026-01', [account, adminAccount]),
+      await chunk('audit:2026-10', [auditEntry]),
+    ]);
+    await serveCopy(page, 'content', [
+      await chunk('news', [article]),
+      await chunk('projects', [story]),
+      await chunk('project-order', [{ order: 'YEAR_THEN_CATEGORY' }]),
+      await chunk('about', [{ photo: null }]),
+      await chunk('donate-band', [{ photo: null }]),
+      await chunk('people', [people]),
+    ]);
+    await serveCopy(page, 'operations', [
+      await chunk('settings', [adminSettings]),
+      await chunk('backups', [backups]),
+    ]);
+  });
+
+  test('when the content, settings, history and backups pages open and the device goes offline, then they come from the copy and every change waits for a connection', async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(90_000);
+    await page.route(
+      (url) => url.pathname === '/api/admin/donors/actions',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                ...auditEntry,
+                adminName: adminAccount.name,
+                adminEmail: adminAccount.email,
+                details: `paymentId=${payment.id}`,
+              },
+            ],
+            hasMore: false,
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === '/api/admin/operations/backups',
+      (route) =>
+        route.fulfill({
+          json: {
+            ...backups,
+            lastTestRestore: { ...failedTestRestore, error: 'pg_restore: error: out of memory' },
+          },
+        }),
+    );
+    const copied = whenAdministrationCopied(page);
+    await signIn(page, administrator);
+    await page.getByRole('link', { name: 'Správa' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeVisible();
+    await copied();
+    const serverReads: string[] = [];
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (COPY_READS.some((read) => path === read)) {
+        serverReads.push(path);
+      }
+    });
+    const nav = page.getByRole('navigation', { name: 'Správa' });
+    type Shows = (main: ReturnType<Page['locator']>) => Promise<void>;
+    const nothingFailed: Shows = (main) =>
+      expect(main.locator('.ui-load-state--error')).toHaveCount(0);
+    const waits =
+      (name: string): Shows =>
+      (main) =>
+        expect(main.getByRole('button', { name, exact: true }).first()).toHaveAttribute(
+          'aria-disabled',
+          'true',
+        );
+    const pages: {
+      link: string;
+      shows: Shows;
+      online?: Shows;
+      offline?: Shows;
+    }[] = [
+      { link: 'Aktuality', shows: (main) => expect(main).toContainText(article.title) },
+      {
+        link: 'Pomáháme',
+        shows: (main) => expect(main).toContainText(story.title),
+        offline: waits('Uložit řazení'),
+      },
+      { link: 'Fotka v sekci O nás', shows: nothingFailed },
+      { link: 'Fotka v pruhu Přispět', shows: nothingFailed },
+      {
+        link: 'Lidé fondu',
+        shows: (main) => expect(main).toContainText('Eva Vzorová z kopie'),
+        offline: waits('Uložit slovo zakladatelů'),
+      },
+      {
+        link: 'Měsíční e-mail',
+        shows: (main) => expect(main).toContainText('kopie@example.cz'),
+        offline: waits('Uložit nastavení'),
+      },
+      {
+        link: 'Historie změn',
+        shows: async (main) => {
+          await expect(main).toContainText('Platba 500 Kč přiřazena dárci Jana Nováková');
+          await expect(main).toContainText('Správce z kopie');
+          await main.getByText('Technické podrobnosti', { exact: true }).first().click();
+        },
+        online: (main) => expect(main).toContainText(`paymentId=${payment.id}`),
+        offline: (main) =>
+          expect(main.getByText('Podrobnosti ukážeme, až budete online.').first()).toBeVisible(),
+      },
+      {
+        link: 'Zálohy',
+        shows: nothingFailed,
+        online: async (main) => {
+          await main.locator('details.tech-details summary').click();
+          await expect(main).toContainText('pg_restore: error: out of memory');
+        },
+        offline: async (main) => {
+          await expect(main).toContainText('Podrobnosti chyby ukážeme, až budete online.');
+          await waits('Zálohovat teď')(main);
+        },
+      },
+      {
+        link: 'Nastavení',
+        shows: nothingFailed,
+        offline: async (main) => {
+          await expect(main).toContainText('Klíč ukážeme, až budete online.');
+          await waits('Uložit nastavení')(main);
+        },
+      },
+    ];
+    const main = page.locator('main');
+    const visit = async (offline: boolean) => {
+      for (const { link, shows, online, offline: whenOffline } of pages) {
+        await nav.getByRole('link', { name: link, exact: true }).click();
+        await expect(page.getByRole('heading', { level: 1, name: link })).toBeVisible();
+        await shows(main);
+        await (offline ? whenOffline : online)?.(main);
+      }
+      await nav.getByRole('link', { name: 'Aktuality', exact: true }).click();
+      await page.getByRole('link', { name: article.title }).click();
+      await expect(page.getByRole('textbox', { name: 'Titulek' })).toHaveValue(article.title);
+      if (offline) {
+        await expect(
+          page.getByRole('button', { name: 'Uložit a ukázat na webu', exact: true }),
+        ).toHaveAttribute('aria-disabled', 'true');
+      }
+    };
+    await visit(false);
+    expect(serverReads).toEqual(SERVER_FIRST_READS);
+
+    serverReads.length = 0;
+    await page.route(
+      (url) => url.pathname.startsWith('/api/'),
+      (route) => route.abort('internetdisconnected'),
+    );
+    await context.setOffline(true);
+    await expect(
+      page.getByRole('button', { name: /^Offline · údaje z \d{1,2}:\d{2}$/ }),
+    ).toBeVisible();
+    await visit(true);
+    expect(serverReads).toEqual([]);
+    await context.setOffline(false);
   });
 
   test('when the payments open and the device goes offline, then they come from the copy, say how old it is and pairing waits for a connection', async ({

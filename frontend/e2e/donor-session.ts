@@ -501,9 +501,14 @@ export async function openSection(page: Page, name: string): Promise<void> {
 
 export async function serveAdministrationCopy(
   page: RouteTarget,
-  parts: { donations: Record<string, unknown[]>; donors: Record<string, unknown[]> },
+  parts: {
+    donations: Record<string, unknown[]>;
+    donors: Record<string, unknown[]>;
+    content?: Record<string, unknown[]>;
+    operations?: Record<string, unknown[]>;
+  },
 ): Promise<void> {
-  for (const [part, chunks] of Object.entries(parts)) {
+  for (const [part, chunks] of Object.entries({ content: {}, operations: {}, ...parts })) {
     const served = await Promise.all(
       Object.entries(chunks).map(async ([id, rows]) => ({
         id,

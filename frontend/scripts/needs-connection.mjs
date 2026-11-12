@@ -24,6 +24,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     'It only switches the wizard to the restore panel.',
   'features/operations/setup/first-setup.html#closeRestore':
     'It only switches the wizard back to the form; the backup key it loads again fails with its own retry.',
+  'features/admin/actions/admin-actions.html#loadMore':
+    'Offline, Načíst starší pages the history from the administration copy on this device, which holds the whole trail; without an open copy the read fails with its own alert and the button stays for another try.',
 };
 
 const BUTTON = /<button\b(?:[^>"']|"[^"]*"|'[^']*')*>/g;

@@ -4,6 +4,8 @@ import cz.novanadeje.app.donors.application.AdminActionFacts;
 import cz.novanadeje.app.donors.application.AdminActionView;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.shared.domain.FoundationZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 
@@ -14,9 +16,11 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 class AdminActionSummaries {
@@ -24,9 +28,12 @@ class AdminActionSummaries {
     private static final String PREFIX = "admin.action.";
     private static final Locale CZECH = Locale.forLanguageTag("cs");
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{(\\w+)}");
+    private static final Pattern EMAIL_ADDRESS = Pattern.compile("[^\\s@]+@[^\\s@]+");
     private static final long HELLERS_PER_CROWN = 100;
     private static final long BYTES_PER_KILOBYTE = 1024;
     private static final long BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE * BYTES_PER_KILOBYTE;
+
+    private static final Logger log = LoggerFactory.getLogger(AdminActionSummaries.class);
 
     private final MessageSource messages;
 
@@ -35,13 +42,37 @@ class AdminActionSummaries {
     }
 
     String summary(AdminActionView view, Locale requested) {
+        return sentence(view, requested).orElse(view.details());
+    }
+
+    Optional<String> sentence(AdminActionView view, Locale requested) {
         Locale locale = Locale.ENGLISH.getLanguage().equals(requested.getLanguage()) ? Locale.ENGLISH : CZECH;
-        return view.facts()
-                .map(facts -> {
-                    String template = messages.getMessage(PREFIX + "summary." + facts.summaryKey(), null, null, locale);
-                    return template == null ? view.details() : fill(template, facts, view, locale);
-                })
-                .orElse(view.details());
+        return view.facts().flatMap(facts -> templateOf(facts, locale).flatMap(template -> filled(template, facts, view, locale)));
+    }
+
+    Optional<String> sentenceOnADevice(AdminActionView view) {
+        return view.facts().map(AdminActionFacts::onADevice)
+                .flatMap(facts -> templateOf(facts, CZECH)
+                        .filter(template -> placeholdersOf(template).noneMatch(AdminActionFacts.NEVER_ON_A_DEVICE::contains))
+                        .flatMap(template -> filled(template, facts, view, CZECH)))
+                .filter(sentence -> !EMAIL_ADDRESS.matcher(sentence).find());
+    }
+
+    private Optional<String> templateOf(AdminActionFacts facts, Locale locale) {
+        return Optional.ofNullable(messages.getMessage(PREFIX + "summary." + facts.summaryKey(), null, null, locale));
+    }
+
+    private Optional<String> filled(String template, AdminActionFacts facts, AdminActionView view, Locale locale) {
+        try {
+            return Optional.of(fill(template, facts, view, locale));
+        } catch (RuntimeException unwritable) {
+            log.warn("The summary of admin action {} could not be written: {}", view.id(), unwritable.getClass().getName());
+            return Optional.empty();
+        }
+    }
+
+    private static Stream<String> placeholdersOf(String template) {
+        return PLACEHOLDER.matcher(template).results().map(placeholder -> placeholder.group(1));
     }
 
     private String fill(String template, AdminActionFacts facts, AdminActionView view, Locale locale) {
@@ -58,9 +89,7 @@ class AdminActionSummaries {
             case "until" -> DateTimeFormatter.ofPattern(text("format.time", locale), locale).format(Instant.parse(value).atZone(FoundationZone.ZONE));
             case "month" -> DateTimeFormatter.ofPattern(text("format.month", locale), locale).format(YearMonth.parse(value));
             case "bytes" -> size(Long.parseLong(value), locale);
-            case "method" -> text("method." + value, locale);
-            case "platform" -> text("platform." + value, locale);
-            case "browser" -> text("browser." + value, locale);
+            case "method", "platform", "browser" -> messages.getMessage(PREFIX + name + "." + value, null, value, locale);
             case "sections" -> labels("section.", value, locale);
             case "settings" -> labels("setting.", value, locale);
             case "previous" -> messages.getMessage(PREFIX + "level." + value, null, value, locale);
