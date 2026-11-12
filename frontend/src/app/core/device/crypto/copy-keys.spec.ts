@@ -7,6 +7,7 @@ import {
   openWithPassword,
   openWithPrf,
   openWithSessionKey,
+  type DraftAddress,
   type RecordAddress,
   type SealedRecord,
 } from './copy-keys';
@@ -15,6 +16,7 @@ import { STANDARD_PASSWORD_PARAMETERS, STRONG_PASSWORD_PARAMETERS } from './pass
 import { ScriptedDerivation, SmallArgon2Derivation } from './testing/password-key-derivations';
 
 const GIFTS_2026: RecordAddress = { collection: 'donations', recordId: '2026', schemaVersion: 1 };
+const PROFILE_DRAFT: DraftAddress = { recordId: 'cHJvZmlsZQ', schemaVersion: 1 };
 const PRF_OUTPUT = new Uint8Array(32).fill(0x5a);
 const CREDENTIAL = 'Y3JlZGVudGlhbC0x';
 const PASSWORD = 'Kn\u00ed\u017eka 2026';
@@ -98,6 +100,54 @@ describe('Given a new device copy', () => {
         expect((await refusal(copy.openRecord(address, sealed))).reason).toBe('damaged');
       });
     }
+  });
+
+  it('when a draft is sealed and opened at the same address, then the plaintext comes back', async () => {
+    const sealed = await copy.sealDraft(PROFILE_DRAFT, utf8('{"street":"Jiráskova 436"}'));
+
+    expect(new TextDecoder().decode(await copy.openDraft(PROFILE_DRAFT, sealed))).toBe(
+      '{"street":"Jiráskova 436"}',
+    );
+    expect(base64UrlToBytes(sealed.iv)).toHaveLength(12);
+  });
+
+  describe('when a sealed draft is opened at another address', () => {
+    for (const [name, address] of [
+      ['another record id', { ...PROFILE_DRAFT, recordId: 'b3RoZXI' }],
+      ['another schema version', { ...PROFILE_DRAFT, schemaVersion: 2 }],
+    ] as const) {
+      it(`and it is ${name}, then it is refused as damaged`, async () => {
+        const sealed = await copy.sealDraft(PROFILE_DRAFT, utf8('{}'));
+
+        expect((await refusal(copy.openDraft(address, sealed))).reason).toBe('damaged');
+      });
+    }
+  });
+
+  it('when a draft is opened as a record of the same id, or a record as a draft, then each is refused as damaged', async () => {
+    const asRecord: RecordAddress = {
+      collection: 'drafts',
+      recordId: PROFILE_DRAFT.recordId,
+      schemaVersion: PROFILE_DRAFT.schemaVersion,
+    };
+    const draft = await copy.sealDraft(PROFILE_DRAFT, utf8('{}'));
+    const record = await copy.sealRecord(asRecord, utf8('{}'));
+
+    expect((await refusal(copy.openRecord(asRecord, draft))).reason).toBe('damaged');
+    expect((await refusal(copy.openDraft(PROFILE_DRAFT, record))).reason).toBe('damaged');
+  });
+
+  it('when a draft is moved into another copy, then that copy refuses it', async () => {
+    const other = await OpenCopy.create();
+    const sealed = await copy.sealDraft(PROFILE_DRAFT, utf8('{}'));
+
+    expect((await refusal(other.openDraft(PROFILE_DRAFT, sealed))).reason).toBe('damaged');
+  });
+
+  it('when the copy is closed, then it seals no draft', async () => {
+    copy.close();
+
+    expect((await refusal(copy.sealDraft(PROFILE_DRAFT, utf8('{}')))).reason).toBe('closed');
   });
 
   it('when a record is moved into another copy, then that copy refuses it', async () => {

@@ -7,6 +7,12 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
 import { settingsView } from '../testing/admin-fixtures';
+import {
+  draftWorkOf,
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+  valuesBase,
+} from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
@@ -432,5 +438,232 @@ describe('Given an administrator sent to the receipt signing key from the overvi
     http.match(SIGNATORY_URL);
     http.match(SIGNING_KEYS_URL);
     http.verify();
+  });
+});
+
+describe('Given an administrator changing the settings on a device that keeps drafts', () => {
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<AdminSettings>;
+  let http: HttpTestingController;
+
+  const shown = (): Record<string, string> =>
+    Object.fromEntries(
+      settingsView()
+        .settings.filter((setting) => !setting.secret)
+        .map((setting) => [setting.name, setting.value ?? '']),
+    );
+
+  async function settle(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+  }
+
+  function element<T extends HTMLElement>(selector: string): T {
+    const found = fixture.nativeElement.querySelector(selector) as T | null;
+    if (found === null) {
+      throw new Error(`No element matches ${selector}`);
+    }
+    return found;
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+    if (found === undefined) {
+      throw new Error(`No button ${name}`);
+    }
+    return found;
+  }
+
+  async function type(selector: string, value: string): Promise<void> {
+    const input = element<HTMLInputElement>(selector);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function open(): Promise<void> {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminSettings],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        ...memoryDraftShelfProviders(shelf),
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminSettings);
+    fixture.detectChanges();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await settle();
+  }
+
+  async function keptDraft(startedFrom: Record<string, string>): Promise<void> {
+    shelf.seed('administration', {
+      key: 'settings',
+      base: await valuesBase(startedFrom),
+      values: { CONTACT_RECIPIENT: 'pavel@example.cz' },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => {
+    http.match(SIGNATORY_URL);
+    http.match(SIGNING_KEYS_URL);
+    http.verify();
+  });
+
+  it('when they change an address and type a new password, then only the address is kept on the device, never the password', async () => {
+    await open();
+
+    await type('#setting-CONTACT_RECIPIENT', 'pavel@example.cz');
+    await type('#setting-MAIL_PASSWORD', 'Tajné heslo SMTP 2026');
+
+    const kept = shelf.draftOf('administration', 'settings');
+    expect(kept?.values).toEqual({ CONTACT_RECIPIENT: 'pavel@example.cz' });
+    expect(JSON.stringify(shelf.kept)).not.toContain('Tajné heslo SMTP 2026');
+    expect(Object.keys(kept?.values as object)).not.toContain('MAIL_PASSWORD');
+    expect(Object.keys(kept?.values as object)).not.toContain('FIO_TOKEN');
+  });
+
+  it('when they switch a flag, then the switch is kept on the device', async () => {
+    await open();
+
+    element<HTMLInputElement>('#setting-MAIL_STARTTLS').click();
+    await settle();
+
+    expect(shelf.draftOf('administration', 'settings')?.values).toMatchObject({
+      MAIL_STARTTLS: 'false',
+    });
+  });
+
+  it('when the device kept a change started from the saved settings and they continue it, then the form takes it and asks to save as usual', async () => {
+    await keptDraft(shown());
+    await open();
+    expect(element('app-draft-offer').textContent).not.toContain(
+      'Uložená verze se od té doby změnila',
+    );
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    expect(element<HTMLInputElement>('#setting-CONTACT_RECIPIENT').value).toBe('pavel@example.cz');
+
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    expect(fixture.nativeElement.textContent).toContain('Mění se: ');
+    expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
+  });
+
+  it('when the device kept a change started from settings saved differently since, then saving asks first and discarding reads them again', async () => {
+    await keptDraft({ ...shown(), MAIL_FROM: 'stary@example.cz' });
+    await open();
+    expect(element('app-draft-offer').textContent).toContain('Uložená verze se od té doby změnila');
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    expect(element('app-changed-meanwhile-dialog dialog').textContent).toContain(
+      'Od chvíle, kdy jste na tomto zařízení začali s úpravami',
+    );
+
+    button('Zahodit své úpravy a načíst novější verzi').click();
+    await settle();
+    http.expectOne(SETTINGS_URL).flush(settingsView());
+    await settle();
+    expect(shelf.draftOf('administration', 'settings')).toBeNull();
+    expect(element<HTMLInputElement>('#setting-CONTACT_RECIPIENT').value).toBe('info@nfnn.cz');
+  });
+
+  it('when they save their change, then the draft leaves the device', async () => {
+    await open();
+    await type('#setting-CONTACT_RECIPIENT', 'pavel@example.cz');
+    expect(shelf.draftOf('administration', 'settings')).not.toBeNull();
+
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    button('Uložit a restartovat').click();
+    await settle();
+    http.expectOne(SETTINGS_URL).flush({ changed: ['CONTACT_RECIPIENT'], restarting: false });
+    await settle();
+    http.match(SETTINGS_URL).forEach((reload) => reload.flush(settingsView()));
+    await settle();
+
+    expect(shelf.draftOf('administration', 'settings')).toBeNull();
+  });
+
+  it('when they continue a kept change, then the focus moves to the page heading and the form counts as unsaved', async () => {
+    await keptDraft(shown());
+    await open();
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+
+    expect(document.activeElement).toBe(element('h1'));
+    expect(element('[role="status"]:not(:empty)').textContent).toContain(
+      'Pokračujete v rozepsaných úpravách',
+    );
+  });
+
+  it('when the kept change is older than settings saved since, then continuing it changes only the field it holds and saving it over the newer ones sends only that field', async () => {
+    await keptDraft({ ...shown(), MAIL_HOST: 'stary.smtp.example.cz' });
+    await open();
+
+    button('Pokračovat v rozepsaném').click();
+    await settle();
+    expect(element<HTMLInputElement>('#setting-MAIL_HOST').value).toBe('smtp-relay.brevo.com');
+    element<HTMLFormElement>('form.settings-form').dispatchEvent(new Event('submit'));
+    await settle();
+    button('Uložit svou verzi místo novější').click();
+    await settle();
+    expect(element('.confirm-changes').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Mění se: Kam chodí zprávy z kontaktního formuláře.',
+    );
+    button('Uložit a restartovat').click();
+    await settle();
+
+    expect(http.expectOne(SETTINGS_URL).request.body).toEqual({
+      changes: [{ name: 'CONTACT_RECIPIENT', value: 'pavel@example.cz' }],
+    });
+  });
+
+  it('when a kept change is offered, then the form waits for the choice and the offer says passwords are not kept', async () => {
+    await keptDraft(shown());
+    await open();
+
+    expect(element<HTMLFormElement>('form.settings-form').inert).toBe(true);
+    expect(element('app-draft-offer').textContent).toContain('Hesla a tokeny');
+
+    button('Zahodit').click();
+    await settle();
+
+    expect(element<HTMLFormElement>('form.settings-form').inert).toBe(false);
+    expect(document.activeElement).toBe(element('h1'));
+  });
+
+  it('when they discard the kept change, then it leaves the device', async () => {
+    await keptDraft(shown());
+    await open();
+
+    button('Zahodit').click();
+    await settle();
+
+    expect(shelf.draftOf('administration', 'settings')).toBeNull();
+    expect(element<HTMLInputElement>('#setting-CONTACT_RECIPIENT').value).toBe('info@nfnn.cz');
   });
 });
