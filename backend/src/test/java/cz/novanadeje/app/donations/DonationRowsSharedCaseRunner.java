@@ -1,8 +1,7 @@
 package cz.novanadeje.app.donations;
 
-import cz.novanadeje.app.donations.application.receipt.DonationReceiptIssuer;
+import cz.novanadeje.app.donations.application.receipt.DonationReceiptService;
 import cz.novanadeje.app.donations.application.report.MonthlyReportSender;
-import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
@@ -49,7 +48,7 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     @Autowired
     private ConfigurableApplicationContext context;
     @Autowired
-    private DonationReceiptIssuer issuer;
+    private DonationReceiptService receipts;
 
     @AfterEach
     void truncate() {
@@ -65,18 +64,19 @@ public abstract class DonationRowsSharedCaseRunner extends SharedCaseRunner {
     }
 
     private void issueReceiptsOf(CaseRows rows) {
-        List<ReceiptToIssue> receipts = rows.receiptsToIssue();
-        if (receipts.isEmpty()) {
+        List<ReceiptToIssue> toIssue = rows.receiptsToIssue();
+        if (toIssue.isEmpty()) {
             return;
         }
+        clock.set(toIssue.getFirst().issuedAt());
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
         ReceiptSignatories.chooseAfterEmptyTables(jdbc, clock.instant());
-        for (ReceiptToIssue receipt : receipts) {
+        for (ReceiptToIssue receipt : toIssue) {
             clock.set(receipt.issuedAt());
             DonorReference donor = new DonorReference(receipt.donor());
             DonationReceipt issued = receipt.yearly()
-                    ? issuer.issueForYear(donor, Year.of(receipt.year().orElseThrow()), FoundationCalendar.today(clock))
-                    : issuer.issueForDonation(donor, new DonationId(receipt.donation().orElseThrow()), FoundationCalendar.today(clock));
+                    ? receipts.issueForYear(donor, Year.of(receipt.year().orElseThrow()))
+                    : receipts.issueForDonation(donor, new DonationId(receipt.donation().orElseThrow()));
             rows.issued(receipt, issued.id().value());
         }
         clock.set(rows.now());

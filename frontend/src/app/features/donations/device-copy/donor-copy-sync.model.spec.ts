@@ -291,6 +291,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
               kind: 'password',
               password: PASSWORDS[current],
             });
+            underPassword[current] = true;
           }
           TestBed.tick();
           await sync.sync();
@@ -298,12 +299,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
         }
 
         async function switchAccount(): Promise<void> {
-          const copyId = vault.opened()?.store.copyId;
-          const kept = (await disk.entries()).some(
-            (entry) =>
-              entry.copyId === copyId && entry.wraps.some((wrap) => wrap.kind === 'password'),
-          );
-          if (!kept) {
+          if (!underPassword[current]) {
             heldBy[current] = [];
           }
           await vault.signedOut(ACCOUNTS[current]);
@@ -313,6 +309,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
             kind: 'password',
             password: PASSWORDS[current],
           });
+          underPassword[current] = true;
           expect(chunkIdsOf(contents())).toEqual(heldBy[current]);
           evicted = false;
           TestBed.tick();
@@ -320,6 +317,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
         }
 
         const heldBy: Record<AccountId, string[]> = { [JANA_ID]: [], [PETR_ID]: [] };
+        const underPassword: Record<AccountId, boolean> = { [JANA_ID]: false, [PETR_ID]: false };
         await startTab(true);
         let held = chunkIdsOf(contents());
 
@@ -342,7 +340,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
               break;
             case 'switch-account':
               disk.crashNextWrite = false;
-              heldBy[current] = held;
+              heldBy[current] = evicted ? [] : held;
               await switchAccount();
               held = chunkIdsOf(contents());
               break;
@@ -354,6 +352,8 @@ describe('Given a model of the donor copy kept on a device while the server chan
               evicted = true;
               heldBy[JANA_ID] = [];
               heldBy[PETR_ID] = [];
+              underPassword[JANA_ID] = false;
+              underPassword[PETR_ID] = false;
               break;
             case 'reload':
               disk.crashNextWrite = false;

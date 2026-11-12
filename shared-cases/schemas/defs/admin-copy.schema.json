@@ -225,7 +225,7 @@
         "donorId": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
         "status": { "enum": ["ACTIVE", "REPLACED", "WITHDRAWN"] },
         "kind": { "enum": ["SINGLE", "YEARLY"] },
-        "number": { "$ref": "#/$defs/receiptNumber" },
+        "number": { "$ref": "../receipts/v1/frozen.schema.json#/$defs/number" },
         "donationId": { "oneOf": [{ "type": "string", "pattern": "^donation:[1-9][0-9]*$" }, { "type": "null" }] },
         "year": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/year" }, { "type": "null" }] },
         "issuedOn": { "$ref": "../defs/rows.schema.json#/$defs/day" },
@@ -238,7 +238,6 @@
         "totalAmountMinor": { "$ref": "../defs/rows.schema.json#/$defs/amountMinor" },
         "keyId": { "type": "string", "pattern": "^[0-9a-f]{8}$" }
       }
-    },
-    "receiptNumber": { "type": "string", "pattern": "^\\d{4}-\\d{6}$" }
+    }
   }
 }

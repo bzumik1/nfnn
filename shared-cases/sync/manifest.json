@@ -663,7 +663,7 @@
             "donor": "jana",
             "kind": "SINGLE",
             "donation": 2,
-            "issuedAt": "2026-03-05T10:00:00Z"
+            "issuedAt": "2027-01-05T09:00:00Z"
           },
           {
             "alias": "rok",
@@ -791,7 +791,7 @@
           },
           {
             "id": "receipts:2026",
-            "rowsSha256": "170a13f74d9b791ca5e92ef7a73a38037fe62b34350aa33cca2e32ffde176cc2",
+            "rowsSha256": "d429c79ef8ddbaf87f135b7ace74a1182a1eba208722a8c4f4c155fcd52fa1c6",
             "count": 2,
             "rows": [
               {
@@ -914,16 +914,16 @@
                 "id": "receipt:brezen",
                 "status": "REPLACED",
                 "kind": "SINGLE",
-                "number": "2026-000001",
+                "number": "2027-000001",
                 "donationId": "donation:2",
                 "year": null,
-                "issuedAt": "2026-03-05T10:00:00Z",
+                "issuedAt": "2027-01-05T09:00:00Z",
                 "supersededAt": "2027-01-10T08:00:00Z",
                 "receipt": {
                   "schemaVersion": 1,
                   "kind": "SINGLE",
-                  "number": "2026-000001",
-                  "issuedOn": "2026-03-05",
+                  "number": "2027-000001",
+                  "issuedOn": "2027-01-05",
                   "locale": "cs",
                   "year": null,
                   "replaces": null,
@@ -1012,7 +1012,7 @@
                   },
                   "verification": {
                     "keyId": "21fe31df",
-                    "qrText": "https://nfnn.cz/overit#10031885061882060800001259902814817310690388209476514543559772848973819259524383294369090612903541213313286624563929942809091180401093888439815695440160060107369893101186040965041963732815611731822361120310837291136086916958761287528879819226939469511479963284679076873060627944407712230551484961731402420960778544343560"
+                    "qrText": "https://nfnn.cz/overit#10031885061882060800001265036642913310690388209476514543559772848973819259524383294369090612903541213313286624563929942809091180401093888439815695440160060107369893539014119430777656897612155357423956599603512807414846066567370993578399838408597526099591033431465134166130146667485721410892379605845854427520216662949633"
                   }
                 }
               }
@@ -1141,6 +1141,96 @@
                 "accountNumber": "1234567/0800",
                 "variableSymbol": "123",
                 "answer": "CONFIRMED"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "two gifts of one day, the one with the lower id recorded later, so the later record comes first",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 20000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL",
+            "recordedAt": "2026-04-10T15:30:00.000001Z"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026,
+        "bankDataAsOf": null
+      },
+      "expected": {
+        "subject": "donor:jana",
+        "summary": {
+          "totalAmountMinor": 30000,
+          "currency": "CZK",
+          "count": 2,
+          "lastReceivedAt": "2026-04-10",
+          "byYear": [
+            {
+              "year": 2026,
+              "count": 2,
+              "totalAmountMinor": 30000
+            }
+          ],
+          "yearlyReceiptsAvailableThrough": 2025,
+          "receiptsAvailableFrom": 2026,
+          "bankDataAsOf": null
+        },
+        "chunks": [
+          {
+            "id": "donations:2026",
+            "rowsSha256": "91648f0b8494aba17b307d4d8bcfe5dac9b1087442daf7e95b96cd74631243d3",
+            "count": 2,
+            "rows": [
+              {
+                "id": "donation:1",
+                "receivedAt": "2026-04-10",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "MANUAL",
+                "purpose": "GENERAL",
+                "pairedBy": null,
+                "bankAccountId": null,
+                "symbolClaimId": null
+              },
+              {
+                "id": "donation:2",
+                "receivedAt": "2026-04-10",
+                "amountMinor": 10000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "MANUAL",
+                "purpose": "GENERAL",
+                "pairedBy": null,
+                "bankAccountId": null,
+                "symbolClaimId": null
               }
             ]
           }

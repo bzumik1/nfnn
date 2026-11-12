@@ -1,5 +1,7 @@
 import type { BrowserContext, Page } from '@playwright/test';
+import { rowsSha256 } from '../../src/app/features/donations/sync/canonical-rows';
 import { administrator, mockDonorApi, session } from '../donor-session';
+import { comeBack, leaveTheApp } from '../page-visibility';
 import { expect, pwaTest as test } from './pwa-fixtures';
 
 const REPORT = '/api/admin/donations/report';
@@ -104,6 +106,68 @@ async function mockAdministration(context: BrowserContext, unlocks: string[]): P
   );
 }
 
+const PAYMENT = {
+  id: '019a1c00-0000-7000-8000-000000001001',
+  version: '3f2a9c4e1b7d6085',
+  bankTransactionId: 1001,
+  bookedOn: '2026-10-10',
+  amountMinor: 50000,
+  currency: 'CZK',
+  variableSymbol: '1111111111',
+  counterpartyAccount: '2900233333/2010',
+  counterpartyName: 'Nováková Jana',
+  messageForRecipient: 'Dar pro fond',
+  importedAt: '2026-10-17T10:00:00Z',
+  unpairedByAdminAt: null,
+  accountVerification: false,
+};
+
+async function serveDonationsCopy(
+  context: BrowserContext,
+  held: readonly { readonly id: string; readonly rows: readonly unknown[] }[],
+): Promise<void> {
+  const chunks = await Promise.all(
+    held.map(async ({ id, rows }) => ({
+      id,
+      rowsSha256: await rowsSha256(rows),
+      count: rows.length,
+      rows,
+    })),
+  );
+  const head = {
+    subject: administrator.id,
+    administrator: true,
+    summary: { today: '2026-11-05', byYear: [] },
+  };
+  await context.route(
+    (url) => url.pathname === '/api/admin/donations/sync',
+    (route) =>
+      route.fulfill({
+        json: {
+          ...head,
+          chunks: chunks.map(({ id, rowsSha256: digest, count }) => ({
+            id,
+            rowsSha256: digest,
+            count,
+          })),
+        },
+      }),
+  );
+  await context.route(
+    (url) => url.pathname === '/api/admin/donations/sync/chunks',
+    (route) => {
+      const ids = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+      return route.fulfill({
+        json: {
+          ...head,
+          chunks: chunks.filter((chunk) => ids.includes(chunk.id)),
+          missing: ids.filter((id) => !chunks.some((chunk) => chunk.id === id)),
+        },
+      });
+    },
+  );
+}
+
 async function createAdministratorPasskey(page: Page): Promise<void> {
   await page.evaluate(async (userId) => {
     const bytes = (text: string): Uint8Array<ArrayBuffer> => new TextEncoder().encode(text);
@@ -122,26 +186,6 @@ async function createAdministratorPasskey(page: Page): Promise<void> {
       },
     });
   }, userHandleBytes(administrator.id));
-}
-
-async function leaveTheApp(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'hidden',
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
-}
-
-async function comeBack(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'visible',
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
 }
 
 interface StoredEntry {
@@ -263,7 +307,7 @@ test.describe('Given an administrator who signs in with the password and has a p
 test.describe('Given an administrator whose copy of the administration is kept under a passkey that supports PRF', () => {
   test.use({ allowedConsoleErrors: [APP_API_OFFLINE] });
 
-  test('when the connection is gone and the administration locks, then the passkey alone unlocks it again on the payments page, without asking the server', async ({
+  test('when the connection is gone and the administration locks, then the passkey alone unlocks it again and the payments page shows the payment from the copy, without asking the server', async ({
     page,
     context,
     virtualAuthenticator,
@@ -271,8 +315,7 @@ test.describe('Given an administrator whose copy of the administration is kept u
     swReady,
     goOffline,
   }) => {
-    const unlocks: string[] = [];
-    await mockAdministration(context, unlocks);
+    await mockAdministration(context, []);
     await context.route(
       (url) => url.pathname === '/api/live',
       (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: '' }),
@@ -281,6 +324,17 @@ test.describe('Given an administrator whose copy of the administration is kept u
       (url) => url.pathname === '/api/admin/donations/payments',
       (route) => route.fulfill({ json: { year: null, availableYears: [], items: [] } }),
     );
+    await context.route(
+      (url) => url.pathname === '/api/donations/bank-logos',
+      (route) => route.fulfill({ json: { items: [] } }),
+    );
+    await serveDonationsCopy(context, [{ id: 'payments:2026-10', rows: [PAYMENT] }]);
+    const asked: string[] = [];
+    context.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/admin/')) {
+        asked.push(new URL(request.url()).pathname);
+      }
+    });
     await page.clock.install();
     await page.goto('/');
     await swReady();
@@ -297,7 +351,9 @@ test.describe('Given an administrator whose copy of the administration is kept u
     await page.getByRole('button', { name: 'Odemknout přístupovým klíčem' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
 
+    await expect(page.getByRole('row').filter({ hasText: 'Nováková Jana' })).toBeVisible();
     await goOffline();
+    asked.length = 0;
     await leaveTheApp(page);
     await page.clock.fastForward(FIVE_MINUTES_MS);
     await comeBack(page);
@@ -306,6 +362,7 @@ test.describe('Given an administrator whose copy of the administration is kept u
     await expect(page.getByRole('button', { name: /^Offline/ })).toBeVisible();
     await page.getByRole('button', { name: 'Odemknout přístupovým klíčem' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
-    expect(unlocks).toEqual([]);
+    await expect(page.getByRole('row').filter({ hasText: 'Nováková Jana' })).toBeVisible();
+    expect(asked.filter((path) => path === UNLOCK)).toEqual([]);
   });
 });

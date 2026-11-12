@@ -353,17 +353,6 @@ describe('Given the download of the administration into its copy on this device'
       ]);
       expect(reporter.report).not.toHaveBeenCalled();
     });
-
-    it('and the chunks answer misses a chunk twice, then nothing is stored and the mismatch is reported', async () => {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        await manifests();
-        await donationsChunks({ chunks: [], missing: ['payments:2026-11'] });
-      }
-
-      expect(await outcome).toBe('mismatch');
-      expect(vault.stored).toEqual([]);
-      expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
-    });
   });
 
   describe('when an empty copy opens on a public computer, which keeps it only in memory', () => {

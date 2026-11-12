@@ -575,7 +575,7 @@
             "donor": "jana",
             "kind": "SINGLE",
             "donation": 2,
-            "issuedAt": "2026-03-05T10:00:00Z"
+            "issuedAt": "2027-01-05T09:00:00Z"
           },
           {
             "alias": "rok",
@@ -657,6 +657,78 @@
             "confirmedSymbol": null,
             "accountVerification": true,
             "receiptAvailable": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "two gifts of one day, the one with the lower id recorded later, so the later record comes first",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 20000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL",
+            "recordedAt": "2026-04-10T15:30:00.000001Z"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026,
+        "bankDataAsOf": null
+      },
+      "expected": {
+        "items": [
+          {
+            "id": "donation:1",
+            "receiptNumber": null,
+            "receivedAt": "2026-04-10",
+            "amountMinor": 20000,
+            "currency": "CZK",
+            "purpose": "Obecný příspěvek",
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "pairedBy": null,
+            "senderAccount": null,
+            "confirmedSymbol": null,
+            "accountVerification": false,
+            "receiptAvailable": true
+          },
+          {
+            "id": "donation:2",
+            "receiptNumber": null,
+            "receivedAt": "2026-04-10",
+            "amountMinor": 10000,
+            "currency": "CZK",
+            "purpose": "Obecný příspěvek",
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "pairedBy": null,
+            "senderAccount": null,
+            "confirmedSymbol": null,
+            "accountVerification": false,
+            "receiptAvailable": true
           }
         ]
       }

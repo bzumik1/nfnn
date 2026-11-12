@@ -1498,7 +1498,7 @@
           }
         ],
         "receipts": [
-          { "alias": "brezen", "donor": "eva", "kind": "SINGLE", "donation": 1, "issuedAt": "2026-03-05T10:00:00Z" },
+          { "alias": "brezen", "donor": "eva", "kind": "SINGLE", "donation": 1, "issuedAt": "2027-01-05T09:00:00Z" },
           { "alias": "rok", "donor": "eva", "kind": "YEARLY", "year": 2026, "issuedAt": "2027-01-10T08:00:00Z" },
           { "alias": "leden", "donor": "eva", "kind": "SINGLE", "donation": 4, "issuedAt": "2027-02-01T08:00:00Z" }
         ],
@@ -1719,11 +1719,11 @@
               "donorId": "donor:eva",
               "status": "REPLACED",
               "kind": "SINGLE",
-              "number": "2026-000001",
+              "number": "2027-000001",
               "donationId": "donation:1",
               "year": null,
-              "issuedOn": "2026-03-05",
-              "issuedAt": "2026-03-05T10:00:00Z",
+              "issuedOn": "2027-01-05",
+              "issuedAt": "2027-01-05T09:00:00Z",
               "supersededAt": "2027-01-10T08:00:00Z",
               "withdrawnAt": null,
               "withdrawalReason": null,

@@ -1006,7 +1006,7 @@
       "input": {
         "now": "2026-10-20T10:00:00Z",
         "donors": [
-          { "alias": "dvorak1", "registeredAt": "2026-05-01T10:00:00Z", "erasedAt": null, "name": "Jan Dvořák", "variableSymbol": "7700003001" },
+          { "alias": "dvorak1", "registeredAt": "2026-05-01T10:00:00Z", "erasedAt": null, "name": "Jan Dvořák", "variableSymbol": "7700003003" },
           { "alias": "dvorak2", "registeredAt": "2026-02-01T10:00:00Z", "erasedAt": null, "name": "Jan Dvořák", "variableSymbol": "7700003002" },
           {
             "alias": "dvorak3",
@@ -1015,7 +1015,7 @@
             "name": "Jan Dvořák",
             "type": "COMPANY",
             "companyIdentifier": "27278794",
-            "variableSymbol": "7700003003"
+            "variableSymbol": "7700003001"
           }
         ],
         "payments": [],
@@ -1039,7 +1039,7 @@
               "donorId": "donor:dvorak1",
               "name": "Jan Dvořák",
               "type": "PERSON",
-              "variableSymbol": "7700003001",
+              "variableSymbol": "7700003003",
               "companyIdentifier": null,
               "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
               "preferredLocale": "cs",
@@ -1052,7 +1052,7 @@
               "donorId": "donor:dvorak3",
               "name": "Jan Dvořák",
               "type": "COMPANY",
-              "variableSymbol": "7700003003",
+              "variableSymbol": "7700003001",
               "companyIdentifier": "27278794",
               "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
               "preferredLocale": "cs",
@@ -1067,16 +1067,16 @@
         "answers": [
           {
             "items": [
-              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003001", "companyIdentifier": null },
+              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003003", "companyIdentifier": null },
               { "donorId": "donor:dvorak2", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003002", "companyIdentifier": null },
-              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003003", "companyIdentifier": "27278794" }
+              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003001", "companyIdentifier": "27278794" }
             ]
           },
           {
             "items": [
-              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003001", "companyIdentifier": null },
+              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003003", "companyIdentifier": null },
               { "donorId": "donor:dvorak2", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003002", "companyIdentifier": null },
-              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003003", "companyIdentifier": "27278794" }
+              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003001", "companyIdentifier": "27278794" }
             ]
           }
         ]

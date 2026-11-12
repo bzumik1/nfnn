@@ -62,8 +62,8 @@ public final class CaseRows {
                 claim.get("accountNumber").asString(), claim.get("variableSymbol").asString(), claim.get("answer").asString(),
                 claim.get("answeredAt").asString())));
         each(input.get("receipts"), receipt -> rows.receipts.add(new Receipt(receipt.get("alias").asString(), receipt.get("donor").asString(),
-                receipt.get("kind").asString(), Optional.ofNullable(receipt.get("year")).map(JsonNode::asInt),
-                Optional.ofNullable(receipt.get("donation")).map(JsonNode::asInt), receipt.get("issuedAt").asString())));
+                receipt.get("kind").asString(), optionalNumber(receipt.get("year")), optionalNumber(receipt.get("donation")),
+                receipt.get("issuedAt").asString())));
         rows.assignIds();
         return rows;
     }
@@ -98,6 +98,18 @@ public final class CaseRows {
         return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asString());
     }
 
+    private static Optional<Integer> optionalNumber(JsonNode value) {
+        return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asInt());
+    }
+
+    private static boolean yearly(String kind) {
+        return switch (kind) {
+            case "YEARLY" -> true;
+            case "SINGLE" -> false;
+            default -> throw new IllegalArgumentException("A receipt of a case is YEARLY or SINGLE, not " + kind);
+        };
+    }
+
     public UUID donorId(String alias) {
         return ids.get("donor:" + alias);
     }
@@ -107,7 +119,7 @@ public final class CaseRows {
     }
 
     public List<ReceiptToIssue> receiptsToIssue() {
-        return receipts.stream().map(receipt -> new ReceiptToIssue(receipt.alias(), donorId(receipt.donor()), receipt.kind().equals("YEARLY"),
+        return receipts.stream().map(receipt -> new ReceiptToIssue(receipt.alias(), donorId(receipt.donor()), yearly(receipt.kind()),
                 receipt.year(), receipt.donation().map(this::donationId), Instant.parse(receipt.issuedAt()))).toList();
     }
 

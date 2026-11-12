@@ -432,9 +432,6 @@ describe('Given the device vault keeping a copy of the administration for an adm
       otherAccess.unlock();
       expect(await other.unlockAdministrationWithPasskey(JANA, false)).toBe(true);
       TestBed.tick();
-    });
-
-    it('then both tabs show the same copy', () => {
       expect(other.administration()?.store.copyId).toBe(vault.administration()?.store.copyId);
     });
 
@@ -451,13 +448,15 @@ describe('Given the device vault keeping a copy of the administration for an adm
     it('and the administration locks in this tab, then the other tab keeps its copy open and can still store into it', async () => {
       access.lock();
       TestBed.tick();
-      await vault.administrationPasskeys(JANA, false);
 
-      expect(vault.administration()).toBeNull();
+      await vi.waitFor(() => expect(vault.administration()).toBeNull());
       expect(other.administration()).not.toBeNull();
       expect(
         await other.replaceContents(other.administration()!.store, administrationContents(CANARY)),
       ).toBe(true);
+      expect(other.administration()?.store.contents()?.chunks[0].rows).toEqual([
+        { counterpartyName: CANARY },
+      ]);
     });
 
     it('and the server tells this tab she is no longer an administrator, then the other tab closes the copy too and stores nothing into it', async () => {
