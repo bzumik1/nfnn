@@ -148,7 +148,7 @@
     padding-block: var(--page-top) var(--space-6);
   }
 
-  .ui-intro .ui-container {
+  .ui-intro__head {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: var(--space-10);
@@ -170,8 +170,11 @@
   }
 
   .ui-intro__lead {
-    margin-top: 0;
     font-size: var(--text-lg);
     line-height: var(--leading-relaxed);
+  }
+
+  .ui-intro__head > .ui-intro__lead {
+    margin-top: 0;
   }
 }

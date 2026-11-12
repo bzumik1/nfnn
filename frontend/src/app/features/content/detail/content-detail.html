@@ -1,14 +1,14 @@
 @switch (state()) {
   @case ('loading') {
     <section class="detail detail--waiting ui-intro">
-      <div class="ui-container">
+      <div class="ui-intro__head ui-container">
         <p class="waiting" role="status" i18n="@@content.detail.loading">Načítáme stránku…</p>
       </div>
     </section>
   }
   @case ('error') {
     <section class="detail detail--waiting ui-intro">
-      <div class="ui-container">
+      <div class="ui-intro__head ui-container">
         <p class="waiting" role="alert" i18n="@@content.detail.error">
           Stránku se nepodařilo načíst.
         </p>

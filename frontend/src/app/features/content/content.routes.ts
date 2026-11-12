@@ -32,7 +32,7 @@ export const contentRoutes: Routes = [
   {
     path: 'zasady-ochrany-osobnich-udaju',
     title: $localize`:@@content.privacy.pageTitle:Zásady ochrany osobních údajů | Nová naděje – nadační fond`,
-    data: { ...LIGHT_HEAD, parent: '/o-nas' },
+    data: { ...LIGHT_HEAD, parent: '/o-nas' } satisfies RouteChromeData,
     loadComponent: () => import('./privacy-policy/privacy-policy').then((m) => m.PrivacyPolicy),
   },
   {
