@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -26,8 +25,6 @@ class AdminDonorsSyncProjection {
     private static final Comparator<DonorAccountView> OLDER_REGISTRATION_FIRST = Comparator.comparing((DonorAccountView account) -> account.donor().registeredAt())
             .thenComparing(account -> account.donor().id().value().toString());
 
-    private static final Locale CZECH = Locale.forLanguageTag("cs");
-
     private final JsonMapper json;
     private final AdminActionSummaries summaries;
 
@@ -40,7 +37,7 @@ class AdminDonorsSyncProjection {
         SortedMap<String, List<Object>> chunks = new TreeMap<>();
         snapshot.accounts().stream().sorted(OLDER_REGISTRATION_FIRST).forEach(account ->
                 rowsOf(chunks, ACCOUNTS + SyncChunk.monthOf(account.donor().registeredAt())).add(DonorAccountResponse.from(account)));
-        snapshot.actions().forEach(action -> rowsOf(chunks, AUDIT + SyncChunk.monthOf(action.performedAt())).add(AuditRow.from(action, summaries.sentence(action, CZECH))));
+        snapshot.actions().forEach(action -> rowsOf(chunks, AUDIT + SyncChunk.monthOf(action.performedAt())).add(AuditRow.from(action, summaries.sentenceOnADevice(action))));
         return SyncChunk.allOf(chunks, json);
     }
 

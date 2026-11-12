@@ -1,8 +1,12 @@
 package cz.novanadeje.app.cucumber;
 
+import cz.novanadeje.app.donors.application.AdminActionFacts;
+import cz.novanadeje.app.operations.application.backup.BackupKeySource;
+import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -30,6 +34,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -48,6 +53,7 @@ public class AdministrationDeviceStepDefinitions {
             "client");
     private static final List<String> SYMBOL_CLAIM_FIELDS = List.of("id", "donorId", "variableSymbol", "answer", "answeredAt");
     private static final int MINIMUM_SECRET_LENGTH = 8;
+    private static final int PERSONAL_VALUE_MINIMUM_LENGTH = 6;
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     private final ApiClient api;
@@ -57,13 +63,15 @@ public class AdministrationDeviceStepDefinitions {
     private final JwtEncoder encoder;
     private final JwtProperties jwt;
     private final Clock clock;
+    private final BackupKeySource backupKeys;
     private final Map<String, Device> devices = new LinkedHashMap<>();
     private final Map<String, String> devicelessTokens = new HashMap<>();
     private final Map<String, String> erasedNames = new HashMap<>();
     private Device device;
+    private String notedReportSettingsVersion;
 
     public AdministrationDeviceStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, JdbcClient jdbc, JwtEncoder encoder,
-                                               JwtProperties jwt, Clock clock) {
+                                               JwtProperties jwt, Clock clock, BackupKeySource backupKeys) {
         this.api = api;
         this.sessions = sessions;
         this.donors = donors;
@@ -71,6 +79,7 @@ public class AdministrationDeviceStepDefinitions {
         this.encoder = encoder;
         this.jwt = jwt;
         this.clock = clock;
+        this.backupKeys = backupKeys;
     }
 
     @Given("{string} holds a browser token from before the signed-in devices")
@@ -437,6 +446,26 @@ public class AdministrationDeviceStepDefinitions {
         assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(expected);
     }
 
+    @Then("the administration device notes the version of its report settings")
+    public void theAdministrationDeviceNotesTheVersionOfItsReportSettings() {
+        notedReportSettingsVersion = reportSettingsRow().get("version").asString();
+    }
+
+    @Then("the administration device's report settings keep the noted version, with the next report for {string} and the last ended month {string}")
+    public void theAdministrationDevicesReportSettingsKeepTheNotedVersion(String nextMonth, String lastEndedMonth) {
+        JsonNode row = reportSettingsRow();
+        assertThat(notedReportSettingsVersion).as("the version noted before").isNotBlank();
+        assertThat(row.get("version").asString()).isEqualTo(notedReportSettingsVersion);
+        assertThat(row.get("nextReport").get("month").asString()).isEqualTo(nextMonth);
+        assertThat(row.get("lastEndedMonth").asString()).isEqualTo(lastEndedMonth);
+    }
+
+    private JsonNode reportSettingsRow() {
+        List<JsonNode> rows = chunk("report-settings").get("rows").valueStream().toList();
+        assertThat(rows).hasSize(1);
+        return rows.getFirst();
+    }
+
     @Then("the administration device's chunks of accounts hold every account as the administration reads it")
     public void theAdministrationDevicesChunksOfAccountsHoldEveryAccount() {
         Map<String, List<JsonNode>> held = rowsOfChunks("accounts:");
@@ -465,9 +494,36 @@ public class AdministrationDeviceStepDefinitions {
 
     @Then("the administration device's chunks of the audit hold every action the administration lists, without details")
     public void theAdministrationDevicesChunksOfTheAuditHoldEveryAction() {
+        assertTheAuditHoldsEveryListedAction(Map.of());
+    }
+
+    @Then("the administration device's chunks of the audit hold every action the administration lists, without details, these with another summary:")
+    public void theAdministrationDevicesChunksOfTheAuditHoldEveryActionTheseWithAnotherSummary(DataTable table) {
+        Map<String, String> otherSummaries = new LinkedHashMap<>();
+        table.asMaps().forEach(row -> otherSummaries.put(row.get("action"), row.get("summary on the device")));
+        assertTheAuditHoldsEveryListedAction(otherSummaries);
+    }
+
+    private void assertTheAuditHoldsEveryListedAction(Map<String, String> otherSummaries) {
         api.get("/api/admin/donors/actions?limit=200");
         Map<String, List<JsonNode>> listed = new TreeMap<>();
-        api.lastResponseJson().get("items").forEach(item -> listed.put(item.get("id").asString(), fields(withoutUntemplatedSummary(item), AUDIT_FIELDS)));
+        Set<String> otherwiseSummarised = new java.util.HashSet<>();
+        api.lastResponseJson().get("items").forEach(item -> {
+            JsonNode expected = item;
+            if (otherSummaries.containsKey(item.get("action").asString())) {
+                String summary = otherSummaries.get(item.get("action").asString());
+                ObjectNode copy = (ObjectNode) item.deepCopy();
+                if ("null".equals(summary)) {
+                    copy.putNull("summary");
+                } else {
+                    copy.put("summary", summary);
+                }
+                expected = copy;
+                otherwiseSummarised.add(item.get("action").asString());
+            }
+            listed.put(item.get("id").asString(), fields(expected, AUDIT_FIELDS));
+        });
+        assertThat(otherwiseSummarised).as("the actions the scenario names with another summary on the device").isEqualTo(otherSummaries.keySet());
         Map<String, List<JsonNode>> held = new TreeMap<>();
         rowsOfChunks("audit:").forEach((id, rows) -> rows.forEach(row -> {
             assertThat(fieldNames(row)).containsExactlyInAnyOrderElementsOf(AUDIT_FIELDS);
@@ -476,6 +532,17 @@ public class AdministrationDeviceStepDefinitions {
         }));
         assertThat(listed).isNotEmpty();
         assertThat(held).isEqualTo(listed);
+    }
+
+    @Given("the trail holds an action {string} by {string} with the details:")
+    public void theTrailHoldsAnActionByWithTheDetails(String action, String alias, String details) {
+        jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (:id, :admin, :action, null, :details, :at)")
+                .param("id", UUID.nameUUIDFromBytes((action + details).getBytes(StandardCharsets.UTF_8)))
+                .param("admin", donors.idOf(alias))
+                .param("action", action)
+                .param("details", details)
+                .param("at", java.sql.Timestamp.from(clock.instant()))
+                .update();
     }
 
     @Then("the administration device's audit names {string} in {int} summaries")
@@ -520,6 +587,7 @@ public class AdministrationDeviceStepDefinitions {
         secrets.addAll(jdbc.sql("select code from donor_second_factor_recovery").query(String.class).list());
         secrets.addAll(jdbc.sql("select code_challenge from oauth_authorization_code").query(String.class).list());
         secrets.addAll(jdbc.sql("select details from admin_action").query(String.class).list());
+        secrets.addAll(personalValuesOfTheTrail());
         List<String> worthChecking = secrets.stream().filter(secret -> secret != null && secret.strip().length() >= MINIMUM_SECRET_LENGTH)
                 .map(String::strip).toList();
         assertThat(worthChecking).isNotEmpty();
@@ -533,6 +601,18 @@ public class AdministrationDeviceStepDefinitions {
         worthChecking.forEach(secret -> assertThat(held).as("the chunks on the administration devices").doesNotContain(secret));
         assertThat(held).doesNotContainIgnoringCase("password").doesNotContainIgnoringCase("secret").doesNotContainIgnoringCase("credential")
                 .doesNotContain("\"details\"");
+    }
+
+    @Then("no chunk on any administration device holds an audit detail or a bank account or address the details name")
+    public void noChunkOnAnyAdministrationDeviceHoldsAnAuditDetailOrAValueItsShapesCapture() {
+        List<String> details = jdbc.sql("select details from admin_action").query(String.class).list();
+        List<String> captured = personalValuesOfTheTrail();
+        assertThat(details).as("the details stored").isNotEmpty();
+        assertThat(captured).as("the accounts and addresses the details name").isNotEmpty();
+        String held = everythingHeld();
+        assertThat(held).isNotEmpty().doesNotContain("\"details\"");
+        Stream.concat(details.stream(), captured.stream())
+                .forEach(value -> assertThat(held).as("the chunks on the administration devices").doesNotContain(value.strip()));
     }
 
     @Then("the administration device's chunk {string} holds the items the administration reads at {string}")
@@ -567,6 +647,70 @@ public class AdministrationDeviceStepDefinitions {
         assertThat(api.lastResponseJson().get("lastBackup").get("error").asString()).isEqualTo(error);
     }
 
+    @Then("no chunk on any administration device holds the text {string}")
+    public void noChunkOnAnyAdministrationDeviceHoldsTheText(String text) {
+        assertThat(devices.values()).as("the copies scanned").anySatisfy(copy -> assertThat(copy.chunks).isNotEmpty());
+        devices.forEach((copy, held) -> held.chunks.forEach((id, chunk) -> assertThat(chunk.toString()).as("the chunk %s of %s", id, copy)
+                .doesNotContain(text)));
+    }
+
+    @Then("no audit chunk on the administration device holds the text {string}")
+    public void noAuditChunkOnTheAdministrationDeviceHoldsTheText(String text) {
+        Map<String, List<JsonNode>> audit = rowsOfChunks("audit:");
+        assertThat(audit).as("the audit chunks scanned").isNotEmpty();
+        audit.forEach((id, rows) -> assertThat(rows.toString()).as("the chunk %s", id).doesNotContain(text));
+    }
+
+    @Then("no chunk on any administration device holds any of the {int} receipt image(s), a receipt signature or an image's bytes")
+    public void noChunkOnAnyAdministrationDeviceHoldsAReceiptImage(int receiptImages) {
+        List<String> images = new ArrayList<>();
+        images.addAll(jdbc.sql("select sha256 from receipt_image").query(String.class).list());
+        images.addAll(jdbc.sql("select substr(encode(content, 'base64'), 1, 64) from receipt_image").query(String.class).list());
+        images.addAll(jdbc.sql("select image_sha256 from donation_person_receipt_signature").query(String.class).list());
+        images.addAll(jdbc.sql("select substr(encode(data, 'base64'), 1, 64) from content_media_variant").query(String.class).list());
+        assertThat(jdbc.sql("select count(*) from receipt_image").query(Integer.class).single()).as("the receipt images stored").isEqualTo(receiptImages);
+        String held = everythingHeld();
+        assertThat(held).isNotEmpty().doesNotContain("data:image").doesNotContain("receipt-images").doesNotContain("receipt-signature");
+        images.forEach(image -> assertThat(held).as("the chunks on the administration devices").doesNotContain(image));
+    }
+
+    @Then("the people on the administration device carry only their public portrait and web signature")
+    public void thePeopleOnTheAdministrationDeviceCarryOnlyTheirPublicImages() {
+        List<JsonNode> members = devices.values().stream().map(copy -> copy.chunks.get("people")).filter(java.util.Objects::nonNull)
+                .flatMap(chunk -> chunk.get("rows").valueStream()).flatMap(row -> row.get("members").valueStream()).toList();
+        assertThat(members).as("the people scanned").isNotEmpty();
+        members.forEach(member -> {
+            assertThat(fieldNames(member)).containsExactlyInAnyOrder("id", "name", "role", "position", "onBoard", "boardNote", "featured", "portrait",
+                    "webSignature", "personalEmail", "fundEmail", "linkedToAccount");
+            Stream.of(member.get("portrait"), member.get("webSignature")).filter(image -> !image.isNull()).forEach(image -> {
+                assertThat(fieldNames(image)).containsExactlyInAnyOrder("id", "url", "width", "height");
+                assertThat(image.get("url").asString()).isEqualTo("/api/content/media/" + image.get("id").asString());
+            });
+        });
+        assertThat(members).anySatisfy(member -> assertThat(member.get("portrait").isNull()).isFalse());
+    }
+
+    @Then("no chunk on any administration device holds the backup key")
+    public void noChunkOnAnyAdministrationDeviceHoldsTheBackupKey() {
+        BackupKey key = backupKeys.current().orElseThrow(() -> new AssertionError("The test backend has no backup key"));
+        String held = everythingHeld();
+        assertThat(held).isNotEmpty().doesNotContain(key.value()).doesNotContain(String.join(" ", key.words().subList(0, 2)));
+    }
+
+    public String everythingHeld() {
+        return devices.values().stream().flatMap(copy -> copy.chunks.values().stream()).map(JsonNode::toString).collect(Collectors.joining("\n"));
+    }
+
+    private List<String> personalValuesOfTheTrail() {
+        List<String> values = new ArrayList<>();
+        jdbc.sql("select action, details from admin_action").query((row, index) -> AdminActionFacts.read(row.getString("action"), row.getString("details")))
+                .list().stream().flatMap(Optional::stream).forEach(facts -> {
+                    facts.value(AdminActionFacts.ACCOUNT).ifPresent(values::add);
+                    facts.value(AdminActionFacts.RECIPIENTS).ifPresent(recipients -> values.addAll(Arrays.asList(recipients.split(",\\s*"))));
+                });
+        return values.stream().filter(value -> value.strip().length() >= PERSONAL_VALUE_MINIMUM_LENGTH).toList();
+    }
+
     @Then("no chunk on the administration device holds the text {string}")
     public void noChunkOnTheAdministrationDeviceHoldsTheText(String text) {
         assertThat(device.chunks).isNotEmpty();
@@ -578,15 +722,6 @@ public class AdministrationDeviceStepDefinitions {
         JsonNode answer = api.lastResponseJson();
         assertThat(answer.get("chunks").valueStream().map(chunk -> chunk.get("id").asString()).toList()).containsExactlyElementsOf(list(held));
         assertThat(answer.get("missing").valueStream().map(JsonNode::asString).toList()).containsExactlyElementsOf(list(missing));
-    }
-
-    private static JsonNode withoutUntemplatedSummary(JsonNode item) {
-        if (!item.get("summary").equals(item.get("details"))) {
-            return item;
-        }
-        ObjectNode copy = (ObjectNode) item.deepCopy();
-        copy.putNull("summary");
-        return copy;
     }
 
     private List<JsonNode> listedPayments() {

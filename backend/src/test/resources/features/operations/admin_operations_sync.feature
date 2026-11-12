@@ -33,6 +33,26 @@ Feature: An administrator's device keeps a copy of the settings and the backups 
     And no chunk on the administration device holds the text "right-key"
     And no chunk on the administration device holds the text "pg_dump"
 
+  Scenario: The copy holds the value of no secret setting, nothing that reveals the backup key and no receipt signature
+    Given "Jana" changes the settings:
+      | name          | value                  |
+      | MAIL_PASSWORD | smtp-heslo-kopie-0042  |
+      | FIO_TOKEN     | fio-token-kopie-004217 |
+    And the response status is 202
+    And the stored "MAIL_PASSWORD" is sealed
+    And the stored "FIO_TOKEN" is sealed
+    And "Jana" reveals the backup key with a fresh code
+    And the answer carries the backup key of this server and no cache keeps it
+    And "Jana" confirms the backup key with the asked words
+    And a person of the foundation signs the receipts
+    And "Jana" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
+    When an administration device of "Jana" syncs the operations
+    Then the administration device's chunk "settings" holds what the administration reads at "/api/admin/operations/settings"
+    And no chunk on the administration device holds the text "smtp-heslo-kopie-0042"
+    And no chunk on the administration device holds the text "fio-token-kopie-004217"
+    And no chunk on any administration device holds the backup key
+    And no chunk on any administration device holds any of the 1 receipt image, a receipt signature or an image's bytes
+
   Scenario: A changed setting changes only the settings, a new backup only the backups, and an unchanged manifest downloads nothing
     Given an administration device of "Jana" syncs the operations
     When an administration device of "Jana" syncs the operations

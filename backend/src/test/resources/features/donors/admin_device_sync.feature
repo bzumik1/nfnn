@@ -33,6 +33,31 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     When an administration device of "Andrea" syncs the donations
     Then no chunk on the administration device holds a stored secret or an audit detail
 
+  Scenario: The trail on a device has no summary of an action no template knows, and of an older entry naming the report's recipients only their count
+    Given today is 2026-10-17
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And the trail holds an action "CHANGE_LOG_LEVEL" by "Andrea" with the details:
+      """
+      {"logger":"cz.novanadeje.app","level":"DEBUG","note":"zapsáno starší verzí bez šablony"}
+      """
+    And 1 minute passes
+    And the trail holds an action "CHANGE_REPORT_SETTINGS" by "Andrea" with the details:
+      """
+      Nastavení měsíčního přehledu změněno: příjemci pokladni@example.cz, revize@example.cz; odesílá se 3. den v měsíci v 7:00; části dárci, dary
+      """
+    When an administration device of "Andrea" syncs the donors
+    Then the administration device holds the chunk "audit:2026-10" with 2 rows
+    And the administration device's chunks of the audit hold every action the administration lists, without details, these with another summary:
+      | action                 | summary on the device                                                                                       |
+      | CHANGE_LOG_LEVEL       | null                                                                                                        |
+      | CHANGE_REPORT_SETTINGS | Změněno nastavení měsíčního přehledu: počet příjemců 2, chodí 3. den v měsíci v 7:00 a obsahuje dárce, dary. |
+    When an administration device of "Andrea" syncs the donations
+    Then no chunk on any administration device holds an audit detail or a bank account or address the details name
+    And no chunk on any administration device holds the text "pokladni@example.cz"
+    And no chunk on any administration device holds the text "revize@example.cz"
+    And no chunk on any administration device holds the text "zapsáno starší verzí bez šablony"
+
   Scenario: A changed profile changes only the chunk of the donor's registration month, a new action only its month of the trail
     Given today is 2026-09-20
     And a person "Jana" is registered
@@ -59,18 +84,30 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And a person "Jana" is registered
     And a person "Andrea" is registered
     And "Andrea" is an administrator
+    And the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name          | variableSymbol |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
+    And the application starts the import
     And "Jana" enables the second factor
     And "Andrea" makes "Jana" an administrator
     And "Andrea" removes "Jana" from the administrators
+    And "Andrea" turns off the pairing from bank account "2900233333/2010" of "Jana"
+    And "Andrea" removes bank account "2900233333/2010" of "Jana"
     And an administration device of "Andrea" syncs the donors
-    And the administration device's audit names "Jana" in 2 summaries
+    And the administration device's audit names "Jana" in 4 summaries
     When "Andrea" erased the donor "Jana"
     And an administration device of "Andrea" syncs the donors
     Then the administration device downloaded the chunks "accounts:2026-10, audit:2026-10"
     And the administration device's chunks of accounts hold 2 accounts
     And the administration device's chunks of accounts hold every account as the administration reads it
-    And the administration device's chunks of the audit hold every action the administration lists, without details
-    And the administration device's audit names "Jana" in 3 summaries only as erased, never by name
+    And the administration device's chunks of the audit hold every action the administration lists, without details, these with another summary:
+      | action                     | summary on the device                                                                                                 |
+      | DISCONNECT_SENDER_ACCOUNT  | Párování plateb z jednoho bankovního účtu dárci (osobní údaje vymazány) vypnuto.                                      |
+      | REMOVE_SENDER_ACCOUNT_LINK | Bankovní účet odebrán dárci (osobní údaje vymazány); smazané dary přiřazené podle účtu: 0, smazané odpovědi o starších symbolech: 0. |
+    And the administration device's audit names "Jana" in 5 summaries only as erased, never by name
+    When an administration device of "Andrea" syncs the donations
+    Then no chunk on any administration device holds the text "2900233333"
+    And no chunk on any administration device holds an audit detail or a bank account or address the details name
 
   Scenario: An administrator whose role was removed learns it at the next sync while the token is still valid, and the device keeps nothing
     Given today is 2026-10-17

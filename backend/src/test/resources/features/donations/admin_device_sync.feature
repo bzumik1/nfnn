@@ -93,6 +93,18 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device's summary of every year is the administration's overview of that year
     And every chunk on the administration device hashes to its rowsSha256
 
+  Scenario: The turn of a month changes the report settings' last ended month, never their version
+    Given today is 2026-10-20
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And an administration device of "Andrea" syncs the donations
+    And the administration device notes the version of its report settings
+    When today is 2026-11-01
+    And an administration device of "Andrea" syncs the donations
+    Then the administration device downloaded the chunks "report-settings"
+    And the administration device's report settings keep the noted version, with the next report for "2026-10" and the last ended month "2026-10"
+    And the administration device's chunk "report-settings" holds the monthly report settings, the sent reports, the next report and the last ended month the administration reads
+
   Scenario: An unpaired gift leaves the gifts of its month, and a month without gifts leaves the device
     Given today is 2026-10-20
     And the foundation wants bank history from 2026-01-01

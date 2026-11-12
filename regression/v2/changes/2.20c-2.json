@@ -67,35 +67,35 @@
     "kind": "request",
     "path": "GET /api/admin/donors/sync/chunks",
     "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
-    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator and removes the role before the erasure, so the audit names the donor in its summaries first and only as erased afterwards; that adds the second-factor e-mail, two administrator actions and the audit chunk to its downloads",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
     "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
   },
   {
     "kind": "body",
     "path": "GET /api/admin/donors/sync/chunks",
     "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
-    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator and removes the role before the erasure, so the audit names the donor in its summaries first and only as erased afterwards; that adds the second-factor e-mail, two administrator actions and the audit chunk to its downloads",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
     "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
   },
   {
     "kind": "body",
     "path": "GET /api/admin/donors/sync",
     "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
-    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator and removes the role before the erasure, so the audit names the donor in its summaries first and only as erased afterwards; that adds the second-factor e-mail, two administrator actions and the audit chunk to its downloads",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
     "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
   },
   {
     "kind": "body",
     "path": "GET /api/admin/donors/actions",
     "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
-    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator and removes the role before the erasure, so the audit names the donor in its summaries first and only as erased afterwards; that adds the second-factor e-mail, two administrator actions and the audit chunk to its downloads",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
     "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
   },
   {
     "kind": "added",
     "scenario": "donors/admin_device_sync: An erased donor's account stays on the device only as a placeholder*",
     "subject": "Dvoufaktorové ověření vašeho účtu bylo zapnuto – Nová naděje",
-    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator and removes the role before the erasure, so the audit names the donor in its summaries first and only as erased afterwards; that adds the second-factor e-mail, two administrator actions and the audit chunk to its downloads",
+    "reason": "2.20c: the scenario of an erased donor's placeholder now makes the donor an administrator, removes the role, and (review A1 and S1) turns off the pairing from her bank account and then removes it before the erasure, so the audit names the donor in its summaries first and only as erased afterwards, never with an account number; that adds the second-factor e-mail, four administrator actions and the audit chunk to its downloads",
     "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donations/sync, /api/admin/donors/sync)"
   },
   {
