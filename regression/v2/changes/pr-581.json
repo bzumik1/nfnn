@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/receipt-pdf.spec.ts > Given a donor whose year holds 120 gifts > when they download its receipt again and again, then the median drawing in the worker stays within a second at full speed, and the cold and warm times are reported",
+    "replacement": "e2e/receipt-pdf.spec.ts > Given a donor whose year holds 120 gifts > when they download its receipt again and again, then the median drawing in the worker stays within three drawings of a one-gift year in the same worker and under two seconds, and the cold and warm times are reported",
+    "reason": "PR #581: a fixed second measured the runner (1 032 ms on a shared GitHub runner, 2026-11-11), so the warm median is held to three drawings of a one-gift year drawn interleaved in the same worker, under a two-second ceiling, and the test's name says so",
+    "contract": "docs/system-overview.md, donations (the receipt drawn in the browser)"
+  }
+]
