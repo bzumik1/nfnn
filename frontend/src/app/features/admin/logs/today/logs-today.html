@@ -1,0 +1,91 @@
+<section class="today" aria-labelledby="logs-today-title">
+  <h2 id="logs-today-title" class="ui-group-title" i18n="@@admin.logs.today.title">
+    Varování a chyby dnes
+  </h2>
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-load-state" i18n="@@admin.logs.today.loading">
+        Hledáme dnešní varování a chyby…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-load-state ui-load-state--error" role="alert">
+        <p i18n="@@admin.logs.today.failed">Dnešní varování a chyby se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button ui-button--small"
+          (click)="load()"
+          i18n="@@admin.logs.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <ul class="ui-list ui-list--inset">
+        @if (problems().length === 0) {
+          <li>
+            <div class="ui-list__row">
+              <span class="ui-list__lead"><app-health-icon kind="ok" /></span>
+              <span class="ui-list__title" i18n="@@admin.logs.today.none"
+                >Dnes žádná varování ani chyby</span
+              >
+            </div>
+          </li>
+        }
+        @for (problem of shown(); track problem.entry.offset) {
+          <li>
+            <a
+              class="ui-list__row"
+              [routerLink]="filePath"
+              [queryParams]="entryQuery(problem.entry)"
+            >
+              <span class="ui-list__lead"><app-level-icon [level]="problem.entry.level" /></span>
+              <span class="ui-list__title problem-message">
+                <span class="visually-hidden">{{ label(problem.entry) }}</span>
+                {{ problem.entry.message }}
+              </span>
+              <span class="ui-list__meta"
+                >{{ time(problem.entry) }} · {{ problem.entry.title }}</span
+              >
+              @if (problem.count > 1) {
+                <span class="ui-list__value ui-list__count ui-list__count--warning"
+                  >{{ problem.count }}×</span
+                >
+              }
+              <svg
+                class="ui-list__chevron"
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
+          </li>
+        }
+        <li>
+          <a
+            class="ui-list__row ui-list__row--action"
+            [routerLink]="filePath"
+            [queryParams]="allQuery"
+            i18n="@@admin.logs.today.all"
+            >Všechna varování a chyby</a
+          >
+        </li>
+      </ul>
+      @if (truncated()) {
+        <p class="ui-group-note" i18n="@@admin.logs.today.truncated">
+          Prohledáno posledních 50 varování a chyb.
+        </p>
+      }
+    }
+  }
+</section>

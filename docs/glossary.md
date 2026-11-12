@@ -92,6 +92,15 @@ _Avoid_: „účet“ alone (it is also the donor's account on the site)
 UI „název banky“ beside an account („2000145399/0800 · Česká spořitelna“); docs „číselník ČNB Kódy bank ČR“ · Code: `BankCode`, `BankCodeList` (`donations/domain/bankcode`, tables `bank_code`, `bank_code_list_state`), `CZECH_BANK_CODES` and `BankNames` in the browser.\
 The ČNB list „Kódy bank ČR“ of four-digit Czech bank codes and the banks they belong to; the server downloads it, the browser shows a short name of the bank (without the legal form) beside a Czech account number.
 
+**Bank logo**\
+UI „logo banky“ beside an account and in the administration · Code: `BankLogo`, `BankLogoSource`, `BankLogoImageId` (`donations/domain/banklogo`, tables `bank_logo`, `bank_logo_image`), `/api/donations/bank-logos`, connector `nfnn_bank_logos`, `nfnn_set_bank_logo_source`, `nfnn_refresh_bank_logo`.\
+The round icon of a bank (its official app icon or site icon) that the server downloads per bank code from an official address on an allow-list, keeps as a 128 px WebP and serves from nfnn.cz; the address it is downloaded from is the logo's address („adresa loga“, code `sourceUrl`, `BankLogoSource`).\
+_Avoid_: „ikona banky“, „favicon“, „zdroj loga“
+
+**Bank monogram**\
+UI „zkratka názvu banky“ (in the round mark of a bank without a logo) · Code: `bankMonogram` (`features/donations/bank-monogram.ts`), drawn by `BankMark`.\
+Two to four capitals of a bank's short name (`ČS`, `KB`, `ČSOB`) that stand in the round mark at 40 px when the bank has no logo or its logo cannot be loaded; the small 24 px mark shows a plain bank sign instead.
+
 **Turning pairing from an account off and on**\
 UI administration „Vypnout párování“ / „Zapnout párování“; donor „Znovu přiřazovat platby z účtu“, status „Nepřiřazujeme“ · Code: `POST …/bank-accounts/{id}/disconnect|reconnect`, status `DISCONNECTED`.\
 Stopping pairing from a sender account (the donations stay) or starting it again (only new payments pair, after the next payment with the symbol).\
@@ -240,7 +249,7 @@ Setting a new password from an e-mailed link; refused to an administrator who ho
 
 **Device**\
 UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`.\
-One sign-in of a browser or the installed app, named by platform and browser; signing it out ends its session within 30 seconds.
+One sign-in of a browser or the installed app, named by platform and browser, or by platform and „aplikace“ for the installed app; signing it out ends its session within 30 seconds.
 
 **Session kind**\
 UI „Zapamatovat si mě“, „Cizí počítač“ · Code: `SessionKind` `APP`, `REMEMBERED`, `BROWSER`, `PUBLIC`.\
@@ -327,8 +336,9 @@ A dated post the administrator writes, with a title, address, tag, perex, Markdo
 _Avoid_: blog post
 
 **Project**\
-UI „projekt“ (tab „Pomáháme“) · Code: `content/domain/project/Project`, `ProjectCategory` `CHILDREN`, `ADULTS`, `ANIMALS`, `OTHER`.\
-A help the foundation gave, with a year and the category of whom it helped, ordered on the site as the administrator chose.
+UI „příběh“ (section „Pomáháme“ on the site and in the administration: „Nový příběh“, „Úprava příběhu“, „Zveřejnit příběh“, „Stáhnout příběh z webu“; Jakub 2026-11-10) · Code: `content/domain/project/Project`, `ProjectCategory` `CHILDREN`, `ADULTS`, `ANIMALS`, `OTHER`; the addresses `/projekty` and `/sprava/projekty` stay.\
+A help the foundation gave, with a year and the category of whom it helped, ordered on the site as the administrator chose.\
+_Avoid_: „projekt“ in the UI
 
 **Draft / publish / take off the site**\
 UI „koncept“, „zveřejnit“, „Stáhnout z webu“ · Code: `publishedOn` of `NewsArticle` and `Project`.\

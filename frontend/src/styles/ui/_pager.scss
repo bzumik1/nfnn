@@ -1,0 +1,60 @@
+@use 'breakpoints' as bp;
+@use 'touch-target';
+@use 'visually-hidden';
+
+.ui-pager {
+  container: pager / inline-size;
+  display: grid;
+  grid-template-columns: minmax(var(--touch-target-size), 1fr) auto minmax(
+      var(--touch-target-size),
+      1fr
+    );
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ui-pager__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  @include touch-target.reaches-finger-size;
+}
+
+.ui-pager__step--newer {
+  grid-column: 1;
+  justify-self: start;
+  padding-inline-start: var(--space-3);
+}
+
+.ui-pager__step--older {
+  grid-column: 3;
+  justify-self: end;
+  padding-inline-end: var(--space-3);
+}
+
+.ui-pager__icon {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+}
+
+.ui-pager__position {
+  grid-column: 2;
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  text-align: center;
+  text-wrap: balance;
+}
+
+@include bp.container-down(pager, pager) {
+  .ui-pager__step {
+    justify-content: center;
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+    padding: var(--space-2-25);
+  }
+
+  .ui-pager__label {
+    @include visually-hidden.hides;
+  }
+}

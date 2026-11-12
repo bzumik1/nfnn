@@ -38,6 +38,7 @@ import {
   PushSubscriptionResponse,
   PushTestResponse,
 } from '../admin-api';
+import { DeviceAlertMarks } from './device-alert-marks';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'unavailable';
@@ -97,6 +98,7 @@ export class AdminAlerts {
   private readonly loginDialog = inject(LoginDialogService);
   private readonly push = inject(SERVICE_WORKER_PUSH);
   private readonly badge = inject(AppBadge);
+  private readonly marks = inject(DeviceAlertMarks);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -301,6 +303,7 @@ export class AdminAlerts {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
+          this.marks.clearOwner();
           void this.push.unsubscribe().then(() => {
             this.turningOff.set(false);
             this.browserState.set('unknown');
@@ -397,6 +400,10 @@ export class AdminAlerts {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (subscription) => {
+          const donorId = this.auth.donor()?.id;
+          if (donorId) {
+            void this.marks.markOwner(donorId);
+          }
           this.subscribing.set(false);
           this.browserState.set('subscribed');
           this.replaceSubscriptions((items) => [

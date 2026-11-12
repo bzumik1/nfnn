@@ -97,6 +97,11 @@
 
   --color-on-image: #ffffff;
   --color-image-shade: #080c24;
+  --hero-top-scrim: linear-gradient(
+    to bottom,
+    color-mix(in srgb, #000000 28%, transparent),
+    transparent 22%
+  );
   --color-backdrop: rgb(10 15 40 / 0.6);
 
   --color-border: #e5e7eb;
@@ -115,6 +120,8 @@
   --color-danger-border: #fecaca;
   --color-on-danger: #ffffff;
   --color-warning: #92400e;
+  --color-log-code: #2f4b7c;
+  --color-log-warn: #b45309;
   --color-warning-bg: #fffbeb;
   --color-warning-border: #d97706;
   --color-success: #15803d;
@@ -234,6 +241,11 @@
   --duration-entrance: 0.9s;
   --duration-sheet: var(--duration-slow);
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-page: 0.35s;
+  --ease-page: cubic-bezier(0.32, 0.72, 0, 1);
+  --page-parallax: -30%;
+  --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
+  --shadow-page-edge: -4px 0 16px color-mix(in srgb, #000000 18%, transparent);
   --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
@@ -288,10 +300,12 @@
 
   --content-max: 1200px;
   --header-height: 72px;
+  --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
     var(--text-sm),
     (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
   );
+  --text-account-number: min(var(--text-lg), 7vw);
   --side-nav-layout-max: 1320px;
   --side-nav-width: 240px;
   --floating-notice-height: 0rem;
@@ -324,13 +338,16 @@
   --text-sheet-body: 1rem;
   --text-sheet-subtitle: 0.882rem;
   --text-sheet-footnote: 0.765rem;
+  --text-bank-monogram: 36cqi;
+  --text-bank-monogram-long: 26cqi;
   --tab-bar-height: 62px;
   --tab-bar-gap: 20px;
   --tab-bar-gap-browser: 16px;
   --tab-pill-inset: 2px;
+  --tab-pill-drag-scale: 1.08;
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
-  --tab-icon-size: 22px;
+  --tab-icon-size: 1.5rem;
   --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
   --launch-icon-size: 128px;
   --tab-bar-rendered-height: var(--tab-bar-height);
@@ -389,6 +406,8 @@
     --color-border-accent: #1d4ed8;
     --color-border-field: #4b5563;
     --color-divider: #6b7280;
+    --color-log-code: #1e3560;
+    --color-log-warn: #92400e;
   }
 }
 
@@ -431,6 +450,7 @@
     --color-surface-quote: #13213f;
 
     --color-backdrop: color-mix(in srgb, #000000 70%, transparent);
+    --color-page-dim: color-mix(in srgb, #000000 22%, transparent);
 
     --color-border: #2a3243;
     --color-border-field: #6b7588;
@@ -446,6 +466,8 @@
     --color-danger-bg: #2c1316;
     --color-danger-border: #b54646;
     --color-warning: #fbbf24;
+    --color-log-code: #a9bfe6;
+    --color-log-warn: #fbbf24;
     --color-warning-bg: #2a1f08;
     --color-success: #4ade80;
     --color-success-bg: #0e2a19;
@@ -471,6 +493,8 @@
     --color-border-accent: #6ea8ff;
     --color-border-field: #9aa3b2;
     --color-divider: #8a93a3;
+    --color-log-code: #cbdaf5;
+    --color-log-warn: #fcd34d;
   }
 }
 

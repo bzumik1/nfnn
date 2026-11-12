@@ -1,0 +1,48 @@
+:host {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  container-type: inline-size;
+  overflow: hidden;
+  width: var(--space-10);
+  height: var(--space-10);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-family: var(--font-title);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-none);
+  vertical-align: middle;
+}
+
+:host(.bank-mark--small) {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--color-paper);
+}
+
+.bank-monogram {
+  font-size: var(--text-bank-monogram);
+  white-space: nowrap;
+
+  &::before {
+    content: attr(data-monogram);
+  }
+}
+
+.bank-monogram--long {
+  font-size: var(--text-bank-monogram-long);
+}
+
+.bank-sign {
+  width: 60%;
+  height: 60%;
+}

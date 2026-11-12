@@ -1,4 +1,5 @@
 import {
+  AdminBankLogoResponse,
   AdminPushResponse,
   PushSubscriptionResponse,
   AdminBankAccountItem,
@@ -17,6 +18,8 @@ import {
   AdminIssuedReceiptResponse,
   AdminOverviewResponse,
   AdminReportResponse,
+  ReportContentResponse,
+  SentReportDetailResponse,
   AdminSettingResponse,
   AdminSettingsResponse,
   AdministratorResponse,
@@ -120,6 +123,24 @@ export function administrator(
     name: 'Jana Nováková',
     email: 'jana@example.cz',
     secondFactorEnabled: true,
+    ...overrides,
+  };
+}
+
+export function adminBankLogo(
+  overrides: Partial<AdminBankLogoResponse> = {},
+): AdminBankLogoResponse {
+  return {
+    code: '0800',
+    bankName: 'Česká spořitelna, a.s.',
+    sourceUrl: 'https://is1-ssl.mzstatic.com/image/thumb/Purple/csas/512x512bb.jpg',
+    sourceAllowed: true,
+    version: '5e1c0a9f3b7d2486',
+    imageId: '019a7c00-0000-7000-8000-0000000000aa',
+    imageSha256: 'a'.repeat(64),
+    fetchedAt: '2026-11-11T04:50:03Z',
+    checkedAt: '2026-11-11T04:50:03Z',
+    lastFailure: null,
     ...overrides,
   };
 }
@@ -322,6 +343,41 @@ export function reportView(overrides: Partial<AdminReportResponse> = {}): AdminR
     sentReports: [],
     nextReport: { month: '2026-09', dueOn: '2026-10-01' },
     lastEndedMonth: '2026-09',
+    ...overrides,
+  };
+}
+
+export function reportContent(
+  overrides: Partial<ReportContentResponse> = {},
+): ReportContentResponse {
+  return {
+    donors: { registered: 2, newInMonth: 2 },
+    donations: {
+      received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+      paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+      receivedInYear: { count: 3, totalMinor: 85000, currency: 'CZK' },
+    },
+    unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+    bankImport: { lastSucceededAt: '2026-11-01T05:00:00Z', lastFailure: null },
+    ...overrides,
+  };
+}
+
+export function sentReport(
+  overrides: Partial<SentReportDetailResponse> = {},
+): SentReportDetailResponse {
+  return {
+    month: '2026-10',
+    firstSentAt: '2026-11-01T06:00:00Z',
+    deliveries: [
+      {
+        sentAt: '2026-11-01T06:00:00Z',
+        byHand: false,
+        recipientCount: 1,
+        content: reportContent(),
+      },
+    ],
+    recomputed: null,
     ...overrides,
   };
 }

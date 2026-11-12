@@ -71,8 +71,8 @@ describe('Given the preview of a project', () => {
     const fixture = await setUp({ kind: 'project', item: project() });
 
     expect(texts(fixture, 'h2')).toEqual([
-      'Karta na úvodní stránce a v seznamu projektů',
-      'Stránka projektu',
+      'Karta na úvodní stránce a v Pomáháme',
+      'Stránka příběhu',
     ]);
     expect(text(fixture, '.card .card-year')).toBe('2024');
     expect(text(fixture, 'app-content-article .ui-eyebrow')).toBe('Projekt · 2024');

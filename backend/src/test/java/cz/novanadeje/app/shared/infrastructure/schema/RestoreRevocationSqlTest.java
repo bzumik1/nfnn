@@ -41,11 +41,11 @@ class RestoreRevocationSqlTest {
                     + " the dump and the restore is imported again and must still complete it (plan v3 2.34, Jakub's card)");
 
     private static final Set<String> HOLD_NO_SESSION_OR_ONE_TIME_SECRET = Set.of(
-            "admin_action", "backup_alert_state", "bank_code", "bank_code_list_state", "bank_import_state", "bank_payment", "contact_message",
+            "admin_action", "backup_alert_state", "bank_code", "bank_code_list_state", "bank_import_state", "bank_logo", "bank_logo_image", "bank_payment", "contact_message",
             "content_about", "content_former_slug", "content_founders_note", "content_media", "content_media_variant", "content_news",
             "content_people_footnote", "content_person", "content_project", "content_project_order",
             "donation", "donation_import_alert", "donation_monthly_report", "donation_person_receipt_signature", "donation_receipt_signatory",
-            "donation_receipt_signature", "donation_report_settings", "donor_record", "donor_sender_account", "donor_symbol_claim",
+            "donation_receipt_signature", "donation_report_delivery", "donation_report_settings", "donor_record", "donor_sender_account", "donor_symbol_claim",
             "issued_receipt", "receipt_image", "receipt_signing_key", "receipt_signing_key_adoption",
             "donor", "donor_passkey", "donor_registration_reminder", "donor_role", "donor_second_factor", "donor_second_factor_wrong_codes",
             "operations_alert", "operations_backup_key_confirmation", "operations_backup_schedule", "operations_carried_settings_key",

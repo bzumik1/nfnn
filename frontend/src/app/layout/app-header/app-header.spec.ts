@@ -229,6 +229,75 @@ describe('Given the header of the app', () => {
     expect(header.querySelector('a.brand')).toBeNull();
   });
 
+  describe('when a page deeper in a tab scrolls on a phone', () => {
+    let main: HTMLElement;
+
+    beforeEach(() => {
+      main = document.createElement('main');
+      main.id = 'obsah';
+      const heading = document.createElement('h1');
+      heading.textContent = 'Bankovní účty';
+      heading.getBoundingClientRect = () => ({ top: -120, bottom: -80, height: 40 }) as DOMRect;
+      main.append(heading);
+      document.body.append(main);
+      Object.defineProperty(document, 'elementsFromPoint', {
+        configurable: true,
+        value: () => [document.body],
+      });
+    });
+
+    afterEach(() => {
+      main.remove();
+      delete (window as { scrollY?: number }).scrollY;
+      delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
+    });
+
+    async function scrolledPast(header: HTMLElement): Promise<void> {
+      header.querySelector('header')!.getBoundingClientRect = () => ({ height: 72 }) as DOMRect;
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 400 });
+      window.dispatchEvent(new Event('scroll'));
+      await new Promise((done) => requestAnimationFrame(() => done(undefined)));
+      fixture.detectChanges();
+    }
+
+    it('then the title of the page stands in the edge at the top once its large title is gone, hidden from screen readers, which read the large one', async () => {
+      donor.set(sampleDonor());
+      const header = await openAt('/darce/ucty');
+      const title = header.querySelector('.edge-title')!;
+      expect(title.getAttribute('aria-hidden')).toBe('true');
+      expect(title.classList).not.toContain('edge-title--shown');
+
+      await scrolledPast(header);
+
+      expect(title.textContent?.trim()).toBe('Bankovní účty');
+      expect(title.classList).toContain('edge-title--shown');
+    });
+
+    it('then the account button stays in reach beside the back button', async () => {
+      donor.set(sampleDonor());
+
+      const header = await openAt('/darce/ucty');
+
+      expect(header.querySelector('header')!.classList).toContain('app-header--pinned-account');
+    });
+
+    it('and the window is a computer, then no title is added to the edge and the account button scrolls with the page', async () => {
+      donor.set(sampleDonor());
+      compact.set(false);
+
+      const header = await openAt('/darce/ucty');
+
+      expect(header.querySelector('.edge-title')).toBeNull();
+      expect(header.querySelector('header')!.classList).not.toContain('app-header--pinned-account');
+    });
+  });
+
+  it('when a tab root is open on a phone, then the edge at the top holds no title, as it has no room for one', async () => {
+    const header = await openAt('/aktuality');
+
+    expect(header.querySelector('.edge-title')).toBeNull();
+  });
+
   it('when an article is open on a computer, then the back button stands alone there too', async () => {
     compact.set(false);
 

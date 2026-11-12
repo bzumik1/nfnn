@@ -97,6 +97,7 @@ module.exports = defineConfig([
     files: ['src/**/*.ts'],
     ignores: [
       'src/app/core/connectivity/connectivity-probe-api.ts',
+      'src/app/features/donations/bank-logos-api.ts',
       'src/app/features/donations/payment-details-api.ts',
       'src/app/features/donations/verification/receipt-keys-api.ts',
       'src/app/features/donations/verification/receipt-status-api.ts',
@@ -112,7 +113,7 @@ module.exports = defineConfig([
               group: ['**/auth-interceptor'],
               importNames: ['WITHOUT_ACCESS_TOKEN'],
               message:
-                'Only the API service of a public endpoint (payment-details-api.ts, receipt-keys-api.ts, receipt-status-api.ts, setup-api.ts for the setup status, connectivity-probe-api.ts for the connectivity probe of the same setup status) sends its request without the access token; an endpoint that needs the token answers 401 without it (frontend.md, HTTP and data).',
+                'Only the API service of a public endpoint (bank-logos-api.ts, payment-details-api.ts, receipt-keys-api.ts, receipt-status-api.ts, setup-api.ts for the setup status, connectivity-probe-api.ts for the connectivity probe of the same setup status) sends its request without the access token; an endpoint that needs the token answers 401 without it (frontend.md, HTTP and data).',
             },
           ],
         },

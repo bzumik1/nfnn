@@ -152,6 +152,58 @@ describe('Given the connectivity of the app', () => {
     expect(connectivity.cause()).toBe('network');
   });
 
+  describe('when the device sleeps (a phone locked or the app in the background) while the app waits', () => {
+    beforeEach(() => start());
+
+    function sleepFor(ms: number): void {
+      vi.setSystemTime(Date.now() + ms);
+    }
+
+    it('and the probe runs out of time the moment the device wakes, then the app asks again instead of saying offline, and an answer keeps it online', () => {
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(NOW - 5 * 60_000).toUTCString() });
+      const firstProbe = http.expectOne(PROBE_PATH);
+
+      sleepFor(60_000);
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+
+      expect(firstProbe.cancelled).toBe(true);
+      expect(connectivity.offline()).toBe(false);
+      answers(PROBE_PATH);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      expect(connectivity.offline()).toBe(false);
+    });
+
+    it('and the probe asked again after waking gets no answer either, then the app is offline once that one gives up', () => {
+      ask(HOME);
+      answers(HOME, 200, { Date: new Date(NOW - 5 * 60_000).toUTCString() });
+      http.expectOne(PROBE_PATH);
+      sleepFor(60_000);
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+      const secondProbe = http.expectOne(PROBE_PATH);
+
+      vi.advanceTimersByTime(PROBE_TIMEOUT_MS);
+
+      expect(secondProbe.cancelled).toBe(true);
+      expect(connectivity.offline()).toBe(true);
+      expect(connectivity.cause()).toBe('network');
+    });
+
+    it('and a request failed just before and its 3 s run out the moment the device wakes, then the app asks again and stays online when the server answers', () => {
+      ask(PROFILE);
+      networkFails(PROFILE);
+      networkFails(PROBE_PATH);
+
+      sleepFor(60_000);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+
+      expect(connectivity.offline()).toBe(false);
+      answers(PROBE_PATH);
+      vi.advanceTimersByTime(OFFLINE_AFTER_MS);
+      expect(connectivity.offline()).toBe(false);
+    });
+  });
+
   describe('when nothing has failed yet and the server is asked whether it is there', () => {
     beforeEach(() => {
       start();

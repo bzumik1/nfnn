@@ -1,4 +1,4 @@
-<section class="ui-card ui-card--padded devices" aria-labelledby="devices-title">
+<section class="ui-card devices" aria-labelledby="devices-title">
   <h2
     #heading
     id="devices-title"
@@ -8,97 +8,205 @@
   >
     Přihlášená zařízení
   </h2>
-  <p class="devices-intro" i18n="@@donor.account.devices.intro">
-    Prohlížeče, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si heslo.
+  <p class="ui-card__intro devices-inset devices-intro" i18n="@@donor.account.devices.intro">
+    Prohlížeče a aplikace, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si
+    heslo.
   </p>
   @if (loadError()) {
-    <p class="ui-field-error" role="alert">{{ loadError() }}</p>
-    <button
-      appNeedsConnection
-      type="button"
-      class="ui-button devices-retry"
-      (click)="loadDevices()"
-      i18n="@@donor.account.devices.retry"
-    >
-      Načíst znovu
-    </button>
-  } @else if (devices(); as list) {
-    <ul class="device-list">
-      @for (device of list; track device.id) {
-        <li class="device">
-          <div class="device-body">
-            <span class="device-name">{{ name(device) }}</span>
-            <span class="device-dates">
-              <span class="device-date"
-                ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
-                  class="device-date-value"
-                  >{{ signedInOn(device) }}</span
-                ></span
-              >&ngsp;<span class="device-date"
-                >·&nbsp;<span i18n="@@donor.account.devices.lastUsed">naposledy použito</span
-                >&ngsp;<span class="device-date-value">{{ lastUsed(device) }}</span></span
-              >
-            </span>
-          </div>
-          @if (device.current) {
-            <span
-              class="ui-badge ui-badge--accent device-current"
-              i18n="@@donor.account.devices.current"
-            >
-              Toto zařízení
-            </span>
-          } @else {
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--danger-soft device-sign-out"
-              [disabled]="signingOut() !== null"
-              [id]="signOutButtonId(device)"
-              [attr.aria-label]="signOutLabel(device)"
-              (click)="signOut(device)"
-            >
-              @if (signingOut() === device.id) {
-                <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-              } @else {
-                <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
-              }
-            </button>
-          }
-        </li>
-      }
-    </ul>
-    @if (hasOthers()) {
+    <div class="devices-inset">
+      <p class="ui-field-error" role="alert">{{ loadError() }}</p>
       <button
         appNeedsConnection
-        #othersButton
         type="button"
-        class="ui-button ui-button--danger-outline devices-sign-out-others"
-        [disabled]="signingOut() !== null"
-        (click)="signOutOthers()"
+        class="ui-button devices-retry"
+        (click)="loadDevices()"
+        i18n="@@donor.account.devices.retry"
       >
-        @if (signingOutOthers()) {
-          <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-        } @else {
-          <span i18n="@@donor.account.devices.signOutOthers"
-            >Odhlásit všechna ostatní zařízení</span
-          >
-        }
+        Načíst znovu
       </button>
-    } @else {
-      <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
-    }
+    </div>
+  } @else if (devices()) {
+    <ul class="ui-list device-list">
+      @for (device of shown(); track device.id) {
+        <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
+      }
+      @if (groups().older.length > 0) {
+        <li>
+          <button
+            #olderToggle
+            type="button"
+            class="ui-list__row devices-older-toggle"
+            [attr.aria-expanded]="olderShown()"
+            [attr.aria-controls]="olderShown() ? 'devices-older' : null"
+            (click)="toggleOlder()"
+          >
+            <span class="ui-list__lead device-icon" aria-hidden="true">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+            </span>
+            <span class="ui-list__title" i18n="@@donor.account.devices.older"
+              >Starší ({{ groups().older.length }})</span
+            >
+            <span class="ui-list__meta" i18n="@@donor.account.devices.older.hint"
+              >Nepoužitá déle než 30 dní</span
+            >
+            <svg
+              class="ui-list__chevron devices-older-chevron"
+              [class.devices-older-chevron--open]="olderShown()"
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        </li>
+        @if (olderShown()) {
+          <li>
+            <ul id="devices-older" class="ui-list device-list device-list--older">
+              @for (device of groups().older; track device.id) {
+                <ng-container *ngTemplateOutlet="row; context: { $implicit: device }" />
+              }
+            </ul>
+          </li>
+        }
+      }
+    </ul>
+    <div class="devices-inset devices-footer">
+      @if (hasOthers()) {
+        <button
+          appNeedsConnection
+          #othersButton
+          type="button"
+          class="ui-button ui-button--danger-outline devices-sign-out-others"
+          [disabled]="signingOut() !== null"
+          (click)="signOutOthers()"
+        >
+          @if (signingOutOthers()) {
+            <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+          } @else {
+            <span i18n="@@donor.account.devices.signOutOthers"
+              >Odhlásit všechna ostatní zařízení</span
+            >
+          }
+        </button>
+      } @else {
+        <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
+      }
+    </div>
   } @else {
-    <p class="devices-empty" role="status" i18n="@@donor.account.devices.loading">
+    <p class="devices-inset devices-empty" role="status" i18n="@@donor.account.devices.loading">
       Načítáme přihlášená zařízení…
     </p>
   }
 
-  @if (actionError()) {
-    <p class="ui-field-error" role="alert">{{ actionError() }}</p>
-  }
-  <p class="ui-form-status devices-status" role="status">
-    @if (signedOut(); as message) {
-      <span>{{ message }}</span>
+  <div class="devices-inset devices-messages">
+    @if (actionError()) {
+      <p class="ui-field-error" role="alert">{{ actionError() }}</p>
     }
-  </p>
+    <p class="ui-form-status devices-status" role="status">
+      @if (signedOut(); as message) {
+        <span>{{ message }}</span>
+      }
+    </p>
+  </div>
 </section>
+
+<ng-template #row let-device>
+  <li class="device">
+    <div class="ui-list__row device-row">
+      <span class="ui-list__lead device-icon" aria-hidden="true">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          @switch (shape(device)) {
+            @case ('phone') {
+              <rect x="6" y="2" width="12" height="20" rx="2.5" />
+              <path d="M11 18h2" />
+            }
+            @case ('tablet') {
+              <rect x="4" y="2" width="16" height="20" rx="2.5" />
+              <path d="M11 18h2" />
+            }
+            @case ('computer') {
+              <rect x="4" y="4" width="16" height="11" rx="1.5" />
+              <path d="M2 19h20" />
+            }
+            @default {
+              <rect x="3" y="4" width="18" height="12" rx="1.5" />
+              <path d="M8 20h8M12 16v4" />
+            }
+          }
+        </svg>
+      </span>
+      <span class="ui-list__title device-name">{{ name(device) }}</span>
+      <span class="ui-list__meta device-meta">
+        <span class="device-last-use"
+          ><span i18n="@@donor.account.devices.lastUsed">naposledy použito</span>&ngsp;<span
+            class="device-date-value"
+            >{{ lastUsed(device) }}</span
+          ></span
+        >
+        <span class="device-sign-in"
+          ><span i18n="@@donor.account.devices.since">přihlášeno</span>&ngsp;<span
+            class="device-date-value"
+            >{{ signedInOn(device) }}</span
+          >
+          @if (kind(device); as sessionKind) {
+            &ngsp;·&nbsp;<span class="device-kind">{{ sessionKind }}</span>
+          }
+        </span>
+      </span>
+      <span class="ui-list__value device-action">
+        @if (device.current) {
+          <span
+            class="ui-badge ui-badge--accent device-current"
+            i18n="@@donor.account.devices.current"
+          >
+            Toto zařízení
+          </span>
+        } @else {
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button ui-button--danger-soft device-sign-out"
+            [disabled]="signingOut() !== null"
+            [id]="signOutButtonId(device)"
+            [attr.aria-label]="signOutLabel(device)"
+            (click)="signOut(device)"
+          >
+            @if (signingOut() === device.id) {
+              <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+            } @else {
+              <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+            }
+          </button>
+        }
+      </span>
+    </div>
+  </li>
+</ng-template>

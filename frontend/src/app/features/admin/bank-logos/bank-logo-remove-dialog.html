@@ -1,0 +1,41 @@
+<app-dialog
+  labelledBy="bank-logo-remove-title"
+  describedBy="bank-logo-remove-lead"
+  [dismissible]="!busy()"
+  (dismissed)="cancelled.emit()"
+>
+  <h2 id="bank-logo-remove-title" class="ui-dialog__title" i18n="@@admin.bankLogos.remove.title">
+    Odebrat logo banky {{ code() }}?
+  </h2>
+  <p id="bank-logo-remove-lead" class="ui-dialog__lead" i18n="@@admin.bankLogos.remove.lead">
+    Smažeme adresu i stažený obrázek. U účtů této banky se místo loga ukáže zkratka jejího názvu.
+  </p>
+  @if (error(); as error) {
+    <p class="ui-notice ui-notice--alert" role="alert">{{ error }}</p>
+  }
+  <div class="ui-dialog__actions">
+    <button
+      appNeedsConnection
+      type="button"
+      class="ui-button ui-button--danger"
+      [disabled]="busy()"
+      (click)="confirmed.emit()"
+    >
+      @if (busy()) {
+        <ng-container i18n="@@admin.bankLogos.remove.busy">Odebíráme…</ng-container>
+      } @else {
+        <ng-container i18n="@@admin.bankLogos.remove.confirm">Odebrat logo</ng-container>
+      }
+    </button>
+    <button
+      type="button"
+      class="ui-button ui-button--quiet"
+      autofocus
+      [disabled]="busy()"
+      (click)="cancelled.emit()"
+      i18n="@@admin.bankLogos.remove.cancel"
+    >
+      Zrušit
+    </button>
+  </div>
+</app-dialog>

@@ -46,7 +46,7 @@ export class RouteChrome {
   }
 }
 
-function chromeOf(root: ActivatedRouteSnapshot): Chrome {
+export function chromeOf(root: ActivatedRouteSnapshot): Chrome {
   let chrome = PLAIN;
   for (let route: ActivatedRouteSnapshot | null = root; route !== null; route = route.firstChild) {
     const data = route.data as RouteChromeData;

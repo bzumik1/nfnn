@@ -1,9 +1,17 @@
 import { readFile } from 'node:fs/promises';
 import type { Download, Locator, Page, TestInfo } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { donor, mockDonorApi, openAccountItem, openSignInDialog, session } from './donor-session';
+import {
+  donor,
+  mockDonorApi,
+  openAccountItem,
+  openSignInDialog,
+  opensSectionsInSheet,
+  session,
+} from './donor-session';
 
 const FILE_NAME = /^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/;
+const CARRIES_THE_FILE = /nfnn-diagnosti/;
 const MAIN_SCRIPT = /\/main-[A-Za-z0-9_-]{8}\.js$/;
 const BOOT_TIMEOUT_MS = 15_000;
 const PERSONAL = [donor.name, donor.email, donor.variableSymbol, donor.id, 'Dlouhá', 'token-1'];
@@ -130,8 +138,8 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
     });
     const sent: string[] = [];
     page.on('request', (request) => {
-      const carried = `${request.url()} ${request.postData() ?? ''}`;
-      if (request.method() !== 'GET' || /nfnn-diagnosti/.test(carried)) {
+      const body = request.postDataBuffer()?.toString('latin1') ?? '';
+      if (CARRIES_THE_FILE.test(`${request.url()} ${body}`)) {
         sent.push(`${request.method()} ${new URL(request.url()).pathname}`);
       }
     });
@@ -144,7 +152,7 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
       format: 'nfnn-diagnostics',
       version: 1,
       source: 'account-page',
-      page: '/darce/udaje',
+      page: opensSectionsInSheet(page) ? '/' : '/darce/udaje',
       app: { started: true, codeArrived: true },
       platform: { browser: expect.any(String), os: expect.any(String) },
       session: { account: 'donor', kind: 'BROWSER', administrationUnlocked: null },

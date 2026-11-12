@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 class JpaMonthlyReportLog implements MonthlyReportLog {
@@ -29,5 +30,10 @@ class JpaMonthlyReportLog implements MonthlyReportLog {
         return jpa.findAll(Sort.by(Sort.Direction.DESC, "reportMonth")).stream()
                 .map(entity -> new SentReport(new ReportMonth(YearMonth.from(entity.reportMonth())), entity.sentAt()))
                 .toList();
+    }
+
+    @Override
+    public Optional<SentReport> sentReportOf(ReportMonth month) {
+        return jpa.findById(month.firstDay()).map(entity -> new SentReport(month, entity.sentAt()));
     }
 }

@@ -159,7 +159,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected readonly slugMessages = {
     pattern: $localize`:@@admin.newsEditor.slug.pattern:Adresa smí mít jen malá písmena bez diakritiky, číslice a pomlčky mezi slovy.`,
     maxlength: $localize`:@@admin.newsEditor.slug.tooLong:Adresa může mít nejvíc ${MAX_SLUG_LENGTH}:max: znaků.`,
-    taken: $localize`:@@admin.newsEditor.slug.taken:Tuto adresu už má jiná aktualita nebo projekt. Zvolte prosím jinou.`,
+    taken: $localize`:@@admin.newsEditor.slug.taken:Tuto adresu už má jiná aktualita nebo příběh. Zvolte prosím jinou.`,
   };
   protected readonly tagMessages = {
     maxlength: $localize`:@@admin.newsEditor.tag.tooLong:Štítek může mít nejvíc ${MAX_TAG_LENGTH}:max: znaků.`,

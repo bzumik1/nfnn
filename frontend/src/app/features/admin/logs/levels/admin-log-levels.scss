@@ -1,125 +1,59 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: block;
 }
 
 .container {
-  max-width: 1000px;
+  max-width: 720px;
 }
 
-.level-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
-
-  app-form-field {
-    flex: 1 1 240px;
-  }
-
-  app-form-field:nth-of-type(2),
-  app-form-field:nth-of-type(3) {
-    flex: 0 1 160px;
-  }
-
-  button {
-    margin-top: var(--space-7);
-  }
-}
-
-.muted {
-  color: var(--color-text-subtle);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.levels {
-  margin: 0 calc(-1 * var(--space-6)) calc(-1 * var(--space-6));
-  width: calc(100% + 48px);
-}
-
-thead tr {
-  background: var(--color-surface-alt);
-}
-
-th {
-  text-align: left;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
-  padding: var(--space-2-5) var(--space-6);
-}
-
-td {
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--text-md);
-  color: var(--color-text-secondary);
-  border-top: 1px solid var(--color-border-soft);
-  vertical-align: middle;
-}
-
-tr.overridden td:first-child {
-  border-left: 4px solid var(--color-accent);
-  padding-left: var(--space-5);
-  font-weight: var(--weight-semibold);
+.groups {
+  margin-top: var(--space-4);
 }
 
 .logger-name {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.ui-list__value .ui-button {
+  font-weight: var(--weight-semibold);
+}
+
+.sheet-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-title);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
 }
 
-.row-actions {
-  text-align: right;
+.level-form {
+  display: grid;
+  gap: var(--space-2);
 }
 
-@include bp.down(cards) {
-  thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+.choice-title {
+  margin-top: var(--space-3);
+}
+
+.choices {
+  .choice {
+    min-height: var(--list-row-min-height);
   }
 
-  table,
-  tbody,
-  tr,
-  td {
-    display: block;
+  .choice:disabled {
+    cursor: not-allowed;
+    color: var(--color-text-subtle);
   }
 
-  tr {
-    padding: var(--space-2) 0;
-    border-top: 1px solid var(--color-border-soft);
+  .check {
+    color: var(--color-accent);
   }
+}
 
-  td {
-    border-top: none;
-    padding: var(--space-1-5) var(--space-6);
-  }
-
-  td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    font-size: var(--text-md);
-    font-weight: var(--weight-regular);
-    color: var(--color-text-soft);
-    margin-bottom: var(--space-0-5);
-  }
-
-  .row-actions {
-    text-align: left;
-  }
-
-  .level-form button {
-    margin-top: 0;
-  }
+.submit {
+  margin-top: var(--space-4);
 }

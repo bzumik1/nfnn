@@ -12,6 +12,7 @@ import {
   inject,
   Injector,
   linkedSignal,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -24,6 +25,7 @@ import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { followScrollEdge } from './scroll-edge';
+import { followLargeTitle, LargeTitleWatch } from './large-title';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AccountPortrait } from '../account-sheet/account-portrait';
@@ -70,19 +72,40 @@ export class AppHeader {
     computation: () => false,
   });
   protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
+  protected readonly titleInEdge = computed(() => this.compact() && this.parent() !== null);
+  protected readonly edgeTitle = signal('');
+  protected readonly edgeTitleShown = signal(false);
 
   constructor() {
     const document = inject(DOCUMENT);
     let releaseScrollEdge: (() => void) | null = null;
+    let largeTitle: LargeTitleWatch | null = null;
     afterNextRender(() => {
-      releaseScrollEdge = followScrollEdge(document, this.header().nativeElement);
+      const header = this.header().nativeElement;
+      releaseScrollEdge = followScrollEdge(document, header);
+      largeTitle = followLargeTitle(document, header, (title) => this.showInEdge(title));
+      largeTitle.check();
     });
-    inject(DestroyRef).onDestroy(() => releaseScrollEdge?.());
+    inject(DestroyRef).onDestroy(() => {
+      releaseScrollEdge?.();
+      largeTitle?.release();
+    });
+    effect(() => {
+      this.path();
+      untracked(() => afterNextRender(() => largeTitle?.check(), { injector: this.injector }));
+    });
     effect(() => {
       if (this.auth.donor() !== null && this.auth.isAdmin()) {
         untracked(() => this.portraits.ask());
       }
     });
+  }
+
+  private showInEdge(title: string | null): void {
+    if (title !== null) {
+      this.edgeTitle.set(title);
+    }
+    this.edgeTitleShown.set(title !== null);
   }
 
   protected back(): void {

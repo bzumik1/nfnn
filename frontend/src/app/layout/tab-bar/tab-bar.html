@@ -2,14 +2,17 @@
   #bar
   class="tab-bar"
   [class.tab-bar--under-keyboard]="keyboard.isOpen()"
+  [class.tab-bar--dragging]="dragging()"
   [attr.aria-label]="label"
 >
+  <span #pill class="tab-bar-pill" aria-hidden="true"></span>
   <ul class="tab-bar-list">
     @for (tab of tabs; track tab.id) {
       <li class="tab-bar-item">
         <a
           class="tab"
-          [class.tab--current]="current() === tab.id"
+          [class.tab--current]="shown() === tab.id"
+          [class.tab--under-finger]="underFinger() === tab.id"
           [href]="hrefOf(tab)"
           [attr.aria-current]="
             current() === tab.id ? (memory.isAtRoot(tab) ? 'page' : 'true') : null
@@ -21,66 +24,31 @@
               <svg
                 class="tab-icon"
                 aria-hidden="true"
-                [attr.viewBox]="star.viewBox"
-                fill="none"
-                stroke="currentColor"
-                stroke-linejoin="round"
+                [attr.viewBox]="starGlyphViewBox"
+                fill="currentColor"
               >
-                <path vector-effect="non-scaling-stroke" [attr.d]="star.path" />
+                <path [attr.d]="star.path" />
               </svg>
             }
             @case ('news') {
-              <svg
-                class="tab-icon"
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect
-                  vector-effect="non-scaling-stroke"
-                  x="4"
-                  y="3"
-                  width="16"
-                  height="18"
-                  rx="2"
+              <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  fill-rule="evenodd"
+                  d="M7.2 2.5h9.6a3.2 3.2 0 0 1 3.2 3.2v12.6a3.2 3.2 0 0 1-3.2 3.2H7.2A3.2 3.2 0 0 1 4 18.3V5.7a3.2 3.2 0 0 1 3.2-3.2zM8.65 7h6.7a.95.95 0 0 1 0 1.9h-6.7a.95.95 0 0 1 0-1.9zm0 4h6.7a.95.95 0 0 1 0 1.9h-6.7a.95.95 0 0 1 0-1.9zm0 4h3.5a.95.95 0 0 1 0 1.9h-3.5a.95.95 0 0 1 0-1.9z"
                 />
-                <path vector-effect="non-scaling-stroke" d="M8 8h8M8 12h8M8 16h5" />
               </svg>
             }
             @case ('projects') {
-              <svg
-                class="tab-icon"
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
                 <path
-                  vector-effect="non-scaling-stroke"
-                  d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.6 3.9 4 7.4 4c2 0 3.6 1.1 4.6 2.7C13 5.1 14.6 4 16.6 4c3.5 0 5.8 3.6 4.6 7.1-1.7 4.8-9.2 9.4-9.2 9.4z"
+                  d="M12 20.8c-.3 0-.6-.1-.9-.3C6.2 16.6 2.3 13.2 2.3 8.9c0-3.1 2.4-5.4 5.4-5.4 1.8 0 3.3.9 4.3 2.3 1-1.4 2.5-2.3 4.3-2.3 3 0 5.4 2.3 5.4 5.4 0 4.3-3.9 7.7-8.8 11.6-.3.2-.6.3-.9.3z"
                 />
               </svg>
             }
             @case ('donate') {
-              <svg
-                class="tab-icon"
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect vector-effect="non-scaling-stroke" x="3" y="8" width="18" height="4" rx="1" />
-                <path vector-effect="non-scaling-stroke" d="M12 8v13M19 12v9H5v-9" />
+              <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
                 <path
-                  vector-effect="non-scaling-stroke"
-                  d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"
+                  d="M11.2 7C10.4 4.6 9 3 7.6 3 6.3 3 5.4 3.9 5.4 5S6.4 7 7.8 7zm1.6 0c.8-2.4 2.2-4 3.6-4 1.3 0 2.2.9 2.2 2s-1 2-2.4 2zM4.1 7.8h6a1.1 1.1 0 0 1 1.1 1.1v1.7a1.1 1.1 0 0 1-1.1 1.1h-6A1.1 1.1 0 0 1 3 10.6V8.9a1.1 1.1 0 0 1 1.1-1.1zm9.8 0h6A1.1 1.1 0 0 1 21 8.9v1.7a1.1 1.1 0 0 1-1.1 1.1h-6a1.1 1.1 0 0 1-1.1-1.1V8.9a1.1 1.1 0 0 1 1.1-1.1zM5.9 12.9h3.8a1.5 1.5 0 0 1 1.5 1.5v5.4a1.5 1.5 0 0 1-1.5 1.5H5.9a1.5 1.5 0 0 1-1.5-1.5v-5.4a1.5 1.5 0 0 1 1.5-1.5zm8.4 0h3.8a1.5 1.5 0 0 1 1.5 1.5v5.4a1.5 1.5 0 0 1-1.5 1.5h-3.8a1.5 1.5 0 0 1-1.5-1.5v-5.4a1.5 1.5 0 0 1 1.5-1.5z"
                 />
               </svg>
             }

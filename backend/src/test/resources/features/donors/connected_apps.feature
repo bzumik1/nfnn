@@ -152,6 +152,7 @@ Feature: An administrator connects an application such as Claude to the administ
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
       | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
+      | DELETE | /api/admin/donations/bank-logos/0800                                |
       | PUT    | /api/admin/donations/receipt-signatory                              |
       | GET    | /api/admin/donations/receipt-signatures/{id}                        |
       | GET    | /api/admin/donations/receipt-images/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee |

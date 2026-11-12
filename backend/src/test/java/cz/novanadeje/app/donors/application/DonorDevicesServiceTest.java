@@ -52,7 +52,7 @@ class DonorDevicesServiceTest {
     }
 
     @Test
-    @DisplayName("Given three signed-in devices, when they are listed from one of them, then that one comes first marked current and the rest follow by their last use")
+    @DisplayName("Given three signed-in devices, when they are listed from one of them, then that one comes first marked current and the rest follow by their last use, each with its kind of session")
     void should_list_current_first_then_by_last_use_when_listed_given_three_devices() {
         DonorDevice current = usedAt(SIGNED_IN.plusSeconds(60));
         DonorDevice older = usedAt(SIGNED_IN.plusSeconds(600));
@@ -63,7 +63,7 @@ class DonorDevicesServiceTest {
 
         assertThat(listed).extracting(DeviceView::id).containsExactly(current.id(), newer.id(), older.id());
         assertThat(listed).extracting(DeviceView::current).containsExactly(true, false, false);
-        assertThat(listed.getFirst()).isEqualTo(new DeviceView(current.id(), IPHONE_SAFARI, SIGNED_IN, SIGNED_IN.plusSeconds(60), true));
+        assertThat(listed.getFirst()).isEqualTo(new DeviceView(current.id(), IPHONE_SAFARI, SessionKind.REMEMBERED, SIGNED_IN, SIGNED_IN.plusSeconds(60), true));
     }
 
     @Test

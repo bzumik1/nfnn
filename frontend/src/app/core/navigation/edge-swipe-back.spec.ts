@@ -3,8 +3,10 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { appConfig } from '../../app.config';
+import { DirtyForms } from '../updates/dirty-forms';
 import { BackTarget } from './back-target';
 import { EdgeSwipeBack, edgeSwipeBackAtStart } from './edge-swipe-back';
+import { PageTransitions, SwipePreview } from './page-transitions';
 import { Chrome, RouteChrome } from './route-chrome';
 
 interface Device {
@@ -22,7 +24,13 @@ const IPHONE_HOME_SCREEN: Device = { standalone: true, maxTouchPoints: 5 };
 const IPHONE_SAFARI_TAB: Device = { standalone: false, maxTouchPoints: 5 };
 
 let location: { back: ReturnType<typeof vi.fn> };
-let backTarget: { canGoBack: boolean; back: ReturnType<typeof vi.fn> };
+let backTarget: {
+  canGoBack: boolean;
+  back: ReturnType<typeof vi.fn>;
+  destination: ReturnType<typeof vi.fn>;
+};
+let transitions: { startSwipe: ReturnType<typeof vi.fn> };
+let dirty: boolean;
 let chrome: ReturnType<typeof signal<Chrome>>;
 let pendingNavigation: ReturnType<typeof signal<object | null>>;
 let page: HTMLElement;
@@ -52,6 +60,8 @@ function runOn(device: Device): void {
       edgeSwipeBackAtStart,
       { provide: Location, useValue: location },
       { provide: BackTarget, useValue: backTarget },
+      { provide: PageTransitions, useValue: transitions },
+      { provide: DirtyForms, useValue: { any: () => dirty } },
       { provide: RouteChrome, useValue: { current: chrome.asReadonly() } },
       { provide: Router, useValue: { currentNavigation: pendingNavigation.asReadonly() } },
     ],
@@ -92,8 +102,15 @@ const ACROSS: readonly Point[] = [
 ];
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
   location = { back: vi.fn() };
-  backTarget = { canGoBack: true, back: vi.fn() };
+  backTarget = {
+    canGoBack: true,
+    back: vi.fn(),
+    destination: vi.fn(() => ({ kind: 'step', depth: 0, path: '/aktuality' })),
+  };
+  transitions = { startSwipe: vi.fn(() => null) };
+  dirty = false;
   chrome = signal(chromeWith('/aktuality'));
   pendingNavigation = signal<object | null>(null);
   page = document.createElement('main');
@@ -112,6 +129,7 @@ afterEach(() => {
   document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
   delete (navigator as { standalone?: boolean }).standalone;
   delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
+  delete (window as { innerWidth?: number }).innerWidth;
 });
 
 describe('Given the app opened from the home screen of an iPhone', () => {
@@ -144,7 +162,30 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     expect(backTarget.back).not.toHaveBeenCalled();
   });
 
-  it('when a swipe from the middle of the screen goes a third of the screen across, then the app goes back as Zpět does', () => {
+  it('when a swipe goes a third of the screen across and rests before letting go, then nothing happens', () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 90, y: 302, at: 200 },
+      { x: 160, y: 304, at: 400 },
+      { x: 160, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).not.toHaveBeenCalled();
+    expect(location.back).not.toHaveBeenCalled();
+  });
+
+  it('when a swipe goes past half the screen and rests before letting go, then the app goes back as Zpět does', () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when a swipe from the middle of the screen moves on across as the finger lets go, then the app goes back as Zpět does', () => {
     drag(page, [
       { x: 160, y: 300, at: 0 },
       { x: 260, y: 305, at: 200 },
@@ -355,6 +396,133 @@ describe('Given the app opened from the home screen of an iPhone', () => {
     drag(dialog, ACROSS);
 
     expect(dialog.open).toBe(true);
+  });
+});
+
+describe('Given the app opened from the home screen of an iPhone, which shows the page behind the finger', () => {
+  let preview: {
+    follow: ReturnType<typeof vi.fn>;
+    settle: ReturnType<typeof vi.fn>;
+    slideBack: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    preview = {
+      follow: vi.fn(),
+      settle: vi.fn(() => Promise.resolve()),
+      slideBack: vi.fn(() => Promise.resolve()),
+    };
+    transitions.startSwipe.mockImplementation(() => preview as SwipePreview);
+    runOn(IPHONE_HOME_SCREEN);
+  });
+
+  it('when a finger takes the page, then the page Zpět leads to shows under it and the page follows the finger across', () => {
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 60, y: 302, at: 40 });
+    touch('touchmove', page, { x: 140, y: 304, at: 80 });
+
+    expect(backTarget.destination).toHaveBeenCalledWith('/aktuality');
+    expect(transitions.startSwipe).toHaveBeenCalledExactlyOnceWith({
+      kind: 'step',
+      depth: 0,
+      path: '/aktuality',
+    });
+    expect(preview.follow.mock.calls).toEqual([[40], [120]]);
+  });
+
+  it('when the finger has not taken the page yet, then nothing shows under it', () => {
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 25, y: 302, at: 40 });
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+  });
+
+  it('when the finger lets go past half the width, then the page slides off and only then the app goes back as Zpět does', async () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+
+    expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ completes: true, to: 390 }),
+    );
+    expect(backTarget.back).not.toHaveBeenCalled();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when the finger lets go short of half the width, then the page slides back and the app stays', async () => {
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 90, y: 302, at: 200 },
+      { x: 160, y: 304, at: 400 },
+      { x: 160, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+
+    expect(preview.settle).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ completes: false, to: 0 }),
+    );
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page holds unsaved input, then the page slides back first and the step back then asks as Zpět does', async () => {
+    dirty = true;
+
+    drag(page, [
+      { x: 20, y: 300, at: 0 },
+      { x: 120, y: 302, at: 200 },
+      { x: 230, y: 304, at: 400 },
+      { x: 230, y: 304, at: 700 },
+    ]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(preview.settle).not.toHaveBeenCalled();
+    expect(preview.slideBack).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).toHaveBeenCalledExactlyOnceWith('/aktuality');
+  });
+
+  it('when the system cancels the touch while the page follows, then the page slides back and the app stays', async () => {
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 300, y: 300, at: 100 });
+    touch('touchcancel', page, { x: 300, y: 300, at: 150 });
+    await Promise.resolve();
+
+    expect(preview.slideBack).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when the page went back by itself during the swipe, then the page slides back and the app takes no second step', async () => {
+    touch('touchstart', page, { x: 20, y: 300, at: 0 });
+    touch('touchmove', page, { x: 300, y: 300, at: 100 });
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    touch('touchend', page, { x: 300, y: 300, at: 110 });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(preview.slideBack).toHaveBeenCalledTimes(1);
+    expect(backTarget.back).not.toHaveBeenCalled();
+  });
+
+  it('when a dialog is open, then no page shows under the finger and the swipe closes the dialog as before', () => {
+    openDialog();
+
+    drag(page, ACROSS);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
+    expect(location.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the page is a tab root, then no page shows under the finger', () => {
+    chrome.set(chromeWith(null));
+
+    drag(page, ACROSS);
+
+    expect(transitions.startSwipe).not.toHaveBeenCalled();
   });
 });
 

@@ -249,15 +249,18 @@ describe('Given a dialog and the press that opens it', () => {
     fixture.nativeElement.remove();
   });
 
-  it('when a finger or a mouse opens it, then the dialog itself holds the focus, so no control shows a focus ring nobody asked for', () => {
+  const title = () => fixture.nativeElement.querySelector('#title') as HTMLElement;
+
+  it('when a finger or a mouse opens it, then its title holds the focus, so no control shows a focus ring nobody asked for', () => {
     openBy(new Event('pointerdown', { bubbles: true }));
 
-    expect(document.activeElement).toBe(native());
+    expect(document.activeElement).toBe(title());
   });
 
-  it('when a finger or a mouse opens it, then the dialog itself stays out of the tab order', () => {
+  it('when a finger or a mouse opens it, then its title and the dialog itself stay out of the tab order', () => {
     openBy(new Event('pointerdown', { bubbles: true }));
 
+    expect(title().getAttribute('tabindex')).toBe('-1');
     expect(native().getAttribute('tabindex')).toBe('-1');
   });
 
@@ -267,10 +270,18 @@ describe('Given a dialog and the press that opens it', () => {
     expect(document.activeElement).not.toBe(native());
   });
 
-  it('when a finger opens it and a field asks for the focus, then the field keeps it', () => {
+  it('when a finger opens it and a field asks for the focus, then its title takes the focus all the same, so the field shows no ring after a tap', () => {
     fixture.componentInstance.fieldTakesFocus.set(true);
 
     openBy(new Event('pointerdown', { bubbles: true }));
+
+    expect(document.activeElement).toBe(title());
+  });
+
+  it('when the keyboard opens it and a field asks for the focus, then the field takes it', () => {
+    fixture.componentInstance.fieldTakesFocus.set(true);
+
+    openBy(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
 
     expect(document.activeElement?.id).toBe('field');
   });
@@ -992,6 +1003,82 @@ describe('Given a dialog and the history entry it keeps', () => {
 
     expect(history.opened).toBe(0);
     expect(history.closed).toBe(0);
+  });
+});
+
+@Component({
+  imports: [Dialog],
+  template: `
+    <app-dialog labelledBy="title" [depth]="depth()" (steppedBack)="steppedBack()">
+      <h2 id="title">Název</h2>
+    </app-dialog>
+  `,
+})
+class SteppedHost {
+  readonly depth = signal(0);
+  readonly keepsStep = signal(false);
+  stepsBack = 0;
+
+  steppedBack(): void {
+    this.stepsBack++;
+    if (!this.keepsStep()) {
+      this.depth.set(0);
+    }
+  }
+}
+
+describe('Given a dialog whose page moves on to a further step inside it', () => {
+  let fixture: ComponentFixture<SteppedHost>;
+  let history: FakeDialogHistory;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [SteppedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+    fixture = TestBed.createComponent(SteppedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the page moves one step deeper, then the dialog asks for a history step of its own', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(history.steps.at(-1)).toBe(1);
+  });
+
+  it('when the visitor goes back from that step, then the page is told to step back and the dialog stays open', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.stepsBack).toBe(1);
+    expect(history.steps.at(-1)).toBe(0);
+    expect(fixture.nativeElement.querySelector('dialog')?.open).toBe(true);
+  });
+
+  it('when the page keeps its step after the visitor went back, then the dialog asks for that step again', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.componentInstance.keepsStep.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const showStep = vi.spyOn(history, 'showStep');
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(showStep).toHaveBeenCalledWith(1, history.listener);
   });
 });
 

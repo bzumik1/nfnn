@@ -8,7 +8,8 @@ import {
   servePaymentDetails,
   serveRecentDonors,
 } from '../baseline/screen-mocks';
-import { administrator, donor, mockDonorApi, session } from '../donor-session';
+import { LOGO_IMAGE_ID, mockBankLogos } from '../bank-logos';
+import { administrator, bankAccountItem, donor, mockDonorApi, session } from '../donor-session';
 import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import { serveReceiptKeys, serveReceiptStatus, SINGLE_RECEIPT } from '../receipt-verification';
 import { FOUR_DONORS, mockYearlyReceipts } from '../yearly-receipts';
@@ -94,6 +95,27 @@ async function newsFeed(ui: Ui): Promise<void> {
   );
   await visit(ui, '/aktuality');
   await ui.waitVisible({ css: '.story' });
+}
+
+const PAGED_PROJECTS = Array.from({ length: 10 }, (_, index) => ({
+  ...project,
+  id: `paged-${index}`,
+  slug: `projekt-${index + 11}`,
+  title: `Projekt ${index + 11}`,
+}));
+
+async function projectsMiddlePage(ui: Ui): Promise<void> {
+  await mockDonorApi(ui.routes);
+  await mockPublicContent(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: { items: PAGED_PROJECTS, page: 1, size: 10, total: 25, hasMore: true },
+      }),
+  );
+  await visit(ui, '/projekty?strana=2');
+  await ui.waitVisible({ css: 'nav.pages' });
 }
 
 async function donorPage(ui: Ui, path: string): Promise<void> {
@@ -215,6 +237,11 @@ export const STEPS: Step[] = [
     open: (ui) => publicPage(ui, `/projekty/${project.slug}`),
   },
   {
+    id: 'projects-page',
+    title: 'a middle page of the projects with its paging',
+    open: projectsMiddlePage,
+  },
+  {
     id: 'verify-receipt',
     title: 'the verification of a scanned receipt',
     open: async (ui) => {
@@ -245,6 +272,37 @@ export const STEPS: Step[] = [
     id: 'donor-details',
     title: "the donor's details",
     open: (ui) => donorPage(ui, '/darce/udaje'),
+  },
+  {
+    id: 'donor-bank-accounts',
+    title: "the donor's bank accounts with a bank logo and a monogram",
+    open: async (ui) => {
+      await mockDonorApi(ui.routes, donorWithDonations);
+      await ui.routes.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000001',
+                  accountNumber: '6020809023/0800',
+                  donationCount: 1,
+                  totalAmountMinor: 200,
+                }),
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000002',
+                  accountNumber: '123-7092740277/2010',
+                }),
+              ],
+            },
+          }),
+      );
+      await mockBankLogos(ui.routes, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await rememberedSession(ui, donor);
+      await visit(ui, '/darce/ucty');
+      await ui.waitVisible({ css: '.accounts-list' });
+    },
   },
   {
     id: 'donor-device-data-delete',
@@ -386,6 +444,11 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'admin-sent-report',
+    title: 'a sent monthly report with its sendings',
+    open: (ui) => adminPage(ui, '/sprava/prehledy/2026-09'),
+  },
+  {
     id: 'admin-settings',
     title: 'the settings in the administration',
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
@@ -401,9 +464,27 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/logy/soubor?nazev=backend.log'),
   },
   {
+    id: 'admin-log-levels',
+    title: 'the log levels',
+    open: (ui) => adminPage(ui, '/sprava/logy/urovne'),
+  },
+  {
     id: 'admin-server-state',
     title: 'the server state',
     open: (ui) => adminPage(ui, '/sprava/logy/stav'),
+  },
+  {
+    id: 'admin-backups',
+    title: 'the backups, their key and their schedule in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/zalohy');
+      await ui.waitVisible({ css: '#backup-time' });
+    },
+  },
+  {
+    id: 'admin-backup-history',
+    title: 'the history of backups by day in the administration',
+    open: (ui) => adminPage(ui, '/sprava/zalohy/historie'),
   },
   {
     id: 'admin-more',

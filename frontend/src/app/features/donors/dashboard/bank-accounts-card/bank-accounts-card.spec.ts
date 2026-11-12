@@ -127,6 +127,19 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
 
+  it('when accounts arrive, then each Czech account starts its row with the mark of its bank and a foreign account has none', async () => {
+    await respond([
+      bankAccount({ id: 'a-1', accountNumber: '2000145399/0800' }),
+      bankAccount({ id: 'a-2', accountNumber: 'CZ6508000000192000145399' }),
+    ]);
+
+    const [czech, foreign] = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.account-main'),
+    ];
+    expect(czech.firstElementChild?.tagName).toBe('APP-BANK-LOGO');
+    expect(foreign.querySelector('app-bank-logo')).toBeNull();
+  });
+
   describe('when the site does not name the bank of an account itself', () => {
     beforeEach(async () => {
       await respond([

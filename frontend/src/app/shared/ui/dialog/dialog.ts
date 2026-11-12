@@ -53,7 +53,10 @@ export class Dialog implements AfterViewInit, OnDestroy {
   readonly unsavedInput = input(false);
   readonly alert = input(false);
   readonly pulledAway = input(0);
+  readonly depth = input(0);
+  readonly showsClose = input(true);
   readonly dismissed = output<void>();
+  readonly steppedBack = output<void>();
   protected readonly announcer = inject(DialogAnnouncer);
 
   private readonly areaPresentation = inject(DIALOG_PRESENTATION);
@@ -85,7 +88,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private readonly history = inject(DialogHistory);
   private readonly injector = inject(Injector);
   private readonly historyEntry: DialogHistoryListener = {
-    stepBack: () => undefined,
+    stepBack: () => this.steppedBackByHistory(),
     close: () => this.closedByBack(),
   };
   private readonly suspension = inject(DIALOG_SUSPENSION);
@@ -106,6 +109,10 @@ export class Dialog implements AfterViewInit, OnDestroy {
       const suspended = this.suspension();
       untracked(() => this.follow(suspended));
     });
+    effect(() => {
+      const depth = this.depth();
+      untracked(() => this.showDepth(depth));
+    });
   }
 
   ngAfterViewInit(): void {
@@ -117,6 +124,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
     if (this.pushesHistory()) {
       this.history.open(this.historyEntry);
+      this.showDepth(this.depth());
     }
   }
 
@@ -308,9 +316,22 @@ export class Dialog implements AfterViewInit, OnDestroy {
   private showModal(): void {
     const dialog = this.element().nativeElement;
     dialog.showModal();
-    if (this.modality.lastPressByPointer() && dialog.querySelector('[autofocus]') === null) {
-      dialog.focus({ preventScroll: true });
+    if (this.modality.lastPressByPointer()) {
+      this.focusTitle(dialog);
     }
+  }
+
+  private focusTitle(dialog: HTMLDialogElement): void {
+    const [titleId] = this.labelledBy().split(/\s+/);
+    const title = this.document.getElementById(titleId);
+    if (title === null || !dialog.contains(title)) {
+      dialog.focus({ preventScroll: true });
+      return;
+    }
+    if (!title.hasAttribute('tabindex')) {
+      title.setAttribute('tabindex', '-1');
+    }
+    title.focus({ preventScroll: true });
   }
 
   private follow(suspended: boolean): void {
@@ -418,6 +439,17 @@ export class Dialog implements AfterViewInit, OnDestroy {
     this.dragging.set(false);
     this.dragOffset.set(0);
     this.sheetPull.set(0);
+  }
+
+  private showDepth(depth: number): void {
+    if (this.viewReady && !this.destroyed && this.pushesHistory()) {
+      this.history.showStep(depth, this.historyEntry);
+    }
+  }
+
+  private steppedBackByHistory(): void {
+    this.steppedBack.emit();
+    afterNextRender(() => this.showDepth(this.depth()), { injector: this.injector });
   }
 
   private closedByBack(): void {

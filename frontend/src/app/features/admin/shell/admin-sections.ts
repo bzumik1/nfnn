@@ -6,6 +6,7 @@ export const ADMIN_HOME_PATH = '/sprava';
 export const ADMIN_MORE_PATH = '/sprava/vice';
 export const ADMIN_PAYMENTS_PATH = '/sprava/platby';
 export const ADMIN_LOGS_PATH = '/sprava/logy';
+export const ADMIN_BACKUPS_PATH = '/sprava/zalohy';
 
 export const ADMIN_OVERVIEW: SideNavGroup = {
   id: 'admin-nav-home',
@@ -20,7 +21,7 @@ export const ADMIN_DAILY: SideNavGroup = {
     { path: ADMIN_PAYMENTS_PATH, label: $localize`:@@admin.nav.payments:Platby z banky` },
     { path: '/sprava/darci', label: $localize`:@@admin.nav.donors:Dárci` },
     { path: '/sprava/aktuality', label: $localize`:@@admin.nav.news:Aktuality` },
-    { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Projekty` },
+    { path: '/sprava/projekty', label: $localize`:@@admin.nav.projects:Pomáháme` },
   ],
 };
 
@@ -36,7 +37,7 @@ export const ADMIN_OCCASIONAL: SideNavGroup = {
     { path: '/sprava/lide-fondu', label: $localize`:@@admin.nav.people:Lidé fondu` },
     { path: '/sprava/spravci', label: $localize`:@@admin.nav.administrators:Správci` },
     { path: '/sprava/prehledy', label: $localize`:@@admin.nav.report:Měsíční e-mail` },
-    { path: '/sprava/zalohy', label: $localize`:@@admin.nav.backups:Zálohy` },
+    { path: ADMIN_BACKUPS_PATH, label: $localize`:@@admin.nav.backups:Zálohy` },
     { path: '/sprava/upozorneni', label: $localize`:@@admin.nav.alerts:Upozornění` },
     { path: '/sprava/historie', label: $localize`:@@admin.nav.actions:Historie změn` },
   ],
@@ -52,6 +53,7 @@ export const ADMIN_TECHNICAL: SideNavGroup = {
       path: '/sprava/starsi-symboly',
       label: $localize`:@@admin.nav.symbolClaims:Odpovědi o starších symbolech`,
     },
+    { path: '/sprava/loga-bank', label: $localize`:@@admin.nav.bankLogos:Loga bank` },
   ],
 };
 

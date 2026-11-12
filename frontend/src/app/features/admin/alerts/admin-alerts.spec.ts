@@ -21,6 +21,7 @@ import {
 import { AdminPushResponse } from '../admin-api';
 import { adminPush, PUSH_PUBLIC_KEY, pushSubscription } from '../testing/admin-fixtures';
 import { AdminAlerts } from './admin-alerts';
+import { DeviceAlertMarks } from './device-alert-marks';
 
 const PUSH_URL = '/api/admin/operations/push';
 const DEVICE: DevicePushSubscription = {
@@ -285,6 +286,9 @@ describe('Given an administrator on the alerts page', () => {
 
     expect(status()).toContain('Upozornění jsme na tomto zařízení zapnuli.');
     expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
+    await vi.waitFor(async () =>
+      expect(await TestBed.inject(DeviceAlertMarks).ownedBy(sampleDonor().id)).toBe(true),
+    );
     http
       .expectOne({ method: 'GET', url: PUSH_URL })
       .flush(adminPush({ subscriptions: [pushSubscription()] }));
@@ -562,6 +566,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and this device is turned off, then it is removed on the server, unsubscribed in the browser and offered again', async () => {
+      await TestBed.inject(DeviceAlertMarks).markOwner(sampleDonor().id);
       button('Vypnout na tomto zařízení').click();
       await settle();
       http
@@ -571,6 +576,7 @@ describe('Given an administrator on the alerts page', () => {
 
       expect(push.unsubscribe).toHaveBeenCalled();
       expect(status()).toContain('Upozornění jsme na tomto zařízení vypnuli.');
+      expect(await TestBed.inject(DeviceAlertMarks).ownedBy(sampleDonor().id)).toBe(false);
       expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
       expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');
     });

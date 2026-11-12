@@ -28,6 +28,11 @@
 
   --color-on-image: #fdfcf7;
   --color-image-shade: #14201b;
+  --hero-top-scrim: linear-gradient(
+    to bottom,
+    color-mix(in srgb, #000000 28%, transparent),
+    transparent 22%
+  );
   --color-backdrop: rgb(20 32 27 / 0.65);
 
   --color-border: #d6d3c8;
@@ -46,6 +51,8 @@
   --color-danger-border: #f2b8b5;
   --color-on-danger: #ffffff;
   --color-warning: #7a4a00;
+  --color-log-code: #1d5a52;
+  --color-log-warn: #9a5a00;
   --color-warning-bg: #fff8e7;
   --color-warning-border: #c98a12;
   --color-success: #166534;
@@ -165,6 +172,11 @@
   --duration-entrance: 0.6s;
   --duration-sheet: 0.2s;
   --ease-sheet: ease-in;
+  --duration-page: 0.2s;
+  --ease-page: ease-in;
+  --page-parallax: -50%;
+  --color-page-dim: color-mix(in srgb, var(--color-surface-inverse) 20%, transparent);
+  --shadow-page-edge: -3px 0 0 var(--color-border-field);
   --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
   --pressed-brightness: 0.8;
   --pressed-scale: 0.94;
@@ -219,10 +231,12 @@
 
   --content-max: 1140px;
   --header-height: 68px;
+  --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
     var(--text-sm),
     (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
   );
+  --text-account-number: min(var(--text-lg), 7vw);
   --side-nav-layout-max: 1280px;
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
@@ -255,10 +269,13 @@
   --text-sheet-body: 1rem;
   --text-sheet-subtitle: var(--text-sm);
   --text-sheet-footnote: var(--text-xs);
+  --text-bank-monogram: 40cqi;
+  --text-bank-monogram-long: 28cqi;
   --tab-bar-height: 60px;
   --tab-bar-gap: 15px;
   --tab-bar-gap-browser: 15px;
   --tab-pill-inset: 5px;
+  --tab-pill-drag-scale: 1.04;
   --tab-bar-max-width: 400px;
   --tab-bar-home-indicator-overlap: 15px;
   --tab-icon-size: 20px;
@@ -360,6 +377,8 @@
     --color-danger-bg: #3a1214;
     --color-danger-border: #b4474a;
     --color-warning: #fcd34d;
+    --color-log-code: #9fd8cc;
+    --color-log-warn: #fcd34d;
     --color-warning-bg: #2e2208;
     --color-success: #86efac;
     --color-success-bg: #0f2b1a;

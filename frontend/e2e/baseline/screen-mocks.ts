@@ -450,6 +450,46 @@ const adminAnswers: Record<string, unknown> = {
     nextReport: { month: '2026-10', dueOn: '2026-11-01' },
     lastEndedMonth: '2026-09',
   },
+  '/api/admin/donations/report/sent': {
+    month: '2026-09',
+    firstSentAt: '2026-10-01T05:00:12Z',
+    deliveries: [
+      {
+        sentAt: '2026-10-21T08:00:00Z',
+        byHand: true,
+        recipientCount: 1,
+        content: {
+          donors: { registered: 2, newInMonth: 1 },
+          donations: {
+            received: { count: 3, totalMinor: 85000, currency: 'CZK' },
+            paired: { count: 2, totalMinor: 70000, currency: 'CZK' },
+            receivedInYear: { count: 9, totalMinor: 240000, currency: 'CZK' },
+          },
+          unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+          bankImport: {
+            lastSucceededAt: '2026-10-21T07:00:00Z',
+            lastFailure: { kind: 'TRANSPORT', attemptedAt: '2026-10-21T06:00:00Z' },
+          },
+        },
+      },
+      {
+        sentAt: '2026-10-01T05:00:12Z',
+        byHand: false,
+        recipientCount: 1,
+        content: {
+          donors: { registered: 2, newInMonth: 1 },
+          donations: {
+            received: { count: 2, totalMinor: 70000, currency: 'CZK' },
+            paired: { count: 1, totalMinor: 55000, currency: 'CZK' },
+            receivedInYear: { count: 8, totalMinor: 225000, currency: 'CZK' },
+          },
+          unpairedPayments: { count: 1, totalMinor: 15000, currency: 'CZK' },
+          bankImport: { lastSucceededAt: '2026-10-01T04:00:00Z', lastFailure: null },
+        },
+      },
+    ],
+    recomputed: null,
+  },
   '/api/admin/operations/settings': fictionalSettings,
   '/api/admin/content/news': { items: [article, draft] },
   '/api/admin/content/projects': { items: [project] },

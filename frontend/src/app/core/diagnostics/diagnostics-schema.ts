@@ -54,6 +54,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/historie',
   '/sprava/hromadna-potvrzeni',
   '/sprava/lide-fondu',
+  '/sprava/loga-bank',
   '/sprava/logy',
   '/sprava/logy/soubor',
   '/sprava/logy/soubory',
@@ -64,6 +65,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/o-nas',
   '/sprava/platby',
   '/sprava/prehledy',
+  '/sprava/prehledy/:param',
   '/sprava/projekty',
   '/sprava/projekty/:param',
   '/sprava/projekty/nova',
@@ -72,6 +74,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/upozorneni',
   '/sprava/vice',
   '/sprava/zalohy',
+  '/sprava/zalohy/historie',
   '/zasady-ochrany-osobnich-udaju',
 ] as const;
 

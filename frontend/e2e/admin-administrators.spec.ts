@@ -202,4 +202,31 @@ test.describe('Given an administrator on the administrators page', () => {
     await expect(page.locator('.administrator-row')).toHaveCount(1);
     expect(calls).toEqual(['reset', 'DELETE']);
   });
+  for (const width of [390, 1280]) {
+    test(`when the list shows rows with notes ${width} px wide, then each avatar centres on the name, e-mail and badges, not on the notes`, async ({
+      page,
+    }) => {
+      await page.route(
+        (url) => url.pathname === ADMINISTRATORS,
+        (route) =>
+          route.fulfill({ json: { items: [jana, { ...petr, secondFactorEnabled: false }] } }),
+      );
+      await page.setViewportSize({ width, height: 900 });
+
+      await page.goto('/sprava/spravci');
+      const rows = page.locator('.administrator-row');
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0)).toContainText('Svůj účet spravujete');
+      await expect(rows.nth(1)).toContainText('Správa se mu otevře jen přístupovým klíčem.');
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const row of await rows.all()) {
+        const name = (await row.locator('.ui-person-row__name').boundingBox())!;
+        const badges = (await row.locator('.ui-person-row__badges').boundingBox())!;
+        const avatar = (await row.locator('app-avatar').boundingBox())!;
+        const blockCentre = (name.y + badges.y + badges.height) / 2;
+        expect(Math.abs(avatar.y + avatar.height / 2 - blockCentre)).toBeLessThanOrEqual(1);
+      }
+    });
+  }
 });

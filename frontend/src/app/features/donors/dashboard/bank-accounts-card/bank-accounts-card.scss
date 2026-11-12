@@ -105,6 +105,7 @@
 }
 
 .account {
+  container: account / inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -124,8 +125,38 @@
 }
 
 .account-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   flex: 1 1 320px;
   min-width: 0;
+}
+
+.account-logo {
+  margin-inline-end: var(--space-3);
+}
+
+.account-identity,
+.account-body {
+  grid-column: 2;
+  min-width: 0;
+}
+
+@include bp.container-down(account, tabs) {
+  .account-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-logo {
+    justify-self: start;
+    margin-inline-end: 0;
+    margin-block-end: var(--space-3);
+  }
+
+  .account-identity,
+  .account-body {
+    grid-column: 1;
+  }
 }
 
 .account-line {
@@ -136,9 +167,13 @@
 }
 
 .account-number {
-  font-size: var(--text-lg);
+  font-size: var(--text-account-number);
   font-weight: var(--weight-bold);
   color: var(--color-text);
+  flex-shrink: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .account-status {
@@ -577,6 +612,11 @@
   font-weight: var(--weight-bold);
   font-size: var(--text-md);
   cursor: pointer;
+}
+
+.account-action {
+  max-width: 100%;
+  white-space: normal;
 }
 
 @include bp.down(tablet) {

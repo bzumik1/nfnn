@@ -294,19 +294,17 @@ test.describe('Given an administrator', () => {
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
     expect(authorization).toEqual(['Bearer token-1']);
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
-    await expect(attention.locator('.attention-list > li')).toHaveText([
-      '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
-      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď. Otevřít zálohy',
-      'Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru se jménem. Nahrát podpis',
+    await expect(attention.getByRole('listitem')).toHaveText([
+      '1 platba čeká na přiřazení 150 Kč',
+      'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+      'Podepisující nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
     ]);
-    await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
-      'href',
-      '/sprava/platby',
-    );
-    await expect(attention.getByRole('link', { name: 'Nahrát podpis' })).toHaveAttribute(
-      'href',
-      '/sprava/lide-fondu',
-    );
+    await expect(
+      attention.getByRole('link', { name: '1 platba čeká na přiřazení 150 Kč' }),
+    ).toHaveAttribute('href', '/sprava/platby');
+    await expect(
+      attention.getByRole('link', { name: 'Podepisující nemá nahraný podpis' }),
+    ).toHaveAttribute('href', '/sprava/lide-fondu');
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
     await expect(backupsCard).toContainText('23. 10. 2026 3:00 (2 kB)');
     await expect(backupsCard.getByRole('link', { name: 'Otevřít zálohy' })).toHaveAttribute(
@@ -405,7 +403,7 @@ test.describe('Given an administrator', () => {
 
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     await expect(attention).toContainText(
-      'Platby z banky se nestahují (1× za sebou) a fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
+      'Platby z banky se nestahují 1× za sebou, fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
     );
     await expect(attention).toContainText('vytvořte nový token typu „Sledování účtu“');
     await expect(attention.getByRole('link', { name: 'Otevřít Nastavení' })).toHaveAttribute(
@@ -417,7 +415,7 @@ test.describe('Given an administrator', () => {
     );
   });
 
-  test('when the receipt signing key of the server fails its seal, then a red row leads to the key in the settings, which names it unpublished', async ({
+  test('when the receipt signing key of the server fails its seal, then an urgent row leads to the key in the settings, which names it unpublished', async ({
     page,
   }) => {
     const unpublished = {
@@ -440,9 +438,9 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     const row = attention.locator('.attention-signing-key');
     await expect(row).toHaveText(
-      'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+      'Naléhavé: Klíč k ověřovacím QR kódům není zveřejněný Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
     );
-    await row.getByRole('link', { name: 'Otevřít nastavení' }).click();
+    await row.getByRole('link', { name: /Klíč k ověřovacím QR kódům není zveřejněný/ }).click();
 
     await expect(page).toHaveURL(/\/sprava\/nastaveni#klic-k-overovacim-qr$/);
     await expect(

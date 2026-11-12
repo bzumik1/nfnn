@@ -7,6 +7,8 @@
     restartu backendu se úroveň vrátí sama. Změna se zapisuje do historie správy.
   </p>
 
+  <app-live-notice [notice]="notice()" />
+
   @switch (state()) {
     @case ('loading') {
       <p class="ui-load-state" role="status" i18n="@@admin.logs.level.loading">Načítáme úrovně…</p>
@@ -26,124 +28,27 @@
       </div>
     }
     @case ('ready') {
-      <section class="ui-card" aria-labelledby="logs-levels-title">
-        <h2 id="logs-levels-title" class="ui-card__title" i18n="@@admin.logs.level.title">
-          Úroveň logování
-        </h2>
-        <div class="ui-card__body">
-          <app-live-notice [notice]="levelNotice()" />
-          <form
-            #levelForm="ngForm"
-            class="level-form"
-            appFocusFirstInvalid
-            (ngSubmit)="setLevel(levelForm)"
-            novalidate
-          >
-            <app-form-field
-              label="Logger"
-              i18n-label="@@admin.logs.level.logger"
-              hint="ROOT, balíček nebo třída, třeba cz.novanadeje.app nebo org.hibernate.SQL."
-              i18n-hint="@@admin.logs.level.logger.hint"
-              [messages]="loggerMessages"
+      <div class="ui-groups groups">
+        @if (overrides().length > 0) {
+          <section class="overrides" aria-labelledby="levels-overrides-title">
+            <h2
+              id="levels-overrides-title"
+              class="ui-group-title"
+              i18n="@@admin.logs.level.overrides"
             >
-              <input
-                appFormControl
-                id="log-level-logger"
-                name="logger"
-                type="text"
-                list="log-level-loggers"
-                enterkeyhint="next"
-                autocomplete="off"
-                spellcheck="false"
-                maxlength="200"
-                [pattern]="loggerPattern"
-                [(ngModel)]="logger"
-                required
-              />
-              <datalist id="log-level-loggers">
-                @for (entry of loggers(); track entry.logger) {
-                  <option [value]="entry.logger"></option>
-                }
-              </datalist>
-            </app-form-field>
-            <app-form-field label="Úroveň" i18n-label="@@admin.logs.level.level">
-              <select appFormControl id="log-level-level" name="level" [(ngModel)]="level">
-                @for (option of levels; track option) {
-                  <option [ngValue]="option">{{ option }}</option>
-                }
-              </select>
-            </app-form-field>
-            <app-form-field
-              label="Na kolik minut"
-              i18n-label="@@admin.logs.level.minutes"
-              [messages]="minutesMessages"
-            >
-              <input
-                appFormControl
-                id="log-level-minutes"
-                name="minutes"
-                type="number"
-                inputmode="numeric"
-                enterkeyhint="done"
-                min="1"
-                [max]="maxMinutes"
-                [(ngModel)]="minutes"
-                required
-              />
-            </app-form-field>
-            <button
-              appNeedsConnection
-              type="submit"
-              class="ui-button ui-button--primary"
-              [disabled]="levelState() === 'loading'"
-            >
-              @if (levelState() === 'loading') {
-                <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
-              } @else {
-                <ng-container i18n="@@admin.logs.level.submit">Nastavit</ng-container>
-              }
-            </button>
-          </form>
-
-          <table class="levels">
-            <thead>
-              <tr>
-                <th i18n="@@admin.logs.level.col.logger">Logger</th>
-                <th i18n="@@admin.logs.level.col.configured">Nastaveno</th>
-                <th i18n="@@admin.logs.level.col.effective">Platí</th>
-                <th i18n="@@admin.logs.level.col.override">Dočasně</th>
-                <th class="visually-hidden" i18n="@@admin.logs.level.col.actions">Akce</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (entry of loggers(); track entry.logger) {
-                <tr [class.overridden]="entry.override !== null">
-                  <td data-label="Logger" i18n-data-label="@@admin.logs.level.col.logger">
-                    <span class="logger-name">{{ entry.logger }}</span>
-                  </td>
-                  <td data-label="Nastaveno" i18n-data-label="@@admin.logs.level.col.configured">
-                    @if (entry.configuredLevel; as configured) {
-                      {{ configured }}
-                    } @else {
-                      <span class="muted" i18n="@@admin.logs.level.inherited">zděděno</span>
-                    }
-                  </td>
-                  <td data-label="Platí" i18n-data-label="@@admin.logs.level.col.effective">
-                    {{ entry.effectiveLevel }}
-                  </td>
-                  <td data-label="Dočasně" i18n-data-label="@@admin.logs.level.col.override">
-                    @if (entry.override) {
-                      {{ describeOverride(entry) }}
-                    } @else {
-                      <span class="muted">–</span>
-                    }
-                  </td>
-                  <td class="row-actions">
-                    @if (entry.override) {
+              Dočasně změněno
+            </h2>
+            <ul class="ui-list ui-list--inset">
+              @for (entry of overrides(); track entry.logger) {
+                <li>
+                  <div class="ui-list__row">
+                    <span class="ui-list__title ui-mono logger-name">{{ entry.logger }}</span>
+                    <span class="ui-list__meta">{{ overrideText(entry) }}</span>
+                    <span class="ui-list__value">
                       <button
                         appNeedsConnection
                         type="button"
-                        class="ui-button"
+                        class="ui-button ui-button--small"
                         [disabled]="resetting() !== null"
                         [attr.aria-label]="resetLabel(entry)"
                         (click)="reset(entry)"
@@ -154,14 +59,204 @@
                           <ng-container i18n="@@admin.logs.level.resetNow">Vrátit</ng-container>
                         }
                       </button>
-                    }
-                  </td>
-                </tr>
+                    </span>
+                  </div>
+                </li>
               }
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </ul>
+          </section>
+        }
+
+        <section class="watched" aria-labelledby="levels-watched-title">
+          <h2 id="levels-watched-title" class="ui-group-title" i18n="@@admin.logs.level.watched">
+            Sledované loggery
+          </h2>
+          <ul class="ui-list ui-list--inset">
+            @for (entry of loggers(); track entry.logger) {
+              <li>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-list__row"
+                  aria-haspopup="dialog"
+                  (click)="edit(entry)"
+                >
+                  <span class="ui-list__title">{{ description(entry) ?? entry.logger }}</span>
+                  <span class="ui-list__meta">
+                    @if (description(entry)) {
+                      <span class="ui-mono">{{ entry.logger }}</span>
+                    }
+                    @if (entry.configuredLevel === null) {
+                      @if (description(entry)) {
+                        ·
+                      }
+                      <ng-container i18n="@@admin.logs.level.inherited">zděděno</ng-container>
+                    }
+                  </span>
+                  <span class="ui-list__value">{{ entry.effectiveLevel }}</span>
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </li>
+            }
+            <li>
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-list__row ui-list__row--action"
+                aria-haspopup="dialog"
+                (click)="edit(null)"
+                i18n="@@admin.logs.level.other"
+              >
+                Jiný logger…
+              </button>
+            </li>
+          </ul>
+        </section>
+      </div>
     }
   }
 </div>
+
+@if (editing(); as sheet) {
+  <app-dialog labelledBy="level-sheet-title" presentation="sheet" (dismissed)="closeSheet()">
+    <h2 id="level-sheet-title" class="sheet-title">
+      @if (sheet.logger; as logger) {
+        <ng-container i18n="@@admin.logs.level.sheetTitle">Úroveň loggeru</ng-container>
+        <span class="ui-mono">{{ logger }}</span>
+      } @else {
+        <ng-container i18n="@@admin.logs.level.sheetTitleOther">Úroveň jiného loggeru</ng-container>
+      }
+    </h2>
+    <form
+      #levelForm="ngForm"
+      class="level-form"
+      appFocusFirstInvalid
+      (ngSubmit)="save(levelForm)"
+      novalidate
+    >
+      @if (sheet.logger === null) {
+        <app-form-field
+          label="Logger"
+          i18n-label="@@admin.logs.level.logger"
+          hint="ROOT, balíček nebo třída, třeba cz.novanadeje.app nebo org.hibernate.SQL."
+          i18n-hint="@@admin.logs.level.logger.hint"
+          [messages]="loggerMessages"
+        >
+          <input
+            appFormControl
+            id="log-level-logger"
+            name="logger"
+            type="text"
+            enterkeyhint="done"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            maxlength="200"
+            [pattern]="loggerPattern"
+            [(ngModel)]="otherLogger"
+            required
+          />
+        </app-form-field>
+      }
+
+      <h3
+        class="ui-group-title choice-title"
+        id="level-choice-title"
+        i18n="@@admin.logs.level.level"
+      >
+        Úroveň
+      </h3>
+      <div
+        class="ui-list ui-list--inset choices"
+        appRadioGroup
+        aria-labelledby="level-choice-title"
+      >
+        @for (option of levels; track option) {
+          <button
+            type="button"
+            role="radio"
+            class="ui-list__row choice"
+            [attr.aria-checked]="level() === option"
+            [tabindex]="level() === option ? 0 : -1"
+            [disabled]="option === 'TRACE' && !traceAllowed()"
+            (click)="chooseLevel(option)"
+          >
+            <span class="ui-list__title ui-mono">{{ option }}</span>
+            @if (level() === option) {
+              <svg
+                class="ui-list__chevron check"
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="5 12.5 10 17.5 19 7" />
+              </svg>
+            }
+          </button>
+        }
+      </div>
+      @if (!traceAllowed()) {
+        <p class="ui-group-note trace-note" i18n="@@admin.logs.level.traceOnlyOwn">
+          TRACE jen pro cz.novanadeje.app
+        </p>
+      }
+
+      <h3
+        class="ui-group-title choice-title"
+        id="level-duration-title"
+        i18n="@@admin.logs.level.duration"
+      >
+        Na jak dlouho
+      </h3>
+      <div class="ui-segmented" appRadioGroup aria-labelledby="level-duration-title">
+        @for (option of durations; track option.minutes) {
+          <button
+            type="button"
+            role="radio"
+            [class.is-active]="duration() === option"
+            [attr.aria-checked]="duration() === option"
+            [tabindex]="duration() === option ? 0 : -1"
+            (click)="chooseDuration(option)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
+      @if (sheetError() !== '') {
+        <p class="ui-notice ui-notice--alert" role="alert">{{ sheetError() }}</p>
+      }
+      <button
+        appNeedsConnection
+        type="submit"
+        class="ui-button ui-button--primary submit"
+        [disabled]="saving()"
+      >
+        @if (saving()) {
+          <ng-container i18n="@@admin.logs.level.busy">Nastavujeme…</ng-container>
+        } @else {
+          {{ submitLabel() }}
+        }
+      </button>
+    </form>
+  </app-dialog>
+}
