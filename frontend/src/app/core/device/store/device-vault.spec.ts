@@ -37,6 +37,24 @@ const NEWCOMER: DeviceAccount = {
   email: JANA.email,
   userHandle: userHandleOf('0190c3a2-7b1e-7cc1-8a52-000000000003'),
 };
+const JANA_PROFILE = {
+  id: '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a',
+  type: 'PERSON',
+  name: 'Jana Kanárková',
+  email: JANA.email,
+  roles: ['DONOR'],
+  address: { street: 'Kanárkova 17', postalCode: '40001', city: 'Zlatohlávkov' },
+  companyIdentifier: null,
+  variableSymbol: '7319046285',
+};
+const PETR_PROFILE = {
+  ...JANA_PROFILE,
+  id: '0190c3a2-7b1e-7cc1-8a52-000000000002',
+  name: 'Petr Kanárek',
+  email: PETR.email,
+};
+const NOW = Date.parse('2026-11-12T08:00:00Z');
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PASSWORD = 'Kanárek 2026';
 const CREDENTIAL = 'Y3JlZGVudGlhbC0x';
 const CANARY = 'Zlatohlávek Kanárkový';
@@ -47,6 +65,16 @@ function contentsOf(name: string): CopyContents {
     summary: { totalMinor: 50_000 },
     storedAt: '2026-11-05T10:00:00Z',
   };
+}
+
+async function remembered(
+  vault: DeviceVault,
+  contents: CopyContents,
+  profile: unknown = JANA_PROFILE,
+  session: object = { kind: 'REMEMBERED', acceptedAt: new Date(NOW - DAY_MS).toISOString() },
+): Promise<CopyContents> {
+  const wrap = await vault.sessionWrapOf(vault.opened()!.store);
+  return { ...contents, profile, session: { ...session, wrap } };
 }
 
 function prfReading(fill = 7): PrfReading {
@@ -879,6 +907,203 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       await Promise.all([first, second]);
 
       expect(order).toEqual(['first started', 'first done', 'second started']);
+    });
+  });
+
+  describe('when Jana signed in with a remembered session, her gifts, profile and session were stored, and a later start cannot reach the server', () => {
+    let copyId: string;
+
+    beforeEach(async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      copyId = vault.opened()!.store.copyId;
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY)),
+      );
+    });
+
+    it('then a new tab opens her copy with the session key for viewing and hands back her profile and session', async () => {
+      const reloaded = anotherTab();
+
+      const opening = await reloaded.openedOffline('REMEMBERED', NOW);
+
+      expect(opening?.profile).toEqual(JANA_PROFILE);
+      expect(opening?.session.kind).toBe('REMEMBERED');
+      expect(reloaded.opened()?.store.copyId).toBe(copyId);
+      expect(reloaded.opened()?.reason).toBe('offline');
+      expect(reloaded.opened()?.account.userHandle).toBe(JANA.userHandle);
+      expect(reloaded.opened()?.store.contents()?.chunks).toEqual(contentsOf(CANARY).chunks);
+    });
+
+    it('then opening it writes nothing to the device', async () => {
+      const before = await storedEntries();
+      const dumpBefore = (await rawIndexedDbDump()).text;
+
+      await anotherTab().openedOffline('REMEMBERED', NOW);
+
+      expect(await storedEntries()).toEqual(before);
+      expect((await rawIndexedDbDump()).text).toBe(dumpBefore);
+    });
+
+    it('then a start exactly 14 days after the accepted session still opens it', async () => {
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
+          kind: 'REMEMBERED',
+          acceptedAt: new Date(NOW - 14 * DAY_MS).toISOString(),
+        }),
+      );
+
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW)).not.toBeNull();
+    });
+
+    it('then a start more than 14 days after the accepted session opens nothing', async () => {
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
+          kind: 'REMEMBERED',
+          acceptedAt: new Date(NOW - 14 * DAY_MS - 1).toISOString(),
+        }),
+      );
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+
+    it('then a start whose clock stands before the accepted session opens nothing', async () => {
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW - 2 * DAY_MS)).toBeNull();
+    });
+
+    it('then the installed app, which expects its own session, opens nothing', async () => {
+      expect(await anotherTab().openedOffline('APP', NOW)).toBeNull();
+    });
+
+    it('and the server then accepts the refresh, then the same copy counts as restored', async () => {
+      const reloaded = anotherTab();
+      await reloaded.openedOffline('REMEMBERED', NOW);
+      const store = reloaded.opened()!.store;
+
+      await reloaded.restored(JANA);
+
+      expect(reloaded.opened()?.store).toBe(store);
+      expect(reloaded.opened()?.reason).toBe('restored');
+    });
+
+    it('and the tab signs her out without the server, then the session wrap is gone and nothing opens again', async () => {
+      const reloaded = anotherTab();
+      await reloaded.openedOffline('REMEMBERED', NOW);
+
+      await reloaded.signedOut(reloaded.opened()!.account);
+
+      expect(reloaded.opened()).toBeNull();
+      expect(await wrapsOf(reloaded)).toEqual(['password']);
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW)).toBeNull();
+    });
+
+    it('and she signed out and signed in again without a sync since, then the remembered session of the earlier sign-in opens nothing', async () => {
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+
+    it('and a tab opened her copy without the server, then that tab cannot store contents into it', async () => {
+      const reloaded = anotherTab();
+      await reloaded.openedOffline('REMEMBERED', NOW);
+
+      expect(
+        await reloaded.replaceContents(reloaded.opened()!.store, contentsOf('Jiný plátce')),
+      ).toBe(false);
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW)).not.toBeNull();
+    });
+
+    it('then the tab that opened the copy names the session wrap it opened it with, and another tab that signed in since names none', async () => {
+      const first = vault.opened()!.store;
+      const wrap = await vault.sessionWrapOf(first);
+      const other = anotherTab();
+      await other.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(wrap).not.toBeNull();
+      expect(await other.sessionWrapOf(other.opened()!.store)).not.toBe(wrap);
+      expect(await vault.sessionWrapOf(first)).toBeNull();
+    });
+
+    it('and she had signed out, then nothing opens without the server', async () => {
+      await vault.signedOut(JANA);
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+
+    it('and the copy keeps the profile of another account, then nothing opens without the server', async () => {
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY), PETR_PROFILE),
+      );
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+
+    it('and the tab already shows her copy opened without the server, then asking again hands back the same profile', async () => {
+      const reloaded = anotherTab();
+      await reloaded.openedOffline('REMEMBERED', NOW);
+      const store = reloaded.opened()!.store;
+
+      expect((await reloaded.openedOffline('REMEMBERED', NOW))?.profile).toEqual(JANA_PROFILE);
+      expect(reloaded.opened()?.store).toBe(store);
+    });
+  });
+
+  describe('when the copy of a signed-in donor holds no remembered session', () => {
+    beforeEach(async () => {
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+    });
+
+    it('as its session was a browser one, then nothing opens without the server', async () => {
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
+          kind: 'BROWSER',
+          acceptedAt: new Date(NOW - DAY_MS).toISOString(),
+        }),
+      );
+
+      expect(await anotherTab().openedOffline('BROWSER', NOW)).toBeNull();
+    });
+
+    it('as it holds no session at all, then nothing opens without the server', async () => {
+      await vault.replaceContents(vault.opened()!.store, {
+        ...contentsOf(CANARY),
+        profile: JANA_PROFILE,
+      });
+
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW)).toBeNull();
+    });
+
+    it('as it holds no profile, then nothing opens without the server', async () => {
+      await vault.replaceContents(vault.opened()!.store, {
+        ...contentsOf(CANARY),
+        session: { kind: 'REMEMBERED', acceptedAt: new Date(NOW - DAY_MS).toISOString() },
+      });
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+  });
+
+  describe('when the device holds no copy and a start cannot reach the server', () => {
+    it('then nothing opens and no database is made', async () => {
+      expect(await vault.openedOffline('REMEMBERED', NOW)).toBeNull();
+
+      expect(vault.opened()).toBeNull();
+      expect(await databaseNames()).not.toContain(DEVICE_DATABASE);
     });
   });
 

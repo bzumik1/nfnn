@@ -10,6 +10,10 @@ export const adminGuard: CanActivateFn = async (_route, state) => {
   const loginDialog = inject(LoginDialogService);
   const refusal = inject(AdminAccessRefusal);
   await store.restore();
+  if (store.fromDevice()) {
+    refusal.refuse('needs-connection');
+    return router.createUrlTree(['/darce/prehled']);
+  }
   if (store.isAdmin()) {
     refusal.clear();
     return true;

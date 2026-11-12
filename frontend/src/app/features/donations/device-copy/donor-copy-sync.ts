@@ -1,7 +1,7 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom, type Observable, timeout } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
-import type { Donor } from '../../../core/auth/donor';
+import { type CopySession, copyProfileOf } from '../../../core/auth/copy-profile';
 import { userHandleOf } from '../../../core/auth/session-device';
 import { bytesToBase64Url } from '../../../core/device/crypto/device-bytes';
 import type {
@@ -28,23 +28,7 @@ export const SYNC_REQUEST_TIMEOUT_MS = 30_000;
 
 type Fetched = CopyContents | 'changed' | 'another-donor';
 
-export type CopyProfile = Pick<
-  Donor,
-  'id' | 'type' | 'name' | 'email' | 'roles' | 'address' | 'companyIdentifier' | 'variableSymbol'
->;
-
-export function copyProfileOf(donor: Donor): CopyProfile {
-  return {
-    id: donor.id,
-    type: donor.type,
-    name: donor.name,
-    email: donor.email,
-    roles: donor.roles,
-    address: donor.address,
-    companyIdentifier: donor.companyIdentifier,
-    variableSymbol: donor.variableSymbol,
-  };
-}
+export { type CopyProfile, copyProfileOf } from '../../../core/auth/copy-profile';
 
 interface QueuedSync {
   full: boolean;
@@ -79,7 +63,8 @@ export class DonorCopySync implements DonorCopy {
   constructor() {
     inject(DonorCopyLink).copy.set(this);
     effect(() => {
-      if (this.vault.opened() !== null) {
+      const opened = this.vault.opened();
+      if (opened !== null && opened.reason !== 'offline') {
         untracked(() => void this.sync());
       }
     });
@@ -145,6 +130,9 @@ export class DonorCopySync implements DonorCopy {
     if (opened === null) {
       return 'no-copy';
     }
+    if (opened.reason === 'offline') {
+      return 'failed';
+    }
     this.running.update((count) => count + 1);
     try {
       return await this.vault.withCopyLock(opened.store, () => this.synced(opened, full));
@@ -198,6 +186,7 @@ export class DonorCopySync implements DonorCopy {
           await this.withImages(fetched, before?.images ?? []),
           opened,
           before,
+          await this.vault.sessionWrapOf(store),
         );
         return (await this.vault.replaceContents(store, contents)) ? 'stored' : 'no-copy';
       }
@@ -256,13 +245,25 @@ export class DonorCopySync implements DonorCopy {
     contents: CopyContents,
     opened: OpenedCopy,
     before: CopyContents | null,
+    wrap: string | null,
   ): CopyContents {
     const donor = this.auth.donor();
-    const profile =
-      donor !== null && userHandleOf(donor.id) === opened.account.userHandle
-        ? copyProfileOf(donor)
-        : before?.profile;
-    return profile === undefined ? contents : { ...contents, profile };
+    const owns = donor !== null && userHandleOf(donor.id) === opened.account.userHandle;
+    const profile = owns ? copyProfileOf(donor) : before?.profile;
+    const session = owns ? (this.acceptedSession(wrap) ?? before?.session) : before?.session;
+    return {
+      ...contents,
+      ...(profile === undefined ? {} : { profile }),
+      ...(session === undefined ? {} : { session }),
+    };
+  }
+
+  private acceptedSession(wrap: string | null): CopySession | null {
+    const kind = this.auth.session();
+    const acceptedAt = this.auth.sessionAcceptedAt();
+    return kind === null || acceptedAt === null || wrap === null || this.auth.fromDevice()
+      ? null
+      : { kind, acceptedAt, wrap };
   }
 
   private async withImages(
