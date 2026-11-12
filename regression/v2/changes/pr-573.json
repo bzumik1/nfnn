@@ -62,5 +62,21 @@
     "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
     "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
     "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen, then the sheet hands its history entry to that page, one level deeper, and closes",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen on a computer, then the sheet hands its history entry to that page, one level deeper, and closes",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section opens inside the sheet, so handing the sheet's history entry to the section's page holds only on a computer",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the sheet kept no history entry of its own, then a chosen section opens as a new entry over the page under it",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the sheet kept no history entry of its own on a computer, then a chosen section opens as a new entry over the page under it",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section opens inside the sheet, so handing the sheet's history entry to the section's page holds only on a computer",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
   }
 ]
