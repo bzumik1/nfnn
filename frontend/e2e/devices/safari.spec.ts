@@ -88,13 +88,17 @@ const test = testWithoutBrowser.extend<
       console.log(`${testInfo.title}: ${waits.presses.join('; ')}`);
     }
     if (testInfo.status !== testInfo.expectedStatus) {
-      await keepFailedScreen(driver, testInfo);
+      await keepFailedScreen(driver, host, testInfo);
     }
     expect(askedForServerPayment, NO_SERVER_PAYMENT).toEqual([]);
   },
 });
 
-async function keepFailedScreen(driver: WebDriver, testInfo: TestInfo): Promise<void> {
+async function keepFailedScreen(
+  driver: WebDriver,
+  host: RouteHost,
+  testInfo: TestInfo,
+): Promise<void> {
   const shown = testInfo.attachments.some((attachment) => attachment.name === 'screen');
   const screen = shown ? undefined : await driver.screenshot().catch(() => undefined);
   if (screen) {
@@ -105,6 +109,9 @@ async function keepFailedScreen(driver: WebDriver, testInfo: TestInfo): Promise<
     .catch((error: unknown) => [String(error)]);
   await testInfo.attach('events', { body: events.join('\n'), contentType: 'text/plain' });
   console.log(`${testInfo.title}: events before the failure\n${events.join('\n')}`);
+  const answered = host.answered();
+  await testInfo.attach('answered', { body: answered.join('\n'), contentType: 'text/plain' });
+  console.log(`${testInfo.title}: API answers before the failure\n${answered.join('\n')}`);
 }
 
 test.describe('Given the site in Safari on an iPhone, an iPad or a Mac', () => {

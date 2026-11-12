@@ -30,6 +30,7 @@ import {
   servePaymentDetails,
   serveRecentDonors,
 } from './screen-mocks';
+import { openRequests, quietNetwork } from '../settled';
 
 interface ElementShot {
   name: string;
@@ -52,6 +53,7 @@ const DIALOG_OPENING_WIDTH = 1280;
 const SEARCH_PAUSE_MS = 5_000;
 const UNLOCK_TIMEOUT_MS = 15_000;
 const STABLE_SCREENSHOT_TIMEOUT_MS = 15_000;
+const QUIET_NETWORK_TIMEOUT_MS = 20_000;
 const PAGE_TOLERANCE = { maxDiffPixelRatio: 0.002 };
 const ELEMENT_TOLERANCE = { maxDiffPixels: 0 };
 const FIXED_BARS_HIDDEN =
@@ -509,12 +511,12 @@ const SCREENS_SINCE_V2: Screen[] = [
   },
 ];
 
-async function settle(page: Page, screen: Screen): Promise<void> {
+async function settle(page: Page, screen: Screen, open: () => string[]): Promise<void> {
   await expect(page.locator('h1').first()).toBeVisible();
   if (screen.ready) {
     await screen.ready(page);
   } else {
-    await page.waitForLoadState('networkidle');
+    await quietNetwork(page, open, QUIET_NETWORK_TIMEOUT_MS);
   }
   await page.evaluate(async () => {
     document.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((image) => {
@@ -567,8 +569,9 @@ function shootEach(screens: Screen[]): void {
         page,
       }) => {
         await page.setViewportSize({ width, height: HEIGHT });
+        const open = openRequests(page);
         await screen.open(page, width);
-        await settle(page, screen);
+        await settle(page, screen, open);
         recordRoute(page, [
           `${screen.name}-${width}`,
           ...(screen.elements ?? []).map((shot) => `${shot.name}-${width}`),
