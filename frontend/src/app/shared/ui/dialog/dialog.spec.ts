@@ -1006,6 +1006,82 @@ describe('Given a dialog and the history entry it keeps', () => {
   });
 });
 
+@Component({
+  imports: [Dialog],
+  template: `
+    <app-dialog labelledBy="title" [depth]="depth()" (steppedBack)="steppedBack()">
+      <h2 id="title">Název</h2>
+    </app-dialog>
+  `,
+})
+class SteppedHost {
+  readonly depth = signal(0);
+  readonly keepsStep = signal(false);
+  stepsBack = 0;
+
+  steppedBack(): void {
+    this.stepsBack++;
+    if (!this.keepsStep()) {
+      this.depth.set(0);
+    }
+  }
+}
+
+describe('Given a dialog whose page moves on to a further step inside it', () => {
+  let fixture: ComponentFixture<SteppedHost>;
+  let history: FakeDialogHistory;
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      imports: [SteppedHost],
+      providers: [{ provide: DialogHistory, useClass: FakeDialogHistory }],
+    });
+    history = TestBed.inject(DialogHistory) as unknown as FakeDialogHistory;
+    fixture = TestBed.createComponent(SteppedHost);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => fixture.nativeElement.remove());
+
+  it('when the page moves one step deeper, then the dialog asks for a history step of its own', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(history.steps.at(-1)).toBe(1);
+  });
+
+  it('when the visitor goes back from that step, then the page is told to step back and the dialog stays open', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.stepsBack).toBe(1);
+    expect(history.steps.at(-1)).toBe(0);
+    expect(fixture.nativeElement.querySelector('dialog')?.open).toBe(true);
+  });
+
+  it('when the page keeps its step after the visitor went back, then the dialog asks for that step again', async () => {
+    fixture.componentInstance.depth.set(1);
+    fixture.componentInstance.keepsStep.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const showStep = vi.spyOn(history, 'showStep');
+
+    history.listener?.stepBack();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(showStep).toHaveBeenCalledWith(1, history.listener);
+  });
+});
+
 @Component({ template: '' })
 class Page {}
 

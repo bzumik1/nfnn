@@ -1,7 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import type { Download, Locator, Page, TestInfo } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { donor, mockDonorApi, openAccountItem, openSignInDialog, session } from './donor-session';
+import {
+  donor,
+  mockDonorApi,
+  openAccountItem,
+  openSignInDialog,
+  opensSectionsInSheet,
+  session,
+} from './donor-session';
 
 const FILE_NAME = /^nfnn-diagnostika-\d{4}-\d{2}-\d{2}-\d{4}\.json$/;
 const CARRIES_THE_FILE = /nfnn-diagnosti/;
@@ -145,7 +152,7 @@ test.describe('Given a signed-in donor on Údaje a zabezpečení', () => {
       format: 'nfnn-diagnostics',
       version: 1,
       source: 'account-page',
-      page: '/darce/udaje',
+      page: opensSectionsInSheet(page) ? '/' : '/darce/udaje',
       app: { started: true, codeArrived: true },
       platform: { browser: expect.any(String), os: expect.any(String) },
       session: { account: 'donor', kind: 'BROWSER', administrationUnlocked: null },

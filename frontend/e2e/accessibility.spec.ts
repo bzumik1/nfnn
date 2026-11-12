@@ -22,6 +22,7 @@ import {
   donor,
   mockConnectApi,
   mockDonorApi,
+  openAccountItem,
   openDonorSection,
   openSignInDialog,
   problem,
@@ -229,6 +230,37 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.keyboard.press('Escape');
 
     await expect(sheet).toHaveCount(0);
+    await expect(account).toBeFocused();
+  });
+
+  test('when a signed-in donor opens each section inside the account sheet on a phone, then the sheet breaks no rule and Esc closes it with the focus back on the account button', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page
+      .getByRole('navigation', { name: 'Hlavní sekce' })
+      .getByRole('link', { name: 'O nás' })
+      .click();
+    await expect(page).toHaveURL('/o-nas');
+    const account = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+
+    for (const name of [
+      'Můj přehled',
+      'Moje dary',
+      'Potvrzení o daru',
+      'Bankovní účty',
+      'Údaje a zabezpečení',
+    ]) {
+      await openAccountItem(page, name);
+      const sheet = page.getByRole('dialog', { name });
+      await expect(sheet).toBeVisible();
+      expect(await violations(page), name).toEqual([]);
+    }
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(account).toBeFocused();
   });
 

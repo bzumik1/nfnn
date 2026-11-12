@@ -1,7 +1,7 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { browserEntries, stepBack } from './app-history';
-import { mockDonorApi, openAccountItem, signIn } from './donor-session';
+import { mockDonorApi, signIn } from './donor-session';
 
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c001',
@@ -39,6 +39,42 @@ async function settledPanel(page: Page) {
 
 function tabs(page: Page) {
   return page.getByRole('navigation', { name: 'Hlavní sekce' });
+}
+
+const SECTIONS = [
+  'Můj přehled',
+  'Moje dary',
+  'Potvrzení o daru',
+  'Bankovní účty',
+  'Údaje a zabezpečení',
+];
+
+async function openSheetSection(page: Page, name: string) {
+  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByRole('link', { name }).click();
+  await expect(sheet.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
+  return sheet;
+}
+
+async function swipeFromLeftEdge(target: Locator): Promise<void> {
+  const box = await target.boundingBox();
+  const y = (box?.y ?? 0) + 40;
+  for (const [type, x] of [
+    ['touchstart', 4],
+    ['touchmove', 60],
+    ['touchmove', 160],
+    ['touchmove', 260],
+    ['touchend', 260],
+  ] as const) {
+    const finger = { identifier: 1, clientX: x, clientY: y };
+    await target.dispatchEvent(type, {
+      touches: type === 'touchend' ? [] : [finger],
+      changedTouches: [finger],
+      bubbles: true,
+      cancelable: true,
+    });
+  }
 }
 
 function back(page: Page) {
@@ -123,55 +159,89 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     await expect(page).toHaveURL('/o-nas');
   });
 
-  test('when the app steps back, as its swipe does, then the page the sheet was opened on returns', async ({
+  for (const section of SECTIONS) {
+    test(`when they choose ${section}, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays`, async ({
+      page,
+    }) => {
+      const sheet = await openSheetSection(page, section);
+
+      await expect(sheet.getByRole('button', { name: 'Zpět' })).toBeVisible();
+      await expect(sheet.getByRole('button', { name: 'Zavřít' })).toHaveCount(0);
+      await expect(sheet.locator('app-account-section > *')).not.toHaveCount(0);
+      await expect(page).toHaveURL('/o-nas');
+    });
+
+    test(`when the app steps back from ${section}, as its swipe does, then the account list returns in the sheet and the next step closes it`, async ({
+      page,
+    }) => {
+      const sheet = await openSheetSection(page, section);
+
+      await stepBack(page);
+
+      await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+      await expect(sheet.getByRole('link', { name: section })).toBeFocused();
+      await expect(page).toHaveURL('/o-nas');
+      await stepBack(page);
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page).toHaveURL('/o-nas');
+    });
+  }
+
+  test('when they have written into a form of Údaje a zabezpečení and step back, then a dialog asks first, and only discarding returns the account list', async ({
     page,
   }) => {
-    await openAccountItem(page, 'Moje dary');
-    await expect(page).toHaveURL('/darce/dary');
+    const sheet = await openSheetSection(page, 'Údaje a zabezpečení');
+    await sheet.getByRole('button', { name: 'Upravit údaje' }).click();
+    await sheet.getByLabel('Jméno a příjmení').fill('Jana Rozepsaná');
 
     await stepBack(page);
 
+    const ask = page.getByRole('dialog', { name: 'Zahodit rozepsané údaje?' });
+    await expect(ask).toBeVisible();
+    await ask.getByRole('button', { name: 'Pokračovat v psaní' }).click();
+    await expect(ask).toHaveCount(0);
+    await expect(sheet.getByLabel('Jméno a příjmení')).toHaveValue('Jana Rozepsaná');
+
+    await stepBack(page);
+    await page
+      .getByRole('dialog', { name: 'Zahodit rozepsané údaje?' })
+      .getByRole('button', { name: 'Zahodit' })
+      .click();
+
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
     await expect(page).toHaveURL('/o-nas');
-    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site', async ({
+  test('when they press Zpět in the sheet, then the account list returns with the focus on the section they left', async ({
+    page,
+  }) => {
+    const sheet = await openSheetSection(page, 'Moje dary');
+
+    await sheet.getByRole('button', { name: 'Zpět' }).click();
+
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+    await expect(sheet.getByRole('link', { name: 'Moje dary' })).toBeFocused();
+    await expect(sheet.getByRole('button', { name: 'Zavřít' })).toBeVisible();
+  });
+
+  test('when they open a section in the sheet, then the browser gains no entry, so its Back would leave the site', async ({
     page,
   }) => {
     const entries = await browserEntries(page);
 
-    await openAccountItem(page, 'Moje dary');
+    await openSheetSection(page, 'Moje dary');
 
-    await expect(page).toHaveURL('/darce/dary');
     expect(await browserEntries(page)).toBe(entries);
   });
 
-  test('when they press Zpět, then the page the sheet was opened on returns', async ({ page }) => {
-    await openAccountItem(page, 'Moje dary');
-    await expect(page).toHaveURL('/darce/dary');
-
-    await back(page).click();
-
-    await expect(page).toHaveURL('/o-nas');
-  });
-
-  test('when they choose the section already open, then the sheet closes and one step back leaves it', async ({
+  test('when they choose a section from the account list, then its title in the sheet takes the focus', async ({
     page,
   }) => {
-    await openAccountItem(page, 'Moje dary');
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    const sheet = page.getByRole('dialog');
-    await expect(sheet.getByRole('link', { name: 'Moje dary' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    const sheet = await openSheetSection(page, 'Bankovní účty');
 
-    await sheet.getByRole('link', { name: 'Moje dary' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page).toHaveURL('/darce/dary');
-    await stepBack(page);
-
-    await expect(page).toHaveURL('/o-nas');
+    await expect(
+      sheet.getByRole('heading', { level: 2, name: 'Bankovní účty', exact: true }),
+    ).toBeFocused();
   });
 
   test('when they press the account button, then the title of the sheet holds the focus and no control shows a focus ring', async ({
@@ -243,6 +313,32 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
     expect(close && name && close.y < name.y + name.height && name.y < close.y + close.height).toBe(
       true,
     );
+  });
+});
+
+test.describe('Given a donor in the installed app on a phone with a section open in the account sheet', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+    });
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/o-nas');
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('when they swipe from the left edge, then the account list returns in the sheet', async ({
+    page,
+  }) => {
+    const address = page.url();
+    const sheet = await openSheetSection(page, 'Moje dary');
+
+    await swipeFromLeftEdge(sheet.locator('app-account-section'));
+
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+    await expect(page).toHaveURL(address);
   });
 });
 

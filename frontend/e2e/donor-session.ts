@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
@@ -400,8 +400,27 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await page.getByRole('dialog').locator('.ui-button--block').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await openAccountItem(page, 'Můj přehled');
+  if (opensSectionsInSheet(page)) {
+    return;
+  }
   await expect(page).toHaveURL(/\/darce\/prehled$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+}
+
+export async function showAccountList(page: Page): Promise<Locator> {
+  const sheet = page.getByRole('dialog');
+  const sectionBack = sheet.locator('.account-back');
+  if (await sectionBack.isVisible()) {
+    await sectionBack.click();
+  } else {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+  }
+  await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+  return sheet;
+}
+
+export function opensSectionsInSheet(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 0) <= BREAKPOINTS.nav;
 }
 
 function adminSetting(
@@ -447,10 +466,15 @@ function sectionName(name: string): RegExp {
 }
 
 export async function openAccountItem(page: Page, name: string): Promise<void> {
-  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-  const sheet = page.getByRole('dialog');
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole('link', { name: sectionName(name) }).click();
+  const sheet = await showAccountList(page);
+  const item = sheet.getByRole('link', { name: sectionName(name) });
+  const opensInSheet =
+    opensSectionsInSheet(page) && (await item.getAttribute('href')) !== '/sprava';
+  await item.click();
+  if (opensInSheet) {
+    await expect(sheet.getByRole('heading', { level: 2, name: sectionName(name) })).toBeVisible();
+    return;
+  }
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('app-public-shell')).toHaveCount(0);
 }
