@@ -34,6 +34,7 @@ async function openPayments(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/sprava$/);
   await page.getByRole('link', { name: 'Platby z banky' }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+  await expect(page.locator('.page-transition')).toHaveCount(0);
   await page.evaluate(() => ((window as unknown as Probe).dialogEntries = 0));
 }
 
