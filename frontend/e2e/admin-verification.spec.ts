@@ -71,7 +71,7 @@ test.describe('Given an administrator whose device holds the administration copy
       'Fond ho 1. 2. 2027 nahradil potvrzením č. 2027-000124.',
     );
     await expect(register(page)).toContainText(
-      /Podle údajů správy stažených do tohoto zařízení \d{2}\. \d{2}\. \d{4} v \d{2}:\d{2}\./,
+      /Podle údajů správy stažených do tohoto zařízení [1-9]\d?\. [1-9]\d?\. \d{4} v [1-9]?\d:\d{2}\./,
     );
     await expect(page.getByRole('heading', { level: 2, name: 'Údaje v kódu' })).toBeVisible();
     expect(
