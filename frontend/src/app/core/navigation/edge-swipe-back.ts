@@ -1,8 +1,10 @@
 import { DOCUMENT, Location } from '@angular/common';
 import { EnvironmentProviders, inject, Injectable, provideAppInitializer } from '@angular/core';
 import { Router } from '@angular/router';
+import { DirtyForms } from '../updates/dirty-forms';
 import { BackSwipe, SwipePoint } from './back-swipe';
 import { BackTarget } from './back-target';
+import { PageTransitions, SwipePreview } from './page-transitions';
 import { RouteChrome } from './route-chrome';
 
 const FIELDS = 'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
@@ -16,6 +18,8 @@ interface Swipe {
   readonly id: number;
   readonly pops: number;
   readonly motion: BackSwipe;
+  preview: SwipePreview | null;
+  previewAsked: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +29,8 @@ export class EdgeSwipeBack {
   private readonly router = inject(Router);
   private readonly backTarget = inject(BackTarget);
   private readonly chrome = inject(RouteChrome).current;
+  private readonly transitions = inject(PageTransitions);
+  private readonly dirtyForms = inject(DirtyForms);
   private swipe: Swipe | null = null;
   private pops = 0;
 
@@ -32,6 +38,7 @@ export class EdgeSwipeBack {
   private readonly onMove = (event: TouchEvent): void => this.moved(event);
   private readonly onEnd = (event: TouchEvent): void => this.ended(event);
   private readonly onCancel = (): void => {
+    void this.swipe?.preview?.slideBack();
     this.swipe = null;
   };
   private readonly onLeave = (): void => {
@@ -73,6 +80,8 @@ export class EdgeSwipeBack {
       id: touch.identifier,
       pops: this.pops,
       motion: new BackSwipe(pointOf(touch, event), width),
+      preview: null,
+      previewAsked: false,
     };
   }
 
@@ -85,7 +94,13 @@ export class EdgeSwipeBack {
     swipe.motion.move(pointOf(touch, event));
     if (swipe.motion.abandoned) {
       this.swipe = null;
+      return;
     }
+    if (swipe.motion.dragging && !swipe.previewAsked) {
+      swipe.previewAsked = true;
+      swipe.preview = this.preview();
+    }
+    swipe.preview?.follow(swipe.motion.offset);
   }
 
   private ended(event: TouchEvent): void {
@@ -96,9 +111,29 @@ export class EdgeSwipeBack {
     }
     this.swipe = null;
     const settle = swipe.motion.release(pointOf(touch, event));
-    if (settle?.completes === true && swipe.pops === this.pops) {
-      this.back();
+    const goesBack = settle?.completes === true && swipe.pops === this.pops;
+    const preview = swipe.preview;
+    if (preview === null) {
+      if (goesBack) {
+        this.back();
+      }
+    } else if (goesBack && this.dirtyForms.any()) {
+      void preview.slideBack().then(() => this.back());
+    } else if (goesBack && settle !== null) {
+      void preview.settle(settle).then(() => this.back());
+    } else if (settle !== null && !settle.completes) {
+      void preview.settle(settle);
+    } else {
+      void preview.slideBack();
     }
+  }
+
+  private preview(): SwipePreview | null {
+    const parent = this.chrome().parent;
+    if (parent === null || this.document.querySelector('dialog[open]') !== null) {
+      return null;
+    }
+    return this.transitions.startSwipe(this.backTarget.destination(parent));
   }
 
   private back(): void {
