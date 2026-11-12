@@ -241,6 +241,11 @@
   --duration-entrance: 0.9s;
   --duration-sheet: var(--duration-slow);
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-page: 0.35s;
+  --ease-page: cubic-bezier(0.32, 0.72, 0, 1);
+  --page-parallax: -30%;
+  --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
+  --shadow-page-edge: -4px 0 16px color-mix(in srgb, #000000 18%, transparent);
   --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
@@ -444,6 +449,7 @@
     --color-surface-quote: #13213f;
 
     --color-backdrop: color-mix(in srgb, #000000 70%, transparent);
+    --color-page-dim: color-mix(in srgb, #000000 22%, transparent);
 
     --color-border: #2a3243;
     --color-border-field: #6b7588;

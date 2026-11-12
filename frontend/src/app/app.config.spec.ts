@@ -2,6 +2,7 @@ import { HttpBackend, HttpClient, HttpXhrBackend } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { REMOVE_STYLES_ON_COMPONENT_DESTROY } from '@angular/platform-browser';
 import { provideRouter, Router, RouterPreloader } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -12,6 +13,7 @@ import {
   chunkLoadRecoveryFeature,
   connectivityAtStart,
   dialogHistoryAtStart,
+  keptPageStyles,
   navigationAtStart,
   tabPagesPreloading,
 } from './app.config';
@@ -19,6 +21,7 @@ import { Connectivity } from './core/connectivity/connectivity';
 import { ShownAnswers } from './core/connectivity/shown-answers';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
+import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
@@ -137,6 +140,19 @@ describe('Given the history entries of dialogs', () => {
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(appConfig.providers).toContain(dialogHistoryAtStart);
+  });
+});
+
+describe('Given the transitions between pages', () => {
+  it('when the app starts, then the styles of a page that closes stay, so its still copy keeps its look while it slides', () => {
+    TestBed.configureTestingModule({ providers: [keptPageStyles] });
+
+    expect(TestBed.inject(REMOVE_STYLES_ON_COMPONENT_DESTROY)).toBe(false);
+    expect(appConfig.providers).toContain(keptPageStyles);
+  });
+
+  it('when the app starts, then the transitions follow its navigations', () => {
+    expect(appConfig.providers).toContain(pageTransitionsAtStart);
   });
 });
 
