@@ -11,6 +11,7 @@ describe('Given the edge at the top of a page', () => {
   let underEdge: Element[];
   let release: () => void;
   let appearance: EventTarget;
+  let windowWidth: PropertyDescriptor | undefined;
 
   function scrollTo(top: number): void {
     Object.defineProperty(window, 'scrollY', { configurable: true, value: top });
@@ -32,6 +33,8 @@ describe('Given the edge at the top of a page', () => {
   }
 
   beforeEach(() => {
+    windowWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
     header = document.createElement('header');
     content = fullWidth(document.createElement('section'));
     content.style.backgroundColor = 'rgb(15, 23, 42)';
@@ -60,6 +63,11 @@ describe('Given the edge at the top of a page', () => {
     delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
     delete (window as { scrollY?: number }).scrollY;
     delete (window as { matchMedia?: unknown }).matchMedia;
+    if (windowWidth === undefined) {
+      delete (window as { innerWidth?: number }).innerWidth;
+    } else {
+      Object.defineProperty(window, 'innerWidth', windowWidth);
+    }
   });
 
   it('when the page is at its top, then the edge is not raised, so the page looks as designed', () => {
