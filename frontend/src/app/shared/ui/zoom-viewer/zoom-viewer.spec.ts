@@ -300,6 +300,100 @@ describe('Given the zoom viewer', () => {
       expect(level()).toBe('200\u00a0%');
     });
 
+    describe('when one finger drags it at its fitted size', () => {
+      const shown = () => fixture.nativeElement.querySelector('.zoom-content') as HTMLElement;
+
+      it('far down, then the viewer closes', async () => {
+        pointer('pointerdown', 1, 200, 100);
+        pointer('pointermove', 1, 200, 200);
+        pointer('pointermove', 1, 210, 300);
+        pointer('pointerup', 1, 210, 300);
+        await settle();
+
+        expect(fixture.componentInstance.closings).toBe(1);
+      });
+
+      it('a little down, then the photo follows the finger and returns, and the viewer stays', async () => {
+        pointer('pointerdown', 1, 200, 100);
+        pointer('pointermove', 1, 205, 120);
+        await settle();
+        const followed = shown().style.translate;
+        pointer('pointerup', 1, 205, 120);
+        await settle();
+
+        expect(followed).toBe('5px 20px');
+        expect(shown().style.translate).toBe('');
+        expect(fixture.componentInstance.closings).toBe(0);
+      });
+
+      it('up, then the viewer stays', async () => {
+        pointer('pointerdown', 1, 200, 300);
+        pointer('pointermove', 1, 200, 100);
+        pointer('pointerup', 1, 200, 100);
+        await settle();
+
+        expect(fixture.componentInstance.closings).toBe(0);
+      });
+
+      it('down while a second finger joins, then the fingers pinch and the viewer stays', async () => {
+        pointer('pointerdown', 1, 100, 100);
+        pointer('pointermove', 1, 100, 200);
+        pointer('pointerdown', 2, 200, 200);
+        pointer('pointermove', 2, 300, 200);
+        pointer('pointerup', 2, 300, 200);
+        pointer('pointerup', 1, 100, 300);
+        await settle();
+
+        expect(fixture.componentInstance.closings).toBe(0);
+        expect(shown().style.translate).toBe('');
+      });
+    });
+
+    it('when it is zoomed in and one finger drags it down, then the photo moves and the viewer stays', async () => {
+      button('Přiblížit').click();
+      await settle();
+      pointer('pointerdown', 1, 200, 100);
+      pointer('pointermove', 1, 200, 300);
+      pointer('pointerup', 1, 200, 300);
+      await settle();
+
+      expect(fixture.componentInstance.closings).toBe(0);
+    });
+
+    it('when a mouse drags it down, then the viewer stays', async () => {
+      stage().setPointerCapture = () => undefined;
+      stage().dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          pointerId: 9,
+          pointerType: 'mouse',
+          clientX: 200,
+          clientY: 100,
+        }),
+      );
+      stage().dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          pointerId: 9,
+          pointerType: 'mouse',
+          clientX: 200,
+          clientY: 400,
+        }),
+      );
+      stage().dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          pointerId: 9,
+          pointerType: 'mouse',
+          clientX: 200,
+          clientY: 400,
+        }),
+      );
+      await settle();
+
+      expect(fixture.componentInstance.closings).toBe(0);
+    });
+
     it('when the close button is pressed, then the viewer closes', async () => {
       button('Zavřít').click();
       await settle();

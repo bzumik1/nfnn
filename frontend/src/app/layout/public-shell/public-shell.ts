@@ -30,6 +30,7 @@ import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
   imports: [RouterOutlet, AppHeader, SiteFooter, TabBar, SignedOutNotice],
   templateUrl: './public-shell.html',
   styleUrl: './public-shell.scss',
+  host: { class: 'page-layer' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PublicShell {

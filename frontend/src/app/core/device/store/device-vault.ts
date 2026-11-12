@@ -10,6 +10,8 @@ import {
 import { AdministrationAccess } from '../../auth/administration-access';
 import type { DeviceAccount, SessionDevice, SignInSecret } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
+import type { DeviceCopyDiagnostics } from '../../diagnostics/device-copy-diagnostics';
+import { ageBucket } from '../../diagnostics/diagnostics-schema';
 import { ErrorReporter } from '../../errors/error-reporter';
 import {
   CopyRefused,
@@ -166,6 +168,17 @@ export class DeviceVault implements SessionDevice {
     });
   }
 
+  diagnostics(): DeviceCopyDiagnostics {
+    const opened = this.openedCopy();
+    const storedAt = opened?.store.contents()?.storedAt;
+    return {
+      mode: this.currentMode(),
+      donorCopy: opened !== null ? 'open' : this.lockedCopy() ? 'locked' : 'none',
+      storedAge: storedAt === undefined ? null : ageBucket(Date.now() - Date.parse(storedAt)),
+      administrationCopy: this.administrationState(),
+    };
+  }
+
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null> {
     return this.run(async () => {
       try {
@@ -176,6 +189,13 @@ export class DeviceVault implements SessionDevice {
         return null;
       }
     });
+  }
+
+  private administrationState(): DeviceCopyDiagnostics['administrationCopy'] {
+    if (this.openedAdministration() !== null) {
+      return 'open';
+    }
+    return this.account?.administrator === true && !this.access.unlocked() ? 'locked' : 'none';
   }
 
   signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
@@ -399,6 +419,36 @@ export class DeviceVault implements SessionDevice {
             account,
             { kind: 'prf', reading },
             { replacesRefused: false, reason: 'unlocked' },
+          )) === 'opened'
+        );
+      } finally {
+        reading.output.fill(0);
+      }
+    });
+  }
+
+  unlockAdministrationWithPrf(
+    account: DeviceAccount,
+    reading: PrfReading,
+    storeNothing: boolean,
+  ): Promise<boolean> {
+    const generation = this.sessionGeneration;
+    return this.run(async () => {
+      try {
+        const storage =
+          generation === this.sessionGeneration
+            ? await this.administrationStorageFor(storeNothing, true)
+            : null;
+        if (storage === null) {
+          return false;
+        }
+        this.closeAdministration();
+        return (
+          (await this.openAdministration(
+            storage,
+            account,
+            { kind: 'prf', reading },
+            { replacesRefused: true, reason: 'unlocked' },
           )) === 'opened'
         );
       } finally {

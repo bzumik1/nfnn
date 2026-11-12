@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when they raise a logger for a while, then the level is put and the list shows the temporary level with a reset",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when they tap a logger, choose a level and a time, then the level is put and the sheet closes",
+    "reason": "Log levels (Jakub 2026-11-07, variant A of the logs redesign, part 3): the levels page lists the watched loggers as rows that open a sheet with the level and the time as choices, and a raised level leads with its countdown, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when the logger name is not a Java name or the minutes are out of range, then the form says so and posts nothing",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when they name another logger, then a wrong name is refused at the field and the site’s own code may take TRACE",
+    "reason": "Log levels (Jakub 2026-11-07, variant A of the logs redesign, part 3): the levels page lists the watched loggers as rows that open a sheet with the level and the time as choices, and a raised level leads with its countdown, so its tests are named after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when the backend refuses the level, then the problem is shown as an alert",
+    "replacement": "src/app/features/admin/logs/levels/admin-log-levels.spec.ts > Given an administrator on the log levels page > when the backend refuses the level, then the sheet stays open with the problem",
+    "reason": "Log levels (Jakub 2026-11-07, variant A of the logs redesign, part 3): the levels page lists the watched loggers as rows that open a sheet with the level and the time as choices, and a raised level leads with its countdown, so its tests are named after what they now prove"
+  }
+]

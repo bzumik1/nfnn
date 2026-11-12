@@ -15,7 +15,9 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.receipt.DonationOnYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -45,6 +47,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -67,6 +70,8 @@ class DonationReceiptIssuerConcurrencyTest {
     private DonationReceiptIssuer issuer;
     @Autowired
     private DonationReceiptService receipts;
+    @Autowired
+    private DonationReceiptRepository receiptRepository;
     @Autowired
     private ReceiptRequestReader requests;
     @Autowired
@@ -121,6 +126,65 @@ class DonationReceiptIssuerConcurrencyTest {
         assertThat(storedReceipts()).isEqualTo(1);
         assertThat(jdbc.sql("select count(*) from issued_receipt where status = 'ACTIVE' and donation_id = ?")
                 .param(donation.id().value()).query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given a writer holding the donor's row, when the single receipt of a gift and then the yearly receipt of its year wait for it and run at once, then the yearly receipt is the only active receipt of the gift, the single one being replaced or refused")
+    void should_leave_only_the_yearly_receipt_active_when_single_first_and_yearly_race_given_a_held_donor_row() throws Exception {
+        assertOnlyTheYearlyReceiptStaysActiveWhenRacing(true);
+    }
+
+    @Test
+    @DisplayName("Given a writer holding the donor's row, when the yearly receipt of a year and then the single receipt of its gift wait for it and run at once, then the yearly receipt is the only active receipt of the gift, the single one being replaced or refused")
+    void should_leave_only_the_yearly_receipt_active_when_yearly_first_and_single_race_given_a_held_donor_row() throws Exception {
+        assertOnlyTheYearlyReceiptStaysActiveWhenRacing(false);
+    }
+
+    private void assertOnlyTheYearlyReceiptStaysActiveWhenRacing(boolean singleFirst) throws Exception {
+        DonorRecord jana = storedJana();
+        Donation donation = storedDonation(jana, 7401, LocalDate.of(2025, 3, 15), 50000);
+        LocalDate today = LocalDate.of(2026, 1, 15);
+        Callable<DonationReceipt> single = () -> issuer.issueForDonation(jana.id(), donation.id(), today);
+        Callable<DonationReceipt> yearly = () -> issuer.issueForYear(jana.id(), YEAR_2025, today);
+        CountDownLatch held = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService threads = Executors.newFixedThreadPool(3);
+        try {
+            Future<?> holder = threads.submit(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                receiptRepository.lockDonor(jana.id());
+                held.countDown();
+                awaitRelease(release);
+            }));
+            assertThat(held.await(30, TimeUnit.SECONDS)).isTrue();
+            Future<DonationReceipt> first = threads.submit(singleFirst ? single : yearly);
+            await().atMost(Duration.ofSeconds(30)).until(() -> sessionsWaitingForALock() == 1);
+            Future<DonationReceipt> second = threads.submit(singleFirst ? yearly : single);
+            await().atMost(Duration.ofSeconds(30)).until(() -> sessionsWaitingForALock() == 2);
+            release.countDown();
+            holder.get(30, TimeUnit.SECONDS);
+            Future<DonationReceipt> singleIssue = singleFirst ? first : second;
+            Future<DonationReceipt> yearlyIssue = singleFirst ? second : first;
+
+            DonationReceipt yearlyReceipt = yearlyIssue.get(60, TimeUnit.SECONDS);
+            assertThat(yearlyReceipt.lists(donation.id())).isTrue();
+            try {
+                DonationReceipt singleReceipt = singleIssue.get(60, TimeUnit.SECONDS);
+                assertThat(statusOf(singleReceipt)).isEqualTo("REPLACED");
+            } catch (ExecutionException refused) {
+                assertThat(refused.getCause()).isInstanceOf(DonationOnYearlyReceipt.class);
+            }
+        } finally {
+            release.countDown();
+            threads.shutdownNow();
+        }
+        assertThat(jdbc.sql("select count(*) from issued_receipt where status = 'ACTIVE' and donation_id = ?")
+                .param(donation.id().value()).query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("select count(*) from issued_receipt where status = 'ACTIVE' and receipt_year = 2025")
+                .query(Long.class).single()).isEqualTo(1);
+    }
+
+    private String statusOf(DonationReceipt receipt) {
+        return jdbc.sql("select status from issued_receipt where id = ?").param(receipt.id().value()).query(String.class).single();
     }
 
     @Test

@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the server answers 522 and the probe then hangs, then the probe is cancelled after 10 s and the cause becomes the network",
+    "replacement": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the server answers 522 and the probe then hangs, then the probe is cancelled after its timeout and the cause becomes the network at once",
+    "reason": "PR #516 (Jakub 2026-11-06, offline without waiting): the browser's word offline is trusted at once, the probe gives up after 5 s and is offline at once, and a restore checks the connection after 1 s, so these tests are renamed after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the browser says it went offline, then the app probes at once and is offline 3 s later, never on the browser word alone",
+    "replacement": "src/app/core/connectivity/connectivity.spec.ts > Given the connectivity of the app > when the browser says it went offline, then the app is offline at once without a network and probes whether the server is there anyway",
+    "reason": "PR #516 (Jakub 2026-11-06, offline without waiting): the browser's word offline is trusted at once, the probe gives up after 5 s and is offline at once, and a restore checks the connection after 1 s, so these tests are renamed after what they now prove"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/auth/auth-store.spec.ts > Given the auth store in one of several tabs of the browser > when a restore times out, then a restore right after does not wait again, and one after the pause tries again",
+    "replacement": "src/app/core/auth/auth-store.spec.ts > Given the auth store in one of several tabs of the browser > when a restore times out while the server still answers the check of the connection, then a restore right after does not wait again, and one after the pause tries again",
+    "reason": "PR #516 (Jakub 2026-11-06, offline without waiting): the browser's word offline is trusted at once, the probe gives up after 5 s and is offline at once, and a restore checks the connection after 1 s, so these tests are renamed after what they now prove"
+  }
+]

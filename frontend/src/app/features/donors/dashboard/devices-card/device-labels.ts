@@ -1,6 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { DeviceBrowser, DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
+import { BrowserSessionKind } from '../../../../core/auth/session-jar';
 
 const PLATFORMS: Record<Exclude<DevicePlatform, 'OTHER'>, string> = {
   IPHONE: $localize`:@@donor.account.devices.platform.iphone:iPhone`,
@@ -19,17 +20,36 @@ const BROWSERS: Record<Exclude<DeviceBrowser, 'OTHER'>, string> = {
   EDGE: $localize`:@@donor.account.devices.browser.edge:Edge`,
 };
 
-export function deviceName(device: Pick<SignedInDevice, 'platform' | 'browser'>): string {
-  if (device.platform === 'OTHER' && device.browser === 'OTHER') {
+const APP = $localize`:@@donor.account.devices.app:aplikace`;
+
+const SESSION_KINDS: Record<BrowserSessionKind, string> = {
+  REMEMBERED: $localize`:@@donor.account.devices.kind.remembered:zapamatované přihlášení`,
+  BROWSER: $localize`:@@donor.account.devices.kind.browser:do zavření prohlížeče`,
+  PUBLIC: $localize`:@@donor.account.devices.kind.public:cizí počítač`,
+};
+
+export function deviceName(
+  device: Pick<SignedInDevice, 'platform' | 'browser' | 'session'>,
+): string {
+  const installedApp = device.session === 'APP';
+  if (device.platform === 'OTHER' && device.browser === 'OTHER' && !installedApp) {
     return $localize`:@@donor.account.devices.unknown:Neznámé zařízení`;
   }
   const platform =
     device.platform === 'OTHER'
       ? $localize`:@@donor.account.devices.platform.other:Jiné zařízení`
       : PLATFORMS[device.platform];
-  const browser =
-    device.browser === 'OTHER'
-      ? $localize`:@@donor.account.devices.browser.other:jiný prohlížeč`
-      : BROWSERS[device.browser];
-  return `${platform} · ${browser}`;
+  return `${platform} · ${installedApp ? APP : browserName(device.browser)}`;
+}
+
+export function sessionKindName(device: Pick<SignedInDevice, 'session'>): string | null {
+  return device.session === undefined || device.session === 'APP'
+    ? null
+    : SESSION_KINDS[device.session];
+}
+
+function browserName(browser: DeviceBrowser): string {
+  return browser === 'OTHER'
+    ? $localize`:@@donor.account.devices.browser.other:jiný prohlížeč`
+    : BROWSERS[browser];
 }

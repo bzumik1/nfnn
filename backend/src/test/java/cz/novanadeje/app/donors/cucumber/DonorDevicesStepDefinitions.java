@@ -13,6 +13,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,11 +49,25 @@ public class DonorDevicesStepDefinitions {
     @Given("{string} signs in on the {string}")
     public void signsInOnThe(String alias, String device) {
         ScenarioDonors.Credentials credentials = donors.credentialsOf(alias);
+        signIn(alias, device, Map.of("email", credentials.email(), "password", credentials.password()));
+    }
+
+    @Given("{string} signs in on the {string} with the session {string}")
+    public void signsInOnTheWithTheSession(String alias, String device, String session) {
+        ScenarioDonors.Credentials credentials = donors.credentialsOf(alias);
+        signIn(alias, device, Map.of("email", credentials.email(), "password", credentials.password(), "session", session));
+    }
+
+    private void signIn(String alias, String device, Map<String, String> body) {
         onDevice(device, null);
-        ResponseEntity<String> response = api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+        ResponseEntity<String> response = api.post(LOGIN_PATH, body);
         if (response.getStatusCode().value() == 401 && api.lastResponseJson().get("type").asString().endsWith("auth/second-factor-required")) {
             String challenge = api.lastResponseJson().get("challenge").asString();
-            response = api.post(SECOND_FACTOR_PATH, Map.of("challenge", challenge, "code", totpCodes.freshCode(donors.secondFactorSecretOf(alias))));
+            Map<String, String> secondFactor = new HashMap<>(Map.of("challenge", challenge, "code", totpCodes.freshCode(donors.secondFactorSecretOf(alias))));
+            if (body.containsKey("session")) {
+                secondFactor.put("session", body.get("session"));
+            }
+            response = api.post(SECOND_FACTOR_PATH, secondFactor);
         }
         assertThat(response.getStatusCode().value()).withFailMessage("Signing in on the %s answered %s", device, response.getBody()).isEqualTo(200);
         remember(device, response);
@@ -149,10 +164,14 @@ public class DonorDevicesStepDefinitions {
     public void theDevicesAre(DataTable expected) {
         assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Listing the devices answered %s", api.lastResponse().getBody())
                 .isEqualTo(200);
+        List<String> columns = expected.row(0);
         List<Map<String, String>> listed = new ArrayList<>();
         for (JsonNode item : api.lastResponseJson().get("items")) {
-            listed.add(Map.of("platform", item.get("platform").asString(), "browser", item.get("browser").asString(),
-                    "current", String.valueOf(item.get("current").asBoolean())));
+            Map<String, String> row = new LinkedHashMap<>();
+            for (String column : columns) {
+                row.put(column, item.path(column).asString(""));
+            }
+            listed.add(row);
         }
         assertThat(listed).isEqualTo(expected.asMaps());
     }

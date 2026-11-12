@@ -24,6 +24,7 @@ function notificationOf(kind: string): NotificationCase['expected'] {
 export interface PushDeviceOptions {
   readonly subscribedWith?: string;
   readonly permission?: 'granted' | 'denied' | 'default';
+  readonly permissionAnswer?: 'granted' | 'denied' | 'default';
 }
 
 export const DEVICE_ENDPOINT = 'https://fcm.googleapis.com/fcm/send/e2e-device';
@@ -39,7 +40,8 @@ export interface PushDeviceRecord {
 
 export async function fakePushDevice(page: Page, options: PushDeviceOptions = {}): Promise<void> {
   await page.addInitScript(
-    ({ endpoint, p256dh, auth, subscribedWith, permission }) => {
+    ({ endpoint, p256dh, auth, subscribedWith, permission, permissionAnswer }) => {
+      let current = permission;
       const listeners = new Map<string, Set<(event: unknown) => void>>();
       const record = {
         subscribedWith: [] as string[],
@@ -101,13 +103,14 @@ export async function fakePushDevice(page: Page, options: PushDeviceOptions = {}
       };
       Object.defineProperty(Notification, 'permission', {
         configurable: true,
-        get: () => permission,
+        get: () => current,
       });
       Object.defineProperty(Notification, 'requestPermission', {
         configurable: true,
         value: () => {
           record.permissionRequests += 1;
-          return Promise.resolve(permission);
+          current = permissionAnswer;
+          return Promise.resolve(permissionAnswer);
         },
       });
       Object.defineProperty(Navigator.prototype, 'serviceWorker', {
@@ -145,6 +148,7 @@ export async function fakePushDevice(page: Page, options: PushDeviceOptions = {}
       auth: DEVICE_AUTH,
       subscribedWith: options.subscribedWith ?? null,
       permission: options.permission ?? 'granted',
+      permissionAnswer: options.permissionAnswer ?? options.permission ?? 'granted',
     },
   );
 }

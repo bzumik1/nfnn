@@ -1,12 +1,4 @@
-import {
-  afterNextRender,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  inject,
-  viewChild,
-} from '@angular/core';
-import { Meta } from '@angular/platform-browser';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { LoginDialog } from './features/donors/login-dialog/login-dialog';
 import { LoginDialogService } from './core/auth/login-dialog.service';
@@ -23,13 +15,4 @@ import { UpdateNotice } from './layout/update-notice/update-notice';
 })
 export class App {
   protected readonly loginDialog = inject(LoginDialogService);
-  private readonly meta = inject(Meta);
-  private readonly statusBarTint = viewChild.required<ElementRef<HTMLElement>>('statusBarTint');
-
-  constructor() {
-    afterNextRender(() => {
-      const color = getComputedStyle(this.statusBarTint().nativeElement).backgroundColor;
-      this.meta.updateTag({ name: 'theme-color', content: color });
-    });
-  }
 }

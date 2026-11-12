@@ -46,6 +46,7 @@ public class DonateBandService {
     public DonateBandView change(UUID adminId, DonateBandCommand command) {
         Instant now = clock.instant();
         Optional<DonateBandPhoto> next = command.toPhoto();
+        next.map(DonateBandPhoto::image).ifPresent(media::lockForUse);
         Optional<MediaSize> size = next.map(photo -> media.findSize(photo.image()).orElseThrow(() -> new MediaNotFound(photo.image())));
         Optional<DonateBand> stored = band.find();
         if (next.isEmpty() && stored.flatMap(DonateBand::photo).isEmpty()) {

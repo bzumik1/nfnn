@@ -190,6 +190,7 @@ describe('Given the about section', () => {
       expect(ink.getAttribute('alt')).toBe('');
       expect(ink.getAttribute('width')).toBe('600');
       expect(ink.getAttribute('height')).toBe('180');
+      expect(ink.classList).toContain('ui-ink');
       expect(portrait.getAttribute('src')).toBe(`/api/content/media/${PORTRAIT_ID}?w=480`);
       expect(portrait.getAttribute('alt')).toBe('');
     });

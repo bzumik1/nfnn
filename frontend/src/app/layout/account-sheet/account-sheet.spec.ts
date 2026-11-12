@@ -1,5 +1,7 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
+import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth-store';
@@ -13,6 +15,24 @@ import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-hi
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall, InstallWay } from '../../core/install/app-install';
 import { AccountSheet } from './account-sheet';
+import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
+
+@Component({
+  imports: [FormsModule],
+  template: `<p class="stub-page">Obsah sekce</p>
+    <a class="stub-gifts" href="/darce/dary">Moje dary</a>
+    <a class="stub-elsewhere" href="/overit">Ověřit potvrzení</a>
+    <form class="stub-form"><input class="stub-input" name="note" ngModel /></form>`,
+})
+class StubSection {}
+
+const SECTION_PAGES: AccountSectionPages = {
+  '/darce/prehled': () => Promise.resolve(StubSection),
+  '/darce/dary': () => Promise.resolve(StubSection),
+  '/darce/potvrzeni': () => Promise.resolve(StubSection),
+  '/darce/ucty': () => Promise.resolve(StubSection),
+  '/darce/udaje': () => Promise.resolve(StubSection),
+};
 
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
@@ -37,6 +57,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: DialogHistory, useClass: FakeDialogHistory },
+        { provide: ACCOUNT_SECTION_PAGES, useValue: SECTION_PAGES },
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: AppInstall, useValue: { way: installWay.asReadonly(), install } },
         {
@@ -62,22 +83,173 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   }
 
-  it('when it opens, then it names the donor and their variable symbol over the sections of the account', () => {
+  it('when it opens, then it is named Účet under the logo of the foundation, with the card of the donor leading to Údaje a zabezpečení above the sections', () => {
     const sheet = open();
 
-    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Jana Nováková');
-    expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'Variabilní symbol 1234567890',
+    expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
+    expect(sheet.querySelector('#account-sheet-title img.account-logo')?.getAttribute('alt')).toBe(
+      '',
+    );
+    const profile = sheet.querySelector('a.account-profile')!;
+    expect(profile.getAttribute('href')).toBe('/darce/udaje');
+    expect(profile.querySelector('.account-name')?.textContent?.trim()).toBe('Jana Nováková');
+    expect(profile.querySelector('.account-profile-detail')?.textContent?.trim()).toBe(
+      'Údaje a zabezpečení',
     );
     expect(sheet.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
-    expect(rows(sheet)).toEqual([
-      'Můj přehled',
-      'Moje dary',
-      'Potvrzení o daru',
-      'Bankovní účty',
-      'Údaje a zabezpečení',
-    ]);
+    expect(rows(sheet)).toEqual(['Můj přehled', 'Moje dary', 'Potvrzení o daru', 'Bankovní účty']);
+    expect(sheet.querySelector('.account-symbol')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Variabilní symbol pro vaše dary: 1234567890',
+    );
     expect(sheet.querySelector('.account-sign-out')?.textContent?.trim()).toBe('Odhlásit se');
+  });
+
+  describe('when a section is chosen on a phone', () => {
+    let navigate: ReturnType<typeof vi.spyOn>;
+    let sheet: HTMLElement;
+
+    const choose = async (selector: string): Promise<void> => {
+      sheet
+        .querySelector<HTMLAnchorElement>(selector)!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+      sheet = open();
+      await choose('nav a[href="/darce/potvrzeni"]');
+    });
+
+    it('then it opens inside the sheet under its title with Zpět, and the sheet goes one step deeper', () => {
+      expect(navigate).not.toHaveBeenCalled();
+      expect(closed).toBe(0);
+      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
+        'Potvrzení o daru',
+      );
+      expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
+      expect(sheet.querySelector('button.account-back')?.getAttribute('aria-label')).toBe('Zpět');
+      expect(sheet.querySelector('nav.account-nav')).toBeNull();
+      expect(history.steps.at(-1)).toBe(1);
+    });
+
+    it('then its title takes the focus', () => {
+      expect(document.activeElement?.id).toBe('account-section-title');
+    });
+
+    it('and Zpět is pressed, then the sheet steps back through the history', () => {
+      const back = vi.spyOn(TestBed.inject(Location), 'back');
+
+      sheet.querySelector<HTMLButtonElement>('button.account-back')!.click();
+
+      expect(back).toHaveBeenCalledOnce();
+    });
+
+    it('and the visitor goes back, then the list of the account returns with the focus on the row they came from', async () => {
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(sheet.querySelector('#account-section-title')).toBeNull();
+      expect(sheet.querySelector('nav.account-nav')).not.toBeNull();
+      expect((document.activeElement as HTMLAnchorElement | null)?.getAttribute('href')).toBe(
+        '/darce/potvrzeni',
+      );
+      expect(closed).toBe(0);
+    });
+
+    describe('and something is written in a form of the section and the visitor goes back', () => {
+      const settle = async (): Promise<void> => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+
+      beforeEach(async () => {
+        const input = sheet.querySelector<HTMLInputElement>('input.stub-input')!;
+        input.value = 'rozepsáno';
+        input.dispatchEvent(new Event('input'));
+        await settle();
+        history.listener?.stepBack();
+        await settle();
+      });
+
+      it('then the section stays with its step and a dialog asks whether to discard what is written', () => {
+        expect(sheet.querySelector('#account-section-title')).not.toBeNull();
+        expect(history.steps.at(-1)).toBe(1);
+        expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
+          'Zahodit rozepsané údaje?',
+        );
+      });
+
+      it('and they choose to keep writing, then the dialog closes and the section stays', async () => {
+        document.querySelector<HTMLButtonElement>('button.account-discard-keep')!.click();
+        await settle();
+
+        expect(document.querySelector('#account-discard-title')).toBeNull();
+        expect(sheet.querySelector('#account-section-title')).not.toBeNull();
+        expect(sheet.querySelector<HTMLInputElement>('input.stub-input')?.value).toBe('rozepsáno');
+      });
+
+      it('and they choose to discard, then the sheet steps back and the list of the account returns', async () => {
+        const back = vi.spyOn(TestBed.inject(Location), 'back');
+
+        document.querySelector<HTMLButtonElement>('button.account-discard-leave')!.click();
+        await settle();
+        history.listener?.stepBack();
+        await settle();
+
+        expect(back).toHaveBeenCalledOnce();
+        expect(document.querySelector('#account-discard-title')).toBeNull();
+        expect(sheet.querySelector('#account-section-title')).toBeNull();
+        expect(sheet.querySelector('nav.account-nav')).not.toBeNull();
+      });
+    });
+
+    it('and a link inside it leads to another section, then that section opens inside the sheet', async () => {
+      await choose('a.stub-gifts');
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe('Moje dary');
+    });
+
+    it('and a link inside it leads elsewhere, then the sheet closes and that page opens', async () => {
+      await choose('a.stub-elsewhere');
+
+      expect(closed).toBe(1);
+      expect(navigate).toHaveBeenCalledWith('/overit', expect.anything());
+    });
+  });
+
+  it('when the card of the donor is chosen on a phone, then Údaje a zabezpečení opens inside the sheet', async () => {
+    const sheet = open();
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a.account-profile')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
+      'Údaje a zabezpečení',
+    );
+  });
+
+  it('when Správa is chosen, then the sheet closes and the administration opens as a page', async () => {
+    admin.set(true);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const sheet = open();
+
+    sheet
+      .querySelector<HTMLAnchorElement>('a[href="/sprava"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+
+    expect(closed).toBe(1);
+    expect(navigate.mock.calls[0][0]).toBe('/sprava');
   });
 
   it('when a question waits under Bankovní účty, then that row shows how many and names them', () => {
@@ -129,13 +301,16 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(open().querySelector('dialog')?.getAttribute('data-presentation')).toBe('centered');
   });
 
-  it('when no name is kept, then the sheet is named Účet and shows a person instead of initials', () => {
+  it('when no name is kept, then the card of the donor shows a person instead of initials and still leads to Údaje a zabezpečení', () => {
     donor.set(sampleDonor({ name: '' }));
 
     const sheet = open();
 
     expect(sheet.querySelector('#account-sheet-title')?.textContent?.trim()).toBe('Účet');
     expect(sheet.querySelector('.account-initials svg')).not.toBeNull();
+    expect(sheet.querySelector('a.account-profile')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Údaje a zabezpečení',
+    );
   });
 
   it('when the site already runs as an app or cannot be added, then the sheet offers no Přidat na plochu', () => {
@@ -195,7 +370,8 @@ describe('Given the account sheet of a signed-in donor', () => {
     );
   });
 
-  it('when a section is chosen, then the sheet hands its history entry to that page, one level deeper, and closes', async () => {
+  it('when a section is chosen on a computer, then the sheet hands its history entry to that page, one level deeper, and closes', async () => {
+    compact.set(false);
     const router = TestBed.inject(Router);
     const navigate = vi.spyOn(router, 'navigateByUrl');
     const sheet = open();
@@ -230,7 +406,8 @@ describe('Given the account sheet of a signed-in donor', () => {
     expect(closed).toBe(1);
   });
 
-  it('when the sheet kept no history entry of its own, then a chosen section opens as a new entry over the page under it', async () => {
+  it('when the sheet kept no history entry of its own on a computer, then a chosen section opens as a new entry over the page under it', async () => {
+    compact.set(false);
     history.ownsEntry = false;
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     const sheet = open();

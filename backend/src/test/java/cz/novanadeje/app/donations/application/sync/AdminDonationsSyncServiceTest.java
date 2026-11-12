@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
@@ -103,7 +104,7 @@ class AdminDonationsSyncServiceTest {
         when(payments.findAllNewestFirst()).thenReturn(List.of());
         when(donations.findAllNewestFirst()).thenReturn(List.of());
         when(claims.findAllNewestFirst()).thenReturn(List.of());
-        when(receipts.findAllNewestFirst()).thenReturn(List.of(erasedOnes, janas));
+        when(receipts.findAllSummariesNewestFirst()).thenReturn(List.of(ReceiptSummary.of(erasedOnes), ReceiptSummary.of(janas)));
         when(importStates.current()).thenReturn(importState);
         when(reportSettings.view()).thenReturn(report);
 
@@ -114,7 +115,7 @@ class AdminDonationsSyncServiceTest {
         assertThat(snapshot.years()).containsExactly(YearOverview.compile(Year.of(2026), TODAY, List.of(), List.of(),
                 List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L, 2L, 2L)));
         assertThat(snapshot.donorRecords()).containsExactly(jana, erased);
-        assertThat(snapshot.receipts()).containsExactly(janas);
+        assertThat(snapshot.receipts()).containsExactly(ReceiptSummary.of(janas));
         assertThat(snapshot.importState()).contains(importState);
         assertThat(snapshot.report()).contains(report);
     }

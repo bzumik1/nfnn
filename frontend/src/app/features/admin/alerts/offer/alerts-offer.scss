@@ -1,0 +1,34 @@
+.alerts-offer {
+  text-align: center;
+
+  .ui-dialog__title {
+    margin-inline: var(--space-8);
+    outline: none;
+  }
+}
+
+.alerts-offer__icon {
+  display: grid;
+  place-items: center;
+  width: var(--sheet-avatar-size);
+  height: var(--sheet-avatar-size);
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-accent-fill);
+  color: var(--color-on-accent);
+}
+
+.alerts-offer__icon--on {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.alerts-offer__actions {
+  flex-direction: column;
+
+  .ui-button {
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
+}

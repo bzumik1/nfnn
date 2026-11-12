@@ -178,27 +178,44 @@ export class EmailVerification {
   }
 
   private confirm(token: string): void {
+    if (this.changesEmail) {
+      this.authApi.confirmEmailChange(token).subscribe({
+        next: () => this.signOutThenShow('confirmed'),
+        error: (failure: unknown) => this.fail(failure),
+      });
+      return;
+    }
     this.auth.confirmEmail(token).subscribe({
       next: (donor) => {
         this.donorName.set(donor.name);
         this.donorEmail.set(donor.email);
-        this.needsPasskey.set(!this.changesEmail && !donor.hasPassword);
+        this.needsPasskey.set(!donor.hasPassword);
         this.show('confirmed');
       },
-      error: (failure: unknown) => {
-        if (problemTypeEndsWith(failure, INVALID_TOKEN)) {
-          this.show('invalid');
-          return;
-        }
-        this.error.set(
-          describeProblem(
-            failure,
-            $localize`:@@donor.emailVerification.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`,
-          ),
-        );
-        this.show('failed');
-      },
+      error: (failure: unknown) => this.fail(failure),
     });
+  }
+
+  private signOutThenShow(panel: Panel): void {
+    if (!this.auth.signedIn()) {
+      this.show(panel);
+      return;
+    }
+    this.auth.logout().subscribe({ complete: () => this.show(panel) });
+  }
+
+  private fail(failure: unknown): void {
+    if (problemTypeEndsWith(failure, INVALID_TOKEN)) {
+      this.show('invalid');
+      return;
+    }
+    this.error.set(
+      describeProblem(
+        failure,
+        $localize`:@@donor.emailVerification.error.generic:Spojení se serverem se nepodařilo. Zkuste to prosím znovu.`,
+      ),
+    );
+    this.show('failed');
   }
 
   private show(panel: Panel): void {

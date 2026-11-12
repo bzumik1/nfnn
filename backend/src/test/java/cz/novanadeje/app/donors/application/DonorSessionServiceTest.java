@@ -28,8 +28,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -43,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -73,7 +76,7 @@ class DonorSessionServiceTest {
     @BeforeEach
     void setUp() {
         service = new DonorSessionService(refreshTokens, devices, signOuts, donors, accessTokens, new DonorSessionProperties(REFRESH_TTL, null),
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(signedInDevice()));
     }
 
@@ -270,6 +273,58 @@ class DonorSessionServiceTest {
 
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
         verify(refreshTokens, never()).revokeAllOf(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a token the reuse grace superseded, when it is presented, then the donor's sessions are locked before the token is locked again and every session ends, so the replay never holds a token while it waits for them")
+    void should_lock_sessions_before_the_token_when_presented_given_a_superseded_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken superseded = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false);
+        superseded.supersede(NOW.minusSeconds(20));
+        when(refreshTokens.findDonorOfSecretHash(secret.hash())).thenReturn(Optional.of(DONOR));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        InOrder order = inOrder(refreshTokens, signOuts);
+        order.verify(refreshTokens).findBySecretHashForUpdate(secret.hash());
+        order.verify(refreshTokens).lockSessionsOf(DONOR);
+        order.verify(refreshTokens).findBySecretHashForUpdate(secret.hash());
+        order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+    }
+
+    @Test
+    @DisplayName("Given a usable token, when the session is refreshed, then the donor's sessions are not locked, because a plain rotation locks only its own token")
+    void should_not_lock_sessions_when_refreshed_given_usable_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(accessTokens.issue(eq(DONOR), eq(Set.of(Role.DONOR)), any(DeviceId.class), eq(NOW))).thenReturn(new IssuedAccessToken("access2", NOW.plus(Duration.ofMinutes(15))));
+        when(refreshTokens.markUsed(existing.id(), NOW)).thenReturn(true);
+
+        service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN);
+
+        verify(refreshTokens, never()).lockSessionsOf(any());
+        verify(refreshTokens, times(1)).findBySecretHashForUpdate(secret.hash());
+    }
+
+    @Test
+    @DisplayName("Given a known token, when the session is closed, then the donor's sessions are locked before the token, so the sign-out never holds a token while it waits for them")
+    void should_lock_sessions_before_the_token_when_closed_given_known_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken existing = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
+        when(refreshTokens.findDonorOfSecretHash(secret.hash())).thenReturn(Optional.of(DONOR));
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(existing));
+
+        service.close(secret.value());
+
+        InOrder order = inOrder(refreshTokens, signOuts);
+        order.verify(refreshTokens).lockSessionsOf(DONOR);
+        order.verify(refreshTokens).findBySecretHashForUpdate(secret.hash());
+        order.verify(refreshTokens).revokeIfUnused(existing.id(), NOW);
+        order.verify(signOuts).end(DONOR, DEVICE, DeviceSignOutReason.SIGNED_OUT, NOW);
     }
 
     @Test

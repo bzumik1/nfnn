@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import org.slf4j.Logger;
@@ -59,13 +60,26 @@ final class StatusFiles {
         };
         return Optional.of(new BackupRun(outcome, Instant.parse(required(values, "started_at")), Instant.parse(required(values, "finished_at")),
                 optional(values, "file"), optional(values, "size").map(Long::parseLong), optional(values, "tables").map(Integer::parseInt),
-                optional(values, "request"), optional(values, "admin").map(UUID::fromString), optional(values, "error"), revocations(values)));
+                optional(values, "request"), optional(values, "admin").map(UUID::fromString), optional(values, "error"), revocations(values),
+                carriedForward(values)));
     }
 
     private static Optional<RestoreRevocations> revocations(Map<String, String> values) {
         Optional<Integer> sessions = count(values, "sessions_ended");
         Optional<Integer> oneTimeSecrets = count(values, "one_time_secrets_spent");
         return sessions.flatMap(ended -> oneTimeSecrets.map(spent -> new RestoreRevocations(ended, spent)));
+    }
+
+    private static Optional<RestoreCarryForward> carriedForward(Map<String, String> values) {
+        Optional<Integer> erasures = count(values, "erasures_carried");
+        Optional<Integer> credentials = count(values, "credentials_carried");
+        Optional<Integer> roles = count(values, "roles_carried");
+        Optional<Integer> adminActions = count(values, "admin_actions_carried");
+        Optional<Integer> receiptNumbersSkipped = count(values, "receipt_numbers_skipped");
+        if (erasures.isEmpty() || credentials.isEmpty() || roles.isEmpty() || adminActions.isEmpty() || receiptNumbersSkipped.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new RestoreCarryForward(erasures.get(), credentials.get(), roles.get(), adminActions.get(), receiptNumbersSkipped.get()));
     }
 
     private static Optional<Integer> count(Map<String, String> values, String key) {

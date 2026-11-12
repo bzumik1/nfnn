@@ -96,4 +96,64 @@ describe('Given the site footer', () => {
     expect(news?.getAttribute('href')).toBe('/aktuality');
     expect(news?.getAttribute('aria-current')).toBe('page');
   });
+
+  describe('when the page scrolls it into view', () => {
+    type Watch = (entries: { isIntersecting: boolean }[]) => void;
+    let watch: Watch | null;
+    let watched: Element | null;
+    let disconnected: boolean;
+
+    beforeEach(() => {
+      watch = null;
+      watched = null;
+      disconnected = false;
+      vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+          constructor(callback: Watch) {
+            watch = callback;
+          }
+
+          observe(element: Element): void {
+            watched = element;
+          }
+
+          disconnect(): void {
+            disconnected = true;
+          }
+        },
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      document.documentElement.classList.remove('footer-in-view');
+    });
+
+    it('then the page says so, for Safari to paint the strip under its toolbar in the footer colour, and stops saying it once the footer leaves the screen', async () => {
+      const fixture = TestBed.createComponent(SiteFooter);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(watched).toBe(fixture.nativeElement);
+      watch!([{ isIntersecting: true }]);
+      const inView = document.documentElement.classList.contains('footer-in-view');
+      watch!([{ isIntersecting: false }]);
+
+      expect(inView).toBe(true);
+      expect(document.documentElement.classList.contains('footer-in-view')).toBe(false);
+    });
+
+    it('then a page without the footer forgets it, and the footer stops watching', async () => {
+      const fixture = TestBed.createComponent(SiteFooter);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      watch!([{ isIntersecting: true }]);
+
+      fixture.destroy();
+
+      expect(document.documentElement.classList.contains('footer-in-view')).toBe(false);
+      expect(disconnected).toBe(true);
+    });
+  });
 });

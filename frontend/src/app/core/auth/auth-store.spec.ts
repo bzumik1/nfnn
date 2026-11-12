@@ -1,11 +1,12 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { AdministrationAccess } from './administration-access';
-import { AuthStore, SESSION_HINT_KEY } from './auth-store';
+import { AuthStore, CONNECTION_CHECK_AFTER_MS, SESSION_HINT_KEY } from './auth-store';
 import { Donor } from './donor';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { TimeoutError } from 'rxjs';
+import { Connectivity, PROBE_PATH, PROBE_TIMEOUT_MS } from '../connectivity/connectivity';
 import {
   REFRESH_LOCK_WAIT_MS,
   REFRESH_REQUEST_TIMEOUT_MS,
@@ -541,6 +542,83 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(store.currentAccessToken()).toBe('token-8');
   });
 
+  describe('when the app knows it is offline', () => {
+    let probe: ReturnType<HttpTestingController['expectOne']>;
+
+    beforeEach(() => {
+      localStorage.setItem(SESSION_HINT_KEY, '1');
+      TestBed.inject(Connectivity);
+      window.dispatchEvent(new Event('offline'));
+      probe = http.expectOne(PROBE_PATH);
+    });
+
+    it('and a restore starts, then it asks nothing and the visitor waits signed out at once, the hint kept', async () => {
+      await store.restore();
+
+      http.expectNone('/api/donors/auth/refresh');
+      expect(store.status()).toBe('anonymous');
+      expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+      probe.error(new ProgressEvent('error'), { status: 0 });
+    });
+
+    it('and the connection comes back, then the next restore asks the server again', async () => {
+      await store.restore();
+      probe.flush({});
+      TestBed.inject(Connectivity).answered({
+        status: 200,
+        headers: new HttpHeaders(),
+        fromNetwork: true,
+      });
+
+      const again = store.restore();
+      await vi.waitFor(() =>
+        http.expectOne('/api/donors/auth/refresh').flush(authResponse('token-12')),
+      );
+      await again;
+      expect(store.currentAccessToken()).toBe('token-12');
+    });
+  });
+
+  it('when a restore starts and neither the refresh nor the check of the connection is answered, then the restore gives up once the check does, not after the refresh timeout', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+    vi.useFakeTimers();
+    try {
+      const restored = store.restore();
+      await vi.advanceTimersByTimeAsync(0);
+      const refresh = http.expectOne('/api/donors/auth/refresh');
+      http.expectNone(PROBE_PATH);
+      await vi.advanceTimersByTimeAsync(CONNECTION_CHECK_AFTER_MS);
+      http.expectOne(PROBE_PATH);
+
+      await vi.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+      await restored;
+
+      expect(store.status()).toBe('anonymous');
+      expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+      refresh.error(new ProgressEvent('error'), { status: 0 });
+      http
+        .match(PROBE_PATH)
+        .forEach((probe) => probe.error(new ProgressEvent('error'), { status: 0 }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('when the app finds out it is offline while a restore waits for the server, then the restore gives up at once and the hint stays', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+    TestBed.inject(Connectivity);
+
+    const restored = store.restore();
+    const refresh = await vi.waitFor(() => http.expectOne('/api/donors/auth/refresh'));
+    window.dispatchEvent(new Event('offline'));
+    await restored;
+
+    expect(store.status()).toBe('anonymous');
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
+    http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+    refresh.error(new ProgressEvent('error'), { status: 0 });
+  });
+
   it('when the server refuses the refresh as a replay, then only the session ends and nothing else the browser keeps is deleted', async () => {
     signInFirst();
     localStorage.setItem('nfnn.receipt-keys', '{"keys":[]}');
@@ -623,14 +701,16 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     },
   );
 
-  it('when a restore times out, then a restore right after does not wait again, and one after the pause tries again', async () => {
+  it('when a restore times out while the server still answers the check of the connection, then a restore right after does not wait again, and one after the pause tries again', async () => {
     localStorage.setItem(SESSION_HINT_KEY, '1');
     vi.useFakeTimers();
 
     const first = store.restore();
     await vi.advanceTimersByTimeAsync(0);
     http.expectOne('/api/donors/auth/refresh');
-    await vi.advanceTimersByTimeAsync(REFRESH_REQUEST_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(CONNECTION_CHECK_AFTER_MS);
+    http.expectOne(PROBE_PATH).flush({});
+    await vi.advanceTimersByTimeAsync(REFRESH_REQUEST_TIMEOUT_MS - CONNECTION_CHECK_AFTER_MS);
     await first;
 
     await store.restore();

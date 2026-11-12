@@ -167,6 +167,17 @@ class JpaRefreshTokenRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a token, when its donor is found by hash, then it is the token's donor and an unknown hash finds none")
+    void should_find_the_donor_when_found_by_hash_given_a_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        refreshTokens.save(RefreshToken.issue(secret, jana, device, NOW, TTL, false));
+        flushAndClear();
+
+        assertThat(refreshTokens.findDonorOfSecretHash(secret.hash())).contains(jana);
+        assertThat(refreshTokens.findDonorOfSecretHash(RefreshTokenSecret.generate().hash())).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a used token and the token issued after it, when the successor is recorded, then the used token names it")
     void should_name_the_successor_when_recorded_given_a_used_token_and_the_next_one() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();

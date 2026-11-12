@@ -1,0 +1,9 @@
+[
+  {
+    "path": "GET /api/admin/donations/report/sent",
+    "scenario": "donations/admin_sent_monthly_report: *",
+    "kind": "added",
+    "reason": "Jakub 2026-11-10 (variant C): an administrator opens a sent monthly report at /sprava/prehledy and the connector's nfnn_report reads it with a month; every sending (the morning check and each by hand) is kept with the sections it carried, its figures, the bank import status and the recipient count, never the addresses; a month sent before the sendings were kept is recomputed from today's data without the bank; v2 had no such endpoint",
+    "contract": "docs/api-contract.md, Monthly report settings and overview; MCP connector"
+  }
+]

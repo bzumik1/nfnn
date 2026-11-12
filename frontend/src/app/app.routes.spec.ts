@@ -6,6 +6,7 @@ import { inject } from 'vitest';
 import { appRoutePaths } from '../testing/server-routes';
 import { routes } from './app.routes';
 import { SESSION_HINT_KEY } from './core/auth/auth-store';
+import { RouteChrome } from './core/navigation/route-chrome';
 import { authResponse } from './core/auth/testing/donor-fixtures';
 
 describe('Given a signed-in donor and the app routes', () => {
@@ -61,6 +62,15 @@ describe('Given a visitor and the app routes', () => {
 
     expect(router.url).toBe('/overit#1234');
     expect(document.title).toBe('Ověření potvrzení o daru | Nová naděje – nadační fond');
+  });
+
+  it('when the verification page opens, then it has Zpět, which returns to the step before or else home', async () => {
+    const router = TestBed.inject(Router);
+    const chrome = TestBed.inject(RouteChrome);
+
+    await router.navigateByUrl('/overit');
+
+    expect(chrome.current().parent).toBe('/');
   });
 });
 

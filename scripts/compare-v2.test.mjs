@@ -1736,7 +1736,7 @@ describe('Given recorded log lines with an IBAN or the data of the fixtures', ()
     assert.match(result.output, /Krátká/);
     assert.match(
       result.output,
-      /rename the fixture value or add the word to COMMON_WORDS with a reason in testing\.md/,
+      /rename the fixture value or add the word to COMMON_WORDS with a reason in testing-regression\.md/,
     );
   });
 

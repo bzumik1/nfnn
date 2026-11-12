@@ -61,6 +61,7 @@ class DeviceSignOutsTest {
         signOuts().endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
 
         InOrder order = inOrder(refreshTokens, devices, events);
+        order.verify(refreshTokens).lockSessionsOf(JANA);
         order.verify(refreshTokens).revokeAllOf(JANA, NOW);
         order.verify(devices).findActiveOf(JANA);
         order.verify(refreshTokens).revokeAllOfDevice(phone.id(), NOW);
@@ -98,6 +99,7 @@ class DeviceSignOutsTest {
         signOuts().endOthersOf(JANA, Optional.of(current.id()), NOW);
 
         InOrder order = inOrder(refreshTokens, devices);
+        order.verify(refreshTokens).lockSessionsOf(JANA);
         order.verify(refreshTokens).lockAllOf(JANA);
         order.verify(refreshTokens).revokeDevicelessBrowserTokensOf(JANA, NOW);
         order.verify(devices).findActiveOf(JANA);
@@ -131,6 +133,7 @@ class DeviceSignOutsTest {
 
         assertThat(ended).isTrue();
         InOrder order = inOrder(refreshTokens, devices, events);
+        order.verify(refreshTokens).lockSessionsOf(JANA);
         order.verify(refreshTokens).lockAllOf(JANA);
         order.verify(devices).findById(phone.id());
         order.verify(refreshTokens).revokeAllOfDevice(phone.id(), NOW);

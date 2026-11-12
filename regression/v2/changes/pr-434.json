@@ -1,0 +1,40 @@
+[
+  {
+    "path": "PUT /api/admin/operations/settings",
+    "scenario": "operations/settings: A connected application changes plain settings but never a password, a token, the site's address or the mail server*",
+    "kind": "status",
+    "reason": "Security audit 2026-11-06 (#434): every mail setting is browser-only, so a connection moving MAIL_HOST gets 403 operations/secret-settings-in-browser-only instead of 400 password-for-new-mail-server, whether or not a mail password is set",
+    "contract": "docs/api-contract.md, Settings"
+  },
+  {
+    "path": "PUT /api/admin/operations/settings",
+    "scenario": "operations/settings: A connected application changes plain settings but never a password, a token, the site's address or the mail server*",
+    "kind": "body",
+    "reason": "Security audit 2026-11-06 (#434): the 403 for MAIL_HOST replaces the 400 naming MAIL_PASSWORD, and operations/secret-settings-in-browser-only now names the mail settings in its title and detail",
+    "contract": "docs/api-contract.md, Settings"
+  },
+  {
+    "path": "POST /api/admin/operations/settings/test-email",
+    "scenario": "operations/settings: A connected application sends a test e-mail through the running server but never with a password*",
+    "kind": "body",
+    "field": "$.title",
+    "reason": "Security audit 2026-11-06 (#434): operations/secret-settings-in-browser-only covers the mail settings too, so its title is \"Jen v prohlížeči\"",
+    "contract": "docs/api-contract.md, Settings"
+  },
+  {
+    "path": "POST /api/admin/operations/settings/test-email",
+    "scenario": "operations/settings: A connected application sends a test e-mail through the running server but never with a password*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Security audit 2026-11-06 (#434): operations/secret-settings-in-browser-only covers the mail settings too, so its detail names them",
+    "contract": "docs/api-contract.md, Settings"
+  },
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the report settings change, then the whole settings reach the administration",
+    "replacement": "test/tools.spec.ts > Given an administrator connected with the writing permission > when the report settings change, then the day, the hour and the sections reach the administration with the recipients it holds now, whatever recipients the call names",
+    "reason": "Security audit 2026-11-06, second round (#434): nfnn_update_report_settings takes no recipients and sends back the ones the backend holds, so the test that sent the whole settings now proves the stored recipients reach the administration whatever the call names",
+    "contract": "docs/api-contract.md, MCP connector"
+  }
+]

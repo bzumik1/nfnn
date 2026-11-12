@@ -85,7 +85,7 @@ public class NewsAdminService {
         requireFreeYear(lookBackYear, id);
         NewsArticle article = NewsArticle.create(id, content, lookBackYear, now);
         news.save(article);
-        formerSlugs.forget(content.slug());
+        formerSlugs.forgetNews(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
         if (lookBackYear.isPresent()) {
             auditLookBack(adminId, article, lookBackYear, now);
@@ -150,7 +150,7 @@ public class NewsAdminService {
     }
 
     private void rememberFormerSlug(NewsArticle before, NewsArticle after, Instant now) {
-        formerSlugs.forget(after.slug());
+        formerSlugs.forgetNews(after.slug());
         if (!before.slug().equals(after.slug())) {
             formerSlugs.rememberNews(before.slug(), after.id(), now);
         }
@@ -160,6 +160,7 @@ public class NewsAdminService {
         if (news.isSlugTakenByAnother(content.slug(), id)) {
             throw new SlugTaken(content.slug());
         }
+        content.coverImage().ifPresent(media::lockForUse);
         content.coverImage().filter(image -> !media.exists(image)).ifPresent(image -> {
             throw new MediaNotFound(image);
         });

@@ -5,6 +5,11 @@ import { pathOf, tabOf } from './app-tabs';
 
 export const APP_DEPTH_KEY = 'nfnnAppDepth';
 export const APP_BEHIND_KEY = 'nfnnAppBehind';
+export const BACK_NAVIGATION = 'nfnn.back';
+
+export type BackDestination =
+  | { readonly kind: 'step'; readonly depth: number; readonly path: string | null }
+  | { readonly kind: 'parent'; readonly path: string };
 
 @Injectable({ providedIn: 'root' })
 export class BackTarget {
@@ -48,12 +53,27 @@ export class BackTarget {
     return this.left;
   }
 
+  destination(parent: string): BackDestination {
+    return this.canGoBack && this.staysInTab()
+      ? { kind: 'step', depth: this.depth - 1, path: this.behind }
+      : { kind: 'parent', path: parent };
+  }
+
   back(parent: string): void {
-    if (this.canGoBack && this.staysInTab()) {
+    if (this.destination(parent).kind === 'step') {
       this.buttonPressed = true;
       this.location.back();
     } else {
-      void this.router.navigateByUrl(parent, { replaceUrl: true });
+      void this.router.navigateByUrl(parent, { replaceUrl: true, info: BACK_NAVIGATION });
+    }
+  }
+
+  toTabRoot(root: string): void {
+    if (this.canGoBack && this.behind === root) {
+      this.buttonPressed = true;
+      this.location.back();
+    } else {
+      void this.router.navigateByUrl(root, { replaceUrl: true, info: BACK_NAVIGATION });
     }
   }
 

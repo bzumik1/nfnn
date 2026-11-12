@@ -221,7 +221,7 @@ describe('Given an administrator writing a new news article', () => {
     const slug = element<HTMLInputElement>(fixture, '#news-slug');
     expect(slug.getAttribute('aria-invalid')).toBe('true');
     expect(text(fixture, '#news-slug-error')).toBe(
-      'Tuto adresu už má jiná aktualita nebo projekt. Zvolte prosím jinou.',
+      'Tuto adresu už má jiná aktualita nebo příběh. Zvolte prosím jinou.',
     );
     expect(document.activeElement).toBe(slug);
     expect(fixture.nativeElement.querySelector('.form-error')).toBeNull();

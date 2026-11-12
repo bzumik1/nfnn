@@ -29,7 +29,7 @@ const QR_OF_500_FOR_JANA = paymentQrCase('500 Kč with a ten-digit variable symb
 
 function qrOfTyped(crowns: number): QrMatrix {
   return encodeText(
-    `SPD*1.0*ACC:CZ2620100000005544332217*AM:${crowns}.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE`,
+    `SPD*1.0*ACC:CZ2620100000005544332217*AM:${crowns}.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:DAR NADACNI FOND NOVA NADEJE`,
     'H',
   );
 }

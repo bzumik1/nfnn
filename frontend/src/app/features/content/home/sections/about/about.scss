@@ -13,7 +13,7 @@
   grid-template-rows: auto 1fr;
   gap: var(--space-6) var(--space-16);
   align-items: start;
-  padding-top: calc(env(safe-area-inset-top) + var(--header-height) + var(--space-16));
+  padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-16));
   padding-bottom: var(--space-16);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-section-title);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-display);
@@ -75,6 +75,8 @@
   border-radius: var(--radius-media);
   background: var(--color-surface-alt);
   box-shadow: var(--shadow-card);
+  outline: 1px solid var(--color-media-rim);
+  outline-offset: -1px;
 }
 
 .about-badge {
@@ -84,14 +86,14 @@
   max-width: 15rem;
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-media);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
   box-shadow: var(--shadow-badge);
   pointer-events: none;
 }
 
 .about-badge-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-4xl);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-none);
@@ -128,7 +130,7 @@
   width: var(--space-12);
   height: auto;
   margin-bottom: var(--space-6);
-  fill: var(--color-accent);
+  fill: var(--color-accent-fill);
 }
 
 .quote-text {
@@ -136,7 +138,7 @@
   gap: var(--space-4);
   margin: 0;
   color: var(--color-text);
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-style: italic;
   line-height: var(--leading-snug);
@@ -145,7 +147,7 @@
 
 .board-title {
   margin-bottom: var(--space-6);
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-heading);
   font-weight: var(--weight-bold);
   color: var(--color-text);
@@ -216,7 +218,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
     gap: var(--space-6);
-    padding-top: calc(env(safe-area-inset-top) + var(--header-height) + var(--space-6));
+    padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-6));
     padding-bottom: var(--space-10);
   }
 

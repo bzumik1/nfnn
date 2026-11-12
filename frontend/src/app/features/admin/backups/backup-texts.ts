@@ -17,7 +17,7 @@ export const BACKUP_PROBLEM_SUMMARIES: Record<BackupProblem, string> = {
   TEST_RESTORE_STALE: $localize`:@@admin.backups.problem.testRestoreStale.summary:Zkušební obnova neproběhla déle než týden.`,
 };
 
-const BACKUP_PROBLEM_ACTIONS: Record<BackupProblem, string> = {
+export const BACKUP_PROBLEM_ACTIONS: Record<BackupProblem, string> = {
   BACKUPS_UNAVAILABLE: ASK_TECHNICIAN,
   BACKUP_MISSING: RETRY_BACKUP,
   BACKUP_FAILED: RETRY_BACKUP,

@@ -120,3 +120,25 @@
     margin-top: var(--space-1);
   }
 }
+
+.recent-title {
+  padding: var(--space-2) var(--space-6) var(--space-3);
+}
+
+.donor-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.gift-amount {
+  display: block;
+  font-weight: var(--weight-semibold);
+}
+
+.donor-avatar {
+  flex: none;
+  width: var(--space-10);
+  height: var(--space-10);
+  font-size: var(--text-md);
+}

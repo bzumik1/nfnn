@@ -55,6 +55,7 @@ public class DonorPasskeyStepDefinitions {
     private static final String SECOND_FACTOR_CONFIRM_PATH = "/api/donors/me/second-factor/confirm";
     private static final String RECOVERY_OPTIONS_PATH = "/api/donors/auth/password-reset/passkey/options";
     private static final String RECOVERY_PATH = "/api/donors/auth/password-reset/passkey";
+    private static final String ADMINISTRATION_UNLOCK_PATH = "/api/admin/donors/devices/current/unlock";
     private static final Pattern RESET_TOKEN_IN_LINK = Pattern.compile("obnova-hesla#token=([A-Za-z0-9_-]{43})");
     private static final String REGISTERED_ADDRESS_STREET = "Dlouhá 12";
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
@@ -138,6 +139,24 @@ public class DonorPasskeyStepDefinitions {
         asksToAddAPasskeyWith(alias, Map.of("passkey", confirmation));
     }
 
+    @When("{string} unlocks the administration on this device with the passkey {string}")
+    public void unlocksTheAdministrationWithThePasskey(String alias, String name) {
+        unlocksTheAdministrationWith(alias, passkeyConfirmation(alias, name));
+    }
+
+    @When("{string} unlocks the administration on this device with the passkey {string} of {string}")
+    public void unlocksTheAdministrationWithThePasskeyOf(String alias, String name, String owner) {
+        unlocksTheAdministrationWith(alias, passkeyConfirmation(owner, name));
+    }
+
+    @When("{string} unlocks the administration on this device with the passkey {string} answering a spent challenge")
+    public void unlocksTheAdministrationAnsweringASpentChallenge(String alias, String name) {
+        Map<String, Object> confirmation = passkeyConfirmation(alias, name);
+        unlocksTheAdministrationWith(alias, confirmation);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Unlock answered %s", api.lastResponse().getBody()).isEqualTo(204);
+        unlocksTheAdministrationWith(alias, confirmation);
+    }
+
     @When("{string} starts the second factor set-up confirmed with the passkey {string}")
     public void startsTheSecondFactorSetUpConfirmedWithThePasskey(String alias, String name) {
         Map<String, Object> confirmation = passkeyConfirmation(alias, name);
@@ -194,6 +213,16 @@ public class DonorPasskeyStepDefinitions {
     @When("{string} asks for a new passkey with the link from the e-mail and code {string}")
     public void asksForANewPasskeyWithTheLinkAndCode(String alias, String code) {
         asksForANewPasskey(Map.of("token", resetToken(), "code", code));
+    }
+
+    @Given("{string} asked for a new passkey with the link from the e-mail and code {string} {int} times, each from another client address")
+    public void askedForANewPasskeyWithTheLinkAndCodeTimesEachFromAnotherClientAddress(String alias, String code, int times) {
+        for (int attempt = 0; attempt < times; attempt++) {
+            api.comeFromAnotherAddress();
+            asksForANewPasskeyWithTheLinkAndCode(alias, code);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Request %d answered %s", attempt + 1, api.lastResponse().getBody()).isEqualTo(400);
+            assertThat(api.lastResponseJson().get("type").asString()).endsWith("donors/second-factor-code-rejected");
+        }
     }
 
     @When("{string} asks for a new passkey with the link from the e-mail and the current code")
@@ -518,6 +547,11 @@ public class DonorPasskeyStepDefinitions {
         assertThat(response.getStatusCode().value()).withFailMessage("Sign-in options answered %s", response.getBody()).isEqualTo(200);
         String challenge = api.lastResponseJson().get("challenge").asString();
         return Map.of("challenge", challenge, "credential", passkey(alias, name).key().assertion(challenge));
+    }
+
+    private void unlocksTheAdministrationWith(String alias, Map<String, Object> confirmation) {
+        sessions.actAs(alias);
+        api.post(ADMINISTRATION_UNLOCK_PATH, Map.of("passkey", confirmation));
     }
 
     private void asksForANewPasskey(Map<String, ?> body) {

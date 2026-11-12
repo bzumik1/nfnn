@@ -50,12 +50,26 @@
             <ng-container i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</ng-container>
           }
         </button>
+      } @else if (accountPasskeyUnlocks()) {
+        <button
+          type="button"
+          class="ui-button ui-button--primary ui-button--block lock-passkey"
+          appNeedsConnection
+          [disabled]="busy() || !online()"
+          (click)="withAccountPasskey()"
+        >
+          @if (busy()) {
+            <ng-container i18n="@@admin.lock.passkey.busy">Čekáme na přístupový klíč…</ng-container>
+          } @else {
+            <ng-container i18n="@@admin.lock.passkey">Odemknout přístupovým klíčem</ng-container>
+          }
+        </button>
       }
       @if (passwordUnlocks()) {
         <button
           type="button"
           class="ui-button ui-button--block lock-use-password"
-          [class.ui-button--primary]="!passkeyUnlocks()"
+          [class.ui-button--primary]="!offersPasskey()"
           [disabled]="busy() || !online()"
           (click)="usePassword()"
           i18n="@@admin.lock.usePassword"
@@ -64,7 +78,7 @@
         </button>
       }
     </div>
-    @if (passkeyUnlocks()) {
+    @if (offersPasskey()) {
       <p class="lock-note" i18n="@@admin.lock.passkeyNote">
         Face ID, otisk prstu nebo zámek obrazovky.
       </p>

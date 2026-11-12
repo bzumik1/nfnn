@@ -6,7 +6,11 @@ import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { AdministrationAccess } from '../../../core/auth/administration-access';
 import { AuthStore } from '../../../core/auth/auth-store';
-import type { Donor } from '../../../core/auth/donor';
+import type { Donor, PasskeySignInOptions } from '../../../core/auth/donor';
+import {
+  PasskeyAuthenticator,
+  PasskeyCeremonyError,
+} from '../../../core/auth/passkey-authenticator';
 import { deviceAccountOf } from '../../../core/auth/session-device';
 import { sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { DeviceVault } from '../../../core/device/store/device-vault';
@@ -14,6 +18,26 @@ import { AdministrationCopyDownload } from '../device-copy/administration-copy-d
 import { AdministrationLockService } from './administration-lock-service';
 
 const ADMINISTRATOR = sampleDonor({ roles: ['DONOR', 'ADMIN'] });
+const UNLOCK = '/api/admin/donors/devices/current/unlock';
+const SIGN_IN_OPTIONS = '/api/donors/auth/passkey/options';
+const OPTIONS: PasskeySignInOptions = {
+  challenge: 'dnlad3ZhLWtfYS1tZXppLWNoYWxsZW5nZQ',
+  rpId: 'nfnn.cz',
+  timeout: 60000,
+  userVerification: 'required',
+  allowCredentials: [],
+};
+const ASSERTION = {
+  id: 'Y3JlZGVudGlhbC0x',
+  rawId: 'Y3JlZGVudGlhbC0x',
+  type: 'public-key' as const,
+  response: {
+    clientDataJSON: 'Y2xpZW50',
+    authenticatorData: 'YXV0aA',
+    signature: 'c2lnbmF0dXJl',
+    userHandle: 'dXNlcg',
+  },
+};
 
 describe('Given the lock of the administration in this tab', () => {
   let donor: ReturnType<typeof signal<Donor | null>>;
@@ -23,7 +47,12 @@ describe('Given the lock of the administration in this tab', () => {
     administrationPasskeys: ReturnType<typeof vi.fn>;
     unlockAdministrationWithPasskey: ReturnType<typeof vi.fn>;
     unlockAdministrationWithPassword: ReturnType<typeof vi.fn>;
+    unlockAdministrationWithPrf: ReturnType<typeof vi.fn>;
+    prfInput: ReturnType<typeof vi.fn>;
   };
+  let passkeys: { getWithPrf: ReturnType<typeof vi.fn> };
+  let hasPasskeys: ReturnType<typeof vi.fn>;
+  let prfOutput: Uint8Array<ArrayBuffer>;
   let access: AdministrationAccess;
   let lock: AdministrationLockService;
   let http: HttpTestingController;
@@ -42,7 +71,17 @@ describe('Given the lock of the administration in this tab', () => {
       administrationPasskeys: vi.fn(async () => ['Y3JlZGVudGlhbC0x']),
       unlockAdministrationWithPasskey: vi.fn(async () => true),
       unlockAdministrationWithPassword: vi.fn(async () => undefined),
+      unlockAdministrationWithPrf: vi.fn(async () => true),
+      prfInput: vi.fn(async () => new Uint8Array(32)),
     };
+    prfOutput = new Uint8Array(32).fill(7);
+    passkeys = {
+      getWithPrf: vi.fn(async () => ({
+        credential: ASSERTION,
+        prf: { credentialId: ASSERTION.id, userHandle: 'dXNlcg', output: prfOutput },
+      })),
+    };
+    hasPasskeys = vi.fn(() => of(true));
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -55,9 +94,11 @@ describe('Given the lock of the administration in this tab', () => {
             isAdmin: admin.asReadonly(),
             storesNothing: publicComputer.asReadonly(),
             logout,
+            hasPasskeys,
           },
         },
         { provide: DeviceVault, useValue: vault },
+        { provide: PasskeyAuthenticator, useValue: passkeys },
         { provide: AdministrationCopyDownload, useValue: { firstDownload: signal(null) } },
       ],
     });
@@ -157,6 +198,96 @@ describe('Given the lock of the administration in this tab', () => {
     await expect(unlocked).rejects.toBeTruthy();
     expect(lock.locked()).toBe(true);
     expect(vault.unlockAdministrationWithPassword).not.toHaveBeenCalled();
+  });
+
+  describe('when the copy on this device has no passkey wrap and the account has a passkey', () => {
+    beforeEach(() => vault.administrationPasskeys.mockResolvedValue([]));
+
+    async function answerOptions(): Promise<void> {
+      await vi.waitFor(() => http.expectOne(SIGN_IN_OPTIONS).flush(OPTIONS));
+    }
+
+    it('then the passkey of the account is offered', async () => {
+      expect(await lock.accountPasskeyUnlocks()).toBe(true);
+    });
+
+    it('and the account has none, then no passkey of the account is offered', async () => {
+      hasPasskeys.mockReturnValue(of(false));
+
+      expect(await lock.accountPasskeyUnlocks()).toBe(false);
+    });
+
+    it('and the server accepts the passkey, then the administration is unlocked and the copy is wrapped with it, in memory on a public computer', async () => {
+      publicComputer.set(true);
+      const unlocked = lock.unlockWithAccountPasskey();
+      await answerOptions();
+      const request = await vi.waitFor(() => http.expectOne(UNLOCK));
+      expect(request.request.body).toEqual({
+        passkey: { challenge: OPTIONS.challenge, credential: ASSERTION },
+      });
+      expect(passkeys.getWithPrf).toHaveBeenCalledWith(OPTIONS, new Uint8Array(32));
+      request.flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(await unlocked).toBe(true);
+      expect(lock.locked()).toBe(false);
+      expect(vault.unlockAdministrationWithPrf).toHaveBeenCalledWith(
+        deviceAccountOf(ADMINISTRATOR),
+        expect.objectContaining({ credentialId: ASSERTION.id }),
+        true,
+      );
+    });
+
+    it('and the server refuses the passkey, then the administration stays locked, the copy stays closed and the output is wiped', async () => {
+      const unlocked = lock.unlockWithAccountPasskey();
+      await answerOptions();
+      (await vi.waitFor(() => http.expectOne(UNLOCK))).flush(
+        { type: 'https://nfnn.cz/problems/donors/passkey-confirmation-rejected', status: 400 },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+      await expect(unlocked).rejects.toBeTruthy();
+      expect(lock.locked()).toBe(true);
+      expect(vault.unlockAdministrationWithPrf).not.toHaveBeenCalled();
+      expect(prfOutput.every((byte) => byte === 0)).toBe(true);
+    });
+
+    it('and the passkey is cancelled, then nothing is sent and the administration stays locked', async () => {
+      passkeys.getWithPrf.mockRejectedValue(new PasskeyCeremonyError('cancelled'));
+      const unlocked = lock.unlockWithAccountPasskey();
+      await answerOptions();
+
+      expect(await unlocked).toBe(false);
+      http.expectNone(UNLOCK);
+      expect(lock.locked()).toBe(true);
+    });
+
+    it('and the authenticator gives no PRF output, then the administration is unlocked and the copy stays as it is', async () => {
+      passkeys.getWithPrf.mockResolvedValue({ credential: ASSERTION, prf: null });
+      const unlocked = lock.unlockWithAccountPasskey();
+      await answerOptions();
+      (await vi.waitFor(() => http.expectOne(UNLOCK))).flush(null, {
+        status: 204,
+        statusText: 'No Content',
+      });
+
+      expect(await unlocked).toBe(true);
+      expect(lock.locked()).toBe(false);
+      expect(vault.unlockAdministrationWithPrf).not.toHaveBeenCalled();
+    });
+
+    it('and she signs out while the server checks the passkey, then neither the administration nor the copy opens', async () => {
+      const unlocked = lock.unlockWithAccountPasskey();
+      await answerOptions();
+      const request = await vi.waitFor(() => http.expectOne(UNLOCK));
+      donor.set(null);
+      admin.set(false);
+      request.flush(null, { status: 204, statusText: 'No Content' });
+
+      expect(await unlocked).toBe(false);
+      expect(access.unlocked()).toBe(false);
+      expect(vault.unlockAdministrationWithPrf).not.toHaveBeenCalled();
+      expect(prfOutput.every((byte) => byte === 0)).toBe(true);
+    });
   });
 
   it('when it was unlocked and locks again, then the lock reads locked', () => {

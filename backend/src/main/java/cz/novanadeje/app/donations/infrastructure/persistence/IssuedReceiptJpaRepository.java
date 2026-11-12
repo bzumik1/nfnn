@@ -23,11 +23,15 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonationIdAndStatus(UUID donationId, ReceiptStatus status);
 
+    List<IssuedReceiptJpaEntity> findByDonationIdInAndStatus(Collection<UUID> donationIds, ReceiptStatus status);
+
     boolean existsByDonationId(UUID donationId);
 
     boolean existsByDonorIdAndKindAndReceiptYearAndIssuedAtGreaterThanEqual(UUID donorId, ReceiptKind kind, Integer receiptYear, Instant issuedAt);
 
     long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtAfter(UUID donorId, Instant issuedAt);
+
+    long countByDonorIdAndSupersedesIdIsNotNullAndIssuedAtGreaterThanEqual(UUID donorId, Instant issuedAt);
 
     @Query("select distinct r.donationId from IssuedReceiptJpaEntity r where r.donationId in :donationIds")
     Set<UUID> findDonationIdsWithReceipt(@Param("donationIds") Collection<UUID> donationIds);
@@ -43,7 +47,13 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     List<IssuedReceiptJpaEntity> findByDonorIdOrderByIssuedAtDescNumberDesc(UUID donorId);
 
-    List<IssuedReceiptJpaEntity> findAllByOrderByIssuedAtDescNumberDesc();
+    @Query("""
+            select new cz.novanadeje.app.donations.infrastructure.persistence.IssuedReceiptSummaryRow(r.id, r.donorId, r.kind, r.number, r.donationId,
+                   r.receiptYear, r.issuedOn, r.issuedAt, r.locale, r.status, r.supersededAt, r.withdrawnAt, r.withdrawalReason, r.giftCount,
+                   r.totalAmountMinor, r.certifiedYear)
+            from IssuedReceiptJpaEntity r
+            order by r.issuedAt desc, r.number desc""")
+    List<IssuedReceiptSummaryRow> findAllSummariesNewestFirst();
 
     @Query("select count(r) > 0 from IssuedReceiptJpaEntity r where r.donorId = :donorId and (r.signatureImageSha256 = :image or r.portraitImageSha256 = :image)")
     boolean showsImage(@Param("donorId") UUID donorId, @Param("image") String image);

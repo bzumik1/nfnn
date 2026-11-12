@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,6 +13,9 @@ interface SecondFactorJpaRepository extends JpaRepository<SecondFactorJpaEntity,
 
     @Query("select f.donorId from SecondFactorJpaEntity f where f.confirmedAt is not null")
     List<UUID> findDonorIdsWithConfirmedFactor();
+
+    @Query("select f.donorId from SecondFactorJpaEntity f where f.confirmedAt is not null and f.donorId in :donorIds")
+    List<UUID> findDonorIdsWithConfirmedFactorAmong(@Param("donorIds") Collection<UUID> donorIds);
 
     @Modifying(flushAutomatically = true)
     @Query("update SecondFactorJpaEntity f set f.lastUsedStep = :step where f.donorId = :donorId and (f.lastUsedStep is null or f.lastUsedStep < :step)")

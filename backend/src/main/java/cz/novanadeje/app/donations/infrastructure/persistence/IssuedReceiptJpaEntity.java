@@ -103,6 +103,15 @@ class IssuedReceiptJpaEntity {
     @Column(name = "withdrawal_reason", length = 24)
     private ReceiptWithdrawalReason withdrawalReason;
 
+    @Column(name = "gift_count", insertable = false, updatable = false)
+    private Integer giftCount;
+
+    @Column(name = "total_amount_minor", insertable = false, updatable = false)
+    private Long totalAmountMinor;
+
+    @Column(name = "certified_year", insertable = false, updatable = false)
+    private Integer certifiedYear;
+
     protected IssuedReceiptJpaEntity() {
     }
 

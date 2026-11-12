@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when / opens, then the box Safari finds there carries the site's blue",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when / opens, then Safari finds no box to tint the status bar from",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when /projekty opens, then the box Safari finds there carries the site's blue",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when /projekty opens, then Safari finds no box to tint the status bar from",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when /zasady-ochrany-osobnich-udaju opens, then the box Safari finds there carries the site's blue",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when /zasady-ochrany-osobnich-udaju opens, then Safari finds no box to tint the status bar from",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when a donor opens the overview, then the status bar is blue there too",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when a donor opens the overview, then Safari finds no box to tint the status bar from",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when a page opens in Chrome on Android or an older Safari, then the theme-color it reads is the same blue",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when a page opens, then it paints no tint strip and names no theme colour",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from the fixed box at the top edge > when the home page opens, then the box shows at most a faint line over the photo and takes no tap",
+    "reason": "PR #374 (Jakub 2026-11-05): the blue strip that tinted the iPhone status bar is removed, so Safari finds no box at the top edge and lets the page show under the status bar; the tests that proved the blue now prove that no box tints it and no theme colour is named",
+    "replacement": "e2e/status-bar.spec.ts > Given a visitor on an iPhone, whose Safari tints its status bar from a fixed box at the top edge without a backdrop filter and otherwise lets the page show under it > when a page opens, then it paints no tint strip and names no theme colour",
+    "contract": "docs/frontend-overview.md, Shell, routing, auth"
+  }
+]

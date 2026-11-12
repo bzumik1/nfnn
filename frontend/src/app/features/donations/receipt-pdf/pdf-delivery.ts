@@ -1,6 +1,6 @@
 import { inject, Injectable, InjectionToken } from '@angular/core';
 import { DownloadedFile } from '../donations-api';
-import { saveBlob } from '../file-download';
+import { saveBlob } from '../../../core/files/file-download';
 
 export interface ShareableNavigator {
   readonly userAgent: string;

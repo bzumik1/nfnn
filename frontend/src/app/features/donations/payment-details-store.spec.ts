@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../core/auth/auth-interceptor';
 import { AuthStore } from '../../core/auth/auth-store';
 import { authResponse } from '../../core/auth/testing/donor-fixtures';
+import { Connectivity, PROBE_PATH } from '../../core/connectivity/connectivity';
 import { sharedCases } from '../../../testing/shared-cases';
 import { KEPT_PAYMENT_DETAILS, PaymentDetailsStore } from './payment-details-store';
 import { PaymentDetails } from './payment-details-api';
@@ -288,6 +289,42 @@ describe('Given the payment details store', () => {
 
       expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
       expect(store.age()).toEqual({ writtenAt: null, kept: false });
+    });
+
+    describe('when the app already knows it is offline', () => {
+      beforeEach(() => {
+        TestBed.inject(Connectivity);
+        window.dispatchEvent(new Event('offline'));
+        http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+        store.load();
+      });
+
+      it('then the kept details are shown at once, said to be kept, while the server is still asked', () => {
+        expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+        expect(store.age()).toEqual({ writtenAt: written, kept: true });
+        http.expectOne(PAYMENT_DETAILS_URL).error(new ProgressEvent('error'), { status: 0 });
+        expect(store.age()).toEqual({ writtenAt: written, kept: true });
+      });
+
+      it('and the server answers after all, then its answer wins', () => {
+        http.expectOne(PAYMENT_DETAILS_URL).flush(movedAccount());
+
+        expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
+        expect(store.age()).toEqual({ writtenAt: null, kept: false });
+      });
+
+      it('and the server answers with a problem, then nothing kept is shown, so a changed account never shows the old one', () => {
+        http.expectOne(PAYMENT_DETAILS_URL).flush(
+          { type: 'https://nfnn.cz/problems/donations/x', title: 'x', status: 500 },
+          {
+            status: 500,
+            statusText: 'Error',
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        );
+
+        expect(store.state()).toEqual({ kind: 'failed' });
+      });
     });
 
     it('when nothing answers, then the kept details are shown and said to be kept, with the time they were written', () => {

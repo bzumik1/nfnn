@@ -52,7 +52,7 @@ export class AdminProjects {
     if (typeof deleted === 'string') {
       this.notice.set({
         kind: 'status',
-        text: $localize`:@@admin.projects.deleted:Projekt „${deleted}:title:“ jsme smazali.`,
+        text: $localize`:@@admin.projects.deleted:Příběh „${deleted}:title:“ jsme smazali.`,
       });
     }
     this.load();

@@ -111,6 +111,25 @@ Feature: An administrator or a connected application issues the yearly receipts 
       | ISSUE_RECEIPT  | claude.ai |
       | ISSUE_RECEIPT  | claude.ai |
 
+  Scenario: A connected application skips a donor whose yearly receipt would replace a single receipt of a gift, and a browser session issues it, replacing the single receipt
+    Given "Jana" issues the receipt of her donation received on 2026-10-01
+    And "Petr" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token issues the yearly receipts for 2026 of "Jana, Karel"
+    Then the response status is 200
+    And the yearly receipts were issued as:
+      | donor | outcome | number      | problem                                        |
+      | Jana  | SKIPPED |             | donations/receipt-replacement-in-browser-only |
+      | Karel | ISSUED  | 2027-000002 |                                                |
+    When "Petr" issues in the administration the yearly receipts for 2026 of "Jana"
+    Then the response status is 200
+    And the yearly receipts were issued as:
+      | donor | outcome | number      | problem |
+      | Jana  | ISSUED  | 2027-000003 |         |
+    And 3 receipts are stored
+    And 2 receipts are active
+    And receipt "2027-000001" is superseded
+
   Scenario: A run that issues no new number leaves no row in the audit trail
     When "Petr" issues in the administration the yearly receipts for 2026 of "Petr"
     Then the response status is 200

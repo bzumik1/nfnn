@@ -20,6 +20,8 @@ const ALLOWED_DATA = {
     '/api/content/projects/novy-voziky',
   ],
   'payment-details': ['/api/donations/payment-details'],
+  'bank-logo-list': ['/api/donations/bank-logos'],
+  'bank-logos': ['/api/donations/bank-logos/images/0192f4d2-1a6b-7c3d-9e8f-001122334455'],
   'public-photos': [
     '/api/content/media/0192f4d2-1a6b-7c3d-9e8f-001122334455?w=640',
     '/api/content/media/0192f4d2-1a6b-7c3d-9e8f-001122334455',
@@ -33,6 +35,9 @@ const NEVER_CACHED = [
   '/api/donations/me/receipt-images/abc',
   '/api/donations/receipt-keys',
   '/api/donations/receipts/status',
+  '/api/donations/bank-codes',
+  '/api/admin/donations/bank-logos',
+  '/api/admin/donations/bank-logos/0800',
   '/api/donors/me',
   '/api/donors/auth/refresh',
   '/api/admin/content/news',
@@ -91,6 +96,7 @@ const PUBLIC_PREFIXES = [
   '/api/content/projects',
   '/api/content/media/',
   '/api/donations/payment-details',
+  '/api/donations/bank-logos',
 ];
 
 function isPublic(path) {
@@ -98,20 +104,59 @@ function isPublic(path) {
 }
 
 describe('Given the service worker configuration', () => {
-  it('when its data groups are read, then only the public content, the payment details for at most a day and the photos are kept, the photos at most 300', async () => {
+  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details and the bank logo list wait a second for the network and are kept for at most a day, and the bank logos, at most 60, and the photos, at most 300, are kept', async () => {
     const manifest = await generatedManifest();
 
     assert.deepEqual(
-      manifest.dataGroups.map(({ name, strategy, maxSize, maxAge }) => ({
+      manifest.dataGroups.map(({ name, strategy, maxSize, maxAge, timeoutMs, refreshAheadMs }) => ({
         name,
         strategy,
         maxSize,
         maxAge,
+        timeoutMs,
+        refreshAheadMs,
       })),
       [
-        { name: 'public-content', strategy: 'freshness', maxSize: 100, maxAge: 30 * DAY },
-        { name: 'payment-details', strategy: 'freshness', maxSize: 1, maxAge: DAY },
-        { name: 'public-photos', strategy: 'performance', maxSize: 300, maxAge: 365 * DAY },
+        {
+          name: 'public-content',
+          strategy: 'performance',
+          maxSize: 100,
+          maxAge: 30 * DAY,
+          timeoutMs: 5_000,
+          refreshAheadMs: 0,
+        },
+        {
+          name: 'payment-details',
+          strategy: 'freshness',
+          maxSize: 1,
+          maxAge: DAY,
+          timeoutMs: 1_000,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'bank-logos',
+          strategy: 'performance',
+          maxSize: 60,
+          maxAge: 365 * DAY,
+          timeoutMs: undefined,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'bank-logo-list',
+          strategy: 'freshness',
+          maxSize: 1,
+          maxAge: DAY,
+          timeoutMs: 1_000,
+          refreshAheadMs: undefined,
+        },
+        {
+          name: 'public-photos',
+          strategy: 'performance',
+          maxSize: 300,
+          maxAge: 365 * DAY,
+          timeoutMs: undefined,
+          refreshAheadMs: undefined,
+        },
       ],
     );
   });
@@ -187,12 +232,13 @@ describe('Given the service worker configuration', () => {
     assert.equal(config.index, '/index.html');
   });
 
-  it('when the build is listed, then the app shell with its fonts and logos is kept at install, photos, icons and the receipt files only once asked for, and the worker files never', async () => {
+  it('when the build is listed, then the app shell with its fonts, logos and launch icon is kept at install, photos, icons and the receipt files only once asked for, and the worker files never', async () => {
     const shell = [
       '/index.html',
       '/boot-guard.js',
       '/manifest.webmanifest',
       '/favicon.svg',
+      '/launch-icon.svg',
       '/images/logo.svg',
       '/images/logo-on-dark.svg',
       '/main-ABCDEFGH.js',
@@ -205,13 +251,14 @@ describe('Given the service worker configuration', () => {
       '/worker-ABCDEFGH.js',
       '/receipt-fonts/body.0123456789abcdef.ttf',
       '/images/hero-1024.webp',
+      '/icon-192.png',
       '/icon-512.png',
       '/apple-touch-icon.png',
       '/favicon.ico',
       '/robots.txt',
       '/sitemap.xml',
     ];
-    const never = ['/ngsw-worker.js', '/safety-worker.js', '/ngsw.json'];
+    const never = ['/ngsw-worker.js', '/safety-worker.js', '/ngsw.json', '/startup/750x1334.png'];
     const listed = {
       list: async () => [...shell, ...later, ...never],
       read: async () => '',

@@ -269,7 +269,7 @@ describe('Given the fallback Worker built from this checkout', () => {
       assert.ok(html.includes('info@nfnn.cz'));
     });
 
-    it("then its QR code pays the foundation's donation without an amount", async () => {
+    it("then its QR code pays the foundation's donation without an amount and asks for an instant payment", async () => {
       const { html } = await fallbackPage();
       const svg = /<svg[^>]*class="qr"[\s\S]*?<\/svg>/.exec(html)?.[0];
       assert.ok(svg, 'a QR code drawn as inline SVG');
@@ -278,6 +278,7 @@ describe('Given the fallback Worker built from this checkout', () => {
       assert.deepEqual(Object.fromEntries(fields.map((field) => field.split(/:(.*)/s, 2))), {
         ACC: served.account.iban,
         CC: served.currency,
+        PT: 'IP',
         RN: served.account.recipientName,
         MSG: served.messages.donation,
       });

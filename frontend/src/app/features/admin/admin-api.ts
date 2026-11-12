@@ -1,6 +1,6 @@
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
 import { ifMatch } from '../../core/version/row-version';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { BankAccountItem } from '../donations/bank-accounts-api';
@@ -170,6 +170,36 @@ export interface SymbolClaimResponse {
   answer: SymbolClaimAnswer;
   answeredAt: string;
   donationCount: number;
+}
+
+export type BankLogoFailure =
+  | 'status'
+  | 'redirected'
+  | 'timeout'
+  | 'unreachable'
+  | 'unknown-host'
+  | 'non-public-address'
+  | 'too-large'
+  | 'unsupported-type'
+  | 'image-too-large'
+  | 'unreadable-image'
+  | 'interrupted';
+
+export interface AdminBankLogoResponse {
+  code: string;
+  bankName: string | null;
+  sourceUrl: string;
+  sourceAllowed: boolean;
+  version: string;
+  imageId: string | null;
+  imageSha256: string | null;
+  fetchedAt: string | null;
+  checkedAt: string | null;
+  lastFailure: BankLogoFailure | null;
+}
+
+export interface AdminBankLogoListResponse {
+  items: AdminBankLogoResponse[];
 }
 
 export interface SymbolClaimListResponse {
@@ -370,6 +400,43 @@ export interface ReportSettingsRequest {
 export interface SentReportResponse {
   month: string;
   sentAt: string;
+}
+
+export interface ReportDonorsResponse {
+  registered: number;
+  newInMonth: number;
+}
+
+export interface ReportDonationsResponse {
+  received: TallyResponse;
+  paired: TallyResponse;
+  receivedInYear: TallyResponse;
+}
+
+export interface ReportBankImportResponse {
+  lastSucceededAt: string | null;
+  lastFailure: { kind: ImportFailureKind; attemptedAt: string } | null;
+}
+
+export interface ReportContentResponse {
+  donors: ReportDonorsResponse | null;
+  donations: ReportDonationsResponse | null;
+  unpairedPayments: TallyResponse | null;
+  bankImport: ReportBankImportResponse | null;
+}
+
+export interface ReportDeliveryResponse {
+  sentAt: string;
+  byHand: boolean;
+  recipientCount: number;
+  content: ReportContentResponse;
+}
+
+export interface SentReportDetailResponse {
+  month: string;
+  firstSentAt: string;
+  deliveries: ReportDeliveryResponse[];
+  recomputed: ReportContentResponse | null;
 }
 
 export interface NextReportResponse {
@@ -803,6 +870,30 @@ export class AdminApi {
     return this.http.delete<void>(`/api/admin/donors/${encodeURIComponent(donorId)}/passkeys`);
   }
 
+  bankLogos(): Observable<AdminBankLogoListResponse> {
+    return this.http.get<AdminBankLogoListResponse>(BANK_LOGOS_URL);
+  }
+
+  setBankLogoSource(
+    code: string,
+    sourceUrl: string,
+    version: string | null,
+  ): Observable<AdminBankLogoResponse> {
+    return this.http.put<AdminBankLogoResponse>(
+      bankLogoUrl(code),
+      { sourceUrl },
+      version === null ? { headers: new HttpHeaders({ 'If-None-Match': '*' }) } : ifMatch(version),
+    );
+  }
+
+  refreshBankLogo(code: string): Observable<AdminBankLogoResponse> {
+    return this.http.post<AdminBankLogoResponse>(`${bankLogoUrl(code)}/refresh`, null);
+  }
+
+  removeBankLogo(code: string, version: string): Observable<void> {
+    return this.http.delete<void>(bankLogoUrl(code), ifMatch(version));
+  }
+
   symbolClaims(): Observable<SymbolClaimListResponse> {
     return this.http.get<SymbolClaimListResponse>('/api/admin/donations/symbol-claims');
   }
@@ -822,10 +913,14 @@ export class AdminApi {
     );
   }
 
-  adminActions(before: string | null = null, limit = 50): Observable<AdminActionListResponse> {
+  adminActions(
+    after: Pick<AdminActionResponse, 'id' | 'performedAt'> | null = null,
+    limit = 50,
+  ): Observable<AdminActionListResponse> {
     const params: Record<string, string> = { limit: String(limit) };
-    if (before !== null) {
-      params['before'] = before;
+    if (after !== null) {
+      params['before'] = after.performedAt;
+      params['beforeId'] = after.id;
     }
     return this.http.get<AdminActionListResponse>('/api/admin/donors/actions', { params });
   }
@@ -857,6 +952,12 @@ export class AdminApi {
       request,
       ifMatch(version),
     );
+  }
+
+  sentReport(month: string): Observable<SentReportDetailResponse> {
+    return this.http.get<SentReportDetailResponse>('/api/admin/donations/report/sent', {
+      params: { month },
+    });
   }
 
   sendReport(month: string): Observable<SendReportResponse> {
@@ -1108,4 +1209,10 @@ const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
 
 function donorAccountUrl(donorId: string, linkId: string): string {
   return `/api/admin/donations/donors/${encodeURIComponent(donorId)}/bank-accounts/${encodeURIComponent(linkId)}`;
+}
+
+const BANK_LOGOS_URL = '/api/admin/donations/bank-logos';
+
+function bankLogoUrl(code: string): string {
+  return `${BANK_LOGOS_URL}/${encodeURIComponent(code)}`;
 }

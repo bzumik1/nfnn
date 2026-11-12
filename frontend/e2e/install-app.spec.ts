@@ -92,22 +92,72 @@ test.describe('Given a signed-in donor in Safari on an iPhone', () => {
   });
 });
 
+test.describe('Given the app starting before its code has run', () => {
+  test('when the page first paints, then it shows only the theme icon in the middle of the surface, as the launch image does', async ({
+    page,
+  }) => {
+    await page.route('**/main-*.js', () => undefined);
+    await page.goto('/aplikace', { waitUntil: 'commit' });
+
+    const icon = page.locator('.launch-screen__icon');
+    await expect(icon).toBeVisible();
+    const box = await icon.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box && viewport).toBeTruthy();
+    expect(box!.width).toBe(128);
+    expect(box!.height).toBe(128);
+    expect(box!.x + box!.width / 2).toBeCloseTo(viewport!.width / 2, 0);
+    expect(box!.y + box!.height / 2).toBeCloseTo(viewport!.height / 2, 0);
+    await expect(page.locator('.launch-screen')).toHaveCSS(
+      'background-color',
+      'rgb(255, 255, 255)',
+    );
+  });
+
+  test('when the device is dark, then the star of the theme SVG stands on the dark surface without a tile around it', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.route('**/main-*.js', () => undefined);
+    await page.goto('/aplikace', { waitUntil: 'commit' });
+
+    const icon = page.locator('.launch-screen__icon');
+    await expect(icon).toBeVisible();
+    await expect(icon).toHaveAttribute('src', 'launch-icon.svg');
+    await expect(page.locator('.launch-screen')).toHaveCSS('background-color', 'rgb(18, 24, 38)');
+    const alphas = await icon.evaluate(async (image: HTMLImageElement) => {
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0, 128, 128);
+      const alphaAt = (x: number, y: number) => context.getImageData(x, y, 1, 1).data[3];
+      return {
+        corners: [alphaAt(1, 1), alphaAt(126, 1), alphaAt(1, 126), alphaAt(126, 126)],
+        centre: alphaAt(64, 60),
+      };
+    });
+    expect(alphas.corners).toEqual([0, 0, 0, 0]);
+    expect(alphas.centre).toBe(255);
+  });
+});
+
 test.describe('Given the installed app opening its start address /aplikace', () => {
-  test('when nobody is signed in, then it opens the home page with the sign-in dialog, and signing in there opens the overview', async ({
+  test('when nobody is signed in, then it opens the home page without a dialog or a focused field, and Přihlásit se there offers the sign-in', async ({
     page,
   }) => {
     await mockDonorApi(page);
-    await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200, donor)));
     await page.goto('/aplikace');
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.locator('#login-email').fill('jana@example.cz');
-    await page.locator('#login-password').fill('correct horse battery');
-    await page.getByRole('dialog').locator('.ui-button--block').click();
-
-    await expect(page).toHaveURL(/\/darce\/prehled$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.activeElement?.matches('input, textarea') ?? false),
+    ).toBe(false);
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 
   for (const [who, user, address] of [

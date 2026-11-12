@@ -10,6 +10,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     'Reading a receipt code checks it in the browser against the keys it keeps, offline too (frontend.md, Receipt verification).',
   'layout/offline-status/offline-status.html#tryAgain':
     'It is the probe that ends the offline state, so it must run while offline.',
+  'features/donors/login-dialog/login-dialog.html#tryConnectionAgain':
+    "It is the probe that ends the offline state, as the offline sheet's Zkusit znovu, so it must run while offline.",
   'layout/account-sheet/account-sheet.html#signOut':
     'AuthStore.logout forgets the session on the device when the server cannot be reached, so signing out from the account sheet works offline.',
   'features/donors/connect-app/connect-app.html#switchAccount':

@@ -12,9 +12,9 @@ import java.time.ZoneId;
 
 @TestConfiguration(proxyBeanMethods = false)
 @Import({TestcontainersConfiguration.class, JpaBankPaymentRepository.class, JpaBankImportStateRepository.class, JpaDonorRecordRepository.class,
-        JpaDonationRepository.class, JpaDonationReceiptRepository.class, JpaReceiptImageRepository.class, JpaMonthlyReportLog.class,
+        JpaDonationRepository.class, JpaDonationReceiptRepository.class, JpaReceiptImageRepository.class, JpaMonthlyReportLog.class, JpaReportDeliveries.class,
         JpaSymbolClaimRepository.class, JpaReportSettingsRepository.class, JpaReceiptSignatureRepository.class, JpaReceiptSignatoryRepository.class, JpaImportAlertRepository.class, PostgresPairingLock.class,
-        JpaReceiptSigningKeyRepository.class})
+        JpaReceiptSigningKeyRepository.class, JpaBankCodeRepository.class, JpaBankLogoRepository.class})
 class BankPersistenceTestConfiguration {
 
     static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");

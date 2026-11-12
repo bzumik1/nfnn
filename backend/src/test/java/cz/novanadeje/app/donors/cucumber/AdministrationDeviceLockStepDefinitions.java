@@ -10,6 +10,8 @@ import org.springframework.http.HttpHeaders;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class AdministrationDeviceLockStepDefinitions {
 
     private static final String CURRENT_DEVICE = "/api/admin/donors/devices/current";
@@ -56,6 +58,15 @@ public class AdministrationDeviceLockStepDefinitions {
     public void unlocksWithThePasswordAndTheCodeTimes(String alias, String password, String code, int times) {
         for (int attempt = 0; attempt < times; attempt++) {
             unlock(alias, password, code);
+        }
+    }
+
+    @When("{string} unlocks the administration on this device with her/his password and the code {string} {int} times, each from another client address")
+    public void unlocksWithThePasswordAndTheCodeTimesEachFromAnotherClientAddress(String alias, String code, int times) {
+        for (int attempt = 0; attempt < times; attempt++) {
+            api.comeFromAnotherAddress();
+            unlocksWithThePasswordAndTheCode(alias, code);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Unlock %d answered %s", attempt + 1, api.lastResponse().getBody()).isEqualTo(400);
         }
     }
 

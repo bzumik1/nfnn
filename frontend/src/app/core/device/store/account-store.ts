@@ -24,6 +24,7 @@ export interface CopyContents {
   readonly summary: unknown;
   readonly storedAt: string;
   readonly images?: readonly StoredImage[];
+  readonly profile?: unknown;
 }
 
 export type CopyLoad = 'empty' | 'loaded' | 'damaged';
@@ -40,6 +41,7 @@ interface MetaPlaintext {
   readonly type: 'meta';
   readonly summary: unknown;
   readonly storedAt: string;
+  readonly profile?: unknown;
 }
 
 export class AccountStore {
@@ -78,7 +80,12 @@ export class AccountStore {
 
   async replace(contents: CopyContents): Promise<void> {
     const plaintexts: (ChunkPlaintext | MetaPlaintext | ImagePlaintext)[] = [
-      { type: 'meta', summary: contents.summary, storedAt: contents.storedAt },
+      {
+        type: 'meta',
+        summary: contents.summary,
+        storedAt: contents.storedAt,
+        ...(contents.profile === undefined ? {} : { profile: contents.profile }),
+      },
       ...contents.chunks.map((chunk): ChunkPlaintext => ({
         type: 'chunk',
         id: chunk.id,
@@ -153,6 +160,7 @@ export class AccountStore {
       summary: meta.summary,
       storedAt: meta.storedAt,
       ...(images.length === 0 ? {} : { images }),
+      ...(meta.profile === undefined ? {} : { profile: meta.profile }),
     };
   }
 

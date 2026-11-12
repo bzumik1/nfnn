@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  margin-block-start: var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
+
+p {
+  margin: 0;
+}
+
+.diagnostics-download-shared,
+.diagnostics-download-button {
+  margin-block-start: var(--space-2);
+}
+
+.diagnostics-download-button {
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+
+a {
+  color: var(--color-accent);
+}

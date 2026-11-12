@@ -6,6 +6,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
+import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import cz.novanadeje.app.operations.domain.backup.RestoreSource;
@@ -99,7 +100,8 @@ public class BackupRestoreService {
         if (run.succeeded()) {
             String tables = run.tables().map(count -> ", tabulek: " + count).orElse("");
             String revoked = run.tables().flatMap(count -> run.revocations())
-                    .map(revocations -> "; ukončená přihlášení: " + revocations.sessions() + ", zneplatněné jednorázové odkazy a kódy: " + revocations.oneTimeSecrets())
+                    .map(revocations -> "; ukončená přihlášení: " + revocations.sessions() + ", zneplatněné jednorázové odkazy a kódy: " + revocations.oneTimeSecrets()
+                            + run.carriedForward().map(BackupRestoreService::carried).orElse(""))
                     .orElse("");
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORED_ACTION, Optional.empty(),
                     "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked, now));
@@ -110,6 +112,11 @@ public class BackupRestoreService {
                             + "; data zůstala, jak byla"), now));
             log.warn("The restore of {} (request {}) failed; the data stayed as they were", file, requestId);
         }
+    }
+
+    private static String carried(RestoreCarryForward carried) {
+        return "; zachováno z doby po záloze: vymazaní dárci " + carried.erasures() + ", přihlašovací údaje " + carried.credentials() + ", role " + carried.roles()
+                + ", záznamy historie " + carried.adminActions() + "; čísla potvrzení posunuta o " + carried.receiptNumbersSkipped();
     }
 
     private void requireNoRestorePending() {

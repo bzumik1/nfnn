@@ -49,7 +49,9 @@
   transform-origin: center;
 
   &.is-easing {
-    transition: transform var(--duration-base) ease;
+    transition:
+      transform var(--duration-base) ease,
+      translate var(--duration-base) ease;
   }
 }
 

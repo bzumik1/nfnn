@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs once, when the stock entrypoint creates a new database: creates the application role with the
-# password nfnn-postgres left in /tmp/nfnn-app-password and hands it the new database.
+# password nfnn-postgres left in /tmp/nfnn-app-password and hands it the new database's public schema.
 set -eu
 
 password_file=/tmp/nfnn-app-password
@@ -10,4 +10,4 @@ psql -X -q -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
 psql -X -q -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   -f /usr/local/share/nfnn/own-by-app-role.sql > /dev/null
 rm -f "$password_file"
-echo "nfnn-postgres: the new database belongs to the application role novanadeje_app"
+echo "nfnn-postgres: the public schema of the new database belongs to the application role novanadeje_app"

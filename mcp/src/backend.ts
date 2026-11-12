@@ -1,5 +1,6 @@
 import type { FetchLike } from './authorization.js';
 import type { Photo } from './photos.js';
+import { visitorHeaders } from './visitor.js';
 
 export interface Problem {
   readonly status: number;
@@ -72,7 +73,11 @@ export class BackendClient {
     accept = 'application/json',
     expectedVersion?: string,
   ): Promise<unknown> {
-    const headers: Record<string, string> = { accept, 'accept-language': 'cs' };
+    const headers: Record<string, string> = {
+      ...visitorHeaders(),
+      accept,
+      'accept-language': 'cs',
+    };
     if (apiToken !== undefined) {
       headers['authorization'] = `Bearer ${apiToken}`;
     }
