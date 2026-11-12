@@ -574,6 +574,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
     { timeout: 10_000 },
   );
   return async () => {
+    await expect(page.locator('.admin-page h1')).toBeVisible();
     await synced;
     await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
   };
