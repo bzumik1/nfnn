@@ -416,6 +416,63 @@ describe('Given the device vault keeping a copy of the administration for an adm
     });
   });
 
+  describe('when Jana has the administration open under her passkey in two tabs', () => {
+    let otherAccess: AdministrationAccess;
+    let other: DeviceVault;
+
+    beforeEach(async () => {
+      await signIn(JANA, { kind: 'prf', reading: prfReading() });
+      const tab = createEnvironmentInjector(
+        [DeviceVault, AdministrationAccess],
+        TestBed.inject(EnvironmentInjector),
+      );
+      otherAccess = tab.get(AdministrationAccess);
+      other = tab.get(DeviceVault);
+      await other.restored(JANA);
+      otherAccess.unlock();
+      expect(await other.unlockAdministrationWithPasskey(JANA, false)).toBe(true);
+      TestBed.tick();
+    });
+
+    it('then both tabs show the same copy', () => {
+      expect(other.administration()?.store.copyId).toBe(vault.administration()?.store.copyId);
+    });
+
+    it('and this tab stores a new download, then the other tab shows it without being unlocked again', async () => {
+      await vault.replaceContents(vault.administration()!.store, administrationContents(CANARY));
+
+      await vi.waitFor(() =>
+        expect(other.administration()?.store.contents()?.chunks[0].rows).toEqual([
+          { counterpartyName: CANARY },
+        ]),
+      );
+    });
+
+    it('and the administration locks in this tab, then the other tab keeps its copy open and can still store into it', async () => {
+      access.lock();
+      TestBed.tick();
+      await vault.administrationPasskeys(JANA, false);
+
+      expect(vault.administration()).toBeNull();
+      expect(other.administration()).not.toBeNull();
+      expect(
+        await other.replaceContents(other.administration()!.store, administrationContents(CANARY)),
+      ).toBe(true);
+    });
+
+    it('and the server tells this tab she is no longer an administrator, then the other tab closes the copy too and stores nothing into it', async () => {
+      const store = other.administration()!.store;
+
+      await vault.administrationRevoked(JANA);
+
+      await vi.waitFor(() => expect(other.administration()).toBeNull());
+      expect(store.contents()).toBeNull();
+      expect(await other.replaceContents(store, administrationContents(CANARY))).toBe(false);
+      expect(await administrationWraps()).toEqual([]);
+      expect(other.opened()).not.toBeNull();
+    });
+  });
+
   describe('when Jana signs in on a public computer, so nothing is stored', () => {
     it('then the administration lives in memory and unlocks there again with her password', async () => {
       access.signedIn();

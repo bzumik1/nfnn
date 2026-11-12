@@ -6,6 +6,9 @@ const REPORT = '/api/admin/donations/report';
 const UNLOCK = '/api/admin/donors/devices/current/unlock';
 const RECORD = '/api/admin/donors/devices/current/administration-copy';
 const LOCKED = 'Správa je zamčená';
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
+const APP_API_OFFLINE =
+  /^Failed to load resource: (?:the server responded with a status of 504 \(Gateway Timeout\)|net::ERR_INTERNET_DISCONNECTED) \(http:\/\/localhost:\d+\/api\//;
 
 const reportView = {
   settings: {
@@ -121,6 +124,26 @@ async function createAdministratorPasskey(page: Page): Promise<void> {
   }, userHandleBytes(administrator.id));
 }
 
+async function leaveTheApp(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
+async function comeBack(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 interface StoredEntry {
   readonly kind?: string;
   readonly wraps?: readonly { readonly kind: string }[];
@@ -234,5 +257,55 @@ test.describe('Given an administrator who signs in with the password and has a p
       },
     ]);
     await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['prf']);
+  });
+});
+
+test.describe('Given an administrator whose copy of the administration is kept under a passkey that supports PRF', () => {
+  test.use({ allowedConsoleErrors: [APP_API_OFFLINE] });
+
+  test('when the connection is gone and the administration locks, then the passkey alone unlocks it again on the payments page, without asking the server', async ({
+    page,
+    context,
+    virtualAuthenticator,
+    idbDump,
+    swReady,
+    goOffline,
+  }) => {
+    const unlocks: string[] = [];
+    await mockAdministration(context, unlocks);
+    await context.route(
+      (url) => url.pathname === '/api/live',
+      (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: '' }),
+    );
+    await context.route(
+      (url) => url.pathname === '/api/admin/donations/payments',
+      (route) => route.fulfill({ json: { year: null, availableYears: [], items: [] } }),
+    );
+    await page.clock.install();
+    await page.goto('/');
+    await swReady();
+    await createAdministratorPasskey(page);
+    expect(await virtualAuthenticator.credentialCount()).toBe(1);
+    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Přihlásit se přístupovým klíčem' })
+      .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect.poll(async () => administrationWraps(await idbDump())).toEqual(['prf']);
+    await page.goto('/sprava/platby');
+    await page.getByRole('button', { name: 'Odemknout přístupovým klíčem' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+
+    await goOffline();
+    await leaveTheApp(page);
+    await page.clock.fastForward(FIVE_MINUTES_MS);
+    await comeBack(page);
+
+    await expect(page.getByRole('heading', { level: 1, name: LOCKED })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Offline/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Odemknout přístupovým klíčem' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+    expect(unlocks).toEqual([]);
   });
 });

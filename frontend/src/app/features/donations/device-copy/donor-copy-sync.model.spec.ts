@@ -26,7 +26,10 @@ import { DonorSyncApi, type SyncChunk, type SyncChunks, type SyncManifest } from
 const JANA_ID = '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6a';
 const PETR_ID = '0190c3a2-7b1e-7cc1-8a52-000000000002';
 const JANA: DeviceAccount = { email: 'jana@example.cz', userHandle: userHandleOf(JANA_ID) };
-const PASSWORD = 'Kanárek 2026';
+const PETR: DeviceAccount = { email: 'petr@example.cz', userHandle: userHandleOf(PETR_ID) };
+const ACCOUNTS = { [JANA_ID]: JANA, [PETR_ID]: PETR } as const;
+const PASSWORDS = { [JANA_ID]: 'Kanárek 2026', [PETR_ID]: 'Stehlík 2026' } as const;
+type AccountId = typeof JANA_ID | typeof PETR_ID;
 const YEARS = [2024, 2025, 2026] as const;
 
 interface Gift {
@@ -38,13 +41,22 @@ interface Gift {
 
 class ServerModel {
   gifts: Gift[] = [];
-  subject = JANA_ID;
+  subject: string;
   wrongSummary = false;
   changeBeforeChunks = false;
   private next = 1;
 
+  constructor(readonly donor: AccountId) {
+    this.subject = donor;
+  }
+
   add(year: number, amountMinor: number): void {
-    this.gifts.push({ id: `gift-${this.next++}`, year, amountMinor, status: 'RECEIVED' });
+    this.gifts.push({
+      id: `gift-${this.donor}-${this.next++}`,
+      year,
+      amountMinor,
+      status: 'RECEIVED',
+    });
   }
 
   refund(index: number): void {
@@ -107,7 +119,11 @@ function rowOf(gift: Gift): DonationRow {
 }
 
 class ModelSyncApi {
-  constructor(private readonly server: ServerModel) {}
+  constructor(private readonly serverOf: () => ServerModel) {}
+
+  private get server(): ServerModel {
+    return this.serverOf();
+  }
 
   manifest(): Observable<SyncManifest> {
     return defer(async () => ({
@@ -182,7 +198,8 @@ type Command =
   | { readonly kind: 'evict' }
   | { readonly kind: 'reload' }
   | { readonly kind: 'wrong-summary' }
-  | { readonly kind: 'another-donor' };
+  | { readonly kind: 'another-donor' }
+  | { readonly kind: 'switch-account' };
 
 const commands: fc.Arbitrary<Command> = fc.oneof(
   {
@@ -208,20 +225,32 @@ const commands: fc.Arbitrary<Command> = fc.oneof(
   { weight: 1, arbitrary: fc.constant({ kind: 'reload' as const }) },
   { weight: 1, arbitrary: fc.constant({ kind: 'wrong-summary' as const }) },
   { weight: 1, arbitrary: fc.constant({ kind: 'another-donor' as const }) },
+  { weight: 2, arbitrary: fc.constant({ kind: 'switch-account' as const }) },
 );
 
 function chunkIdsOf(contents: CopyContents | null): string[] {
   return (contents?.chunks ?? []).map((chunk) => `${chunk.id}@${chunk.rowsSha256}`);
 }
 
+function giftIdsOf(contents: CopyContents | null): string[] {
+  return (contents?.chunks ?? []).flatMap((chunk) =>
+    (chunk.rows as readonly { readonly id: string }[]).map((row) => row.id),
+  );
+}
+
 describe('Given a model of the donor copy kept on a device while the server changes', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('when syncs, crashes mid-write, evictions, reloads, a wrong summary and another donor’s answers come in any order, then the copy only ever holds what a whole sync stored and ends as a fresh download', async () => {
+  it('when syncs, crashes mid-write, evictions, reloads, a wrong summary, another donor’s answers and a second account signing in on the device come in any order, then each copy only ever holds its own donor’s gifts as a whole sync stored them and ends as a fresh download', async () => {
     await fc.assert(
       fc.asyncProperty(fc.array(commands, { minLength: 1, maxLength: 20 }), async (steps) => {
         TestBed.resetTestingModule();
-        const server = new ServerModel();
+        const servers = {
+          [JANA_ID]: new ServerModel(JANA_ID),
+          [PETR_ID]: new ServerModel(PETR_ID),
+        };
+        let current: AccountId = JANA_ID;
+        let server = servers[current];
         const disk = new Disk();
         const reporter = { report: vi.fn() };
         const bus = new ChannelBus();
@@ -233,7 +262,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
             { provide: STORAGE_PERSISTENCE, useValue: () => undefined },
             { provide: TAB_LOCKS, useValue: new NamedLocks() },
             { provide: ErrorReporter, useValue: reporter },
-            { provide: DonorSyncApi, useValue: new ModelSyncApi(server) },
+            { provide: DonorSyncApi, useValue: new ModelSyncApi(() => server) },
             { provide: ReceiptsApi, useValue: { image: () => of() } },
           ],
         });
@@ -246,7 +275,7 @@ describe('Given a model of the donor copy kept on a device while the server chan
         const freshIds = async (): Promise<string[]> =>
           chunkIdsOf({ chunks: await server.chunks(), summary: null, storedAt: '' });
 
-        async function startTab(): Promise<void> {
+        async function startTab(signIn = false): Promise<void> {
           tab?.destroy();
           tab = createEnvironmentInjector(
             [DeviceVault, DonorCopySync],
@@ -254,16 +283,44 @@ describe('Given a model of the donor copy kept on a device while the server chan
           );
           vault = tab.get(DeviceVault);
           sync = tab.get(DonorCopySync);
-          await vault.restored(JANA);
+          if (!signIn) {
+            await vault.restored(ACCOUNTS[current]);
+          }
           if (vault.opened() === null) {
-            await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+            await vault.signedIn(ACCOUNTS[current], {
+              kind: 'password',
+              password: PASSWORDS[current],
+            });
           }
           TestBed.tick();
           await sync.sync();
           evicted = false;
         }
 
-        await startTab();
+        async function switchAccount(): Promise<void> {
+          const copyId = vault.opened()?.store.copyId;
+          const kept = (await disk.entries()).some(
+            (entry) =>
+              entry.copyId === copyId && entry.wraps.some((wrap) => wrap.kind === 'password'),
+          );
+          if (!kept) {
+            heldBy[current] = [];
+          }
+          await vault.signedOut(ACCOUNTS[current]);
+          current = current === JANA_ID ? PETR_ID : JANA_ID;
+          server = servers[current];
+          await vault.signedIn(ACCOUNTS[current], {
+            kind: 'password',
+            password: PASSWORDS[current],
+          });
+          expect(chunkIdsOf(contents())).toEqual(heldBy[current]);
+          evicted = false;
+          TestBed.tick();
+          await sync.sync();
+        }
+
+        const heldBy: Record<AccountId, string[]> = { [JANA_ID]: [], [PETR_ID]: [] };
+        await startTab(true);
         let held = chunkIdsOf(contents());
 
         for (const step of steps) {
@@ -281,7 +338,13 @@ describe('Given a model of the donor copy kept on a device while the server chan
               server.wrongSummary = !server.wrongSummary;
               break;
             case 'another-donor':
-              server.subject = server.subject === JANA_ID ? PETR_ID : JANA_ID;
+              server.subject = server.subject === server.donor ? 'another-donor' : server.donor;
+              break;
+            case 'switch-account':
+              disk.crashNextWrite = false;
+              heldBy[current] = held;
+              await switchAccount();
+              held = chunkIdsOf(contents());
               break;
             case 'crash':
               disk.crashNextWrite = true;
@@ -289,6 +352,8 @@ describe('Given a model of the donor copy kept on a device while the server chan
             case 'evict':
               disk.inner = new MemoryDeviceStorage();
               evicted = true;
+              heldBy[JANA_ID] = [];
+              heldBy[PETR_ID] = [];
               break;
             case 'reload':
               disk.crashNextWrite = false;
@@ -302,10 +367,10 @@ describe('Given a model of the donor copy kept on a device while the server chan
               const outcome: SyncOutcome = await (step.full ? sync.reload() : sync.sync());
               server.changeBeforeChunks = false;
               const after = chunkIdsOf(contents());
-              const writes = server.subject === JANA_ID && !evicted;
+              const writes = server.subject === server.donor && !evicted;
               if (!writes) {
                 expect(outcome).toBe(
-                  evicted && server.subject === JANA_ID ? 'no-copy' : 'mismatch',
+                  evicted && server.subject === server.donor ? 'no-copy' : 'mismatch',
                 );
                 expect(evicted ? [before, []] : [before]).toContainEqual(after);
               } else if (crashing) {
@@ -321,18 +386,27 @@ describe('Given a model of the donor copy kept on a device while the server chan
             }
           }
           expect(chunkIdsOf(contents())).toEqual(held);
+          expect(giftIdsOf(contents()).every((id) => id.startsWith(`gift-${current}-`))).toBe(true);
         }
 
-        server.subject = JANA_ID;
-        server.wrongSummary = false;
+        for (const model of Object.values(servers)) {
+          model.subject = model.donor;
+          model.wrongSummary = false;
+        }
         disk.crashNextWrite = false;
         if (evicted) {
           await startTab();
         }
-        expect(await sync.sync()).toBe('stored');
-        expect(chunkIdsOf(contents())).toEqual(await freshIds());
-        expect(contents()?.summary).toEqual(server.summary());
-        expect(donorCopyView(contents())?.agrees).toBe(true);
+        for (let account = 0; account < 2; account++) {
+          expect(await sync.sync()).toBe('stored');
+          expect(chunkIdsOf(contents())).toEqual(await freshIds());
+          expect(contents()?.summary).toEqual(server.summary());
+          expect(donorCopyView(contents())?.agrees).toBe(true);
+          heldBy[current] = chunkIdsOf(contents());
+          if (account === 0) {
+            await switchAccount();
+          }
+        }
         expect(
           reporter.report.mock.calls.every(([kind]) =>
             ['device-copy-mismatch', 'device-store-evicted'].includes(kind as string),
