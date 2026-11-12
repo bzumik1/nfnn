@@ -1,9 +1,5 @@
 @use 'breakpoints' as bp;
 
-.last-gift-status {
-  align-self: center;
-}
-
 .last-gift-status--refunded {
   background: var(--color-border);
   color: var(--color-text-muted);
@@ -52,6 +48,14 @@
 .last-gift,
 .first-gift {
   margin-bottom: var(--space-5);
+}
+
+.overview-account {
+  white-space: normal;
+}
+
+.overview-answer {
+  color: var(--color-accent);
 }
 
 .admin-refusal {

@@ -182,6 +182,39 @@ for (const { width, height } of [
       expect(Math.abs(logo.x - number.x)).toBeLessThanOrEqual(1);
     });
 
+    test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  id: 'a-1',
+                  accountNumber: '19-2000145399/0800',
+                  symbolOffer: {
+                    variableSymbol: '1234567890',
+                    paymentCount: 3,
+                    firstMonth: '2026-09',
+                    lastMonth: '2026-11',
+                  },
+                }),
+              ],
+            },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const row = page.locator('.overview-question .ui-list__row');
+      await expect(row).toContainText('Odpovědět');
+
+      expect(await contentPastTheSides(row)).toEqual([]);
+    });
+
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
       page,
     }) => {

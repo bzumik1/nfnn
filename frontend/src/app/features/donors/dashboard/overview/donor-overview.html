@@ -105,7 +105,7 @@
               <span class="overview-account ui-figures">{{ account.accountNumber }}</span
               >.</span
             ></span
-          >&ngsp;<span class="ui-list__value" i18n="@@donor.overview.question.answer"
+          >&ngsp;<span class="ui-list__meta overview-answer" i18n="@@donor.overview.question.answer"
             >Odpovědět</span
           >
           <svg
@@ -170,15 +170,14 @@
       <app-bank-check>
         <li>
           <div class="ui-list__row last-gift-main">
-            <span class="ui-list__title last-gift-date">{{ formatDate(gift.receivedAt) }}</span>
-            <span class="ui-list__meta">
-              <span
+            <span class="ui-list__title last-gift-date">{{ formatDate(gift.receivedAt) }}</span
+            >&ngsp;<span class="ui-list__meta"
+              ><span
                 class="ui-badge ui-badge--success last-gift-status"
                 [class.last-gift-status--refunded]="gift.status === 'REFUNDED'"
                 >{{ statusLabel(gift.status) }}</span
-              >
-            </span>
-            <span class="ui-list__value last-gift-amount ui-figures"
+              ></span
+            >&ngsp;<span class="ui-list__value last-gift-amount ui-figures"
               >{{ crowns(gift.amountMinor) }}&nbsp;Kč</span
             >
           </div>

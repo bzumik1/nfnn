@@ -1164,8 +1164,12 @@ describe('Given a signed-in donor in the donor area', () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      expect(text('.last-gift ul .last-gift-amount')).toBe('500 Kč');
-      expect(text('.last-gift ul .bank-check-btn')).toBe('Zkontrolovat nové platby');
+      const group = element('section[aria-labelledby="last-gift-title"]');
+      expect(normalized(group?.querySelector('h2')?.textContent ?? '')).toBe('Poslední dar');
+      const rows = [...(group?.querySelectorAll('ul > li') ?? [])].map((row) =>
+        normalized(row.textContent ?? ''),
+      );
+      expect(rows).toEqual(['15. 3. 2026 Přijato 500 Kč', 'Zkontrolovat nové platby']);
     });
 
     it('then a payment that verified an account never becomes the last gift: the newest gift does', async () => {
@@ -1426,9 +1430,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.send-gift .missing-gift')).toBeNull();
       const card = element('.first-gift')!;
       const order = [...card.querySelectorAll('h2, .missing-gift, .first-gift-steps')].map(
-        (node) => node.className || node.tagName,
+        (node) => (node.tagName === 'H2' ? 'H2' : node.className),
       );
-      expect(order).toEqual(['ui-card__title', 'missing-gift', 'first-gift-steps']);
+      expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
     });
 
     it('then a donor with gifts can still open the standing order guide in the card Poslat dar', async () => {
