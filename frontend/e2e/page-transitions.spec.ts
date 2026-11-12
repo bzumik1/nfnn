@@ -26,6 +26,7 @@ interface SeenTransition {
 declare global {
   interface Window {
     nfnnSeenTransitions: SeenTransition[];
+    nfnnSeenTops: [string, number][];
   }
 }
 
@@ -252,10 +253,9 @@ for (const [screen, viewport] of [
       await band.scrollIntoViewIfNeeded();
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
       await page.evaluate(() => {
-        const seen: [string, number][] = [];
-        Object.assign(window, { nfnnSeenTops: seen });
+        window.nfnnSeenTops = [];
         const sample = () => {
-          seen.push([location.pathname, window.scrollY]);
+          window.nfnnSeenTops.push([location.pathname, window.scrollY]);
           requestAnimationFrame(sample);
         };
         requestAnimationFrame(sample);
@@ -264,21 +264,17 @@ for (const [screen, viewport] of [
       await band.getByRole('link', { name: 'Přispět', exact: true }).click();
       await expect(page).toHaveURL('/prispet');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+      ).toBeGreaterThan(300);
       await expect
         .poll(() =>
-          page.evaluate(
-            () =>
-              (window as unknown as { nfnnSeenTops: [string, number][] }).nfnnSeenTops.filter(
-                ([path]) => path === '/prispet',
-              ).length,
-          ),
+          page.evaluate(() => window.nfnnSeenTops.filter(([path]) => path === '/prispet').length),
         )
         .toBeGreaterThan(20);
 
       const tops = await page.evaluate(() =>
-        (window as unknown as { nfnnSeenTops: [string, number][] }).nfnnSeenTops
-          .filter(([path]) => path === '/prispet')
-          .map(([, top]) => top),
+        window.nfnnSeenTops.filter(([path]) => path === '/prispet').map(([, top]) => top),
       );
       expect(tops.filter((top) => top !== 0)).toEqual([]);
     });

@@ -25,12 +25,10 @@ export class TabMemory {
   private keptTop: { readonly top: number; readonly navigation: number } | null = null;
   private returnedToKeptPage = false;
   private placements = 0;
-  private trigger: NavigationStart['navigationTrigger'] = 'imperative';
 
   constructor() {
     const navigations = this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
-        this.trigger = event.navigationTrigger;
         this.keptPages.takeReturningTop();
       } else if (event instanceof NavigationEnd) {
         this.visited(event.urlAfterRedirects);
@@ -77,6 +75,9 @@ export class TabMemory {
   private overRouterScrolling(event: Scroll): void {
     const kept = this.keptTop;
     if (kept === null || kept.navigation !== event.routerEvent.id) {
+      if (!event.position && event.anchor === null && event.scrollBehavior !== 'manual') {
+        this.scrollTo(0);
+      }
       return;
     }
     this.keptTop = null;
@@ -86,8 +87,8 @@ export class TabMemory {
   }
 
   private startNewPageAtTop(): void {
-    const scroll = untracked(this.router.currentNavigation)?.extras.scroll;
-    if (this.trigger !== 'popstate' && scroll !== 'manual') {
+    const navigation = untracked(this.router.currentNavigation);
+    if (navigation?.trigger !== 'popstate' && navigation?.extras.scroll !== 'manual') {
       this.scrollTo(0);
     }
   }
