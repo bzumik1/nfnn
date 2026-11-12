@@ -1,9 +1,9 @@
 @use 'breakpoints' as bp;
 
 .ui-dialog__title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   color: var(--color-text);
   margin: 0 var(--space-8) var(--space-3) 0;
   overflow-wrap: anywhere;
@@ -47,5 +47,35 @@
       max(var(--space-5), env(safe-area-inset-left));
     border-top: 1px solid var(--color-divider);
     background: var(--color-surface);
+  }
+}
+
+:root {
+  --keyboard-covered-height: 0px;
+}
+
+html.keyboard-open .dialog[open] {
+  padding-bottom: calc(var(--space-5) + var(--keyboard-covered-height));
+}
+
+@include bp.down(phone) {
+  html.keyboard-open .dialog[open] {
+    padding-bottom: var(--keyboard-covered-height);
+    background: var(--color-surface);
+  }
+}
+
+@include bp.down(nav) {
+  html.keyboard-open .dialog--full[open] {
+    padding-bottom: var(--keyboard-covered-height);
+    background: var(--color-surface);
+  }
+
+  html.keyboard-open .dialog--sheet[open] {
+    padding-bottom: var(--keyboard-covered-height);
+  }
+
+  html.keyboard-open .dialog--sheet[open] .dialog-panel {
+    max-height: calc(100% - var(--space-12));
   }
 }

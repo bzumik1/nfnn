@@ -15,6 +15,10 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findBySecretHashForUpdate(String secretHash);
 
+    Optional<DonorId> findDonorOfSecretHash(String secretHash);
+
+    void lockSessionsOf(DonorId donorId);
+
     void recordSuccessor(UUID tokenId, UUID successorId);
 
     boolean revokeIfUnused(UUID tokenId, Instant at);

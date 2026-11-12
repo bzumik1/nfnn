@@ -1,0 +1,25 @@
+<svg
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  @switch (kind()) {
+    @case ('ok') {
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 2.5 2.5L16 9.5" />
+    }
+    @case ('attention') {
+      <path d="M12 3.5 2.5 20h19z" />
+      <path d="M12 10v4.5M12 17.5h0" />
+    }
+    @case ('failure') {
+      <path d="M8.3 3h7.4L21 8.3v7.4L15.7 21H8.3L3 15.7V8.3z" />
+      <path d="m9 9 6 6M15 9l-6 6" />
+    }
+  }
+</svg>

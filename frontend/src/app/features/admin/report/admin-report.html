@@ -264,26 +264,32 @@
             Zatím žádný přehled neodešel.
           </p>
         } @else {
-          <table class="ui-table">
-            <thead>
-              <tr>
-                <th i18n="@@admin.report.sent.col.month">Měsíc</th>
-                <th i18n="@@admin.report.sent.col.sentAt">Odesláno</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of sentReports(); track item.month) {
-                <tr>
-                  <td data-label="Měsíc" i18n-data-label="@@admin.report.sent.col.month">
-                    <span class="admin-name">{{ formatMonth(item.month) }}</span>
-                  </td>
-                  <td data-label="Odesláno" i18n-data-label="@@admin.report.sent.col.sentAt">
-                    {{ sentTime(item) }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+          <ul class="ui-list sent-reports">
+            @for (item of sentReports(); track item.month) {
+              <li>
+                <a class="ui-list__row" [routerLink]="['/sprava/prehledy', item.month]">
+                  <span class="ui-list__title">{{ formatMonth(item.month) }}</span>
+                  <span class="ui-list__meta" i18n="@@admin.report.sent.at"
+                    >Odesláno {{ sentTime(item) }}</span
+                  >
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </a>
+              </li>
+            }
+          </ul>
         }
       </section>
     }

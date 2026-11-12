@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.donors.domain.AuthorizationCode;
 import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
+import cz.novanadeje.app.donors.domain.DonorId;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -30,5 +31,15 @@ class JpaAuthorizationCodeRepository implements AuthorizationCodeRepository {
     @Override
     public boolean markUsed(UUID codeId, Instant at) {
         return jpa.markUsed(codeId, at) == 1;
+    }
+
+    @Override
+    public int deleteExpiredBefore(Instant cutoff) {
+        return jpa.deleteExpiredBefore(cutoff);
+    }
+
+    @Override
+    public void deleteAllOfWithoutWaiting(DonorId donorId) {
+        jpa.deleteUnlockedOf(donorId.value());
     }
 }

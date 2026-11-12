@@ -6,6 +6,7 @@ import {
   DestroyRef,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 
@@ -33,6 +34,7 @@ export class CopyButton {
   readonly failedStatus = input<string | null>(null);
   readonly align = input<'start' | 'end'>('end');
   readonly tone = input<'light' | 'dark'>('light');
+  readonly copied = output<void>();
 
   protected readonly state = signal<CopyState>('idle');
   private reset: ReturnType<typeof setTimeout> | undefined;
@@ -60,6 +62,7 @@ export class CopyButton {
     try {
       await navigator.clipboard.writeText(this.value());
       this.state.set('copied');
+      this.copied.emit();
       this.reset = setTimeout(() => this.state.set('idle'), CONFIRMATION_MS);
     } catch {
       this.state.set('failed');

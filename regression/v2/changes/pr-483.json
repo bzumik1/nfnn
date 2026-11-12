@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when it opens, then it names the donor and their variable symbol over the sections of the account",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when it opens, then it is named Účet under the logo of the foundation, with the card of the donor leading to Údaje a zabezpečení above the sections",
+    "reason": "#483 (Jakub 2026-11-06, the approved renders of the account sheet after the Music app on iOS): the sheet is named Účet under the logo, the card of the donor leads to Údaje a zabezpečení and the variable symbol stands under the sections, so the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, shared/ui dialog (the account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when no name is kept, then the sheet is named Účet and shows a person instead of initials",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when no name is kept, then the card of the donor shows a person instead of initials and still leads to Údaje a zabezpečení",
+    "reason": "#483 (Jakub 2026-11-06, the approved renders of the account sheet after the Music app on iOS): the sheet is named Účet under the logo, the card of the donor leads to Údaje a zabezpečení and the variable symbol stands under the sections, so the tests are renamed for what they now prove",
+    "contract": "docs/frontend-overview.md, shared/ui dialog (the account sheet)"
+  }
+]

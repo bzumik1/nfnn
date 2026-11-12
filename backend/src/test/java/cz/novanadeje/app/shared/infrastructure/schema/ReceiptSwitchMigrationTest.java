@@ -1,12 +1,12 @@
 package cz.novanadeje.app.shared.infrastructure.schema;
 
+import cz.novanadeje.app.TestcontainersConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -28,7 +28,7 @@ class ReceiptSwitchMigrationTest {
 
     @BeforeAll
     static void startDatabase() {
-        postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine"));
+        postgres = TestcontainersConfiguration.newPostgres();
         postgres.start();
     }
 

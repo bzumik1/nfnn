@@ -50,7 +50,7 @@
         <div class="standing-row">
           <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
           <dd>
-            <span class="standing-value">{{ state.account.number }}</span>
+            <span class="standing-value ui-figures">{{ state.account.number }}</span>
             <app-copy-button
               [value]="state.account.number"
               what="číslo účtu"
@@ -63,7 +63,7 @@
     <div class="standing-row">
       <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
       <dd>
-        <span class="standing-value">{{ variableSymbol() }}</span>
+        <span class="standing-value ui-figures">{{ variableSymbol() }}</span>
         <app-copy-button
           [value]="variableSymbol()"
           what="variabilní symbol"
@@ -103,7 +103,7 @@
   <p class="standing-older">
     <span i18n="@@donor.standingOrder.older"
       >Posíláte už trvalým příkazem s jiným nebo starším symbolem? Změňte v něm symbol na
-      <strong>{{ variableSymbol() }}</strong
+      <strong class="ui-figures">{{ variableSymbol() }}</strong
       >, nebo ověřte účet v části</span
     >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.standingOrder.olderLink">Bankovní účty</a>.
   </p>

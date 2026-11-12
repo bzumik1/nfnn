@@ -28,6 +28,10 @@ export function ibanOfAccountNumber(accountNumber: string): string | null {
   return `${COUNTRY}${String(checkDigits).padStart(CHECK_DIGITS, '0')}${basicBankAccountNumber}`;
 }
 
+export function bankCodeOf(accountNumber: string): string | null {
+  return ACCOUNT_NUMBER.exec(accountNumber)?.[3] ?? null;
+}
+
 export function accountMatchesIban(accountNumber: string, iban: string): boolean {
   const expected = ibanOfAccountNumber(accountNumber);
   return expected !== null && expected === iban;

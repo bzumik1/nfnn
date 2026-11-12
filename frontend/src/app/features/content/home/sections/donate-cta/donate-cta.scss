@@ -1,7 +1,7 @@
 @use 'breakpoints' as bp;
 
 .donate {
-  padding: var(--space-27) 0;
+  padding: max(calc(var(--safe-area-top) + var(--space-27)), var(--page-top)) 0 var(--space-27);
   background: var(--color-surface);
 }
 
@@ -21,6 +21,8 @@
   border-radius: var(--radius-media);
   height: 460px;
   overflow: hidden;
+  outline: 1px solid var(--color-media-rim);
+  outline-offset: -1px;
 
   img {
     object-position: center 15%;
@@ -29,9 +31,9 @@
 
 .donate-quote {
   position: absolute;
-  top: 28px;
+  bottom: 28px;
   right: -20px;
-  background: var(--color-text);
+  background: var(--color-surface-quote);
   color: var(--color-on-inverse);
   border-radius: var(--radius-media);
   padding: var(--space-4-5) var(--space-6);
@@ -43,7 +45,7 @@
 
 .donate-quote-mark {
   font-size: var(--text-5xl);
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-weight: var(--weight-extrabold);
   color: var(--color-accent);
 }
@@ -54,7 +56,7 @@
 }
 
 .title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-cta-title);
   font-weight: var(--weight-extrabold);
   line-height: var(--leading-heading);
@@ -101,7 +103,7 @@
 }
 
 .step-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: var(--leading-snug);
@@ -139,7 +141,7 @@
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--color-on-accent);
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   border: none;
   border-radius: var(--radius-pill);
   padding: var(--space-3) var(--space-7);
@@ -147,8 +149,10 @@
   cursor: pointer;
   transition: transform var(--duration-base);
 
-  &:hover {
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-1px);
+    }
   }
 }
 
@@ -164,9 +168,9 @@
   cursor: pointer;
 }
 
-@include bp.down(tablet) {
+@mixin one-column {
   .donate {
-    padding: var(--space-16) 0;
+    padding: max(calc(var(--safe-area-top) + var(--space-16)), var(--page-top)) 0 var(--space-16);
   }
 
   .two-col {
@@ -177,4 +181,12 @@
   .donate-img-wrap {
     display: none;
   }
+}
+
+@include bp.down(tablet) {
+  @include one-column;
+}
+
+@include bp.height-down(short) {
+  @include one-column;
 }

@@ -48,6 +48,18 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public FakeBankCodeSource fakeBankCodeSource() {
+        return new FakeBankCodeSource();
+    }
+
+    @Bean
+    @Primary
+    public FakeBankLogoSource fakeBankLogoSource() {
+        return new FakeBankLogoSource();
+    }
+
+    @Bean
+    @Primary
     public FakeCompanyRegistry fakeCompanyRegistry() {
         return new FakeCompanyRegistry();
     }

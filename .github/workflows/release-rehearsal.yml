@@ -18,7 +18,7 @@ jobs:
     env:
       SERVER: ${{ matrix.server }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -51,17 +51,17 @@ jobs:
           echo "DEPLOYED_REVISION=$revision" >> "$GITHUB_ENV"
           echo "REHEARSE=true" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         if: env.REHEARSE == 'true'
         with:
           node-version: "26"
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         if: env.REHEARSE == 'true'
 
       - name: Build images
         if: env.REHEARSE == 'true'
-        uses: docker/bake-action@v7
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         env:
           CACHE_FROM_GHA: "true"
           CACHE_TO_GHA: "false"
@@ -239,7 +239,7 @@ jobs:
           rm -f "$RUNNER_TEMP/first-server.key"
           docker compose up -d --wait --wait-timeout 300
           scripts/backend-log.sh "$second/logs" | grep "Receipt signing key $first_key from a restored backup is sealed again and published" > /dev/null || { echo "::error::the second server did not adopt the first server's receipt signing key $first_key"; grep -i 'receipt signing key' "$second/logs/backend.log"; exit 1; }
-          [ "$(docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select count(*) from admin_action where action = 'ADOPT_RECEIPT_SIGNING_KEY' and details like '%$first_key%'")" = 1 ] || { echo "::error::the adoption of $first_key is not in the audit trail exactly once"; exit 1; }
+          [ "$(docker exec nfnn-postgres psql -U novanadeje_app -d novanadeje -tA -c "select count(*) from admin_action where action = 'ADOPT_RECEIPT_SIGNING_KEY' and details like '%$first_key%'")" = 1 ] || { echo "::error::the adoption of $first_key is not in the audit trail exactly once"; exit 1; }
           [ "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$second/secrets/backup-key")" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$first/secrets/backup-key")" ] || { echo "::error::the second server did not adopt the backup key the backup came with"; exit 1; }
           if scripts/backend-log.sh "$second/logs" | grep -E "Receipt signing key [0-9a-f]{8} (is sealed by the settings key of another server|fails its seal)"; then
             echo "::error::the second server refused a receipt signing key"

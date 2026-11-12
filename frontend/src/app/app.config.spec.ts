@@ -1,7 +1,10 @@
-import { HttpBackend, HttpXhrBackend } from '@angular/common/http';
-import { ErrorHandler } from '@angular/core';
+import { HttpBackend, HttpClient, HttpXhrBackend } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { REMOVE_STYLES_ON_COMPONENT_DESTROY } from '@angular/platform-browser';
+import { provideRouter, Router, RouterPreloader } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import {
   appConfig,
@@ -10,11 +13,16 @@ import {
   chunkLoadRecoveryFeature,
   connectivityAtStart,
   dialogHistoryAtStart,
+  keptPageStyles,
   navigationAtStart,
+  tabPagesPreloading,
 } from './app.config';
 import { Connectivity } from './core/connectivity/connectivity';
+import { ShownAnswers } from './core/connectivity/shown-answers';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
+import { pageTransitionsAtStart } from './core/navigation/page-transitions';
+import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ExternalNavigation } from './core/navigation/external-navigation';
@@ -27,6 +35,81 @@ describe('Given the HTTP client of the app', () => {
     TestBed.configureTestingModule({ providers: [appHttpClient] });
 
     expect(TestBed.inject(HttpBackend)).toBeInstanceOf(HttpXhrBackend);
+  });
+});
+
+describe('Given the public content the app has already shown', () => {
+  it('when a page asks for it again, then the app answers from memory at once and asks the server in the background', async () => {
+    TestBed.configureTestingModule({ providers: [appHttpClient, provideHttpClientTesting()] });
+    const http = TestBed.inject(HttpClient);
+    const backend = TestBed.inject(HttpTestingController);
+    const first = firstValueFrom(http.get('/api/content/home'));
+    backend.expectOne('/api/content/home').flush({ news: [] });
+    await first;
+
+    expect(await firstValueFrom(http.get('/api/content/home'))).toEqual({ news: [] });
+
+    backend.expectOne('/api/content/home').flush({ news: [] });
+    backend.verify();
+  });
+
+  it('when a visitor comes back to a page, then it shows the date of the kept answer until the answer from the background replaces it', async () => {
+    @Component({ template: '' })
+    class AnyPage {}
+    TestBed.configureTestingModule({
+      providers: [
+        appHttpClient,
+        provideHttpClientTesting(),
+        provideRouter([{ path: '**', component: AnyPage }]),
+      ],
+    });
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpClient);
+    const backend = TestBed.inject(HttpTestingController);
+    const shown = TestBed.inject(ShownAnswers);
+    const news = '/api/content/news?page=0&size=10';
+    const keptAt = 'Thu, 05 Nov 2026 12:00:00 GMT';
+    const refreshedAt = 'Thu, 05 Nov 2026 12:05:00 GMT';
+    await router.navigateByUrl('/aktuality');
+    const first = firstValueFrom(http.get(news));
+    backend.expectOne(news).flush({ items: [] }, { headers: { Date: keptAt } });
+    await first;
+    await router.navigateByUrl('/o-nas');
+    await router.navigateByUrl('/aktuality');
+
+    await firstValueFrom(http.get(news));
+
+    expect(shown.fetchedAtOf(news)).toBe(Date.parse(keptAt));
+    backend.expectOne(news).flush({ items: [] }, { headers: { Date: refreshedAt } });
+    expect(shown.fetchedAtOf(news)).toBe(Date.parse(refreshedAt));
+  });
+});
+
+describe('Given the pages behind the tab bar', () => {
+  @Component({ template: '' })
+  class Landing {}
+
+  it('when the app has shown its first page, then the tab pages load ahead and every other page waits', async () => {
+    const tabPage = vi.fn(() => Promise.resolve(Landing));
+    const otherPage = vi.fn(() => Promise.resolve(Landing));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          [
+            { path: '', pathMatch: 'full', component: Landing },
+            { path: 'aktuality', data: LOADED_AHEAD, loadComponent: tabPage },
+            { path: 'zasady-ochrany-osobnich-udaju', loadComponent: otherPage },
+          ],
+          tabPagesPreloading,
+        ),
+      ],
+    });
+
+    await TestBed.inject(Router).navigateByUrl('/');
+    await firstValueFrom(TestBed.inject(RouterPreloader).preload());
+
+    expect(tabPage).toHaveBeenCalledTimes(1);
+    expect(otherPage).not.toHaveBeenCalled();
   });
 });
 
@@ -57,6 +140,19 @@ describe('Given the history entries of dialogs', () => {
 
     expect(started).toHaveBeenCalledTimes(1);
     expect(appConfig.providers).toContain(dialogHistoryAtStart);
+  });
+});
+
+describe('Given the transitions between pages', () => {
+  it('when the app starts, then the styles of a page that closes stay, so its still copy keeps its look while it slides', () => {
+    TestBed.configureTestingModule({ providers: [keptPageStyles] });
+
+    expect(TestBed.inject(REMOVE_STYLES_ON_COMPONENT_DESTROY)).toBe(false);
+    expect(appConfig.providers).toContain(keptPageStyles);
+  });
+
+  it('when the app starts, then the transitions follow its navigations', () => {
+    expect(appConfig.providers).toContain(pageTransitionsAtStart);
   });
 });
 

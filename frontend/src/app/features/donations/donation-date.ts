@@ -1,6 +1,6 @@
 export function formatDonationDate(isoDate: string): string {
   const [year, month, day] = isoDate.slice(0, 10).split('-');
-  return `${day}. ${month}. ${year}`;
+  return `${Number(day)}. ${Number(month)}. ${year}`;
 }
 
 const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
@@ -10,32 +10,23 @@ const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  second: '2-digit',
   hourCycle: 'h23',
 });
 
 export function formatBankTime(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
-  return `${parts['day']}. ${parts['month']}. ${parts['year']} ${parts['hour']}:${parts['minute']}`;
-}
-
-const BANK_CLOCK = new Intl.DateTimeFormat('cs-CZ', {
-  timeZone: 'Europe/Prague',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-
-export function formatBankClock(isoInstant: string): string {
-  const parts = Object.fromEntries(
-    BANK_CLOCK.formatToParts(new Date(isoInstant)).map((part) => [part.type, part.value]),
-  );
-  return `${parts['hour']}:${parts['minute']}:${parts['second']}`;
+  return `${Number(parts['day'])}. ${Number(parts['month'])}. ${parts['year']} ${Number(parts['hour'])}:${parts['minute']}`;
 }
 
 export function pragueDay(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
   return `${parts['year']}-${parts['month']}-${parts['day']}`;
+}
+
+export function pragueTime(isoInstant: string): string {
+  const parts = pragueParts(isoInstant);
+  return `${Number(parts['hour'])}:${parts['minute']}:${parts['second']}`;
 }
 
 export function pragueHour(isoInstant: string): number {

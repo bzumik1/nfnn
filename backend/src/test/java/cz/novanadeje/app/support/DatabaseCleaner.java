@@ -25,7 +25,12 @@ public class DatabaseCleaner {
                         sequences().stream().map(sequence -> "alter sequence " + sequence + " restart"))
                 .toList();
         if (!statements.isEmpty()) {
-            jdbc.sql(String.join(";\n", statements)).update();
+            jdbc.sql("do $$ begin\n"
+                            + "perform set_config('session_replication_role', 'replica', true);\n"
+                            + statements.stream().map(statement -> statement + ";\n").collect(Collectors.joining())
+                            + "perform set_config('session_replication_role', 'origin', true);\n"
+                            + "end $$")
+                    .update();
         }
     }
 

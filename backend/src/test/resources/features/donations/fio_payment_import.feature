@@ -194,6 +194,16 @@ Feature: Incoming bank payments are imported from Fio
     When the application starts the import
     Then bank payment 1001 is stored with a 255-character name, a 500-character message and a 64-character account
 
+  Scenario: A payment whose texts from the bank carry NUL characters is stored without them
+    Given today is 2026-10-17
+    And the bank account has a movement 1001 on 2026-10-15 named "Nováková<NUL> Jana" with the message "Dar<NUL> pro fond<NUL>", where "<NUL>" is a NUL character
+    When the application starts the import
+    Then every import completed
+    And the import reported 1 movements received, 1 new and 0 known
+    And bank payment 1001 is stored with the name "Nováková Jana" and the message "Dar pro fond"
+    And bank payment 1001 is stored with "500.00" CZK received on 2026-10-15 from "2900233333/2010"
+    And the bank movements are covered from 2026-07-20 to 2026-10-17
+
   Scenario: The bank-side bookmark is never used
     Given today is 2026-10-17
     And the bank account has these movements:

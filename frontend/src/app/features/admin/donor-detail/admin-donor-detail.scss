@@ -44,11 +44,9 @@
   }
 
   dt {
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
   }
 
   dd {
@@ -86,9 +84,9 @@
 }
 
 .erase-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-title);
   font-size: var(--text-3xl);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   margin-bottom: var(--space-3);
 }
 
@@ -171,11 +169,9 @@
   margin: 0;
 
   dt {
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
     margin-bottom: var(--space-1);
   }
 
@@ -250,6 +246,11 @@ td.amount {
   white-space: nowrap;
 }
 
+.account-number {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
 .muted {
   display: block;
   color: var(--color-text-muted);
@@ -297,7 +298,7 @@ td.amount {
   color: var(--color-warning);
 }
 
-@include bp.down(cards) {
+@mixin stacked-cells {
   td.action,
   td.amount {
     text-align: left;
@@ -323,7 +324,27 @@ td.amount {
   }
 }
 
+@include bp.down(cards) {
+  @include stacked-cells;
+}
+
+.ui-table--stacked {
+  @include stacked-cells;
+}
+
+.admin-actions .ui-button {
+  white-space: normal;
+}
+
+.card-rows {
+  margin-bottom: var(--space-5);
+}
+
 .donor-payments a {
   color: var(--color-accent);
   font-weight: var(--weight-semibold);
+}
+
+.donations-card--rows {
+  overflow: clip;
 }

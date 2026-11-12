@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -12,7 +13,9 @@ import tools.jackson.databind.JsonNode;
 
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +62,22 @@ public class AdminActionsStepDefinitions {
                 .update();
     }
 
+    @Given("{string} recorded these changes at one moment an hour ago, newest first:")
+    public void recordedTheseChangesAtOneMoment(String alias, DataTable table) {
+        Instant moment = clock.instant().minusSeconds(3600);
+        List<Map<String, String>> rows = table.asMaps();
+        List<UUID> ids = rows.stream()
+                .map(row -> UuidV7.generate(moment))
+                .sorted(Comparator.comparing(UUID::toString).reversed())
+                .toList();
+        for (int index = 0; index < rows.size(); index++) {
+            Map<String, String> row = rows.get(index);
+            jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (?, ?, ?, ?, ?, ?)")
+                    .params(ids.get(index), scenarioDonors.idOf(alias), row.get("action"), null, row.get("details"), Timestamp.from(moment))
+                    .update();
+        }
+    }
+
     @When("{string} asks for the {int} newest admin actions")
     public void asksForTheNewestAdminActions(String alias, int limit) {
         sessions.actAs(alias);
@@ -71,6 +90,21 @@ public class AdminActionsStepDefinitions {
         String oldest = items.get(items.size() - 1).get("performedAt").asString();
         sessions.actAs(alias);
         api.get(ACTIONS_PATH + "?limit=" + limit + "&before=" + oldest);
+    }
+
+    @When("{string} asks for the {int} admin actions after the last one listed")
+    public void asksForTheAdminActionsAfterTheLastOneListed(String alias, int limit) {
+        JsonNode items = api.lastResponseJson().get("items");
+        JsonNode last = items.get(items.size() - 1);
+        sessions.actAs(alias);
+        api.get(ACTIONS_PATH + "?limit=" + limit + "&before=" + last.get("performedAt").asString() + "&beforeId=" + last.get("id").asString());
+    }
+
+    @When("{string} asks for the admin actions after an action without naming its time")
+    public void asksForTheAdminActionsAfterAnActionWithoutItsTime(String alias) {
+        JsonNode items = api.lastResponseJson().get("items");
+        sessions.actAs(alias);
+        api.get(ACTIONS_PATH + "?beforeId=" + items.get(items.size() - 1).get("id").asString());
     }
 
     @When("someone without a token asks for the admin actions")

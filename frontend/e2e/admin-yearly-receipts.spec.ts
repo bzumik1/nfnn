@@ -52,7 +52,7 @@ test.describe('Given an administrator who prints the yearly receipts of 2026', (
       `Bílá Eva: ${receiptNumberOf(1)} nahrazuje 2027-000090`,
     ]);
     await expect(page.locator('.skipped li')).toHaveText([
-      'Čermák Petr: dárce dnes dosáhl denního limitu nových potvrzení; zkuste to zítra.',
+      'Čermák Petr: dárce dosáhl limitu nových potvrzení místo dřívějších (20 za 24 hodin, 60 za rok); zkuste to později.',
     ]);
 
     const [saved] = await Promise.all([

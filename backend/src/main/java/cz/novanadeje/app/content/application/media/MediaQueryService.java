@@ -20,6 +20,8 @@ public class MediaQueryService {
     }
 
     public MediaVariant variant(MediaId id, Optional<Integer> wantedWidth) {
-        return media.findById(id).orElseThrow(() -> new MediaNotFound(id)).variantFor(wantedWidth);
+        return wantedWidth.map(width -> media.findVariantAtLeast(id, width))
+                .orElseGet(() -> media.findLargestVariant(id))
+                .orElseThrow(() -> new MediaNotFound(id));
     }
 }

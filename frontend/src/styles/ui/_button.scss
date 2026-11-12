@@ -1,3 +1,5 @@
+@use 'pressed';
+
 .ui-button {
   display: inline-block;
   border: none;
@@ -17,10 +19,14 @@
     cursor: progress;
     opacity: 0.7;
   }
+
+  @include pressed.when-pressed {
+    @include pressed.darkens;
+  }
 }
 
 .ui-button--primary {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
   padding: var(--space-2-5) var(--space-6);
   font-size: var(--text-md);
@@ -45,7 +51,7 @@
 }
 
 .ui-button--danger {
-  background: var(--color-danger);
+  background: var(--color-danger-fill);
   color: var(--color-on-danger);
 }
 
@@ -108,8 +114,10 @@
     border-color var(--duration-base),
     color var(--duration-base);
 
-  &:hover {
-    border-color: var(--color-accent);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--color-accent);
+    }
   }
 
   &[aria-disabled='true'] {

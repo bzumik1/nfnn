@@ -68,7 +68,9 @@ class ServiceWorkerCachedAnswersTest {
             "/api/content/projects",
             "/api/content/projects/x",
             "/api/content/media/x",
-            "/api/donations/payment-details");
+            "/api/donations/payment-details",
+            "/api/donations/bank-logos",
+            "/api/donations/bank-logos/images/x");
 
     @Autowired
     @Qualifier("requestMappingHandlerMapping")
@@ -170,6 +172,10 @@ class ServiceWorkerCachedAnswersTest {
         ProjectView draftProject = projects.create(admin, new ProjectCommand("Připravovaný projekt", today.getYear(), ProjectCategory.ADULTS,
                 Optional.empty(), Optional.empty(), "Krátký úvod", "Text projektu", Optional.empty(), Optional.empty())).view();
         String media = "/api/content/media/" + photo.id().value();
+        UUID logoImage = UuidV7.generate(clock.instant());
+        jdbc.sql("insert into bank_logo_image (id, sha256, webp) values (?, ?, ?)").params(logoImage, "a".repeat(64), png()).update();
+        jdbc.sql("insert into bank_logo (code, source_url, image_id, fetched_at, checked_at) values ('0800', 'https://is1-ssl.mzstatic.com/a.jpg', ?, now(), now())")
+                .param(logoImage).update();
         return List.of(
                 "/api/content/home",
                 "/api/content/news",
@@ -183,6 +189,9 @@ class ServiceWorkerCachedAnswersTest {
                 "/api/content/projects/zadny-takovy-projekt",
                 "/api/content/projects/" + draftProject.slug(),
                 "/api/donations/payment-details",
+                "/api/donations/bank-logos",
+                "/api/donations/bank-logos/images/" + logoImage,
+                "/api/donations/bank-logos/images/" + UUID.randomUUID(),
                 media,
                 media + "?w=480",
                 "/api/content/media/" + UUID.randomUUID());

@@ -115,6 +115,20 @@ Feature: An account without a password, opened only with passkeys
     When "Jana" adds the new passkey named "Nový telefon" with the link from the e-mail
     Then the response status is 201
 
+  Scenario: Ten wrong codes with one reset link, from any address, stop the codes of the donor before a passkey is recovered
+    Given "Jana" added a passkey named "iPhone"
+    And "Jana" turned the second factor on confirmed with the passkey "iPhone"
+    And the donor asked for a password reset for "jana@example.cz"
+    And "Jana" asked for a new passkey with the link from the e-mail and code "000000" 10 times, each from another client address
+    When the following requests come from another client address
+    And "Jana" asks for a new passkey with the link from the e-mail and the current code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+    And an e-mail goes to the address of "Jana" with the subject "Někdo zkouší kódy k vašemu účtu – Nová naděje"
+    When "Jana" adds the new passkey named "Nový telefon" with the link from the e-mail
+    Then the response status is 400
+    And the passkeys of "Jana" are "iPhone"
+
   Scenario: An administrator does not recover a passkey through the e-mail link
     Given "Jana" added a passkey named "iPhone"
     And "Jana" is given the administrator role without signing in again

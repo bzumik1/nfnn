@@ -11,15 +11,13 @@
   th {
     padding: var(--space-3) var(--space-5);
     text-align: left;
-    font-size: var(--text-2xs);
-    font-weight: var(--weight-bold);
-    color: var(--color-text-subtle);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
   }
 
   tbody tr {
-    border-top: 1px solid var(--color-divider);
+    border-top: 1px solid var(--color-separator);
   }
 
   td {
@@ -30,43 +28,49 @@
   }
 }
 
+@mixin stacked {
+  thead {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  &,
+  tbody,
+  tr,
+  td {
+    display: block;
+  }
+
+  tbody tr {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-3-5) var(--space-5);
+  }
+
+  td {
+    padding: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-soft);
+    margin-bottom: var(--space-0-5);
+  }
+}
+
 @include bp.down(cards) {
   .ui-table {
-    thead {
-      display: block;
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-    }
-
-    &,
-    tbody,
-    tr,
-    td {
-      display: block;
-    }
-
-    tbody tr {
-      display: grid;
-      gap: var(--space-2);
-      padding: var(--space-3-5) var(--space-5);
-    }
-
-    td {
-      padding: 0;
-    }
-
-    td::before {
-      content: attr(data-label);
-      display: block;
-      font-size: var(--text-2xs);
-      font-weight: var(--weight-bold);
-      color: var(--color-text-subtle);
-      letter-spacing: var(--tracking-wide);
-      text-transform: uppercase;
-      margin-bottom: var(--space-0-5);
-    }
+    @include stacked;
   }
+}
+
+.ui-table--stacked {
+  @include stacked;
 }

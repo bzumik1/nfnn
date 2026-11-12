@@ -8,11 +8,12 @@ final class BankTexts {
     }
 
     static Optional<String> normalized(Optional<String> value, int width) {
-        return require(value, "Optional text").map(String::trim).filter(text -> !text.isEmpty()).map(text -> cut(text, width));
+        return require(value, "Optional text").map(BankTexts::withoutControlCharacters).map(String::trim).filter(text -> !text.isEmpty())
+                .map(text -> cut(text, width));
     }
 
     static String required(String value, int width, String label) {
-        return cut(require(value, label).trim(), width);
+        return cut(withoutControlCharacters(require(value, label)).trim(), width);
     }
 
     static <T> T require(T value, String label) {
@@ -20,6 +21,16 @@ final class BankTexts {
             throw new IllegalArgumentException(label + " is required");
         }
         return value;
+    }
+
+    private static String withoutControlCharacters(String text) {
+        StringBuilder kept = new StringBuilder(text.length());
+        text.codePoints().filter(BankTexts::kept).forEach(kept::appendCodePoint);
+        return kept.toString();
+    }
+
+    private static boolean kept(int codePoint) {
+        return Character.getType(codePoint) != Character.CONTROL || codePoint == '\t' || codePoint == '\n' || codePoint == '\r';
     }
 
     private static String cut(String text, int width) {

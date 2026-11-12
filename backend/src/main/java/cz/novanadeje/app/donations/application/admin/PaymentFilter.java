@@ -70,6 +70,10 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         BankPayment payment = view.payment();
         Optional<String> account = payment.sender().map(SenderAccount::display)
                 .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)));
+        if (view.payerWithheld()) {
+            return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(),
+                    view.donation().flatMap(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
+        }
         return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(), account, payment.counterpartyName(),
                         payment.messageForRecipient(), view.donation().flatMap(PairedDonationView::donor).map(DonorRecord::name))
                 .flatMap(Optional::stream);

@@ -30,6 +30,7 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
             "/api/admin/donations/receipt-signatures/*",
+            "/api/admin/donations/bank-logos/*",
             "/api/admin/operations/push/subscriptions/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
             "/api/admin/donors/administrators",
@@ -66,6 +67,7 @@ class ApiSecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/operations/client-errors").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/payment-details").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/donations/receipt-keys").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/donations/bank-logos", "/api/donations/bank-logos/images/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donations/receipts/status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/content/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/donors/auth/**").permitAll()

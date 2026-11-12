@@ -8,6 +8,7 @@ import {
   Injectable,
   Injector,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,7 +16,6 @@ import {
   catchError,
   EMPTY,
   filter,
-  forkJoin,
   last,
   map,
   Observable,
@@ -34,6 +34,11 @@ import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { BankAccountItem, BankAccountsApi } from '../../donations/bank-accounts-api';
+import { copyBackedReceiptSource } from '../../donations/device-copy/copy-receipt-source';
+import {
+  type DonorDonationsRead,
+  DonorDonationsRepository,
+} from '../../donations/device-copy/donor-donations-repository';
 import {
   BankCheckResponse,
   DonationItem,
@@ -41,7 +46,9 @@ import {
   DonationSummaryResponse,
   DownloadedFile,
 } from '../../donations/donations-api';
+import { GiftFeed } from '../../donations/gift-arrival/gift-feed';
 import { ReceiptSubject } from '../../donations/receipt-pdf/frozen-receipt';
+import { giftsOnActiveYearlyReceipts } from './yearly-receipt';
 import { PdfDelivery } from '../../donations/receipt-pdf/pdf-delivery';
 import {
   ReceiptPdf,
@@ -80,6 +87,7 @@ export interface ReceiptError {
   readonly scope: ReceiptScope;
   readonly key: string;
   readonly message: string;
+  readonly offersDiagnostics?: true;
 }
 
 const RECEIPT_FAILED = $localize`:@@donor.dashboard.receipt.error:Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.`;
@@ -90,6 +98,7 @@ const RECEIPT_TOOLS_STILL_MISSING = $localize`:@@donor.dashboard.receipt.toolsSt
 const RECEIPT_UNPRINTABLE = $localize`:@@donor.dashboard.receipt.unprintable:Údaje potvrzení obsahují znak, který v PDF neumíme vytisknout, a tak jsme PDF nevytvořili. Napište nám prosím na info@nfnn.cz.`;
 const RECEIPT_STYLE_FAILED = $localize`:@@donor.dashboard.receipt.styleFailed:PDF teď kvůli chybě na webu nejde vytvořit. Napište nám prosím na info@nfnn.cz, opravíme ji.`;
 const RECEIPT_CANCELLED = $localize`:@@donor.dashboard.receipt.cancelled:Přípravu potvrzení jste zrušili.`;
+const RECEIPT_ON_YEARLY = $localize`:@@donor.dashboard.receipt.onYearly:Tento dar uvádí roční potvrzení za jeho rok, a tak k němu samostatné potvrzení nevystavujeme. Stáhněte si roční potvrzení.`;
 const DRAWING_FAILURE_TEXTS: Readonly<Record<ReceiptPdfFailureReason, string>> = {
   'tools-missing': RECEIPT_TOOLS_MISSING,
   fonts: RECEIPT_DRAWING_FAILED,
@@ -106,6 +115,7 @@ const RECEIPT_BEFORE_FIRST_YEAR = 'donations/receipt-before-first-year';
 const RECEIPT_UNPRINTABLE_PROBLEM = 'donations/receipt-unprintable';
 const RECEIPT_SIGNING_PAUSED_PROBLEM = 'donations/receipt-signing-paused';
 const RECEIPT_SIGNING_KEY_UNPUBLISHED_PROBLEM = 'donations/receipt-signing-key-unpublished';
+const DONATION_ON_YEARLY_RECEIPT = 'donations/donation-on-yearly-receipt';
 const PROBLEMS_SHOWN_WITH_DETAIL: Readonly<Record<string, string>> = {
   [RECEIPT_UNPRINTABLE_PROBLEM]: RECEIPT_UNPRINTABLE,
   [RECEIPT_SIGNING_PAUSED_PROBLEM]: RECEIPT_FAILED,
@@ -124,13 +134,12 @@ const NOT_FOUND = 404;
 const BANK_CHECK_COOLDOWN_MS = 30_000;
 
 interface IncomingDonations {
-  readonly summary: DonationSummaryResponse;
-  readonly items: readonly DonationItem[];
+  readonly read: DonorDonationsRead;
   readonly added: number;
 }
 
 @Injectable()
-export class DonorDonations {
+export class DonorDonations implements GiftFeed {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
   private readonly loginDialog = inject(LoginDialogService);
@@ -144,6 +153,7 @@ export class DonorDonations {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly live = inject(LiveUpdates);
+  private readonly repository = inject(DonorDonationsRepository);
   private readonly pendingDownload =
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
 
@@ -164,18 +174,37 @@ export class DonorDonations {
     this.checkingBank() ? 0 : (this.incoming()?.added ?? 0),
   );
 
+  readonly gifts = computed(() =>
+    this.state() === 'ready' ? (this.incoming()?.read.items ?? this.items()) : null,
+  );
+  readonly asking = this.checkingBank.asReadonly();
+  readonly listedHere = true;
+
   readonly bankAccounts = signal<readonly BankAccountItem[]>([]);
   readonly accountsWithQuestion = computed(() =>
     this.bankAccounts().filter((account) => account.symbolOffer !== null),
   );
 
   readonly receiptError = signal<ReceiptError | null>(null);
+  readonly offersDiagnostics = computed(() => this.receiptError()?.offersDiagnostics === true);
+  private readonly refusedAsOnYearlyReceipt = signal<ReadonlySet<string>>(new Set());
+  private readonly onYearlyReceipts = computed(() => {
+    const onReceipt = new Set(
+      giftsOnActiveYearlyReceipts(this.items(), this.repository.view()?.receipts ?? []),
+    );
+    for (const id of this.refusedAsOnYearlyReceipt()) {
+      onReceipt.add(id);
+    }
+    return onReceipt;
+  });
   private readonly downloads = signal<ReadonlySet<string>>(new Set());
   private readonly receiptTasks = signal<ReadonlyMap<string, ReceiptTask>>(new Map());
   private readonly running = new Map<string, Subscription>();
   private readonly focusedAtStart = new Map<string, Element | null>();
   private pendingStarted = false;
   private latestDonationsRequest = 0;
+  private shown: DonorDonationsRead | null = null;
+  private shownOwner: string | null = null;
   private bankCheckEndedAt: number | null = null;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
@@ -198,6 +227,24 @@ export class DonorDonations {
       }
       printedBefore = printed;
     });
+    effect(() => {
+      const held = this.repository.held();
+      if (held === null) {
+        return;
+      }
+      untracked(() => {
+        const switched = this.shownOwner !== null && held.owner !== this.shownOwner;
+        if (!switched && this.shown?.source === 'server' && held.at < this.shown.at) {
+          return;
+        }
+        if (this.state() === 'ready' && !switched) {
+          this.offerDonations(held);
+        } else {
+          this.latestDonationsRequest++;
+          this.showRead(held);
+        }
+      });
+    });
     this.load();
     this.checkBank(false);
     this.bankAccountsApi
@@ -210,10 +257,22 @@ export class DonorDonations {
     this.followLiveChanges();
   }
 
+  requestGifts(): Observable<readonly DonationItem[]> {
+    return this.repository.fresh('sync').pipe(map((read) => read.items));
+  }
+
+  follow(): Observable<unknown> {
+    return EMPTY;
+  }
+
+  askBank(): void {
+    this.checkBank(false);
+  }
+
   showIncoming(): void {
     const incoming = this.incoming();
     if (incoming !== null) {
-      this.showDonations(incoming.summary, incoming.items);
+      this.showDonations(incoming.read);
     }
   }
 
@@ -251,27 +310,37 @@ export class DonorDonations {
       return this.reloadDonations();
     }
     const startedAfter = this.latestDonationsRequest;
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      tap(({ summary, list }) => {
-        if (startedAfter !== this.latestDonationsRequest) {
-          return;
-        }
-        const shown = new Set(this.items().map((item) => item.id));
-        const added = list.items.filter((item) => !shown.has(item.id)).length;
-        if (added === 0) {
-          this.showDonations(summary, list.items);
-        } else {
-          this.incoming.set({ summary, items: list.items, added });
+    return this.repository.fresh('sync').pipe(
+      tap((read) => {
+        if (startedAfter === this.latestDonationsRequest) {
+          this.offerDonations(read);
         }
       }),
       catchError(() => EMPTY),
     );
   }
 
-  private showDonations(summary: DonationSummaryResponse, items: readonly DonationItem[]): void {
+  private offerDonations(read: DonorDonationsRead): void {
+    const shown = new Set(this.items().map((item) => item.id));
+    const added = read.items.filter((item) => !shown.has(item.id)).length;
+    if (added === 0) {
+      this.showDonations(read);
+    } else {
+      this.incoming.set({ read, added });
+    }
+  }
+
+  private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
-    this.summary.set(summary);
-    this.items.set(items);
+    this.shown = read;
+    if (read.owner !== null) {
+      this.shownOwner = read.owner;
+    }
+    this.summary.set(read.summary);
+    this.items.set(read.items);
+    if (read.bankDataAsOf !== null && this.bankDataAsOf() === null) {
+      this.bankDataAsOf.set(read.bankDataAsOf);
+    }
   }
 
   showBankAccounts(items: readonly BankAccountItem[]): void {
@@ -310,27 +379,40 @@ export class DonorDonations {
     this.reloadDonations().subscribe();
   }
 
-  private reloadDonations(): Observable<readonly DonationItem[] | null> {
+  private reloadDonations(offered = false): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
-    return forkJoin({ summary: this.donations.summary(), list: this.donations.list() }).pipe(
-      map(({ summary, list }) => {
+    const held = this.repository.held();
+    const atOnce = held !== null && this.state() !== 'ready';
+    if (atOnce) {
+      this.showRead(held);
+    }
+    return this.repository.fresh(atOnce ? 'catch-up' : 'sync').pipe(
+      map((read) => {
         if (request === this.latestDonationsRequest) {
-          this.showDonations(summary, list.items);
-          this.state.set('ready');
-          this.startPendingDownload();
+          if (atOnce || offered) {
+            this.offerDonations(read);
+          } else {
+            this.showRead(read);
+          }
         }
-        return list.items;
+        return read.items;
       }),
       catchError((failure: unknown) => {
         if (this.sessionEnded(failure)) {
           this.sendToSignIn();
-        } else if (request === this.latestDonationsRequest) {
+        } else if (request === this.latestDonationsRequest && this.shown?.source !== 'copy') {
           this.state.set('error');
         }
         return of(null);
       }),
       takeUntilDestroyed(this.destroyRef),
     );
+  }
+
+  private showRead(read: DonorDonationsRead): void {
+    this.showDonations(read);
+    this.state.set('ready');
+    this.startPendingDownload();
   }
 
   sendToSignIn(): void {
@@ -458,8 +540,12 @@ export class DonorDonations {
     this.download(yearlyKey(year), 'yearly', { year });
   }
 
+  onYearlyReceipt(item: DonationItem): boolean {
+    return item.receiptAvailable && this.onYearlyReceipts().has(item.id);
+  }
+
   downloadSingleReceipt(item: DonationItem): void {
-    if (!item.receiptAvailable) {
+    if (!item.receiptAvailable || this.onYearlyReceipt(item)) {
       return;
     }
     this.download(singleKey(item.id), 'single', { donationId: item.id });
@@ -499,7 +585,9 @@ export class DonorDonations {
       return;
     }
     this.checkingBank.set(true);
-    this.bankCheckOutcome.set(null);
+    if (byDonor) {
+      this.bankCheckOutcome.set(null);
+    }
     const known = new Set(this.items().map((item) => item.id));
     let asOfBefore: string | null | undefined;
     this.donations
@@ -517,10 +605,18 @@ export class DonorDonations {
           if (byDonor || check.bankDataAsOf !== asOfBefore) {
             this.bankDataArrived.update((count) => count + 1);
           }
-          this.reloadDonations().subscribe((items) => {
+          this.reloadDonations(!byDonor && this.shown?.source === 'copy').subscribe((items) => {
             this.bankCheckEnded();
-            if (byDonor && items !== null) {
+            if (!byDonor) {
+              if (items !== null) {
+                this.dropOutdatedOutcome(outcomeOf(check, items, known));
+              }
+              return;
+            }
+            if (items !== null) {
               this.bankCheckOutcome.set(outcomeOf(check, items, known));
+            } else if (this.state() === 'ready' && this.auth.status() !== 'anonymous') {
+              this.bankCheckOutcome.set({ kind: 'failed' });
             }
           });
         },
@@ -536,6 +632,13 @@ export class DonorDonations {
           this.bankCheckOutcome.set({ kind: 'failed' });
         },
       });
+  }
+
+  private dropOutdatedOutcome(latest: BankCheckOutcome): void {
+    const standing = this.bankCheckOutcome();
+    if (standing !== null && (latest.kind === 'found' || standing.kind !== 'none')) {
+      this.bankCheckOutcome.set(null);
+    }
   }
 
   private bankCheckEnded(): void {
@@ -560,7 +663,13 @@ export class DonorDonations {
     this.downloads.update((running) => new Set(running).add(key));
     this.focusedAtStart.set(key, this.document.activeElement);
     const subscription = this.receiptPdf
-      .draw(this.receiptsApi.donorSource(subject))
+      .draw(
+        copyBackedReceiptSource(
+          this.receiptsApi.donorSource(subject),
+          () => this.repository.view(),
+          subject,
+        ),
+      )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (event) => this.receiptProgressed(key, scope, event),
@@ -643,12 +752,18 @@ export class DonorDonations {
           key,
           message:
             restart === 'reloaded-already' ? RECEIPT_TOOLS_STILL_MISSING : RECEIPT_TOOLS_MISSING,
+          ...(restart === 'reloaded-already' ? { offersDiagnostics: true } : {}),
         });
       }
       return;
     }
     this.restart.abandoned(downloadName(key));
-    this.receiptError.set({ scope, key, message: DRAWING_FAILURE_TEXTS[failure.reason] });
+    this.receiptError.set({
+      scope,
+      key,
+      message: DRAWING_FAILURE_TEXTS[failure.reason],
+      ...(failure.reason === 'unprintable' ? {} : { offersDiagnostics: true }),
+    });
   }
 
   private receiptFailed(scope: ReceiptScope, failure: unknown, key: string): void {
@@ -671,6 +786,16 @@ export class DonorDonations {
         key,
         message: describeProblemWithoutFields(failure, PROBLEMS_SHOWN_WITH_DETAIL[shownWithDetail]),
       });
+      return;
+    }
+    if (scope === 'single' && problemTypeEndsWith(failure, DONATION_ON_YEARLY_RECEIPT)) {
+      this.receiptError.set({
+        scope,
+        key,
+        message: describeProblemWithoutFields(failure, RECEIPT_ON_YEARLY),
+      });
+      this.refusedAsOnYearlyReceipt.update((ids) => new Set(ids).add(donationIdOf(key)));
+      this.fetchDonations();
       return;
     }
     if (
@@ -720,4 +845,8 @@ function yearlyKey(year: number): string {
 
 function singleKey(donationId: string): string {
   return `single:${donationId}`;
+}
+
+function donationIdOf(key: string): string {
+  return key.replace(/^single:/, '');
 }

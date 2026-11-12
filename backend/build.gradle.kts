@@ -18,7 +18,7 @@ repositories {
 	mavenCentral()
 }
 
-extra["cucumberVersion"] = "7.34.9"
+extra["cucumberVersion"] = "8.0.4"
 extra["archunitVersion"] = "1.5.1"
 extra["fioApiVersion"] = "1.0.0"
 extra["webpImageioVersion"] = "0.3.3"
@@ -97,6 +97,7 @@ tasks.withType<Test> {
 	inputs.file("../frontend/src/app/core/version/api-generation.json").withPropertyName("appApiGeneration").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../frontend/src/app/features/donations/receipt-pdf/receipt-document.ts").withPropertyName("browserReceiptTextKeys").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../deploy/backup/revoke-restored-credentials.sql").withPropertyName("restoreRevocations").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../deploy/backup/carry-forward.sql").withPropertyName("restoreCarryForward").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }

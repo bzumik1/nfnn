@@ -102,3 +102,24 @@ td.admin-col {
     justify-content: flex-start;
   }
 }
+
+.action-rows {
+  border-top: 1px solid var(--color-divider);
+}
+
+.action-extra {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+
+  .donor-link,
+  summary {
+    margin-top: 0;
+    padding-block: var(--space-1);
+  }
+
+  .details {
+    margin-top: 0;
+  }
+}

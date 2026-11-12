@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.PasskeyId;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +45,15 @@ class JpaPasskeyRepository implements PasskeyRepository {
     @Override
     public Map<DonorId, Integer> countByDonors() {
         return jpa.countPerDonor().stream()
+                .collect(Collectors.toUnmodifiableMap(row -> new DonorId((UUID) row[0]), row -> ((Number) row[1]).intValue()));
+    }
+
+    @Override
+    public Map<DonorId, Integer> countByDonors(Collection<DonorId> donorIds) {
+        if (donorIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpa.countPerDonorAmong(donorIds.stream().map(DonorId::value).collect(Collectors.toSet())).stream()
                 .collect(Collectors.toUnmodifiableMap(row -> new DonorId((UUID) row[0]), row -> ((Number) row[1]).intValue()));
     }
 

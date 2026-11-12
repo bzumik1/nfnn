@@ -1,9 +1,13 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { APP_ROUTES_FILE, appRouteMatcher } from './app-routes.mjs';
+import { checkoutMarkerPath, devPort } from './dev-port.mjs';
 import { readSecurityHeaders } from './security-headers.mjs';
 
-const [folder, portArgument = '4200'] = process.argv.slice(2);
+const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
+const [folder, portArgument = String(devPort({ root: repositoryRoot }))] = process.argv.slice(2);
 if (!folder) {
   console.error('Usage: node scripts/serve-dist.mjs <dist/.../browser> [port]');
   process.exit(2);
@@ -16,6 +20,9 @@ if (!existsSync(appShell)) {
 }
 
 const securityHeaders = readSecurityHeaders();
+const ownMarker = checkoutMarkerPath(repositoryRoot);
+const isAppRoute = appRouteMatcher(readFileSync(APP_ROUTES_FILE, 'utf8'));
+const verificationPage = /^\/overit\/?$/;
 
 const fileOnly =
   /\.(?:js|mjs|css|map|json|webmanifest|txt|xml|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf|pdf)$/i;
@@ -27,21 +34,21 @@ const contentTypes = {
   '.ico': 'image/x-icon',
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.map': 'application/json',
-  '.mjs': 'text/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
   '.otf': 'font/otf',
   '.pdf': 'application/pdf',
   '.png': 'image/png',
-  '.svg': 'image/svg+xml',
+  '.svg': 'image/svg+xml; charset=utf-8',
   '.ttf': 'font/ttf',
   '.txt': 'text/plain; charset=utf-8',
-  '.webmanifest': 'application/manifest+json',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.webp': 'image/webp',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
-  '.xml': 'application/xml',
+  '.xml': 'text/xml; charset=utf-8',
 };
 
 function existingFile(path) {
@@ -59,9 +66,10 @@ function fileFor(pathname) {
   }
   const found = existingFile(candidate);
   if (found || fileOnly.test(pathname) || /^\/(?:media|images)\//.test(pathname)) {
-    return found;
+    return found && { file: found, status: 200 };
   }
-  return appShell;
+  const known = isAppRoute(pathname) || verificationPage.test(pathname);
+  return { file: appShell, status: known ? 200 : 404 };
 }
 
 createServer((request, response) => {
@@ -72,8 +80,18 @@ createServer((request, response) => {
     response.writeHead(400).end();
     return;
   }
-  const file = fileFor(pathname);
-  if (!file) {
+  if (pathname === ownMarker) {
+    response
+      .writeHead(200, {
+        ...securityHeaders,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      })
+      .end('ok');
+    return;
+  }
+  const served = fileFor(pathname);
+  if (!served) {
     response
       .writeHead(404, {
         ...securityHeaders,
@@ -83,11 +101,12 @@ createServer((request, response) => {
       .end('<h1>404 Not Found</h1>');
     return;
   }
-  response.writeHead(200, {
+  const { file, status } = served;
+  response.writeHead(status, {
     ...securityHeaders,
     'Content-Type': contentTypes[extname(file).toLowerCase()] ?? 'application/octet-stream',
     'Cache-Control': 'no-cache',
-    ...(/^\/overit\/?$/.test(pathname) ? { 'X-Robots-Tag': 'noindex' } : {}),
+    ...(verificationPage.test(pathname) ? { 'X-Robots-Tag': 'noindex' } : {}),
   });
   if (request.method === 'HEAD') {
     response.end();

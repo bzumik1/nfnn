@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -28,6 +28,7 @@ import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
+import { Connectivity, PROBE_PATH } from '../../../core/connectivity/connectivity';
 
 describe('Given the sign-in dialog', () => {
   let fixture: ComponentFixture<LoginDialog>;
@@ -107,6 +108,50 @@ describe('Given the sign-in dialog', () => {
     await fixture.whenStable();
   }
 
+  describe('when it opens while the app is offline', () => {
+    beforeEach(async () => {
+      TestBed.inject(Connectivity);
+      window.dispatchEvent(new Event('offline'));
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+      await render();
+    });
+
+    it('then it says at once that signing in needs a connection and offers no form that cannot be sent', () => {
+      expect(element('.offline-entry h3')?.textContent?.trim()).toBe('Jste offline');
+      expect(element('.offline-entry')?.textContent).toContain(
+        'Přihlásit se ani zaregistrovat se bez připojení nejde.',
+      );
+      expect(element('.tab-switch')).toBeNull();
+      expect(element('#login-email')).toBeNull();
+    });
+
+    it('and the visitor tries again while the network is still gone, then the dialog says so and stays offline', async () => {
+      await click('.offline-entry-try-again');
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+      await settle();
+
+      expect(element('.offline-entry [role="status"]')?.textContent?.trim()).toBe(
+        'Pořád se nedaří připojit.',
+      );
+      expect(element('#login-email')).toBeNull();
+    });
+
+    it('and the connection comes back, then the sign-in form shows in its place', async () => {
+      await click('.offline-entry-try-again');
+      http.expectOne(PROBE_PATH).flush({});
+      TestBed.inject(Connectivity).answered({
+        status: 200,
+        headers: new HttpHeaders(),
+        fromNetwork: true,
+      });
+      await settle();
+
+      expect(element('.offline-entry')).toBeNull();
+      expect(element('#login-email')).not.toBeNull();
+      expect(element('.tab-switch')).not.toBeNull();
+    });
+  });
+
   describe('when it opens', () => {
     beforeEach(() => render());
 
@@ -137,6 +182,11 @@ describe('Given the sign-in dialog', () => {
 
     it('then the device copies start loading at once, so a passkey sign-in finds the device ready for its PRF input', () => {
       expect(prepared).toBe(1);
+    });
+
+    it('then the keyboard’s return key moves from the e-mail on to the password and signs in from there', () => {
+      expect(element('#login-email').getAttribute('enterkeyhint')).toBe('next');
+      expect(element('#login-password').getAttribute('enterkeyhint')).toBe('go');
     });
 
     it('and the browser closes it on Esc, then the dialog is closed', () => {
@@ -421,7 +471,7 @@ describe('Given the sign-in dialog', () => {
           amountMinor: 100,
           currency: 'CZK',
           usableFrom: '2026-10-27',
-          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
+          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*MSG:OBNOVA K7MP4RXA',
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {
@@ -950,6 +1000,35 @@ describe('Given the sign-in dialog', () => {
       expect(withPlaceholder).toEqual([]);
     });
 
+    function returnKeys(): Record<string, string | null> {
+      return Object.fromEntries(
+        [
+          ...fixture.nativeElement.querySelectorAll('.register-form input:not([type="checkbox"])'),
+        ].map((input) => [
+          (input as HTMLInputElement).id,
+          (input as HTMLInputElement).getAttribute('enterkeyhint'),
+        ]),
+      );
+    }
+
+    it('as a person, then the keyboard’s return key leads from field to field and creates the account from the password', () => {
+      expect(returnKeys()).toEqual({
+        'register-name': 'next',
+        'register-street': 'next',
+        'register-postal-code': 'next',
+        'register-city': 'next',
+        'register-email': 'next',
+        'register-password': 'go',
+      });
+    });
+
+    it('as a company, then the return key leads from the company identifier on as well', async () => {
+      await click('.type-switch button:nth-child(2)');
+
+      expect(returnKeys()['register-company-identifier']).toBe('next');
+      expect(returnKeys()['register-name']).toBe('next');
+    });
+
     it('as a company, then no field shows an example value that could pass for a filled-in one', async () => {
       await click('.type-switch button:nth-child(2)');
 
@@ -1159,6 +1238,12 @@ describe('Given the sign-in dialog', () => {
         expect(element<HTMLInputElement>('#register-email').value).toBe('ucetni@stavby.example.cz');
         expect(element<HTMLInputElement>('#register-password').value).toBe('');
       });
+    });
+
+    it('with a passkey instead of a password, then the e-mail is the last field and its return key creates the account', async () => {
+      await click('.type-switch[aria-labelledby="register-method-label"] button:nth-child(2)');
+
+      expect(element('#register-email').getAttribute('enterkeyhint')).toBe('go');
     });
 
     it('with a passkey instead of a password, then no password is asked for and none is sent', async () => {
@@ -1487,6 +1572,10 @@ describe('Given the sign-in dialog', () => {
     it('opened on the reset tab, then the reset form is shown straight away', () => {
       expect(element('.reset-title').textContent).toContain('Obnovení hesla');
       expect(element('#reset-email')).not.toBeNull();
+    });
+
+    it('then the keyboard’s return key sends the link', () => {
+      expect(element('#reset-email').getAttribute('enterkeyhint')).toBe('send');
     });
 
     it('from the sign-in tab, then the link switches to the reset form with the e-mail already filled in and focused', async () => {

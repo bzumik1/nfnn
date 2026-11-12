@@ -25,10 +25,10 @@ import { FieldMessages, FormField } from '../../../../shared/ui/form-field/form-
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import {
-  formatBankClock,
   formatBankTime,
   formatDonationDate,
   pragueDay,
+  pragueTime,
 } from '../../../donations/donation-date';
 import {
   AdminApi,
@@ -41,7 +41,7 @@ import {
   IMPORT_FAILURE_LABELS,
   ImportNextStep,
   ImportNextStepLink,
-} from '../import-failure-labels';
+} from '../../import-failure-labels';
 
 const HISTORY_POLL_MS = 3000;
 const HISTORY_MAX_POLLS = 40;
@@ -52,7 +52,7 @@ const IN_FUTURE = 'donations/history-start-in-future';
 const FROM_MESSAGES: FieldMessages = {
   required: $localize`:@@admin.home.history.from.required:Zadejte prosím den, od kterého se mají platby stáhnout.`,
   max: $localize`:@@admin.home.history.from.max:Zvolte prosím den nejpozději dnes.`,
-  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve 01. 01. 2000.`,
+  min: $localize`:@@admin.home.history.from.min:Zvolte prosím den nejdříve 1. 1. 2000.`,
 };
 
 @Component({
@@ -218,7 +218,7 @@ function describeRun(run: HistoryImportResponse): Notice {
         kind: 'status',
         text:
           Date.parse(run.startsAt) > Date.now()
-            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${formatBankClock(run.startsAt)}:time:. Stránku můžete zavřít, výsledek tu uvidíte i později.`
+            ? $localize`:@@admin.home.history.queued:Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v ${pragueTime(run.startsAt)}:time:. Stránku můžete zavřít, výsledek tu uvidíte i později.`
             : $localize`:@@admin.home.history.waiting:Stahování začne za chvíli…`,
       };
     case 'RUNNING':

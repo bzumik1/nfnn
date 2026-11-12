@@ -10,6 +10,8 @@ import cz.novanadeje.app.support.BackupKeyWordDraws;
 import cz.novanadeje.app.support.ClientErrorCapWindows;
 import cz.novanadeje.app.support.CompanyLookupPause;
 import cz.novanadeje.app.support.DatabaseCleaner;
+import cz.novanadeje.app.support.FakeBankCodeSource;
+import cz.novanadeje.app.support.FakeBankLogoSource;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.HistoryImportRuns;
@@ -89,6 +91,8 @@ public class CommonStepDefinitions {
         HistoryImportRuns.forget(context.getBean(HistoryImportTracker.class), context.getBean(SynchronousBankImportRequests.class));
         context.getBean(RecordingPushTransport.class).reset();
         context.getBean(RecordingPushRetryTimer.class).reset();
+        context.getBean(FakeBankCodeSource.class).reset();
+        context.getBean(FakeBankLogoSource.class).reset();
     }
 
     @When("{int} second(s) pass(es)")

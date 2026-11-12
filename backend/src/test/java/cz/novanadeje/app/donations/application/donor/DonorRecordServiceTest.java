@@ -185,36 +185,30 @@ class DonorRecordServiceTest {
     @Test
     @DisplayName("Given a known donor, when payments are paired after the registration, then the loaded record is paired at the clock's time and nothing is written")
     void should_pair_loaded_record_when_pairing_after_registration_given_known_donor() {
-        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
-        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
-        when(pairing.pairPaymentsOf(record, NOW)).thenReturn(new PairingOutcome(1, 1, 0, 1, 0));
+        when(pairing.pairPaymentsOf(DONOR, NOW)).thenReturn(Optional.of(new PairingOutcome(1, 1, 0, 1, 0)));
 
         service.pairPaymentsOf(DONOR_ID);
 
-        verify(pairing).pairPaymentsOf(record, NOW);
-        verify(donorRecords).findById(DONOR);
-        verifyNoMoreInteractions(donorRecords);
+        verify(pairing).pairPaymentsOf(DONOR, NOW);
+        verifyNoInteractions(donorRecords);
         assertThat(warnings()).isEmpty();
     }
 
     @Test
     @DisplayName("Given a donor unknown to donations, when payments are paired after the registration, then a warning names the donor and nothing is paired")
     void should_warn_when_pairing_after_registration_given_unknown_donor() {
-        when(donorRecords.findById(DONOR)).thenReturn(Optional.empty());
+        when(pairing.pairPaymentsOf(DONOR, NOW)).thenReturn(Optional.empty());
 
         service.pairPaymentsOf(DONOR_ID);
 
-        verifyNoMoreInteractions(donorRecords);
-        verifyNoInteractions(pairing);
+        verifyNoInteractions(donorRecords);
         assertThat(warnings()).anySatisfy(message -> assertThat(message).contains(DONOR_ID.toString()));
     }
 
     @Test
     @DisplayName("Given pairing that loses a race with the import, when payments are paired after the registration, then the integrity violation is logged and swallowed")
     void should_swallow_and_warn_when_pairing_after_registration_given_lost_race() {
-        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
-        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
-        when(pairing.pairPaymentsOf(record, NOW)).thenThrow(new DataIntegrityViolationException("uq_donation_bank_payment"));
+        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new DataIntegrityViolationException("uq_donation_bank_payment"));
 
         service.pairPaymentsOf(DONOR_ID);
 
@@ -225,9 +219,7 @@ class DonorRecordServiceTest {
     @Test
     @DisplayName("Given pairing that deadlocks with the import, when payments are paired after the registration, then the lock failure is logged as a lost race and swallowed")
     void should_swallow_and_warn_when_pairing_after_registration_given_deadlock_with_import() {
-        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
-        when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
-        when(pairing.pairPaymentsOf(record, NOW)).thenThrow(new CannotAcquireLockException("deadlock detected"));
+        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new CannotAcquireLockException("deadlock detected"));
 
         service.pairPaymentsOf(DONOR_ID);
 

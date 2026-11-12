@@ -100,15 +100,15 @@ test.describe('Given an administrator on the alerts page of a device with a serv
 
     await page.goto('/sprava/upozorneni');
 
-    await expect(page).toHaveTitle('Upozornění na telefon | Správa | Nová naděje – nadační fond');
+    await expect(page).toHaveTitle('Upozornění | Správa | Nová naděje – nadační fond');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Upozornění na telefon' }),
+      page.getByRole('heading', { level: 1, name: 'Upozornění', exact: true }),
     ).toBeFocused();
     const watched = page.getByRole('region', { name: 'Co se hlídá' });
     await expect(watched.getByRole('link')).toHaveText([
       /Import plateb z banky\s*Bez poruchy/,
       /Zálohy\s*Bez poruchy/,
-      /Odesílání e-mailů\s*Nefunguje od 04\. 11\. 2026 06:15/,
+      /Odesílání e-mailů\s*Nefunguje od 4\. 11\. 2026 6:15/,
     ]);
     await expect(watched.getByRole('link').nth(2)).toHaveAttribute('href', '/sprava/nastaveni');
     expect((await deviceRecord(page)).badges).toContain(1);
@@ -128,7 +128,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
       body: { endpoint: DEVICE_ENDPOINT, keys: { p256dh: DEVICE_P256DH, auth: DEVICE_AUTH } },
     });
 
-    await device.getByRole('checkbox', { name: 'Zálohy' }).uncheck();
+    await device.getByRole('switch', { name: 'Zálohy' }).uncheck();
 
     await expect(device.getByRole('status')).toHaveText(
       'Uloženo pro toto zařízení: Zálohy – vypnuto.',
@@ -140,9 +140,9 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     });
 
     const test = page.getByRole('region', { name: 'Zkušební upozornění' });
-    await test
-      .getByRole('button', { name: 'Poslat zkušební upozornění na všechna moje zařízení' })
-      .click();
+    const sendTest = test.getByRole('button', { name: 'Poslat zkušební upozornění' });
+    await expect(sendTest).toHaveAccessibleDescription(/povolená oznámení a není v režimu Nerušit/);
+    await sendTest.click();
 
     await expect(test.getByRole('status')).toHaveText(
       /^Zkušební upozornění jsme předali k doručení na 1 zařízení\./,
@@ -187,19 +187,24 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await page.goto('/sprava/upozorneni');
 
     const others = page.getByRole('region', { name: 'Další zařízení' });
-    const phoneSwitches = others.getByRole('group', { name: 'Apple, zapnuto 30. 10. 2026' });
-    await expect(phoneSwitches).toContainText('Naposledy doručeno 03. 11. 2026 10:05.');
-    await expect(phoneSwitches).toContainText('Nedoručeno 2× po sobě.');
+    const phoneRow = others.getByRole('button', { name: /^Apple, zapnuto 30\. 10\. 2026/ });
+    await expect(phoneRow).toContainText('Naposledy doručeno 3. 11. 2026 10:05.');
+    await expect(phoneRow).toContainText('Nedoručeno 2× po sobě.');
+    await expect(phoneRow).toContainText('3 ze 3');
 
-    await phoneSwitches.getByRole('checkbox', { name: 'Import plateb z banky' }).uncheck();
+    await phoneRow.click();
+    const sheet = page.getByRole('dialog', { name: 'Apple, zapnuto 30. 10. 2026' });
+    await sheet.getByRole('switch', { name: 'Import plateb z banky' }).uncheck();
 
-    await expect(others.getByRole('status')).toHaveText(
+    await expect(sheet.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
       'Uloženo pro Apple (30. 10. 2026): Import plateb z banky – vypnuto.',
     );
 
-    await others
+    await sheet
       .getByRole('button', { name: 'Odebrat zařízení Apple, zapnuto 30. 10. 2026' })
       .click();
+
+    await expect(sheet).toBeHidden();
 
     await expect(others.getByRole('status')).toHaveText(
       'Zařízení Apple jsme odebrali; upozornění na ně už nechodí.',
@@ -301,7 +306,7 @@ test.describe('Given an administrator on the alerts page without a service worke
     await page.goto('/sprava');
 
     const panel = page.getByRole('navigation', { name: 'Správa' });
-    await panel.getByRole('link', { name: 'Upozornění na telefon' }).click();
+    await panel.getByRole('link', { name: 'Upozornění', exact: true }).click();
 
     await expect(page).toHaveURL(/\/sprava\/upozorneni$/);
   });

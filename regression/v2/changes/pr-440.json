@@ -1,0 +1,18 @@
+[
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: A donor gets at most 20 replacements in 24 hours, and an unchanged receipt is returned all the same*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Security audit 2026-11-06 (#440): donations/receipt-issue-limit also answers the new cap of 60 replacements per donor in a Prague calendar year, so its detail names both caps",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  },
+  {
+    "path": "POST /api/admin/donations/donors/*",
+    "scenario": "donations/admin_receipts: The administration shares the donor's cap of 20 replacements in 24 hours, which a first issue does not count against*",
+    "kind": "body",
+    "field": "$.detail",
+    "reason": "Security audit 2026-11-06 (#440): donations/receipt-issue-limit also answers the new cap of 60 replacements per donor in a Prague calendar year, so its detail names both caps",
+    "contract": "docs/api-contract.md, Issued receipts as frozen data"
+  }
+]

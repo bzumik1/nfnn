@@ -17,10 +17,11 @@ describe('Given the chrome a route asks for', () => {
           { path: '', pathMatch: 'full', component: Blank, data: { landing: true, head: 'photo' } },
           {
             path: 'darce',
-            data: { head: 'light', parent: '/', backOnWide: false, logoBesideBack: false },
+            data: { head: 'light', parent: '/', backOnWide: false },
             children: [{ path: 'prehled', component: Blank }],
           },
           { path: 'aktuality/:slug', component: Blank, data: { parent: '/aktuality' } },
+          { path: 'darci/:id/:section', component: Blank, data: { parent: '/darci/:id' } },
           { path: '**', component: Blank },
         ]),
       ],
@@ -39,7 +40,6 @@ describe('Given the chrome a route asks for', () => {
       landing: false,
       phoneFooter: false,
       backOnWide: true,
-      logoBesideBack: true,
     });
   });
 
@@ -47,6 +47,12 @@ describe('Given the chrome a route asks for', () => {
     await router.navigateByUrl('/aktuality/clanek');
 
     expect(chrome.current().parent).toBe('/aktuality');
+  });
+
+  it('when a page names its parent by its own parameters, then the back button leads to that page', async () => {
+    await router.navigateByUrl('/darci/0192f0a1-7b2c-7c3d-9e4f-5a6b7c8d9e0f/dary');
+
+    expect(chrome.current().parent).toBe('/darci/0192f0a1-7b2c-7c3d-9e4f-5a6b7c8d9e0f');
   });
 
   it('when an area names its chrome, then its pages inherit it', async () => {
@@ -57,7 +63,6 @@ describe('Given the chrome a route asks for', () => {
         head: 'light',
         parent: '/',
         backOnWide: false,
-        logoBesideBack: false,
       }),
     );
   });

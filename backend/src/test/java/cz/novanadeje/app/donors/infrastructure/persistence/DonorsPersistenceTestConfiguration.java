@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Import;
 @TestConfiguration(proxyBeanMethods = false)
 @Import({TestcontainersConfiguration.class, JpaAuthorizationCodeRepository.class, JpaDonorDeviceRepository.class, JpaDonorRepository.class, JpaEmailVerificationTokenRepository.class,
         JpaPasskeyChallengeRepository.class, JpaPasskeyRepository.class, JpaPasswordResetTokenRepository.class, JpaRefreshTokenRepository.class,
-        JpaRegistrationReminders.class, JpaSecondFactorChallengeRepository.class, JpaSecondFactorRecoveryRepository.class, JpaSecondFactorRepository.class})
+        JpaRegistrationReminders.class, JpaSecondFactorChallengeRepository.class, JpaSecondFactorRecoveryRepository.class, JpaSecondFactorRepository.class,
+        JpaWrongSecondFactorCodes.class})
 class DonorsPersistenceTestConfiguration {
 }

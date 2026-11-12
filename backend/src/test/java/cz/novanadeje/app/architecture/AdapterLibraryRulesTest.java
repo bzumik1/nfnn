@@ -30,8 +30,9 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAPackage("org.thymeleaf..");
 
     @ArchTest
-    static final ArchRule image_libraries_are_used_only_by_the_content_media_and_receipt_signature_adapters = noClasses()
-            .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.signature..")
+    static final ArchRule image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters = noClasses()
+            .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.signature..",
+                    "cz.novanadeje.app.donations.infrastructure.banklogo..")
             .should().dependOnClassesThat()
             .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt.image..");
 

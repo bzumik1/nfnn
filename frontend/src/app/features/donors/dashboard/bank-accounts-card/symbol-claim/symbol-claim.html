@@ -2,7 +2,7 @@
   @if (donorName()) {
     <p [id]="questionId()" class="claim-question" i18n="@@donor.bankAccounts.claim.question">
       Z tohoto účtu k nám chodí i platby s variabilním symbolem
-      <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
+      <strong class="claim-symbol ui-figures">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
         one {1&nbsp;platba}
         few {{{ offer().paymentCount }}&nbsp;platby}
@@ -17,7 +17,7 @@
       i18n="@@donor.bankAccounts.claim.questionWithoutName"
     >
       Z tohoto účtu k nám chodí i platby s variabilním symbolem
-      <strong class="claim-symbol">{{ offer().variableSymbol }}</strong>
+      <strong class="claim-symbol ui-figures">{{ offer().variableSymbol }}</strong>
       ({offer().paymentCount, plural,
         one {1&nbsp;platba}
         few {{{ offer().paymentCount }}&nbsp;platby}

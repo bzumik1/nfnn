@@ -1,7 +1,7 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { Navigation, provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -90,6 +90,13 @@ describe('Given an administrator on the backups page', () => {
     await settle();
   }
 
+  async function openLatest(): Promise<void> {
+    (
+      fixture.nativeElement.querySelector('.backups-list button.ui-list__row') as HTMLButtonElement
+    ).click();
+    await settle();
+  }
+
   it('when the page opens, then it asks for the backups with the token and says it is loading', () => {
     const request = http.expectOne(BACKUPS_URL);
 
@@ -109,14 +116,19 @@ describe('Given an administrator on the backups page', () => {
       'Poslední obnova',
     ]);
     expect(texts('.run dd')).toEqual([
-      '23. 10. 2026 03:00 (2 kB)',
-      '18. 10. 2026 04:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.age',
+      '23. 10. 2026 3:00 (2 kB)',
+      '18. 10. 2026 4:00, 37 tabulek ze zálohy nfnn-2026-10-18_0300.dump.age',
       'Zatím žádná.',
     ]);
-    expect(texts('tbody tr')).toEqual([
-      '23. 10. 2026 03:00 nfnn-2026-10-23_0300.dump.age Plánovaná 2 kB Stáhnout Obnovit…',
-      '22. 10. 2026 03:00 nfnn-2026-10-22_0300.dump.age Plánovaná 1 kB Stáhnout Obnovit…',
+    expect(texts('.backups-list .ui-list__title')).toEqual(['Nejnovější záloha', 'Všechny zálohy']);
+    expect(texts('.backups-list .ui-list__meta')).toEqual([
+      '23. 10. 2026 3:00 · Plánovaná',
+      'Po dnech, nejnovější nahoře',
     ]);
+    expect(texts('.backups-list .ui-list__value')).toEqual(['2 kB', '2']);
+    expect(
+      fixture.nativeElement.querySelector('.backups-list a.ui-list__row')?.getAttribute('href'),
+    ).toBe('/sprava/zalohy/historie');
     expect(text('.off-server')).toBe(
       'Zálohy leží na stejném disku jako web. Jednou za měsíc si nejnovější stáhněte tlačítkem Stáhnout a uložte jinam, třeba na flash disk nebo do cloudu. Jsou zašifrované, takže je bez klíče k zálohám nikdo nepřečte.',
     );
@@ -158,7 +170,7 @@ describe('Given an administrator on the backups page', () => {
       'Zkušební obnova ještě neproběhla, i když zálohy jsou starší než týden.',
     ]);
     expect(fixture.nativeElement.querySelector('.problems')?.getAttribute('role')).toBe('alert');
-    expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 03:00.');
+    expect(text('.run:nth-child(1) dd .run-text')).toBe('Nepovedla se 23. 10. 2026 3:00.');
     expect(text('.run:nth-child(1) dd details summary')).toBe('Technické podrobnosti');
     expect(text('.run:nth-child(1) dd .run-error')).toBe(
       'pg_dump: error: connection to server failed',
@@ -166,11 +178,11 @@ describe('Given an administrator on the backups page', () => {
     expect(texts('.run dd')[1]).toBe('Zatím žádná. Podle plánu běží v neděli 4:00.');
     expect(text('.restore-files-title')).toBe('Soubory k obnově');
     expect(texts('.restore-files li')).toEqual([
-      'zaloha.dump.skipped byl 23. 10. 2026 06:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
-      'stara.dump.failed se 22. 10. 2026 06:36 obnovit nepodařilo; data zůstala, jak byla.',
+      'zaloha.dump.skipped byl 23. 10. 2026 6:36 přeskočen: databáze nebyla prázdná nebo ve složce leželo víc souborů.',
+      'stara.dump.failed se 22. 10. 2026 6:36 obnovit nepodařilo; data zůstala, jak byla.',
     ]);
     expect(text('.run:nth-child(3) dd .run-text')).toBe(
-      'Nepovedla se 23. 10. 2026 03:00, data zůstala, jak byla.',
+      'Nepovedla se 23. 10. 2026 3:00, data zůstala, jak byla.',
     );
     expect(text('.run:nth-child(3) dd .run-error')).toBe(
       'the database is not empty; name the file .force.dump to replace it',
@@ -292,7 +304,7 @@ describe('Given an administrator on the backups page', () => {
         'Záloha nfnn-2026-10-23_1000-rucni.dump.age je hotová (2 kB).',
       );
       expect(button('Zálohovat teď').disabled).toBe(false);
-      expect(texts('tbody tr')[0]).toContain('nfnn-2026-10-23_1000-rucni.dump.age Na požádání');
+      expect(texts('.backups-list .ui-list__meta')[0]).toBe('23. 10. 2026 10:00 · Na požádání');
     });
 
     it('then a failed run is reported in an alert with its error', async () => {
@@ -392,7 +404,8 @@ describe('Given an administrator on the backups page', () => {
   describe('when a backup is restored', () => {
     beforeEach(async () => {
       await respond(backupsView());
-      button('Obnovit…').click();
+      await openLatest();
+      button('Obnovit web z této zálohy…').click();
       await settle();
     });
 
@@ -400,15 +413,17 @@ describe('Given an administrator on the backups page', () => {
       return fixture.nativeElement.querySelector('dialog');
     }
 
-    it('then a dialog names the backup, what is lost, the receipts issued since and the safety backup, and cancelling posts nothing', async () => {
+    it('then a dialog names the backup, what is lost, what is kept from after the backup, the receipts issued since and the safety backup, and cancelling posts nothing', async () => {
       expect(text('#restore-title')).toBe('Obnovit databázi ze zálohy?');
       expect(text('.restore-lead')).toBe(
-        'Web se vrátí do stavu z 23. 10. 2026 03:00, ze zálohy nfnn-2026-10-23_0300.dump.age.',
+        'Web se vrátí do stavu z 23. 10. 2026 3:00, ze zálohy nfnn-2026-10-23_0300.dump.age.',
       );
-      expect(texts('.restore-points li')[1]).toContain(
+      expect(texts('.restore-points li')[1]).toContain('vymazaní dárci zůstanou vymazaní');
+      expect(texts('.restore-points li')[1]).toContain('historie správy se nezkrátí');
+      expect(texts('.restore-points li')[2]).toContain(
         'Potvrzení o daru vydaná po vytvoření zálohy z databáze zmizí',
       );
-      expect(texts('.restore-points li')[2]).toContain('záloha „Před obnovou“');
+      expect(texts('.restore-points li')[3]).toContain('záloha „Před obnovou“');
 
       button('Zrušit').click();
       await settle();
@@ -523,8 +538,9 @@ describe('Given an administrator on the backups page', () => {
 
   it('when a restore is pending, then every action that could interfere is disabled', async () => {
     await respond(backupsView({ restorePending: true, pendingRequests: 1 }));
+    await openLatest();
 
-    expect(button('Obnovit…').disabled).toBe(true);
+    expect(button('Obnovit web z této zálohy…').disabled).toBe(true);
     expect(button('Zálohovat teď').disabled).toBe(true);
     expect(button('Ověřit obnovu teď').disabled).toBe(true);
   });
@@ -548,11 +564,8 @@ describe('Given an administrator on the backups page', () => {
       value: vi.fn(),
     });
 
-    (
-      fixture.nativeElement.querySelector(
-        'tbody button[aria-label="Stáhnout nfnn-2026-10-23_0300.dump.age"]',
-      ) as HTMLButtonElement | null
-    )?.click();
+    await openLatest();
+    button('Stáhnout').click();
     await settle();
 
     const request = http.expectOne(`${BACKUPS_URL}/nfnn-2026-10-23_0300.dump.age`);
@@ -565,7 +578,38 @@ describe('Given an administrator on the backups page', () => {
     await settle();
 
     expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump.age']);
-    expect(texts('tbody button')).toEqual(['Stáhnout', 'Obnovit…', 'Stáhnout', 'Obnovit…']);
+    expect(button('Stáhnout').disabled).toBe(false);
+  });
+
+  it('when the latest backup is opened, then a sheet names its time, kind, size and file and offers to download it or restore the site from it', async () => {
+    await respond(backupsView());
+    await openLatest();
+
+    expect(text('dialog h2')).toBe('23. 10. 2026 3:00');
+    expect(text('dialog .backup-meta')).toBe('Plánovaná · 2 kB');
+    expect(text('dialog .backup-file')).toBe('nfnn-2026-10-23_0300.dump.age');
+    expect(texts('dialog button.ui-button')).toEqual(['Stáhnout', 'Obnovit web z této zálohy…']);
+    expect(
+      fixture.nativeElement.querySelector('dialog .ui-button--danger-outline')?.textContent?.trim(),
+    ).toBe('Obnovit web z této zálohy…');
+  });
+
+  it('when a download fails, then the sheet says so and the download can be tried again', async () => {
+    await respond(backupsView());
+    await openLatest();
+    button('Stáhnout').click();
+    await settle();
+
+    const failure = problem(503, 'server-busy', 'Server je zaneprázdněný', 'Zkuste to za chvíli.');
+    http
+      .expectOne(`${BACKUPS_URL}/nfnn-2026-10-23_0300.dump.age`)
+      .flush(new Blob([JSON.stringify(failure.body)], { type: 'application/problem+json' }), {
+        ...failure.options,
+      });
+    await settle();
+
+    expect(text('dialog [role="alert"]')).not.toBe('');
+    expect(button('Stáhnout').disabled).toBe(false);
   });
 
   it('when the backup plan is saved, then the page announces the new plan and keeps the card', async () => {
@@ -615,5 +659,36 @@ describe('Given an administrator on the backups page', () => {
     await respond(backupsView());
 
     expect(text('.healthy')).toBe('Zálohování je v pořádku.');
+  });
+});
+
+describe('Given an administrator who chose to restore a backup from the history of backups', () => {
+  it('when the backups page opens, then it asks to confirm the restore of that backup', async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminBackups],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    vi.spyOn(TestBed.inject(Router), 'currentNavigation').mockReturnValue({
+      extras: { state: { restore: 'nfnn-2026-10-22_0300.dump.age' } },
+    } as unknown as Navigation);
+    const fixture = TestBed.createComponent(AdminBackups);
+    fixture.detectChanges();
+    http.expectOne('/api/admin/operations/backups').flush(backupsView());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement.querySelector('.restore-lead')?.textContent ?? '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Web se vrátí do stavu z 22. 10. 2026 3:00, ze zálohy nfnn-2026-10-22_0300.dump.age.');
+    http.verify();
   });
 });

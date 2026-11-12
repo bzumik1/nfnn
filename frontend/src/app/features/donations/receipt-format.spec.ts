@@ -98,7 +98,7 @@ describe('Given the shared receipt formatting cases of Czech dates', () => {
   const dates = casesOf('czechDate');
 
   for (const date of dates) {
-    it(`when ${date.name} is formatted, then it reads with a two-digit day and month as the receipt prints it`, () => {
+    it(`when ${date.name} is formatted, then it reads without leading zeros in day and month as the receipt prints it`, () => {
       expect(formatReceiptDate(String(date.value))).toBe(date.text);
     });
   }
@@ -106,8 +106,8 @@ describe('Given the shared receipt formatting cases of Czech dates', () => {
 
 describe('Given a receipt text with numbered placeholders', () => {
   it('when it is filled, then each placeholder takes its value, as often as it appears', () => {
-    expect(fillReceiptText('{0}, dne {1}; {0}', 'V Novém Boru', '15. 03. 2026')).toBe(
-      'V Novém Boru, dne 15. 03. 2026; V Novém Boru',
+    expect(fillReceiptText('{0}, dne {1}; {0}', 'V Novém Boru', '15. 3. 2026')).toBe(
+      'V Novém Boru, dne 15. 3. 2026; V Novém Boru',
     );
   });
 
@@ -125,8 +125,8 @@ describe('Given a receipt text with numbered placeholders', () => {
 });
 
 describe('Given a receipt date', () => {
-  it('when it is formatted, then it has two-digit day and month as everywhere on the site (plan v3 D11)', () => {
-    expect(formatReceiptDate('2026-03-05')).toBe('05. 03. 2026');
+  it('when it is formatted, then it has day and month without leading zeros as everywhere on the site', () => {
+    expect(formatReceiptDate('2026-03-05')).toBe('5. 3. 2026');
   });
 });
 
@@ -155,7 +155,7 @@ describe('Given a signed yearly receipt of a company that replaces an earlier on
   it('when it is prepared for display, then every value reads as on paper', () => {
     expect(receiptDisplay(YEARLY)).toEqual({
       number: '2027-000012',
-      issuedOn: '15. 01. 2027',
+      issuedOn: '15. 1. 2027',
       replaces: { number: '2026-000044', issuedOn: '20. 12. 2026' },
       company: true,
       donorName: 'Acme Třebíč s.r.o.',
@@ -163,7 +163,7 @@ describe('Given a signed yearly receipt of a company that replaces an earlier on
       donorAddress: 'Průmyslová 5, 470 01 Česká Lípa',
       year: 2026,
       gifts: [
-        { receivedOn: '03. 02. 2026', amount: '500 Kč' },
+        { receivedOn: '3. 2. 2026', amount: '500 Kč' },
         { receivedOn: '30. 11. 2026', amount: '1 250,50 Kč' },
       ],
       total: '1 750,50 Kč',
@@ -187,6 +187,6 @@ describe('Given a signed single receipt of a person', () => {
     expect(display.replaces).toBeNull();
     expect(display.company).toBe(false);
     expect(display.donorIdentifier).toBeNull();
-    expect(display.gifts).toEqual([{ receivedOn: '03. 02. 2026', amount: '500 Kč' }]);
+    expect(display.gifts).toEqual([{ receivedOn: '3. 2. 2026', amount: '500 Kč' }]);
   });
 });

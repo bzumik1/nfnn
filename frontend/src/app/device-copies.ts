@@ -1,11 +1,13 @@
 import { EnvironmentInjector, inject, Injectable } from '@angular/core';
 import type { PrfReading } from './core/device/crypto/prf';
 import type { DeviceAccount, SessionDevice, SignInSecret } from './core/auth/session-device';
+import type { DeviceVault } from './core/device/store/device-vault';
+import type { DeviceCopyDiagnostics } from './core/diagnostics/device-copy-diagnostics';
 
 @Injectable({ providedIn: 'root' })
 export class DeviceCopies implements SessionDevice {
   private readonly injector = inject(EnvironmentInjector);
-  private loading: Promise<SessionDevice> | null = null;
+  private loading: Promise<DeviceVault> | null = null;
 
   prepare(): void {
     void this.vault().catch(() => undefined);
@@ -45,6 +47,12 @@ export class DeviceCopies implements SessionDevice {
     return this.vault().then((vault) => vault.signedOut(account));
   }
 
+  diagnostics(): Promise<DeviceCopyDiagnostics | null> {
+    return this.loading === null
+      ? Promise.resolve(null)
+      : this.loading.then((vault) => vault.diagnostics()).catch(() => null);
+  }
+
   signedOutElsewhere(): void {
     void this.loading?.then((vault) => vault.signedOutElsewhere());
   }
@@ -80,13 +88,13 @@ export class DeviceCopies implements SessionDevice {
       .catch(() => undefined);
   }
 
-  private vault(): Promise<SessionDevice> {
+  private vault(): Promise<DeviceVault> {
     if (this.loading === null) {
       const loading = Promise.all([
         import('./core/device/store/device-vault'),
-        import('./features/donations/device-copy/donor-copy-download'),
-      ]).then(([vault, download]) => {
-        this.injector.get(download.DonorCopyDownload);
+        import('./features/donations/device-copy/donor-copy-sync'),
+      ]).then(([vault, sync]) => {
+        this.injector.get(sync.DonorCopySync);
         return this.injector.get(vault.DeviceVault);
       });
       this.loading = loading;

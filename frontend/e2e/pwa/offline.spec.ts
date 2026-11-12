@@ -5,7 +5,7 @@ const APP_API_OFFLINE =
   /^Failed to load resource: (?:the server responded with a status of 504 \(Gateway Timeout\)|net::ERR_INTERNET_DISCONNECTED) \(http:\/\/localhost:\d+\/api\//;
 const APP_API_DOWN =
   /^Failed to load resource: the server responded with a status of 522 \((?:Unknown)?\) \(http:\/\/localhost:\d+\/api\//;
-const KEPT_NOTE = /Údaje účtu z \d{2}\. \d{2}\. \d{4} · nemusí být aktuální/;
+const KEPT_NOTE = /Údaje účtu z \d{1,2}\. \d{1,2}\. \d{4} · nemusí být aktuální/;
 const PICTURE_NEVER_LOADED =
   /^(?:Error: Response not Ok \(fetchAndCacheOnce\): request for http:\/\/localhost:\d+\/images\/[\w-]+\.webp returned response 504 Gateway Timeout|Failed to load resource: net::ERR_FAILED) \(http:\/\/localhost:\d+\/(?:ngsw-worker\.js|images\/[\w-]+\.webp)\)$/;
 

@@ -197,6 +197,44 @@ async function rememberedSession(page: Page, user: typeof donor): Promise<void> 
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
 }
 
+interface RowCentring {
+  title: string;
+  lines: number;
+  offCentre: string[];
+}
+
+function offCentreParts(page: Page, rowSelector: string): Promise<RowCentring[]> {
+  return page.evaluate((selector) => {
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).map((row) => {
+      const box = row.getBoundingClientRect();
+      const style = getComputedStyle(row);
+      const middle =
+        (box.top + parseFloat(style.paddingTop) + box.bottom - parseFloat(style.paddingBottom)) / 2;
+      const title = row.querySelector<HTMLElement>('.ui-list__title');
+      const range = document.createRange();
+      if (title) range.selectNodeContents(title);
+      const lines = new Set(Array.from(range.getClientRects(), (rect) => Math.round(rect.top)))
+        .size;
+      const offCentre = [
+        '.ui-list__lead',
+        '.ui-list__title',
+        '.ui-list__value',
+        '.ui-list__chevron',
+      ]
+        .map(
+          (part) => [part, row.querySelector(`:scope > ${part}`)?.getBoundingClientRect()] as const,
+        )
+        .filter(([, part]) => part && Math.abs((part.top + part.bottom) / 2 - middle) > 1)
+        .map(([part]) => `${title?.textContent?.trim()}: ${part}`);
+      return {
+        title: title?.textContent?.trim() ?? '',
+        lines,
+        offCentre,
+      };
+    });
+  }, rowSelector);
+}
+
 function value(page: Page, label: string) {
   return page
     .getByRole('region', { name: 'Stav stahování plateb z banky' })
@@ -255,26 +293,24 @@ test.describe('Given an administrator', () => {
     await expect(page).toHaveURL(/\/sprava$/);
     await expect(page).toHaveTitle('Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
-    await expect(value(page, 'Stažené období')).toHaveText('20. 07. 2026 – 17. 10. 2026');
+    await expect(value(page, 'Stažené období')).toHaveText('20. 7. 2026 – 17. 10. 2026');
     await expect(value(page, 'Poslední úspěšné stažení')).toHaveText('18. 10. 2026 10:05');
     await expect(value(page, 'Poslední chyba')).toHaveText('žádná');
     expect(authorization).toEqual(['Bearer token-1']);
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
-    await expect(attention.locator('.attention-list > li')).toHaveText([
-      '1 platba čeká na přiřazení dárci (150 Kč). Přiřadit platby',
-      'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď. Otevřít zálohy',
-      'Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru se jménem. Nahrát podpis',
+    await expect(attention.getByRole('listitem')).toHaveText([
+      '1 platba čeká na přiřazení 150 Kč',
+      'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+      'Podepisující nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
     ]);
-    await expect(attention.getByRole('link', { name: 'Přiřadit platby' })).toHaveAttribute(
-      'href',
-      '/sprava/platby',
-    );
-    await expect(attention.getByRole('link', { name: 'Nahrát podpis' })).toHaveAttribute(
-      'href',
-      '/sprava/lide-fondu',
-    );
+    await expect(
+      attention.getByRole('link', { name: '1 platba čeká na přiřazení 150 Kč' }),
+    ).toHaveAttribute('href', '/sprava/platby');
+    await expect(
+      attention.getByRole('link', { name: 'Podepisující nemá nahraný podpis' }),
+    ).toHaveAttribute('href', '/sprava/lide-fondu');
     const backupsCard = page.getByRole('region', { name: 'Zálohy databáze' });
-    await expect(backupsCard).toContainText('23. 10. 2026 03:00 (2 kB)');
+    await expect(backupsCard).toContainText('23. 10. 2026 3:00 (2 kB)');
     await expect(backupsCard.getByRole('link', { name: 'Otevřít zálohy' })).toHaveAttribute(
       'href',
       '/sprava/zalohy',
@@ -373,7 +409,7 @@ test.describe('Given an administrator', () => {
 
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     await expect(attention).toContainText(
-      'Platby z banky se nestahují (1× za sebou) a fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
+      'Platby z banky se nestahují 1× za sebou, fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
     );
     await expect(attention).toContainText('vytvořte nový token typu „Sledování účtu“');
     await expect(attention.getByRole('link', { name: 'Otevřít Nastavení' })).toHaveAttribute(
@@ -469,15 +505,15 @@ test.describe('Given an administrator', () => {
     await page.clock.fastForward(3000);
 
     await expect(part.getByRole('status')).toHaveText(
-      'Hotovo (05. 11. 2026 11:00): staženo období 01. 06. 2025 – 05. 11. 2026, 12 nových plateb.',
+      'Hotovo (5. 11. 2026 11:00): staženo období 1. 6. 2025 – 5. 11. 2026, 12 nových plateb.',
     );
-    await expect(value(page, 'Stažené období')).toHaveText('01. 06. 2025 – 05. 11. 2026');
+    await expect(value(page, 'Stažené období')).toHaveText('1. 6. 2025 – 5. 11. 2026');
     await expect(part.getByRole('button', { name: 'Načíst starší platby' })).not.toHaveAttribute(
       'aria-disabled',
     );
   });
 
-  test('when the receipt signing key of the server fails its seal, then a red row leads to the key in the settings, which names it unpublished', async ({
+  test('when the receipt signing key of the server fails its seal, then an urgent row leads to the key in the settings, which names it unpublished', async ({
     page,
   }) => {
     const unpublished = {
@@ -500,9 +536,9 @@ test.describe('Given an administrator', () => {
     const attention = page.getByRole('region', { name: 'Co potřebuje vaši pozornost' });
     const row = attention.locator('.attention-signing-key');
     await expect(row).toHaveText(
-      'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+      'Naléhavé: Klíč k ověřovacím QR kódům není zveřejněný Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
     );
-    await row.getByRole('link', { name: 'Otevřít nastavení' }).click();
+    await row.getByRole('link', { name: /Klíč k ověřovacím QR kódům není zveřejněný/ }).click();
 
     await expect(page).toHaveURL(/\/sprava\/nastaveni#klic-k-overovacim-qr$/);
     await expect(
@@ -612,6 +648,29 @@ test.describe('Given an administrator', () => {
     await expect(page).toHaveURL(/\/sprava\/vice$/);
     await back.click();
     await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when they use a phone, then the icon and the arrow of every section row stand in the middle of its height, a row of two lines too', async ({
+    page,
+  }) => {
+    await mockImportState(page, quietImport);
+    await rememberedSession(page, administrator);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/sprava');
+
+    const sections = page.getByRole('navigation', { name: 'Sekce správy' });
+    await expect(sections.getByRole('link', { name: /Lidé fondu, správci, zálohy/ })).toBeVisible();
+    const home = await offCentreParts(page, 'nav[aria-label="Sekce správy"] .ui-list__row');
+    expect(home.find((row) => row.title.startsWith('Lidé fondu'))?.lines).toBe(2);
+    expect(home.flatMap((row) => row.offCentre)).toEqual([]);
+
+    await page.goto('/sprava/vice');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Občas a pro technika' }),
+    ).toBeVisible();
+    const more = await offCentreParts(page, 'nav[aria-label="Další sekce správy"] .ui-list__row');
+    expect(more.length).toBeGreaterThan(0);
+    expect(more.flatMap((row) => row.offCentre)).toEqual([]);
   });
 
   test('when they come back later with a remembered session, then the administration opens straight away', async ({

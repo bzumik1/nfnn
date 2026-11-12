@@ -66,6 +66,7 @@ import {
   STREET_MESSAGES,
 } from '../donor-field-messages';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 
 interface RegistrationFields {
   name: string;
@@ -131,6 +132,7 @@ const REGISTRATION_FIELDS: Readonly<Record<string, string>> = {
 })
 export class LoginDialog {
   private readonly dialog = inject(LoginDialogService);
+  private readonly connectivity = inject(Connectivity);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly document = inject(DOCUMENT);
@@ -192,6 +194,10 @@ export class LoginDialog {
   protected readonly atCrossroads = computed(
     () => this.step() === 'login' || this.step() === 'register',
   );
+  protected readonly offlineAtCrossroads = computed(
+    () => this.atCrossroads() && this.connectivity.offline(),
+  );
+  protected readonly offlineRetry = signal<'idle' | 'trying' | 'still-offline'>('idle');
 
   protected email = this.mode() === 'login' ? this.dialog.initialEmail() : '';
   protected password = '';
@@ -392,6 +398,16 @@ export class LoginDialog {
     this.recovery.set(null);
     this.error.set('');
     this.focusStep();
+  }
+
+  protected tryConnectionAgain(): void {
+    if (this.offlineRetry() === 'trying') {
+      return;
+    }
+    this.offlineRetry.set('trying');
+    this.connectivity
+      .tryAgain()
+      .subscribe((reached) => this.offlineRetry.set(reached ? 'idle' : 'still-offline'));
   }
 
   protected amount(recovery: SecondFactorRecovery): string {

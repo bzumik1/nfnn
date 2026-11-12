@@ -1,5 +1,5 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
-import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Params, Router } from '@angular/router';
 
 export type PageHead = 'photo' | 'dark' | 'light';
 
@@ -10,7 +10,6 @@ export interface RouteChromeData {
   readonly landing?: boolean;
   readonly phoneFooter?: boolean;
   readonly backOnWide?: boolean;
-  readonly logoBesideBack?: boolean;
 }
 
 export interface Chrome {
@@ -20,7 +19,6 @@ export interface Chrome {
   readonly landing: boolean;
   readonly phoneFooter: boolean;
   readonly backOnWide: boolean;
-  readonly logoBesideBack: boolean;
 }
 
 const PLAIN: Chrome = {
@@ -30,7 +28,6 @@ const PLAIN: Chrome = {
   landing: false,
   phoneFooter: false,
   backOnWide: true,
-  logoBesideBack: true,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -49,19 +46,29 @@ export class RouteChrome {
   }
 }
 
-function chromeOf(root: ActivatedRouteSnapshot): Chrome {
+export function chromeOf(root: ActivatedRouteSnapshot): Chrome {
   let chrome = PLAIN;
   for (let route: ActivatedRouteSnapshot | null = root; route !== null; route = route.firstChild) {
     const data = route.data as RouteChromeData;
     chrome = {
-      parent: data.parent ?? (route === root ? null : chrome.parent),
+      parent:
+        data.parent !== undefined
+          ? withParams(data.parent, route.params)
+          : route === root
+            ? null
+            : chrome.parent,
       head: data.head ?? chrome.head,
       tabBar: data.tabBar ?? chrome.tabBar,
       landing: data.landing ?? false,
       phoneFooter: data.phoneFooter ?? false,
       backOnWide: data.backOnWide ?? chrome.backOnWide,
-      logoBesideBack: data.logoBesideBack ?? chrome.logoBesideBack,
     };
   }
   return chrome;
+}
+
+function withParams(path: string, params: Params): string {
+  return path.replace(/:([A-Za-z]+)/g, (segment, name: string) =>
+    typeof params[name] === 'string' ? encodeURIComponent(params[name]) : segment,
+  );
 }

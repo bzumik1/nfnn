@@ -1,5 +1,6 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
+import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
 import { noSignature, signatory } from './signature-image';
@@ -55,7 +56,7 @@ export const secondFactorRecovery = {
   currency: 'CZK',
   usableFrom: '2026-10-27',
   spayd:
-    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
+    'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA K7MP4RXA',
 };
 
 export const secondFactorEnrolment = {
@@ -277,11 +278,56 @@ export async function mockDonorSync(page: RouteTarget, sync: DonorSyncMock): Pro
   );
 }
 
+export interface DonorSyncRows {
+  readonly gifts: readonly ReturnType<typeof donationItem>[];
+  readonly receipts?: readonly { readonly year: number | null; readonly issuedAt: string }[];
+}
+
+export async function donorSyncOf(summary: object, rows: DonorSyncRows): Promise<DonorSyncMock> {
+  const chunks = new Map<string, unknown[]>();
+  for (const gift of rows.gifts) {
+    const id = `donations:${gift.receivedAt.slice(0, 4)}`;
+    chunks.set(id, [
+      ...(chunks.get(id) ?? []),
+      {
+        id: gift.id,
+        receivedAt: gift.receivedAt,
+        amountMinor: gift.amountMinor,
+        currency: gift.currency,
+        status: gift.status,
+        source: gift.source,
+        purpose: gift.accountVerification ? 'ACCOUNT_VERIFICATION' : 'GENERAL',
+        pairedBy: gift.pairedBy,
+        bankAccountId: null,
+        symbolClaimId: null,
+      },
+    ]);
+  }
+  for (const receipt of rows.receipts ?? []) {
+    const id = `receipts:${receipt.year ?? receipt.issuedAt.slice(0, 4)}`;
+    chunks.set(id, [...(chunks.get(id) ?? []), receipt]);
+  }
+  return {
+    summary: { ...summary, bankDataAsOf: '2026-10-18T08:05:30Z' },
+    chunks: await Promise.all(
+      [...chunks.entries()]
+        .sort(([first], [second]) => first.localeCompare(second))
+        .map(async ([id, chunkRows]) => ({
+          id,
+          rowsSha256: await rowsSha256(chunkRows),
+          count: chunkRows.length,
+          rows: chunkRows,
+        })),
+    ),
+  };
+}
+
 export const signedInDevices = [
   {
     id: '019a5a3c-0000-7000-8000-000000000001',
     platform: 'MAC',
     browser: 'SAFARI',
+    session: 'REMEMBERED',
     signedInAt: '2026-10-18T07:00:00Z',
     lastUsedAt: '2026-10-18T08:05:00Z',
     current: true,
@@ -290,8 +336,30 @@ export const signedInDevices = [
     id: '019a5a3c-0000-7000-8000-000000000002',
     platform: 'IPHONE',
     browser: 'SAFARI',
+    session: 'REMEMBERED',
     signedInAt: '2026-10-12T18:00:00Z',
     lastUsedAt: '2026-10-17T19:05:00Z',
+    current: false,
+  },
+];
+
+export const longUnusedDevices = [
+  {
+    id: '019a5a3c-0000-7000-8000-000000000003',
+    platform: 'IPHONE',
+    browser: 'SAFARI',
+    session: 'APP',
+    signedInAt: '2026-08-02T18:00:00Z',
+    lastUsedAt: '2026-09-10T06:40:00Z',
+    current: false,
+  },
+  {
+    id: '019a5a3c-0000-7000-8000-000000000004',
+    platform: 'WINDOWS',
+    browser: 'EDGE',
+    session: 'PUBLIC',
+    signedInAt: '2026-07-01T10:00:00Z',
+    lastUsedAt: '2026-07-01T10:20:00Z',
     current: false,
   },
 ];
@@ -332,8 +400,27 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
   await page.getByRole('dialog').locator('.ui-button--block').click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await openAccountItem(page, 'Můj přehled');
+  if (opensSectionsInSheet(page)) {
+    return;
+  }
   await expect(page).toHaveURL(/\/darce\/prehled$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Můj přehled' })).toBeVisible();
+}
+
+export async function showAccountList(page: Page): Promise<Locator> {
+  const sheet = page.getByRole('dialog');
+  const sectionBack = sheet.locator('.account-back');
+  if (await sectionBack.isVisible()) {
+    await sectionBack.click();
+  } else {
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+  }
+  await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+  return sheet;
+}
+
+export function opensSectionsInSheet(page: Page): boolean {
+  return (page.viewportSize()?.width ?? 0) <= BREAKPOINTS.nav;
 }
 
 function adminSetting(
@@ -375,14 +462,19 @@ export const adminSettings = {
 };
 
 function sectionName(name: string): RegExp {
-  return new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
+  return new RegExp(`(^| )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( |$)`);
 }
 
 export async function openAccountItem(page: Page, name: string): Promise<void> {
-  await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-  const sheet = page.getByRole('dialog');
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole('link', { name: sectionName(name) }).click();
+  const sheet = await showAccountList(page);
+  const item = sheet.getByRole('link', { name: sectionName(name) });
+  const opensInSheet =
+    opensSectionsInSheet(page) && (await item.getAttribute('href')) !== '/sprava';
+  await item.click();
+  if (opensInSheet) {
+    await expect(sheet.getByRole('heading', { level: 2, name: sectionName(name) })).toBeVisible();
+    return;
+  }
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('app-public-shell')).toHaveCount(0);
 }
@@ -403,4 +495,90 @@ export async function openSection(page: Page, name: string): Promise<void> {
   const tab = tabs.getByRole('link', { name, exact: true });
   await tab.click();
   await expect(tab).toHaveAttribute('aria-current', /^(page|true)$/);
+}
+
+export async function serveAdministrationCopy(
+  page: RouteTarget,
+  parts: { donations: Record<string, unknown[]>; donors: Record<string, unknown[]> },
+): Promise<void> {
+  for (const [part, chunks] of Object.entries(parts)) {
+    const served = await Promise.all(
+      Object.entries(chunks).map(async ([id, rows]) => ({
+        id,
+        rowsSha256: await rowsSha256(rows),
+        count: rows.length,
+        rows,
+      })),
+    );
+    const summary = part === 'donations' ? { summary: { today: '2026-11-06', byYear: [] } } : {};
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync`,
+      (route) =>
+        route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.map(({ id, rowsSha256, count }) => ({ id, rowsSha256, count })),
+          },
+        }),
+    );
+    await page.route(
+      (url) => url.pathname === `/api/admin/${part}/sync/chunks`,
+      (route) => {
+        const asked = (new URL(route.request().url()).searchParams.get('ids') ?? '').split(',');
+        return route.fulfill({
+          json: {
+            subject: administrator.id,
+            administrator: true,
+            ...summary,
+            chunks: served.filter((chunk) => asked.includes(chunk.id)),
+            missing: asked.filter((id) => !served.some((chunk) => chunk.id === id)),
+          },
+        });
+      },
+    );
+  }
+}
+
+export function administrationCopyGift(
+  id: string,
+  donorId: string,
+  receivedAt: string,
+  amountMinor: number,
+) {
+  return {
+    id,
+    donorId,
+    paymentId: id,
+    receivedAt,
+    amountMinor,
+    currency: 'CZK',
+    status: 'RECEIVED',
+    source: 'BANK_TRANSFER',
+    purpose: 'GENERAL',
+    pairedBy: 'VARIABLE_SYMBOL',
+    bankAccountId: null,
+    symbolClaimId: null,
+    recordedAt: `${receivedAt}T09:00:00Z`,
+  };
+}
+
+const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
+
+export async function openUnlockedAdministrationPage(
+  page: Page,
+  path: string,
+  heading: string,
+): Promise<void> {
+  await Promise.all([
+    page
+      .goto(path)
+      .then(() => expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()),
+    page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/admin/donations/sync',
+      { timeout: 10_000 },
+    ),
+  ]);
+  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
 }

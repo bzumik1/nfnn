@@ -4,8 +4,8 @@
   </h2>
   <div class="ui-card__body">
     <p class="ui-card__intro" i18n="@@admin.projects.order.intro">
-      Vyberte, v jakém pořadí web ukazuje projekty na úvodní stránce a v přehledu projektů. Ve
-      stejném pořadí jsou i v seznamu nahoře, jen koncepty v něm stojí vždy první.
+      Vyberte, v jakém pořadí web ukazuje příběhy na úvodní stránce a v Pomáháme. Ve stejném pořadí
+      jsou i v seznamu nahoře, jen koncepty v něm stojí vždy první.
     </p>
     @switch (state()) {
       @case ('loading') {
@@ -35,7 +35,7 @@
         <form class="order-form" (submit)="save($event)" novalidate>
           <fieldset class="orders">
             <legend class="visually-hidden" i18n="@@admin.projects.order.legend">
-              Pořadí projektů na webu
+              Pořadí příběhů na webu
             </legend>
             @for (order of orders; track order) {
               <label class="ui-choice" [class.is-selected]="chosen() === order">

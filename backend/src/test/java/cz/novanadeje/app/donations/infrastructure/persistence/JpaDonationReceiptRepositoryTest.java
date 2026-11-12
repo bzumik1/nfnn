@@ -28,6 +28,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptParty;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStanding;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
@@ -76,6 +77,7 @@ import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersist
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -432,6 +434,34 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given active and replaced single receipts, a yearly one and another donor's, when the active single receipts of some donations are read, then only the active single ones of those donations come")
+    void should_find_active_singles_of_the_donations_when_read_given_mixed_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        Donation june = storedDonation(jana, LocalDate.of(2026, 6, 1));
+        Donation july = storedDonation(jana, LocalDate.of(2026, 7, 1));
+        Donation petrs = storedDonation(petr, LocalDate.of(2026, 4, 1));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        receipts.save(single(jana, march, "2026-000002"));
+        receipts.save(single(jana, june, "2026-000003"));
+        receipts.save(single(jana, july, "2026-000004"));
+        receipts.save(single(petr, petrs, "2026-000005"));
+        receipts.save(yearly(jana, YEAR_2025, "2026-000006", Optional.empty()));
+        flushAndClear();
+
+        List<DonationReceipt> active = receipts.findActiveSinglesFor(List.of(march.id(), june.id(), petrs.id()));
+
+        assertThat(active).extracting(DonationReceipt::number).containsExactlyInAnyOrder(
+                new ReceiptNumber("2026-000002"), new ReceiptNumber("2026-000003"), new ReceiptNumber("2026-000005"));
+        assertThat(active).allSatisfy(receipt -> assertThat(receipt.isActive()).isTrue());
+        assertThat(receipts.findActiveSinglesFor(List.of())).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given receipts of two donors, active, replaced and withdrawn, when every receipt is listed newest first, then all come, latest issue and higher number first")
     void should_list_every_receipt_newest_first_when_all_listed_given_receipts_of_two_donors() {
         DonorReference jana = storedDonor("4821937560");
@@ -451,8 +481,43 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(earliest);
         flushAndClear();
 
-        assertThat(receipts.findAllNewestFirst()).extracting(receipt -> receipt.number().value())
+        assertThat(receipts.findAllSummariesNewestFirst()).extracting(receipt -> receipt.number().value())
                 .containsExactly("2026-000003", "2026-000002", "2026-000001", "2026-000004");
+    }
+
+    @Test
+    @DisplayName("Given a yearly receipt of three gifts, a single receipt replaced by another and a withdrawn yearly one, when every receipt's summary is listed, then each gives what its frozen data gives, latest issue and higher number first")
+    void should_summarise_each_receipt_as_its_frozen_data_when_every_summary_listed_given_single_and_yearly_receipts() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        Donation march = storedDonation(jana, LocalDate.of(2026, 3, 15));
+        DonationReceipt replaced = single(jana, march, "2026-000001");
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        DonationReceipt replacement = issued(jana, NOW.plusSeconds(60), singleDocument(march, "2026-000002",
+                Optional.of(new ReplacedReceipt(new ReceiptNumber("2026-000001"), ISSUED_ON))), Optional.of(replaced.id()));
+        receipts.save(replacement);
+        DonationReceipt withdrawn = issued(petr, NOW.plusSeconds(120), yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.empty());
+        receipts.save(withdrawn);
+        withdrawn.withdrawBecauseDonationsChanged(NOW.plusSeconds(180));
+        receipts.save(withdrawn);
+        List<ReceiptLine> gifts = List.of(new ReceiptLine(DonationId.newId(NOW), LocalDate.of(2025, 2, 1), Money.czk(12345), DonationSource.BANK_TRANSFER),
+                new ReceiptLine(DonationId.newId(NOW), LocalDate.of(2025, 6, 30), Money.czk(100), DonationSource.MANUAL),
+                new ReceiptLine(DonationId.newId(NOW), LocalDate.of(2025, 12, 31), Money.czk(999999), DonationSource.BANK_TRANSFER));
+        DonationReceipt yearly = issued(jana, NOW.minusSeconds(60), new ReceiptDocument(ReceiptKind.YEARLY, new ReceiptNumber("2026-000004"), ISSUED_ON, LocaleCode.CS,
+                FOUNDATION, JANA_PARTY, gifts, Money.czk(12345 + 100 + 999999), Optional.of(YEAR_2025), SIGNATORY, Optional.empty()), Optional.empty());
+        receipts.save(yearly);
+        flushAndClear();
+
+        List<ReceiptSummary> summaries = receipts.findAllSummariesNewestFirst();
+
+        assertThat(summaries).containsExactly(ReceiptSummary.of(withdrawn), ReceiptSummary.of(replacement), ReceiptSummary.of(replaced),
+                ReceiptSummary.of(yearly));
+        assertThat(summaries).extracting(summary -> summary.number().value(), ReceiptSummary::giftCount, ReceiptSummary::totalAmountMinor,
+                        summary -> summary.certifiedYear().getValue())
+                .containsExactly(tuple("2026-000003", 1, 50000L, 2025), tuple("2026-000002", 1, march.amount().amountMinor(), 2026),
+                        tuple("2026-000001", 1, march.amount().amountMinor(), 2026), tuple("2026-000004", 3, 12345L + 100 + 999999, 2025));
     }
 
     @Test
@@ -596,6 +661,7 @@ class JpaDonationReceiptRepositoryTest {
         DonationReceipt receipt = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
         receipts.save(receipt);
         flushAndClear();
+        jdbc.sql("set local session_replication_role = replica").update();
         jdbc.sql("update issued_receipt set number = '2026-000099' where id = ?").param(receipt.id().value()).update();
 
         assertThatThrownBy(() -> receipts.findById(receipt.id()))
@@ -672,6 +738,35 @@ class JpaDonationReceiptRepositoryTest {
         assertThat(receipts.countReplacementsIssuedAfter(jana, NOW.minusSeconds(3600))).isZero();
         assertThat(receipts.countReplacementsIssuedAfter(jana, NOW.minusSeconds(1))).isZero();
         assertThat(receipts.countReplacementsIssuedAfter(petr, NOW.minusSeconds(7201))).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Given a donor's first issue and replacements issued an hour ago and now, and another donor's replacement, when the donor's replacements issued since a time are counted, then replacements issued at that time or later count")
+    void should_count_replacements_issued_since_a_time_when_counted_given_first_issue_and_replacements() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt firstIssue = issued(jana, NOW.minusSeconds(7200), yearlyDocument(YEAR_2025, "2026-000001", Optional.empty()), Optional.empty());
+        receipts.save(firstIssue);
+        firstIssue.markSuperseded(NOW.minusSeconds(3600));
+        receipts.save(firstIssue);
+        DonationReceipt anHourAgo = issued(jana, NOW.minusSeconds(3600), yearlyDocument(YEAR_2025, "2026-000002", Optional.empty()), Optional.of(firstIssue.id()));
+        receipts.save(anHourAgo);
+        anHourAgo.markSuperseded(NOW);
+        receipts.save(anHourAgo);
+        receipts.save(issued(jana, NOW, yearlyDocument(YEAR_2025, "2026-000003", Optional.empty()), Optional.of(anHourAgo.id())));
+        DonationReceipt petrFirst = issued(petr, NOW.minusSeconds(3600), yearlyDocument(YEAR_2025, "2026-000004", Optional.empty()), Optional.empty());
+        receipts.save(petrFirst);
+        petrFirst.markSuperseded(NOW);
+        receipts.save(petrFirst);
+        receipts.save(issued(petr, NOW, yearlyDocument(YEAR_2025, "2026-000005", Optional.empty()), Optional.of(petrFirst.id())));
+        flushAndClear();
+
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(7200))).isEqualTo(2);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(3600))).isEqualTo(2);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.minusSeconds(3599))).isEqualTo(1);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW)).isEqualTo(1);
+        assertThat(receipts.countReplacementsIssuedSince(jana, NOW.plusSeconds(1))).isZero();
+        assertThat(receipts.countReplacementsIssuedSince(petr, NOW.minusSeconds(7200))).isEqualTo(1);
     }
 
     @Test

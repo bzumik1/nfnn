@@ -33,15 +33,18 @@
         >Vlastní částka v korunách</label
       >
       <input
+        #customAmountField
         [id]="customAmountId()"
         type="text"
         inputmode="numeric"
+        enterkeyhint="done"
         autocomplete="off"
         [value]="customText()"
         [attr.aria-invalid]="showAmountHint()"
         [attr.aria-describedby]="customAmountDescription()"
         (input)="enterCustomAmount($event)"
         (blur)="leaveCustomAmount()"
+        (keydown.enter)="finishCustomAmount()"
       />
       <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
         >Kč</span
@@ -69,10 +72,11 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ account.number }}</span>
+          <span class="bank-value ui-figures">{{ account.number }}</span>
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
+            (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyAccount"
           />
         </span>
@@ -81,7 +85,7 @@
         <div class="bank-row">
           <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>
           <span class="bank-value-wrap">
-            <span class="bank-value"
+            <span class="bank-value ui-figures"
               >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                 >Kč</ng-container
               ></span
@@ -89,6 +93,7 @@
             <app-copy-button
               [value]="'' + chosen"
               what="částku"
+              (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyAmount"
             />
           </span>
@@ -98,10 +103,11 @@
         <div class="bank-row">
           <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>
           <span class="bank-value-wrap">
-            <span class="bank-value">{{ symbol }}</span>
+            <span class="bank-value ui-figures">{{ symbol }}</span>
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
+              (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyVs"
             />
           </span>
@@ -110,10 +116,14 @@
       <div class="bank-row">
         <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>
         <span class="bank-value-wrap">
-          <span class="bank-value">{{ ibanInGroups() }}</span>
+          <span class="bank-value ui-figures ui-figures--groups"
+            ><span class="iban-half">{{ ibanLines()[0] }}</span
+            >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
+          >
           <app-copy-button
             [value]="account.iban"
             what="IBAN"
+            (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyIban"
           />
         </span>
@@ -134,6 +144,34 @@
 }
 
 <ng-content select="[afterBankDetails]" />
+
+<div
+  class="gift-arrival"
+  [class.ui-notice]="arrivalText() !== null"
+  [class.ui-notice--status]="arrivalText() !== null"
+>
+  <p class="gift-arrival-text" role="status">
+    @if (arrivalText(); as text) {
+      <span>{{ text }}</span>
+    }
+  </p>
+  @if (arrivalText() !== null) {
+    <div class="gift-arrival-actions">
+      @if (!arrivalListedHere) {
+        <a routerLink="/darce/prehled" i18n="@@home.donate.arrived.overview">Zobrazit v přehledu</a>
+      }
+      <button
+        #arrivalClose
+        type="button"
+        class="ui-button ui-button--small gift-arrival-close"
+        (click)="closeThanks()"
+        i18n="@@home.donate.arrived.close"
+      >
+        Zavřít
+      </button>
+    </div>
+  }
+</div>
 
 @if (compact()) {
   <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
@@ -164,6 +202,21 @@
       <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
     </button>
     <div class="bank-app-status" role="status">
+      @switch (handoffStep()) {
+        @case ('sharing') {
+          <p class="bank-app-progress" i18n="@@home.donate.bankApp.sharing">
+            Otevíráme nabídku sdílení…
+          </p>
+        }
+        @case ('opening') {
+          <p class="bank-app-progress" i18n="@@home.donate.bankApp.opening">
+            Otevíráme platbu v aplikaci banky…
+          </p>
+        }
+        @case ('saving') {
+          <p class="bank-app-progress" i18n="@@home.donate.qr.saving">Připravujeme obrázek…</p>
+        }
+      }
       @switch (handoffNotice()) {
         @case ('imageSaved') {
           <p class="ui-form-status">{{ savedQrText() }}</p>

@@ -1,9 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, Routes } from '@angular/router';
+import { inject } from 'vitest';
+import { appRoutePaths } from '../testing/server-routes';
 import { routes } from './app.routes';
 import { SESSION_HINT_KEY } from './core/auth/auth-store';
+import { RouteChrome } from './core/navigation/route-chrome';
 import { authResponse } from './core/auth/testing/donor-fixtures';
 
 describe('Given a signed-in donor and the app routes', () => {
@@ -59,5 +62,43 @@ describe('Given a visitor and the app routes', () => {
 
     expect(router.url).toBe('/overit#1234');
     expect(document.title).toBe('Ověření potvrzení o daru | Nová naděje – nadační fond');
+  });
+
+  it('when the verification page opens, then it has Zpět, which returns to the step before or else home', async () => {
+    const router = TestBed.inject(Router);
+    const chrome = TestBed.inject(RouteChrome);
+
+    await router.navigateByUrl('/overit');
+
+    expect(chrome.current().parent).toBe('/');
+  });
+});
+
+describe('Given the app routes and the addresses nginx answers with the app', () => {
+  it('when both are listed, then nginx answers exactly the addresses the app has a page for', async () => {
+    expect(inject('serverAppRoutes')).toEqual(await appRoutePaths(routes));
+  });
+
+  it('when the app routes are listed, then lazy areas, redirects and detail pages are among them', async () => {
+    const paths = await appRoutePaths(routes);
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        '/',
+        '/aplikace',
+        '/darce',
+        '/darce/prehled',
+        '/donor/prehled',
+        '/sprava/darci/:param',
+        '/aktuality/:param',
+      ]),
+    );
+    expect(paths).not.toContain('/**');
+  });
+
+  it('when the app gains a page nginx does not list, then the lists differ', async () => {
+    const withNewPage: Routes = [...routes, { path: 'nova-stranka', children: [] }];
+
+    expect(inject('serverAppRoutes')).not.toEqual(await appRoutePaths(withNewPage));
   });
 });

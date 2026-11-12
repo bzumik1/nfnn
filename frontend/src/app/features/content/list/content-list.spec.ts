@@ -63,9 +63,24 @@ describe('Given a visitor opening the list of projects', () => {
       '/projekty/zahrada-pro-deti',
     );
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
-      'Stránky projektů',
+      'Stránky příběhů',
     );
-    expect(link(fixture, 'Starší →')?.getAttribute('href')).toBe('/projekty?strana=2');
+    expect(link(fixture, 'Starší')?.getAttribute('href')).toBe('/projekty?strana=2');
+  });
+
+  it('when a middle page is asked for, then both directions are offered in words with a chevron icon hidden from screen readers', async () => {
+    ({ fixture, http } = await setUp({ strana: '2' }));
+    http.expectOne('/api/content/projects?page=1&size=10').flush(page([project()], 1, 25));
+    await settle(fixture);
+
+    expect(text(fixture, '.pages-position')).toBe('Strana 2 z 3');
+    const newer = link(fixture, 'Novější');
+    const older = link(fixture, 'Starší');
+    expect(newer?.getAttribute('href')).toBe('/projekty');
+    expect(older?.getAttribute('href')).toBe('/projekty?strana=3');
+    for (const direction of [newer, older]) {
+      expect(direction?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    }
   });
 
   it('when nothing is published yet, then the page says so', async () => {
@@ -73,6 +88,6 @@ describe('Given a visitor opening the list of projects', () => {
     http.expectOne('/api/content/projects?page=0&size=10').flush(page([], 0, 0));
     await settle(fixture);
 
-    expect(text(fixture, '.list-state')).toBe('Zatím tu žádný projekt není.');
+    expect(text(fixture, '.list-state')).toBe('Zatím tu žádný příběh není.');
   });
 });

@@ -1,6 +1,7 @@
-import { Page, Request } from '@playwright/test';
+import { Page, Request, Response } from '@playwright/test';
 import { mockDonorApi, openDonorSection, signIn } from './donor-session';
 import { expect, test } from './fixtures';
+import { requestsInFlight, settled } from './settled';
 import { fakeCameraShowing, pdfWithLink, pngDataUrl, qrCodePng } from './receipt-code-files';
 import {
   CHANGED_AMOUNT,
@@ -159,19 +160,12 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     await withoutWebCryptoEd25519(page);
     await serveReceiptKeys(page);
     await serveReceiptStatus(page, 'active');
-    const scripts: Promise<string>[] = [];
-    page.on('response', (response) => {
-      if (new URL(response.url()).pathname.endsWith('.js')) {
-        scripts.push(response.text());
-      }
-    });
+    const scripts = scriptsLoadedBy(page);
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
-    expect((await Promise.all(scripts)).some((script) => script.includes('edwards25519'))).toBe(
-      true,
-    );
+    expect((await scripts.all()).some((script) => script.includes('edwards25519'))).toBe(true);
   });
 
   test('when the browser has Ed25519 in WebCrypto, then the fallback library is never loaded', async ({
@@ -179,19 +173,12 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
   }) => {
     await serveReceiptKeys(page);
     await serveReceiptStatus(page, 'active');
-    const scripts: Promise<string>[] = [];
-    page.on('response', (response) => {
-      if (new URL(response.url()).pathname.endsWith('.js')) {
-        scripts.push(response.text());
-      }
-    });
+    const scripts = scriptsLoadedBy(page);
 
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(SIGNED);
-    expect((await Promise.all(scripts)).some((script) => script.includes('edwards25519'))).toBe(
-      false,
-    );
+    expect((await scripts.all()).some((script) => script.includes('edwards25519'))).toBe(false);
   });
 });
 
@@ -546,3 +533,25 @@ test.describe('Given a signed-in donor on the receipts page', () => {
     await expect(page.getByRole('button', { name: 'Naskenovat QR kód' })).toBeVisible();
   });
 });
+
+interface LoadedScripts {
+  all(): Promise<string[]>;
+}
+
+function scriptsLoadedBy(page: Page): LoadedScripts {
+  const inFlight = requestsInFlight(page);
+  const scripts: Promise<string>[] = [];
+  const keep = (response: Response): void => {
+    if (new URL(response.url()).pathname.endsWith('.js')) {
+      scripts.push(response.text());
+    }
+  };
+  page.on('response', keep);
+  return {
+    all: async () => {
+      await settled(page, inFlight, 10_000);
+      page.off('response', keep);
+      return Promise.all(scripts);
+    },
+  };
+}

@@ -8,10 +8,7 @@ import { SignedOutNotice } from '../../../../core/auth/signed-out-notice';
 import { DeviceVault } from '../../../../core/device/store/device-vault';
 import { LiveNotice, type Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import {
-  DonorCopyDownload,
-  type DownloadOutcome,
-} from '../../../donations/device-copy/donor-copy-download';
+import { DonorCopySync, type SyncOutcome } from '../../../donations/device-copy/donor-copy-sync';
 import { formatBankTime } from '../../../donations/donation-date';
 import { DeleteDeviceDataDialog } from './delete-device-data-dialog';
 
@@ -25,7 +22,7 @@ import { DeleteDeviceDataDialog } from './delete-device-data-dialog';
 export class DeviceDataCard {
   private readonly auth = inject(AuthStore);
   private readonly vault = inject(DeviceVault);
-  private readonly download = inject(DonorCopyDownload);
+  private readonly copySync = inject(DonorCopySync);
   private readonly router = inject(Router);
   private readonly signedOut = inject(SignedOutNotice);
 
@@ -47,7 +44,7 @@ export class DeviceDataCard {
     return { date: shown.slice(0, split), time: shown.slice(split + 1) };
   });
   protected readonly saving = computed(
-    () => this.vault.opened() !== null && this.storedAt() === null && this.download.downloading(),
+    () => this.vault.opened() !== null && this.storedAt() === null && this.copySync.syncing(),
   );
 
   reload(): void {
@@ -56,7 +53,7 @@ export class DeviceDataCard {
     }
     this.reloading.set(true);
     this.notice.set(null);
-    void this.download.reload().then((outcome) => {
+    void this.copySync.reload().then((outcome) => {
       this.reloading.set(false);
       this.notice.set(reloadNotice(outcome));
     });
@@ -97,10 +94,9 @@ export class DeviceDataCard {
   }
 }
 
-function reloadNotice(outcome: DownloadOutcome): Notice {
+function reloadNotice(outcome: SyncOutcome): Notice {
   switch (outcome) {
     case 'stored':
-    case 'skipped':
       return {
         kind: 'status',
         text: $localize`:@@donor.deviceData.reloaded:Data jsou načtená znovu.`,
@@ -111,10 +107,14 @@ function reloadNotice(outcome: DownloadOutcome): Notice {
         text: $localize`:@@donor.deviceData.reloadFailed:Data se nepodařilo načíst. Zkontrolujte připojení a zkuste to prosím znovu.`,
       };
     case 'mismatch':
+      return {
+        kind: 'alert',
+        text: $localize`:@@donor.deviceData.reloadUnverified:Data ze serveru se nepodařilo ověřit. Zkuste je prosím za chvíli načíst znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.`,
+      };
     case 'no-copy':
       return {
         kind: 'alert',
-        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz.`,
+        text: $localize`:@@donor.deviceData.reloadFailedOther:Data se nepodařilo načíst. Zkuste to prosím za chvíli znovu, a když to nepůjde, napište nám na info@nfnn.cz a přiložte diagnostický soubor z části Když web nefunguje.`,
       };
   }
 }

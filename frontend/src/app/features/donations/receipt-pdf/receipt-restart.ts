@@ -15,12 +15,14 @@ export class ReceiptRestart {
       this.finished();
       return 'reloaded-already';
     }
-    if (!this.write(download)) {
+    const view = this.document.defaultView;
+    if (view === null || !this.write(download)) {
       return 'unavailable';
     }
-    const url = new URL(this.document.location.href);
+    const url = new URL(view.location.href);
     url.searchParams.set(RECEIPT_RESTART_PARAM, download);
-    this.document.location.assign(url.toString());
+    view.history.replaceState(view.history.state, '', url.toString());
+    view.location.reload();
     return 'reloading';
   }
 

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -24,27 +25,32 @@ public class AdministrationDeviceService {
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final DonorConfirmations confirmations;
+    private final SecondFactorCodes codes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public AdministrationDeviceService(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations,
-                                       ApplicationEventPublisher events, Clock clock) {
+                                       SecondFactorCodes codes, ApplicationEventPublisher events, Clock clock) {
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.confirmations = confirmations;
+        this.codes = codes;
         this.events = events;
         this.clock = clock;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public void unlock(DonorId adminId, String password, String code) {
         Donor admin = donors.findById(adminId).orElseThrow(() -> new DonorNotFound(adminId));
         confirmations.confirm(admin, Confirmation.withPassword(password));
         SecondFactor factor = secondFactors.findByDonor(adminId).filter(SecondFactor::isEnabled).orElseThrow(SecondFactorCodeRejected::new);
-        factor.check(code, clock.instant());
-        if (!secondFactors.recordUse(factor)) {
-            throw new SecondFactorCodeRejected();
-        }
+        codes.check(factor, code, clock.instant());
+    }
+
+    @Transactional
+    public void unlockWithPasskey(DonorId adminId, PasskeyProof passkey) {
+        Donor admin = donors.findById(adminId).orElseThrow(() -> new DonorNotFound(adminId));
+        confirmations.confirm(admin, Confirmation.withPasskey(passkey));
     }
 
     @Transactional

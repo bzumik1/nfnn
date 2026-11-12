@@ -88,8 +88,8 @@ describe('Given an administrator on the project list', () => {
 
     expect(rows()).toEqual([
       'Benefiční koncert 2026 Ostatní bez štítku Koncept 22. 10. 2026 11:00',
-      'Zahrada pro děti 2024 Děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 09:30',
-      'Zahrada pro děti 2024 Děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 09:30',
+      'Zahrada pro děti 2024 Děti Projekt Zveřejní se 30. 10. 2026 20. 10. 2026 9:30',
+      'Zahrada pro děti 2024 Děti Projekt Na webu od 20. 10. 2026 20. 10. 2026 9:30',
     ]);
     const links = fixture.nativeElement.querySelectorAll(
       'tbody a',
@@ -122,7 +122,7 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(texts('[aria-labelledby="projects-list-title"] .ui-card__intro')).toEqual([
-      'Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.',
+      'Zatím tu žádný příběh není. Napište první tlačítkem Nový příběh.',
     ]);
   });
 
@@ -131,7 +131,7 @@ describe('Given an administrator on the project list', () => {
     await settle();
 
     expect(texts('[role="alert"]:not(:empty)')).toEqual([
-      'Projekty se nepodařilo načíst. Zkusit znovu',
+      'Příběhy se nepodařilo načíst. Zkusit znovu',
     ]);
     (
       fixture.nativeElement.querySelector('.ui-load-state--error button') as HTMLButtonElement
@@ -218,7 +218,7 @@ describe('Given an administrator who has just deleted a project', () => {
       (
         fixture.nativeElement.querySelector('[role="status"]:not(:empty)')?.textContent ?? ''
       ).trim(),
-    ).toBe('Projekt „Zahrada pro děti“ jsme smazali.');
+    ).toBe('Příběh „Zahrada pro děti“ jsme smazali.');
     http.verify();
   });
 });

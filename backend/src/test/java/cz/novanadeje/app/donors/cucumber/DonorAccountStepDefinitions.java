@@ -186,6 +186,14 @@ public class DonorAccountStepDefinitions {
         adoptSession(api.lastResponse());
     }
 
+    @Then("the response carries no access token and no refresh cookie")
+    public void theResponseCarriesNoAccessTokenAndNoRefreshCookie() {
+        String body = api.lastResponse().getBody();
+        assertThat(body == null ? "" : body).doesNotContain("accessToken");
+        assertThat(api.lastResponse().getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE))
+                .noneMatch(cookie -> cookie.startsWith("refresh_token") && !cookie.contains("Max-Age=0"));
+    }
+
     @And("the refresh cookie differs from the previous one")
     public void theRefreshCookieDiffersFromThePreviousOne() {
         assertThat(currentRefreshCookie).isNotEqualTo(previousRefreshCookie);

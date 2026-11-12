@@ -7,7 +7,17 @@ public class ReceiptIssueLimitReached extends Conflict {
 
     public static final String CODE = "donations/receipt-issue-limit";
 
-    public ReceiptIssueLimitReached(DonorReference donor, int limit) {
-        super(CODE, "Donor " + donor + " was issued " + limit + " replacement receipts in the last 24 hours, no further replacement is numbered yet");
+    private ReceiptIssueLimitReached(String message) {
+        super(CODE, message);
+    }
+
+    public static ReceiptIssueLimitReached inADay(DonorReference donor, int limit) {
+        return new ReceiptIssueLimitReached("Donor " + donor + " was issued " + limit
+                + " replacement receipts in the last 24 hours, no further replacement is numbered yet");
+    }
+
+    public static ReceiptIssueLimitReached inAYear(DonorReference donor, int limit) {
+        return new ReceiptIssueLimitReached("Donor " + donor + " was issued " + limit
+                + " replacement receipts this calendar year, no further replacement is numbered before the next one");
     }
 }

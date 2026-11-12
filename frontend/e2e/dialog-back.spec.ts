@@ -1,8 +1,11 @@
-import { Page, Route } from '@playwright/test';
+import { Locator, Page, Route } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, mockDonorApi, session } from './donor-session';
+import { browserEntries, stepBack } from './app-history';
+import { administrator, mockDonorApi, openAccountItem, session } from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
+const SHEET_FLICK_REST_MS = 100;
+const SLIDE_START_TOLERANCE_MS = 50;
 const PAYMENT_ID = '019a1c00-0000-7000-8000-000000001001';
 
 const unpaired = {
@@ -25,10 +28,14 @@ async function openPayments(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
     route.fulfill(session(200, administrator)),
   );
+  await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
   await page.goto('/');
-  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
-  await page.goto('/sprava/platby');
+  await openAccountItem(page, 'Správa');
+  await expect(page).toHaveURL(/\/sprava$/);
+  await page.getByRole('link', { name: 'Platby z banky' }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Platby z banky' })).toBeVisible();
+  await expect(page.locator('.page-transition')).toHaveCount(0);
+  await page.evaluate(() => ((window as unknown as Probe).dialogEntries = 0));
 }
 
 interface Probe {
@@ -42,13 +49,15 @@ async function countDialogEntries(page: Page): Promise<void> {
     record.dialogEntries = 0;
     record.pops = 0;
     window.addEventListener('popstate', () => record.pops++, { capture: true });
-    const pushState = history.pushState.bind(history);
-    history.pushState = (state: unknown, title: string, url?: string | URL | null) => {
-      if (typeof state === 'object' && state !== null && 'nfnnDialogDepth' in state) {
-        record.dialogEntries++;
-      }
-      pushState(state, title, url);
-    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const pushState = history.pushState.bind(history);
+      history.pushState = (state: unknown, title: string, url?: string | URL | null) => {
+        if (typeof state === 'object' && state !== null && 'nfnnDialogDepth' in state) {
+          record.dialogEntries++;
+        }
+        pushState(state, title, url);
+      };
+    });
   });
 }
 
@@ -62,12 +71,154 @@ async function entryTakenBack(page: Page): Promise<void> {
     .toBeUndefined();
 }
 
-async function back(page: Page): Promise<void> {
-  await page.evaluate(() => history.back());
+async function sheetSettled(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.locator('.dialog-panel').evaluate(
+        (element) =>
+          element
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+            .filter((animation) => animation.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
+}
+
+async function restLongerThanAFlick(page: Page): Promise<void> {
+  const restStartedAt = await page.evaluate(() => performance.now());
+  await expect
+    .poll(() => page.evaluate(() => performance.now()))
+    .toBeGreaterThan(restStartedAt + SHEET_FLICK_REST_MS);
+}
+
+async function fingerTo(
+  target: Locator,
+  type: 'touchstart' | 'touchmove' | 'touchend',
+  x: number,
+  y: number,
+  touching = true,
+): Promise<void> {
+  const finger = { identifier: 1, clientX: x, clientY: y };
+  await target.dispatchEvent(type, {
+    touches: touching ? [finger] : [],
+    changedTouches: [finger],
+    bubbles: true,
+    cancelable: true,
+  });
+}
+
+interface SheetLeave {
+  slideFrom: number | null;
+  slideTo: string | null;
+  slideDuration: number;
+  slideStartedAt: number | null;
+  veilTo: number | null;
+  blurTo: number | null;
+  removedAt: number | null;
+}
+
+async function watchSheetLeave(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const panel = document.querySelector<HTMLElement>('.dialog-panel')!;
+    const dialog = document.querySelector<HTMLElement>('dialog')!;
+    const alphaOf = (color: string): number => {
+      const alpha = color.includes('/')
+        ? color.split('/')[1]
+        : color.startsWith('rgba')
+          ? color.split(',').at(-1)
+          : undefined;
+      return alpha === undefined ? (color === 'transparent' ? 0 : 1) : parseFloat(alpha);
+    };
+    const blurOf = (filter: string): number =>
+      parseFloat(filter.match(/blur\(([\d.]+)px\)/)?.[1] ?? '0');
+    const downOf = (translate: unknown): number => {
+      const parts = String(translate ?? 'none')
+        .trim()
+        .split(/\s+/);
+      return parts.length > 1 ? parseFloat(parts[1]) : 0;
+    };
+    const record: SheetLeave = {
+      slideFrom: null,
+      slideTo: null,
+      slideDuration: 0,
+      slideStartedAt: null,
+      veilTo: null,
+      blurTo: null,
+      removedAt: null,
+    };
+    (window as unknown as { sheetLeave: SheetLeave }).sheetLeave = record;
+    const targetOf = (element: Element, property: RegExp): string | null => {
+      for (const transition of element.getAnimations()) {
+        const last = (transition.effect as KeyframeEffect).getKeyframes().at(-1) ?? {};
+        const entry = Object.entries(last).find(([name]) => property.test(name));
+        if (entry !== undefined) {
+          return String(entry[1]);
+        }
+      }
+      return null;
+    };
+    new MutationObserver((_, observer) => {
+      if (!dialog.classList.contains('dialog--leaving')) {
+        return;
+      }
+      observer.disconnect();
+      record.slideStartedAt = performance.now();
+      void getComputedStyle(panel).translate;
+      const slide = panel
+        .getAnimations()
+        .find((animation) => (animation as CSSTransition).transitionProperty === 'translate');
+      const keyframes = (slide?.effect as KeyframeEffect | undefined)?.getKeyframes() ?? [];
+      record.slideFrom = downOf(keyframes[0]?.['translate']);
+      record.slideTo = String(keyframes.at(-1)?.['translate'] ?? '');
+      record.slideDuration = Number(slide?.effect?.getTiming().duration ?? 0);
+      const style = getComputedStyle(dialog);
+      record.veilTo = alphaOf(targetOf(dialog, /^backgroundColor$/) ?? style.backgroundColor);
+      record.blurTo = blurOf(
+        targetOf(dialog, /backdropFilter$/i) ??
+          (style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter')),
+      );
+    }).observe(dialog, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver((_, observer) => {
+      if (!dialog.isConnected) {
+        record.removedAt = performance.now();
+        observer.disconnect();
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+}
+
+function sheetLeave(page: Page): Promise<SheetLeave> {
+  return page.evaluate(() => (window as unknown as { sheetLeave: SheetLeave }).sheetLeave);
+}
+
+function expectSlidOffTheScreen(leave: SheetLeave, from: number): void {
+  expect(Math.abs(leave.slideFrom! - from)).toBeLessThan(2);
+  expect(leave.slideTo).toMatch(/ 100%$/);
+  expect(leave.slideDuration).toBeGreaterThanOrEqual(100);
+  expect(leave.removedAt! - leave.slideStartedAt!).toBeGreaterThanOrEqual(
+    leave.slideDuration - SLIDE_START_TOLERANCE_MS,
+  );
+  expect(leave.veilTo!).toBeLessThan(0.05);
+  expect(leave.blurTo!).toBeLessThan(0.5);
+}
+
+async function phoneThatAnimates(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
+async function pageUsableAgain(page: Page): Promise<void> {
+  await expect(page.locator('dialog')).toHaveCount(0);
+  expect(await page.locator('[inert]').count()).toBe(0);
+  await openPairing(page);
 }
 
 async function openPairing(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
+  await page
+    .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
+    .first()
+    .click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
@@ -121,11 +272,11 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   test('when they go back, then the dialog closes and the payments stay on screen', async ({
     page,
   }) => {
-    await back(page);
+    await stepBack(page);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
-    await expect(page.locator('tbody tr')).toContainText('Nováková Jana');
+    await expect(page.locator('[data-payment-row]')).toContainText('Nováková Jana');
   });
 
   test('when they close it with its button and go back, then the page before the payments opens', async ({
@@ -135,12 +286,12 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await entryTakenBack(page);
 
-    await back(page);
+    await stepBack(page);
 
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
-  test('when they go back while the pairing is being saved, then the dialog stays until it is done and Back then leaves the payments', async ({
+  test('when they go back while the pairing is being saved, then the dialog stays until it is done and a step back then leaves the payments', async ({
     page,
   }) => {
     const dialog = page.getByRole('dialog');
@@ -150,7 +301,7 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect.poll(() => pairing.length).toBe(1);
     const entries = await dialogEntries(page);
 
-    await back(page);
+    await stepBack(page);
 
     await expect.poll(() => dialogEntries(page)).toBe(entries + 1);
     await expect(dialog).toBeVisible();
@@ -158,11 +309,11 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await pairing[0].fulfill({ json: { donationId: 'd1', changedYearlyReceipts: [] } });
     await expect(dialog).toHaveCount(0);
     await entryTakenBack(page);
-    await back(page);
-    await expect(page).toHaveURL(/\/$/);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
-  test('when someone else changed the payment meanwhile, then the pairing dialog gives way to the sheet that says so and Back closes only the sheet', async ({
+  test('when someone else changed the payment meanwhile, then the pairing dialog gives way to the sheet that says so and a step back closes only the sheet', async ({
     page,
   }) => {
     const dialog = page.getByRole('dialog');
@@ -192,13 +343,13 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
       .toBe(1);
     await expect.poll(() => dialogEntries(page)).toBe(2);
 
-    await back(page);
+    await stepBack(page);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
     await entryTakenBack(page);
-    await back(page);
-    await expect(page).toHaveURL(/\/$/);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
   test('when they drag the sheet down by its top edge on a phone, then it follows the finger, closes and takes its entry back', async ({
@@ -234,11 +385,11 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
     await entryTakenBack(page);
-    await back(page);
-    await expect(page).toHaveURL(/\/$/);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
-  test('when they drag the sheet only a little and rest before letting go, then it returns and Back still closes it', async ({
+  test('when they drag the sheet only a little and rest before letting go, then it returns and a step back still closes it', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -264,17 +415,163 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await page.mouse.move(x, y);
     await page.mouse.down();
     await page.mouse.move(x, y + 30, { steps: 10 });
-    await page.waitForTimeout(300);
+    await restLongerThanAFlick(page);
     await page.mouse.up();
 
     await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);
     await expect(page.getByRole('dialog')).toBeVisible();
-    await back(page);
+    await stepBack(page);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
   });
 
-  test('when they reload the page with the dialog open, then one Back leaves the payments', async ({
+  test('when a finger pulls the content of the sheet down from its top on a phone, then the sheet follows it, slides away and takes its entry back', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerTo(content, 'touchmove', x, y + 80);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 60);
+    await fingerTo(content, 'touchmove', x, y + 400);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 300);
+    await fingerTo(content, 'touchend', x, y + 400, false);
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when a finger pulls the content of the sheet only a little on a phone, then it returns and a step back still closes it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 10);
+    await fingerTo(content, 'touchend', x, y + 20, false);
+
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(opened, 0);
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await stepBack(page);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+  });
+
+  test('when they close the sheet with its button on a phone, then it slides down off the screen with its veil before it goes, and the page can be used again', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+    await watchSheetLeave(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), 0);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when a finger pulls the sheet far enough down on a phone and lets go, then it slides on from where the finger left it off the screen', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    const panel = page.locator('.dialog-panel');
+    const content = page.getByRole('dialog').getByRole('heading', { level: 2 }).first();
+    await sheetSettled(page);
+    const opened = (await panel.boundingBox())!.y;
+    const box = (await content.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await fingerTo(content, 'touchstart', x, y);
+    await fingerTo(content, 'touchmove', x, y + 20);
+    await fingerTo(content, 'touchmove', x, y + 200);
+    await expect.poll(async () => (await panel.boundingBox())!.y).toBeGreaterThan(opened + 150);
+    const released = (await panel.boundingBox())!.y;
+    await watchSheetLeave(page);
+
+    await fingerTo(content, 'touchend', x, y + 200, false);
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), released - opened);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they go back with the sheet open on a phone, then it slides down off the screen and takes no new entry', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+    const entries = await dialogEntries(page);
+    await watchSheetLeave(page);
+
+    await stepBack(page);
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expectSlidOffTheScreen(await sheetLeave(page), 0);
+    expect(await dialogEntries(page)).toBe(entries);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    await pageUsableAgain(page);
+  });
+
+  test('when they press the close button twice and go back while the sheet slides away, then it closes once and the page before the payments is one step back', async ({
+    page,
+  }) => {
+    await phoneThatAnimates(page);
+    await sheetSettled(page);
+
+    await page.evaluate(() => {
+      const close = document.querySelector<HTMLButtonElement>('dialog .dialog-close')!;
+      close.click();
+      close.click();
+      history.back();
+    });
+
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
+    expect(await page.locator('[inert]').count()).toBe(0);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when the visitor asks for less motion and closes the sheet on a phone, then it goes at once', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await sheetSettled(page);
+    await watchSheetLeave(page);
+
+    await page.getByRole('dialog').getByLabel('Zavřít').click();
+
+    await expect.poll(async () => (await sheetLeave(page)).removedAt).not.toBeNull();
+    expect((await sheetLeave(page)).slideFrom).toBeNull();
+    await pageUsableAgain(page);
+  });
+
+  test('when they reload the page with the dialog open, then one step back leaves the payments', async ({
     page,
   }) => {
     await page.reload();
@@ -282,30 +579,37 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await expect.poll(() => page.evaluate(() => (window as unknown as Probe).pops)).toBe(1);
     await entryTakenBack(page);
 
-    await back(page);
+    await stepBack(page);
 
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/sprava$/);
   });
 
-  test('when they close it, go forward again and open it once more, then Back still closes it', async ({
+  test('when they close it, ask for a step forward and open it once more, then nothing comes forward and a step back still closes it', async ({
     page,
   }) => {
     await page.getByRole('dialog').getByLabel('Zavřít').click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await entryTakenBack(page);
     await page.evaluate(() => history.forward());
-    await expect
-      .poll(() =>
-        page.evaluate(() => (history.state as Record<string, unknown>)['nfnnDialogDepth']),
-      )
-      .toBe(1);
+    await expect(page).toHaveURL(/\/sprava\/platby$/);
+    await entryTakenBack(page);
     await openPairing(page);
 
-    await back(page);
+    await stepBack(page);
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL(/\/sprava\/platby$/);
-    await back(page);
-    await expect(page).toHaveURL(/\/$/);
+    await stepBack(page);
+    await expect(page).toHaveURL(/\/sprava$/);
+  });
+
+  test('when they have moved through three pages and opened the dialog, then the browser holds one entry of the site and its Back leaves the site', async ({
+    page,
+  }) => {
+    expect(await browserEntries(page)).toBe(2);
+
+    await page.goBack();
+
+    await expect(page).toHaveURL('about:blank');
   });
 });

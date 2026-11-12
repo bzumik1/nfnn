@@ -25,6 +25,7 @@ import {
   receiptSignatory,
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -155,12 +156,12 @@ describe('Given an administrator on the administration home', () => {
     );
 
     expect(dataRows()).toEqual({
-      'Stažené období': '20. 07. 2026 – 17. 10. 2026',
+      'Stažené období': '20. 7. 2026 – 17. 10. 2026',
       'Poslední úspěšné stažení': '18. 10. 2026 10:05',
       'Poslední pokus': '18. 10. 2026 10:05',
       'Poslední chyba': 'žádná',
     });
-    expect(fixture.nativeElement.querySelector('.attention-item--warning')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.attention-import')).toBeNull();
     expect(text('[aria-labelledby="admin-import-title"] .healthy')).toBe(
       'Stahování plateb je v pořádku, naposledy 18. 10. 2026 10:05.',
     );
@@ -180,13 +181,14 @@ describe('Given an administrator on the administration home', () => {
       }),
     );
 
-    expect(text('.admin-next-step')).toBe(
-      'Co udělat: Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“. Přejít ke starším platbám',
+    expect(text('.attention-import .admin-next-step')).toBe(
+      'Co udělat: Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.',
     );
-    expect(text('.admin-next-step')).not.toContain('restart');
-    expect(fixture.nativeElement.querySelector('.admin-next-step a')?.getAttribute('href')).toBe(
-      '/sprava#starsi-platby',
-    );
+    expect(text('.attention-import')).not.toContain('restart');
+    expect(text('.attention-import-next a')).toBe('Přejít ke starším platbám');
+    expect(
+      fixture.nativeElement.querySelector('.attention-import-next a')?.getAttribute('href'),
+    ).toBe('/sprava#starsi-platby');
   });
 
   it('when the import card is ready, then it holds the part for older payments with the default day', async () => {
@@ -211,7 +213,7 @@ describe('Given an administrator on the administration home', () => {
       }),
     );
     await settleWithFakeTimers();
-    expect(dataRows()['Stažené období']).toBe('08. 08. 2026 – 04. 11. 2026');
+    expect(dataRows()['Stažené období']).toBe('8. 8. 2026 – 4. 11. 2026');
     await vi.advanceTimersByTimeAsync(3000);
 
     http.expectOne(IMPORT_STATE_URL).flush(
@@ -233,13 +235,13 @@ describe('Given an administrator on the administration home', () => {
     try {
       await finishRun(2);
 
-      expect(dataRows()['Stažené období']).toBe('01. 01. 2026 – 05. 11. 2026');
+      expect(dataRows()['Stažené období']).toBe('1. 1. 2026 – 5. 11. 2026');
       expect(text('app-history-import [role="status"]')).toBe(
-        'Hotovo (05. 11. 2026 11:01): staženo období 01. 01. 2026 – 05. 11. 2026, 2 nové platby.',
+        'Hotovo (5. 11. 2026 11:01): staženo období 1. 1. 2026 – 5. 11. 2026, 2 nové platby.',
       );
       http.expectOne(UNPAIRED_URL).flush(paymentList([unpairedPayment()]));
       await settleWithFakeTimers();
-      expect(text('.attention-unpaired')).toContain('1 platba čeká na přiřazení dárci');
+      expect(text('.attention-unpaired .ui-list__title')).toBe('1 platba čeká na přiřazení');
     } finally {
       vi.useRealTimers();
     }
@@ -250,14 +252,14 @@ describe('Given an administrator on the administration home', () => {
     try {
       await finishRun(0);
 
-      expect(dataRows()['Stažené období']).toBe('01. 01. 2026 – 05. 11. 2026');
+      expect(dataRows()['Stažené období']).toBe('1. 1. 2026 – 5. 11. 2026');
       http.expectNone(UNPAIRED_URL);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('when the import has never run, then one sentence says so and points to the token in the settings', async () => {
+  it('when the import has never run, then a warning row says so and leads to the token in the settings', async () => {
     await respond(
       importState({
         coveredFrom: null,
@@ -267,10 +269,10 @@ describe('Given an administrator on the administration home', () => {
       }),
     );
 
-    expect(text('.admin-pending')).toBe(
-      'Stahování plateb ještě neproběhlo. Pokud to trvá déle než hodinu, zkontrolujte v Nastavení token Fio API.',
+    expect(text('.attention-import a')).toBe(
+      'Upozornění: Stahování plateb ještě neproběhlo Pokud to trvá déle než hodinu, zkontrolujte v Nastavení token Fio API.',
     );
-    expect(fixture.nativeElement.querySelector('.admin-pending a')?.getAttribute('href')).toBe(
+    expect(fixture.nativeElement.querySelector('.attention-import a')?.getAttribute('href')).toBe(
       '/sprava/nastaveni',
     );
     expect(dataRows()).toEqual({
@@ -298,15 +300,14 @@ describe('Given an administrator on the administration home', () => {
       }),
     );
 
-    expect(text('.attention-item--stack p')).toBe(
-      'Upozornění: Platby z banky se nestahují (1× za sebou) a fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel).',
+    expect(text('.attention-import')).toBe(
+      'Upozornění: Platby z banky se nestahují 1× za sebou, fond o tom dostal e-mail. Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel). Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.',
     );
-    expect(text('.admin-next-step')).toBe(
-      'Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API. Otevřít Nastavení',
-    );
-    expect(fixture.nativeElement.querySelector('.admin-next-step a')?.getAttribute('href')).toBe(
-      '/sprava/nastaveni',
-    );
+    expect(fixture.nativeElement.querySelector('.attention-import a')).toBeNull();
+    expect(text('.attention-import-next a')).toBe('Otevřít Nastavení');
+    expect(
+      fixture.nativeElement.querySelector('.attention-import-next a')?.getAttribute('href'),
+    ).toBe('/sprava/nastaveni');
     expect(dataRows()['Poslední chyba']).toBe(
       'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
     );
@@ -315,7 +316,7 @@ describe('Given an administrator on the administration home', () => {
     ).toBeNull();
   });
 
-  it('when the bank does not answer repeatedly, then the warning says the web retries by itself and links nowhere', async () => {
+  it('when the bank does not answer repeatedly, then the warning says the web retries by itself and leads nowhere', async () => {
     await respond(
       importState({
         lastAttemptedAt: '2026-10-18T09:00:00Z',
@@ -325,10 +326,10 @@ describe('Given an administrator on the administration home', () => {
       }),
     );
 
-    expect(text('.admin-next-step')).toBe(
+    expect(text('.attention-import .admin-next-step')).toBe(
       'Co udělat: Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.',
     );
-    expect(fixture.nativeElement.querySelector('.admin-next-step a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.attention-import-next')).toBeNull();
   });
 
   it('when the state cannot be loaded, then an alert offers a retry that asks again', async () => {
@@ -342,7 +343,7 @@ describe('Given an administrator on the administration home', () => {
     await respond(importState());
 
     expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
-    expect(dataRows()['Stažené období']).toBe('20. 07. 2026 – 17. 10. 2026');
+    expect(dataRows()['Stažené období']).toBe('20. 7. 2026 – 17. 10. 2026');
   });
 
   it('when the role was taken away meanwhile, then the administrator is sent to their own overview', async () => {
@@ -532,7 +533,7 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 29. 10. 2026 00:30. Od té doby přišla 1 platba za 500 Kč.',
+        'Poslední přihlášení 29. 10. 2026 0:30. Od té doby přišla 1 platba za 500 Kč.',
       );
       expect(dataRows('admin-since-title')).toEqual({
         'Přiřazené dárcům': '1 platba za 500 Kč',
@@ -639,8 +640,8 @@ describe('Given an administrator on the administration home', () => {
         'Zálohování je v pořádku.',
       );
       expect(dataRows('admin-backups-title')).toEqual({
-        'Poslední záloha': '23. 10. 2026 03:00 (2 kB)',
-        'Zkušební obnova': '18. 10. 2026 04:00, 37 tabulek',
+        'Poslední záloha': '23. 10. 2026 3:00 (2 kB)',
+        'Zkušební obnova': '18. 10. 2026 4:00, 37 tabulek',
       });
       expect(backupsCard().querySelector('a')?.getAttribute('href')).toBe('/sprava/zalohy');
     });
@@ -657,15 +658,15 @@ describe('Given an administrator on the administration home', () => {
 
       expect(
         Array.from(
-          (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-problems li'),
-        ).map((item) => (item.textContent ?? '').trim()),
+          (fixture.nativeElement as HTMLElement).querySelectorAll('.attention-backups'),
+        ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim()),
       ).toEqual([
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
-        'Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
+        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+        'Naléhavé: Zatím se nevyzkoušelo, že jde zálohu obnovit. Spusťte Ověřit obnovu teď.',
       ]);
       expect(backupsCard().querySelector('.healthy')).toBeNull();
       expect(dataRows('admin-backups-title')).toEqual({
-        'Poslední záloha': 'selhala 23. 10. 2026 03:00',
+        'Poslední záloha': 'selhala 23. 10. 2026 3:00',
         'Zkušební obnova': 'zatím žádná',
       });
     });
@@ -681,7 +682,7 @@ describe('Given an administrator on the administration home', () => {
       await respondOverview(BACKUPS_URL, backupsView());
 
       expect(backupsCard().querySelector('[role="alert"]')).toBeNull();
-      expect(dataRows('admin-backups-title')['Poslední záloha']).toBe('23. 10. 2026 03:00 (2 kB)');
+      expect(dataRows('admin-backups-title')['Poslední záloha']).toBe('23. 10. 2026 3:00 (2 kB)');
     });
   });
 
@@ -694,6 +695,12 @@ describe('Given an administrator on the administration home', () => {
       return Array.from(
         attention().querySelectorAll('.attention-list > li') as NodeListOf<HTMLElement>,
       ).map((item) => (item.textContent ?? '').replace(/\s+/g, ' ').trim());
+    }
+
+    function links(): string[] {
+      return Array.from(attention().querySelectorAll('a') as NodeListOf<HTMLAnchorElement>).map(
+        (link) => link.getAttribute('href') ?? '',
+      );
     }
 
     async function sources(
@@ -712,20 +719,23 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
     }
 
-    it('then while they load the card says so', () => {
+    it('then the group is named by its heading and while they load its row says so', () => {
+      expect(attention().getAttribute('aria-labelledby')).toBe('admin-attention-title');
+      expect(text('#admin-attention-title')).toBe('Co potřebuje vaši pozornost');
       expect(text('.attention [role="status"]')).toBe('Zjišťujeme, jestli na vás něco nečeká…');
     });
 
-    it('then with nothing pending it says everything is fine with the last import and backup', async () => {
+    it('then with nothing pending one calm row says everything is fine with the last import and backup', async () => {
       await sources();
 
-      expect(text('.attention .healthy')).toBe(
-        'Vše je v pořádku. Platby z banky naposledy stažené 18. 10. 2026 10:05, poslední záloha 23. 10. 2026 03:00.',
-      );
-      expect(attention().querySelector('.attention-list')).toBeNull();
+      expect(items()).toEqual([
+        'Vše je v pořádku Platby z banky naposledy stažené 18. 10. 2026 10:05, poslední záloha 23. 10. 2026 3:00.',
+      ]);
+      expect(links()).toEqual([]);
+      expect(attention().querySelector('button')).toBeNull();
     });
 
-    it('then unpaired payments of every year, backup problems and an administrator without any second factor each get a row with a link', async () => {
+    it('then unpaired payments of every year, backup problems and an administrator without any second factor each get a row that is one link', async () => {
       await sources(
         paymentList([
           unpairedPayment(),
@@ -747,18 +757,44 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        '3 platby čekají na přiřazení dárci (850 Kč). Přiřadit platby',
-        'Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval. Zkopírovat zprávu pro technika Otevřít zálohy',
-        'Správce Petr Svoboda nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře. Otevřít Správce',
+        '3 platby čekají na přiřazení 850 Kč',
+        'Naléhavé: Poslední záloha se nepovedla. Data webu jsou v pořádku, ale nejsou zálohovaná. Zkuste Zálohovat teď; když to nepomůže, zkopírujte zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+        'Zpráva pro technika Kopírovat zprávu pro technika',
+        'Správce nemá druhý faktor, správa se mu neotevře Petr Svoboda',
       ]);
-      const links = Array.from(
-        attention().querySelectorAll('a') as NodeListOf<HTMLAnchorElement>,
-      ).map((link) => link.getAttribute('href'));
-      expect(links).toEqual(['/sprava/platby', '/sprava/zalohy', '/sprava/spravci']);
-      expect(attention().querySelector('.healthy')).toBeNull();
+      expect(links()).toEqual(['/sprava/platby', '/sprava/zalohy', '/sprava/spravci']);
+      expect(
+        Array.from(attention().querySelectorAll('.attention-list > li')).map(
+          (item) => item.children.length,
+        ),
+      ).toEqual([1, 1, 1, 1]);
     });
 
-    it('then a backup folder the backend cannot see is told in plain words, without the server details', async () => {
+    it('then several administrators without any second factor share one row naming them all', async () => {
+      await sources(paymentList([]), [
+        administrator({ donorId: 'petr', name: 'Petr Svoboda', secondFactorEnabled: false }),
+        administrator({ donorId: 'eva', name: 'Eva Malá', secondFactorEnabled: false }),
+      ]);
+      http.expectOne('/api/admin/donors/petr').flush(donorAccount({ name: 'Petr Svoboda' }));
+      http.expectOne('/api/admin/donors/eva').flush(donorAccount({ name: 'Eva Malá' }));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Správci nemají druhý faktor, správa se jim neotevře Petr Svoboda, Eva Malá',
+      ]);
+    });
+
+    it('then the count of waiting payments is a figure, the sum a value beside it', async () => {
+      await sources(paymentList([unpairedPayment()]));
+
+      const row = attention().querySelector('.attention-unpaired a') as HTMLAnchorElement;
+      expect(text('.attention-unpaired .ui-list__title')).toBe('1 platba čeká na přiřazení');
+      expect(text('.attention-unpaired .ui-list__value')).toBe('500 Kč');
+      expect(row.getAttribute('href')).toBe('/sprava/platby');
+    });
+
+    it('then a backup folder the backend cannot see is told in plain words, without the server details, with the message for the technician beside it', async () => {
       await sources(
         paymentList([]),
         [administrator()],
@@ -766,12 +802,13 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval. Zkopírovat zprávu pro technika Otevřít zálohy',
+        'Naléhavé: Web teď nevidí složku se zálohami, takže zálohy nejde vytvořit ani stáhnout. Data webu jsou v pořádku. Zkopírujte prosím zprávu pro technika a pošlete ji správci serveru, který web nainstaloval.',
+        'Zpráva pro technika Kopírovat zprávu pro technika',
       ]);
       expect(attention().textContent).not.toContain('compose');
     });
 
-    it('then the message for the technician is copied with the technical details from the row', async () => {
+    it('then the message for the technician is copied with the technical details from its row', async () => {
       const writeText = vi.fn().mockResolvedValue(undefined);
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
       await sources(
@@ -780,18 +817,14 @@ describe('Given an administrator on the administration home', () => {
         backupsView({ available: false, problems: ['BACKUPS_UNAVAILABLE'] }),
       );
 
-      (
-        Array.from(attention().querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(
-          (button) => button.textContent?.trim() === 'Zkopírovat zprávu pro technika',
-        ) as HTMLButtonElement
-      ).click();
+      (attention().querySelector('.attention-technician button') as HTMLButtonElement).click();
       await fixture.whenStable();
 
       expect(writeText).toHaveBeenCalledOnce();
       expect(writeText.mock.calls[0][0]).toContain('/DATA/AppData/nfnn/backups');
     });
 
-    it('then a backup key nobody saved yet gets a row leading to the backups', async () => {
+    it('then a backup key nobody saved yet gets a warning row leading to the backups', async () => {
       await sources(
         paymentList([]),
         [administrator()],
@@ -799,14 +832,12 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik. Uložit klíč',
+        'Upozornění: Klíč k zálohám si zatím nikdo neuložil Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik.',
       ]);
-      expect(attention().querySelector('a')?.getAttribute('href')).toBe(
-        '/sprava/zalohy#klic-k-zaloham',
-      );
+      expect(links()).toEqual(['/sprava/zalohy#klic-k-zaloham']);
     });
 
-    it('then a receipt signing key that fails its seal gets a red row leading to the settings', async () => {
+    it('then a receipt signing key that fails its seal gets an urgent row leading to the settings', async () => {
       await sources(
         paymentList([]),
         [administrator()],
@@ -816,16 +847,12 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+        'Naléhavé: Klíč k ověřovacím QR kódům není zveřejněný Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
       ]);
-      const row = attention().querySelector('.attention-list > li') as HTMLElement;
-      expect(row.classList).toContain('attention-item--danger');
-      expect(row.querySelector('a')?.getAttribute('href')).toBe(
-        '/sprava/nastaveni#klic-k-overovacim-qr',
-      );
+      expect(links()).toEqual(['/sprava/nastaveni#klic-k-overovacim-qr']);
     });
 
-    it('then a current receipt signing key missing from the list gets the same red row', async () => {
+    it('then a current receipt signing key missing from the list gets the same urgent row', async () => {
       await sources(
         paymentList([]),
         [administrator()],
@@ -835,11 +862,28 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru. Otevřít nastavení',
+        'Naléhavé: Klíč k ověřovacím QR kódům není zveřejněný Klíč 21fe31df není zveřejněný, proto se QR kódy jím podepsané neověří. Jeho záznam v databázi chybí nebo neprošel kontrolou pečeti (změna mimo web nebo záloha jiného serveru, kterou server nepřevzal); obraťte se na technika serveru.',
       ]);
     });
 
-    it('then a withdrawn key of the server and key rows that disagree with the audit trail get a red row leading to the settings', async () => {
+    it('then two unpublished receipt signing keys are named together under a plural title', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        receiptSigningKeys([
+          receiptSigningKey({ published: false }),
+          receiptSigningKey({ keyId: '39f713d0', current: false, published: false }),
+        ]),
+      );
+
+      expect(text('.attention-signing-key .ui-list__title')).toBe(
+        'Naléhavé: Klíče k ověřovacím QR kódům nejsou zveřejněné',
+      );
+    });
+
+    it('then a withdrawn key of the server and key rows that disagree with the audit trail get an urgent row leading to the settings', async () => {
       await sources(
         paymentList([]),
         [administrator()],
@@ -852,29 +896,21 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Klíč serveru 21fe31df je zneplatněný a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru. Otevřít nastavení',
+        'Naléhavé: Klíč k ověřovacím QR kódům potřebuje kontrolu Klíč serveru 21fe31df je zneplatněný a server zatím nemá nový, takže se potvrzení o daru teď nestáhnou. Nový klíč si server vytvoří při startu; když se to nestane do pár minut, obraťte se na technika serveru. Klíč 39f713d0 je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru.',
       ]);
-      const row = attention().querySelector('.attention-list > li') as HTMLElement;
-      expect(row.classList).toContain('attention-item--danger');
-      expect(row.querySelector('a')?.getAttribute('href')).toBe(
-        '/sprava/nastaveni#klic-k-overovacim-qr',
-      );
+      expect(links()).toEqual(['/sprava/nastaveni#klic-k-overovacim-qr']);
     });
 
-    it('then receipts nobody signs get a red row leading to the people of the foundation', async () => {
+    it('then receipts nobody signs get an urgent row leading to the people of the foundation', async () => {
       await sources();
       http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());
       await fixture.whenStable();
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        'Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví. Vybrat podepisujícího',
+        'Naléhavé: Nikdo nepodepisuje potvrzení o daru Web je proto dárcům nevystaví.',
       ]);
-      expect(
-        attention().querySelector('.attention-item--danger.attention-signatory'),
-      ).not.toBeNull();
-      expect(attention().querySelector('a')?.getAttribute('href')).toBe('/sprava/lide-fondu');
-      expect(attention().querySelector('.healthy')).toBeNull();
+      expect(links()).toEqual(['/sprava/lide-fondu']);
     });
 
     it('then receipts nobody signs lead the rows, ahead of another problem', async () => {
@@ -888,8 +924,8 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        'Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví. Vybrat podepisujícího',
-        'Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik. Uložit klíč',
+        'Naléhavé: Nikdo nepodepisuje potvrzení o daru Web je proto dárcům nevystaví.',
+        'Upozornění: Klíč k zálohám si zatím nikdo neuložil Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik.',
       ]);
     });
 
@@ -900,10 +936,9 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        'Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru se jménem. Nahrát podpis',
+        'Podepisující nemá nahraný podpis Potvrzení o daru mají zatím jen čáru se jménem.',
       ]);
-      expect(attention().querySelector('.attention-item--danger')).toBeNull();
-      expect(attention().querySelector('a')?.getAttribute('href')).toBe('/sprava/lide-fondu');
+      expect(links()).toEqual(['/sprava/lide-fondu']);
     });
 
     it('then a signatory who cannot be checked says so with a retry, and a signed signatory adds no row', async () => {
@@ -915,13 +950,15 @@ describe('Given an administrator on the administration home', () => {
       expect(items()).toEqual([
         'Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru. Zkusit znovu',
       ]);
-      (attention().querySelector('.attention-item button') as HTMLButtonElement).click();
+      expect(text('.attention [role="alert"]')).toBe(
+        'Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru.',
+      );
+      (attention().querySelector('.attention-signatory button') as HTMLButtonElement).click();
       http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(attention().querySelector('.attention-list')).toBeNull();
-      expect(text('.attention .healthy')).toContain('Vše je v pořádku.');
+      expect(items()[0]).toContain('Vše je v pořádku');
     });
 
     it('then a source that fails says so with a retry while the others still show', async () => {
@@ -934,18 +971,54 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(items()).toEqual([
-        '1 platba čeká na přiřazení dárci (500 Kč). Přiřadit platby',
+        '1 platba čeká na přiřazení 500 Kč',
         'Správce se nepodařilo zkontrolovat. Zkusit znovu',
       ]);
-      expect(text('.attention [role="alert"]')).toContain('Správce se nepodařilo zkontrolovat.');
+      expect(text('.attention [role="alert"]')).toBe('Správce se nepodařilo zkontrolovat.');
 
-      (attention().querySelector('.attention-list button') as HTMLButtonElement).click();
+      (attention().querySelector('.attention-administrators button') as HTMLButtonElement).click();
       fixture.detectChanges();
       http.expectOne(ADMINISTRATORS_URL).flush({ items: [administrator()] });
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(items()).toEqual(['1 platba čeká na přiřazení dárci (500 Kč). Přiřadit platby']);
+      expect(items()).toEqual(['1 platba čeká na přiřazení 500 Kč']);
+    });
+
+    it('then waiting payments that cannot be counted say so with a retry that asks again', async () => {
+      http.expectOne(IMPORT_STATE_URL).flush(importState());
+      http.expectOne(BACKUPS_URL).flush(backupsView());
+      http.expectOne(UNPAIRED_URL).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(ADMINISTRATORS_URL).flush({ items: [administrator()] });
+      http.expectOne(SIGNING_KEYS_URL).flush(receiptSigningKeys());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual(['Platby čekající na přiřazení se nepodařilo zjistit. Zkusit znovu']);
+
+      (attention().querySelector('.attention-unpaired button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      http.expectOne(UNPAIRED_URL).flush(paymentList([unpairedPayment()]));
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual(['1 platba čeká na přiřazení 500 Kč']);
+    });
+
+    it('then the import and the backups that cannot be read point to their cards below without a link', async () => {
+      http.expectOne(IMPORT_STATE_URL).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(BACKUPS_URL).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(UNPAIRED_URL).flush(paymentList([]));
+      http.expectOne(ADMINISTRATORS_URL).flush({ items: [administrator()] });
+      http.expectOne(SIGNING_KEYS_URL).flush(receiptSigningKeys());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        'Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.',
+        'Stav záloh se nepodařilo zjistit; zkuste to znovu v kartě níže.',
+      ]);
+      expect(links()).toEqual([]);
     });
 
     it('then receipt signing keys that cannot be checked say so with a retry that asks again', async () => {
@@ -962,17 +1035,17 @@ describe('Given an administrator on the administration home', () => {
       expect(items()).toEqual([
         'Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat. Zkusit znovu',
       ]);
-      expect(text('.attention [role="alert"]')).toContain(
+      expect(text('.attention [role="alert"]')).toBe(
         'Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.',
       );
 
-      (attention().querySelector('.attention-list button') as HTMLButtonElement).click();
+      (attention().querySelector('.attention-signing-key button') as HTMLButtonElement).click();
       fixture.detectChanges();
       http.expectOne(SIGNING_KEYS_URL).flush(receiptSigningKeys());
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(text('.attention .healthy')).toContain('Vše je v pořádku.');
+      expect(items()[0]).toContain('Vše je v pořádku');
     });
   });
 
@@ -1000,7 +1073,10 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
     });
 
-    it('then the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
+    it('then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
+      expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.attention'),
+      );
       expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
         sections()?.closest('app-admin-section-rows'),
       );
@@ -1010,10 +1086,18 @@ describe('Given an administrator on the administration home', () => {
           'Platby z banky → /sprava/platby',
           'Dárci → /sprava/darci',
           'Aktuality → /sprava/aktuality',
-          'Projekty → /sprava/projekty',
+          'Pomáháme → /sprava/projekty',
         ],
         ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
       ]);
+    });
+
+    it("then the way to the rest leads with the foundation's star, hidden from screen readers", () => {
+      const lead = sections()?.querySelector('a[href="/sprava/vice"] .ui-list__lead');
+
+      expect(lead?.getAttribute('aria-hidden')).toBe('true');
+      expect(lead?.querySelector('svg')?.getAttribute('viewBox')).toBe(FOUNDATION_STAR.viewBox);
+      expect(lead?.querySelector('path')?.getAttribute('d')).toBe(FOUNDATION_STAR.path);
     });
 
     it('then the payments row shows how many payments wait to be paired and says it to screen readers', async () => {
@@ -1045,6 +1129,9 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(sections()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
+        fixture.nativeElement.querySelector('.attention'),
+      );
     });
   });
 });

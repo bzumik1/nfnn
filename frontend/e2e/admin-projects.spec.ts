@@ -83,8 +83,8 @@ test.describe('Given an administrator managing the projects', () => {
 
     await page.goto('/sprava/projekty');
 
-    await expect(page).toHaveTitle('Projekty | Správa | Nová naděje – nadační fond');
-    await expect(page.getByRole('heading', { level: 1, name: 'Projekty' })).toBeFocused();
+    await expect(page).toHaveTitle('Pomáháme | Správa | Nová naděje – nadační fond');
+    await expect(page.getByRole('heading', { level: 1, name: 'Pomáháme' })).toBeFocused();
     await expect(page.locator('tbody tr').nth(0).locator('td')).toHaveText([
       'Benefiční koncert',
       '2026',
@@ -99,13 +99,17 @@ test.describe('Given an administrator managing the projects', () => {
       'Děti',
       'Projekt',
       'Na webu od 20. 10. 2026',
-      '20. 10. 2026 09:30',
+      '20. 10. 2026 9:30',
     ]);
 
     await page.getByRole('link', { name: 'Zahrada pro děti' }).click();
 
     await expect(page).toHaveURL(`/sprava/projekty/${PROJECT_ID}`);
-    await expect(page.getByRole('heading', { level: 1, name: 'Úprava projektu' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Úprava příběhu' })).toBeFocused();
+    await expect(page.getByRole('link', { name: '← Pomáháme' })).toHaveAttribute(
+      'href',
+      '/sprava/projekty',
+    );
     await expect(page.getByLabel('Titulek')).toHaveValue('Zahrada pro děti');
     await expect(page.getByLabel('Rok')).toHaveValue('2024');
     await expect(
@@ -175,7 +179,7 @@ test.describe('Given an administrator managing the projects', () => {
       exact: true,
     });
     await expect(byCategory).toHaveAccessibleDescription(
-      'Nahoře jsou všechny projekty pro děti, pak pro dospělé, zvířata a ostatní. V každé kategorii od nejnovějšího roku a v roce od naposledy zveřejněného.',
+      'Nahoře jsou všechny příběhy dětí, pak dospělých, zvířat a ostatních. V každé kategorii od nejnovějšího roku a v roce od naposledy zveřejněného.',
     );
     await expect(page.locator('tbody tr td:first-child')).toHaveText(['Kamna', 'Zahrada pro děti']);
 
@@ -183,7 +187,7 @@ test.describe('Given an administrator managing the projects', () => {
     await card.getByRole('button', { name: 'Uložit řazení' }).click();
 
     await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Řazení jsme uložili. Web už projekty ukazuje v tomto pořadí.',
+      'Řazení jsme uložili. Web už příběhy ukazuje v tomto pořadí.',
     );
     expect(sent).toEqual([{ order: 'CATEGORY_THEN_YEAR' }]);
     await expect(page.locator('tbody tr td:first-child')).toHaveText(['Zahrada pro děti', 'Kamna']);
@@ -228,12 +232,12 @@ test.describe('Given an administrator managing the projects', () => {
     );
 
     await page.goto('/sprava/projekty/nova');
-    await expect(page.getByRole('heading', { level: 1, name: 'Nový projekt' })).toBeFocused();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nový příběh' })).toBeFocused();
 
     await page.getByLabel('Titulek').fill('Benefiční koncert');
     await expect(page.getByLabel('Adresa na webu')).toHaveValue('beneficni-koncert');
     await expect(
-      page.getByText('Projekt bude na nfnn.cz/projekty/beneficni-koncert.'),
+      page.getByText('Příběh bude na nfnn.cz/projekty/beneficni-koncert.'),
     ).toBeVisible();
     await page.getByLabel('Rok').fill('2026');
     await page.getByLabel('Kategorie').selectOption({ label: 'Dospělí' });
@@ -257,7 +261,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByRole('button', { name: 'Uložit koncept' }).click();
 
     await expect(page.locator('.ui-action-bar [role="status"]')).toHaveText(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
+      'Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     await expect(page).toHaveURL(`/sprava/projekty/${DRAFT_ID}`);
     expect(created).toEqual([
@@ -279,7 +283,7 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByRole('button', { name: 'Uložit a zveřejnit' }).click();
 
     await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(
-      'Projekt je na webu s datem 23. 10. 2026.',
+      'Příběh je na webu s datem 23. 10. 2026.',
     );
     await expect(page.getByRole('button', { name: 'Stáhnout z webu' })).toBeVisible();
     expect(updated).toHaveLength(1);
@@ -321,7 +325,7 @@ test.describe('Given an administrator managing the projects', () => {
             409,
             'content/slug-taken',
             'Adresa je obsazená',
-            'Jiná aktualita nebo projekt už tuto adresu používá; zvolte jinou.',
+            'Jiná aktualita nebo příběh už tuto adresu používá; zvolte jinou.',
           ),
         ),
     );
@@ -336,7 +340,7 @@ test.describe('Given an administrator managing the projects', () => {
     await expect(address).toBeFocused();
     await expect(address).toHaveAttribute('aria-invalid', 'true');
     await expect(
-      page.getByText('Tuto adresu už má jiný projekt nebo aktualita. Zvolte prosím jinou.'),
+      page.getByText('Tuto adresu už má jiný příběh nebo aktualita. Zvolte prosím jinou.'),
     ).toBeVisible();
   });
 
@@ -371,21 +375,21 @@ test.describe('Given an administrator managing the projects', () => {
     await page.getByRole('button', { name: 'Stáhnout z webu' }).click();
 
     await expect(page.locator('.ui-action-bar .ui-notice--status')).toHaveText(
-      'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
+      'Příběh jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     await expect(page.getByRole('button', { name: 'Uložit a zveřejnit' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Smazat projekt' }).click();
-    const question = page.getByRole('group', { name: 'Smazat projekt?' });
-    await expect(question).toContainText('Opravdu smazat projekt „Zahrada pro děti“?');
+    await page.getByRole('button', { name: 'Smazat příběh' }).click();
+    const question = page.getByRole('group', { name: 'Smazat příběh?' });
+    await expect(question).toContainText('Opravdu smazat příběh „Zahrada pro děti“?');
     await question.getByRole('button', { name: 'Smazat natrvalo' }).click();
 
     await expect(page).toHaveURL('/sprava/projekty');
     await expect(
-      page.getByText('Zatím tu žádný projekt není. Napište první tlačítkem Nový projekt.'),
+      page.getByText('Zatím tu žádný příběh není. Napište první tlačítkem Nový příběh.'),
     ).toBeVisible();
     await expect(page.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Projekt „Zahrada pro děti“ jsme smazali.',
+      'Příběh „Zahrada pro děti“ jsme smazali.',
     );
     expect(deleted).toBe(1);
   });

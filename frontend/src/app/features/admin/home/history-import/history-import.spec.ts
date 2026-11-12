@@ -233,7 +233,7 @@ describe('Given the part for older bank payments on the import card', () => {
 
       http.expectNone(HISTORY_URL);
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
-      expect(fieldError()).toBe('Zvolte prosím den nejdříve 01. 01. 2000.');
+      expect(fieldError()).toBe('Zvolte prosím den nejdříve 1. 1. 2000.');
       expect(document.activeElement).toBe(dateField());
     });
 
@@ -243,7 +243,7 @@ describe('Given the part for older bank payments on the import card', () => {
       http.expectOne(HISTORY_URL).flush(refused.body, refused.options);
       await settle();
 
-      expect(fieldError()).toBe('Zvolte prosím den nejdříve 01. 01. 2000.');
+      expect(fieldError()).toBe('Zvolte prosím den nejdříve 1. 1. 2000.');
       expect(dateField().getAttribute('aria-invalid')).toBe('true');
       expect(alert()).toBe('');
       expect(busy()).toBe(false);
@@ -301,7 +301,7 @@ describe('Given the part for older bank payments on the import card', () => {
 
       await poll(historyImport({ status: 'RUNNING' }));
 
-      expect(status()).toBe('Stahujeme platby od 01. 01. 2026…');
+      expect(status()).toBe('Stahujeme platby od 1. 1. 2026…');
       expect(busy()).toBe(true);
       expect(button().textContent?.trim()).toBe('Stahujeme platby…');
       expect(finished).toEqual([]);
@@ -321,7 +321,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(status()).toBe(
-        'Hotovo (05. 11. 2026 11:01): staženo období 01. 01. 2026 – 05. 11. 2026, 5 nových plateb.',
+        'Hotovo (5. 11. 2026 11:01): staženo období 1. 1. 2026 – 5. 11. 2026, 5 nových plateb.',
       );
       expect(busy()).toBe(false);
       expect(button().textContent?.trim()).toBe('Načíst starší platby');
@@ -341,7 +341,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Načtení z 05. 11. 2026 11:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
+        'Načtení z 5. 11. 2026 11:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
       );
       expect(status()).toBe('');
       expect(finished.length).toBe(1);
@@ -357,7 +357,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio nebylo dostupné. Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
+        'Platby se nepodařilo stáhnout (5. 11. 2026 11:00). Důvod: Fio nebylo dostupné. Co udělat: Banka teď neodpovídá. Starší platby se samy znovu nenačtou: za chvíli stiskněte „Načíst starší platby“ znovu; pokud to trvá déle, zkontrolujte připojení serveru k internetu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
       );
       expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
@@ -372,7 +372,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo příliš častý dotaz. Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
+        'Platby se nepodařilo stáhnout (5. 11. 2026 11:00). Důvod: Fio odmítlo příliš častý dotaz. Co udělat: Banka teď odmítá příliš časté dotazy. Starší platby se samy znovu nenačtou: za pár minut stiskněte „Načíst starší platby“ znovu. Pokud od odemčení historie uplynulo víc než 10 minut, odemkněte ji předtím znovu.',
       );
       expect(fixture.nativeElement.querySelector('.history-next-step')).toBeNull();
     });
@@ -401,7 +401,7 @@ describe('Given the part for older bank payments on the import card', () => {
         );
 
         expect(alert()).toBe(
-          `Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
+          `Platby se nepodařilo stáhnout (5. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
         );
       },
     );
@@ -425,7 +425,7 @@ describe('Given the part for older bank payments on the import card', () => {
         );
 
         expect(alert()).toBe(
-          `Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
+          `Platby se nepodařilo stáhnout (5. 11. 2026 11:00). Důvod: ${reason}. Co udělat: ${step}`,
         );
         expect(text('.history-next-step')).toBe('Otevřít logy');
         expect(
@@ -444,7 +444,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Platby se nepodařilo stáhnout (05. 11. 2026 11:00). Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel). Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.',
+        'Platby se nepodařilo stáhnout (5. 11. 2026 11:00). Důvod: Fio odmítlo token (chybí, ještě neplatí nebo vypršel). Co udělat: V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.',
       );
       expect(text('.history-next-step')).toBe('Otevřít Nastavení');
       expect(
@@ -460,7 +460,7 @@ describe('Given the part for older bank payments on the import card', () => {
 
       await poll(historyImport({ status: 'RUNNING' }));
 
-      expect(status()).toBe('Stahujeme platby od 01. 01. 2026…');
+      expect(status()).toBe('Stahujeme platby od 1. 1. 2026…');
     });
 
     describe('and 40 checks still find it running', () => {
@@ -493,7 +493,7 @@ describe('Given the part for older bank payments on the import card', () => {
         );
 
         expect(status()).toBe(
-          'Hotovo (05. 11. 2026 11:03): staženo období 01. 01. 2026 – 05. 11. 2026, žádná nová platba.',
+          'Hotovo (5. 11. 2026 11:03): staženo období 1. 1. 2026 – 5. 11. 2026, žádná nová platba.',
         );
         expect(finished.length).toBe(1);
       });
@@ -513,7 +513,7 @@ describe('Given the part for older bank payments on the import card', () => {
     });
 
     it('then it shows the run, keeps the button busy and asks until the run ends', async () => {
-      expect(status()).toBe('Stahujeme platby od 01. 01. 2026…');
+      expect(status()).toBe('Stahujeme platby od 1. 1. 2026…');
       expect(busy()).toBe(true);
 
       await poll(
@@ -521,7 +521,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(status()).toBe(
-        'Hotovo (05. 11. 2026 11:01): staženo období 01. 01. 2026 – 05. 11. 2026, 1 nová platba.',
+        'Hotovo (5. 11. 2026 11:01): staženo období 1. 1. 2026 – 5. 11. 2026, 1 nová platba.',
       );
       expect(finished.length).toBe(1);
     });
@@ -549,7 +549,7 @@ describe('Given the part for older bank payments on the import card', () => {
         );
 
         expect(status()).toBe(
-          `Hotovo (04. 11. 2026 11:01): staženo období 01. 03. 2025 – 04. 11. 2026, ${phrase}.`,
+          `Hotovo (4. 11. 2026 11:01): staženo období 1. 3. 2025 – 4. 11. 2026, ${phrase}.`,
         );
         expect(busy()).toBe(false);
         await vi.advanceTimersByTimeAsync(POLL_MS * 2);
@@ -569,7 +569,7 @@ describe('Given the part for older bank payments on the import card', () => {
       );
 
       expect(alert()).toBe(
-        'Načtení z 04. 11. 2026 10:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
+        'Načtení z 4. 11. 2026 10:00 se nepovedlo. Důvod: historie ve Fio byla zamčená. Odemkněte ji podle kroků výše a zkuste to znovu.',
       );
       expect(busy()).toBe(false);
     });

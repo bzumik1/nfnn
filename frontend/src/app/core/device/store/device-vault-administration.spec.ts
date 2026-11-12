@@ -179,6 +179,37 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(restarted.administration()?.reason).toBe('unlocked');
     });
 
+    it('and the app starts again and she unlocks with a passkey of her account the server confirmed, then a fresh copy opens under that passkey alone and the output is wiped', async () => {
+      const copyId = vault.administration()!.store.copyId;
+      await vault.replaceContents(vault.administration()!.store, administrationContents(CANARY));
+      access.ended();
+      const restarted = anotherStart();
+      await restarted.restored(JANA);
+      const reading = prfReading();
+
+      expect(await restarted.unlockAdministrationWithPrf(JANA, reading, false)).toBe(true);
+
+      expect(restarted.administration()?.store.copyId).not.toBe(copyId);
+      expect(restarted.administration()?.reason).toBe('empty');
+      expect(await administrationWraps()).toEqual(['prf']);
+      expect(await restarted.administrationPasskeys(JANA, false)).toEqual([CREDENTIAL]);
+      expect(reading.output.every((byte) => byte === 0)).toBe(true);
+    });
+
+    it('and she signs out while the passkey the server confirmed waits for the vault, then nothing opens for her and the copy keeps her password', async () => {
+      await vault.lockAdministration();
+      const reading = prfReading();
+
+      const unlocking = vault.unlockAdministrationWithPrf(JANA, reading, false);
+      const signingOut = vault.signedOut(JANA);
+
+      expect(await unlocking).toBe(false);
+      await signingOut;
+      expect(vault.administration()).toBeNull();
+      expect(await administrationWraps()).toEqual(['password']);
+      expect(reading.output.every((byte) => byte === 0)).toBe(true);
+    });
+
     it('and the administration locks while another tab holds the vault, then its copy closes at once, without waiting for the vault', async () => {
       const store = vault.administration()!.store;
       await vault.replaceContents(store, administrationContents(CANARY));

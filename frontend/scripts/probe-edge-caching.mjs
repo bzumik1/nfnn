@@ -10,6 +10,7 @@ const SIGN_IN_ATTEMPTS = 12;
 const OWN_CACHE_CONTROL = new Map([
   ['/api/donations/payment-details', 'private, max-age=300'],
   ['/api/donations/receipt-keys', 'public, max-age=3600'],
+  ['/api/donations/bank-logos', 'private, max-age=300'],
 ]);
 const NOT_THERE_YET = [401, 404];
 const UNKNOWN_IMAGE = 'e'.repeat(64);
@@ -23,6 +24,11 @@ const API_ANSWERS = [
   { status: 200, method: 'GET', path: '/api/content/home' },
   { status: 401, method: 'GET', path: '/api/donors/me' },
   { status: 404, method: 'GET', path: '/api/content/news/probe-neexistuje' },
+  {
+    status: 404,
+    method: 'GET',
+    path: '/api/donations/bank-logos/images/0192f4d2-1a6b-7c3d-9e8f-001122334455',
+  },
   ...RECEIPT_IMAGES.map(({ path }) => ({ status: 401, method: 'GET', path })),
   { status: 401, method: 'GET', path: '/api/live' },
 ];
@@ -36,6 +42,8 @@ const EDGE_ONLY = [
 ];
 const STATUS_PATH = '/api/donations/receipts/status';
 const STATUS_BODY_LIMIT = 1024;
+const API_BODY_LIMIT = 1024 * 1024;
+const UPLOAD_PATH = '/api/admin/content/media';
 const APP_SHELL = ['/', '/overit'];
 const NOT_INDEXED = ['/overit', '/overit/'];
 const CLIENT_ERRORS = '/api/operations/client-errors';
@@ -292,6 +300,28 @@ if (oversized.status !== 413) {
   );
 }
 expectEdgeNoStore(`POST ${STATUS_PATH} over ${STATUS_BODY_LIMIT} bytes`, oversized);
+
+const oversizedSignIn = await request({
+  ...signIn,
+  body: JSON.stringify({ email: `a@${'.'.repeat(API_BODY_LIMIT)}@`, password: 'x' }),
+});
+if (oversizedSignIn.status !== 413) {
+  fail(
+    `POST ${signIn.path} with a body over ${API_BODY_LIMIT} bytes answered ${oversizedSignIn.status}, expected 413 from nginx`,
+  );
+}
+expectEdgeNoStore(`POST ${signIn.path} over ${API_BODY_LIMIT} bytes`, oversizedSignIn);
+const largeUpload = await request({
+  method: 'POST',
+  path: UPLOAD_PATH,
+  headers: { 'Content-Type': 'application/octet-stream' },
+  body: 'x'.repeat(2 * API_BODY_LIMIT),
+});
+if (largeUpload.status !== 401) {
+  fail(
+    `POST ${UPLOAD_PATH} without a token and a body of ${2 * API_BODY_LIMIT} bytes answered ${largeUpload.status}, expected 401 from the backend (nginx lets photo uploads through up to 11 MB)`,
+  );
+}
 
 const clientError = (body) => ({
   method: 'POST',

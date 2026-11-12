@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -25,6 +26,8 @@ import {
   TEST_KEY,
 } from '../../donations/verification/testing/verification-fixtures';
 import { AdminDonorDetail } from './admin-donor-detail';
+import type { AdminDonorDetailResponse } from '../admin-api';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -386,7 +389,7 @@ describe('Given an administrator on a donor card', () => {
     const accounts = section('Bankovní účty');
     const accountRow = accounts.querySelector('tbody tr') as HTMLElement;
     const accountText = (accountRow.textContent ?? '').replace(/\s+/g, ' ').trim();
-    expect(accountText).toContain('2900233333/2010');
+    expect(accountText).toContain('2900233333/2010 · Fio banka');
     expect(accountText).toContain('Páruje platby');
     expect(accountText).toContain('ověřen 17. 10. 2026');
     expect(accountText).toContain('2 dary');
@@ -780,7 +783,7 @@ describe('Given an administrator on a donor card', () => {
 
     expect(optionLabels()).toEqual([
       'Roční potvrzení za rok 2026',
-      'Dar z 05. 01. 2027, 700 Kč',
+      'Dar z 5. 1. 2027, 700 Kč',
       'Dar z 12. 10. 2026, 300 Kč',
     ]);
   });
@@ -1471,5 +1474,314 @@ describe('Given an administrator on a donor card', () => {
     expect(
       buttonNames(section('Vydaná potvrzení')).some((name) => name.startsWith('Stáhnout PDF')),
     ).toBe(true);
+  });
+});
+
+describe('Given an administrator on a donor card opened part by part', () => {
+  let fixture: ComponentFixture<AdminDonorDetail>;
+  let http: HttpTestingController;
+
+  type Answer = 'ok' | 'error' | 'pending';
+
+  async function open(
+    section: string | null,
+    rows = true,
+    answers: {
+      account?: Answer;
+      detail?: Answer;
+      detailBody?: AdminDonorDetailResponse;
+      compact?: boolean;
+    } = {},
+  ): Promise<void> {
+    localStorage.clear();
+    await TestBed.configureTestingModule({
+      imports: [AdminDonorDetail],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap(
+                section === null ? { id: DONOR_ID } : { id: DONOR_ID, section },
+              ),
+            },
+          },
+        },
+        { provide: RECEIPT_PDF_ENVIRONMENT, useValue: new FakeReceiptPdfEnvironment() },
+        {
+          provide: CompactLayout,
+          useValue: {
+            isCompact: signal(answers.compact ?? rows).asReadonly(),
+            listsAsRows: signal(rows).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(AdminDonorDetail);
+    fixture.detectChanges();
+    answer(ACCOUNT_URL, answers.account ?? 'ok', donorAccount());
+    answer(DETAIL_URL, answers.detail ?? 'ok', answers.detailBody ?? donorDetail());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  function answer(url: string, kind: Answer, body: object): void {
+    if (kind === 'ok') {
+      http.expectOne(url).flush(body);
+    } else if (kind === 'error') {
+      http.expectOne(url).flush(null, { status: 500, statusText: 'Error' });
+    }
+  }
+
+  afterEach(() => {
+    http.match(KEYS_URL).forEach((request) => request.flush(keyListWith([TEST_KEY])));
+    http.verify();
+  });
+
+  function spaced(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent ?? '';
+    }
+    return Array.from(node.childNodes).map(spaced).join(' ');
+  }
+
+  function textOf(node: Element | null): string {
+    return (node === null ? '' : spaced(node)).replace(/\s+/g, ' ').trim();
+  }
+
+  function cardTitles(): string[] {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('section.ui-card > h2') as NodeListOf<HTMLElement>,
+    ).map(textOf);
+  }
+
+  function crumb(): HTMLAnchorElement {
+    return fixture.nativeElement.querySelector('.ui-crumbs a');
+  }
+
+  it('when the card opens, then the summary stands over one row per part, each with what it holds, and no part is shown yet', async () => {
+    await open(null);
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.card-rows a.ui-list__row',
+      ) as NodeListOf<HTMLAnchorElement>,
+    );
+    expect(rows.map(textOf)).toEqual([
+      'Údaje',
+      'Přihlášení',
+      'Bankovní účty 1 účet',
+      'Dary 2 dary za 800 Kč',
+      'Potvrzení 1 vydané potvrzení',
+      'Výmaz údajů',
+    ]);
+    expect(rows.map((row) => row.getAttribute('href'))).toEqual(
+      ['udaje', 'prihlaseni', 'bankovni-ucty', 'dary', 'potvrzeni', 'vymaz'].map(
+        (part) => `/sprava/darci/${DONOR_ID}/${part}`,
+      ),
+    );
+    expect(fixture.nativeElement.querySelector('.card-rows')?.getAttribute('aria-label')).toBe(
+      'Části karty dárce',
+    );
+    expect(fixture.nativeElement.querySelector('.donor-summary')).not.toBeNull();
+    expect(cardTitles()).toEqual([]);
+    expect(crumb()).toBeNull();
+  });
+
+  it('when a part opens on a phone, then only that part shows under the name, and the header alone leads back', async () => {
+    await open('dary');
+
+    expect(cardTitles()).toEqual(['Dary']);
+    expect(fixture.nativeElement.querySelector('.donor-summary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
+    expect(textOf(fixture.nativeElement.querySelector('h1'))).toBe('Jana Nováková');
+    expect(crumb()).toBeNull();
+  });
+
+  describe('when the text is so large that a wide screen lists rows', () => {
+    it('then the card leads back to the donors', async () => {
+      await open(null, true, { compact: false });
+
+      expect(fixture.nativeElement.querySelector('.card-rows')).not.toBeNull();
+      expect(textOf(crumb())).toBe('← Dárci');
+    });
+
+    it('and a part opens, then the way back above it leads to the card', async () => {
+      await open('dary', true, { compact: false });
+
+      expect(cardTitles()).toEqual(['Dary']);
+      expect(textOf(crumb())).toBe('← Jana Nováková');
+      expect(crumb().getAttribute('href')).toBe(`/sprava/darci/${DONOR_ID}`);
+    });
+  });
+
+  it('when the gifts part opens, then its gifts stand as rows under a heading per year with the count and sum', async () => {
+    await open('dary', true, {
+      detailBody: donorDetail({
+        donations: {
+          items: [
+            adminDonation(),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000002',
+              receivedAt: '2026-10-10',
+              amountMinor: 50000,
+              pairedBy: 'VARIABLE_SYMBOL',
+              senderAccount: null,
+              confirmedSymbol: '4821937560',
+              receiptNumber: '2026-000001',
+            }),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000003',
+              receivedAt: '2025-12-30',
+              amountMinor: 20000,
+              status: 'REFUNDED',
+            }),
+            adminDonation({
+              id: '0192f0f1-0000-7000-8000-000000000004',
+              receivedAt: '2025-06-01',
+              amountMinor: 10000,
+            }),
+          ],
+          totalAmountMinor: 90000,
+          currency: 'CZK',
+          count: 4,
+        },
+      }),
+    });
+
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+    const headings = Array.from(
+      fixture.nativeElement.querySelectorAll('h3.donation-year') as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(headings).toEqual(['2026 · 2 dary · 800 Kč', '2025 · 1 dar · 100 Kč']);
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.donation-rows .ui-list__row',
+      ) as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toMatch(
+      /^12\. 10\. 2026 Obecný příspěvek · .* 2900233333\/2010 300 Kč Potvrzení zatím žádné$/,
+    );
+    expect(rows[1]).toMatch(
+      /^10\. 10\. 2026 Obecný příspěvek · .* VS 4821937560 500 Kč Potvrzení 2026-000001$/,
+    );
+    expect(rows[2]).toContain('vráceno');
+  });
+
+  describe('when the gifts are still loading', () => {
+    it('then the gifts part and the receipts part show the wait under their own titles, and their rows name no count', async () => {
+      await open('dary', true, { detail: 'pending' });
+
+      expect(cardTitles()).toEqual(['Dary']);
+      expect(textOf(fixture.nativeElement.querySelector('section.ui-card [role="status"]'))).toBe(
+        'Načítáme účty, dary a potvrzení…',
+      );
+
+      http.expectOne(DETAIL_URL).flush(donorDetail());
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('section.ui-card [role="status"]')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.donation-rows .ui-list__row')).toHaveLength(
+        2,
+      );
+    });
+
+    it('and the card itself opens, then the rows of gifts and receipts stand without a count', async () => {
+      await open(null, true, { detail: 'pending' });
+
+      const rows = Array.from(
+        fixture.nativeElement.querySelectorAll(
+          '.card-rows a.ui-list__row',
+        ) as NodeListOf<HTMLElement>,
+      ).map(textOf);
+      expect(rows).toContain('Dary');
+      expect(rows).toContain('Potvrzení');
+      http.expectOne(DETAIL_URL).flush(donorDetail());
+    });
+  });
+
+  it('when the gifts cannot be loaded, then the receipts part offers a retry and its row says to open it', async () => {
+    await open('potvrzeni', true, { detail: 'error' });
+
+    expect(cardTitles()).toEqual(['Potvrzení']);
+    const alert = fixture.nativeElement.querySelector(
+      'section.ui-card [role="alert"]',
+    ) as HTMLElement;
+    expect(textOf(alert)).toBe('Účty, dary a potvrzení se nepodařilo načíst. Zkusit znovu');
+
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne(DETAIL_URL).flush(donorDetail());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(cardTitles()).toEqual(['Vydaná potvrzení']);
+  });
+
+  it('when the card opens and the gifts could not be loaded, then their rows say to open them and try again', async () => {
+    await open(null, true, { detail: 'error' });
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        '.card-rows a.ui-list__row',
+      ) as NodeListOf<HTMLElement>,
+    ).map(textOf);
+    expect(rows).toContain('Dary Nepodařilo se načíst, otevřete a zkuste znovu');
+    expect(rows).toContain('Potvrzení Nepodařilo se načíst, otevřete a zkuste znovu');
+  });
+
+  it('when the account cannot be loaded, then the sign-in part offers a retry under its own title', async () => {
+    await open('prihlaseni', true, { account: 'error' });
+
+    expect(cardTitles()).toEqual(['Přihlášení']);
+    const alert = fixture.nativeElement.querySelector(
+      'section.ui-card [role="alert"]',
+    ) as HTMLElement;
+    expect(textOf(alert)).toBe('Účet se nepodařilo načíst. Zkusit znovu');
+
+    (alert.querySelector('button') as HTMLButtonElement).click();
+    http.expectOne(ACCOUNT_URL).flush(donorAccount());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ui-load-state--error')).toBeNull();
+    expect(cardTitles()).toEqual(['Přihlášení']);
+  });
+
+  it('when the address names the erasure, then only the erasure shows', async () => {
+    await open('vymaz');
+
+    expect(cardTitles()).toEqual(['Výmaz osobních údajů (GDPR)']);
+  });
+
+  it('when the address names no known part, then the card opens with its rows', async () => {
+    await open('nic');
+
+    expect(cardTitles()).toEqual([]);
+    expect(fixture.nativeElement.querySelectorAll('.card-rows a.ui-list__row')).toHaveLength(6);
+  });
+
+  it('when a part is opened on a wide screen, then the whole card shows and the part takes the focus', async () => {
+    await open('potvrzeni', false);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.card-rows')).toBeNull();
+    expect(cardTitles()).toContain('Údaje');
+    expect(cardTitles()).toContain('Vydaná potvrzení');
+    expect(document.activeElement?.id).toBe('potvrzeni');
+    expect(textOf(crumb())).toBe('← Dárci');
   });
 });

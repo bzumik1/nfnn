@@ -1,0 +1,34 @@
+@if (underReceipt()) {
+  <p class="diagnostics-download-about" i18n="@@ui.diagnostics.aboutUnderReceipt">
+    K e&#8209;mailu nám prosím přiložte diagnostický soubor. Je v něm jen stav webu v tomto
+    zařízení, žádné vaše údaje ani hesla, a sám se nikam neodesílá.
+  </p>
+} @else {
+  <p class="diagnostics-download-about">
+    <span i18n="@@ui.diagnostics.about"
+      >Když nám píšete o potížích s webem, přiložte prosím diagnostický soubor. Je v něm jen stav
+      webu v tomto zařízení, žádné vaše údaje ani hesla, a sám se nikam neodesílá. Pošlete ho
+      na</span
+    >&ngsp;<a href="mailto:info@nfnn.cz?subject=Diagnostick%C3%BD%20soubor">info&#64;nfnn.cz</a>.
+  </p>
+}
+@if (onSharedComputer()) {
+  <p class="diagnostics-download-shared" i18n="@@ui.diagnostics.sharedComputer">
+    Soubor zůstane ve stažených souborech tohoto počítače. Po odeslání ho prosím smažte.
+  </p>
+}
+<button
+  type="button"
+  class="ui-button diagnostics-download-button"
+  [attr.aria-disabled]="busy() || null"
+  (click)="press()"
+>
+  @if (preparing()) {
+    <span i18n="@@ui.diagnostics.preparing">Připravujeme soubor…</span>
+  } @else if (readyToShare()) {
+    <span i18n="@@ui.diagnostics.share">Sdílet diagnostický soubor</span>
+  } @else {
+    <span i18n="@@ui.diagnostics.download">Stáhnout diagnostický soubor</span>
+  }
+</button>
+<app-live-notice [notice]="notice()" />

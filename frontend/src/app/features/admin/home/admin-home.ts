@@ -13,6 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
+import { NgTemplateOutlet } from '@angular/common';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -30,17 +31,12 @@ import {
   TallyResponse,
 } from '../admin-api';
 import { formatSize } from '../backups/backup-format';
-import { BACKUP_PROBLEM_HELP } from '../backups/backup-texts';
-import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
-import {
-  unpublishedKeyIds,
-  unpublishedKeysSentence,
-} from '../settings/receipt-signing-key/unpublished-keys';
+import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
+import { unpublishedKeyIds } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { HistoryImport } from './history-import/history-import';
-import { IMPORT_FAILURE_LABELS, IMPORT_NEXT_STEPS } from './import-failure-labels';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -49,17 +45,17 @@ import {
   SectionIcon,
   SectionRowGroup,
 } from '../shell/section-rows/admin-section-rows';
-
-type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
-type LoadState = 'loading' | 'ready' | 'error';
+import {
+  AttentionRetry,
+  attentionRows,
+  LoadState,
+  SignatoryState,
+  UnpairedSummary,
+  unpairedCount,
+} from './attention-rows';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-
-interface UnpairedSummary {
-  readonly count: number;
-  readonly totalMinor: number;
-}
 
 interface SinceSignIn {
   readonly previousSignInAt: string | null;
@@ -75,7 +71,14 @@ interface SinceFigure {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [NeedsConnection, RouterLink, CopyButton, HistoryImport, AdminSectionRows],
+  imports: [
+    NeedsConnection,
+    RouterLink,
+    CopyButton,
+    HistoryImport,
+    AdminSectionRows,
+    NgTemplateOutlet,
+  ],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -110,13 +113,7 @@ export class AdminHome {
   protected readonly unpublishedSigningKeys = signal<readonly string[]>([]);
   protected readonly signingKeyWarnings = signal<readonly string[]>([]);
 
-  protected readonly backupProblems = computed(() =>
-    (this.backups()?.problems ?? []).map((problem) => BACKUP_PROBLEM_HELP[problem]),
-  );
-  protected readonly backupTechnicianMessage = computed(() => {
-    const view = this.backups();
-    return view !== null && needsTechnician(view) ? technicianMessage(view) : null;
-  });
+  protected readonly backupsHealthy = computed(() => this.backups()?.problems.length === 0);
   protected readonly lastBackup = computed(() => {
     const run = this.backups()?.lastBackup;
     if (!run) {
@@ -203,46 +200,24 @@ export class AdminHome {
   protected readonly lastFailureAt = computed(() =>
     time(this.importState()?.lastFailure?.attemptedAt),
   );
-  protected readonly outage = computed(() => {
-    const state = this.importState();
-    return state?.reportedOutage ? IMPORT_FAILURE_LABELS[state.reportedOutage] : null;
-  });
-  protected readonly nextStep = computed(() => {
-    const state = this.importState();
-    return state?.reportedOutage ? IMPORT_NEXT_STEPS[state.reportedOutage] : null;
-  });
   protected readonly neverAttempted = computed(
     () => this.state() === 'ready' && this.importState()?.lastAttemptedAt == null,
   );
-
-  protected readonly importNeedsAttention = computed(
-    () => this.state() === 'error' || this.outage() !== null || this.neverAttempted(),
-  );
-  protected readonly unpairedNeedsAttention = computed(
-    () => this.unpairedState() === 'error' || (this.unpaired()?.count ?? 0) > 0,
-  );
-  protected readonly backupsNeedAttention = computed(
-    () => this.backupsState() === 'error' || this.backupProblems().length > 0,
-  );
-  protected readonly backupKeyUnconfirmed = computed(() => {
-    const key = this.backups()?.key;
-    return key !== undefined && key.available && !key.confirmed;
-  });
-  protected readonly administratorsNeedAttention = computed(
-    () => this.administratorsState() === 'error' || this.withoutSecondFactor().length > 0,
-  );
-  protected readonly signatoryNeedsAttention = computed(() =>
-    ['error', 'missing', 'unsigned'].includes(this.signatoryState()),
-  );
-  protected readonly signingKeysNeedAttention = computed(
-    () =>
-      this.signingKeysState() === 'error' ||
-      this.unpublishedSigningKeys().length > 0 ||
-      this.signingKeyWarnings().length > 0,
-  );
-  protected readonly signingKeyWarningsText = computed(() => this.signingKeyWarnings().join(' '));
-  protected readonly unpublishedSigningKeysText = computed(() =>
-    unpublishedKeysSentence(this.unpublishedSigningKeys()),
+  protected readonly attentionRows = computed(() =>
+    attentionRows({
+      importLoad: this.state(),
+      importState: this.importState(),
+      unpairedLoad: this.unpairedState(),
+      unpaired: this.unpaired(),
+      backupsLoad: this.backupsState(),
+      backups: this.backups(),
+      administratorsLoad: this.administratorsState(),
+      withoutSecondFactor: this.withoutSecondFactor(),
+      signingKeysLoad: this.signingKeysState(),
+      unpublishedSigningKeys: this.unpublishedSigningKeys(),
+      signingKeyWarnings: this.signingKeyWarnings(),
+      signatory: this.signatoryState(),
+    }),
   );
   protected readonly attentionLoading = computed(() =>
     [
@@ -253,34 +228,14 @@ export class AdminHome {
       this.signingKeysState(),
     ].includes('loading'),
   );
-  protected readonly needsAttention = computed(
-    () =>
-      this.importNeedsAttention() ||
-      this.unpairedNeedsAttention() ||
-      this.backupsNeedAttention() ||
-      this.backupKeyUnconfirmed() ||
-      this.administratorsNeedAttention() ||
-      this.signingKeysNeedAttention() ||
-      this.signatoryNeedsAttention(),
-  );
-  protected readonly unpairedText = computed(() => {
-    const summary = this.unpaired();
-    return summary === null ? '' : unpairedText(summary);
-  });
-  protected readonly withoutSecondFactorText = computed(() => {
-    const names = this.withoutSecondFactor();
-    const list = names.join(', ');
-    return names.length === 1
-      ? $localize`:@@admin.home.attention.secondFactor.one:Správce ${list}:names: nemá druhý faktor (kód z ověřovací aplikace ani přístupový klíč), správa se mu neotevře.`
-      : $localize`:@@admin.home.attention.secondFactor.many:Správci bez druhého faktoru (kódu z ověřovací aplikace i přístupového klíče), kterým se správa neotevře: ${list}:names:.`;
-  });
   protected readonly lastBackupTime = computed(() => {
     const run = this.backups()?.lastBackup;
     return run && run.outcome === 'OK' ? formatBankTime(run.finishedAt) : null;
   });
-  protected readonly consecutiveFailures = computed(
-    () => this.importState()?.consecutiveFailures ?? 0,
-  );
+  protected readonly toneLabels: Readonly<Record<string, string>> = {
+    danger: $localize`:@@admin.home.attention.tone.danger:Naléhavé:`,
+    warning: $localize`:@@admin.home.attention.tone.warning:Upozornění:`,
+  };
 
   constructor() {
     this.loadSince();
@@ -420,6 +375,23 @@ export class AdminHome {
     );
   }
 
+  protected retry(target: AttentionRetry): void {
+    switch (target) {
+      case 'unpaired':
+        this.loadUnpaired();
+        return;
+      case 'signingKeys':
+        this.loadSigningKeys();
+        return;
+      case 'administrators':
+        this.loadAdministrators();
+        return;
+      case 'signatory':
+        this.loadSignatory();
+        return;
+    }
+  }
+
   protected changeYear(event: Event): void {
     this.loadOverview(Number((event.target as HTMLSelectElement).value));
   }
@@ -534,18 +506,6 @@ function time(isoInstant: string | null | undefined): string | null {
   return isoInstant ? formatBankTime(isoInstant) : null;
 }
 
-function unpairedText({ count, totalMinor }: UnpairedSummary): string {
-  const total = `${formatMinorUnits(totalMinor)}\u00a0Kč`;
-  switch (pluralCategory(count)) {
-    case 'one':
-      return $localize`:@@admin.home.attention.unpaired.one:1 platba čeká na přiřazení dárci (${total}:total:).`;
-    case 'few':
-      return $localize`:@@admin.home.attention.unpaired.few:${count}:count: platby čekají na přiřazení dárci (${total}:total:).`;
-    case 'other':
-      return $localize`:@@admin.home.attention.unpaired.many:${count}:count: plateb čeká na přiřazení dárci (${total}:total:).`;
-  }
-}
-
 const DAILY_ICONS: Readonly<Record<string, SectionIcon>> = {
   [ADMIN_PAYMENTS_PATH]: 'payments',
   '/sprava/darci': 'donors',
@@ -562,7 +522,7 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
         ...item,
         icon: DAILY_ICONS[item.path],
         ...(item.path === ADMIN_PAYMENTS_PATH
-          ? { badge: { count: unpaired, description: unpairedBadge(unpaired) } }
+          ? { badge: { count: unpaired, description: unpairedCount(unpaired) } }
           : {}),
       })),
     },
@@ -573,20 +533,9 @@ function sectionRows(unpaired: number): readonly SectionRowGroup[] {
         {
           path: ADMIN_MORE_PATH,
           label: $localize`:@@admin.home.sections.more.row:Lidé fondu, správci, zálohy, nastavení…`,
-          icon: 'more',
+          icon: 'foundation',
         },
       ],
     },
   ];
-}
-
-function unpairedBadge(count: number): string {
-  switch (pluralCategory(count)) {
-    case 'one':
-      return $localize`:@@admin.home.sections.unpaired.one:${count}:count: platba čeká na přiřazení`;
-    case 'few':
-      return $localize`:@@admin.home.sections.unpaired.few:${count}:count: platby čekají na přiřazení`;
-    default:
-      return $localize`:@@admin.home.sections.unpaired.many:${count}:count: plateb čeká na přiřazení`;
-  }
 }

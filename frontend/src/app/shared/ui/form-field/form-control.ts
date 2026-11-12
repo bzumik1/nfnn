@@ -2,6 +2,7 @@ import { Directive, ElementRef, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgForm, NgModel } from '@angular/forms';
 import { merge } from 'rxjs';
+import { isTextEntry, SoftKeyboard } from '../../../core/layout/soft-keyboard';
 import { FormField } from './form-field';
 
 @Directive({
@@ -13,12 +14,15 @@ import { FormField } from './form-field';
     '(document:pointerdown)': 'pressStarted()',
     '(document:pointerup)': 'pressEnded()',
     '(document:pointercancel)': 'pressEnded()',
+    '(blur)': 'leave()',
+    '(keydown.enter)': 'goToNextField($event)',
   },
 })
 export class FormControlDirective {
   private readonly model = inject(NgModel, { self: true });
   private readonly form = inject(NgForm, { optional: true });
   private readonly field = inject(FormField);
+  private readonly keyboard = inject(SoftKeyboard);
   private readonly lastEvent = toSignal(
     this.form ? merge(this.model.control.events, this.form.form.events) : this.model.control.events,
   );
@@ -60,6 +64,39 @@ export class FormControlDirective {
 
   pressEnded(): void {
     this.pressing.set(false);
+  }
+
+  leave(): void {
+    queueMicrotask(() => {
+      const passedThroughEmpty = this.model.pristine === true && this.model.hasError('required');
+      if (passedThroughEmpty && this.form?.submitted !== true) {
+        this.model.control.markAsUntouched();
+      }
+    });
+  }
+
+  goToNextField(event: Event): void {
+    const key = event as KeyboardEvent;
+    if (
+      key.isComposing ||
+      this.element.getAttribute('enterkeyhint') !== 'next' ||
+      !this.keyboard.isOpen() ||
+      this.form?.valid !== false
+    ) {
+      return;
+    }
+    const next = this.nextField();
+    if (next !== null) {
+      key.preventDefault();
+      next.focus();
+    }
+  }
+
+  private nextField(): HTMLElement | null {
+    const form = this.element.closest('form');
+    const fields = Array.from(form?.querySelectorAll('.form-control') ?? []).filter(isTextEntry);
+    const position = fields.indexOf(this.element);
+    return position < 0 ? null : (fields[position + 1] ?? null);
   }
 
   readonly describedBy = computed(() => {

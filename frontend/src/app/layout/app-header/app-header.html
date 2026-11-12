@@ -4,6 +4,8 @@
   tabindex="-1"
   [class.app-header--on-dark]="onDark()"
   [class.app-header--on-photo]="onPhoto()"
+  [class.app-header--deeper]="parent() !== null"
+  [class.app-header--pinned-account]="titleInEdge()"
 >
   <div class="app-header-inner" [class.app-header-inner--without-logo]="!showsLogo()">
     @if (parent()) {
@@ -24,14 +26,19 @@
       </button>
     }
     @if (showsLogo()) {
-      <a class="brand" [class.brand--after-back]="parent()" routerLink="/">
-        <img
-          [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
-          alt="Nová naděje – nadační fond"
-          i18n-alt="@@layout.header.logoAlt"
-          width="115"
-          height="40"
-        />
+      <a class="brand" routerLink="/">
+        <picture>
+          @if (!onDark()) {
+            <source media="(prefers-color-scheme: dark)" srcset="/images/logo-on-dark.svg" />
+          }
+          <img
+            [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+            alt="Nová naděje – nadační fond"
+            i18n-alt="@@layout.header.logoAlt"
+            width="115"
+            height="40"
+          />
+        </picture>
       </a>
     }
     @if (auth.signedIn()) {
@@ -68,6 +75,11 @@
       </button>
     }
   </div>
+  @if (titleInEdge()) {
+    <p class="edge-title" [class.edge-title--shown]="edgeTitleShown()" aria-hidden="true">
+      <span class="edge-title-text">{{ edgeTitle() }}</span>
+    </p>
+  }
 </header>
 @if (accountOpen()) {
   <app-account-sheet [portrait]="portrait()" (closed)="closeAccount()" />

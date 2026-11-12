@@ -2,7 +2,12 @@ import { afterNextRender, computed, inject, Injectable, Injector, signal } from 
 import { Router } from '@angular/router';
 import { firstValueFrom, Observable, tap } from 'rxjs';
 import { AdministrationAccess } from '../../../core/auth/administration-access';
+import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
+import {
+  PasskeyAuthenticator,
+  PasskeyCeremonyError,
+} from '../../../core/auth/passkey-authenticator';
 import { type DeviceAccount, deviceAccountOf } from '../../../core/auth/session-device';
 import { DeviceVault } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
@@ -14,6 +19,8 @@ export class AdministrationLockService {
   private readonly access = inject(AdministrationAccess);
   private readonly vault = inject(DeviceVault);
   private readonly api = inject(AdministrationSyncApi);
+  private readonly authApi = inject(AuthApi);
+  private readonly passkeys = inject(PasskeyAuthenticator);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly leaving = signal(false);
@@ -48,6 +55,51 @@ export class AdministrationLockService {
       this.access.unlock();
     }
     return unlocked;
+  }
+
+  accountPasskeyUnlocks(): Promise<boolean> {
+    return firstValueFrom(this.auth.hasPasskeys());
+  }
+
+  async unlockWithAccountPasskey(): Promise<boolean> {
+    const account = this.account();
+    if (account === null) {
+      return false;
+    }
+    const options = await firstValueFrom(this.authApi.passkeySignInOptions());
+    const input = await this.vault.prfInput();
+    let answer;
+    try {
+      answer = await this.passkeys.getWithPrf(options, input);
+    } catch (failure: unknown) {
+      if (failure instanceof PasskeyCeremonyError) {
+        return false;
+      }
+      throw failure;
+    }
+    const { credential, prf } = answer;
+    let handedOver = false;
+    try {
+      await firstValueFrom(
+        this.api.unlockWithPasskey({ challenge: options.challenge, credential }),
+        { defaultValue: undefined },
+      );
+      if (!this.stillSignedInAs(account)) {
+        return false;
+      }
+      this.access.unlock();
+      if (prf !== null) {
+        handedOver = true;
+        void this.vault
+          .unlockAdministrationWithPrf(account, prf, this.auth.storesNothing())
+          .catch(() => undefined);
+      }
+      return true;
+    } finally {
+      if (!handedOver) {
+        prf?.output.fill(0);
+      }
+    }
   }
 
   unlockWithPassword(password: string, code: string): Observable<void> {

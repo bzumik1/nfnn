@@ -9,7 +9,8 @@ Feature: An administrator reads what administrators changed and when
     And "Jana" is an administrator
 
   Scenario: The trail lists every administrator's change newest first with who did it, what and on whom
-    Given "Jana" made "Petr" an administrator
+    Given "Petr" enables the second factor
+    And "Jana" made "Petr" an administrator
     And 1 minutes pass
     And "Jana" removes "Petr" from the administrators
     When "Jana" asks for the admin actions
@@ -23,6 +24,7 @@ Feature: An administrator reads what administrators changed and when
 
   Scenario: Each change reads as a sentence in Czech or in English, an older English record included, and keeps its stored details
     Given "Jana" recorded "GRANT_ADMINISTRATION" before the history was written in Czech as "Administrator role granted to donor <Eva>"
+    And "Petr" enables the second factor
     And "Jana" made "Petr" an administrator
     When "Jana" asks for the admin actions
     Then the admin actions are:
@@ -36,7 +38,9 @@ Feature: An administrator reads what administrators changed and when
       | GRANT_ADMINISTRATION | Administrator role given to donor Eva Nováková.           |
 
   Scenario: A long trail is read page by page from the newest change back
-    Given "Jana" made "Petr" an administrator
+    Given "Petr" enables the second factor
+    And "Eva" enables the second factor
+    And "Jana" made "Petr" an administrator
     And 1 minutes pass
     And "Jana" made "Eva" an administrator
     And 1 minutes pass
@@ -54,9 +58,32 @@ Feature: An administrator reads what administrators changed and when
       | GRANT_ADMINISTRATION | Petr    |
     And the admin actions have no more pages
 
+  Scenario: Changes made at one moment are read page by page after the last one listed, none skipped
+    Given "Jana" recorded these changes at one moment an hour ago, newest first:
+      | action         | details             |
+      | REQUEST_BACKUP | Třetí ruční záloha  |
+      | REQUEST_BACKUP | Druhá ruční záloha  |
+      | REQUEST_BACKUP | První ruční záloha  |
+    When "Jana" asks for the 2 newest admin actions
+    Then the admin actions are:
+      | details            |
+      | Třetí ruční záloha |
+      | Druhá ruční záloha |
+    And the admin actions have more pages
+    When "Jana" asks for the 2 admin actions after the last one listed
+    Then the response status is 200
+    And the admin actions are:
+      | details            |
+      | První ruční záloha |
+    And the admin actions have no more pages
+    When "Jana" asks for the admin actions after an action without naming its time
+    Then the response status is 400
+    And the problem type ends with "validation"
+
   Scenario: A change made by an administrator who is no longer one still names the administrator
-    Given "Jana" made "Petr" an administrator
-    And "Petr" enables the second factor
+    Given "Petr" enables the second factor
+    And "Eva" enables the second factor
+    And "Jana" made "Petr" an administrator
     And "Petr" signs in again
     And 1 minutes pass
     And "Petr" made "Eva" an administrator

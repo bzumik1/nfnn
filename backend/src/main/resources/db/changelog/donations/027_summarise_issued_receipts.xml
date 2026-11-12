@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="027-summarise-issued-receipts" author="nfnn">
+        <sql>alter table issued_receipt
+            add column gift_count integer generated always as (json_array_length((frozen::json) -> 'gifts')) stored,
+            add column total_amount_minor bigint generated always as ((((frozen::json) -> 'total') ->> 'amountMinor')::bigint) stored,
+            add column certified_year integer generated always as (coalesce(receipt_year, (left((((frozen::json) -> 'gifts') -> 0) ->> 'receivedOn', 4))::integer)) stored</sql>
+    </changeSet>
+</databaseChangeLog>

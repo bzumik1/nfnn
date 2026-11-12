@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog presented as a sheet that the visitor drags by its top edge > when the page holds the sheet open while something runs, then no grabber offers to drag it away",
+    "replacement": "src/app/shared/ui/dialog/dialog.spec.ts > Given a dialog presented as a sheet that the visitor drags by its top edge > when the page holds the sheet open while something runs, then a drag only stretches it and it returns",
+    "reason": "#382 (iOS interaction and accessibility experts): a sheet that cannot close while a step runs keeps its grabber and rubber-bands under the finger, as iOS does under isModalInPresentation, instead of hiding the grabber and ignoring the drag"
+  }
+]

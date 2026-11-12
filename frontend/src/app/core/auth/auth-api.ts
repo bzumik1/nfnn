@@ -46,6 +46,10 @@ export class AuthApi {
     );
   }
 
+  confirmEmailChange(token: string): Observable<void> {
+    return this.http.post<void>('/api/donors/auth/email-change/confirm', { token });
+  }
+
   confirmEmailVerification(token: string, session: SessionKind): Observable<AuthResponse> {
     return this.http.post<AuthResponse>('/api/donors/auth/email-verification/confirm', {
       token,

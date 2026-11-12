@@ -99,7 +99,7 @@ class SecondFactorRecoveryPaymentsTest {
     @DisplayName("Given a recovery code, when the payment text is asked for, then it is the SPAYD text of 1 Kč to the foundation's account with the recovery message and no variable symbol")
     void should_give_the_spayd_text_of_the_recovery_payment_when_asked_for_given_a_code() {
         assertThat(recoveries.spaydFor(new SecondFactorRecoveryCode("ABCD2345"))).isEqualTo(
-                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");
+                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:NADACNI FOND NOVA NADEJE*MSG:OBNOVA ABCD2345");
     }
 
     @Test
@@ -109,7 +109,7 @@ class SecondFactorRecoveryPaymentsTest {
         SecondFactorRecoveryPayments withPercent = new SecondFactorRecoveryPayments(donorRecords, ExcludedSenderAccounts.none(), account, events);
 
         assertThat(withPercent.spaydFor(new SecondFactorRecoveryCode("ABCD2345"))).isEqualTo(
-                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*RN:FOND 100 DETEM*MSG:OBNOVA ABCD2345");
+                "SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*RN:FOND 100 DETEM*MSG:OBNOVA ABCD2345");
     }
 
     private static DonorRecord donorWithAccount() {

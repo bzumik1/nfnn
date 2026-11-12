@@ -1,16 +1,15 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
+import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import jakarta.persistence.EntityManager;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
+@Repository
 @Transactional(propagation = Propagation.MANDATORY)
 class PostgresPairingLock implements PairingLock {
-
-    public static final long KEY = 20261022L;
 
     private final EntityManager entityManager;
 
@@ -20,6 +19,6 @@ class PostgresPairingLock implements PairingLock {
 
     @Override
     public void acquire() {
-        entityManager.createNativeQuery("select 1 from pg_advisory_xact_lock(:key)").setParameter("key", KEY).getSingleResult();
+        AdvisoryLock.PAIRING.acquireFor(entityManager);
     }
 }

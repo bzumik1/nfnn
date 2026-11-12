@@ -17,16 +17,25 @@ class FakeMediaQueryList extends EventTarget {
   }
 }
 
-class FakeWindow {
+class FakeWindow extends EventTarget {
   width: number;
+  rootFontPx: number;
   readonly queries: FakeMediaQueryList[] = [];
+  readonly textSizeWatchers: (() => void)[] = [];
+  readonly ResizeObserver = this.resizeObserverClass();
 
-  constructor(width: number) {
+  constructor(width: number, rootFontPx = 16) {
+    super();
     this.width = width;
+    this.rootFontPx = rootFontPx;
   }
 
   get innerWidth(): number {
     return this.width;
+  }
+
+  getComputedStyle(): { fontSize: string } {
+    return { fontSize: `${this.rootFontPx}px` };
   }
 
   matchMedia(media: string): FakeMediaQueryList {
@@ -38,12 +47,54 @@ class FakeWindow {
   resize(width: number): void {
     this.width = width;
     this.queries.forEach((query) => query.dispatchEvent(new Event('change')));
+    this.dispatchEvent(new Event('resize'));
+  }
+
+  enlargeText(rootFontPx: number): void {
+    this.rootFontPx = rootFontPx;
+    this.textSizeWatchers.forEach((watcher) => watcher());
+  }
+
+  private resizeObserverClass() {
+    const watchers = this.textSizeWatchers;
+    return class {
+      constructor(private readonly watcher: () => void) {}
+
+      observe(): void {
+        watchers.push(this.watcher);
+      }
+
+      disconnect(): void {
+        watchers.splice(watchers.indexOf(this.watcher), 1);
+      }
+    };
+  }
+}
+
+class FakeDocument {
+  readonly probes: { style: { cssText: string }; removed: boolean }[] = [];
+  readonly documentElement = {};
+  readonly body = { append: (): void => undefined };
+
+  constructor(readonly defaultView: object | null) {}
+
+  createElement(): object {
+    const probe = {
+      style: { cssText: '' },
+      removed: false,
+      setAttribute: (): void => undefined,
+      remove: (): void => {
+        probe.removed = true;
+      },
+    };
+    this.probes.push(probe);
+    return probe;
   }
 }
 
 function layoutIn(view: object | null): CompactLayout {
   TestBed.configureTestingModule({
-    providers: [{ provide: DOCUMENT, useValue: { defaultView: view } }],
+    providers: [{ provide: DOCUMENT, useValue: new FakeDocument(view) }],
   });
   return TestBed.inject(CompactLayout);
 }
@@ -93,5 +144,55 @@ describe('Given the compact layout of the app', () => {
     expect(layoutIn({}).isCompact()).toBe(false);
     TestBed.resetTestingModule();
     expect(layoutIn(null).isCompact()).toBe(false);
+  });
+
+  describe('when it chooses between list rows and tables', () => {
+    it('then a compact window shows rows', () => {
+      expect(layoutIn(new FakeWindow(390)).listsAsRows()).toBe(true);
+    });
+
+    it('then a wide window at the default text size shows tables', () => {
+      expect(layoutIn(new FakeWindow(1194)).listsAsRows()).toBe(false);
+    });
+
+    it('then a wide window whose text is twice as large shows rows, as the window is narrower than the nav breakpoint in text widths', () => {
+      const layout = layoutIn(new FakeWindow(1194, 32));
+
+      expect(layout.isCompact()).toBe(false);
+      expect(layout.listsAsRows()).toBe(true);
+    });
+
+    it('then a window just as wide as the nav breakpoint in text widths shows rows, and one pixel wider shows tables', () => {
+      expect(layoutIn(new FakeWindow(1798, 32)).listsAsRows()).toBe(true);
+      TestBed.resetTestingModule();
+      expect(layoutIn(new FakeWindow(1799, 32)).listsAsRows()).toBe(false);
+    });
+
+    it('then enlarging the text of an open page, which resizes no window, switches its tables to rows through a box one text width wide', () => {
+      const view = new FakeWindow(1194);
+      const layout = layoutIn(view);
+
+      view.enlargeText(32);
+
+      expect(layout.listsAsRows()).toBe(true);
+      expect(
+        (TestBed.inject(DOCUMENT) as unknown as FakeDocument).probes[0].style.cssText,
+      ).toContain('width: 1rem');
+    });
+
+    it('then once the app goes, the box that watches the text size goes with it', () => {
+      const view = new FakeWindow(1194);
+      layoutIn(view);
+      const document = TestBed.inject(DOCUMENT) as unknown as FakeDocument;
+
+      TestBed.resetTestingModule();
+
+      expect(document.probes[0].removed).toBe(true);
+      expect(view.textSizeWatchers).toEqual([]);
+    });
+
+    it('then a browser that cannot answer media queries shows tables, as today', () => {
+      expect(layoutIn({}).listsAsRows()).toBe(false);
+    });
   });
 });

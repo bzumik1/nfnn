@@ -30,6 +30,20 @@ Feature: A donor sees the devices signed in to the account and signs them out
       | OTHER    | OTHER   | false   |
     And each device names when it signed in and when it was last used
 
+  Scenario: The list names the kind of session of each device, so the installed app reads apart from a browser
+    Given "Jana" signs in on the "iPhone" with the session "APP"
+    And 5 minutes pass
+    And "Jana" signs in on the "Windows" with the session "BROWSER"
+    And 5 minutes pass
+    And "Jana" signs in on the "Mac"
+    When "Jana" lists the devices on the "Mac"
+    Then the devices are:
+      | platform | browser | session    | current |
+      | MAC      | FIREFOX | REMEMBERED | true    |
+      | WINDOWS  | EDGE    | BROWSER    | false   |
+      | IPHONE   | SAFARI  | APP        | false   |
+      | OTHER    | OTHER   | REMEMBERED | false   |
+
   Scenario: A device signed out from another one loses its access at once and cannot refresh
     Given "Jana" signs in on the "Mac"
     And "Jana" signs in on the "iPhone"

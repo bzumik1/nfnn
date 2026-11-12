@@ -145,7 +145,7 @@ describe('Given an administrator on the monthly report page', () => {
     expect(element<HTMLSelectElement>('#report-send-hour').selectedOptions[0]?.textContent).toBe(
       '7:00',
     );
-    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 01. 10. 2026 v 7:00.');
+    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 1. 10. 2026 v 7:00.');
     expect(text('.changed-at')).toBe('Nastavení jste zatím neměnili.');
     expect(text('[aria-labelledby="report-sent-title"]')).toContain(
       'Zatím žádný přehled neodešel.',
@@ -163,7 +163,7 @@ describe('Given an administrator on the monthly report page', () => {
     await respond(reportView());
 
     expect(text('.next-report')).toBe(
-      'Přehled za září 2026 měl odejít 01. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
+      'Přehled za září 2026 měl odejít 1. 10. 2026 v 7:00, ale zatím neodešel. Web ho zkusí poslat znovu v příští celou hodinu; poslat ho můžete i hned níže.',
     );
   });
 
@@ -176,7 +176,7 @@ describe('Given an administrator on the monthly report page', () => {
       }),
     );
 
-    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 05. 10. 2026 v 18:00.');
+    expect(text('.next-report')).toBe('Příští přehled za září 2026 odejde 5. 10. 2026 v 18:00.');
   });
 
   it('when settings were changed and reports went out, then the change time, the sent months and the sent dates in the month list are shown', async () => {
@@ -209,17 +209,26 @@ describe('Given an administrator on the monthly report page', () => {
     );
     expect(element<HTMLInputElement>('input[name="donors"]').checked).toBe(false);
     expect(element<HTMLInputElement>('input[name="donations"]').checked).toBe(true);
-    expect(text('.changed-at')).toBe('Naposledy změněno 05. 10. 2026 09:00.');
+    expect(text('.changed-at')).toBe('Naposledy změněno 5. 10. 2026 9:00.');
     expect(text('.next-report')).toContain(
-      'Příští přehled za říjen 2026 odejde 05. 11. 2026 v 9:00.',
+      'Příští přehled za říjen 2026 odejde 5. 11. 2026 v 9:00.',
     );
     expect(
       Array.from(
-        fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLTableRowElement>,
-      ).map((row) => (row.textContent ?? '').replace(/\s+/g, ' ').trim()),
-    ).toEqual(['září 2026 05. 10. 2026 07:00', 'srpen 2026 01. 09. 2026 07:00']);
+        fixture.nativeElement.querySelectorAll(
+          '.sent-reports a.ui-list__row',
+        ) as NodeListOf<HTMLAnchorElement>,
+      ).map((row) => ({
+        month: row.querySelector('.ui-list__title')?.textContent?.trim(),
+        sentAt: row.querySelector('.ui-list__meta')?.textContent?.trim(),
+        href: row.getAttribute('href'),
+      })),
+    ).toEqual([
+      { month: 'září 2026', sentAt: 'Odesláno 5. 10. 2026 7:00', href: '/sprava/prehledy/2026-09' },
+      { month: 'srpen 2026', sentAt: 'Odesláno 1. 9. 2026 7:00', href: '/sprava/prehledy/2026-08' },
+    ]);
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
-      'září 2026 (odesláno 05. 10. 2026)',
+      'září 2026 (odesláno 5. 10. 2026)',
     );
   });
 
@@ -362,7 +371,7 @@ describe('Given an administrator on the monthly report page', () => {
 
     it('then the sheet says the edits stay in the form and when the other version was saved', () => {
       expect(sheet().textContent).toContain('zůstávají ve formuláři');
-      expect(sheet().textContent).toContain('Novější verze je z 05. 11. 2026 16:21.');
+      expect(sheet().textContent).toContain('Novější verze je z 5. 11. 2026 16:21.');
       expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('pavel@example.cz');
     });
 
@@ -410,7 +419,7 @@ describe('Given an administrator on the monthly report page', () => {
       'Přehled dostanou: info@nfnn.cz, pavel@example.cz. To jsou příjemci uložení v nastavení výše.',
     );
     expect(text('.send-card .send-intro')).toBe(
-      'Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 01. 11. 2026.',
+      'Přehled za vybraný měsíc odejde hned, i když už jednou odešel. Poslat jde jen měsíc, který už skončil: přehled za říjen 2026 půjde poslat od 1. 11. 2026.',
     );
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
       'září 2026 (zatím neodesláno)',
@@ -458,7 +467,7 @@ describe('Given an administrator on the monthly report page', () => {
         ],
       }),
     );
-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelectorAll('.sent-reports a.ui-list__row')).toHaveLength(2);
     expect(fixture.nativeElement.querySelector('[role="group"]')).toBeNull();
   });
 

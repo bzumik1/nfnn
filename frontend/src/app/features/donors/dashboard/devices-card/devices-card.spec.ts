@@ -12,6 +12,7 @@ const THIS_MAC: SignedInDevice = {
   id: '019a5a3c-0000-7000-8000-000000000001',
   platform: 'MAC',
   browser: 'FIREFOX',
+  session: 'REMEMBERED',
   signedInAt: '2026-11-01T07:00:00Z',
   lastUsedAt: '2026-11-05T09:30:00Z',
   current: true,
@@ -20,6 +21,7 @@ const IPHONE: SignedInDevice = {
   id: '019a5a3c-0000-7000-8000-000000000002',
   platform: 'IPHONE',
   browser: 'SAFARI',
+  session: 'REMEMBERED',
   signedInAt: '2026-10-30T18:00:00Z',
   lastUsedAt: '2026-11-04T19:05:00Z',
   current: false,
@@ -28,8 +30,27 @@ const UNKNOWN: SignedInDevice = {
   id: '019a5a3c-0000-7000-8000-000000000003',
   platform: 'OTHER',
   browser: 'OTHER',
+  session: 'BROWSER',
   signedInAt: '2026-10-29T10:00:00Z',
   lastUsedAt: '2026-10-29T10:00:00Z',
+  current: false,
+};
+const OLD_IPAD: SignedInDevice = {
+  id: '019a5a3c-0000-7000-8000-000000000004',
+  platform: 'IPAD',
+  browser: 'SAFARI',
+  session: 'APP',
+  signedInAt: '2026-08-01T10:00:00Z',
+  lastUsedAt: '2026-09-20T10:00:00Z',
+  current: false,
+};
+const OLD_WINDOWS: SignedInDevice = {
+  id: '019a5a3c-0000-7000-8000-000000000005',
+  platform: 'WINDOWS',
+  browser: 'EDGE',
+  session: 'PUBLIC',
+  signedInAt: '2026-08-01T10:00:00Z',
+  lastUsedAt: '2026-08-01T10:30:00Z',
   current: false,
 };
 
@@ -91,11 +112,11 @@ describe("Given a donor's signed-in devices card", () => {
     await settle();
   }
 
-  it('when the list is loading, then the card says so under its own heading and names browsers only', async () => {
+  it('when the list is loading, then the card says so under its own heading and names browsers and apps', async () => {
     await signIn();
     expect(text(element('h2'))).toBe('Přihlášená zařízení');
     expect(text(element('.devices-intro'))).toBe(
-      'Prohlížeče, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si heslo.',
+      'Prohlížeče a aplikace, ve kterých jste přihlášeni. Zařízení, které neznáte, odhlaste a změňte si heslo.',
     );
     expect(text(element('[role="status"]'))).toContain('Načítáme přihlášená zařízení');
     http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
@@ -107,15 +128,24 @@ describe("Given a donor's signed-in devices card", () => {
       await listed([THIS_MAC, IPHONE, UNKNOWN]);
     });
 
-    it('then each row names the device, the browser and the times in Prague', () => {
+    it('then each row names the device, the browser, the kind of sign-in and the times in Prague', () => {
       expect(rows().map((row) => text(row.querySelector('.device-name')))).toEqual([
         'Mac · Firefox',
         'iPhone · Safari',
         'Neznámé zařízení',
       ]);
-      expect(text(rows()[1].querySelector('.device-dates'))).toBe(
-        'přihlášeno 30. 10. 2026 · naposledy použito 04. 11. 2026 20:05',
+      expect(text(rows()[1].querySelector('.device-last-use'))).toBe(
+        'naposledy použito 4. 11. 2026 20:05',
       );
+      expect(rows().map((row) => text(row.querySelector('.device-sign-in')))).toEqual([
+        'přihlášeno 1. 11. 2026 · zapamatované přihlášení',
+        'přihlášeno 30. 10. 2026 · zapamatované přihlášení',
+        'přihlášeno 29. 10. 2026 · do zavření prohlížeče',
+      ]);
+    });
+
+    it('then no row of older sign-ins is offered', () => {
+      expect(element('.devices-older-toggle')).toBeNull();
     });
 
     it('then this device is marked and offers no sign-out of its own, the others do', () => {
@@ -254,6 +284,93 @@ describe("Given a donor's signed-in devices card", () => {
       expect(text(element('.devices-status'))).toBe(
         'Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je na kartě Připojené aplikace.',
       );
+    });
+  });
+
+  it('when the iPhone is the installed app, then its row says app instead of the browser and its sign-out names it so', async () => {
+    await signIn();
+    await listed([THIS_MAC, { ...IPHONE, session: 'APP' }]);
+
+    expect(text(rows()[1].querySelector('.device-name'))).toBe('iPhone · aplikace');
+    expect(text(rows()[1].querySelector('.device-sign-in'))).toBe('přihlášeno 30. 10. 2026');
+    expect(rows()[1].querySelector('button')?.getAttribute('aria-label')).toBe(
+      'Odhlásit iPhone · aplikace',
+    );
+  });
+
+  describe('when two devices were last used more than 30 days ago', () => {
+    beforeEach(async () => {
+      await signIn();
+      await listed([THIS_MAC, IPHONE, OLD_IPAD, OLD_WINDOWS]);
+    });
+
+    const toggle = () => element<HTMLButtonElement>('.devices-older-toggle');
+
+    it('then they are folded under a collapsed row that counts them', () => {
+      expect(rows().map((row) => text(row.querySelector('.device-name')))).toEqual([
+        'Mac · Firefox',
+        'iPhone · Safari',
+      ]);
+      expect(text(toggle().querySelector('.ui-list__title'))).toBe('Starší (2)');
+      expect(text(toggle().querySelector('.ui-list__meta'))).toBe('Nepoužitá déle než 30 dní');
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      expect(toggle().hasAttribute('aria-controls')).toBe(false);
+    });
+
+    it('and the donor opens the row, then the older ones show below it, newest first, and the row says it is expanded', async () => {
+      toggle().click();
+      await settle();
+
+      expect(toggle().getAttribute('aria-expanded')).toBe('true');
+      const older = root().querySelector(`#${toggle().getAttribute('aria-controls')}`);
+      expect(
+        Array.from(older?.querySelectorAll('.device-name') ?? []).map((name) => text(name)),
+      ).toEqual(['iPad · aplikace', 'Windows · Edge']);
+      expect(text(older?.querySelector('.device-kind') ?? null)).toBe('cizí počítač');
+      expect(rows()).toHaveLength(4);
+
+      toggle().click();
+      await settle();
+
+      expect(toggle().getAttribute('aria-expanded')).toBe('false');
+      expect(rows()).toHaveLength(2);
+    });
+
+    it('and the donor signs out an older one, then focus moves to the next older sign-out', async () => {
+      toggle().click();
+      await settle();
+      rows()[2].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${OLD_IPAD.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(text(toggle().querySelector('.ui-list__title'))).toBe('Starší (1)');
+      expect(document.activeElement).toBe(rows()[2].querySelector('button'));
+    });
+
+    it('and the donor signs out the last recent one while the older ones stay folded, then focus moves to the row that opens them', async () => {
+      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(document.activeElement).toBe(toggle());
+    });
+
+    it('and the donor signs out every other device, then the older ones go too', async () => {
+      element<HTMLButtonElement>('.devices-sign-out-others').click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: DEVICES_URL })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      expect(toggle()).toBeNull();
     });
   });
 

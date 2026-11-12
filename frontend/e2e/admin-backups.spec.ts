@@ -1,6 +1,11 @@
 import { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { administrator, mockDonorApi, session } from './donor-session';
+import {
+  administrator,
+  mockDonorApi,
+  openUnlockedAdministrationPage,
+  session,
+} from './donor-session';
 
 const BACKUPS = '/api/admin/operations/backups';
 const REQUESTS = '/api/admin/operations/backups/requests';
@@ -103,18 +108,29 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page).toHaveTitle('Zálohy | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeFocused();
     await expect(page.getByText('Zálohování je v pořádku.')).toBeVisible();
-    await expect(page.locator('.run dd').first()).toHaveText('23. 10. 2026 03:00 (2 kB)');
-    await expect(page.locator('tbody tr')).toHaveCount(2);
+    await expect(page.locator('.run dd').first()).toHaveText('23. 10. 2026 3:00 (2 kB)');
+    await expect(page.getByRole('button', { name: /^Nejnovější záloha/ })).toContainText(
+      '23. 10. 2026 3:00 · Plánovaná',
+    );
+
+    await page.getByRole('link', { name: /^Všechny zálohy/ }).click();
+
+    await expect(page).toHaveTitle('Všechny zálohy | Správa | Nová naděje – nadační fond');
+    await expect(page.getByRole('heading', { level: 1, name: 'Všechny zálohy' })).toBeFocused();
+    await page
+      .getByRole('region', { name: /22\. 10\. 2026/ })
+      .getByRole('button', { name: /^3:00/ })
+      .click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet.getByRole('heading', { name: '22. 10. 2026 3:00' })).toBeVisible();
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump.age' }).click(),
+      sheet.getByRole('button', { name: 'Stáhnout' }).click(),
     ]);
 
     expect(download.suggestedFilename()).toBe('nfnn-2026-10-22_0300.dump.age');
-    await expect(
-      page.getByRole('button', { name: 'Stáhnout nfnn-2026-10-22_0300.dump.age' }),
-    ).toBeEnabled();
+    await expect(sheet.getByRole('button', { name: 'Stáhnout' })).toBeEnabled();
   });
 
   test('when they show the backup key with a code and confirm saving it, then the key hides and the warning goes', async ({
@@ -222,16 +238,16 @@ test.describe('Given an administrator on the backups page', () => {
       },
     );
 
-    await page.goto('/sprava/zalohy');
+    await openUnlockedAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page.getByRole('button', { name: 'Zálohovat teď' }).click();
 
     await expect(page.getByRole('button', { name: 'Zálohujeme…' })).toBeDisabled();
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasText: 'Záloha nfnn-' })).toHaveText(
       'Záloha nfnn-2026-10-23_1000-rucni.dump.age je hotová (2 kB).',
       { timeout: 10_000 },
     );
-    await expect(page.locator('tbody tr').first()).toContainText(
-      'nfnn-2026-10-23_1000-rucni.dump.age',
+    await expect(page.getByRole('button', { name: /^Nejnovější záloha/ })).toContainText(
+      '23. 10. 2026 10:00 · Na požádání',
     );
     await expect(page.getByRole('button', { name: 'Zálohovat teď' })).toBeEnabled();
     expect(requests).toEqual([{ kind: 'BACKUP' }]);
@@ -289,22 +305,31 @@ test.describe('Given an administrator on the backups page', () => {
     };
     await page.clock.install();
 
-    await page.goto('/sprava/zalohy');
+    await openUnlockedAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
+    await page.getByRole('link', { name: /^Všechny zálohy/ }).click();
     await page
-      .getByRole('button', { name: 'Obnovit databázi ze zálohy nfnn-2026-10-22_0300.dump.age' })
+      .getByRole('region', { name: /22\. 10\. 2026/ })
+      .getByRole('button', { name: /^3:00/ })
       .click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Obnovit web z této zálohy…' })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/zalohy$/);
 
     const dialog = page.getByRole('dialog');
     await expect(
       dialog.getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
     ).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await expect(
+      dialog.getByRole('heading', { name: 'Obnovit databázi ze zálohy?' }),
+    ).toBeFocused();
     await dialog.getByRole('button', { name: 'Obnovit a restartovat web' }).click();
 
     await expect(page.getByRole('heading', { name: 'Obnova ze zálohy' })).toBeVisible();
     expect(await restartPoll()).toBe(502);
     expect(await restartPoll()).toBe(200);
-    await expect(page.locator('.ui-notice--status')).toHaveText(
+    await expect(page.getByRole('status').filter({ hasText: 'Databáze je obnovená' })).toHaveText(
       'Databáze je obnovená ze zálohy nfnn-2026-10-22_0300.dump.age. Stav před obnovou je uložený jako záloha „Před obnovou“.',
     );
     expect(posted).toEqual(['POST']);

@@ -145,7 +145,7 @@ describe('Given an administrator writing a new project', () => {
       'novy-projekt-zahrada-pro-deti',
     );
     expect(text(fixture, '#projects-slug-hint')).toContain(
-      'Projekt bude na nfnn.cz/projekty/novy-projekt-zahrada-pro-deti.',
+      'Příběh bude na nfnn.cz/projekty/novy-projekt-zahrada-pro-deti.',
     );
 
     await type(fixture, '#projects-slug', 'zahrada');
@@ -169,7 +169,7 @@ describe('Given an administrator writing a new project', () => {
       ),
     ).toEqual(['Děti', 'Dospělí', 'Zvířata', 'Ostatní']);
     expect(text(fixture, '#projects-category-hint')).toBe(
-      'Komu projekt pomohl. Jak web řadí projekty podle kategorie a roku, vyberete v seznamu projektů.',
+      'Koho se příběh týká. Jak web řadí příběhy podle kategorie a roku, vyberete v seznamu příběhů.',
     );
   });
 
@@ -241,10 +241,10 @@ describe('Given an administrator writing a new project', () => {
     await settle(fixture);
 
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
+      'Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
     expect(replaced).toHaveBeenCalledWith(`/sprava/projekty/${draftProject().id}`);
-    expect(text(fixture, 'h1')).toBe('Úprava projektu');
+    expect(text(fixture, 'h1')).toBe('Úprava příběhu');
     expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
   });
@@ -267,7 +267,7 @@ describe('Given an administrator writing a new project', () => {
     const slug = element<HTMLInputElement>(fixture, '#projects-slug');
     expect(slug.getAttribute('aria-invalid')).toBe('true');
     expect(text(fixture, '#projects-slug-error')).toBe(
-      'Tuto adresu už má jiný projekt nebo aktualita. Zvolte prosím jinou.',
+      'Tuto adresu už má jiný příběh nebo aktualita. Zvolte prosím jinou.',
     );
     expect(document.activeElement).toBe(slug);
     expect(fixture.nativeElement.querySelector('.form-error')).toBeNull();
@@ -288,9 +288,9 @@ describe('Given an administrator writing a new project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
+      'Příběh jsme uložili jako koncept. Na web ho dostanete tlačítkem Uložit a zveřejnit.',
     );
-    expect(titled).toHaveBeenCalledWith('Úprava projektu | Správa | Nová naděje – nadační fond');
+    expect(titled).toHaveBeenCalledWith('Úprava příběhu | Správa | Nová naděje – nadační fond');
   });
 
   it('when they write it and save and publish at once, then it is created and published with the chosen date', async () => {
@@ -312,7 +312,7 @@ describe('Given an administrator writing a new project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt se na webu ukáže 30. 10. 2026.',
+      'Příběh se na webu ukáže 30. 10. 2026.',
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
@@ -515,7 +515,7 @@ describe('Given an administrator writing a new project', () => {
       `/api/content/media/${IMAGE_ID}?w=960`,
     );
     expect(text(fixture, '.image-field [role="status"]')).toBe(
-      'Fotka je nahraná. K projektu se připojí, až ho uložíte.',
+      'Fotka je nahraná. K příběhu se připojí, až ho uložíte.',
     );
     expect(text(fixture, 'label[for="projects-image"]')).toBe('Vyměnit fotku');
     expect(fixture.componentInstance.canLeave()).toBeInstanceOf(Promise);
@@ -585,7 +585,7 @@ describe('Given an administrator editing a draft project', () => {
     expect(button(fixture, 'Uložit koncept').type).toBe('submit');
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
     expect(text(fixture, '#projects-publish-date-hint')).toBe(
-      'Projekt zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.',
+      'Příběh zatím vidíte jen vy. Tlačítko Uložit a zveřejnit ho pustí na web s tímto datem, s pozdějším datem až ten den.',
     );
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
   });
@@ -621,7 +621,7 @@ describe('Given an administrator editing a draft project', () => {
 
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt je na webu s datem 24. 10. 2026.',
+      'Příběh je na webu s datem 24. 10. 2026.',
     );
     expect(element<HTMLAnchorElement>(fixture, '.public-link').getAttribute('href')).toBe(
       '/projekty/beneficni-koncert',
@@ -653,7 +653,7 @@ describe('Given an administrator editing a draft project', () => {
     it('then the sheet keeps the edits in the form and names when the other version was saved', () => {
       const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
       expect(sheet.textContent).toContain('zůstávají ve formuláři');
-      expect(sheet.textContent).toContain('Novější verze je z 05. 11. 2026 16:20.');
+      expect(sheet.textContent).toContain('Novější verze je z 5. 11. 2026 16:20.');
       expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe(
         'Opravený text o koncertu.',
       );
@@ -688,7 +688,7 @@ describe('Given an administrator editing a draft project', () => {
 
       expect(fixture.nativeElement.querySelector('app-changed-meanwhile-dialog')).toBeNull();
       expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-        'Vaše úpravy jsme zahodili a načetli novější verzi projektu.',
+        'Vaše úpravy jsme zahodili a načetli novější verzi příběhu.',
       );
       expect(document.activeElement?.tagName).toBe('H1');
     });
@@ -705,7 +705,7 @@ describe('Given an administrator editing a draft project', () => {
 
     http.expectNone(`${PROJECTS_URL}/${draftProject().id}/publish`);
     expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
-      'Projekt se nepodařilo uložit. Zkuste to prosím znovu.',
+      'Příběh se nepodařilo uložit. Zkuste to prosím znovu.',
     );
     expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
   });
@@ -741,10 +741,10 @@ describe('Given an administrator editing a published project', () => {
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Na webu');
     expect(text(fixture, '#projects-publish-date-hint')).toBe(
-      'Projekt je na webu, změny se ukážou hned. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.',
+      'Příběh je na webu, změny se ukážou hned. Příběhy na stejném místě řazení ukazuje web od naposledy zveřejněného.',
     );
     expect(element<HTMLInputElement>(fixture, '#projects-publish-date').value).toBe('2026-10-20');
-    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 09:30.');
+    expect(text(fixture, '.updated-at')).toBe('Naposledy uloženo 20. 10. 2026 9:30.');
   });
 
   async function tapPhoto(clientX: number, clientY: number): Promise<void> {
@@ -776,7 +776,7 @@ describe('Given an administrator editing a published project', () => {
       Array.from(fixture.nativeElement.querySelectorAll('figure.preview figcaption')).map(
         (caption) => (caption as HTMLElement).textContent?.trim(),
       ),
-    ).toEqual(['Karta v Projektech', 'Příběh roku v Aktualitách', 'Nahoře v článku']);
+    ).toEqual(['Karta v Pomáháme', 'Příběh roku v Aktualitách', 'Nahoře v článku']);
 
     await tapPhoto(168, 45);
     expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 42 % zleva, 18 % shora.');
@@ -809,7 +809,7 @@ describe('Given an administrator editing a published project', () => {
       .flush(null, { status: 500, statusText: 'Server Error' });
     await settle(fixture);
     expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
-      'Projekt se nepodařilo uložit. Zkuste to prosím znovu.',
+      'Příběh se nepodařilo uložit. Zkuste to prosím znovu.',
     );
 
     await submit(fixture);
@@ -858,7 +858,7 @@ describe('Given an administrator editing a published project', () => {
 
     http.expectNone(`${PROJECTS_URL}/${project().id}`);
     expect(text(fixture, '.ui-action-bar [role="alert"]')).toBe(
-      'Projekt se nepodařilo uložit. Zkuste to prosím znovu.',
+      'Příběh se nepodařilo uložit. Zkuste to prosím znovu.',
     );
     expect(text(fixture, '.picker-status')).toBe('Bod výřezu: 50 % zleva, 50 % shora.');
   });
@@ -903,7 +903,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
-      'Projekt jsme z webu stáhli. Zůstává tu jako koncept.',
+      'Příběh jsme z webu stáhli. Zůstává tu jako koncept.',
     );
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
     expect(button(fixture, 'Uložit a zveřejnit').disabled).toBe(false);
@@ -924,7 +924,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt je na webu s datem 01. 10. 2026.',
+      'Příběh je na webu s datem 1. 10. 2026.',
     );
   });
 
@@ -977,7 +977,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Projekt je na webu s datem 01. 10. 2026.',
+      'Příběh je na webu s datem 1. 10. 2026.',
     );
     expect(button(fixture, 'Uložit a ukázat na webu').disabled).toBe(false);
     expect(fixture.componentInstance.canLeave()).toBe(true);
@@ -1002,7 +1002,7 @@ describe('Given an administrator editing a published project', () => {
 
     expect(text(fixture, '.publish-state .ui-badge')).toBe('Zveřejní se 30. 10. 2026');
     expect(text(fixture, '#projects-publish-date-hint')).toBe(
-      'Na web se projekt dostane 30. 10. 2026, do té doby ho vidíte jen vy. Projekty na stejném místě řazení ukazuje web od naposledy zveřejněného.',
+      'Na web se příběh dostane 30. 10. 2026, do té doby ho vidíte jen vy. Příběhy na stejném místě řazení ukazuje web od naposledy zveřejněného.',
     );
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
     expect(button(fixture, 'Uložit změny').type).toBe('submit');
@@ -1017,7 +1017,7 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(text(fixture, '.ui-action-bar [role="status"]')).toBe(
-      'Změny jsme uložili. Projekt se na webu ukáže 30. 10. 2026.',
+      'Změny jsme uložili. Příběh se na webu ukáže 30. 10. 2026.',
     );
     button(fixture, 'Zrušit zveřejnění').click();
     await settle(fixture);
@@ -1032,13 +1032,13 @@ describe('Given an administrator editing a published project', () => {
   describe('when they ask to delete it', () => {
     beforeEach(async () => {
       await loaded();
-      button(fixture, 'Smazat projekt').click();
+      button(fixture, 'Smazat příběh').click();
       await settle(fixture);
     });
 
     it('then the question names the project and the focus moves to the safe choice', () => {
       expect(text(fixture, '.confirm[role="group"]')).toContain(
-        'Opravdu smazat projekt „Zahrada pro děti“?',
+        'Opravdu smazat příběh „Zahrada pro děti“?',
       );
       expect(document.activeElement).toBe(button(fixture, 'Zrušit'));
     });
@@ -1047,7 +1047,7 @@ describe('Given an administrator editing a published project', () => {
       button(fixture, 'Zrušit').click();
       await settle(fixture);
 
-      expect(document.activeElement).toBe(button(fixture, 'Smazat projekt'));
+      expect(document.activeElement).toBe(button(fixture, 'Smazat příběh'));
     });
 
     it('and confirm, then the project is deleted and the list says so', async () => {
@@ -1075,16 +1075,16 @@ describe('Given an administrator editing a published project', () => {
       await settle(fixture);
 
       expect(text(fixture, '.delete-card [role="alert"]:not(:empty)')).toBe(
-        'Projekt se nepodařilo smazat. Zkuste to prosím znovu.',
+        'Příběh se nepodařilo smazat. Zkuste to prosím znovu.',
       );
-      expect(document.activeElement).toBe(button(fixture, 'Smazat projekt'));
+      expect(document.activeElement).toBe(button(fixture, 'Smazat příběh'));
     });
   });
 
   it('when someone else saved the project before they deleted it with unsaved edits and they keep the edits, then the focus returns to the delete button', async () => {
     await loaded();
     await type(fixture, '#projects-title', 'Jiný titulek');
-    button(fixture, 'Smazat projekt').click();
+    button(fixture, 'Smazat příběh').click();
     await settle(fixture);
     element<HTMLButtonElement>(fixture, '.confirm .ui-button--danger').click();
     await settle(fixture);
@@ -1104,12 +1104,12 @@ describe('Given an administrator editing a published project', () => {
     await settle(fixture);
 
     expect(element<HTMLInputElement>(fixture, '#projects-title').value).toBe('Jiný titulek');
-    expect(document.activeElement).toBe(button(fixture, 'Smazat projekt'));
+    expect(document.activeElement).toBe(button(fixture, 'Smazat příběh'));
   });
 
   it('when the project no longer exists, then the page returns to the list', async () => {
     const navigated = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    const refusal = problem(404, 'content/project-not-found', 'Projekt nenalezen', '');
+    const refusal = problem(404, 'content/project-not-found', 'Příběh nenalezen', '');
     http.expectOne(`${PROJECTS_URL}/${project().id}`).flush(refusal.body, refusal.options);
     await settle(fixture);
 

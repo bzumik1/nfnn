@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
+import cz.novanadeje.app.operations.domain.backup.RestoreCarryForward;
 import cz.novanadeje.app.operations.domain.backup.RestoreRevocations;
 import cz.novanadeje.app.operations.domain.backup.PublicBackupKey;
 import cz.novanadeje.app.operations.domain.backup.RestorePending;
@@ -150,7 +151,7 @@ class BackupRestoreServiceTest {
     void should_audit_the_revocations_when_started_given_a_restore_that_revoked() {
         BackupRun restored = restore(RunOutcome.OK, Optional.of(ADMIN), Optional.empty());
         BackupRun revoked = new BackupRun(restored.outcome(), restored.startedAt(), restored.finishedAt(), restored.fileName(), restored.sizeBytes(), restored.tables(),
-                restored.requestId(), restored.requestedBy(), restored.error(), Optional.of(new RestoreRevocations(2, 3)));
+                restored.requestId(), restored.requestedBy(), restored.error(), Optional.of(new RestoreRevocations(2, 3)), Optional.empty());
         when(store.lastRestore()).thenReturn(Optional.of(revoked));
         when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
 
@@ -163,10 +164,45 @@ class BackupRestoreServiceTest {
     }
 
     @Test
+    @DisplayName("Given a finished restore that carried erasures, credentials, roles and audit entries forward and moved the receipt numbers, when the backend starts, then the audit names every count after the revocations")
+    void should_audit_what_was_carried_forward_when_started_given_a_restore_that_carried_it() {
+        BackupRun restored = restore(RunOutcome.OK, Optional.of(ADMIN), Optional.empty());
+        BackupRun carried = new BackupRun(restored.outcome(), restored.startedAt(), restored.finishedAt(), restored.fileName(), restored.sizeBytes(), restored.tables(),
+                restored.requestId(), restored.requestedBy(), restored.error(), Optional.of(new RestoreRevocations(2, 3)),
+                Optional.of(new RestoreCarryForward(1, 2, 0, 5, 1000)));
+        when(store.lastRestore()).thenReturn(Optional.of(carried));
+        when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
+
+        service.recordFinishedRestore();
+
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + "), tabulek: 37"
+                + "; ukončená přihlášení: 2, zneplatněné jednorázové odkazy a kódy: 3"
+                + "; zachováno z doby po záloze: vymazaní dárci 1, přihlašovací údaje 2, role 0, záznamy historie 5; čísla potvrzení posunuta o 1000");
+    }
+
+    @Test
+    @DisplayName("Given a finished restore that carried things forward but names no revocations, when the backend starts, then the audit keeps the text the history can read")
+    void should_audit_without_what_was_carried_forward_when_started_given_no_revocations() {
+        BackupRun restored = restore(RunOutcome.OK, Optional.of(ADMIN), Optional.empty());
+        BackupRun carried = new BackupRun(restored.outcome(), restored.startedAt(), restored.finishedAt(), restored.fileName(), restored.sizeBytes(), restored.tables(),
+                restored.requestId(), restored.requestedBy(), restored.error(), Optional.empty(), Optional.of(new RestoreCarryForward(1, 2, 0, 5, 1000)));
+        when(store.lastRestore()).thenReturn(Optional.of(carried));
+        when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
+
+        service.recordFinishedRestore();
+
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().details()).isEqualTo("Databáze obnovena ze zálohy " + FILE + " (požadavek " + REQUEST + "), tabulek: 37");
+    }
+
+    @Test
     @DisplayName("Given a finished restore with revocations but no table count, when the backend starts, then the audit keeps the text without counts that the history can read")
     void should_audit_without_the_revocations_when_started_given_no_table_count() {
         BackupRun revoked = new BackupRun(RunOutcome.OK, NOW.minusSeconds(60), NOW.minusSeconds(30), Optional.of(FILE), Optional.of(1590L), Optional.empty(),
-                Optional.of(REQUEST), Optional.of(ADMIN), Optional.empty(), Optional.of(new RestoreRevocations(2, 3)));
+                Optional.of(REQUEST), Optional.of(ADMIN), Optional.empty(), Optional.of(new RestoreRevocations(2, 3)), Optional.empty());
         when(store.lastRestore()).thenReturn(Optional.of(revoked));
         when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
 
@@ -204,6 +240,6 @@ class BackupRestoreServiceTest {
 
     private static BackupRun restore(RunOutcome outcome, Optional<UUID> admin, Optional<String> error) {
         return new BackupRun(outcome, NOW.minusSeconds(60), NOW.minusSeconds(30), Optional.of(FILE), Optional.of(1590L),
-                outcome == RunOutcome.OK ? Optional.of(37) : Optional.empty(), Optional.of(REQUEST), admin, error, Optional.empty());
+                outcome == RunOutcome.OK ? Optional.of(37) : Optional.empty(), Optional.of(REQUEST), admin, error, Optional.empty(), Optional.empty());
     }
 }

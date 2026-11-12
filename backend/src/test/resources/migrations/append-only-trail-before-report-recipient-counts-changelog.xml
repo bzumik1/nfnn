@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <include file="migrations/before-report-recipient-counts-changelog.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/004_index_admin_action_performed_at_id.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/shared/007_keep_admin_action_append_only.xml" relativeToChangelogFile="false"/>
+
+</databaseChangeLog>

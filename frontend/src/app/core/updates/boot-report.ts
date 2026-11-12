@@ -5,6 +5,7 @@ import { ErrorReporter } from '../errors/error-reporter';
 import { SESSION_STORAGE } from '../reload/reload-guard';
 
 export const BOOT_RECOVERED_KEY = 'nfnn.boot.recovered';
+export const BOOT_LAST_ATTEMPT_KEY = 'nfnn.boot.last';
 export const STARTED_ATTRIBUTE = 'data-nfnn-started';
 export const CODE_ARRIVED_ATTRIBUTE = 'data-nfnn-loading';
 

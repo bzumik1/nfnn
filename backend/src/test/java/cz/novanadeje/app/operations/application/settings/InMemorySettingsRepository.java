@@ -15,6 +15,10 @@ class InMemorySettingsRepository implements SettingsRepository {
     private final Map<Setting, StoredSetting> rows = new EnumMap<>(Setting.class);
 
     @Override
+    public void lockForChange() {
+    }
+
+    @Override
     public List<StoredSetting> findAll() {
         return new ArrayList<>(rows.values());
     }

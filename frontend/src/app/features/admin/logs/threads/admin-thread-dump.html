@@ -1,0 +1,76 @@
+<div class="ui-page container">
+  <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.logs.threads.heading">
+    Výpis vláken
+  </h1>
+  <p class="ui-page-intro" i18n="@@admin.logs.threads.intro">
+    Co právě dělá každé vlákno backendu. Hodí se, když web visí nebo neodpovídá.
+  </p>
+
+  <div role="status">
+    @if (state() === 'loading') {
+      <p class="ui-load-state" i18n="@@admin.logs.threads.busy">Načítáme vlákna…</p>
+    }
+  </div>
+  @if (state() === 'error') {
+    <div class="ui-load-state ui-load-state--error" role="alert">
+      <p i18n="@@admin.logs.threads.failed">Výpis vláken se nepodařilo načíst.</p>
+      <button
+        appNeedsConnection
+        type="button"
+        class="ui-button"
+        (click)="load()"
+        i18n="@@admin.logs.error.retry"
+      >
+        Zkusit znovu
+      </button>
+    </div>
+  }
+  @if (state() === 'ready') {
+    <div class="ui-groups groups">
+      <section class="states" aria-labelledby="threads-states-title">
+        <h2 id="threads-states-title" class="ui-group-title" i18n="@@admin.logs.threads.states">
+          Podle stavu
+        </h2>
+        <ul class="ui-list ui-list--inset">
+          <li>
+            <div class="ui-list__row">
+              <span class="ui-list__title" i18n="@@admin.logs.threads.total">Celkem</span>
+              <span class="ui-list__value">{{ total() }}</span>
+            </div>
+          </li>
+          @for (entry of states(); track entry.state) {
+            <li>
+              <div class="ui-list__row">
+                <span class="ui-list__title">{{ entry.label }}</span>
+                <span class="ui-list__value">{{ entry.count }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section aria-labelledby="threads-dump-title">
+        <div class="dump-head">
+          <h2 id="threads-dump-title" class="ui-group-title" i18n="@@admin.logs.threads.dump">
+            Celý výpis
+          </h2>
+          <app-copy-button
+            [value]="dump()"
+            what="výpis vláken"
+            i18n-what="@@admin.logs.threads.copyWhat"
+          />
+        </div>
+        <pre class="dump" tabindex="0">{{ dump() }}</pre>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@admin.logs.threads.reload"
+        >
+          Načíst znovu
+        </button>
+      </section>
+    </div>
+  }
+</div>

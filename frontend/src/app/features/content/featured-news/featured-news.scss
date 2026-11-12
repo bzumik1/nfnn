@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 
 :host {
   display: block;
@@ -15,6 +16,13 @@
   box-shadow: var(--shadow-card);
   color: var(--color-on-image);
   isolation: isolate;
+  transition: transform var(--duration-base);
+}
+
+.featured:has(.featured-more:active) {
+  @include pressed.look {
+    @include pressed.shrinks;
+  }
 }
 
 .featured-photo {
@@ -62,7 +70,7 @@
 }
 
 .featured-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-section-title);
   font-weight: var(--weight-bold);
   line-height: var(--leading-display);
@@ -150,6 +158,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: none;
   white-space: nowrap;
+
+  &:active {
+    background-image: none;
+  }
 
   &::after {
     content: '';

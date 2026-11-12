@@ -83,6 +83,39 @@ Feature: An administrator sees the database backups, starts one, downloads one a
     And a request file for the test restore waits for the backup container
     And the admin action "REQUEST_TEST_RESTORE" by "Jana" is recorded with details containing "Zkušební obnova nejnovější zálohy vyžádána"
 
+  Scenario: While a request waits for the backup container another one is refused, also of the other kind
+    Given "Jana" asked for a backup now
+    When "Jana" asks for a backup now
+    Then the response status is 409
+    And the problem type ends with "operations/backup-request-pending"
+    When "Jana" asks for a test restore now
+    Then the response status is 409
+    And the problem type ends with "operations/backup-request-pending"
+    And the admin action "REQUEST_BACKUP" by "Jana" is recorded with details containing "Záloha databáze vyžádána"
+    And the admin action "REQUEST_TEST_RESTORE" by "Jana" is not recorded
+    When the backup container takes every waiting request
+    And "Jana" asks for a test restore now
+    Then the response status is 202
+
+  Scenario: Requests are limited to ten a day for each administrator, from any address, counted before anything is written
+    Given a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And "Jana" asked for a backup now 10 times, each taken by the backup container
+    When the following requests come from another client address
+    And "Jana" asks for a test restore now
+    Then the response status is 429
+    And the problem type ends with "operations/rate-limited"
+    And no request waits for the backup container
+    When "Andrea" asks for a backup now
+    Then the response status is 202
+    When the backup container takes every waiting request
+    And 1439 minutes pass
+    And "Jana" asks for a backup now
+    Then the response status is 429
+    When 1 minute passes
+    And "Jana" asks for a backup now
+    Then the response status is 202
+
   Scenario: A backup is downloaded as a file and the download is audited; an unknown or odd name is not found
     Given these backups are in the backup folder:
       | file                          | size | createdAt            |

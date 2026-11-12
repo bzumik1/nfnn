@@ -20,9 +20,7 @@
 }
 
 .claim-symbol {
-  font-family: var(--font-mono);
   font-weight: var(--weight-bold);
-  white-space: nowrap;
 }
 
 .claim-note {
@@ -60,7 +58,7 @@
 }
 
 .claim-yes {
-  background: var(--color-accent);
+  background: var(--color-accent-fill);
   color: var(--color-on-accent);
 }
 

@@ -113,6 +113,38 @@ test.describe('Given an administrator whose administration locks on this device'
     ]);
   });
 
+  test('when the account has a passkey that this device has not wrapped the copy with, then the passkey is offered first and the password stays beside it', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === '/api/donors/me/passkeys',
+      (route) =>
+        route.fulfill({
+          json: {
+            items: [
+              {
+                id: '0190c3a2-7b1e-7cc1-8a52-0000000000aa',
+                name: 'iPhone',
+                createdAt: '2026-11-01T08:00:00Z',
+                lastUsedAt: null,
+              },
+            ],
+          },
+        }),
+    );
+    await rememberedSession(page);
+
+    await page.goto('/sprava/prehledy');
+
+    await expect(
+      page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+    ).toBeVisible();
+    await expect(page.locator('.lock-actions').getByRole('button')).toHaveText([
+      'Odemknout přístupovým klíčem',
+      'Použít heslo',
+    ]);
+  });
+
   test('when the administrator has just signed in, then the administration opens without asking again', async ({
     page,
   }) => {
@@ -176,7 +208,8 @@ test.describe('Given an administrator whose administration locks on this device'
   });
 
   test.describe('when the administration is on the news editor', () => {
-    const tabs = (page: Page) => page.getByRole('navigation', { name: 'Hlavní sekce' });
+    const logo = (page: Page) =>
+      page.getByRole('banner').getByRole('link', { name: 'Nová naděje – nadační fond' });
 
     test.beforeEach(async ({ page }) => {
       await page.route(
@@ -186,7 +219,7 @@ test.describe('Given an administrator whose administration locks on this device'
       await rememberedSession(page);
     });
 
-    test('and it is locked from the start, then a tab still leads out of the administration', async ({
+    test('and it is locked from the start, then the logo still leads out of the administration', async ({
       page,
     }) => {
       await page.goto('/sprava/aktuality/nova');
@@ -194,12 +227,12 @@ test.describe('Given an administrator whose administration locks on this device'
         page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
       ).toBeFocused();
 
-      await tabs(page).getByRole('link', { name: 'O nás' }).click();
+      await logo(page).click();
 
-      await expect(page).toHaveURL('/o-nas');
+      await expect(page).toHaveURL('/');
     });
 
-    test('and it locks with a half-written article and a tab is pressed, then the question about unsaved changes waits behind the panel until the administration is unlocked', async ({
+    test('and it locks with a half-written article and the logo is pressed, then the question about unsaved changes waits behind the panel until the administration is unlocked', async ({
       page,
     }) => {
       await page.goto('/sprava/aktuality/nova');
@@ -212,7 +245,7 @@ test.describe('Given an administrator whose administration locks on this device'
         page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
       ).toBeFocused();
 
-      await tabs(page).getByRole('link', { name: 'O nás' }).click();
+      await logo(page).click();
       await expect(page.getByRole('dialog', { name: 'Máte neuložené změny' })).toHaveCount(0);
       await unlockAdministration(page);
 
@@ -252,12 +285,12 @@ test.describe('Given an administrator whose administration locks on this device'
       await expect(page.getByLabel('Titulek')).toHaveCount(0);
     });
 
-    test('and a tab was pressed before signing out, then signing out still opens the site', async ({
+    test('and the logo was pressed before signing out, then signing out still opens the site', async ({
       page,
     }) => {
       await page
-        .getByRole('navigation', { name: 'Hlavní sekce' })
-        .getByRole('link', { name: 'O nás' })
+        .getByRole('banner')
+        .getByRole('link', { name: 'Nová naděje – nadační fond' })
         .click();
 
       await page.getByRole('button', { name: 'Odhlásit se z tohoto zařízení' }).click();
@@ -279,7 +312,9 @@ test.describe('Given an administrator whose administration locks on this device'
 
     await context.setOffline(true);
 
-    await expect(page.getByText('Jste offline.', { exact: false })).toBeVisible();
+    await expect(
+      page.getByText('Jste offline. Heslem a kódem odemknete správu', { exact: false }),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Použít heslo' })).toBeDisabled();
     await context.setOffline(false);
   });

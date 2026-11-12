@@ -8,6 +8,7 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
+import { REMOVE_STYLES_ON_COMPONENT_DESTROY } from '@angular/platform-browser';
 import {
   InMemoryScrollingFeature,
   InMemoryScrollingOptions,
@@ -15,6 +16,7 @@ import {
   provideRouter,
   withInMemoryScrolling,
   withNavigationErrorHandler,
+  withPreloading,
 } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -25,20 +27,29 @@ import { PublicSessionIdle } from './core/auth/public-session-idle';
 import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
+import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
+import { pageTransitionsAtStart } from './core/navigation/page-transitions';
+import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
+import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
+import { keptAnswerRefreshInterceptor } from './core/connectivity/kept-answer-refresh';
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
 import { AppBadge } from './core/push/app-badge';
+import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
+import { inputModalityAtStart } from './core/input/input-modality';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
+import { windowControlsAtStart } from './core/layout/window-controls';
+import { DEVICE_COPY_DIAGNOSTICS } from './core/diagnostics/device-copy-diagnostics';
 import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
 
@@ -49,6 +60,8 @@ const scrollOptions: InMemoryScrollingOptions = {
 
 const inMemoryScrolling: InMemoryScrollingFeature = withInMemoryScrolling(scrollOptions);
 
+export const tabPagesPreloading = withPreloading(TabPagesPreloading);
+
 export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavigationErrorHandler(
   (error) => void inject(ChunkLoadRecovery).handleNavigationError(error),
 );
@@ -56,12 +69,19 @@ export const chunkLoadRecoveryFeature: NavigationErrorHandlerFeature = withNavig
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
   withInterceptors([
+    keptPublicAnswersInterceptor,
     authInterceptor,
     versionInterceptor,
+    keptAnswerRefreshInterceptor,
     serviceWorkerBypassInterceptor,
     connectivityInterceptor,
   ]),
 );
+
+export const keptPageStyles: Provider = {
+  provide: REMOVE_STYLES_ON_COMPONENT_DESTROY,
+  useValue: false,
+};
 
 export const appErrorHandler: Provider = {
   provide: ErrorHandler,
@@ -72,7 +92,16 @@ export const dialogHistoryAtStart: EnvironmentProviders = provideAppInitializer(
   () => void inject(DialogHistory),
 );
 
-export const deviceCopies: Provider = { provide: SESSION_DEVICE, useExisting: DeviceCopies };
+export const deviceCopies: Provider[] = [
+  { provide: SESSION_DEVICE, useExisting: DeviceCopies },
+  {
+    provide: DEVICE_COPY_DIAGNOSTICS,
+    useFactory: () => {
+      const copies = inject(DeviceCopies);
+      return () => copies.diagnostics();
+    },
+  },
+];
 
 export const connectivityAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(Connectivity);
@@ -89,7 +118,7 @@ export const appConfig: ApplicationConfig = {
     deviceCopies,
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
-    provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature),
+    provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature, tabPagesPreloading),
     appHttpClient,
     provideAppServiceWorker(),
     provideAppInitializer(() => {
@@ -106,7 +135,13 @@ export const appConfig: ApplicationConfig = {
     dialogHistoryAtStart,
     connectivityAtStart,
     pagePinchLockAtStart,
+    pressedOnTouchAtStart,
+    inputModalityAtStart,
     systemTextSizeAtStart,
+    windowControlsAtStart,
     navigationAtStart,
+    edgeSwipeBackAtStart,
+    pageTransitionsAtStart,
+    keptPageStyles,
   ],
 };

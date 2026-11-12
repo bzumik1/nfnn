@@ -75,6 +75,22 @@ class ImageIoSignatureImageProcessorTest {
     }
 
     @Test
+    @DisplayName("Given a PNG that declares 7000 by 7000 pixels, within 8000 on a side but over 48 million pixels, when processed, then it is refused before its pixels are decoded")
+    void should_refuse_without_decoding_when_processed_given_more_than_48_million_pixels() {
+        assertThatThrownBy(() -> processor.process(pngHeaderOnly(7000, 7000)))
+                .isInstanceOf(UnsupportedSignatureImage.class)
+                .hasMessageContaining("48 million pixels");
+    }
+
+    @Test
+    @DisplayName("Given a PNG of 16 bits per sample, when processed, then it is refused before its pixels are decoded")
+    void should_refuse_without_decoding_when_processed_given_sixteen_bits_per_sample() {
+        assertThatThrownBy(() -> processor.process(encode(new BufferedImage(20, 20, BufferedImage.TYPE_USHORT_GRAY), "png")))
+                .isInstanceOf(UnsupportedSignatureImage.class)
+                .hasMessageContaining("8 bits per sample");
+    }
+
+    @Test
     @DisplayName("Given a PNG cut off in the middle, when processed, then it is refused as undecodable")
     void should_refuse_when_processed_given_truncated_png() {
         byte[] whole = encode(signature(600, 200, BufferedImage.TYPE_INT_RGB), "png");

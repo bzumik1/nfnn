@@ -17,8 +17,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,12 +34,25 @@ class RestoreRevocationSqlTest {
 
     private static final Path REVOCATIONS = Path.of("deploy", "backup", "revoke-restored-credentials.sql");
 
+    private static final List<String> ENDED_AS_SESSIONS = List.of("donor_refresh_token", "donor_device", "operations_push_subscription");
+
     private static final Map<String, String> KEPT_USABLE_AFTER_A_RESTORE = Map.of(
-            "donor_refresh_token", "a session, which end_sessions revokes instead",
             "donor_second_factor_recovery", "the 1 Kč recovery unlocks nothing without a payment from the donor's verified account, and a payment made between"
                     + " the dump and the restore is imported again and must still complete it (plan v3 2.34, Jakub's card)");
 
+    private static final Set<String> HOLD_NO_SESSION_OR_ONE_TIME_SECRET = Set.of(
+            "admin_action", "backup_alert_state", "bank_code", "bank_code_list_state", "bank_import_state", "bank_logo", "bank_logo_image", "bank_payment", "contact_message",
+            "content_about", "content_former_slug", "content_founders_note", "content_media", "content_media_variant", "content_news",
+            "content_people_footnote", "content_person", "content_project", "content_project_order",
+            "donation", "donation_import_alert", "donation_monthly_report", "donation_person_receipt_signature", "donation_receipt_signatory",
+            "donation_receipt_signature", "donation_report_delivery", "donation_report_settings", "donor_record", "donor_sender_account", "donor_symbol_claim",
+            "issued_receipt", "receipt_image", "receipt_signing_key", "receipt_signing_key_adoption",
+            "donor", "donor_passkey", "donor_registration_reminder", "donor_role", "donor_second_factor", "donor_second_factor_wrong_codes",
+            "operations_alert", "operations_backup_key_confirmation", "operations_backup_schedule", "operations_carried_settings_key",
+            "operations_push_key", "operations_restore_record", "operations_setting", "operations_setup");
+
     private static final Pattern SPENT_TABLES = Pattern.compile("foreach one_time_table in array array\\[(?<tables>[^]]*)]");
+    private static final Pattern END_SESSIONS = Pattern.compile("function pg_temp\\.end_sessions\\(\\).*?\\$\\$(?<body>.*?)\\$\\$", Pattern.DOTALL);
     private static final String DONOR = "019a0000-0000-7000-8000-0000000000d1";
     private static final String DEVICE = "019a0000-0000-7000-8000-0000000000d2";
     private static final String SIGNED_OUT_DEVICE = "019a0000-0000-7000-8000-0000000000d3";
@@ -128,9 +144,28 @@ class RestoreRevocationSqlTest {
     }
 
     @Test
-    @DisplayName("Given the migrated schema, when the tables with an expiry or a hashed secret beside a use are read, then the restore spends each one or keeps it usable for a stated reason, so a new kind of link, challenge or code is not revived by a backup")
-    void should_spend_or_explain_every_single_use_table_when_tables_read_given_migrated_schema() throws IOException {
-        List<String> candidates = jdbc.sql("""
+    @DisplayName("Given the migrated schema, when its tables are read, then each one is classified once, as a session the restore ends, a one-time secret it spends or keeps usable for a stated reason, or a table that holds neither, and none with an expiry or a hashed secret beside a use holds neither, so a new kind of session, link, challenge or code is not revived by a backup")
+    void should_classify_every_table_once_when_tables_read_given_migrated_schema() {
+        assertThat(classificationProblems()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a new table that holds a session without an expiry, when the tables are read, then it is reported as unclassified")
+    void should_report_the_table_as_unclassified_when_tables_read_given_a_new_session_table_without_an_expiry() {
+        jdbc.sql("create table restore_probe_session (id uuid primary key, donor_id uuid not null, issued_at timestamp with time zone not null)").update();
+
+        assertThat(classificationProblems()).containsExactly("restore_probe_session is not classified: a session goes into end_sessions and"
+                + " ENDED_AS_SESSIONS, a one-time secret into spend_one_time_secrets or KEPT_USABLE_AFTER_A_RESTORE with its reason, any other table into"
+                + " HOLD_NO_SESSION_OR_ONE_TIME_SECRET");
+    }
+
+    private List<String> classificationProblems() {
+        List<String> tables = jdbc.sql("""
+                select table_name from information_schema.tables
+                where table_schema = 'public' and table_type = 'BASE TABLE' and table_name not like 'databasechangelog%'
+                order by 1
+                """).query(String.class).list();
+        List<String> withAnExpiryOrAHashedSecretBesideAUse = jdbc.sql("""
                 select distinct candidate.table_name from information_schema.columns candidate
                 where candidate.table_schema = 'public'
                   and (candidate.column_name = 'expires_at'
@@ -140,11 +175,40 @@ class RestoreRevocationSqlTest {
                                          and secret.column_name like '%\\_hash')))
                 order by 1
                 """).query(String.class).list();
+        Map<String, List<String>> classes = new LinkedHashMap<>();
+        classes.put("spend_one_time_secrets", spentTables());
+        classes.put("ENDED_AS_SESSIONS", ENDED_AS_SESSIONS);
+        classes.put("KEPT_USABLE_AFTER_A_RESTORE", List.copyOf(KEPT_USABLE_AFTER_A_RESTORE.keySet()));
+        classes.put("HOLD_NO_SESSION_OR_ONE_TIME_SECRET", List.copyOf(HOLD_NO_SESSION_OR_ONE_TIME_SECRET));
+        List<String> problems = new ArrayList<>();
+        for (String table : tables) {
+            List<String> named = classes.entrySet().stream().filter(group -> group.getValue().contains(table)).map(Map.Entry::getKey).toList();
+            if (named.isEmpty()) {
+                problems.add(table + " is not classified: a session goes into end_sessions and ENDED_AS_SESSIONS, a one-time secret into"
+                        + " spend_one_time_secrets or KEPT_USABLE_AFTER_A_RESTORE with its reason, any other table into HOLD_NO_SESSION_OR_ONE_TIME_SECRET");
+            } else if (named.size() > 1) {
+                problems.add(table + " is classified more than once, in " + named);
+            }
+        }
+        classes.forEach((group, named) -> named.stream().filter(table -> !tables.contains(table)).sorted()
+                .forEach(table -> problems.add(table + " in " + group + " is no table of the migrated schema")));
+        String endSessions = endSessionsBody();
+        ENDED_AS_SESSIONS.stream().filter(table -> !endSessions.contains("public." + table))
+                .forEach(table -> problems.add(table + " is classified as a session, but end_sessions does not end it"));
+        withAnExpiryOrAHashedSecretBesideAUse.stream().filter(HOLD_NO_SESSION_OR_ONE_TIME_SECRET::contains)
+                .forEach(table -> problems.add(table + " has an expiry or a hashed secret beside a use, so it holds a session or a one-time secret"));
+        return problems;
+    }
 
-        assertThat(candidates).hasSizeGreaterThanOrEqualTo(7);
-        assertThat(candidates).allSatisfy(table -> assertThat(spentTables().contains(table) ^ KEPT_USABLE_AFTER_A_RESTORE.containsKey(table)).as(table).isTrue());
-        assertThat(spentTables()).allSatisfy(table -> assertThat(candidates).contains(table));
-        assertThat(KEPT_USABLE_AFTER_A_RESTORE.keySet()).allSatisfy(table -> assertThat(candidates).contains(table));
+    private String endSessionsBody() {
+        Matcher function;
+        try {
+            function = END_SESSIONS.matcher(revocations());
+        } catch (IOException unreadable) {
+            throw new IllegalStateException(unreadable);
+        }
+        assertThat(function.find()).as("the function end_sessions in " + REVOCATIONS).isTrue();
+        return function.group("body");
     }
 
     private List<String> spentTables() {

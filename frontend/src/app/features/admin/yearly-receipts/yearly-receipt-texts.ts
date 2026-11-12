@@ -18,7 +18,7 @@ const SKIP_REASONS: Readonly<Record<string, string>> = {
   'donations/donor-not-found': $localize`:@@admin.yearlyReceipts.skip.notFound:dárce jsme nenašli.`,
   'donations/yearly-receipt-not-available': $localize`:@@admin.yearlyReceipts.skip.noGift:za tento rok nemá žádný dar.`,
   'donations/receipt-replacement-in-browser-only': $localize`:@@admin.yearlyReceipts.skip.browserOnly:platné potvrzení jde nahradit jen ve správě webu v prohlížeči.`,
-  'donations/receipt-issue-limit': $localize`:@@admin.yearlyReceipts.skip.limit:dárce dnes dosáhl denního limitu nových potvrzení; zkuste to zítra.`,
+  'donations/receipt-issue-limit': $localize`:@@admin.yearlyReceipts.skip.limit:dárce dosáhl limitu nových potvrzení místo dřívějších (20 za 24 hodin, 60 za rok); zkuste to později.`,
   'donations/receipt-too-long': $localize`:@@admin.yearlyReceipts.skip.tooLong:potvrzení má příliš mnoho darů pro ověřovací QR kód; vystavte mu na kartě dárce potvrzení k jednotlivým darům.`,
   'donations/receipt-unprintable': $localize`:@@admin.yearlyReceipts.skip.unprintable:údaje na potvrzení obsahují znak, který neumíme vytisknout; napište prosím správci webu.`,
 };

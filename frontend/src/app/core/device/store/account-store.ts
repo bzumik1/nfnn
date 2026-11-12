@@ -13,10 +13,18 @@ export interface StoredChunk {
   readonly rows: readonly unknown[];
 }
 
+export interface StoredImage {
+  readonly sha256: string;
+  readonly mediaType: string;
+  readonly base64: string;
+}
+
 export interface CopyContents {
   readonly chunks: readonly StoredChunk[];
   readonly summary: unknown;
   readonly storedAt: string;
+  readonly images?: readonly StoredImage[];
+  readonly profile?: unknown;
 }
 
 export type CopyLoad = 'empty' | 'loaded' | 'damaged';
@@ -25,10 +33,15 @@ interface ChunkPlaintext extends StoredChunk {
   readonly type: 'chunk';
 }
 
+interface ImagePlaintext extends StoredImage {
+  readonly type: 'image';
+}
+
 interface MetaPlaintext {
   readonly type: 'meta';
   readonly summary: unknown;
   readonly storedAt: string;
+  readonly profile?: unknown;
 }
 
 export class AccountStore {
@@ -66,13 +79,24 @@ export class AccountStore {
   }
 
   async replace(contents: CopyContents): Promise<void> {
-    const plaintexts: (ChunkPlaintext | MetaPlaintext)[] = [
-      { type: 'meta', summary: contents.summary, storedAt: contents.storedAt },
+    const plaintexts: (ChunkPlaintext | MetaPlaintext | ImagePlaintext)[] = [
+      {
+        type: 'meta',
+        summary: contents.summary,
+        storedAt: contents.storedAt,
+        ...(contents.profile === undefined ? {} : { profile: contents.profile }),
+      },
       ...contents.chunks.map((chunk): ChunkPlaintext => ({
         type: 'chunk',
         id: chunk.id,
         rowsSha256: chunk.rowsSha256,
         rows: chunk.rows,
+      })),
+      ...(contents.images ?? []).map((image): ImagePlaintext => ({
+        type: 'image',
+        sha256: image.sha256,
+        mediaType: image.mediaType,
+        base64: image.base64,
       })),
     ];
     const records: StoredRecord[] = [];
@@ -104,14 +128,21 @@ export class AccountStore {
 
   private async contentsOf(records: readonly StoredRecord[]): Promise<CopyContents | null> {
     const chunks: StoredChunk[] = [];
+    const images: StoredImage[] = [];
     let meta: MetaPlaintext | null = null;
     for (const record of records) {
       const bytes = await this.copy.openRecord(this.addressOf(record.recordId), record);
       try {
         const plaintext = JSON.parse(new TextDecoder().decode(bytes)) as
-          ChunkPlaintext | MetaPlaintext;
+          ChunkPlaintext | MetaPlaintext | ImagePlaintext;
         if (plaintext.type === 'meta') {
           meta = plaintext;
+        } else if (plaintext.type === 'image') {
+          images.push({
+            sha256: plaintext.sha256,
+            mediaType: plaintext.mediaType,
+            base64: plaintext.base64,
+          });
         } else {
           chunks.push({ id: plaintext.id, rowsSha256: plaintext.rowsSha256, rows: plaintext.rows });
         }
@@ -122,13 +153,24 @@ export class AccountStore {
     if (meta === null) {
       return null;
     }
-    chunks.sort((first, second) => (first.id < second.id ? -1 : first.id > second.id ? 1 : 0));
-    return { chunks, summary: meta.summary, storedAt: meta.storedAt };
+    chunks.sort((first, second) => byText(first.id, second.id));
+    images.sort((first, second) => byText(first.sha256, second.sha256));
+    return {
+      chunks,
+      summary: meta.summary,
+      storedAt: meta.storedAt,
+      ...(images.length === 0 ? {} : { images }),
+      ...(meta.profile === undefined ? {} : { profile: meta.profile }),
+    };
   }
 
   private addressOf(recordId: string): RecordAddress {
     return { collection: this.feed, recordId, schemaVersion: RECORD_SCHEMA_VERSION };
   }
+}
+
+function byText(first: string, second: string): number {
+  return first < second ? -1 : first > second ? 1 : 0;
 }
 
 function padded(json: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {

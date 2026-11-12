@@ -12,26 +12,27 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
-import { saveBlob } from '../../donations/file-download';
 import { RESTORE_MAX_POLLS, SetupApi } from '../../operations/setup/setup-api';
 import {
   AdminApi,
   AdminBackupsResponse,
   BackupFileResponse,
   BackupKeyStatus,
-  BackupKind,
   BackupRequestKind,
   BackupRunResponse,
   BackupScheduleResponse,
   RestoreFileResponse,
 } from '../admin-api';
 import { formatSize } from './backup-format';
+import { BackupDownloads } from './backup-downloads';
+import { backupKindName } from './backup-kinds';
+import { BackupSheet } from './backup-sheet/backup-sheet';
 import { formatPlanTime, onDay } from './backup-plan';
 import { BackupKeyCard } from './backup-key-card';
 import { BackupScheduleCard } from './backup-schedule-card';
@@ -39,6 +40,7 @@ import { BACKUP_PROBLEM_HELP, BACKUP_PROBLEM_TEXTS } from './backup-texts';
 import { needsTechnician, technicianMessage } from './backup-message';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { RestoreDialog } from './restore-dialog';
+import { ADMIN_BACKUP_HISTORY_PATH, RESTORE_STATE_KEY } from './backup-paths';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
@@ -64,13 +66,6 @@ export const JOB_POLL_MS = 3000;
 export const JOB_MAX_POLLS = 20;
 export const RESTORE_REQUEST_KEY = 'nfnn.restore-request';
 
-const KIND_NAMES: Record<BackupKind, string> = {
-  DAILY: $localize`:@@admin.backups.kind.daily:Plánovaná`,
-  REQUESTED: $localize`:@@admin.backups.kind.requested:Na požádání`,
-  BEFORE_RESTORE: $localize`:@@admin.backups.kind.beforeRestore:Před obnovou`,
-  OTHER: $localize`:@@admin.backups.kind.other:Jiná`,
-};
-
 const NONE_YET = $localize`:@@admin.backups.run.none:Zatím žádná.`;
 
 function failedAt(at: string): string {
@@ -87,7 +82,10 @@ function failedAt(at: string): string {
     BackupScheduleCard,
     NgTemplateOutlet,
     CopyButton,
+    RouterLink,
+    BackupSheet,
   ],
+  providers: [BackupDownloads],
   templateUrl: './admin-backups.html',
   styleUrl: './admin-backups.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -101,12 +99,16 @@ export class AdminBackups {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
+  private restoreAskedFor: string | null = restoreHandedOver(this.router);
+
+  protected readonly downloads = inject(BackupDownloads);
+  protected readonly historyPath = ADMIN_BACKUP_HISTORY_PATH;
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly job = signal<RunningJob | null>(null);
-  protected readonly downloading = signal<string | null>(null);
+  protected readonly opened = signal<BackupFileResponse | null>(null);
   protected readonly restoreCandidate = signal<BackupFileResponse | null>(null);
   protected readonly restoreBusy = signal(false);
   protected readonly restoreError = signal<string | null>(null);
@@ -115,6 +117,7 @@ export class AdminBackups {
 
   protected readonly available = computed(() => this.view()?.available ?? false);
   protected readonly backups = computed(() => this.view()?.backups ?? []);
+  protected readonly latest = computed(() => this.backups()[0] ?? null);
   protected readonly restoreFiles = computed(() => this.view()?.restoreFiles ?? []);
   protected readonly pendingRequests = computed(() => this.view()?.pendingRequests ?? 0);
   protected readonly problems = computed(() =>
@@ -154,6 +157,7 @@ export class AdminBackups {
           this.view.set(view);
           this.state.set('ready');
           this.reportRequestedRestore(view);
+          this.askHandedOverRestore(view);
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -178,15 +182,24 @@ export class AdminBackups {
   }
 
   protected kindName(item: BackupFileResponse): string {
-    return KIND_NAMES[item.kind];
+    return backupKindName(item.kind);
   }
 
-  protected restoreLabel(item: BackupFileResponse): string {
-    return $localize`:@@admin.backups.restore.label:Obnovit databázi ze zálohy ${item.fileName}:file:`;
+  protected openBackup(item: BackupFileResponse): void {
+    this.downloads.forget();
+    this.opened.set(item);
   }
 
-  protected downloadLabel(item: BackupFileResponse): string {
-    return $localize`:@@admin.backups.download.label:Stáhnout ${item.fileName}:file:`;
+  protected closeBackup(): void {
+    this.opened.set(null);
+  }
+
+  protected restoreOpened(): void {
+    const item = this.opened();
+    this.opened.set(null);
+    if (item !== null) {
+      this.askRestore(item);
+    }
   }
 
   protected time(isoInstant: string): string {
@@ -305,33 +318,6 @@ export class AdminBackups {
       });
   }
 
-  protected download(item: BackupFileResponse): void {
-    if (this.downloading() !== null) {
-      return;
-    }
-    this.notice.set(null);
-    this.downloading.set(item.fileName);
-    this.api
-      .downloadBackup(item.fileName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (file) => {
-          this.downloading.set(null);
-          saveBlob(file);
-        },
-        error: (failure: unknown) => {
-          this.downloading.set(null);
-          this.notice.set({
-            kind: 'alert',
-            text: describeProblem(
-              failure,
-              $localize`:@@admin.backups.download.failed:Zálohu se nepodařilo stáhnout. Zkuste to prosím znovu.`,
-            ),
-          });
-        },
-      });
-  }
-
   private finished(
     view: AdminBackupsResponse,
     kind: BackupRequestKind,
@@ -384,6 +370,15 @@ export class AdminBackups {
           kind: 'alert',
           text: $localize`:@@admin.backups.testRestore.failed:Zkušební obnova se nepovedla. Technické podrobnosti najdete níže u Poslední zkušební obnova.`,
         };
+  }
+
+  private askHandedOverRestore(view: AdminBackupsResponse): void {
+    const fileName = this.restoreAskedFor;
+    this.restoreAskedFor = null;
+    const item = view.backups.find((backup) => backup.fileName === fileName);
+    if (item !== undefined) {
+      this.askRestore(item);
+    }
   }
 
   private reportRequestedRestore(view: AdminBackupsResponse): void {
@@ -471,6 +466,11 @@ export class AdminBackups {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function restoreHandedOver(router: Router): string | null {
+  const fileName: unknown = router.currentNavigation()?.extras.state?.[RESTORE_STATE_KEY];
+  return typeof fileName === 'string' ? fileName : null;
 }
 
 function rememberRestore(restore: RequestedRestore): void {

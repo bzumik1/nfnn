@@ -23,6 +23,7 @@ import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { AdminApi, AdministratorResponse } from '../admin-api';
+import { portraitsByEmail } from '../people/portraits-by-email';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -33,7 +34,6 @@ type PendingAction = { kind: ActionKind; donorId: string } | null;
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
-const PORTRAIT_WIDTH = 480;
 
 @Component({
   selector: 'app-admin-administrators',
@@ -262,20 +262,4 @@ export class AdminAdministrators {
 
 function openerId(kind: ActionKind, donorId: string): string {
   return `administrator-${kind}-${donorId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
-}
-
-function portraitsByEmail(members: PersonResponse[]): Map<string, string | null> {
-  const portraits = new Map<string, string | null>();
-  for (const member of members) {
-    if (!member.linkedToAccount) {
-      continue;
-    }
-    const portrait = member.portrait ? `${member.portrait.url}?w=${PORTRAIT_WIDTH}` : null;
-    for (const email of [member.personalEmail, member.fundEmail]) {
-      if (email !== null && !portraits.has(email)) {
-        portraits.set(email, portrait);
-      }
-    }
-  }
-  return portraits;
 }

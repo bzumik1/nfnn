@@ -7,6 +7,8 @@ import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.donor.ChangeDonorRecordProfileCommand;
 import cz.novanadeje.app.donations.application.donor.DonorRecordService;
 import cz.novanadeje.app.donations.application.donor.RegisterDonorRecordCommand;
+import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -120,9 +122,11 @@ class DonorRecordSynchronizerTest {
     @Test
     @DisplayName("Given pairing after the registration, when its transaction setting is read, then it runs in a new transaction of its own")
     void should_pair_in_new_transaction_when_annotation_read_given_service() throws NoSuchMethodException {
-        Transactional transactional = DonorRecordService.class.getMethod("pairPaymentsOf", UUID.class).getAnnotation(Transactional.class);
+        Transactional pairing = PaymentPairingService.class.getMethod("pairPaymentsOf", DonorReference.class, Instant.class)
+                .getAnnotation(Transactional.class);
 
-        assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+        assertThat(pairing.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+        assertThat(DonorRecordService.class.getMethod("pairPaymentsOf", UUID.class).getAnnotation(Transactional.class)).isNull();
     }
 
     private static TransactionalEventListener listener(String method, Class<?> event) throws NoSuchMethodException {

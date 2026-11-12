@@ -14,6 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { formatBankTime } from '../../donations/donation-date';
@@ -57,17 +58,20 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
+  SET_BANK_LOGO_SOURCE: $localize`:@@admin.actions.action.setBankLogoSource:Nastavení loga banky`,
+  REFRESH_BANK_LOGO: $localize`:@@admin.actions.action.refreshBankLogo:Nové stažení loga banky`,
+  REMOVE_BANK_LOGO: $localize`:@@admin.actions.action.removeBankLogo:Odebrání loga banky`,
   CREATE_NEWS: $localize`:@@admin.actions.action.createNews:Napsání aktuality`,
   UPDATE_NEWS: $localize`:@@admin.actions.action.updateNews:Úprava aktuality`,
   PUBLISH_NEWS: $localize`:@@admin.actions.action.publishNews:Zveřejnění aktuality`,
   UNPUBLISH_NEWS: $localize`:@@admin.actions.action.unpublishNews:Stažení aktuality z webu`,
   DELETE_NEWS: $localize`:@@admin.actions.action.deleteNews:Smazání aktuality`,
-  CREATE_PROJECT: $localize`:@@admin.actions.action.createProject:Napsání projektu`,
-  UPDATE_PROJECT: $localize`:@@admin.actions.action.updateProject:Úprava projektu`,
-  PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění projektu`,
-  UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení projektu z webu`,
-  CHANGE_PROJECT_ORDER: $localize`:@@admin.actions.action.changeProjectOrder:Změna řazení projektů`,
-  DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání projektu`,
+  CREATE_PROJECT: $localize`:@@admin.actions.action.createProject:Napsání příběhu`,
+  UPDATE_PROJECT: $localize`:@@admin.actions.action.updateProject:Úprava příběhu`,
+  PUBLISH_PROJECT: $localize`:@@admin.actions.action.publishProject:Zveřejnění příběhu`,
+  UNPUBLISH_PROJECT: $localize`:@@admin.actions.action.unpublishProject:Stažení příběhu z webu`,
+  CHANGE_PROJECT_ORDER: $localize`:@@admin.actions.action.changeProjectOrder:Změna řazení příběhů`,
+  DELETE_PROJECT: $localize`:@@admin.actions.action.deleteProject:Smazání příběhu`,
   CHANGE_BACKUP_SCHEDULE: $localize`:@@admin.actions.action.changeBackupSchedule:Změna plánu záloh`,
   REQUEST_BACKUP: $localize`:@@admin.actions.action.requestBackup:Spuštění zálohy databáze`,
   REQUEST_HISTORY_IMPORT: $localize`:@@admin.actions.action.requestHistoryImport:Načtení starších plateb z banky`,
@@ -107,6 +111,7 @@ export class AdminActions {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly rows = inject(CompactLayout).listsAsRows;
   protected readonly items = signal<AdminActionResponse[]>([]);
   protected readonly hasMore = signal(false);
   protected readonly loadingMore = signal(false);
@@ -143,14 +148,14 @@ export class AdminActions {
   }
 
   protected loadMore(): void {
-    const oldest = this.items().at(-1);
-    if (oldest === undefined || this.loadingMore()) {
+    const lastListed = this.items().at(-1);
+    if (lastListed === undefined || this.loadingMore()) {
       return;
     }
     this.loadingMore.set(true);
     this.moreFailed.set(false);
     this.api
-      .adminActions(oldest.performedAt)
+      .adminActions(lastListed)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {

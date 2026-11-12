@@ -23,6 +23,7 @@ const READ_ONLY = {
 const YEAR = z.number().int().min(2000).max(2100);
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const LOG_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const DONATIONS_SHOWN = 20;
 const LOG_TIMES =
@@ -357,24 +358,40 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           .describe(
             'Only actions before this instant (ISO 8601), as the previous answer names it for the next page.',
           ),
+        beforeId: z
+          .string()
+          .uuid()
+          .optional()
+          .describe(
+            'With before: only actions listed after the action of this id, as the previous answer names it for the next page, so actions of one moment are not skipped.',
+          ),
         limit: z.number().int().min(1).max(200).default(50),
       }),
       annotations: READ_ONLY,
     },
-    async ({ before, limit }, ctx) =>
+    async ({ before, beforeId, limit }, ctx) =>
       answer(deps, ctx, 'nfnn_admin_actions', async ({ apiToken }) => {
         const query = new URLSearchParams({ limit: String(limit) });
         if (before !== undefined) {
           query.set('before', before);
+          if (beforeId !== undefined) {
+            query.set('beforeId', beforeId);
+          }
         }
         const page = asRecord(await backend.get(`/api/admin/donors/actions?${query}`, apiToken));
         const items = Array.isArray(page['items']) ? page['items'] : [];
-        const oldest = asRecord(items[items.length - 1])['performedAt'];
+        const lastListed = asRecord(items[items.length - 1]);
+        const oldest = lastListed['performedAt'];
+        const oldestId = lastListed['id'];
         const result = text(page);
-        if (page['hasMore'] === true && typeof oldest === 'string') {
+        if (
+          page['hasMore'] === true &&
+          typeof oldest === 'string' &&
+          typeof oldestId === 'string'
+        ) {
           result.content.push({
             type: 'text',
-            text: `Older actions: call nfnn_admin_actions again with before "${oldest}".`,
+            text: `Older actions: call nfnn_admin_actions again with before "${oldest}" and beforeId "${oldestId}".`,
           });
         }
         return result;
@@ -386,12 +403,17 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Měsíční přehled',
       description:
-        'The monthly report settings (recipients, send day, sections), the reports sent and the next one due.',
+        "The monthly report settings (recipients, send day, sections), the reports sent and the next one due. With `month` (YYYY-MM) one sent report instead: every sending of that month, newest first, with when it went out, whether an administrator sent it by hand, how many recipients it had and what it said (only the sections it carried: donors, donations, unpaired payments, bank import); a month sent before the sendings were kept has no sendings and `recomputed`, its figures counted from today's data without the bank import, which may differ from the e-mail that went out.",
+      inputSchema: z.object({ month: MONTH.optional() }),
       annotations: READ_ONLY,
     },
-    async (ctx) =>
+    async ({ month }, ctx) =>
       answer(deps, ctx, 'nfnn_report', async ({ apiToken }) =>
-        text(await backend.get('/api/admin/donations/report', apiToken)),
+        text(
+          month === undefined
+            ? await backend.get('/api/admin/donations/report', apiToken)
+            : await backend.get(`/api/admin/donations/report/sent?month=${month}`, apiToken),
+        ),
       ),
   );
 
@@ -406,6 +428,20 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     async (ctx) =>
       answer(deps, ctx, 'nfnn_settings', async ({ apiToken }) =>
         text(await backend.get('/api/admin/operations/settings', apiToken)),
+      ),
+  );
+
+  server.registerTool(
+    'nfnn_bank_logos',
+    {
+      title: 'Loga bank',
+      description:
+        "The bank logos the site shows beside Czech account numbers, one per bank code: code, the bank's name from the ČNB list (null for a code the list does not know), sourceUrl (the official address the server downloads the icon from), sourceAllowed (false when the allow-list no longer admits that address: the site then hides the logo and it is never downloaded again until a new address is set), version (for nfnn_set_bank_logo_source), imageId and imageSha256 of the stored 128 px WebP (null until the first download), fetchedAt, checkedAt and lastFailure (the reason the last daily check could not download it: status, redirected, timeout, unreachable, unknown-host, non-public-address, too-large, unsupported-type, image-too-large, unreadable-image or interrupted; null after a good one). The server checks each logo again weekly and keeps the stored image when its source fails; removing a logo stays on the web (/sprava).",
+      annotations: READ_ONLY,
+    },
+    async (ctx) =>
+      answer(deps, ctx, 'nfnn_bank_logos', async ({ apiToken }) =>
+        text(await backend.get('/api/admin/donations/bank-logos', apiToken)),
       ),
   );
 
@@ -454,7 +490,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_content',
     {
-      title: 'Aktuality a projekty',
+      title: 'Aktuality a příběhy',
       description:
         'Every news article and project of the site, drafts included, with id, slug, title, tag, perex, the year and category of a project, photo, published date, live (whether the site shows it today: published and the published date not after today in Prague) and the length of the text, but not the text itself: read one whole with nfnn_news_article or nfnn_project.',
       annotations: READ_ONLY,
@@ -472,7 +508,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_project_order',
     {
-      title: 'Řazení projektů',
+      title: 'Řazení příběhů',
       description: `How the site orders the projects on the home page and the list of projects (the administration lists them the same way, drafts first), as \`order\`: ${PROJECT_ORDERS} Changed with nfnn_set_project_order.`,
       annotations: READ_ONLY,
     },
@@ -504,7 +540,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
   server.registerTool(
     'nfnn_project',
     {
-      title: 'Projekt',
+      title: 'Příběh',
       description:
         'One project whole, draft or published: every field nfnn_update_project takes, with its text, year, category and photo (coverImage.focalPoint as for news), and live (whether the site shows it today; false for a draft and before its published date).',
       inputSchema: z.object({ id: UUID }),

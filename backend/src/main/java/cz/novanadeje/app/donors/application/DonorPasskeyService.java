@@ -83,7 +83,7 @@ public class DonorPasskeyService {
 
     @Transactional(noRollbackFor = PasskeyRejected.class)
     public PasskeyView register(DonorId donorId, String challenge, String name, PasskeyAttestation attestation) {
-        return registerFor(load(donorId), challenge, name, attestation);
+        return registerFor(lock(donorId), challenge, name, attestation);
     }
 
     PasskeyView registerFor(Donor donor, String challenge, String name, PasskeyAttestation attestation) {
@@ -129,10 +129,10 @@ public class DonorPasskeyService {
 
     @Transactional
     public void remove(DonorId donorId, boolean secondFactorVerified, PasskeyId passkeyId) {
+        Donor donor = lock(donorId);
         Passkey passkey = passkeys.findById(passkeyId)
                 .filter(found -> found.belongsTo(donorId))
                 .orElseThrow(() -> new PasskeyNotFound(passkeyId));
-        Donor donor = load(donorId);
         sessionGuard.requireForFactorChange(donor, secondFactorVerified);
         if (!donor.hasPassword() && passkeys.countByDonor(donorId) <= 1) {
             throw new LastSignInMethod(donorId);
@@ -152,5 +152,9 @@ public class DonorPasskeyService {
 
     private Donor load(DonorId donorId) {
         return donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+    }
+
+    private Donor lock(DonorId donorId) {
+        return donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
     }
 }

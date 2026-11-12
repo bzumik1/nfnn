@@ -1,6 +1,11 @@
+import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import {
+  FakeSoftKeyboard,
+  provideFakeSoftKeyboard,
+} from '../../core/layout/testing/fake-soft-keyboard';
 import { TabBar } from './tab-bar';
 
 @Component({ template: '' })
@@ -9,11 +14,16 @@ class Blank {}
 describe('Given the tab bar', () => {
   let fixture: ComponentFixture<TabBar>;
   let router: Router;
+  let keyboard: FakeSoftKeyboard;
 
   beforeEach(async () => {
+    keyboard = new FakeSoftKeyboard();
     await TestBed.configureTestingModule({
       imports: [TabBar],
-      providers: [provideRouter([{ path: '**', component: Blank }])],
+      providers: [
+        provideRouter([{ path: '**', component: Blank }]),
+        provideFakeSoftKeyboard(keyboard),
+      ],
     }).compileComponents();
     router = TestBed.inject(Router);
     fixture = TestBed.createComponent(TabBar);
@@ -50,6 +60,19 @@ describe('Given the tab bar', () => {
       ['Pomáháme', '/projekty'],
       ['Přispět', '/prispet'],
     ]);
+  });
+
+  it('when it renders, then every tab shows one decorative filled glyph drawn in the text colour', () => {
+    const icons = tabs().map((link) => link.querySelectorAll('svg'));
+
+    expect(icons.map((found) => found.length)).toEqual([1, 1, 1, 1]);
+    for (const [icon] of icons.map((found) => Array.from(found))) {
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+      expect(icon.getAttribute('viewBox')).not.toBeNull();
+      expect(icon.getAttribute('fill')).toBe('currentColor');
+      expect(icon.querySelectorAll('[stroke], [stroke-width]')).toHaveLength(0);
+      expect(icon.hasAttribute('stroke')).toBe(false);
+    }
   });
 
   it('when the landing page is open, then no tab is the current page', async () => {
@@ -93,6 +116,19 @@ describe('Given the tab bar', () => {
     expect(router.url).toBe('/projekty');
   });
 
+  it('when the current tab is pressed on a page opened from its root, then the app steps back to that root instead of opening it again on top', async () => {
+    router.initialNavigation();
+    await visit('/projekty');
+    await visit('/projekty/sofinka');
+    const location = TestBed.inject(Location);
+
+    press(tab('Pomáháme'));
+    await vi.waitFor(() => expect(router.url).toBe('/projekty'));
+
+    location.forward();
+    await vi.waitFor(() => expect(router.url).toBe('/projekty/sofinka'));
+  });
+
   it('when the current tab is pressed at its root, then the page scrolls to the top and stays', async () => {
     await visit('/o-nas');
     const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
@@ -110,5 +146,29 @@ describe('Given the tab bar', () => {
     const click = press(tab('Aktuality'), { ctrlKey: true });
 
     expect(click.defaultPrevented).toBe(false);
+  });
+
+  describe('when the on-screen keyboard opens for a text field', () => {
+    beforeEach(() => {
+      document.body.appendChild(fixture.nativeElement);
+      keyboard.show();
+      fixture.detectChanges();
+    });
+
+    afterEach(() => fixture.nativeElement.remove());
+
+    it('then the tab bar steps out of sight and out of the reach of the screen reader, as the keyboard covers it in a native app', () => {
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('nav')!;
+
+      expect(getComputedStyle(bar).visibility).toBe('hidden');
+    });
+
+    it('and the keyboard goes down, then the tab bar is back', () => {
+      keyboard.hide();
+      fixture.detectChanges();
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('nav')!;
+
+      expect(getComputedStyle(bar).visibility).not.toBe('hidden');
+    });
   });
 });

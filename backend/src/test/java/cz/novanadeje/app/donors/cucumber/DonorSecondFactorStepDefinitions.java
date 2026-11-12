@@ -158,6 +158,17 @@ public class DonorSecondFactorStepDefinitions {
         }
     }
 
+    @Given("the donor entered the code {string} {int} times, each after signing in with email {string} and password {string} from another client address")
+    public void theDonorEnteredTheCodeTimesEachFromAnotherClientAddress(String code, int times, String email, String password) {
+        for (int i = 0; i < times; i++) {
+            api.comeFromAnotherAddress();
+            theDonorSignedInUpToTheCode(email, password);
+            theDonorCompletesTheSignInWithCode(code);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Code %d answered %s", i + 1, api.lastResponse().getBody()).isEqualTo(401);
+            assertThat(api.lastResponseJson().get("type").asString()).endsWith("auth/invalid-second-factor-code");
+        }
+    }
+
     @Then("the set-up answers with a secret and an otpauth link for {string} issued by {string}, and no QR code")
     public void theSetUpAnswersWithASecretAndAnOtpauthLinkAndNoQrCode(String account, String issuer) {
         JsonNode body = api.lastResponseJson();
