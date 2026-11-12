@@ -1,6 +1,7 @@
 import { signal, type WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { AdministrationVisit, type VisitState } from '../../device-copy/administration-visit';
 import type { VisitChanges } from '../../device-copy/visit-changes';
 import { SinceLastVisit } from './since-last-visit';
@@ -28,13 +29,18 @@ const BUSY: VisitChanges = {
   anything: true,
 };
 
-function ready(changes: VisitChanges, seenAt = '2026-11-10T13:05:00Z'): VisitState {
-  return { kind: 'ready', seenAt, changes };
+function ready(
+  changes: VisitChanges,
+  seenAt = '2026-11-10T13:05:00Z',
+  copiedAt: string | null = null,
+): VisitState {
+  return { kind: 'ready', seenAt, changes, copiedAt };
 }
 
 describe('Given the block of what is new since the last visit on the administration home', () => {
   let state: WritableSignal<VisitState>;
   let opened: WritableSignal<object | null>;
+  let offline: WritableSignal<boolean>;
   let dismissed: WritableSignal<boolean>;
   let dismiss: ReturnType<typeof vi.fn<() => void>>;
   let check: ReturnType<typeof vi.fn<() => Promise<void>>>;
@@ -44,6 +50,7 @@ describe('Given the block of what is new since the last visit on the administrat
   beforeEach(async () => {
     state = signal<VisitState>({ kind: 'checking' });
     opened = signal<object | null>(null);
+    offline = signal(false);
     dismissed = signal(false);
     dismiss = vi.fn<() => void>(() => dismissed.set(true));
     check = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -52,6 +59,7 @@ describe('Given the block of what is new since the last visit on the administrat
       imports: [SinceLastVisit],
       providers: [
         provideRouter([]),
+        { provide: Connectivity, useValue: { offline: offline.asReadonly() } },
         {
           provide: AdministrationVisit,
           useValue: {
@@ -120,11 +128,74 @@ describe('Given the block of what is new since the last visit on the administrat
     expect(check).toHaveBeenCalledTimes(2);
   });
 
+  it('when the connection comes back or goes away, then it asks again, so the copy catches up or the summary shows what it holds', async () => {
+    offline.set(true);
+    await fixture.whenStable();
+    offline.set(false);
+    await fixture.whenStable();
+
+    expect(check).toHaveBeenCalledTimes(3);
+  });
+
+  it('when no copy of the administration is open, then the card is not shown', async () => {
+    await show({ kind: 'closed' });
+
+    expect((fixture.nativeElement as HTMLElement).hidden).toBe(true);
+  });
+
+  it('when the summary was compared offline, then it says the copy may not be up to date and from when it is', async () => {
+    await show(ready(BUSY, '2026-11-10T13:05:00Z', '2026-11-12T08:00:00Z'));
+
+    expect(text('.visit-offline')).toBe(
+      'Jste bez připojení, takže vidíte jen to, co si zařízení stáhlo do 12. 11. 2026 9:00. Nemusí to být aktuální.',
+    );
+  });
+
+  it('when the summary was compared online, then it says nothing about the connection', async () => {
+    await show(ready(BUSY));
+
+    expect(fixture.nativeElement.querySelector('.visit-offline')).toBeNull();
+  });
+
+  it('when several of each came in, then each reads in its plural form', async () => {
+    const cases: [VisitChanges, string, string, string][] = [
+      [
+        {
+          ...BUSY,
+          payments: { count: 3, totalMinor: 30000 },
+          newDonors: 2,
+          otherAdministrators: [{ adminId: 'a1', name: 'Pavel Znamenáček', actions: 2 }],
+        },
+        'Od té doby přišly 3 platby za 300 Kč.',
+        '2 nové registrace',
+        'Pavel Znamenáček: 2 úkony',
+      ],
+      [
+        {
+          ...BUSY,
+          payments: { count: 12, totalMinor: 120000 },
+          newDonors: 5,
+          otherAdministrators: [{ adminId: 'a1', name: 'Pavel Znamenáček', actions: 7 }],
+        },
+        'Od té doby přišlo 12 plateb za 1 200 Kč.',
+        '5 nových registrací',
+        'Pavel Znamenáček: 7 úkonů',
+      ],
+    ];
+    for (const [changes, lead, donors, others] of cases) {
+      await show(ready(changes));
+
+      expect(text('.since-lead')).toContain(lead);
+      expect(figures()['Noví dárci']).toBe(donors);
+      expect(figures()['Úkony dalších správců']).toBe(others);
+    }
+  });
+
   it('when a lot came in, then it names the last visit, sums the payments and lists every kind with its link', async () => {
     await show(ready(BUSY));
 
     expect(text('.since-lead')).toBe(
-      'Minulá návštěva na tomto zařízení 10. 11. 2026 14:05. Od té doby přišlo 5 plateb za 12 500 Kč.',
+      'Minulá návštěva na tomto zařízení byla 10. 11. 2026 14:05. Od té doby přišlo 5 plateb za 12 500 Kč.',
     );
     expect(figures()).toEqual({
       'Přiřazené dárcům': '3 platby za 7 500 Kč',
@@ -159,7 +230,7 @@ describe('Given the block of what is new since the last visit on the administrat
     );
 
     expect(text('.since-lead')).toBe(
-      'Minulá návštěva na tomto zařízení 10. 11. 2026 14:05. Od té doby přišla 1 platba za 500 Kč.',
+      'Minulá návštěva na tomto zařízení byla 10. 11. 2026 14:05. Od té doby přišla 1 platba za 500 Kč.',
     );
     expect(figures()).toEqual({
       'Přiřazené dárcům': '1 platba za 500 Kč',
@@ -185,10 +256,10 @@ describe('Given the block of what is new since the last visit on the administrat
     );
 
     expect(text('.since-lead')).toBe(
-      'Minulá návštěva na tomto zařízení 10. 11. 2026 14:05. Od té doby nepřišla žádná platba.',
+      'Minulá návštěva na tomto zařízení byla 10. 11. 2026 14:05. Od té doby nepřišla žádná platba.',
     );
     expect(figures()).toEqual({
-      'Noví dárci': 'žádná',
+      'Noví dárci': 'žádní',
       'Vydaná potvrzení': 'žádná',
       'Úkony dalších správců': 'Pavel Znamenáček: 4 úkony',
     });
@@ -198,7 +269,7 @@ describe('Given the block of what is new since the last visit on the administrat
     await show(ready(NOTHING));
 
     expect(text('.since-lead')).toBe(
-      'Minulá návštěva na tomto zařízení 10. 11. 2026 14:05. Od té doby nepřibylo nic nového.',
+      'Minulá návštěva na tomto zařízení byla 10. 11. 2026 14:05. Od té doby nepřibylo nic nového.',
     );
     expect(fixture.nativeElement.querySelector('dl')).toBeNull();
     expect(keepMark).toHaveBeenCalled();
@@ -208,7 +279,7 @@ describe('Given the block of what is new since the last visit on the administrat
     await show({ kind: 'first' });
 
     expect(text('.since-lead')).toBe(
-      'Na tomto zařízení otevíráte správu poprvé. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.',
+      'Na tomto zařízení zatím není s čím porovnat. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.',
     );
     expect(keepMark).toHaveBeenCalled();
   });
@@ -217,7 +288,7 @@ describe('Given the block of what is new since the last visit on the administrat
     await show({ kind: 'not-kept' });
 
     expect(text('.since-lead')).toBe(
-      'Toto zařízení si správu neukládá, a tak nemá s čím porovnat, co od minula přibylo.',
+      'V tomto prohlížeči se správa neukládá, a tak tu není s čím porovnat, co od minula přibylo. Souhrn uvidíte na zařízení, kde se správa ukládá.',
     );
     expect(keepMark).not.toHaveBeenCalled();
   });
@@ -231,6 +302,7 @@ describe('Given the block of what is new since the last visit on the administrat
     (alert.querySelector('button') as HTMLButtonElement).click();
 
     expect(check).toHaveBeenCalledTimes(2);
+    expect(document.activeElement?.id).toBe('admin-visit-title');
   });
 
   it('when the summary is closed, then the card goes away for this visit', async () => {
@@ -244,6 +316,16 @@ describe('Given the block of what is new since the last visit on the administrat
 
     expect(dismiss).toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).hidden).toBe(true);
+  });
+
+  it('when this device keeps nothing of the administration, then the card can be closed', async () => {
+    await show({ kind: 'not-kept' });
+
+    expect(
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).map(
+        (button) => button.textContent?.trim(),
+      ),
+    ).toEqual(['Zavřít souhrn']);
   });
 
   it('when it is the first visit, then there is no summary to close', async () => {

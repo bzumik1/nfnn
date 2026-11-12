@@ -9,7 +9,7 @@ import {
   type AdministrationDownloadOutcome,
 } from './administration-copy-download';
 import { AdministrationVisit } from './administration-visit';
-import type { VisitMark } from './visit-changes';
+import { markOf, type VisitMark } from './visit-changes';
 
 const ME = 'admin-me';
 const PAVEL = 'admin-pavel';
@@ -56,6 +56,8 @@ describe('Given the summary of what is new since the last visit on this device',
     typeof vi.fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>
   >;
   let replaced: CopyContents[];
+  let stored: CopyContents | null;
+  let replacing: (contents: CopyContents) => Promise<boolean>;
   let visit: AdministrationVisit;
 
   beforeEach(() => {
@@ -65,6 +67,8 @@ describe('Given the summary of what is new since the last visit on this device',
     offline = signal(false);
     kept = true;
     replaced = [];
+    stored = null;
+    replacing = async () => true;
     refresh = vi
       .fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>()
       .mockImplementation(async () => {
@@ -80,9 +84,13 @@ describe('Given the summary of what is new since the last visit on this device',
             stores: () => kept,
             withCopyLock: <T>(_store: AccountStore, work: () => Promise<T>) => work(),
             replaceContents: async (store: AccountStore, contents: CopyContents) => {
-              replaced.push(contents);
-              (store.contents as WritableSignal<CopyContents | null>).set(contents);
-              return true;
+              const done = await replacing(contents);
+              if (done) {
+                replaced.push(contents);
+                stored = contents;
+                (store.contents as WritableSignal<CopyContents | null>).set(contents);
+              }
+              return done;
             },
           },
         },
@@ -98,14 +106,27 @@ describe('Given the summary of what is new since the last visit on this device',
 
   function open(held: CopyContents | null): WritableSignal<CopyContents | null> {
     const contents = signal<CopyContents | null>(held);
+    stored = held;
     checkedAt.set(null);
     opened.set({
-      store: { copyId: 'copy-1', contents } as unknown as AccountStore,
+      store: {
+        copyId: 'copy-1',
+        contents,
+        load: async () => {
+          contents.set(stored === null ? null : { ...stored });
+          return stored === null ? 'empty' : 'loaded';
+        },
+      } as unknown as AccountStore,
       reason: 'unlocked',
       account: { email: 'a@example.cz', userHandle: 'h', administrator: true },
     });
     TestBed.tick();
     return contents;
+  }
+
+  function synced(contents: WritableSignal<CopyContents | null>, next: CopyContents): void {
+    stored = next;
+    contents.set(next);
   }
 
   it('when no copy of the administration is open, then there is nothing to show', () => {
@@ -120,7 +141,8 @@ describe('Given the summary of what is new since the last visit on this device',
 
   it('when it is asked to check, then the copy catches up and the summary compares it with the mark of the last visit', async () => {
     const contents = open(copy([payment('payment-1', '2026-11-09', 10000)], MARK));
-    contents.set(
+    synced(
+      contents,
       copy(
         [payment('payment-2', '2026-11-11', 30000), payment('payment-1', '2026-11-09', 10000)],
         MARK,
@@ -241,7 +263,10 @@ describe('Given the summary of what is new since the last visit on this device',
     const contents = open(copy([], MARK));
     await visit.check();
 
-    contents.set(copy([payment('payment-3', '2026-11-12', 5000)], replaced[0].seen as VisitMark));
+    synced(
+      contents,
+      copy([payment('payment-3', '2026-11-12', 5000)], replaced[0].seen as VisitMark),
+    );
     await visit.keepMark();
 
     expect(replaced).toHaveLength(2);
@@ -286,5 +311,136 @@ describe('Given the summary of what is new since the last visit on this device',
     await visit.check();
 
     expect(visit.state().kind).toBe('first');
+  });
+
+  it('when another tab keeps the same mark again, then this tab, which kept the mark of its opening, writes nothing back', async () => {
+    const contents = open(copy([payment('payment-2', '2026-11-11', 30000)], MARK));
+    await visit.check();
+    const mine = replaced[0];
+
+    synced(contents, {
+      ...mine,
+      seen: { ...(mine.seen as VisitMark), at: '2026-11-12T09:31:00Z' },
+    });
+    await visit.keepMark();
+    synced(contents, { ...mine });
+    await visit.keepMark();
+
+    expect(replaced).toHaveLength(1);
+  });
+
+  it('when another tab synced and kept the mark of the new rows, then this tab writes nothing back', async () => {
+    const contents = open(copy([], MARK));
+    await visit.check();
+    const after = copy([payment('payment-3', '2026-11-12', 5000)]);
+
+    synced(contents, { ...after, seen: markOf(after, '2026-11-12T09:31:00Z') });
+    await visit.keepMark();
+
+    expect(replaced).toHaveLength(1);
+  });
+
+  it('when this tab holds an older copy than the one another tab stored, then the mark is written over the stored copy, never over the older one', async () => {
+    const contents = open(copy([], MARK));
+    await visit.check();
+    const newer = copy([payment('payment-4', '2026-11-12', 7000)], replaced[0].seen as VisitMark);
+
+    stored = newer;
+    contents.set(copy([payment('payment-3', '2026-11-12', 5000)], replaced[0].seen as VisitMark));
+    await visit.keepMark();
+
+    expect(replaced).toHaveLength(2);
+    expect(replaced[1].chunks).toEqual(newer.chunks);
+    expect((replaced[1].seen as VisitMark).payments).toEqual(['payment-4']);
+  });
+
+  it('when the mark cannot be written, then the summary says it could not find out, and a later check that writes it shows the summary', async () => {
+    open(copy([], MARK));
+    replacing = async () => {
+      throw new Error('quota');
+    };
+
+    await visit.check();
+
+    expect(visit.state().kind).toBe('failed');
+
+    replacing = async () => true;
+    await visit.check();
+
+    expect(visit.state().kind).toBe('ready');
+  });
+
+  it('when the copy is no longer stored as the mark is written, then nothing is kept and the summary still shows', async () => {
+    open(copy([], MARK));
+    replacing = async () => false;
+
+    await visit.check();
+
+    expect(replaced).toHaveLength(0);
+    expect(visit.state().kind).toBe('ready');
+  });
+
+  it('when the device went offline after an offline summary and comes back, then it waits for the copy to catch up and a check shows the summary again', async () => {
+    offline.set(true);
+    open(copy([payment('payment-2', '2026-11-11', 30000)], MARK));
+    await visit.check();
+    expect(visit.state().kind).toBe('ready');
+
+    offline.set(false);
+
+    expect(visit.state().kind).toBe('checking');
+
+    await visit.check();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(visit.state().kind).toBe('ready');
+  });
+
+  it('when the copy could not catch up and the device then goes offline, then a check shows what the copy holds', async () => {
+    open(copy([payment('payment-2', '2026-11-11', 30000)], MARK));
+    refresh.mockResolvedValueOnce('failed');
+    await visit.check();
+    expect(visit.state().kind).toBe('failed');
+
+    offline.set(true);
+    await visit.check();
+
+    const state = visit.state();
+    expect(state.kind).toBe('ready');
+    expect(state.kind === 'ready' && state.copiedAt).toBe('2026-11-12T08:00:00Z');
+  });
+
+  it('when the summary is ready online, then it names no copy time, since the copy has caught up', async () => {
+    open(copy([], MARK));
+
+    await visit.check();
+
+    const state = visit.state();
+    expect(state.kind === 'ready' && state.copiedAt).toBeNull();
+  });
+
+  it('when the refresh fails because the connection just dropped, then the summary compares what the copy holds', async () => {
+    open(copy([payment('payment-2', '2026-11-11', 30000)], MARK));
+    refresh.mockImplementationOnce(async () => {
+      offline.set(true);
+      return 'failed';
+    });
+
+    await visit.check();
+
+    expect(visit.state().kind).toBe('ready');
+  });
+
+  it('when another copy opens while the copy catches up, then the check of the first one keeps no mark', async () => {
+    open(copy([], MARK));
+    refresh.mockImplementationOnce(async () => {
+      open(copy([], MARK));
+      return 'stored';
+    });
+
+    await visit.check();
+
+    expect(replaced).toHaveLength(0);
+    expect(visit.state().kind).toBe('checking');
   });
 });

@@ -997,6 +997,9 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
 
       expect(sections()).toBeNull();
+      expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling?.tagName).toBe(
+        'APP-SINCE-LAST-VISIT',
+      );
       expect(fixture.nativeElement.querySelector('.since')?.nextElementSibling).toBe(
         fixture.nativeElement.querySelector('.attention'),
       );

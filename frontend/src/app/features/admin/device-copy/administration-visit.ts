@@ -7,6 +7,7 @@ import { AdministrationCopyDownload } from './administration-copy-download';
 import {
   isVisitMark,
   markOf,
+  sameMarkedRows,
   visitChanges,
   type VisitChanges,
   type VisitMark,
@@ -14,11 +15,16 @@ import {
 
 export type VisitState =
   | { readonly kind: 'closed' | 'checking' | 'failed' | 'not-kept' | 'first' }
-  | { readonly kind: 'ready'; readonly seenAt: string; readonly changes: VisitChanges };
+  | {
+      readonly kind: 'ready';
+      readonly seenAt: string;
+      readonly changes: VisitChanges;
+      readonly copiedAt: string | null;
+    };
 
-interface Baseline {
+interface KeptMark {
   readonly copy: OpenedCopy;
-  readonly mark: VisitMark | null;
+  readonly mark: VisitMark;
 }
 
 const CLOSED: VisitState = { kind: 'closed' };
@@ -34,10 +40,11 @@ export class AdministrationVisit {
   private readonly connectivity = inject(Connectivity);
   private readonly auth = inject(AuthStore);
   private readonly failedFor = signal<OpenedCopy | null>(null);
+  private readonly markFailedFor = signal<OpenedCopy | null>(null);
   private readonly keptFor = signal<OpenedCopy | null>(null);
   private readonly dismissedFor = signal<OpenedCopy | null>(null);
-  private baseline: Baseline | null = null;
-  private markedFrom: CopyContents | null = null;
+  private readonly baselines = new WeakMap<OpenedCopy, VisitMark | null>();
+  private kept: KeptMark | null = null;
 
   private readonly compared = computed<VisitState>(() => {
     const opened = this.vault.administration();
@@ -47,12 +54,15 @@ export class AdministrationVisit {
     if (!this.vault.stores(opened.store)) {
       return NOT_KEPT;
     }
+    if (this.markFailedFor() === opened) {
+      return FAILED;
+    }
     const contents = opened.store.contents();
     const offline = this.connectivity.offline();
     if (contents === null || (this.download.checkedAt() === null && !offline)) {
       return this.failedFor() === opened || (contents === null && offline) ? FAILED : CHECKING;
     }
-    const mark = this.baselineOf(opened, contents).mark;
+    const mark = this.baselineOf(opened, contents);
     if (mark === null) {
       return FIRST;
     }
@@ -60,6 +70,7 @@ export class AdministrationVisit {
       kind: 'ready',
       seenAt: mark.at,
       changes: visitChanges(mark, contents, this.auth.donor()?.id ?? ''),
+      copiedAt: offline ? contents.storedAt : null,
     };
   });
 
@@ -97,12 +108,17 @@ export class AdministrationVisit {
         return;
       }
     }
+    this.markFailedFor.set(null);
     try {
       await this.keepMark();
-    } finally {
+    } catch {
       if (this.vault.administration() === opened) {
-        this.keptFor.set(opened);
+        this.markFailedFor.set(opened);
       }
+      return;
+    }
+    if (this.vault.administration() === opened) {
+      this.keptFor.set(opened);
     }
   }
 
@@ -113,24 +129,46 @@ export class AdministrationVisit {
       return;
     }
     const store = opened.store;
+    const held = store.contents();
+    if (held === null || this.keptAlready(opened, held)) {
+      return;
+    }
     await this.vault.withCopyLock(store, async () => {
+      if (this.vault.administration() !== opened) {
+        return;
+      }
+      await store.load();
       const contents = store.contents();
-      if (contents === null || contents === this.markedFrom) {
+      if (contents === null || this.vault.administration() !== opened) {
         return;
       }
       this.baselineOf(opened, contents);
-      const stored = await this.vault.replaceContents(store, {
-        ...contents,
-        seen: markOf(contents, new Date().toISOString()),
-      });
-      this.markedFrom = stored ? store.contents() : null;
+      if (this.keptAlready(opened, contents)) {
+        this.kept = { copy: opened, mark: markOf(contents, '') };
+        return;
+      }
+      const mark = markOf(contents, new Date().toISOString());
+      if (await this.vault.replaceContents(store, { ...contents, seen: mark })) {
+        this.kept = { copy: opened, mark };
+      }
     });
   }
 
-  private baselineOf(opened: OpenedCopy, contents: CopyContents): Baseline {
-    if (this.baseline?.copy !== opened) {
-      this.baseline = { copy: opened, mark: isVisitMark(contents.seen) ? contents.seen : null };
+  private keptAlready(opened: OpenedCopy, contents: CopyContents): boolean {
+    if (this.kept?.copy !== opened) {
+      return false;
     }
-    return this.baseline;
+    const now = markOf(contents, '');
+    return (
+      sameMarkedRows(this.kept.mark, now) ||
+      (isVisitMark(contents.seen) && sameMarkedRows(contents.seen, now))
+    );
+  }
+
+  private baselineOf(opened: OpenedCopy, contents: CopyContents): VisitMark | null {
+    if (!this.baselines.has(opened)) {
+      this.baselines.set(opened, isVisitMark(contents.seen) ? contents.seen : null);
+    }
+    return this.baselines.get(opened) ?? null;
   }
 }

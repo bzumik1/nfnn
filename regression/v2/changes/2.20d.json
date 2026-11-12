@@ -83,7 +83,7 @@
     "kind": "retired",
     "suite": "frontend-playwright",
     "test": "e2e/admin.spec.ts > Given an administrator > when they come back after an earlier sign-in, then the overview opens with what came in since then and leads to the waiting payments",
-    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they come back after payments, a donor, a receipt and another administrator came in, then the block names each and leads to the waiting payments",
+    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they open the administration on this device for the first time and come back after payments, a donor, a receipt and another administrator came in, then the block first says what it will show and then names each and leads to the waiting payments",
     "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
     "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
   },
@@ -91,7 +91,7 @@
     "kind": "retired",
     "suite": "frontend-playwright",
     "test": "e2e/admin.spec.ts > Given an administrator > when they sign in to the administration for the first time, then the block says there is nothing to compare yet",
-    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they open the administration on this device for the first time, then the block says what it will show next time",
+    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they open the administration on this device for the first time and come back after payments, a donor, a receipt and another administrator came in, then the block first says what it will show and then names each and leads to the waiting payments",
     "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
     "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
   }

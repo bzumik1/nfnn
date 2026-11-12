@@ -1,13 +1,16 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { formatMinorUnits } from '../../../donations/donation-amount';
@@ -29,15 +32,17 @@ interface VisitFigure {
 
 @Component({
   selector: 'app-since-last-visit',
-  imports: [RouterLink, NeedsConnection],
+  imports: [RouterLink, NeedsConnection, NgTemplateOutlet],
   templateUrl: './since-last-visit.html',
   styleUrl: './since-last-visit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[hidden]': 'dismissed()' },
+  host: { '[hidden]': "dismissed() || state().kind === 'closed'" },
 })
 export class SinceLastVisit {
   private readonly visit = inject(AdministrationVisit);
+  private readonly connectivity = inject(Connectivity);
   private readonly document = inject(DOCUMENT);
+  private readonly title = viewChild.required<ElementRef<HTMLElement>>('title');
 
   protected readonly state = this.visit.state;
   protected readonly dismissed = this.visit.dismissed;
@@ -45,14 +50,22 @@ export class SinceLastVisit {
     const state = this.state();
     switch (state.kind) {
       case 'first':
-        return $localize`:@@admin.home.visit.first:Na tomto zařízení otevíráte správu poprvé. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.`;
+        return $localize`:@@admin.home.visit.first:Na tomto zařízení zatím není s čím porovnat. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.`;
       case 'not-kept':
-        return $localize`:@@admin.home.visit.notKept:Toto zařízení si správu neukládá, a tak nemá s čím porovnat, co od minula přibylo.`;
+        return $localize`:@@admin.home.visit.notKept:V tomto prohlížeči se správa neukládá, a tak tu není s čím porovnat, co od minula přibylo. Souhrn uvidíte na zařízení, kde se správa ukládá.`;
       case 'ready':
         return leadOf(formatBankTime(state.seenAt), state.changes);
       default:
         return '';
     }
+  });
+  protected readonly offlineNote = computed(() => {
+    const state = this.state();
+    if (state.kind !== 'ready' || state.copiedAt === null) {
+      return null;
+    }
+    const time = formatBankTime(state.copiedAt);
+    return $localize`:@@admin.home.visit.offline:Jste bez připojení, takže vidíte jen to, co si zařízení stáhlo do ${time}:time:. Nemusí to být aktuální.`;
   });
   protected readonly figures = computed((): readonly VisitFigure[] => {
     const state = this.state();
@@ -62,17 +75,19 @@ export class SinceLastVisit {
   constructor() {
     effect(() => {
       this.visit.opened();
+      this.connectivity.offline();
       untracked(() => void this.visit.check());
     });
     effect(() => {
       const kind = this.state().kind;
       if (kind === 'ready' || kind === 'first') {
-        void this.visit.keepMark();
+        untracked(() => void this.visit.keepMark().catch(() => undefined));
       }
     });
   }
 
   protected retry(): void {
+    this.title().nativeElement.focus();
     void this.visit.check();
   }
 
@@ -83,22 +98,23 @@ export class SinceLastVisit {
 }
 
 const NONE = $localize`:@@admin.home.since.none:žádná`;
+const NO_DONORS = $localize`:@@admin.home.visit.newDonors.none:žádní`;
 
 function leadOf(at: string, changes: VisitChanges): string {
   if (!changes.anything) {
-    return $localize`:@@admin.home.visit.nothing:Minulá návštěva na tomto zařízení ${at}:time:. Od té doby nepřibylo nic nového.`;
+    return $localize`:@@admin.home.visit.nothing:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby nepřibylo nic nového.`;
   }
   const { count } = changes.payments;
   const total = crowns(changes.payments);
   switch (count === 0 ? 'none' : pluralCategory(count)) {
     case 'none':
-      return $localize`:@@admin.home.visit.lead.noPayments:Minulá návštěva na tomto zařízení ${at}:time:. Od té doby nepřišla žádná platba.`;
+      return $localize`:@@admin.home.visit.lead.noPayments:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby nepřišla žádná platba.`;
     case 'one':
-      return $localize`:@@admin.home.visit.lead.one:Minulá návštěva na tomto zařízení ${at}:time:. Od té doby přišla 1 platba za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.one:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišla 1 platba za ${total}:total:.`;
     case 'few':
-      return $localize`:@@admin.home.visit.lead.few:Minulá návštěva na tomto zařízení ${at}:time:. Od té doby přišly ${count}:count: platby za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.few:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišly ${count}:count: platby za ${total}:total:.`;
     default:
-      return $localize`:@@admin.home.visit.lead.many:Minulá návštěva na tomto zařízení ${at}:time:. Od té doby přišlo ${count}:count: plateb za ${total}:total:.`;
+      return $localize`:@@admin.home.visit.lead.many:Minulá návštěva na tomto zařízení byla ${at}:time:. Od té doby přišlo ${count}:count: plateb za ${total}:total:.`;
   }
 }
 
@@ -121,7 +137,7 @@ function figuresOf(changes: VisitChanges): VisitFigure[] {
   figures.push(
     {
       label: $localize`:@@admin.home.since.newDonors:Noví dárci`,
-      text: changes.newDonors > 0 ? registrationsText(changes.newDonors) : NONE,
+      text: changes.newDonors > 0 ? registrationsText(changes.newDonors) : NO_DONORS,
       link: changes.newDonors > 0 ? '/sprava/darci' : null,
       query: null,
     },

@@ -63,6 +63,18 @@ export function markOf(contents: CopyContents, at: string): VisitMark {
   };
 }
 
+export function sameMarkedRows(one: VisitMark, other: VisitMark): boolean {
+  return MARKED_KINDS.every((kind) => sameIds(one[kind], other[kind]));
+}
+
+function sameIds(one: readonly string[], other: readonly string[]): boolean {
+  if (one.length !== other.length) {
+    return false;
+  }
+  const sorted = [...other].sort();
+  return [...one].sort().every((id, index) => id === sorted[index]);
+}
+
 export function isVisitMark(value: unknown): value is VisitMark {
   if (typeof value !== 'object' || value === null) {
     return false;

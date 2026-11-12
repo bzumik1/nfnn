@@ -1,3 +1,5 @@
+@use 'touch-target';
+
 :host {
   display: block;
 }
@@ -39,6 +41,19 @@
   }
 }
 
+.visit-offline {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .visit-close {
+  @include touch-target.reaches-finger-size;
+
   margin-top: var(--space-4);
+}
+
+.since-lead + .visit-close,
+.visit-offline + .visit-close {
+  margin-top: 0;
 }

@@ -1,5 +1,11 @@
 <section class="ui-card" aria-labelledby="admin-visit-title">
-  <h2 id="admin-visit-title" class="ui-card__title" i18n="@@admin.home.visit.title">
+  <h2
+    #title
+    id="admin-visit-title"
+    class="ui-card__title"
+    tabindex="-1"
+    i18n="@@admin.home.visit.title"
+  >
     Od minulé návštěvy
   </h2>
   @switch (state().kind) {
@@ -19,6 +25,9 @@
     }
     @case ('ready') {
       <p class="since-lead">{{ lead() }}</p>
+      @if (offlineNote(); as note) {
+        <p class="visit-offline">{{ note }}</p>
+      }
       @if (figures().length > 0) {
         <dl class="ui-data-list visit-figures">
           @for (figure of figures(); track figure.label) {
@@ -35,20 +44,14 @@
           }
         </dl>
       }
-      <button
-        type="button"
-        class="ui-button ui-button--small ui-button--quiet visit-close"
-        (click)="close()"
-        i18n="@@admin.home.visit.close"
-      >
-        Zavřít souhrn
-      </button>
+      <ng-container *ngTemplateOutlet="closeButton" />
     }
     @case ('first') {
       <p class="since-lead">{{ lead() }}</p>
     }
     @case ('not-kept') {
       <p class="since-lead">{{ lead() }}</p>
+      <ng-container *ngTemplateOutlet="closeButton" />
     }
     @default {
       <p class="ui-load-state" role="status" i18n="@@admin.home.since.loading">
@@ -57,3 +60,14 @@
     }
   }
 </section>
+
+<ng-template #closeButton>
+  <button
+    type="button"
+    class="ui-button ui-button--small ui-button--quiet visit-close"
+    (click)="close()"
+    i18n="@@admin.home.visit.close"
+  >
+    Zavřít souhrn
+  </button>
+</ng-template>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CopyContents } from '../../../core/device/store/account-store';
-import { isVisitMark, markOf, visitChanges } from './visit-changes';
+import { isVisitMark, markOf, sameMarkedRows, visitChanges } from './visit-changes';
 
 const ME = '01a18e56-0000-7000-8000-00000000a001';
 const PAVEL = '01a18e56-0000-7000-8000-00000000a002';
@@ -158,9 +158,9 @@ describe('Given the mark of what this device showed at the last visit and the co
     const after: Rows = {
       ...BEFORE,
       payments: [payment('p-0002', '2026-11-10', 50000), ...BEFORE.payments!],
-      donations: BEFORE.donations,
+      donations: [gift('g-0002', 'p-0002', JANA), ...BEFORE.donations!],
     };
-    const before: Rows = { ...after, donations: [] };
+    const before: Rows = { ...after, donations: BEFORE.donations };
 
     const changes = changesBetween(copyOf(before), copyOf(after));
 
@@ -285,5 +285,29 @@ describe('Given the mark of what this device showed at the last visit and the co
     const changes = changesBetween(before, moved);
 
     expect(changes.payments.count).toBe(0);
+  });
+
+  it('when rows the mark held are gone from the copy, as an erased donor or a deleted payment, then nothing is new', () => {
+    const changes = changesBetween(
+      copyOf(BEFORE),
+      copyOf({ ...BEFORE, payments: [], donations: [], records: [], receipts: [] }),
+    );
+
+    expect(changes.anything).toBe(false);
+  });
+
+  it('when two marks are compared, then they are the same when each kind holds the same ids in any order, whatever their times', () => {
+    const mark = markOf(copyOf(BEFORE), '2026-11-10T13:05:00Z');
+    const two = copyOf({
+      ...BEFORE,
+      payments: [payment('p-0002', '2026-11-10', 50000), ...BEFORE.payments!],
+    });
+
+    expect(sameMarkedRows(mark, markOf(copyOf(BEFORE), '2026-11-12T09:00:00Z'))).toBe(true);
+    expect(
+      sameMarkedRows(markOf(two, 'a'), { ...markOf(two, 'b'), payments: ['p-0001', 'p-0002'] }),
+    ).toBe(true);
+    expect(sameMarkedRows(mark, markOf(two, '2026-11-10T13:05:00Z'))).toBe(false);
+    expect(sameMarkedRows(mark, { ...mark, actions: [] })).toBe(false);
   });
 });

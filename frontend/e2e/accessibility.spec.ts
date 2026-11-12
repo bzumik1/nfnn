@@ -1214,7 +1214,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
     await expect(page.getByRole('region', { name: 'Od minulé návštěvy' })).toContainText(
-      'Na tomto zařízení otevíráte správu poprvé.',
+      'Na tomto zařízení zatím není s čím porovnat.',
     );
     await expect(page.getByRole('region', { name: 'Co potřebuje vaši pozornost' })).toContainText(
       'Platby z banky se nestahují',

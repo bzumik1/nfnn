@@ -12,7 +12,7 @@ import {
 const PAVEL = '01a18e56-bdb0-775a-bd0a-a6075683a002';
 const PETR = '01a18e56-bdb0-775a-bd0a-a6075683d002';
 
-const LAST_VISIT = String.raw`^Minulá návštěva na tomto zařízení \d{1,2}\. \d{1,2}\. \d{4} \d{1,2}:\d{2}\.`;
+const LAST_VISIT = String.raw`^Minulá návštěva na tomto zařízení byla \d{1,2}\. \d{1,2}\. \d{4} \d{1,2}:\d{2}\.`;
 
 function payment(id: string, bookedOn: string, amountMinor: number) {
   return {
@@ -151,21 +151,13 @@ test.describe('Given an administrator whose device keeps the administration', ()
     await rememberedSession(page);
   });
 
-  test('when they open the administration on this device for the first time, then the block says what it will show next time', async ({
+  test('when they open the administration on this device for the first time and come back after payments, a donor, a receipt and another administrator came in, then the block first says what it will show and then names each and leads to the waiting payments', async ({
     page,
   }) => {
     await page.goto('/sprava');
-
     await expect(block(page)).toContainText(
-      'Na tomto zařízení otevíráte správu poprvé. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.',
+      'Na tomto zařízení zatím není s čím porovnat. Příště tu uvidíte, co mezitím přibylo: platby, dárci, potvrzení a úkony dalších správců.',
     );
-  });
-
-  test('when they come back after payments, a donor, a receipt and another administrator came in, then the block names each and leads to the waiting payments', async ({
-    page,
-  }) => {
-    await page.goto('/sprava');
-    await expect(block(page)).toContainText('otevíráte správu poprvé');
     await serveAdministrationCopy(page, SINCE_THEN);
 
     await page.reload();
@@ -201,7 +193,7 @@ test.describe('Given an administrator whose device keeps the administration', ()
     page,
   }) => {
     await page.goto('/sprava');
-    await expect(block(page)).toContainText('otevíráte správu poprvé');
+    await expect(block(page)).toContainText('zatím není s čím porovnat');
     await serveAdministrationCopy(page, SINCE_THEN);
     await page.reload();
     await expect(block(page)).toContainText('Od té doby přišly 2 platby');
