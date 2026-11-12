@@ -8,7 +8,20 @@ import {
   untracked,
 } from '@angular/core';
 import { AdministrationAccess } from '../../auth/administration-access';
-import type { DeviceAccount, SessionDevice, SignInSecret } from '../../auth/session-device';
+import {
+  type CopyProfile,
+  type CopySession,
+  isCopyProfile,
+  opensOffline,
+} from '../../auth/copy-profile';
+import {
+  type DeviceAccount,
+  deviceAccountOf,
+  type SessionDevice,
+  type SignInSecret,
+  userHandleOf,
+} from '../../auth/session-device';
+import type { SessionKind } from '../../auth/session-jar';
 import { SignedOutNotice } from '../../auth/signed-out-notice';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import type { DeviceCopyDiagnostics } from '../../diagnostics/device-copy-diagnostics';
@@ -100,7 +113,12 @@ export const STORAGE_PERSISTENCE = new InjectionToken<() => void>('STORAGE_PERSI
   },
 });
 
-export type OpenReason = 'sign-in' | 'restored' | 'unlocked' | 'empty';
+export type OpenReason = 'sign-in' | 'restored' | 'unlocked' | 'empty' | 'offline';
+
+export interface OfflineOpening {
+  readonly profile: CopyProfile;
+  readonly session: CopySession;
+}
 
 export interface OpenedCopy {
   readonly store: AccountStore;
@@ -232,6 +250,18 @@ export class DeviceVault implements SessionDevice {
         storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
       ),
     ).then(() => this.checkStatus(false));
+  }
+
+  openedOffline(expected: SessionKind, now = Date.now()): Promise<OfflineOpening | null> {
+    return this.run(async () => {
+      const already = this.openedCopy();
+      if (already !== null) {
+        return already.reason === 'offline'
+          ? offlineOpeningOf(already.store.contents(), expected, now)
+          : null;
+      }
+      return this.openOffline(expected, now);
+    });
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
@@ -932,8 +962,48 @@ export class DeviceVault implements SessionDevice {
     }
   }
 
+  private async openOffline(expected: SessionKind, now: number): Promise<OfflineOpening | null> {
+    const storage = await this.presentStorage().catch(() => null);
+    const salt = storage?.kind === 'indexed-db' ? await storage.deviceSalt() : null;
+    if (storage === null || salt === null) {
+      return null;
+    }
+    const withSession = (await storage.entries()).filter(
+      (entry) => isDonor(entry) && entry.wraps.some((wrap) => wrap.kind === 'session'),
+    );
+    if (withSession.length !== 1) {
+      return null;
+    }
+    const entry = withSession[0];
+    const opening = await this.openExisting(storage, entry, { kind: 'none' });
+    if (opening === null || opening === 'undecided') {
+      return null;
+    }
+    const placeholder: DeviceAccount = { email: '', userHandle: '' };
+    const store = await this.adopt(storage, placeholder, opening.copy);
+    const found =
+      (await store.load()) === 'loaded' ? offlineOpeningOf(store.contents(), expected, now) : null;
+    if (
+      found === null ||
+      (await userHandleTag(salt, userHandleOf(found.profile.id))) !== entry.userHandleTag
+    ) {
+      store.close();
+      this.closeOpen();
+      return null;
+    }
+    const account = deviceAccountOf(found.profile);
+    this.account = account;
+    this.openedCopy.set({ store, reason: 'offline', account });
+    return found;
+  }
+
   private async openAtRestore(account: DeviceAccount): Promise<void> {
-    if (this.openedFor(account) !== null) {
+    const opened = this.openedFor(account);
+    if (opened !== null) {
+      if (opened.reason === 'offline') {
+        this.account = account;
+        this.openedCopy.set({ store: opened.store, reason: 'restored', account });
+      }
       return;
     }
     this.closeOpen();
@@ -1277,6 +1347,18 @@ async function accountTags(salt: string, account: DeviceAccount): Promise<Accoun
     lookupTag: await lookupTag(salt, account.email),
     userHandleTag: await userHandleTag(salt, account.userHandle),
   };
+}
+
+function offlineOpeningOf(
+  contents: CopyContents | null,
+  expected: SessionKind,
+  now: number,
+): OfflineOpening | null {
+  const profile = contents?.profile;
+  const session = contents?.session;
+  return isCopyProfile(profile) && opensOffline(session, expected, now)
+    ? { profile, session }
+    : null;
 }
 
 function entryFor(entries: readonly RegistryEntry[], tags: AccountTags): RegistryEntry | null {

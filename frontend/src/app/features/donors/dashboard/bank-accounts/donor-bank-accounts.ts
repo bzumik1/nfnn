@@ -23,25 +23,28 @@ import { PageTitle } from '../page-title/page-title';
 })
 export class DonorBankAccounts {
   protected readonly donations = inject(DonorDonations);
-  protected readonly donor = inject(AuthStore).donor;
+  private readonly auth = inject(AuthStore);
+  protected readonly donor = this.auth.donor;
+  protected readonly fromDevice = this.auth.fromDevice;
 
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly card = viewChild.required(BankAccountsCard);
+  private readonly card = viewChild(BankAccountsCard);
 
   constructor() {
     toObservable(this.donations.bankDataArrived)
       .pipe(skip(1), takeUntilDestroyed())
-      .subscribe(() => this.card().reload());
+      .subscribe(() => this.card()?.reload());
     afterNextRender({ read: () => this.openAddWhenAsked() });
   }
 
   private openAddWhenAsked(): void {
     const [name, value] = Object.entries(ADD_ACCOUNT_QUERY)[0];
-    if (this.route.snapshot.queryParamMap.get(name) !== value) {
+    const card = this.card();
+    if (card === undefined || this.route.snapshot.queryParamMap.get(name) !== value) {
       return;
     }
-    this.card().openAddDialog();
+    card.openAddDialog();
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { [name]: null },

@@ -26,6 +26,9 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   }
   const store = inject(AuthStore);
   const token = store.currentAccessToken();
+  if (token === null && store.fromDevice()) {
+    return store.refresh().pipe(switchMap((fresh) => send(withBearer(request, fresh), next)));
+  }
   if (token === null) {
     return send(request, next);
   }

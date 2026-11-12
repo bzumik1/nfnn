@@ -114,6 +114,20 @@ describe('Given an account store over IndexedDB', () => {
     reopened.close();
   });
 
+  it('when contents with the kind and time of the accepted session are stored, then a new store of the same copy loads them back and the raw database holds neither', async () => {
+    const session = { kind: 'REMEMBERED', acceptedAt: '2026-11-05T10:17:43.512Z' };
+    await store.replace({ ...contents(), session });
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    expect(await reopened.load()).toBe('loaded');
+    expect(reopened.contents()?.session).toEqual(session);
+    const dump = await rawIndexedDbDump();
+    expect(leaks(dump, session.kind)).toBe(false);
+    expect(leaks(dump, session.acceptedAt)).toBe(false);
+    reopened.close();
+  });
+
   it('when contents without a profile are stored, then the loaded contents carry none', async () => {
     await store.replace(contents());
 

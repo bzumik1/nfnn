@@ -14,7 +14,20 @@ import { SESSION_HINT_KEY } from './auth-store';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialogService } from './login-dialog.service';
+import { copyProfileOf } from './copy-profile';
+import { NO_SESSION_DEVICE, SESSION_DEVICE, type SessionDevice } from './session-device';
 import { authResponse, sampleDonor } from './testing/donor-fixtures';
+
+function offlineAdministrator(): SessionDevice {
+  const administrator = sampleDonor({ roles: ['DONOR', 'ADMIN'] });
+  return {
+    ...NO_SESSION_DEVICE,
+    openedOffline: async () => ({
+      profile: copyProfileOf(administrator),
+      session: { kind: 'REMEMBERED', acceptedAt: new Date().toISOString() },
+    }),
+  };
+}
 
 describe('Given the administration guard', () => {
   let http: HttpTestingController;
@@ -27,6 +40,7 @@ describe('Given the administration guard', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: DialogHistory, useValue: new FakeDialogHistory() },
+        { provide: SESSION_DEVICE, useValue: offlineAdministrator() },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -92,6 +106,21 @@ describe('Given the administration guard', () => {
 
     expect(serialized(await result)).toBe('/darce/prehled');
     expect(TestBed.inject(AdminAccessRefusal).reason()).toBe('second-factor');
+  });
+
+  it('when the account of an administrator shows from the device copy because the server cannot be reached, then they go to their overview, which says the administration needs a connection', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+
+    const result = activate();
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').error(new ProgressEvent('error'), { status: 0 }),
+    );
+
+    expect(serialized(await result)).toBe('/darce/prehled');
+    expect(TestBed.inject(AdminAccessRefusal).reason()).toBe('needs-connection');
+    http
+      .match(() => true)
+      .forEach((request) => request.error(new ProgressEvent('error'), { status: 0 }));
   });
 
   it('when nobody is signed in, then the visitor goes to the home page and the sign-in dialog opens', async () => {

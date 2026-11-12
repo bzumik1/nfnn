@@ -20,6 +20,14 @@
         aplikace si zapnete v části <a routerLink="/darce/udaje">Údaje a zabezpečení</a>.
       </p>
     }
+    @case ('needs-connection') {
+      <p
+        class="ui-callout ui-callout--warning admin-refusal"
+        i18n="@@donor.overview.adminRefusal.needsConnection"
+      >
+        Správa se bez připojení zatím neotevře. Jakmile budete připojeni, otevřete ji znovu.
+      </p>
+    }
   }
 </div>
 
