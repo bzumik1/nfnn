@@ -1,5 +1,7 @@
 import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom, type Observable, timeout } from 'rxjs';
+import { AuthStore } from '../../../core/auth/auth-store';
+import type { Donor } from '../../../core/auth/donor';
 import { userHandleOf } from '../../../core/auth/session-device';
 import { bytesToBase64Url } from '../../../core/device/crypto/device-bytes';
 import type {
@@ -26,6 +28,24 @@ export const SYNC_REQUEST_TIMEOUT_MS = 30_000;
 
 type Fetched = CopyContents | 'changed' | 'another-donor';
 
+export type CopyProfile = Pick<
+  Donor,
+  'id' | 'type' | 'name' | 'email' | 'roles' | 'address' | 'companyIdentifier' | 'variableSymbol'
+>;
+
+export function copyProfileOf(donor: Donor): CopyProfile {
+  return {
+    id: donor.id,
+    type: donor.type,
+    name: donor.name,
+    email: donor.email,
+    roles: donor.roles,
+    address: donor.address,
+    companyIdentifier: donor.companyIdentifier,
+    variableSymbol: donor.variableSymbol,
+  };
+}
+
 interface QueuedSync {
   full: boolean;
   readonly promise: Promise<SyncOutcome>;
@@ -34,6 +54,7 @@ interface QueuedSync {
 @Injectable({ providedIn: 'root' })
 export class DonorCopySync implements DonorCopy {
   private readonly vault = inject(DeviceVault);
+  private readonly auth = inject(AuthStore);
   private readonly api = inject(DonorSyncApi);
   private readonly receipts = inject(ReceiptsApi);
   private readonly reporter = inject(ErrorReporter);
@@ -173,7 +194,11 @@ export class DonorCopySync implements DonorCopy {
         return 'mismatch';
       }
       if (fetched !== 'changed') {
-        const contents = await this.withImages(fetched, before?.images ?? []);
+        const contents = this.withProfile(
+          await this.withImages(fetched, before?.images ?? []),
+          opened,
+          before,
+        );
         return (await this.vault.replaceContents(store, contents)) ? 'stored' : 'no-copy';
       }
     }
@@ -225,6 +250,19 @@ export class DonorCopySync implements DonorCopy {
       chunks.push(old);
     }
     return { chunks, summary: manifest.summary, storedAt: new Date().toISOString() };
+  }
+
+  private withProfile(
+    contents: CopyContents,
+    opened: OpenedCopy,
+    before: CopyContents | null,
+  ): CopyContents {
+    const donor = this.auth.donor();
+    const profile =
+      donor !== null && userHandleOf(donor.id) === opened.account.userHandle
+        ? copyProfileOf(donor)
+        : before?.profile;
+    return profile === undefined ? contents : { ...contents, profile };
   }
 
   private async withImages(
