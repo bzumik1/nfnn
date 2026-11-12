@@ -44,8 +44,8 @@ class JpaPersonRepository implements PersonRepository {
     }
 
     @Override
-    public boolean isAnyonesWebSignature(MediaId image) {
-        return jpa.existsByWebSignatureMediaId(image.value());
+    public boolean isAnyonesSignature(MediaId image) {
+        return jpa.existsBySignatureMediaId(image.value());
     }
 
     @Override

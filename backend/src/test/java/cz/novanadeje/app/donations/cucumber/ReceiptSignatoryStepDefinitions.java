@@ -135,32 +135,6 @@ public class ReceiptSignatoryStepDefinitions {
         assertThat(chosen.get("portraitPrintable").asBoolean()).isFalse();
     }
 
-    @Then("the receipt signatures list a {word} signature of {string}, {int} by {int} pixels")
-    public void theReceiptSignaturesList(String kind, String name, int width, int height) {
-        String person = personIdOf(name).orElseThrow().toString();
-        JsonNode listed = null;
-        for (JsonNode signature : api.lastResponseJson().get("signatures")) {
-            if (signature.get("personId").asString().equals(person)) {
-                listed = signature;
-            }
-        }
-        assertThat(listed).withFailMessage("No signature of %s in %s", name, api.lastResponse().getBody()).isNotNull();
-        assertThat(listed.get("kind").asString()).isEqualTo(kind);
-        assertThat(listed.get("width").asInt()).isEqualTo(width);
-        assertThat(listed.get("height").asInt()).isEqualTo(height);
-    }
-
-    @Then("the receipt signatures list none")
-    public void theReceiptSignaturesListNone() {
-        assertThat(api.lastResponseJson().get("signatures")).isEmpty();
-    }
-
-    @Then("no receipt signature is kept for a person the foundation no longer has")
-    public void noReceiptSignatureIsKeptForARemovedPerson() {
-        assertThat(jdbc.sql("select count(*) from donation_person_receipt_signature s"
-                + " where not exists (select 1 from content_person p where p.id = s.person_id)").query(Long.class).single()).isZero();
-    }
-
     private Optional<UUID> personIdOf(String name) {
         return jdbc.sql("select id from content_person where name = ?").param(name).query(UUID.class).optional();
     }

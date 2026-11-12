@@ -25,15 +25,7 @@ import { FormControlDirective } from '../../../shared/ui/form-field/form-control
 import { FormField } from '../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { MAX_IMAGE_BYTES, mediaUrl, NewsApi, UploadedImageResponse } from '../../content/news-api';
-import {
-  AdminApi,
-  MAX_RECEIPT_ROLE_LENGTH,
-  ReceiptSignatoryResponse,
-  ReceiptSignatureResponse,
-  ReceiptSignatureSummaryResponse,
-} from '../admin-api';
-import { ReceiptSignature } from '../receipt-signature/receipt-signature';
-import { SignatureArtwork } from '../receipt-signature/signature-artwork';
+import { AdminApi, MAX_RECEIPT_ROLE_LENGTH, ReceiptSignatoryResponse } from '../admin-api';
 import {
   EMAIL_SHAPE,
   MAX_BOARD_NOTE_LENGTH,
@@ -97,11 +89,6 @@ interface SavedText {
   readonly version: string;
 }
 
-type ReceiptPreview =
-  | { key: string; state: 'loading' }
-  | { key: string; state: 'ready'; signature: ReceiptSignatureResponse }
-  | { key: string; state: 'error' };
-
 interface ReceiptDraft {
   signs: boolean;
   role: string;
@@ -129,14 +116,12 @@ const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený
   selector: 'app-admin-people',
   imports: [
     Avatar,
-    SignatureArtwork,
     FormsModule,
     FormField,
     FormControlDirective,
     FocusFirstInvalid,
     FileButton,
     LiveNotice,
-    ReceiptSignature,
     NeedsConnection,
     DraftOffer,
     ChangedMeanwhileDialog,
@@ -195,8 +180,6 @@ export class AdminPeople {
     () => this.signatoryState() === 'offline',
     () => this.loadSignatory(),
   );
-  protected readonly receiptPreviews = signal<ReadonlyMap<string, ReceiptPreview>>(new Map());
-  protected readonly signatureBusy = signal(false);
   protected readonly savingReceipt = signal(false);
   protected readonly receiptNotice = signal<Notice | null>(null);
   protected readonly footnoteNotice = signal<Notice | null>(null);
@@ -265,7 +248,7 @@ export class AdminPeople {
     return image ? mediaUrl(image.id, PREVIEW_WIDTH) : null;
   });
   protected readonly signatureUrl = computed(() => {
-    const signature = this.current()?.webSignature;
+    const signature = this.current()?.signature;
     return signature ? mediaUrl(signature.id, PREVIEW_WIDTH) : null;
   });
   protected readonly signatoryName = computed(() => this.signatory()?.signatory?.name ?? null);
@@ -276,7 +259,6 @@ export class AdminPeople {
       this.removing() ||
       this.uploadingPortrait() ||
       this.uploadingSignature() ||
-      this.signatureBusy() ||
       this.moving(),
   );
 
@@ -334,7 +316,6 @@ export class AdminPeople {
         next: (view) => {
           this.signatory.set(view);
           this.signatoryState.set('ready');
-          this.loadReceiptPreviews(view.signatures);
           this.fillReceiptRole();
         },
         error: () => {
@@ -345,70 +326,12 @@ export class AdminPeople {
       });
   }
 
-  protected receiptPreview(member: PersonResponse): ReceiptPreview | null {
-    return this.receiptPreviews().get(member.id) ?? null;
+  protected signatureUrlOf(member: PersonResponse): string | null {
+    return member.signature ? mediaUrl(member.signature.id, PREVIEW_WIDTH) : null;
   }
 
-  protected webSignatureUrl(member: PersonResponse): string | null {
-    return member.webSignature ? mediaUrl(member.webSignature.id, PREVIEW_WIDTH) : null;
-  }
-
-  protected webSignatureAlt(member: PersonResponse): string {
-    return $localize`:@@admin.people.list.webSignatureAlt:Podpis na webu: ${member.name}:name:`;
-  }
-
-  protected receiptSignatureLabel(member: PersonResponse): string {
-    return $localize`:@@admin.people.list.receiptSignatureAlt:Podpis na potvrzení: ${member.name}:name:`;
-  }
-
-  private loadReceiptPreviews(summaries: ReceiptSignatureSummaryResponse[]): void {
-    const known = this.receiptPreviews();
-    const next = new Map<string, ReceiptPreview>();
-    const missing: { personId: string; key: string }[] = [];
-    for (const summary of summaries) {
-      const key = `${summary.personId}@${summary.uploadedAt}`;
-      const cached = known.get(summary.personId);
-      if (cached !== undefined && cached.key === key && cached.state !== 'error') {
-        next.set(summary.personId, cached);
-      } else {
-        next.set(summary.personId, { key, state: 'loading' });
-        missing.push({ personId: summary.personId, key });
-      }
-    }
-    this.receiptPreviews.set(next);
-    for (const { personId, key } of missing) {
-      this.admin
-        .receiptSignature(personId)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (signature) =>
-            this.settleReceiptPreview(
-              personId,
-              key,
-              signature.configured ? { key, state: 'ready', signature } : null,
-            ),
-          error: () => this.settleReceiptPreview(personId, key, { key, state: 'error' }),
-        });
-    }
-  }
-
-  private settleReceiptPreview(
-    personId: string,
-    key: string,
-    preview: ReceiptPreview | null,
-  ): void {
-    this.receiptPreviews.update((previews) => {
-      if (previews.get(personId)?.key !== key) {
-        return previews;
-      }
-      const next = new Map(previews);
-      if (preview === null) {
-        next.delete(personId);
-      } else {
-        next.set(personId, preview);
-      }
-      return next;
-    });
+  protected signatureAlt(member: PersonResponse): string {
+    return $localize`:@@admin.people.list.webSignatureAlt:Podpis: ${member.name}:name:`;
   }
 
   private fillReceiptRole(): void {
@@ -435,10 +358,7 @@ export class AdminPeople {
         next: (chosen) => {
           this.savingReceipt.set(false);
           this.kept.forget('receipt-signatory');
-          this.signatory.update((view) => ({
-            signatory: chosen,
-            signatures: view?.signatures ?? [],
-          }));
+          this.signatory.set({ signatory: chosen });
           this.receiptDraft = { signs: false, role: chosen.receiptRole };
           this.receiptNotice.set({
             kind: 'status',
@@ -609,8 +529,10 @@ export class AdminPeople {
     this.upload(file).subscribe({
       next: (uploaded) =>
         this.applySignature(
-          this.api.setWebSignature(person.id, uploaded.id),
-          $localize`:@@admin.people.signature.saved:Podpis je uložený a ukáže se pod slovem zakladatelů.`,
+          this.api.setSignature(person.id, uploaded.id),
+          this.signs(person)
+            ? $localize`:@@admin.people.signature.savedForReceipts:Podpis je uložený. Ukáže se pod slovem zakladatelů a vytiskne se na potvrzeních o daru vystavených od teď; správci o změně dostanou e-mail.`
+            : $localize`:@@admin.people.signature.saved:Podpis je uložený a ukáže se pod slovem zakladatelů.`,
         ),
       error: (failure: unknown) => {
         this.uploadingSignature.set(false);
@@ -633,8 +555,10 @@ export class AdminPeople {
     this.signatureNotice.set(null);
     this.uploadingSignature.set(true);
     this.applySignature(
-      this.api.removeWebSignature(person.id),
-      $localize`:@@admin.people.signature.removed:Podpis jsme z webu odebrali a smazali.`,
+      this.api.removeSignature(person.id),
+      this.signs(person)
+        ? $localize`:@@admin.people.signature.removedFromReceipts:Podpis jsme odebrali a smazali. Potvrzení vystavená od teď budou mít místo něj jen čáru; správci o změně dostanou e-mail.`
+        : $localize`:@@admin.people.signature.removed:Podpis jsme odebrali a smazali.`,
     );
   }
 

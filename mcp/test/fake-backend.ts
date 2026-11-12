@@ -42,7 +42,7 @@ const LOG_MATCHES: Record<string, number[]> = {
   'backend.log.2026-10-21.0.gz': [5],
 };
 
-const NO_SIGNATORY = { signatory: null, signatures: [] };
+const NO_SIGNATORY = { signatory: null };
 
 export interface RecordedRequest {
   readonly method: string;
@@ -420,13 +420,13 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
       return [204, undefined];
     case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}`:
       return [204, undefined];
-    case `POST /api/admin/content/people/${PERSON_ID}/web-signature`: {
+    case `POST /api/admin/content/people/${PERSON_ID}/signature`: {
       const imageId = (JSON.parse(body) as Record<string, unknown>)['imageId'];
       return [
         200,
         {
           ...person(PERSON_ID, 1, { name: 'Adam Vzor', onBoard: true, featured: false }),
-          webSignature: {
+          signature: {
             id: imageId,
             url: `/api/content/media/${String(imageId)}`,
             width: 600,
@@ -435,7 +435,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
         },
       ];
     }
-    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`:
+    case `DELETE /api/admin/content/people/${SIGNED_PERSON_ID}/signature`:
       return [
         200,
         person(SIGNED_PERSON_ID, 0, { name: 'Eva Vzorová', onBoard: true, featured: true }),
@@ -565,15 +565,6 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
             portraitPrintable: true,
             signature: true,
           },
-          signatures: [
-            {
-              personId: SIGNED_PERSON_ID,
-              kind: 'VECTOR',
-              width: 1200,
-              height: 400,
-              uploadedAt: '2026-10-23T19:30:00Z',
-            },
-          ],
         },
       ];
     case 'GET /api/admin/operations/settings':
@@ -1236,7 +1227,7 @@ function people(): Record<string, unknown> {
           portraitId: MEDIA_ID,
           fundEmail: 'eva@nfnn.cz',
         }),
-        webSignature: {
+        signature: {
           id: UNKNOWN_ID,
           url: `/api/content/media/${UNKNOWN_ID}`,
           width: 600,
@@ -1270,7 +1261,7 @@ function person(
       typeof portraitId === 'string'
         ? { id: portraitId, url: `/api/content/media/${portraitId}`, width: 640, height: 640 }
         : null,
-    webSignature: null,
+    signature: null,
     personalEmail: fields['personalEmail'] ?? null,
     fundEmail: fields['fundEmail'] ?? null,
     linkedToAccount: false,

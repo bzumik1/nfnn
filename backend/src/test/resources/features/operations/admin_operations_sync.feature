@@ -45,13 +45,13 @@ Feature: An administrator's device keeps a copy of the settings and the backups 
     And the answer carries the backup key of this server and no cache keeps it
     And "Jana" confirms the backup key with the asked words
     And a person of the foundation signs the receipts
-    And "Jana" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
+    And "Jana" has set a 600 by 200 pixel scan as the signature of the person who signs the receipts
     When an administration device of "Jana" syncs the operations
     Then the administration device's chunk "settings" holds what the administration reads at "/api/admin/operations/settings"
     And no chunk on the administration device holds the text "smtp-heslo-kopie-0042"
     And no chunk on the administration device holds the text "fio-token-kopie-004217"
     And no chunk on any administration device holds the backup key
-    And no chunk on any administration device holds any of the 1 receipt image, a receipt signature or an image's bytes
+    And no chunk on any administration device holds any of the 0 receipt images, a receipt signature or an image's bytes
 
   Scenario: A changed setting changes only the settings, a new backup only the backups, and an unchanged manifest downloads nothing
     Given an administration device of "Jana" syncs the operations

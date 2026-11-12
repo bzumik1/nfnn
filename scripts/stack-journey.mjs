@@ -126,6 +126,12 @@ export function receiptSerial(number) {
   return Number(match[2]);
 }
 
+export const ONE_SIGNATURE_GENERATION = 5;
+
+export function keepsOneSignature(headers) {
+  return Number(headers.get('Nfnn-Api') ?? 0) >= ONE_SIGNATURE_GENERATION;
+}
+
 export function syntheticPortraitPng(side = 640) {
   const rows = [];
   for (let y = 0; y < side; y += 1) {
@@ -680,20 +686,7 @@ class Journey {
       token: admin,
       json: { name: 'Zkušební Podepisující', role: 'Předseda správní rady', onBoard: true, featured: false, portraitId: media.json.id },
     }, 'adding the person who will sign');
-    const signature = await this.request('POST', `/api/admin/donations/receipt-signatures/${person.id}`, {
-      token: admin,
-      body: (() => {
-        const form = new FormData();
-        form.append('file', new Blob([SIGNATURE_SVG], { type: 'image/svg+xml' }), 'podpis.svg');
-        return form;
-      })(),
-    });
-    if (signature.status !== 200) {
-      fail(`uploading the synthetic SVG signature answered ${signature.status}: ${signature.text.slice(0, 300)}`);
-    }
-    if (signature.json.kind !== 'VECTOR') {
-      fail(`the SVG signature was not stored as a vector: ${signature.text.slice(0, 300)}`);
-    }
+    await this.setSignature(admin, person.id, keepsOneSignature(media.headers));
     const receiptRole = 'předseda správní rady';
     const chosen = await this.expect(200, 'PUT', '/api/admin/donations/receipt-signatory', {
       token: admin,
@@ -704,7 +697,37 @@ class Journey {
     }
     this.state.signatory = { personId: person.id, name: 'Zkušební Podepisující', receiptRole };
     this.save();
-    this.say('The administrator chose the signatory with a portrait, a receipt role and an SVG signature');
+    this.say('The administrator chose the signatory with a portrait, a receipt role and a signature');
+  }
+
+  async setSignature(admin, personId, oneSignature) {
+    const image = await this.request('POST', '/api/admin/content/media', {
+      token: admin,
+      body: (() => {
+        const form = new FormData();
+        form.append('file', new Blob([syntheticPortraitPng(240)], { type: 'image/png' }), 'podpis.png');
+        return form;
+      })(),
+    });
+    if (image.status !== 201) {
+      fail(`uploading the synthetic signature answered ${image.status}: ${image.text.slice(0, 300)}`);
+    }
+    const peoplePath = `/api/admin/content/people/${personId}/${oneSignature ? 'signature' : 'web-signature'}`;
+    await this.expect(200, 'POST', peoplePath, { token: admin, json: { imageId: image.json.id } }, 'setting the signature of the person who signs');
+    if (oneSignature) {
+      return;
+    }
+    const receiptSignature = await this.request('POST', `/api/admin/donations/receipt-signatures/${personId}`, {
+      token: admin,
+      body: (() => {
+        const form = new FormData();
+        form.append('file', new Blob([SIGNATURE_SVG], { type: 'image/svg+xml' }), 'podpis.svg');
+        return form;
+      })(),
+    });
+    if (receiptSignature.status !== 200 || receiptSignature.json?.kind !== 'VECTOR') {
+      fail(`uploading the synthetic SVG receipt signature to an image before API generation ${ONE_SIGNATURE_GENERATION} answered ${receiptSignature.status}: ${receiptSignature.text.slice(0, 300)}`);
+    }
   }
 
   async receipts() {

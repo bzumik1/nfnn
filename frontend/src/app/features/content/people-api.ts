@@ -19,7 +19,7 @@ export interface PersonResponse {
   boardNote: string | null;
   featured: boolean;
   portrait: PersonImageResponse | null;
-  webSignature: PersonImageResponse | null;
+  signature: PersonImageResponse | null;
   personalEmail: string | null;
   fundEmail: string | null;
   linkedToAccount: boolean;
@@ -161,11 +161,11 @@ export class PeopleApi {
     );
   }
 
-  setWebSignature(id: string, imageId: string): Observable<PersonResponse> {
-    return this.http.post<PersonResponse>(`${ADMIN_PEOPLE}/${id}/web-signature`, { imageId });
+  setSignature(id: string, imageId: string): Observable<PersonResponse> {
+    return this.http.post<PersonResponse>(`${ADMIN_PEOPLE}/${id}/signature`, { imageId });
   }
 
-  removeWebSignature(id: string): Observable<PersonResponse> {
-    return this.http.delete<PersonResponse>(`${ADMIN_PEOPLE}/${id}/web-signature`);
+  removeSignature(id: string): Observable<PersonResponse> {
+    return this.http.delete<PersonResponse>(`${ADMIN_PEOPLE}/${id}/signature`);
   }
 }

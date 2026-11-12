@@ -20,7 +20,7 @@ export function person(overrides: Partial<PersonResponse> = {}): PersonResponse 
       width: 640,
       height: 640,
     },
-    webSignature: null,
+    signature: null,
     personalEmail: null,
     fundEmail: null,
     linkedToAccount: false,

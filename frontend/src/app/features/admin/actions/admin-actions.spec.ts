@@ -281,6 +281,27 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(chosen)).toContain('Výběr toho, kdo podepisuje potvrzení o daru');
   });
 
+  it('when the one signature of a person was set or removed, then those changes are named in Czech too', () => {
+    firstPage([
+      adminAction({
+        action: 'CHANGE_SIGNATURE',
+        details: 'Podpis u osoby nastaven',
+        client: 'claude.ai',
+      }),
+      adminAction({
+        id: '019a1c00-0000-7000-8000-00000000e008',
+        action: 'REMOVE_SIGNATURE',
+        details: 'Podpis u osoby odebrán',
+      }),
+    ]);
+
+    const [set, removed] = rows();
+    expect(rowText(set)).toContain('Nahrání podpisu');
+    expect(rowText(set)).not.toContain('CHANGE_SIGNATURE');
+    expect(rowText(removed)).toContain('Odebrání podpisu');
+    expect(rowText(removed)).not.toContain('REMOVE_SIGNATURE');
+  });
+
   it('when a receipt was issued, then the change is named in Czech, not by its code', () => {
     firstPage([
       adminAction({

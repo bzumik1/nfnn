@@ -63,6 +63,8 @@ const ACTION_NAMES: Record<string, string> = {
   CHANGE_PEOPLE_FOOTNOTE: $localize`:@@admin.actions.action.changePeopleFootnote:Úprava řádku pod správní radou`,
   CHANGE_WEB_SIGNATURE: $localize`:@@admin.actions.action.changeWebSignature:Nahrání podpisu pro web`,
   REMOVE_WEB_SIGNATURE: $localize`:@@admin.actions.action.removeWebSignature:Odebrání podpisu z webu`,
+  CHANGE_SIGNATURE: $localize`:@@admin.actions.action.changeSignature:Nahrání podpisu`,
+  REMOVE_SIGNATURE: $localize`:@@admin.actions.action.removeSignature:Odebrání podpisu`,
   SET_BANK_LOGO_SOURCE: $localize`:@@admin.actions.action.setBankLogoSource:Nastavení loga banky`,
   REFRESH_BANK_LOGO: $localize`:@@admin.actions.action.refreshBankLogo:Nové stažení loga banky`,
   REMOVE_BANK_LOGO: $localize`:@@admin.actions.action.removeBankLogo:Odebrání loga banky`,

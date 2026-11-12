@@ -8,13 +8,14 @@ import {
   receiptSigningKeys,
   session,
 } from './donor-session';
-import { noSignatory, signatory, vectorSignature } from './signature-image';
+import { noSignatory, signatory } from './signature-image';
 
 const SETTINGS = '/api/admin/operations/settings';
 const SIGNATORY = '/api/admin/donations/receipt-signatory';
 const PEOPLE = '/api/admin/content/people';
 const PERSON_ID = '0199f3e0-0000-7000-8000-00000000c001';
 const PORTRAIT_ID = '0199f3e0-0000-7000-8000-00000000c101';
+const SIGNATURE_ID = '0199f3e0-0000-7000-8000-00000000c201';
 const eva = {
   id: PERSON_ID,
   name: 'Petr Vzorový',
@@ -24,9 +25,18 @@ const eva = {
   boardNote: null,
   featured: true,
   portrait: { id: PORTRAIT_ID, url: `/api/content/media/${PORTRAIT_ID}`, width: 640, height: 640 },
-  webSignature: null,
+  signature: null,
   personalEmail: null,
   fundEmail: null,
+};
+const signed = {
+  ...eva,
+  signature: {
+    id: SIGNATURE_ID,
+    url: `/api/content/media/${SIGNATURE_ID}`,
+    width: 600,
+    height: 180,
+  },
 };
 const SIGNING_KEYS = '/api/admin/donations/receipt-signing-keys';
 
@@ -195,11 +205,7 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await page.route(
       (url) => url.pathname === PEOPLE,
-      (route) => route.fulfill({ json: { members: [eva], note: null } }),
-    );
-    await page.route(
-      (url) => url.pathname === `/api/admin/donations/receipt-signatures/${PERSON_ID}`,
-      (route) => route.fulfill({ json: vectorSignature }),
+      (route) => route.fulfill({ json: { members: [signed], note: null } }),
     );
 
     await page.goto('/sprava/nastaveni');
@@ -209,9 +215,10 @@ test.describe('Given an administrator on the settings page', () => {
       'src',
       `/api/content/media/${PORTRAIT_ID}?w=240`,
     );
-    await expect(
-      block.getByRole('img', { name: 'Podpis na potvrzení' }).locator('path'),
-    ).toHaveCount(2);
+    await expect(block.getByRole('img', { name: 'Podpis na potvrzení' })).toHaveAttribute(
+      'src',
+      `/api/content/media/${SIGNATURE_ID}?w=480`,
+    );
     await expect(block.locator('.signature-block-for')).toHaveText(
       'Za Nová naděje - nadační fond:',
     );
@@ -242,7 +249,7 @@ test.describe('Given an administrator on the settings page', () => {
     await expect(card.getByRole('figure')).toHaveCount(0);
   });
 
-  test('when the signature block is previewed in a dark forced-colours mode, then it keeps the paper and the ink keeps its colour', async ({
+  test('when the signature block is previewed in a dark forced-colours mode, then it keeps the paper and shows the signature', async ({
     page,
   }) => {
     await page.emulateMedia({ forcedColors: 'active', colorScheme: 'dark' });
@@ -252,25 +259,23 @@ test.describe('Given an administrator on the settings page', () => {
     );
     await page.route(
       (url) => url.pathname === SIGNATORY,
-      (route) => route.fulfill({ json: signatory({ signature: true }) }),
+      (route) => route.fulfill({ json: signatory({ personId: PERSON_ID, signature: true }) }),
     );
     await page.route(
-      (url) => url.pathname.startsWith('/api/admin/donations/receipt-signatures/'),
-      (route) => route.fulfill({ json: vectorSignature }),
+      (url) => url.pathname === PEOPLE,
+      (route) => route.fulfill({ json: { members: [signed], note: null } }),
     );
 
     await page.goto('/sprava/nastaveni');
     const frame = page.locator('.signature-block');
-    await expect(frame.locator('path')).toHaveCount(2);
+    await expect(frame.locator('img.signature-block-image')).toBeVisible();
 
     const colours = await frame.evaluate((element) => ({
       adjust: getComputedStyle(element).forcedColorAdjust,
       paper: getComputedStyle(element).backgroundColor,
-      ink: getComputedStyle(element.querySelector('path') as Element).fill,
     }));
     expect(colours.adjust).toBe('none');
     expect(colours.paper).not.toBe('rgb(0, 0, 0)');
-    expect(colours.ink).toBe('rgb(29, 42, 92)');
   });
 });
 

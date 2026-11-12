@@ -40,16 +40,6 @@
   max-height: var(--space-12);
 }
 
-.person-signature-art {
-  width: 160px;
-  max-width: 100%;
-}
-
-.person-signature-note {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
 .list-actions {
   margin-top: var(--space-4);
 }
@@ -188,8 +178,4 @@
   gap: var(--space-2) var(--space-4);
   font-size: var(--text-sm);
   color: var(--color-danger);
-}
-
-.receipt-part app-receipt-signature {
-  margin-top: var(--space-5);
 }

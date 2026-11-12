@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.receiptSignatureChanged.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="${intro}">správce jana@example.cz 12. 11. 2026 v 10:05 změnil ve správě webu Nová naděje podpis osoby Josef Vzorový, která podepisuje potvrzení o daru. Potvrzení vydaná od teď ponesou nový podpis, už vystavená potvrzení se nemění.</p>
+    <p style="margin: 0 0 16px;" th:if="${client}" th:text="${client}">Změnu udělala připojená aplikace claude.ai.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.receiptSignatureChanged.email.expected}">Pokud o tom víte, nemusíte nic dělat.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.receiptSignatureChanged.email.warning(${senderEmail})}">Pokud ne, podívejte se ve správě na Lidi fondu a do Historie změn, změňte si prosím hned heslo i druhý faktor a napište ostatním správcům a na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.receiptSignatureChanged.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.receiptSignatureChanged.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

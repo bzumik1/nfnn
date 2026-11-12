@@ -6,13 +6,11 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatureRepository;
-import cz.novanadeje.app.donations.domain.receipt.SignatureKind;
-import cz.novanadeje.app.donations.domain.receipt.SignatureSummary;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
+import cz.novanadeje.app.shared.application.people.PrintSignature;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,7 +20,6 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,30 +39,28 @@ class ReceiptSignatoryServiceTest {
     private static final Instant EARLIER = Instant.parse("2026-10-01T09:00:00Z");
     private static final UUID ADMIN = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final PersonReference CHAIR = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000f001"));
+    private static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 1};
     private static final PersonReference OTHER = new PersonReference(UUID.fromString("019a3a00-0000-7000-8000-00000000f002"));
 
     private final ReceiptSignatoryRepository signatories = mock(ReceiptSignatoryRepository.class);
-    private final ReceiptSignatureRepository signatures = mock(ReceiptSignatureRepository.class);
     private final FoundationPeople people = mock(FoundationPeople.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final ReceiptSignatoryService service = new ReceiptSignatoryService(signatories, signatures, people, events,
+    private final ReceiptSignatoryService service = new ReceiptSignatoryService(signatories, people, events,
             new MutableClock(NOW, ZoneId.of("Europe/Prague")));
 
     @Test
-    @DisplayName("Given no signatory chosen, when the signatory is viewed, then none is chosen and the uploaded signatures are listed")
+    @DisplayName("Given no signatory chosen, when the signatory is viewed, then none is chosen")
     void should_answer_no_signatory_when_viewed_given_none_chosen() {
-        SignatureSummary summary = new SignatureSummary(OTHER, SignatureKind.VECTOR, 1200, 400, EARLIER);
         when(signatories.current()).thenReturn(Optional.empty());
-        when(signatures.summaries()).thenReturn(List.of(summary));
 
-        assertThat(service.view()).isEqualTo(new ReceiptSignatoryView(Optional.empty(), List.of(summary)));
+        assertThat(service.view()).isEqualTo(new ReceiptSignatoryView(Optional.empty()));
     }
 
     @Test
-    @DisplayName("Given a signatory chosen who has a portrait and a signature, when viewed, then their name, receipt role and both images are named")
+    @DisplayName("Given a signatory chosen who has a portrait and a signature that both print, when viewed, then their name, receipt role and both images are named")
     void should_name_person_role_and_images_when_viewed_given_chosen_signatory() {
         when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
-        when(signatures.summaries()).thenReturn(List.of(new SignatureSummary(CHAIR, SignatureKind.RASTER, 600, 200, EARLIER)));
+        when(people.printSignatureOf(CHAIR.value())).thenReturn(Optional.of(new PrintSignature(PNG, 600, 200)));
         when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", true)));
         when(people.printPortraitOf(CHAIR.value())).thenReturn(Optional.of(new PrintPortrait(new byte[] {(byte) 0xff, (byte) 0xd8, 0}, PrintPortrait.SIDE)));
 
@@ -77,7 +72,6 @@ class ReceiptSignatoryServiceTest {
     @DisplayName("Given a signatory whose portrait cannot be prepared for print, when viewed, then the portrait is named as set but not printable")
     void should_name_portrait_unprintable_when_viewed_given_portrait_that_cannot_be_prepared() {
         when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
-        when(signatures.summaries()).thenReturn(List.of());
         when(people.find(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", true)));
         when(people.printPortraitOf(CHAIR.value())).thenReturn(Optional.empty());
 
@@ -89,7 +83,6 @@ class ReceiptSignatoryServiceTest {
     @DisplayName("Given a signatory chosen whose person is gone, when viewed, then none is chosen")
     void should_answer_no_signatory_when_viewed_given_person_gone() {
         when(signatories.current()).thenReturn(Optional.of(new ReceiptSignatory(CHAIR, "předseda správní rady", EARLIER)));
-        when(signatures.summaries()).thenReturn(List.of());
         when(people.find(CHAIR.value())).thenReturn(Optional.empty());
 
         assertThat(service.view().chosen()).isEmpty();
@@ -99,7 +92,6 @@ class ReceiptSignatoryServiceTest {
     @DisplayName("Given a person of the foundation, when an administrator chooses them with a receipt role, then the choice is stored, audited and returned")
     void should_store_and_audit_when_chosen_given_person() {
         when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
-        when(signatures.digestOf(CHAIR)).thenReturn(Optional.empty());
 
         ChosenSignatoryView chosen = service.choose(ADMIN, CHAIR, "  předseda správní rady ");
 
@@ -156,7 +148,6 @@ class ReceiptSignatoryServiceTest {
     @DisplayName("Given a person of the foundation, when an administrator chooses them, then the person is read with a lock before the choice is stored")
     void should_lock_person_before_storing_when_chosen_given_person() {
         when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
-        when(signatures.digestOf(CHAIR)).thenReturn(Optional.empty());
 
         service.choose(ADMIN, CHAIR, "předseda správní rady");
 

@@ -41,7 +41,7 @@ public class PublicPeopleService {
         }
         List<Person> featured = all.stream().filter(person -> person.details().featured()).toList();
         Map<MediaId, MediaSize> sizes = media.findSizes(featured.stream()
-                .flatMap(person -> Stream.concat(person.details().portrait().stream(), person.webSignature().stream())).collect(Collectors.toSet()));
+                .flatMap(person -> Stream.concat(person.details().portrait().stream(), person.signature().stream())).collect(Collectors.toSet()));
         return Optional.of(new PublicPeopleView(
                 featured.stream().map(person -> card(person, sizes)).toList(),
                 all.stream().filter(person -> person.details().onBoard())
@@ -56,7 +56,7 @@ public class PublicPeopleService {
 
     private static List<SignatureView> signatures(List<Person> featured, Map<MediaId, MediaSize> sizes) {
         return featured.stream()
-                .flatMap(person -> PersonImageView.of(person.webSignature(), sizes).map(image -> new SignatureView(image, person.details().name(),
+                .flatMap(person -> PersonImageView.of(person.signature(), sizes).map(image -> new SignatureView(image, person.details().name(),
                         person.details().role(), PersonImageView.of(person.details().portrait(), sizes))).stream())
                 .toList();
     }

@@ -11,15 +11,10 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { forkJoin, map, Observable, of } from 'rxjs';
+import { map, Observable, of } from 'rxjs';
 import { mediaUrl } from '../../../content/news-api';
 import { PeopleApi } from '../../../content/people-api';
-import {
-  AdminApi,
-  ChosenReceiptSignatoryResponse,
-  ReceiptSignatureResponse,
-} from '../../admin-api';
-import { SignatureArtwork } from '../../receipt-signature/signature-artwork';
+import { AdminApi, ChosenReceiptSignatoryResponse } from '../../admin-api';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../../kept-administration-answers';
@@ -29,14 +24,15 @@ type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 export interface SignatureBlock {
   signatory: ChosenReceiptSignatoryResponse;
   portraitUrl: string | null;
-  signature: ReceiptSignatureResponse | null;
+  signatureUrl: string | null;
 }
 
 const PORTRAIT_WIDTH = 240;
+const SIGNATURE_WIDTH = 480;
 
 @Component({
   selector: 'app-receipt-signatory',
-  imports: [NeedsConnection, RouterLink, SignatureArtwork],
+  imports: [NeedsConnection, RouterLink],
   templateUrl: './receipt-signatory.html',
   styleUrl: './receipt-signatory.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,21 +110,20 @@ export class ReceiptSignatory {
   }
 
   private blockOf(signatory: ChosenReceiptSignatoryResponse): Observable<SignatureBlock> {
-    const portrait = signatory.portrait
-      ? this.people.load().pipe(
-          map((people) => {
-            const image = people.members.find(
-              (member) => member.id === signatory.personId,
-            )?.portrait;
-            return image ? mediaUrl(image.id, PORTRAIT_WIDTH) : null;
-          }),
-        )
-      : of(null);
-    const signature = signatory.signature
-      ? this.api.receiptSignature(signatory.personId)
-      : of(null);
-    return forkJoin({ portraitUrl: portrait, signature }).pipe(
-      map(({ portraitUrl, signature }) => ({ signatory, portraitUrl, signature })),
+    if (!signatory.portrait && !signatory.signature) {
+      return of({ signatory, portraitUrl: null, signatureUrl: null });
+    }
+    return this.people.load().pipe(
+      map((people) => {
+        const member = people.members.find((candidate) => candidate.id === signatory.personId);
+        const portrait = signatory.portrait ? member?.portrait : null;
+        const signature = signatory.signature ? member?.signature : null;
+        return {
+          signatory,
+          portraitUrl: portrait ? mediaUrl(portrait.id, PORTRAIT_WIDTH) : null,
+          signatureUrl: signature ? mediaUrl(signature.id, SIGNATURE_WIDTH) : null,
+        };
+      }),
     );
   }
 }

@@ -9,6 +9,7 @@ import {
   bankProblems,
   base32Decode,
   ifMatch,
+  keepsOneSignature,
   mcpMessages,
   phaseMovements,
   pragueDay,
@@ -63,6 +64,13 @@ test('Given an age key, when the journey names words of it, then they are its 24
 test('Given receipt numbers, when the journey compares them, then it reads their serial', () => {
   assert.equal(receiptSerial('2026-000042'), 42);
   assert.throws(() => receiptSerial('2026-42'), /not a receipt number/);
+});
+
+test('Given the API generation a backend names, when the journey sets the signatory\'s signature, then it uses the one signature from generation 5 on and the two older signatures before', () => {
+  assert.equal(keepsOneSignature(new Headers({ 'Nfnn-Api': '5' })), true);
+  assert.equal(keepsOneSignature(new Headers({ 'Nfnn-Api': '6' })), true);
+  assert.equal(keepsOneSignature(new Headers({ 'Nfnn-Api': '4' })), false);
+  assert.equal(keepsOneSignature(new Headers()), false);
 });
 
 test('Given the synthetic portrait, when it is decoded, then it is a square RGB PNG of the asked side', () => {

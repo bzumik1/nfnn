@@ -148,13 +148,10 @@ Feature: An administrator connects an application such as Claude to the administ
       | DELETE | /api/admin/donations/symbol-claims/{id}                             |
       | POST   | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age/restore |
       | GET    | /api/admin/operations/backups/nfnn-2026-10-23_0300.dump.age         |
-      | POST   | /api/admin/donations/receipt-signatures/{id}                        |
       | POST   | /api/admin/operations/backups/key/reveal                            |
       | POST   | /api/admin/operations/backups/key/confirmation                      |
-      | DELETE | /api/admin/donations/receipt-signatures/{id}                        |
       | DELETE | /api/admin/donations/bank-logos/0800                                |
       | PUT    | /api/admin/donations/receipt-signatory                              |
-      | GET    | /api/admin/donations/receipt-signatures/{id}                        |
       | GET    | /api/admin/donations/receipt-images/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee |
       | POST   | /api/admin/donations/receipt-signing-keys/21fe31df/withdrawal       |
       | POST   | /api/admin/operations/push/subscriptions                            |

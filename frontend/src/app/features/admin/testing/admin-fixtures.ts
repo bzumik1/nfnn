@@ -32,10 +32,8 @@ import {
   ImportStateResponse,
   MonthOverviewResponse,
   PairedDonationResponse,
-  ReceiptSignatureResponse,
   ChosenReceiptSignatoryResponse,
   ReceiptSignatoryResponse,
-  SignatureVectorResponse,
   ReceiptSigningKeyResponse,
   ReceiptSigningKeysResponse,
   SymbolClaimResponse,
@@ -526,50 +524,6 @@ export function setting(overrides: Partial<AdminSettingResponse> = {}): AdminSet
   };
 }
 
-export const SIGNATURE_IMAGE =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-
-export function receiptSignature(
-  overrides: Partial<ReceiptSignatureResponse> = {},
-): ReceiptSignatureResponse {
-  return {
-    configured: true,
-    kind: 'RASTER',
-    image: SIGNATURE_IMAGE,
-    vector: null,
-    width: 1200,
-    height: 400,
-    uploadedAt: '2026-10-23T19:30:00Z',
-    ...overrides,
-  };
-}
-
-export const SIGNATURE_VECTOR: SignatureVectorResponse = {
-  viewBox: [0, 0, 300, 100],
-  paths: [
-    { d: 'M10 80 C40 10 65 10 95 80 S150 150 180 80 Z', fill: '#1d2a5c', opacity: 0.9 },
-    { d: 'M250 50 L290 90 Z', fill: '#c0392b', opacity: 1 },
-  ],
-};
-
-export function vectorReceiptSignature(
-  overrides: Partial<ReceiptSignatureResponse> = {},
-): ReceiptSignatureResponse {
-  return receiptSignature({ kind: 'VECTOR', image: null, vector: SIGNATURE_VECTOR, ...overrides });
-}
-
-export function noReceiptSignature(): ReceiptSignatureResponse {
-  return {
-    configured: false,
-    kind: null,
-    image: null,
-    vector: null,
-    width: null,
-    height: null,
-    uploadedAt: null,
-  };
-}
-
 export function receiptSigningKey(
   overrides: Partial<ReceiptSigningKeyResponse> = {},
 ): ReceiptSigningKeyResponse {
@@ -745,25 +699,11 @@ export function chosenReceiptSignatory(
 export function receiptSignatory(
   overrides: Partial<ChosenReceiptSignatoryResponse> = {},
 ): ReceiptSignatoryResponse {
-  const chosen = chosenReceiptSignatory(overrides);
-  return {
-    signatory: chosen,
-    signatures: chosen.signature
-      ? [
-          {
-            personId: chosen.personId,
-            kind: 'VECTOR',
-            width: 1200,
-            height: 400,
-            uploadedAt: '2026-10-23T19:30:00Z',
-          },
-        ]
-      : [],
-  };
+  return { signatory: chosenReceiptSignatory(overrides) };
 }
 
 export function noReceiptSignatory(): ReceiptSignatoryResponse {
-  return { signatory: null, signatures: [] };
+  return { signatory: null };
 }
 
 export function yearlyCandidate(

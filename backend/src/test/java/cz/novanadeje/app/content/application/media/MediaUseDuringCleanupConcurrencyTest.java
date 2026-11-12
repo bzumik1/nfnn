@@ -7,6 +7,7 @@ import cz.novanadeje.app.content.application.donateband.DonateBandCommand;
 import cz.novanadeje.app.content.application.donateband.DonateBandService;
 import cz.novanadeje.app.content.application.news.NewsAdminService;
 import cz.novanadeje.app.content.application.news.NewsArticleCommand;
+import cz.novanadeje.app.content.application.people.ActingAdministrator;
 import cz.novanadeje.app.content.application.people.PeopleAdminService;
 import cz.novanadeje.app.content.application.people.PersonCommand;
 import cz.novanadeje.app.content.application.project.ProjectAdminService;
@@ -127,7 +128,7 @@ class MediaUseDuringCleanupConcurrencyTest {
             case ABOUT_PHOTO -> about.change(ADMIN, new AboutCommand(Optional.of(photo), Optional.empty(), Optional.empty()));
             case DONATE_BAND_PHOTO -> donateBand.change(ADMIN, new DonateBandCommand(Optional.of(photo), Optional.empty()));
             case PERSON_PORTRAIT -> people.add(ADMIN, person(Optional.of(photo)));
-            case WEB_SIGNATURE -> people.setWebSignature(ADMIN, person, photo);
+            case WEB_SIGNATURE -> people.setSignature(new ActingAdministrator(ADMIN, Optional.empty()), person, photo);
         }
     }
 

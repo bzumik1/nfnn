@@ -215,6 +215,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant("removed", "Řádek pod správní radou odebrán")));
         shapes.put("CHANGE_WEB_SIGNATURE", List.of(full("Podpis " + ID + " na webu u osoby " + ID + " nastaven")));
         shapes.put("REMOVE_WEB_SIGNATURE", List.of(full("Podpis na webu u osoby " + ID + " odebrán")));
+        shapes.put("CHANGE_SIGNATURE", List.of(full("Podpis " + ID + " u osoby " + ID + " nastaven")));
+        shapes.put("REMOVE_SIGNATURE", List.of(full("Podpis u osoby " + ID + " odebrán")));
         shapes.put("SET_BANK_LOGO_SOURCE", List.of(full("Logo banky (?<bank>\\d{4}) nastaveno z (?<host>[a-z0-9.-]+), obrázek (?<image>[0-9a-f]{64})")));
         shapes.put("REFRESH_BANK_LOGO", List.of(full("Logo banky (?<bank>\\d{4}) znovu staženo z (?<host>[a-z0-9.-]+), obrázek (?<image>[0-9a-f]{64})")));
         shapes.put("REMOVE_BANK_LOGO", List.of(full("Logo banky (?<bank>\\d{4}) odebráno")));

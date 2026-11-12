@@ -7,6 +7,6 @@ public class FocalPointOnPersonImage extends RuleViolation {
     public static final String CODE = "content/focal-point-on-person-image";
 
     public FocalPointOnPersonImage(MediaId image) {
-        super(CODE, "Image " + image + " is a portrait or a web signature of a person of the foundation, which takes no focal point");
+        super(CODE, "Image " + image + " is a portrait or a signature of a person of the foundation, which takes no focal point");
     }
 }

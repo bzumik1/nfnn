@@ -181,6 +181,8 @@ class AdminActionFactsTest {
                 arguments("CHANGE_PEOPLE_FOOTNOTE", "Řádek pod správní radou odebrán", "CHANGE_PEOPLE_FOOTNOTE.removed", Map.of()),
                 arguments("CHANGE_WEB_SIGNATURE", "Podpis " + OTHER + " na webu u osoby " + OTHER + " nastaven", "CHANGE_WEB_SIGNATURE", Map.of()),
                 arguments("REMOVE_WEB_SIGNATURE", "Podpis na webu u osoby " + OTHER + " odebrán", "REMOVE_WEB_SIGNATURE", Map.of()),
+                arguments("CHANGE_SIGNATURE", "Podpis " + OTHER + " u osoby " + OTHER + " nastaven", "CHANGE_SIGNATURE", Map.of()),
+                arguments("REMOVE_SIGNATURE", "Podpis u osoby " + OTHER + " odebrán", "REMOVE_SIGNATURE", Map.of()),
                 arguments("SET_BANK_LOGO_SOURCE", "Logo banky 0800 nastaveno z is1-ssl.mzstatic.com, obrázek 000000000000000000000000000000000000000000000000000000000000000a", "SET_BANK_LOGO_SOURCE",
                         Map.of("bank", "0800", "host", "is1-ssl.mzstatic.com", "image", "000000000000000000000000000000000000000000000000000000000000000a")),
                 arguments("REFRESH_BANK_LOGO", "Logo banky 0800 znovu staženo z www.csas.cz, obrázek 000000000000000000000000000000000000000000000000000000000000000a", "REFRESH_BANK_LOGO",

@@ -3,7 +3,7 @@ import { FOUNDATION_PAYMENT_DETAILS } from './qr-matrices';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { mockReceiptIssuing, ReceiptIssuing } from './receipt-issuing';
 import { BREAKPOINTS } from '../src/app/core/layout/breakpoints';
-import { noSignature, signatory } from './signature-image';
+import { signatory } from './signature-image';
 import type { RouteTarget } from './fixtures';
 
 export const donor = {
@@ -199,10 +199,6 @@ export async function mockDonorApi(
   await page.route(
     (url) => url.pathname === '/api/admin/donations/receipt-signatory',
     (route) => route.fulfill({ json: signatory() }),
-  );
-  await page.route(
-    (url) => url.pathname.startsWith('/api/admin/donations/receipt-signatures/'),
-    (route) => route.fulfill({ json: noSignature }),
   );
   await page.route(
     (url) => url.pathname === '/api/admin/donations/receipt-signing-keys',
