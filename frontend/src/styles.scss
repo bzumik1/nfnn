@@ -1,5 +1,4 @@
 @use 'theme';
-@use 'breakpoints' as bp;
 @use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
@@ -56,13 +55,6 @@ html:has(app-root app-landing) body {
 
 html:has(app-root app-landing) {
   overscroll-behavior: none;
-}
-
-@include bp.down(nav) {
-  html:has(app-root app-not-found),
-  html:has(app-root app-not-found) body {
-    background: var(--color-surface-inverse);
-  }
 }
 
 html:has(app-root .ui-grouped) body {

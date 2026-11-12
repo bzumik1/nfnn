@@ -113,8 +113,8 @@
   --text-section-title-compact: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.5rem);
   --text-section-title: clamp(max(1rem, min(1.75rem, 16vw)), 3.5vw, 2.75rem);
   --text-cta-title: clamp(max(1rem, min(1.5rem, 16vw)), 3vw, 2.5rem);
-  --text-article-title: clamp(max(1rem, min(2rem, 16vw)), 4.5vw, 3.25rem);
-  --text-page-title: clamp(max(1rem, min(2rem, 16vw)), 5vw, 3.5rem);
+  --text-article-title: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.5rem);
+  --text-page-title: clamp(max(1rem, min(2rem, 16vw)), 4vw, 3rem);
   --text-hero: clamp(max(1rem, min(2.75rem, 27vw)), 7vw, 5.5rem);
   --text-hero-short: max(2rem, min(5.5vw, 12svh));
 
@@ -225,7 +225,6 @@
   --shadow-button: 0 3px 0 var(--color-surface-inverse);
   --shadow-button-sm: 0 2px 0 var(--color-surface-inverse);
   --shadow-tab: 0 2px 0 var(--color-surface-inverse);
-  --shadow-badge: 0 4px 0 var(--color-surface-inverse);
   --shadow-qr: 0 0 0 1px var(--color-border);
   --shadow-nav-active: inset 4px 0 0 var(--color-accent);
   --shadow-focus: 0 0 0 3px var(--color-focus-ring);

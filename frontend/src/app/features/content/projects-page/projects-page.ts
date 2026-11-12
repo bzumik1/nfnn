@@ -13,7 +13,6 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map, Subscription } from 'rxjs';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
-import { CompactLayout } from '../../../core/layout/compact-layout';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { DonateBand } from '../donate-band/donate-band';
@@ -58,7 +57,6 @@ export class ProjectsPage {
   private readonly destroyRef = inject(DestroyRef);
   private storiesLoad = Subscription.EMPTY;
 
-  protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly state = signal<LoadState>(this.store.stories() ? 'ready' : 'loading');
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
 
