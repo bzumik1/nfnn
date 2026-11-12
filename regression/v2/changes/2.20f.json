@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/admin-donors/donor-card.json",
+    "reason": "2.20f: a case with receipts of two years from the real issuer (a single receipt the yearly one replaced, the yearly receipt and a single receipt of the next year), a refunded gift and two gifts of one day ordered by recordedAt, run against GET /api/admin/donations/donors/{id} and by the browser over the same chunks",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/admin-donors/record-search.json",
+    "reason": "2.20f: three donor records of one name ordered by the lower donor id whatever their registration order",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/admin-payments/list.json",
+    "reason": "2.20f: receiptIssued from receipts the real issuer issued (a replaced single receipt counts) and availableYears offering a year whose only gift was refunded",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/donor-donations/list.json",
+    "reason": "2.20f: 2.15 note 1, a case whose gifts carry a receipt number, a sender account and a confirmed older symbol, the namesake of the new sync/manifest.json case",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/sync/manifest.json",
+    "reason": "2.20f: 2.15 note 1, a case with every chunk kind of the donor copy (donations, receipts of two years with their frozen receipts, bank-accounts, symbol-claims)",
+    "contract": "docs/api-contract.md, Device sync"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/defs/*",
+    "reason": "2.20f: rows.schema.json gains the receipts the runner issues and a gift's recordedAt; admin-copy.schema.json gains the receipts chunk and its row and takes a recordedAt with the fraction PostgreSQL keeps",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/admin-donors/donor-card.schema.json",
+    "reason": "2.20f: the donor card's receipts are specified item by item",
+    "contract": "docs/api-contract.md, Donor accounts"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/donor-donations/list.schema.json",
+    "reason": "2.20f: receiptNumber, senderAccount and confirmedSymbol take their shapes now that a case gives them",
+    "contract": "docs/api-contract.md, Device sync"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/schemas/sync/manifest.schema.json",
+    "reason": "2.20f: the manifest's chunks are the donations, receipts, bank-accounts and symbol-claims chunks, each with its row",
+    "contract": "docs/api-contract.md, Device sync"
+  }
+]
