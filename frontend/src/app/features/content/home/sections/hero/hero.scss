@@ -27,7 +27,7 @@
         color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
         transparent 100%
       )
-      top / 100% 160px no-repeat;
+      top / 100% var(--hero-top-shade-height) no-repeat;
   z-index: 1;
 }
 
@@ -138,6 +138,7 @@
 
 :host-context(.landing-stage) {
   .hero {
+    min-height: max(var(--full-screen-height), 100dvh);
     overflow: visible;
   }
 
@@ -148,6 +149,14 @@
 
   .hero-overlay {
     bottom: calc(-1 * var(--page-bleed-bottom));
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-image-shade) 85%, transparent) 0,
+      color-mix(in srgb, var(--color-image-shade) 85%, transparent) var(--page-bleed-bottom),
+      color-mix(in srgb, var(--color-image-shade) 30%, transparent)
+        calc(var(--page-bleed-bottom) + (100% - var(--page-bleed-bottom)) / 2),
+      transparent 100%
+    );
   }
 
   .hero-top-shade {
@@ -160,6 +169,6 @@
           color-mix(in srgb, var(--color-image-shade) 55%, transparent) var(--page-resting-scroll),
           transparent 100%
         )
-        top / 100% calc(160px + var(--page-resting-scroll)) no-repeat;
+        top / 100% calc(var(--hero-top-shade-height) + var(--page-resting-scroll)) no-repeat;
   }
 }

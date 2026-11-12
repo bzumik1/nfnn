@@ -59,6 +59,7 @@ html:has(app-root app-landing) {
 
 html.landing-stage {
   overflow: hidden;
+  scroll-behavior: auto;
 }
 
 html.landing-stage body {
