@@ -5639,5 +5639,194 @@
     "field": "nfnn-api",
     "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
     "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/confirm",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/confirm",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/confirm",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/donors/me/second-factor/confirm",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "added",
+    "field": "$.user.version",
+    "reason": "2.20c: the donor's profile (the DonorResponse every sign-in, registration confirmation and second-factor answer carries as user) names the version of its stored name, address and language, which the donor area sends back as If-Match on PATCH /api/donors/me",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/content/news/{id}",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "body",
+    "field": "$.version",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "body",
+    "field": "$.version",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "body",
+    "field": "$.version",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "body",
+    "field": "$.version",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}/look-back-year",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "body",
+    "field": "$.version",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "GET /api/content/*",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/admin/*",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "PUT /api/admin/*",
+    "scenario": "content/manage_donate_band: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "2.20c bumps the API generation from 3 to 4 (.claude/rules/backend.md, API versions and compatibility): a browser session must now name the row version it read for the operations settings, the founders' note, the line under the board and the donor's own profile, which an app of generation 3 does not send, so every /api answer names generation 4 and a write from an older tab is refused with 426 app/update-required instead of 428",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/admin/content/news/{id}/publish",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "request",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "request",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
+  },
+  {
+    "path": "PUT /api/admin/content/news/{id}/look-back-year",
+    "scenario": "content/look_back_on_a_year: *",
+    "kind": "request",
+    "reason": "2.20c: the donor's profile and the operations settings now carry a row version, so the transcripts mask more versions in each scenario and the ordinal of every later <version:n> placeholder moves; the version itself is opaque and unchanged for the records 2.18 versioned",
+    "contract": "docs/api-contract.md, Stale writes (If-Match and row versions)"
   }
 ]
