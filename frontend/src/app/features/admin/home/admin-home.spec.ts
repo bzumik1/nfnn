@@ -1135,7 +1135,7 @@ describe('Given an administrator on the administration home with the administrat
     },
     consecutiveFailures: 1,
     reportedOutage: 'UNAUTHORIZED',
-    balance: null,
+    balance: { amountMinor: 12_345_678, readAt: '2026-10-17T10:00:00Z' },
   };
   let fixture: ComponentFixture<AdminHome>;
   let http: HttpTestingController;
@@ -1243,6 +1243,16 @@ describe('Given an administrator on the administration home with the administrat
     expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('Fio refused');
     expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
     expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+  });
+
+  it('when the device is offline, then the account balance of the copy shows with the time it was read and that it may be out of date', () => {
+    expect(http.match(IMPORT_STATE_URL)).toEqual([]);
+
+    expect(
+      text(
+        '.ui-card[aria-labelledby="admin-import-title"] .admin-data > div:has(.balance-read-at) dd',
+      ),
+    ).toBe('123 456,78 Kč k 17. 10. 2026 12:00 (poslední známý, nemusí být aktuální)');
   });
 
   it('when the device is offline, then the backups card shows the last backup of the copy without asking the server', () => {
