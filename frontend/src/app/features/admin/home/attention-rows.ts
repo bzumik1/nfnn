@@ -1,6 +1,8 @@
 /// <reference types="@angular/localize" />
 
 import { pluralCategory } from '../../../core/i18n/plural-category';
+import { OpenAlert } from '../../../core/push/open-alerts-api';
+import { formatBankTime } from '../../donations/donation-date';
 import { formatMinorUnits } from '../../donations/donation-amount';
 import { AdminBackupsResponse } from '../admin-api';
 import type { StoredImportState } from '../device-copy/administration-reads';
@@ -16,7 +18,8 @@ import {
 export type LoadState = 'loading' | 'ready' | 'error';
 export type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 export type AttentionTone = 'danger' | 'warning' | 'task' | 'unknown' | 'action';
-export type AttentionIcon = 'payments' | 'bank' | 'backup' | 'key' | 'administrators' | 'signature';
+export type AttentionIcon =
+  'payments' | 'bank' | 'backup' | 'mail' | 'key' | 'administrators' | 'signature';
 export type AttentionRetry = 'unpaired' | 'signingKeys' | 'administrators' | 'signatory';
 
 export interface UnpairedSummary {
@@ -57,6 +60,7 @@ export interface AttentionSources {
   readonly unpublishedSigningKeys: readonly string[];
   readonly signingKeyWarnings: readonly string[];
   readonly signatory: SignatoryState;
+  readonly openAlerts: readonly OpenAlert[] | null;
 }
 
 const NEXT_STEP_LINKS: Record<
@@ -118,6 +122,7 @@ export function attentionRows(sources: AttentionSources): readonly AttentionRow[
   return [
     ...signatoryMissingRows(sources),
     ...importRows(sources),
+    ...mailRows(sources),
     ...unpairedRows(sources),
     ...backupRows(sources),
     ...backupKeyRows(sources),
@@ -196,6 +201,30 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
     ];
   }
   return [];
+}
+
+function mailRows({ openAlerts }: AttentionSources): AttentionRow[] {
+  const mail = openAlerts?.find((alert) => alert.area === 'mail');
+  if (mail === undefined) {
+    return [];
+  }
+  const settings = NEXT_STEP_LINKS.settings;
+  return [
+    row({
+      key: 'mail',
+      tone: 'warning',
+      icon: 'mail',
+      title: $localize`:@@admin.home.attention.mail.title:E-maily se neodesílají`,
+      meta: $localize`:@@admin.home.attention.mail.meta:Poštovní server od ${formatBankTime(mail.since)}:since: odmítá zprávy.`,
+      step: `${NEXT_STEP_LABEL} ${$localize`:@@admin.home.attention.mail.step:Zkontrolujte nastavení pošty a pošlete zkušební e-mail.`}`,
+    }),
+    row({
+      key: 'mail-next',
+      tone: 'action',
+      title: settings.label,
+      link: { path: settings.path, fragment: settings.fragment },
+    }),
+  ];
 }
 
 function unpairedRows({ unpairedLoad, unpaired }: AttentionSources): AttentionRow[] {

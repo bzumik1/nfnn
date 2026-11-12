@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import { runInNewContext } from 'node:vm';
 import {
   PAYMENT_ROUTE_SCRIPT,
+  WORKER_PREFIX,
   wrapServiceWorker,
   unwrappedServiceWorkers,
   wrapServiceWorkers,
@@ -293,7 +294,7 @@ describe('Given a built Angular service worker', () => {
   });
 
   describe('when the build wraps it', () => {
-    it('then the payment route comes first and the Angular worker follows unchanged', () => {
+    it('then the payment route and the badge come first and the Angular worker follows unchanged', () => {
       const worker = join(folder, 'ngsw-worker.js');
       writeFileSync(worker, ANGULAR_WORKER);
 
@@ -301,8 +302,9 @@ describe('Given a built Angular service worker', () => {
 
       const wrapped = readFileSync(worker, 'utf8');
       assert.ok(wrapped.startsWith(PAYMENT_ROUTE_SCRIPT));
+      assert.ok(wrapped.startsWith(WORKER_PREFIX));
       assert.ok(wrapped.endsWith(ANGULAR_WORKER));
-      assert.equal(wrapped.length, PAYMENT_ROUTE_SCRIPT.length + ANGULAR_WORKER.length);
+      assert.equal(wrapped.length, WORKER_PREFIX.length + ANGULAR_WORKER.length);
     });
   });
 
@@ -314,7 +316,7 @@ describe('Given a built Angular service worker', () => {
 
       assert.equal(wrapServiceWorker(worker), false);
 
-      assert.equal(readFileSync(worker, 'utf8'), PAYMENT_ROUTE_SCRIPT + ANGULAR_WORKER);
+      assert.equal(readFileSync(worker, 'utf8'), WORKER_PREFIX + ANGULAR_WORKER);
     });
   });
 
@@ -333,7 +335,7 @@ describe('Given a built Angular service worker', () => {
         join('frontend', 'browser', 'ngsw-worker.js'),
       ]);
       for (const file of wrapped) {
-        assert.ok(readFileSync(file, 'utf8').startsWith(PAYMENT_ROUTE_SCRIPT));
+        assert.ok(readFileSync(file, 'utf8').startsWith(WORKER_PREFIX));
       }
     });
   });
@@ -364,7 +366,7 @@ describe('Given a built Angular service worker', () => {
   });
 
   describe('when the wrapped worker starts', () => {
-    it('then its route is registered before the Angular listeners', () => {
+    it('then its route and its badge are registered before the Angular listeners', () => {
       const worker = join(folder, 'ngsw-worker.js');
       writeFileSync(worker, ANGULAR_WORKER);
       wrapServiceWorker(worker);
@@ -386,7 +388,7 @@ describe('Given a built Angular service worker', () => {
 
       assert.deepEqual(
         listeners.map((entry) => entry.type),
-        ['message', 'fetch', 'fetch'],
+        ['message', 'fetch', 'push', 'fetch'],
       );
       const { stopped } = fetched(listeners, new Request(fileAddress(reservationOf(listeners))));
       assert.equal(stopped, true);

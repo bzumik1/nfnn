@@ -33,6 +33,7 @@ import {
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
+import { OpenAlerts } from '../../../core/push/open-alerts';
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
@@ -105,6 +106,7 @@ export class AdminHome {
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
+  private readonly openAlerts = inject(OpenAlerts);
   protected readonly donor = this.auth.donor;
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
@@ -235,6 +237,7 @@ export class AdminHome {
       unpublishedSigningKeys: this.unpublishedSigningKeys(),
       signingKeyWarnings: this.signingKeyWarnings(),
       signatory: this.signatoryState(),
+      openAlerts: this.openAlerts.alerts(),
     }),
   );
   protected readonly attentionLoading = computed(() =>
