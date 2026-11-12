@@ -276,6 +276,42 @@ export interface Waits {
 const CLICKED_GLOBAL = '__deviceClicked';
 const CLICK_WAIT_MS = 2_000;
 
+export const FORGET_STORED_DATA = `
+const done = arguments[arguments.length - 1];
+const waitMs = arguments[0];
+const forgotten = (name) =>
+  new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase(name);
+    const timer = setTimeout(() => resolve(name + ': blocked'), waitMs);
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+    request.onerror = () => {
+      clearTimeout(timer);
+      resolve(name + ': ' + (request.error ? request.error.name : 'failed'));
+    };
+  });
+indexedDB
+  .databases()
+  .then((databases) => Promise.all(databases.map((database) => forgotten(database.name))))
+  .then(
+    (kept) => done(kept.filter((name) => name !== null)),
+    (error) => done([String(error)]),
+  );`;
+
+export const HELD_LOCKS = `
+const done = arguments[arguments.length - 1];
+const names = (locks) => locks.map((lock) => lock.name).join(', ') || 'none';
+if (!navigator.locks) {
+  done('no Web Locks');
+} else {
+  navigator.locks.query().then(
+    (state) => done('held: ' + names(state.held) + '; waiting: ' + names(state.pending)),
+    (error) => done(String(error)),
+  );
+}`;
+
 export const WATCH_CLICK = `
 const element = arguments[0];
 window.${CLICKED_GLOBAL} = false;
