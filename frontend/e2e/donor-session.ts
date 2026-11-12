@@ -393,6 +393,15 @@ export async function openSignInDialog(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
+export async function rememberedDonorSession(
+  page: Page,
+  { installed = false, user = donor }: { installed?: boolean; user?: typeof donor } = {},
+): Promise<void> {
+  const hintKey = installed ? 'nfnn.donor-session-app' : 'nfnn.donor-session';
+  await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, user)));
+  await page.addInitScript((key) => localStorage.setItem(key, '1'), hintKey);
+}
+
 export async function signIn(page: Page, user: typeof donor = donor): Promise<void> {
   await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200, user)));
   await openSignInDialog(page);
