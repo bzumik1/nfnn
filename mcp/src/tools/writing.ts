@@ -900,7 +900,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Slovo zakladatelů',
       description:
-        'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only (nfnn_set_web_signature). Audited as CHANGE_FOUNDERS_NOTE.',
+        'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only (nfnn_set_web_signature). Pass `noteVersion` of nfnn_people as expectedVersion. Audited as CHANGE_FOUNDERS_NOTE.',
       inputSchema: z.object({ text: z.string().max(600), expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
@@ -922,7 +922,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Řádek pod správní radou',
       description:
-        'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Audited as CHANGE_PEOPLE_FOOTNOTE.',
+        'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Pass `footnoteVersion` of nfnn_people as expectedVersion. Audited as CHANGE_PEOPLE_FOOTNOTE.',
       inputSchema: z.object({ text: z.string().max(200), expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },

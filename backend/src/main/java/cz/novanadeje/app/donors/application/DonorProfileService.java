@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.Donor;
+import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -39,6 +40,9 @@ public class DonorProfileService {
     @Transactional
     public DonorView updateProfile(DonorId donorId, Set<Role> sessionRoles, UpdateDonorProfileCommand command, ExpectedVersion expected) {
         Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
+        if (donor.isErased()) {
+            throw new DonorAlreadyErased(donorId);
+        }
         String version = profiles.of(donor);
         if (!expected.admits(version)) {
             throw new ProfileChangedMeanwhile(version, ProfileVersions.StoredProfile.of(donor));

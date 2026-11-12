@@ -1874,7 +1874,7 @@ Does **not** belong in `shared`: JWT types, `Donation`, `Donor`, JPA-related typ
 
 ## UX notes affecting the API
 
-- **Language switcher in nav.** For unauthenticated visitors it switches the UI locale only (cookie or `localStorage`). For authenticated donors it persists `preferredLocale` via `PATCH /api/donors/me` so receipts issued from then on come out in the chosen language (an issued receipt keeps its language).
+- **Language switcher in nav.** For unauthenticated visitors it switches the UI locale only (cookie or `localStorage`). It never writes the donor's profile: a signed-in donor changes `preferredLocale` (the language of receipts issued from then on; an issued receipt keeps its language) in the profile card, which sends it with `PATCH /api/donors/me` and the profile's version as `If-Match` (2.20c).
 - **Password rules.** Frontend shows the 12-character minimum and disallow-list hint inline; backend is the source of truth for validation.
 - **Refresh on 401.** Angular HTTP interceptor catches 401 with `type` `auth/expired-token` or `auth/session-ended` (2.9), calls `POST /api/donors/auth/refresh` with `withCredentials: true`, retries the original request. The tabs of one browser refresh and sign out one at a time under a Web Lock and share the new session, or the sign-out, over a `BroadcastChannel` (2.8, `docs/frontend-overview.md`). A refresh that gets no answer (no connection, a 5xx, 408, 429, the 15 s timeout) keeps the session for the next try; only a 4xx refusal ends it. On a second 401 the session ends: the donor is sent home and the sign-in dialog opens (`donorGuard` and the dashboard); there is no sign-in page.
 

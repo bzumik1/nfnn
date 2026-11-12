@@ -35,11 +35,6 @@ public class PeopleFootnoteService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<String> read() {
-        return footnotes.find().flatMap(PeopleFootnote::text);
-    }
-
-    @Transactional(readOnly = true)
     public Versioned<Optional<String>> current() {
         Optional<PeopleFootnote> stored = footnotes.find();
         return new Versioned<>(stored.flatMap(PeopleFootnote::text), versions.ofFootnote(stored));

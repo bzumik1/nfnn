@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.Donor;
+import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
@@ -109,6 +110,21 @@ class DonorProfileServiceTest {
 
         assertThat(changed.name()).isEqualTo("Jana Malá");
         assertThat(changed.version()).isNotEqualTo(PROFILES.of(donor()));
+    }
+
+    @Test
+    @DisplayName("Given an erased donor whose tab still holds the version read before the erasure, when the profile is changed from it, then it is refused as erased rather than as changed meanwhile, and nothing is saved or published")
+    void should_refuse_as_erased_when_changed_from_the_version_read_before_the_erasure_given_an_erased_donor() {
+        String readBefore = PROFILES.of(donor());
+        Donor erased = donor();
+        erased.erase(NOW);
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(erased));
+
+        assertThatThrownBy(() -> service.updateProfile(DONOR, Set.of(Role.DONOR), new UpdateDonorProfileCommand("Petr Svoboda", null, null, null, null),
+                ExpectedVersion.of(readBefore)))
+                .isInstanceOf(DonorAlreadyErased.class);
+        verify(donors, never()).save(any());
+        verify(events, never()).publishEvent(any(Object.class));
     }
 
     private static Donor donor() {

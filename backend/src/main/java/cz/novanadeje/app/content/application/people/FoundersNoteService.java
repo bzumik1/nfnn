@@ -35,11 +35,6 @@ public class FoundersNoteService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<String> read() {
-        return notes.find().flatMap(FoundersNote::text);
-    }
-
-    @Transactional(readOnly = true)
     public Versioned<Optional<String>> current() {
         Optional<FoundersNote> stored = notes.find();
         return new Versioned<>(stored.flatMap(FoundersNote::text), versions.ofFoundersNote(stored));

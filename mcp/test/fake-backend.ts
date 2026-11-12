@@ -576,7 +576,6 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
             { name: 'FIO_TOKEN', group: 'BANK', secret: true, value: null, configured: true },
           ],
           secretsCanBeStored: true,
-          version: CURRENT_VERSION,
         },
       ];
     case 'POST /api/admin/operations/settings/test-email':
@@ -596,7 +595,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
               ],
             },
           ]
-        : [202, { changed: ['RECEIPT_FIRST_YEAR'], restarting: true, version: CURRENT_VERSION }];
+        : [202, { changed: ['RECEIPT_FIRST_YEAR'], restarting: true }];
     case 'GET /api/admin/content/news':
       return [
         200,

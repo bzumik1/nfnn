@@ -32,6 +32,7 @@ public class ErasedDonorTabStepDefinitions {
     private final JwtDecoder decoder;
     private final ProfileRowVersions profileVersions;
     private final Map<String, String> tokensWithoutSession = new HashMap<>();
+    private final Map<String, String> profileVersionsReadBefore = new HashMap<>();
 
     public ErasedDonorTabStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JwtEncoder encoder, JwtDecoder decoder, ProfileRowVersions profileVersions) {
         this.api = api;
@@ -50,6 +51,7 @@ public class ErasedDonorTabStepDefinitions {
         browserToken.getClaims().forEach(claims::claim);
         claims.claims(all -> all.remove(JwtProperties.SESSION_CLAIM));
         tokensWithoutSession.put(alias, encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims.build())).getTokenValue());
+        profileVersionsReadBefore.put(alias, profileVersions.of(scenarioDonors.idOf(alias)));
     }
 
     @When("{string} saves the profile with the name {string}")
@@ -61,7 +63,7 @@ public class ErasedDonorTabStepDefinitions {
     @When("{string} saves the profile with the name {string} with the token that names no session")
     public void savesTheProfileWithTheTokenThatNamesNoSession(String alias, String name) {
         actWithTheTokenThatNamesNoSession(alias);
-        api.patch(PROFILE_PATH, Map.of("name", name), profileVersions.ifMatchOfSignedIn(api));
+        api.patch(PROFILE_PATH, Map.of("name", name), ApiClient.ifMatch(profileVersionsReadBefore.get(alias)));
     }
 
     @When("{string} removes {string} from the administrators with the token that names no session")
