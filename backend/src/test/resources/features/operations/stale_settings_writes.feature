@@ -34,4 +34,12 @@ Feature: The administration refuses a change of the settings made from a version
     When "Jana" sets SESSION_REMEMBER_DAYS to "14" naming no version
     Then the response status is 428
     And the problem type ends with "shared/version-required"
+    And no setting SESSION_REMEMBER_DAYS is stored
+    And the backend does not restart
+
+  Scenario: A change of the settings without a token is refused before anything is stored
+    When someone without a token sets SESSION_REMEMBER_DAYS to "14" from the version stored now
+    Then the response status is 401
+    And the problem type ends with "auth/unauthenticated"
+    And no setting SESSION_REMEMBER_DAYS is stored
     And the backend does not restart

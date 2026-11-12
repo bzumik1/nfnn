@@ -77,6 +77,13 @@ public class StalePeopleTextsStepDefinitions {
         api.put(pathOf(text), Map.of("text", value));
     }
 
+    @When("someone without a token writes the {peopleText} {string} from the version stored now")
+    public void someoneWithoutATokenWritesThePeopleText(String text, String value) {
+        String version = versionOf(text).get();
+        api.forgetCredentials();
+        api.put(pathOf(text), Map.of("text", value), ApiClient.ifMatch(version));
+    }
+
     @Then("the refusal names the version of the {peopleText} now stored and its text {string}")
     public void theRefusalNamesTheVersionNowStoredAndItsText(String text, String value) {
         assertThat(api.lastResponseJson().get("version").asString()).isEqualTo(versionOf(text).get());

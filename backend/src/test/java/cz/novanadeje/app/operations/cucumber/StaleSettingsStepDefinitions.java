@@ -9,6 +9,7 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
 import java.util.HashMap;
@@ -30,13 +31,15 @@ public class StaleSettingsStepDefinitions {
     private final DonorSessions sessions;
     private final SettingsRowVersions versions;
     private final ConcurrentWrites concurrentWrites;
+    private final JdbcClient jdbc;
     private final Map<String, String> readVersions = new HashMap<>();
 
-    public StaleSettingsStepDefinitions(ApiClient api, DonorSessions sessions, SettingsRowVersions versions, ConcurrentWrites concurrentWrites) {
+    public StaleSettingsStepDefinitions(ApiClient api, DonorSessions sessions, SettingsRowVersions versions, ConcurrentWrites concurrentWrites, JdbcClient jdbc) {
         this.api = api;
         this.sessions = sessions;
         this.versions = versions;
         this.concurrentWrites = concurrentWrites;
+        this.jdbc = jdbc;
     }
 
     @When("these settings changes start one after another from the versions read before them, while the settings lock is held:")
@@ -50,6 +53,13 @@ public class StaleSettingsStepDefinitions {
         sessions.actAs(alias);
         api.get(SETTINGS);
         readVersions.put(alias, api.lastResponseJson().get("version").asString());
+    }
+
+    @When("someone without a token sets {word} to {string} from the version stored now")
+    public void someoneWithoutATokenSets(String name, String value) {
+        Map<String, String> ifMatch = versions.ifMatchOfStored();
+        api.forgetCredentials();
+        api.put(SETTINGS, change(name, value), ifMatch);
     }
 
     @When("{string} sets {word} to {string} from the version read before")
@@ -85,6 +95,11 @@ public class StaleSettingsStepDefinitions {
                 .filter(stored -> stored.get("name").asString().equals(name)).findFirst()
                 .orElseThrow(() -> new AssertionError("The refusal names no stored " + name + ": " + refusal));
         assertThat(row.get("value").asString()).isEqualTo(value);
+    }
+
+    @Then("no setting {word} is stored")
+    public void noSettingIsStored(String name) {
+        assertThat(jdbc.sql("select count(*) from operations_setting where name = ?").param(name).query(Long.class).single()).isZero();
     }
 
     @Then("the refusal names no stored ADMIN_EMAILS")

@@ -64,3 +64,16 @@ Feature: The administration refuses a change to the founders note or the line un
       Děkujeme.
       """
     And the line under the board is empty
+
+  Scenario: A change of a people text without a token is refused before anything changes
+    When someone without a token writes the founders note "Děkujeme vám." from the version stored now
+    Then the response status is 401
+    And the problem type ends with "auth/unauthenticated"
+    When someone without a token writes the line under the board "Díky." from the version stored now
+    Then the response status is 401
+    When "Jana" asks for the people of the foundation
+    Then the founders note is:
+      """
+      Děkujeme.
+      """
+    And the line under the board is empty
