@@ -45,7 +45,6 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @DonationRowsContext
 class DeviceOrdersAcrossDevicesTest {
@@ -127,7 +126,7 @@ class DeviceOrdersAcrossDevicesTest {
     @TestFactory
     @DisplayName("Given seeded random sign-ins, refreshes, sign-outs here and elsewhere, replays, weeks and months without a connection, role changes and an erasure across the devices of two donors, when every device asks its status after each step, then each answer is what the orders written so far give and no order is ever lowered, lifted or written by a step that may not write it")
     Stream<DynamicTest> should_answer_what_the_orders_written_so_far_give_when_every_device_asks_after_each_step_given_seeded_random_steps() {
-        int seeds = Optional.ofNullable(System.getenv(SEEDS_VARIABLE)).map(Integer::parseInt).orElse(DEFAULT_SEEDS);
+        int seeds = Math.max(DEFAULT_SEEDS, Optional.ofNullable(System.getenv(SEEDS_VARIABLE)).map(Integer::parseInt).orElse(DEFAULT_SEEDS));
         Set<StepKind> taken = EnumSet.noneOf(StepKind.class);
         Set<DeviceStatus> answered = EnumSet.noneOf(DeviceStatus.class);
         Set<Transition> seen = new HashSet<>();
@@ -140,7 +139,6 @@ class DeviceOrdersAcrossDevicesTest {
         DynamicTest coverage = DynamicTest.dynamicTest(
                 "Given every seed has run, when the steps and answers are counted, then every kind of step ran, every status was answered and every transition the slice promises was seen",
                 () -> {
-                    assumeTrue(seeds >= DEFAULT_SEEDS, "fewer seeds than the default cannot be expected to reach every transition");
                     assertThat(taken).as("the kinds of step the seeds took").containsExactlyInAnyOrder(StepKind.values());
                     assertThat(answered).as("the statuses the devices were answered").containsExactlyInAnyOrder(DeviceStatus.values());
                     assertThat(seen).as("the transitions of a device's answer the seeds went through").containsAll(PROMISED_TRANSITIONS);
