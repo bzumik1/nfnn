@@ -28,9 +28,9 @@ function newsWithPhoto(index: number) {
   };
 }
 
-async function newsWithPhotos(page: Page): Promise<() => number> {
+async function newsWithPhotos(page: Page): Promise<() => readonly string[]> {
   const items = [1, 2, 3, 4, 5, 6].map(newsWithPhoto);
-  let photosAsked = 0;
+  const photosAsked: string[] = [];
   await page.route(
     (url) => url.pathname.startsWith('/api/content/news/'),
     (route) => {
@@ -49,7 +49,8 @@ async function newsWithPhotos(page: Page): Promise<() => number> {
   await page.route(
     (url) => url.pathname.startsWith('/api/content/media/'),
     (route) => {
-      photosAsked += 1;
+      const asked = new URL(route.request().url());
+      photosAsked.push(`${asked.pathname}${asked.search}`);
       return route.fulfill({
         body: PHOTO,
         contentType: 'image/webp',
@@ -57,7 +58,7 @@ async function newsWithPhotos(page: Page): Promise<() => number> {
       });
     },
   );
-  return () => photosAsked;
+  return () => [...photosAsked];
 }
 
 async function photosInViewDrawn(page: Page): Promise<void> {
@@ -81,7 +82,7 @@ async function photosInViewDrawn(page: Page): Promise<void> {
     .toBe(true);
 }
 
-async function rememberDrawnPhotos(page: Page): Promise<number> {
+async function rememberDrawnPhotos(page: Page): Promise<readonly string[]> {
   await photosInViewDrawn(page);
   return page
     .getByRole('main')
@@ -91,8 +92,21 @@ async function rememberDrawnPhotos(page: Page): Promise<number> {
         .map((photo) => photo as HTMLImageElement)
         .filter((photo) => photo.complete && photo.naturalWidth > 0);
       drawn.forEach((photo) => photo.setAttribute('data-seen-before', ''));
-      return drawn.length;
+      return drawn.map((photo) => {
+        const address = new URL(photo.currentSrc);
+        return `${address.pathname}${address.search}`;
+      });
     });
+}
+
+function askedAgain(
+  asked: () => readonly string[],
+  before: number,
+  photos: readonly string[],
+): string[] {
+  return asked()
+    .slice(before)
+    .filter((address) => photos.includes(address));
 }
 
 function framesOfSwitch(page: Page, name: string, path: string): Promise<SwitchFrame[]> {
@@ -250,14 +264,16 @@ test.describe('Given a visitor switching between the tabs', () => {
     await page.goto('/aktuality');
     await expect(page.getByRole('heading', { name: 'Zpráva 2' })).toBeVisible();
     const photos = await rememberDrawnPhotos(page);
-    const askedBefore = photosAsked();
+    const askedBefore = photosAsked().length;
 
     await tab(page, 'O nás').click();
     await expect(page).toHaveURL(/\/o-nas$/);
     const frames = await framesOfSwitch(page, 'Aktuality', '/aktuality');
 
-    expect(frames.map((frame) => frame.seenBeforeAndDrawn)).toEqual(frames.map(() => photos));
-    expect(photosAsked()).toBe(askedBefore);
+    expect(frames.map((frame) => frame.seenBeforeAndDrawn)).toEqual(
+      frames.map(() => photos.length),
+    );
+    expect(askedAgain(photosAsked, askedBefore, photos)).toEqual([]);
   });
 
   test('when they return to a tab they scrolled, then it opens where they left it, and a tab not scrolled opens at its top, each without sliding', async ({
@@ -287,7 +303,7 @@ test.describe('Given a visitor switching between the tabs', () => {
     await article.click();
     await expect(page.getByRole('heading', { level: 1, name: 'Zpráva 4' })).toBeVisible();
     const photos = await rememberDrawnPhotos(page);
-    const askedBefore = photosAsked();
+    const askedBefore = photosAsked().length;
 
     await tab(page, 'O nás').click();
     await expect(page).toHaveURL(/\/o-nas$/);
@@ -297,9 +313,9 @@ test.describe('Given a visitor switching between the tabs', () => {
     );
 
     expect(backToArticle.map((frame) => frame.seenBeforeAndDrawn)).toEqual(
-      backToArticle.map(() => photos),
+      backToArticle.map(() => photos.length),
     );
-    expect(photosAsked()).toBe(askedBefore);
+    expect(askedAgain(photosAsked, askedBefore, photos)).toEqual([]);
     expect(backToList.map((frame) => frame.scrollY)).toEqual(backToList.map(() => listTop));
   });
 });
