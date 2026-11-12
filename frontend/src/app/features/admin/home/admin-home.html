@@ -435,7 +435,7 @@
       @if (!attentionLoading() && attentionRows().length === 0) {
         <li class="attention-fine">
           <div class="ui-list__row">
-            <span class="ui-list__lead attention-tile attention-tile--success" aria-hidden="true">
+            <span class="ui-list__lead ui-list__tile ui-list__tile--success" aria-hidden="true">
               <svg
                 width="18"
                 height="18"
@@ -465,11 +465,7 @@
 
 <ng-template #rowContent let-row>
   @if (row.icon) {
-    <span
-      class="ui-list__lead attention-tile"
-      [class]="'attention-tile--' + row.tone"
-      aria-hidden="true"
-    >
+    <span class="ui-list__lead ui-list__tile" [class]="tileOfTone[row.tone]" aria-hidden="true">
       <svg
         width="18"
         height="18"

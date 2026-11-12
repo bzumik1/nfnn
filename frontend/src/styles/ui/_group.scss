@@ -1,4 +1,5 @@
 @use 'pressed';
+@use 'touch-target';
 
 .ui-groups {
   display: grid;
@@ -14,6 +15,38 @@
   text-transform: uppercase;
   color: var(--color-text-soft);
   outline: none;
+}
+
+.ui-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-1);
+
+  > .ui-group-title {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.ui-group-aside {
+  font-size: var(--text-sm);
+  color: var(--color-text-soft);
+}
+
+a.ui-group-aside {
+  @include touch-target.reaches-finger-size;
+
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
 }
 
 .ui-group-note {

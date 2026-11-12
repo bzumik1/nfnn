@@ -152,6 +152,7 @@
   --color-on-sheet-close: var(--color-text);
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
+  --color-group-cell: var(--color-surface);
   --color-sheet-text: var(--color-text);
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
@@ -365,6 +366,9 @@
   --scroll-edge-fade: 24px;
   --touch-target-size: 44px;
   --list-row-min-height: 56px;
+  --list-inset-row-min-height: 2.765rem;
+  --weight-list-inset-title: var(--weight-regular);
+  --list-lead-size: var(--space-7);
   --list-group-title-top: 0rem;
 
   --receipt-color-text: #1a1a2e;

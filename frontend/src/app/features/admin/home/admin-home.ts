@@ -190,6 +190,13 @@ export class AdminHome {
     const run = this.backups()?.lastBackup;
     return run && run.outcome === 'OK' ? formatBankTime(run.finishedAt) : null;
   });
+  protected readonly tileOfTone: Readonly<Record<string, string>> = {
+    danger: 'ui-list__tile--danger',
+    warning: 'ui-list__tile--warning',
+    task: 'ui-list__tile--accent',
+    unknown: 'ui-list__tile--neutral',
+    action: 'ui-list__tile--accent',
+  };
   protected readonly toneLabels: Readonly<Record<string, string>> = {
     danger: $localize`:@@admin.home.attention.tone.danger:Naléhavé:`,
     warning: $localize`:@@admin.home.attention.tone.warning:Upozornění:`,
