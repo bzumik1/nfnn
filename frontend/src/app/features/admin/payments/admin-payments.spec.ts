@@ -23,6 +23,7 @@ import { ShownAnswers } from '../../../core/connectivity/shown-answers';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
+import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
 
 const PAYMENTS_URL = '/api/admin/donations/payments';
 const DONORS_URL = '/api/admin/donations/donors';
@@ -1188,7 +1189,11 @@ describe('Given an administrator on the bank payments page with the administrati
         { provide: Connectivity, useValue: { offline: signal(deviceOffline).asReadonly() } },
         {
           provide: AdministrationCopyDownload,
-          useValue: { refresh, checkedAt: signal<string | null>(null).asReadonly() },
+          useValue: {
+            refresh,
+            checkedAt: signal<string | null>(null).asReadonly(),
+            writesAtStart: () => null,
+          },
         },
       ],
     }).compileComponents();
@@ -1256,6 +1261,12 @@ describe('Given an administrator on the bank payments page with the administrati
 
   describe('when the device is online', () => {
     beforeEach(() => openPage(false));
+    afterEach(() => vi.restoreAllMocks());
+
+    function halfAMinuteLater(): void {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now + FORCED_REFRESH_GAP_MS);
+    }
 
     it('then the page refreshes the copy once and lists the payments from it', () => {
       expect(text('tbody tr')).toContain('Nováková Jana');
@@ -1263,6 +1274,7 @@ describe('Given an administrator on the bank payments page with the administrati
     });
 
     it('and the live stream says the payments changed, then the copy is refreshed by a refresh that starts after the change', async () => {
+      halfAMinuteLater();
       (TestBed.inject(LiveUpdates) as unknown as FakeLiveUpdates).hint('payments');
       await settle();
 
@@ -1270,6 +1282,7 @@ describe('Given an administrator on the bank payments page with the administrati
     });
 
     it('and a payment is paired, then the list is read again from a refresh that starts after the pairing', async () => {
+      halfAMinuteLater();
       button('Přiřadit dárci').click();
       await settle();
       const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
@@ -1282,6 +1295,27 @@ describe('Given an administrator on the bank payments page with the administrati
       await settle();
 
       expect(refresh.mock.calls.at(-1)).toEqual([true]);
+    });
+
+    it('and a payment is paired less than half a minute after the copy was refreshed, then the list is read again from the server, without another refresh', async () => {
+      button('Přiřadit dárci').click();
+      await settle();
+      const dialog = document.querySelector('dialog[open]') as HTMLDialogElement;
+      (dialog.querySelector('input[type="radio"]') as HTMLInputElement).click();
+      await settle();
+      button('Přiřadit dárci Jana Nováková').click();
+      http
+        .expectOne((request) => request.url.endsWith('/pair'))
+        .flush({ donationId: 'd1', changedYearlyReceipts: [] });
+      await settle();
+      const fromServer = http.match((request) => request.url === '/api/admin/donations/payments');
+      fromServer.forEach((request) =>
+        request.flush({ year: null, availableYears: [], items: [], total: 0 }),
+      );
+      await settle();
+
+      expect(fromServer.length).toBeGreaterThan(0);
+      expect(refresh.mock.calls).toEqual([[false]]);
     });
 
     it('and someone else changed the payment meanwhile, then reloading reads the list from a refresh that starts after the refusal', async () => {
@@ -1302,6 +1336,7 @@ describe('Given an administrator on the bank payments page with the administrati
         .flush({ ...refused.body, version: '1b2c3d4e5f607182' }, refused.options);
       await settle();
       const callsBefore = refresh.mock.calls.length;
+      halfAMinuteLater();
 
       button('Načíst aktuální stav').click();
       await settle();

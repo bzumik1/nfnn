@@ -111,7 +111,7 @@
               </dd>
             </div>
           </dl>
-          @if (importState(); as current) {
+          @if (historyState(); as current) {
             <app-history-import [state]="current" (finished)="historyFinished($event)" />
           }
         }

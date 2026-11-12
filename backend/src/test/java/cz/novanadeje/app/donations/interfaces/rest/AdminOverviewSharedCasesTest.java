@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
-import cz.novanadeje.app.donations.DonationRowsSharedCaseRunner;
+import cz.novanadeje.app.donations.AdministrationCopyCaseRunner;
 import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -13,7 +13,12 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-class AdminOverviewSharedCasesTest extends DonationRowsSharedCaseRunner {
+class AdminOverviewSharedCasesTest extends AdministrationCopyCaseRunner {
+
+    @Override
+    protected List<String> copiedKinds() {
+        return List.of("donations/payments", "donations/donations", "donations/donor-records");
+    }
 
     @Override
     protected String caseFile() {
@@ -22,18 +27,18 @@ class AdminOverviewSharedCasesTest extends DonationRowsSharedCaseRunner {
 
     @Override
     protected String when() {
-        return "when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year";
+        return "when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year, beside the chunks of the device copy";
     }
 
     @Override
     protected String then() {
-        return "then the administration gets the expected overview, and the manifest's summary of that year and of every other offered year is the overview of that year";
+        return "then the administration gets the expected overview, the manifest's summary of that year and of every other offered year is the overview of that year, and the copy holds the case's chunks";
     }
 
     @Override
     protected void run(SharedCase sharedCase) throws Exception {
-        CaseRows rows = writeRows(sharedCase.input());
-        rows.writeAdministrator(jdbc());
+        CaseRows rows = writeRowsAndAdministrator(sharedCase.input());
+        assertTheCopyIsTheInputs(rows, sharedCase.input());
         MockHttpServletRequestBuilder call = get("/api/admin/donations/overview");
         JsonNode year = sharedCase.input().get("year");
         if (!year.isNull()) {
