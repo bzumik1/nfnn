@@ -23,7 +23,7 @@ const TEST_FILE = /(?:^|\/)(?:src\/test|e2e|test)\/|\.(?:spec|test)\.[cm]?[jt]sx
 const NEVER_COUNTED = /(?:^|\/)(?:package-lock\.json|gradle\.lockfile|[^/]+\.lock)$|^regression\/v2\//;
 const MAX_REQUESTS_PER_RUN = 50;
 const MERGEABLE_WAIT_MS = 150_000;
-const WRITE_PAUSE_MS = 1_000;
+const WRITE_PAUSE_MS = 2_000;
 const READ_ATTEMPTS = 4;
 const READ_RETRY_MS = 5_000;
 
@@ -115,19 +115,23 @@ export async function sweep({ github, context, core, pause = sleep }) {
     if (action === 'request-rebase' && (count[action] ?? 0) >= MAX_REQUESTS_PER_RUN) continue;
     count[action] = (count[action] ?? 0) + 1;
     core.info(`#${pr.number} ${action}`);
-    if (action === 'request-rebase') {
-      await github.rest.issues.createComment({
-        ...context.repo,
-        issue_number: pr.number,
-        body: [
-          `This PR conflicts with \`${pr.baseRefName}\`. Rebase it onto \`origin/${pr.baseRefName}\`, resolve the conflict and push with \`--force-with-lease\`; GitHub runs no checks on a conflicting PR.`,
-          '',
-          `The \`${REBASE_LABEL}\` label goes by itself once the PR merges cleanly again.`,
-        ].join('\n'),
-      });
-      await github.rest.issues.addLabels({ ...context.repo, issue_number: pr.number, labels: [REBASE_LABEL] });
-    } else {
-      await removeLabel(github, context, pr.number, REBASE_LABEL);
+    try {
+      if (action === 'request-rebase') {
+        await github.rest.issues.addLabels({ ...context.repo, issue_number: pr.number, labels: [REBASE_LABEL] });
+        await github.rest.issues.createComment({
+          ...context.repo,
+          issue_number: pr.number,
+          body: [
+            `This PR conflicts with \`${pr.baseRefName}\`. Rebase it onto \`origin/${pr.baseRefName}\`, resolve the conflict and push with \`--force-with-lease\`; GitHub runs no checks on a conflicting PR.`,
+            '',
+            `The \`${REBASE_LABEL}\` label goes by itself once the PR merges cleanly again.`,
+          ].join('\n'),
+        });
+      } else {
+        await removeLabel(github, context, pr.number, REBASE_LABEL);
+      }
+    } catch (error) {
+      core.warning(`#${pr.number} ${action} failed: ${error.status ?? error.name}`);
     }
     await pause(WRITE_PAUSE_MS);
   }

@@ -107,12 +107,12 @@ describe('Given the conflict policy', () => {
 });
 
 describe('Given open pull requests on the sweep', () => {
-  it('when one conflicts, then the comment that wakes its watchers comes before the label', async () => {
+  it('when one conflicts, then the label comes before the comment that wakes its watchers, so a failed comment is never repeated', async () => {
     const github = fakeGithub({ pages: [[openPr({ number: 5 }), openPr({ number: 6, mergeable: 'MERGEABLE' })]] });
     const counts = await sweep(options(github));
-    assert.deepEqual(github.writes.map(([kind, number]) => [kind, number]), [['comment', 5], ['label', 5]]);
-    assert.match(github.writes[0][2], /conflicts with `main`/);
-    assert.match(github.writes[0][2], /rebase/i);
+    assert.deepEqual(github.writes.map(([kind, number]) => [kind, number]), [['label', 5], ['comment', 5]]);
+    assert.match(github.writes[1][2], /conflicts with `main`/);
+    assert.match(github.writes[1][2], /rebase/i);
     assert.deepEqual(counts, { 'request-rebase': 1 });
   });
 
@@ -128,7 +128,21 @@ describe('Given open pull requests on the sweep', () => {
     await sweep({ ...options(github), pause: async (ms) => waits.push(ms) });
     assert.equal(github.listed(), 2);
     assert.ok(waits[0] >= 60_000);
-    assert.deepEqual(github.writes.map(([kind]) => kind), ['comment', 'label']);
+    assert.deepEqual(github.writes.map(([kind]) => kind), ['label', 'comment']);
+  });
+
+  it('when a write to one pull request fails, then the sweep warns and goes on with the next', async () => {
+    const warnings = [];
+    const github = fakeGithub({ pages: [[openPr({ number: 3 }), openPr({ number: 4 })]] });
+    const addLabels = github.rest.issues.addLabels;
+    github.rest.issues.addLabels = async (params) => {
+      if (params.issue_number === 3) throw Object.assign(new Error('Unprocessable'), { status: 422 });
+      return addLabels(params);
+    };
+    await sweep({ ...options(github), core: { ...quiet, warning: (text) => warnings.push(text) } });
+    assert.deepEqual(github.writes.map(([kind, number]) => [kind, number]), [['label', 4], ['comment', 4]]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /#3/);
   });
 
   it('when more pull requests conflict than one run may ask, then the rest wait for the next run', async () => {

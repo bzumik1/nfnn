@@ -691,6 +691,16 @@ describe('Given a removed line that kept a check strict', () => {
   });
 });
 
+describe('Given a change to a script that writes to GitHub with the workflows\' token', () => {
+  it('when scripts/pr-labels.mjs changes, then it needs a declaration', () => {
+    const found = addedSuppressions(diffOf('scripts/pr-labels.mjs', ['  await github.rest.pulls.update({ state: \'closed\' });'], { start: 20 }));
+    assert.deepEqual(
+      found.map(({ path: file, line, kind }) => [file, line, kind]),
+      [['scripts/pr-labels.mjs', 20, "a change to a script that writes to GitHub with the workflows' token (1 line)"]],
+    );
+  });
+});
+
 describe('Given a change to a script that decides a required check', () => {
   const SCRIPTS = [
     'scripts/compare-v2.mjs',
