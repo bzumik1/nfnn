@@ -9,7 +9,12 @@ import {
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from './back-target';
-import { PAGE_LAYER_CLASS, PAGE_TRANSITION_CLASS, PageTransitions } from './page-transitions';
+import {
+  PAGE_LAYER_CLASS,
+  PAGE_TRANSITION_CLASS,
+  PAGE_TRANSITION_LONGEST_MS,
+  PageTransitions,
+} from './page-transitions';
 
 @Component({ template: '' })
 class Blank {}
@@ -149,6 +154,7 @@ interface Painted {
   readonly back?: boolean;
   readonly tabBar?: boolean;
   readonly sheet?: boolean;
+  readonly account?: string;
 }
 
 function paint(layer: HTMLElement, page: Painted): void {
@@ -161,6 +167,12 @@ function paint(layer: HTMLElement, page: Painted): void {
     back.className = 'back-button';
     back.setAttribute('aria-label', 'Zpět');
     bar.append(back);
+  }
+  if (page.account !== undefined) {
+    const account = document.createElement('button');
+    account.className = 'account-button';
+    account.textContent = page.account;
+    bar.append(account);
   }
   header.append(bar);
   const main = document.createElement('main');
@@ -231,6 +243,8 @@ describe('Given the app on the home screen of a phone, where the news led to the
           { path: '', component: Blank },
           { path: 'aktuality', component: Blank },
           { path: 'darce/prehled', component: Blank, data: { parent: '/' } },
+          { path: 'darce/dary', component: Blank, data: { parent: '/darce/prehled' } },
+          { path: 'projekty', component: Blank },
         ]),
         { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
       ],
@@ -245,6 +259,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     layer.remove();
     delete (window as { matchMedia?: unknown }).matchMedia;
     delete (window as { innerWidth?: number }).innerWidth;
+    vi.restoreAllMocks();
   });
 
   it('when the overview was opened from the account sheet over the news, then the news without the sheet lies under the finger', async () => {
@@ -266,7 +281,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     expect(under().querySelector('h1')).toBeNull();
   });
 
-  it('when both pages show the tab bar, then it is left out of both copies and the live tab bar stays put above them', async () => {
+  it('when both pages show the tab bar, then the copies give way to the live tab bar, which stays put above them', async () => {
     await openOverviewFromTheNews(
       { title: 'Aktuality', tabBar: true, sheet: true },
       { title: 'Přehled', tabBar: true },
@@ -274,7 +289,6 @@ describe('Given the app on the home screen of a phone, where the news led to the
 
     swipeBack();
 
-    expect(overlay().querySelector('app-tab-bar')).toBeNull();
     expect(overlay().classList).toContain(`${PAGE_TRANSITION_CLASS}--under-tab-bar`);
   });
 
@@ -290,6 +304,27 @@ describe('Given the app on the home screen of a phone, where the news led to the
     expect(overlay().classList).not.toContain(`${PAGE_TRANSITION_CLASS}--under-tab-bar`);
   });
 
+  function barItems(selector: string): HTMLElement[] {
+    return Array.from(
+      overlay().querySelectorAll<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__bar ${selector}`),
+    );
+  }
+
+  function layerClones(): () => number {
+    const original = HTMLElement.prototype.cloneNode;
+    let clones = 0;
+    vi.spyOn(HTMLElement.prototype, 'cloneNode').mockImplementation(function (
+      this: HTMLElement,
+      deep?: boolean,
+    ) {
+      if (this.classList.contains(PAGE_LAYER_CLASS)) {
+        clones++;
+      }
+      return original.call(this, deep);
+    });
+    return () => clones;
+  }
+
   it('when both pages have the round back button, then one back button stands still above the moving pages', async () => {
     await openOverviewFromTheNews(
       { title: 'Aktuality', back: true, sheet: true },
@@ -299,22 +334,91 @@ describe('Given the app on the home screen of a phone, where the news led to the
     swipeBack().follow(195);
 
     expect(barButtons()).toHaveLength(1);
-    expect(
-      barButtons()[0].closest<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__bar-part`)!.style.opacity,
-    ).toBe('');
+    expect(barButtons()[0].style.opacity).toBe('');
   });
 
-  it('when only the page being left has the round back button, then it stays in place and fades as the finger goes across', async () => {
+  it('when only the page being left has the round back button, then it stays in place and is gone by half the way, as the page Zpět leads to shows its logo there', async () => {
     await openOverviewFromTheNews(
       { title: 'Aktuality', sheet: true },
       { title: 'Přehled', back: true },
     );
+    const swipe = swipeBack();
+
+    swipe.follow(97.5);
+    expect(barButtons()).toHaveLength(1);
+    expect(barButtons()[0].style.opacity).toBe('0.5');
+    swipe.follow(195);
+    expect(barButtons()[0].style.opacity).toBe('0');
+  });
+
+  it('when both pages show the same account circle, then one circle stands still and the copies do not carry their own', async () => {
+    await openOverviewFromTheNews(
+      { title: 'Aktuality', back: true, account: 'JN', sheet: true },
+      { title: 'Přehled', back: true, account: 'JN' },
+    );
 
     swipeBack().follow(195);
 
-    expect(barButtons()).toHaveLength(1);
-    expect(
-      barButtons()[0].closest<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__bar-part`)!.style.opacity,
-    ).toBe('0.5');
+    expect(barItems('.account-button')).toHaveLength(1);
+    expect(barItems('.account-button')[0].style.opacity).toBe('');
+  });
+
+  it('when nothing of the page Zpět leads to is kept, then the tab bar of the page being left stays put, as the page it returns to has one too', async () => {
+    paint(layer, { title: 'Přehled', tabBar: true });
+
+    transitions.startSwipe({ kind: 'parent', path: '/' });
+
+    expect(overlay().classList).toContain(`${PAGE_TRANSITION_CLASS}--under-tab-bar`);
+  });
+
+  it('when a finger takes the page, then the page is copied once', async () => {
+    await openOverviewFromTheNews({ title: 'Aktuality', sheet: true }, { title: 'Přehled' });
+    const clones = layerClones();
+
+    swipeBack();
+
+    expect(clones()).toBe(1);
+  });
+
+  it('when another tab opens, then the page left is not copied, as Zpět never leads back across tabs', async () => {
+    paint(layer, { title: 'Aktuality', tabBar: true });
+    const clones = layerClones();
+
+    await router.navigateByUrl('/projekty');
+
+    expect(clones()).toBe(0);
+  });
+
+  it('when a deeper page opens with a tap and both show alike round back buttons, then that button stands still through the slide', async () => {
+    vi.useFakeTimers();
+    const seen: string[][] = [];
+    const watch = new MutationObserver(() => {
+      const moving = document.querySelector(`.${PAGE_TRANSITION_CLASS}--moving`);
+      if (moving !== null && seen.length === 0) {
+        seen.push(
+          Array.from(
+            moving.querySelectorAll(`.${PAGE_TRANSITION_CLASS}__bar .back-button`),
+            (button) => button.className,
+          ),
+        );
+      }
+    });
+    try {
+      await openOverviewFromTheNews(
+        { title: 'Aktuality', sheet: true },
+        { title: 'Přehled', back: true },
+      );
+      watch.observe(document.body, { subtree: true, attributes: true, childList: true });
+      const opened = router.navigateByUrl('/darce/dary');
+      await vi.advanceTimersByTimeAsync(0);
+      paint(layer, { title: 'Moje dary', back: true });
+      await opened;
+      await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS / 2);
+
+      expect(seen).toEqual([[`back-button ${PAGE_TRANSITION_CLASS}__bar-item--still`]]);
+    } finally {
+      watch.disconnect();
+      vi.useRealTimers();
+    }
   });
 });

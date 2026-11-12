@@ -22,6 +22,7 @@ import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackDestination, BackTarget } from './back-target';
 import { SwipeSettle } from './back-swipe';
 import { NavigationFacts, PageTransitionKind, pageTransitionFor } from './page-transition-kind';
+import { tabOf } from './app-tabs';
 import { chromeOf, RouteChrome } from './route-chrome';
 import { stillCopyOf } from './still-copy';
 
@@ -33,6 +34,7 @@ export const KEPT_PAGES = 3;
 
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const LOOKS = ['background-color', 'color', 'border-color', 'backdrop-filter', 'opacity'];
+const BAR_ITEMS = ['.back-button', '.account-button'];
 const SHOWN_DIALOG = 'dialog[open], dialog.dialog--leaving';
 
 interface Running {
@@ -52,11 +54,14 @@ interface KeptPage {
 interface PlacedPage {
   readonly box: HTMLElement;
   readonly copy: HTMLElement | null;
+  readonly scrollY: number;
 }
 
-interface BarParts {
-  readonly leaving: HTMLElement | null;
-  readonly arriving: HTMLElement | null;
+type BarCurve = 'still' | 'out' | 'out-early' | 'in';
+
+interface BarItem {
+  readonly element: HTMLElement;
+  readonly curve: BarCurve;
 }
 
 export interface SwipePreview {
@@ -212,6 +217,7 @@ export class PageTransitions {
     }
     const deepens =
       !extras.skipLocationChange &&
+      sameTab(this.router.url, event.urlAfterRedirects) &&
       this.trigger === 'imperative' &&
       extras.info !== BACK_NAVIGATION &&
       (!extras.replaceUrl || depthIn(extras.state) >= this.backTarget.nextDepth());
@@ -340,7 +346,7 @@ export class PageTransitions {
     page.style.backgroundColor = kept.ground;
     const scroller = this.document.createElement('div');
     scroller.className = `${PAGE_TRANSITION_CLASS}__scroller`;
-    const copy = kept.copy === null ? null : (kept.copy.cloneNode(true) as HTMLElement);
+    const copy = kept.copy;
     if (copy !== null) {
       scroller.append(copy);
     }
@@ -354,7 +360,7 @@ export class PageTransitions {
       overlay.append(page);
     }
     scroller.scrollTop = kept.scrollY;
-    return { box: page, copy };
+    return { box: page, copy, scrollY: kept.scrollY };
   }
 
   private placedPage(overlay: HTMLElement, position: 'under' | 'over'): PlacedPage | null {
@@ -362,59 +368,67 @@ export class PageTransitions {
     if (box === null) {
       return null;
     }
-    const scroller = box.querySelector(`.${PAGE_TRANSITION_CLASS}__scroller`);
-    return { box, copy: (scroller?.firstElementChild as HTMLElement | null) ?? null };
+    const scroller = box.querySelector<HTMLElement>(`.${PAGE_TRANSITION_CLASS}__scroller`);
+    return {
+      box,
+      copy: (scroller?.firstElementChild as HTMLElement | null) ?? null,
+      scrollY: scroller?.scrollTop ?? 0,
+    };
   }
 
   private dressChrome(
     overlay: HTMLElement,
     leaving: PlacedPage | null,
     arriving: PlacedPage | null,
-  ): BarParts {
-    const leavingBar = leaving?.copy?.querySelector('.back-button') ?? null;
-    const arrivingBar = arriving?.copy?.querySelector('.back-button') ?? null;
-    const bothTabBars =
-      leaving?.copy?.querySelector('app-tab-bar') && arriving?.copy?.querySelector('app-tab-bar');
-    if (bothTabBars) {
-      leaving?.copy?.querySelectorAll('app-tab-bar').forEach((bar) => bar.remove());
-      arriving?.copy?.querySelectorAll('app-tab-bar').forEach((bar) => bar.remove());
-    }
-    overlay.classList.toggle(`${PAGE_TRANSITION_CLASS}--under-tab-bar`, Boolean(bothTabBars));
+  ): BarItem[] {
+    const leavingTabBar = leaving?.copy?.querySelector('app-tab-bar') != null;
+    const arrivingTabBar =
+      arriving?.copy == null || arriving.copy.querySelector('app-tab-bar') !== null;
+    overlay.classList.toggle(
+      `${PAGE_TRANSITION_CLASS}--under-tab-bar`,
+      leavingTabBar && arrivingTabBar,
+    );
     overlay.querySelector(`.${PAGE_TRANSITION_CLASS}__bar`)?.remove();
     const bar = this.document.createElement('div');
     bar.className = `${PAGE_TRANSITION_CLASS}__bar`;
     overlay.append(bar);
-    const arrivingPart =
-      arrivingBar === null ? null : this.barPart(bar, arriving!.copy!, 'arriving');
-    const leavingPart = leavingBar === null ? null : this.barPart(bar, leaving!.copy!, 'leaving');
-    if (
-      leavingPart !== null &&
-      arrivingPart !== null &&
-      this.looksAlike(leavingPart, arrivingPart)
-    ) {
-      arrivingPart.remove();
-      leavingPart.classList.add(`${PAGE_TRANSITION_CLASS}__bar-part--still`);
-      return { leaving: null, arriving: null };
-    }
-    return { leaving: leavingPart, arriving: arrivingPart };
+    const arrivingPart = this.barPart(bar, arriving);
+    const leavingPart = this.barPart(bar, leaving);
+    return BAR_ITEMS.flatMap((selector) => {
+      const out = leavingPart?.querySelector<HTMLElement>(selector) ?? null;
+      const into = arrivingPart?.querySelector<HTMLElement>(selector) ?? null;
+      if (out !== null && into !== null && this.looksAlike(out, into)) {
+        into.remove();
+        return [this.barItem(out, 'still')];
+      }
+      return [
+        ...(out === null ? [] : [this.barItem(out, into === null ? 'out-early' : 'out')]),
+        ...(into === null ? [] : [this.barItem(into, 'in')]),
+      ];
+    });
   }
 
-  private barPart(bar: HTMLElement, copy: HTMLElement, side: 'leaving' | 'arriving'): HTMLElement {
-    const part = this.document.createElement('div');
-    part.className = `${PAGE_TRANSITION_CLASS}__bar-part ${PAGE_TRANSITION_CLASS}__bar-part--${side}`;
-    const header = copy.querySelector('app-header');
-    if (header !== null) {
-      part.append(header.cloneNode(true));
+  private barPart(bar: HTMLElement, page: PlacedPage | null): HTMLElement | null {
+    const header = page?.copy?.querySelector('app-header') ?? null;
+    if (page === null || header === null) {
+      return null;
     }
+    const part = this.document.createElement('div');
+    part.className = `${PAGE_TRANSITION_CLASS}__bar-part`;
+    part.style.top = `${-page.scrollY}px`;
+    part.append(header.cloneNode(true));
     bar.append(part);
     return part;
   }
 
-  private looksAlike(leaving: HTMLElement, arriving: HTMLElement): boolean {
+  private barItem(element: HTMLElement, curve: BarCurve): BarItem {
+    element.classList.add(`${PAGE_TRANSITION_CLASS}__bar-item--${curve}`);
+    return { element, curve };
+  }
+
+  private looksAlike(first: HTMLElement, second: HTMLElement): boolean {
     const view = this.document.defaultView;
-    const first = leaving.querySelector('.back-button');
-    const second = arriving.querySelector('.back-button');
-    if (view === null || first === null || second === null) {
+    if (view === null) {
       return false;
     }
     const one = view.getComputedStyle(first);
@@ -425,6 +439,9 @@ export class PageTransitions {
       LOOKS.every(
         (property) => one.getPropertyValue(property) === other.getPropertyValue(property),
       ) &&
+      first.textContent === second.textContent &&
+      first.querySelector('img')?.getAttribute('src') ===
+        second.querySelector('img')?.getAttribute('src') &&
       box.left === otherBox.left &&
       box.top === otherBox.top &&
       box.width === otherBox.width
@@ -480,24 +497,39 @@ function depthIn(state: unknown): number {
   return typeof depth === 'number' ? depth : 0;
 }
 
-function followBar(bar: BarParts, progress: number): void {
-  if (bar.leaving !== null) {
-    bar.leaving.style.opacity = String(1 - progress);
-  }
-  if (bar.arriving !== null) {
-    bar.arriving.style.opacity = String(progress);
+function barOpacity(curve: BarCurve, progress: number): string {
+  switch (curve) {
+    case 'out':
+      return String(1 - progress);
+    case 'out-early':
+      return String(Math.max(0, 1 - 2 * progress));
+    case 'in':
+      return String(progress);
+    default:
+      return '';
   }
 }
 
+function followBar(bar: BarItem[], progress: number): void {
+  bar.forEach((item) => (item.element.style.opacity = barOpacity(item.curve, progress)));
+}
+
 function barMotions(
-  bar: BarParts,
+  bar: BarItem[],
   progress: number,
   timing: KeyframeAnimationOptions,
 ): Animation[] {
-  return [
-    ...(bar.leaving === null ? [] : [bar.leaving.animate([{ opacity: 1 - progress }], timing)]),
-    ...(bar.arriving === null ? [] : [bar.arriving.animate([{ opacity: progress }], timing)]),
-  ];
+  return bar
+    .filter((item) => item.curve !== 'still')
+    .map((item) =>
+      item.element.animate([{ opacity: Number(barOpacity(item.curve, progress)) }], timing),
+    );
+}
+
+function sameTab(from: string, to: string): boolean {
+  const here = tabOf(from);
+  const there = tabOf(to);
+  return here === null || there === null || here.id === there.id;
 }
 
 function parallaxAt(progress: number): string {

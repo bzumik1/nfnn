@@ -27,8 +27,12 @@
   }
 }
 
-.page-transition__scroller .back-button {
+.page-transition__scroller :is(.back-button, .account-button) {
   visibility: hidden;
+}
+
+.page-transition--under-tab-bar .page-transition__scroller app-tab-bar {
+  display: none;
 }
 
 .page-transition__bar,
@@ -46,7 +50,7 @@
     display: none;
   }
 
-  .back-button {
+  :is(.back-button, .account-button) {
     visibility: visible;
   }
 }
@@ -86,7 +90,9 @@
 .page-transition--moving {
   .page-transition__page,
   .page-transition__dim,
-  .page-transition__bar-part {
+  .page-transition__bar-item--out,
+  .page-transition__bar-item--out-early,
+  .page-transition__bar-item--in {
     animation-duration: var(--duration-page);
     animation-timing-function: var(--ease-page);
     animation-fill-mode: both;
@@ -116,11 +122,15 @@
     animation-name: page-undim;
   }
 
-  .page-transition__bar-part--leaving {
+  .page-transition__bar-item--out {
     animation-name: page-undim;
   }
 
-  .page-transition__bar-part--arriving {
+  .page-transition__bar-item--out-early {
+    animation-name: page-bar-leave-early;
+  }
+
+  .page-transition__bar-item--in {
     animation-name: page-dim;
   }
 }
@@ -180,6 +190,17 @@
     opacity: 1;
   }
 
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-bar-leave-early {
+  from {
+    opacity: 1;
+  }
+
+  50%,
   to {
     opacity: 0;
   }
