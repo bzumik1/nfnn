@@ -1,0 +1,31 @@
+name: Task
+description: A piece of work Jakub decided on. Whoever starts it opens a draft PR that closes this issue.
+body:
+  - type: checkboxes
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the open issues and pull requests and found none that covers this.
+          required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: The change and the decision behind it (who decided, when).
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: What has to be true for this issue to close.
+    validations:
+      required: true
+
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      description: When an agent filed this, its harness and machine, such as "Claude Code · T3 on the Mac".

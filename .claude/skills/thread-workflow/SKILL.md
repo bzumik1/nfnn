@@ -27,7 +27,7 @@ A thread wakes only on events: Jakub's message, a finished background task, a PR
 3. Never end a turn that waits on CI unless a run of the head SHA was seen and a `send_later` check is scheduled about 20 minutes after the push, naming the PR and the SHA. Each check acts or schedules the next one (10 minutes later while the run is in progress, up to 35 minutes after the push; after that, treat it as no run). A check that fires after the merge only confirms it and stops.
 
 ### When no run starts, or only `agent-context` and `gate` run
-- Conflict (`dirty`): GitHub runs no workflow on a PR that conflicts with its base. Rebase onto `origin/main` now, resolve, `git push --force-with-lease`, start again.
+- Conflict (`dirty`): GitHub runs no workflow on a PR that conflicts with its base; `pr-conflicts.yml` comments once and adds `needs-rebase` after the push to `main` that caused it, which wakes a subscribed or watched thread. Rebase onto `origin/main` now, resolve, `git push --force-with-lease`, start again.
 - Base other than `main`: `pr-check.yml` and `roadmap-check.yml` run only for PRs to `main`. Retarget the PR to `main` (see Branches) or keep it a draft and say why it has no CI.
 - Only `docs/`, `.claude/` or Markdown changed: the `PR check` run skips every job but `changes`, `agent-context` and `gate`. `agent-context` fails on undeclared growth of what agents always load (`Kontext agenta roste: <reason>` in the description). Wait for `gate`, read the whole diff again, then merge (`CLAUDE.md`).
 - No run otherwise: in T3 Code, on the "No checks have reported" wake, look at githubstatus.com once and tell Jakub at once; in a claude.ai project thread, look at githubstatus.com and again after 10 minutes, then tell Jakub. Keep the watch or the scheduled check.
@@ -42,6 +42,7 @@ Known flaky (remove a line when its fix merges):
 - None at the moment. (The stack start that restarted the backend while a fresh postgres ran initdb is fixed: the backend entrypoint waits for the database port, and the stack job fails on any restart.)
 
 ## Branches
+- Before the branch: `CLAUDE.md` "Working alongside others" (search the open PRs and issues for the same work, then a draft PR with `Closes #n` right after the first commit, so the other agents and the colleague see what it touches).
 - One task, one branch from the latest `origin/main` (`git fetch` first), one worktree, one PR to `main`. Run `git config rerere.enabled true` once per clone, so a conflict resolved once is replayed on every later rebase.
 - In T3 Code the thread's worktree and its branch are given: use that branch, rebased onto `origin/main` after `git fetch`; when it already carries another task's commits, `git switch -c <branch> origin/main` instead. A new independent task gets its own worktree from T3 Code, `t3_thread_launch` with `workspaceStrategy` worktree and `baseRef` `origin/main` (when Jakub asks for a new thread) or `delegate_task` with `isolation: "worktree"`, never a shell `git worktree add`, which the thread's binding does not follow. A `delegate_task` worktree starts at the parent's commit, so its brief tells the child to `git fetch` and `git switch -c <branch> origin/main` first.
 - In a claude.ai project thread: `git worktree add /home/user/wt/<task> -b claude/<task> origin/main`.

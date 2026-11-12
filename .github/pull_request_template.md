@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- What the PR changes and why: the decision, slice or issue behind it. Name a new port, endpoint, dependency or breaking schema or API change here (CLAUDE.md, .claude/rules). -->
+<!-- What the PR changes and why: the decision, slice or issue behind it, with `Closes #n` for the issue it finishes. Name a new port, endpoint, dependency or breaking schema or API change here (CLAUDE.md, .claude/rules). -->
 
 ## How it was verified
 
@@ -34,3 +34,6 @@ Kontext agenta roste: <!-- reason -->
 
 <!-- Suppressions: for each file where the diff adds a suppression or a skipped test (@SuppressWarnings, @Disabled, eslint-disable, @ts-expect-error, it.skip, .only, a relaxed test or lint setting …), and for every changed file under .github/workflows/ or .github/actions/, script that decides a required check or file of the build definition (listed in docs/system-overview.md, Suppression guard; on purpose: such a change cannot be judged line by line), and for a changed line in the "scripts" of a package.json, write the line below once per file with the path and why, at least 10 characters; one line covers every suppression of its file, later pushes included. Left as it is, it declares nothing. Editing the description runs the check Výjimky again by itself. -->
 Výjimka: <!-- path/to/File.java: why the suppression must stay -->
+
+<!-- Every agent works under the same GitHub account, so name the harness and the machine or environment that did the work (CLAUDE.md, Working alongside others), such as "Claude Code · claude.ai project thread" or "Codex · T3 on the server". -->
+Agent: <!-- harness · machine -->
