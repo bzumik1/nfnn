@@ -75,7 +75,7 @@ class ImportBankPaymentsServiceTest {
     @DisplayName("Given a queued history run, when it completes, then the bank is asked from the requested day and the run records the new payments")
     void should_ask_from_requested_day_and_record_new_payments_when_history_run_completes_given_queued_run() {
         HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
-        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 4);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 4, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(DEEP)).thenAnswer(invocation -> {
             assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.RUNNING);
@@ -153,7 +153,7 @@ class ImportBankPaymentsServiceTest {
     @DisplayName("Given a newer request for another day, when an older history run completes, then the newer request stays queued")
     void should_keep_newer_request_queued_when_older_history_run_completes_given_newer_request() {
         HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
-        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 0);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 0, Optional.empty());
         AtomicReference<HistoryImportRun> newer = new AtomicReference<>();
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(DEEP)).thenAnswer(invocation -> {
