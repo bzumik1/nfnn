@@ -52,5 +52,13 @@
     "caseFile": "shared-cases/schemas/sync/manifest.schema.json",
     "reason": "2.20f: the manifest's chunks are the donations, receipts, bank-accounts and symbol-claims chunks, each with its row",
     "contract": "docs/api-contract.md, Device sync"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/device-copy/donor-copy-sync.model.spec.ts > Given a model of the donor copy kept on a device while the server changes > when syncs, crashes mid-write, evictions, reloads, a wrong summary and another donor’s answers come in any order, then the copy only ever holds what a whole sync stored and ends as a fresh download",
+    "reason": "2.20f (2.15 note 2): the model gains a second account signing in and out on the same device, so its name says what it now proves: each copy holds only its own donor's gifts",
+    "replacement": "src/app/features/donations/device-copy/donor-copy-sync.model.spec.ts > Given a model of the donor copy kept on a device while the server changes > when syncs, crashes mid-write, evictions, reloads, a wrong summary, another donor’s answers and a second account signing in on the device come in any order, then each copy only ever holds its own donor’s gifts as a whole sync stored them and ends as a fresh download",
+    "contract": "docs/frontend-overview.md, donations (services and helpers)"
   }
 ]
