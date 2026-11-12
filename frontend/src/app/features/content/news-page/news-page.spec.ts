@@ -615,7 +615,10 @@ describe('Given Aktuality kept while the visitor is on another tab', () => {
     return harness.routeNativeElement!;
   }
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    answerHome(http);
+    http.verify();
+  });
 
   it('when the visitor returns, then the news they saw stay shown while the news are asked for again', async () => {
     await openAndLeave(storiesArrive);

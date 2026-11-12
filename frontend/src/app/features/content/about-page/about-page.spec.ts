@@ -170,9 +170,13 @@ describe('Given O nás kept while the visitor is on another tab', () => {
 
     expect(photoAlt()).toBe('Malý chlapec v náručí dvou dospělých');
 
-    asked.flush({ news: [], projects: [], about: { photo: null } });
+    asked.flush({
+      news: [],
+      projects: [],
+      about: { photo: aboutPhoto({ alt: 'Děti na zahradě' }) },
+    });
     await shown();
-    expect(photoAlt()).toBeUndefined();
+    expect(photoAlt()).toBe('Děti na zahradě');
   });
 
   it('when the content cannot be asked for again, then the photo they saw stays shown', async () => {

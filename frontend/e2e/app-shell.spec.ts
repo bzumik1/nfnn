@@ -94,7 +94,7 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await publishedArticle(page);
   });
 
-  test('when they press Zpět with the keyboard on an article opened from the list, then the list returns and its heading takes the focus', async ({
+  test('when they press Zpět with the keyboard on an article opened from the list, then the list returns and the link to that article takes the focus', async ({
     page,
   }) => {
     await openArticleFromList(page);
@@ -103,7 +103,9 @@ test.describe('Given a visitor who moves through the tabs and back', () => {
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
+    await expect(
+      page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
+    ).toBeFocused();
   });
 
   test('when they reload the article and press Zpět, then the list returns without leaving the site', async ({
