@@ -865,6 +865,54 @@ describe('Given a signed-in donor in the donor area', () => {
     });
   });
 
+  describe('when the donor leaves the area and opens it again, as the account sheet does with each section', () => {
+    async function leaveAfterAreaCheck(): Promise<void> {
+      vi.useFakeTimers();
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+      await go('/');
+    }
+
+    it('and returns within half a minute, then the gifts show at once without the loading line, the bank is not asked again and the gifts are refreshed behind them', async () => {
+      await leaveAfterAreaCheck();
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      await go('/darce/dary');
+
+      expect(root().textContent).not.toContain('Načítáme');
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+    });
+
+    it('and returns more than half a minute later, then the bank is asked again', async () => {
+      await leaveAfterAreaCheck();
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await go('/darce/dary');
+
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({
+        bankDataAsOf: LATER,
+        checking: false,
+      });
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+      await settle();
+      http.match('/api/donations/me/summary').forEach((request) => request.flush(twoYearSummary()));
+      http.match('/api/donations/me').forEach((request) => request.flush(twoYearDonations()));
+      await settle();
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
+    });
+  });
+
   describe('when the overview opens', () => {
     it('then the card Poslat dar reads the gifts once when the donor copies a bank detail, thanks for a gift the live stream brings through the reading of the overview and offers no link to it', async () => {
       Object.defineProperty(navigator, 'clipboard', {

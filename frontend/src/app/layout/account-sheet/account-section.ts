@@ -18,6 +18,10 @@ import { DONOR_SECTION_PAGES } from '../../features/donors/donors.routes';
 
 export type AccountSectionPages = Readonly<Record<string, () => Promise<Type<unknown>>>>;
 
+type SectionPageLoader = () => Promise<Type<unknown>>;
+
+const loadedPages = new WeakMap<SectionPageLoader, Type<unknown>>();
+
 export const ACCOUNT_SECTION_PAGES = new InjectionToken<AccountSectionPages>(
   'ACCOUNT_SECTION_PAGES',
   { factory: () => DONOR_SECTION_PAGES },
@@ -44,14 +48,22 @@ export class AccountSection {
   constructor() {
     effect(() => {
       const path = this.path();
-      untracked(() => {
-        this.page.set(null);
-        void this.pages[path]?.().then((component) => {
-          if (this.path() === path) {
-            this.page.set(component);
-          }
-        });
-      });
+      untracked(() => this.show(path));
+    });
+  }
+
+  private show(path: string): void {
+    const loader = this.pages[path];
+    const loaded = loader === undefined ? undefined : loadedPages.get(loader);
+    this.page.set(loaded ?? null);
+    if (loader === undefined || loaded !== undefined) {
+      return;
+    }
+    void loader().then((component) => {
+      loadedPages.set(loader, component);
+      if (this.path() === path) {
+        this.page.set(component);
+      }
     });
   }
 }

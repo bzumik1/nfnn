@@ -147,6 +147,19 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(back).toHaveBeenCalledOnce();
     });
 
+    it('and the visitor goes back and opens it again, then its page stands in the very first frame', async () => {
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      sheet
+        .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      fixture.detectChanges();
+
+      expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
+    });
+
     it('and the visitor goes back, then the list of the account returns with the focus on the row they came from', async () => {
       history.listener?.stepBack();
       fixture.detectChanges();

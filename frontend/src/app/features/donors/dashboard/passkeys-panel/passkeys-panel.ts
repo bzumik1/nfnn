@@ -38,6 +38,7 @@ import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-co
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 @Component({
   selector: 'app-passkeys-panel',
@@ -57,6 +58,7 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly kept = inject(KeptDonorAnswers);
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly device = inject(SESSION_DEVICE);
   private readonly document = inject(DOCUMENT);
@@ -113,18 +115,22 @@ export class PasskeysPanel {
   protected newName = '';
 
   constructor() {
-    this.load();
+    this.load(true);
     effect(() => {
       const list = this.passkeys();
       if (list !== null) {
         this.countChanged.emit(list.length);
+        this.kept.keep('passkeys', { items: list });
       }
     });
   }
 
-  load(): void {
+  load(shownBefore = false): void {
     this.loadError.set('');
-    this.authApi.passkeys().subscribe({
+    const passkeys = shownBefore
+      ? this.kept.read('passkeys', this.authApi.passkeys())
+      : this.authApi.passkeys();
+    passkeys.subscribe({
       next: (list) => this.passkeys.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {

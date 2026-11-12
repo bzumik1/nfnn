@@ -401,6 +401,42 @@ describe("Given a donor's signed-in devices card", () => {
     expect(rows()).toHaveLength(1);
   });
 
+  describe('when the card was shown once and is opened again', () => {
+    beforeEach(async () => {
+      await signIn();
+      await listed([THIS_MAC, IPHONE]);
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+    });
+
+    it('then the devices show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(text(root())).not.toContain('Načítáme');
+      expect(rows()).toHaveLength(2);
+
+      await listed([THIS_MAC]);
+
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a device signed out before leaving does not come back for a moment', async () => {
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(1);
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
+    });
+  });
+
   it('when this device was signed out elsewhere, then the details page is told to send the donor to sign in', async () => {
     await signIn();
     http.expectOne(DEVICES_URL).flush(problem('auth/session-ended', 'Odhlášeno'), {

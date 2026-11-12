@@ -111,6 +111,19 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
   });
 
+  it('when the card is opened again, then the passkeys show at once without the loading line and are refreshed behind them', async () => {
+    await render([IPHONE, WINDOWS]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(PasskeysPanel);
+    fixture.detectChanges();
+
+    expect(root().textContent).not.toContain('Načítáme');
+    expect(texts('.passkey-name')).toHaveLength(2);
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await settle();
+    expect(texts('.passkey-name')).toHaveLength(1);
+  });
+
   it('when the donor has no passkey, then the card says so and offers to add one', async () => {
     await render([]);
 

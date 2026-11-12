@@ -63,6 +63,7 @@ import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -139,6 +140,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 })
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
+  private readonly kept = inject(KeptDonorAnswers);
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly live = inject(LiveUpdates);
@@ -231,7 +233,13 @@ export class BankAccountsCard {
         this.bankNames.require(account.accountNumber);
       }
     });
-    this.fetch();
+    this.fetch(false, true);
+    effect(() => {
+      const items = this.accounts();
+      if (this.state() === 'ready') {
+        this.kept.keep('bank-accounts', { items });
+      }
+    });
     effect(() => {
       if (this.newlyVerifiedId() !== null) {
         afterNextRender(() => this.addResult()?.nativeElement.focus(), {
@@ -267,25 +275,23 @@ export class BankAccountsCard {
     this.fetch();
   }
 
-  private fetch(focusTitle = false): void {
-    this.api
-      .list()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ items }) => {
-          this.showAccounts(items);
-          if (focusTitle) {
-            afterNextRender(() => this.focusTitle(), { injector: this.injector });
-          }
-        },
-        error: (failure: unknown) => {
-          if (this.sessionHasEnded(failure)) {
-            this.sessionEnded.emit();
-            return;
-          }
-          this.state.set('error');
-        },
-      });
+  private fetch(focusTitle = false, shownBefore = false): void {
+    const list = shownBefore ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
+    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ items }) => {
+        this.showAccounts(items);
+        if (focusTitle) {
+          afterNextRender(() => this.focusTitle(), { injector: this.injector });
+        }
+      },
+      error: (failure: unknown) => {
+        if (this.sessionHasEnded(failure)) {
+          this.sessionEnded.emit();
+          return;
+        }
+        this.state.set('error');
+      },
+    });
   }
 
   private showAccounts(items: readonly BankAccountItem[]): void {

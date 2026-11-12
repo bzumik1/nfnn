@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DOCUMENT,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -20,6 +21,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 import { groupDevices } from './device-groups';
 import { deviceName, sessionKindName } from './device-labels';
 
@@ -50,6 +52,7 @@ const SHAPES: Record<DevicePlatform, DeviceShape> = {
 export class DevicesCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly kept = inject(KeptDonorAnswers);
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
@@ -72,12 +75,21 @@ export class DevicesCard {
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
 
   constructor() {
-    this.loadDevices();
+    this.loadDevices(true);
+    effect(() => {
+      const devices = this.devices();
+      if (devices !== null) {
+        this.kept.keep('devices', { items: devices });
+      }
+    });
   }
 
-  loadDevices(): void {
+  loadDevices(shownBefore = false): void {
     this.loadError.set('');
-    this.authApi.devices().subscribe({
+    const devices = shownBefore
+      ? this.kept.read('devices', this.authApi.devices())
+      : this.authApi.devices();
+    devices.subscribe({
       next: (list) => this.devices.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {

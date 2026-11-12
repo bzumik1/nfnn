@@ -66,6 +66,7 @@ import {
 import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
 import { ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
 import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
+import { KeptDonorAnswers } from './kept-donor-answers';
 
 export type DonationsState = 'loading' | 'ready' | 'error';
 
@@ -133,6 +134,11 @@ const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
 const NOT_FOUND = 404;
 const BANK_CHECK_COOLDOWN_MS = 30_000;
 
+interface KeptBankCheck {
+  readonly endedAt: number;
+  readonly bankDataAsOf: string | null;
+}
+
 interface IncomingDonations {
   readonly read: DonorDonationsRead;
   readonly added: number;
@@ -154,6 +160,7 @@ export class DonorDonations implements GiftFeed {
   private readonly injector = inject(Injector);
   private readonly live = inject(LiveUpdates);
   private readonly repository = inject(DonorDonationsRepository);
+  private readonly kept = inject(KeptDonorAnswers);
   private readonly pendingDownload =
     inject(ActivatedRoute).snapshot.queryParamMap.get(RECEIPT_RESTART_PARAM);
 
@@ -206,6 +213,7 @@ export class DonorDonations implements GiftFeed {
   private shown: DonorDonationsRead | null = null;
   private shownOwner: string | null = null;
   private bankCheckEndedAt: number | null = null;
+  private shownFromLastVisit = false;
   private readonly printedDonor = computed(() => {
     const donor = this.auth.donor();
     return donor === null
@@ -246,9 +254,9 @@ export class DonorDonations implements GiftFeed {
       });
     });
     this.load();
-    this.checkBank(false);
-    this.bankAccountsApi
-      .list()
+    this.checkBankUnlessJustChecked();
+    this.kept
+      .read('bank-accounts', this.bankAccountsApi.list())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ items }) => this.bankAccounts.set(items),
@@ -333,6 +341,7 @@ export class DonorDonations implements GiftFeed {
   private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
     this.shown = read;
+    this.kept.keep('donations', read);
     if (read.owner !== null) {
       this.shownOwner = read.owner;
     }
@@ -345,6 +354,7 @@ export class DonorDonations implements GiftFeed {
 
   showBankAccounts(items: readonly BankAccountItem[]): void {
     this.bankAccounts.set(items);
+    this.kept.keep('bank-accounts', { items });
   }
 
   load(): void {
@@ -381,14 +391,17 @@ export class DonorDonations implements GiftFeed {
 
   private reloadDonations(offered = false): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
-    const held = this.repository.held();
+    const copied = this.repository.held();
+    const held = copied ?? this.kept.kept<DonorDonationsRead>('donations');
     const atOnce = held !== null && this.state() !== 'ready';
     if (atOnce) {
       this.showRead(held);
+      this.shownFromLastVisit = copied === null;
     }
     return this.repository.fresh(atOnce ? 'catch-up' : 'sync').pipe(
       map((read) => {
         if (request === this.latestDonationsRequest) {
+          this.shownFromLastVisit = false;
           if (atOnce || offered) {
             this.offerDonations(read);
           } else {
@@ -400,7 +413,11 @@ export class DonorDonations implements GiftFeed {
       catchError((failure: unknown) => {
         if (this.sessionEnded(failure)) {
           this.sendToSignIn();
-        } else if (request === this.latestDonationsRequest && this.shown?.source !== 'copy') {
+        } else if (
+          request === this.latestDonationsRequest &&
+          this.shown?.source !== 'copy' &&
+          !this.shownFromLastVisit
+        ) {
           this.state.set('error');
         }
         return of(null);
@@ -644,6 +661,22 @@ export class DonorDonations implements GiftFeed {
   private bankCheckEnded(): void {
     this.checkingBank.set(false);
     this.bankCheckEndedAt = Date.now();
+    this.kept.keep<KeptBankCheck>('bank-check', {
+      endedAt: this.bankCheckEndedAt,
+      bankDataAsOf: this.bankDataAsOf(),
+    });
+  }
+
+  private checkBankUnlessJustChecked(): void {
+    const last = this.kept.kept<KeptBankCheck>('bank-check');
+    if (last === null || Date.now() - last.endedAt > BANK_CHECK_COOLDOWN_MS) {
+      this.checkBank(false);
+      return;
+    }
+    this.bankCheckEndedAt = last.endedAt;
+    if (last.bankDataAsOf !== null) {
+      this.bankDataAsOf.set(last.bankDataAsOf);
+    }
   }
 
   private sessionEnded(failure: unknown): boolean {
