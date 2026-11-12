@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor card of /sprava/darci/<id>, GET /api/admin/donations/donors/{id} in Czech, without its bankAccounts, which stay on the server (whether pairing excludes an account is the server's setting): the donor record as the copy has it; the donor's gifts, newest received first (then the later recordedAt, then the higher id), each with its receipt number (that of the active single receipt of a received gift) or null, the Czech purpose text, the sender account of its bank account link and the confirmed symbol of its symbol claim, whether it is an account verification and whether a receipt is available (received, not an account verification, received in summary.receiptsAvailableFrom or later); the total and count of the received gifts, account verifications included; the donor's receipts, newest issued first, with the day of the gift a single receipt names; yearlyReceiptsAvailableThrough the year before summary.today and receiptsAvailableFrom as the summary names it. Receipts come from the issuer, so these cases hold none; the browser's tests cover them.",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links, symbolClaims and receipts) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor card of /sprava/darci/<id>, GET /api/admin/donations/donors/{id} in Czech, without its bankAccounts, which stay on the server (whether pairing excludes an account is the server's setting): the donor record as the copy has it; the donor's gifts, newest received first (then the later recordedAt, then the higher id), each with its receipt number (that of the active single receipt of a received gift) or null, the Czech purpose text, the sender account of its bank account link and the confirmed symbol of its symbol claim, whether it is an account verification and whether a receipt is available (received, not an account verification, received in summary.receiptsAvailableFrom or later); the total and count of the received gifts, account verifications included; the donor's receipts, newest issued first, with the day of the gift a single receipt names; yearlyReceiptsAvailableThrough the year before summary.today and receiptsAvailableFrom as the summary names it. Receipts come from the issuer: input.receipts names the receipts issued over these rows; the backend runner issues them in that order through the donor's own issuer with the server clock at each issuedAt (the signing key and the signatory chosen first), so their numbers and states are the real issuer's and a yearly receipt replaces the single receipts of its gifts. An alias that breaks a tie by id sorts as that id does (CaseRows numbers the rows in the order of the input), so the browser, which compares the aliases, orders as the server does.",
   "cases": [
     {
       "name": "Donor cards of a person with every kind of gift, a company, an erased donor and a donor without gifts",
@@ -553,6 +553,337 @@
             "donations": { "items": [], "totalAmountMinor": 0, "currency": "CZK", "count": 0 },
             "receipts": [],
             "yearlyReceiptsAvailableThrough": 2025,
+            "receiptsAvailableFrom": 2026
+          }
+        ]
+      }
+    },
+    {
+      "name": "Receipts of two years: a single receipt the yearly one replaced, the yearly receipt and a single receipt of the new year; two gifts of one day by the later recording",
+      "input": {
+        "now": "2027-02-10T09:00:00Z",
+        "donors": [{ "alias": "eva", "registeredAt": "2026-01-10T08:00:00Z", "erasedAt": null, "name": "Eva Horáková", "variableSymbol": "7700002001" }],
+        "payments": [
+          { "alias": "p1", "bookedOn": "2026-03-02", "amountMinor": 50000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p2", "bookedOn": "2026-03-02", "amountMinor": 30000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p3", "bookedOn": "2026-11-20", "amountMinor": 20000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p4", "bookedOn": "2027-01-15", "amountMinor": 10000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" }
+        ],
+        "donations": [
+          {
+            "donor": "eva",
+            "payment": "p1",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "recordedAt": "2026-03-02T12:00:00.000001Z"
+          },
+          {
+            "donor": "eva",
+            "payment": "p2",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "eva",
+            "payment": "p3",
+            "receivedOn": "2026-11-20",
+            "amountMinor": 20000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "eva",
+            "payment": "p4",
+            "receivedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "receipts": [
+          { "alias": "brezen", "donor": "eva", "kind": "SINGLE", "donation": 1, "issuedAt": "2026-03-05T10:00:00Z" },
+          { "alias": "rok", "donor": "eva", "kind": "YEARLY", "year": 2026, "issuedAt": "2027-01-10T08:00:00Z" },
+          { "alias": "leden", "donor": "eva", "kind": "SINGLE", "donation": 4, "issuedAt": "2027-02-01T08:00:00Z" }
+        ],
+        "chunks": {
+          "donations/donations:2026-03": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-03-02",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00.000001Z"
+            },
+            {
+              "id": "donation:2",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-03-02",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-11": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-11-20",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-11-20T12:00:00Z"
+            }
+          ],
+          "donations/donations:2027-01": [
+            {
+              "id": "donation:4",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p4",
+              "receivedAt": "2027-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2027-01-15T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:eva",
+              "name": "Eva Horáková",
+              "type": "PERSON",
+              "variableSymbol": "7700002001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-10T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/receipts:2026": [
+            {
+              "id": "receipt:rok",
+              "donorId": "donor:eva",
+              "status": "ACTIVE",
+              "kind": "YEARLY",
+              "number": "2027-000002",
+              "donationId": null,
+              "year": 2026,
+              "issuedOn": "2027-01-10",
+              "issuedAt": "2027-01-10T08:00:00Z",
+              "supersededAt": null,
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 2,
+              "totalAmountMinor": 80000,
+              "keyId": "21fe31df"
+            },
+            {
+              "id": "receipt:brezen",
+              "donorId": "donor:eva",
+              "status": "REPLACED",
+              "kind": "SINGLE",
+              "number": "2026-000001",
+              "donationId": "donation:1",
+              "year": null,
+              "issuedOn": "2026-03-05",
+              "issuedAt": "2026-03-05T10:00:00Z",
+              "supersededAt": "2027-01-10T08:00:00Z",
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 1,
+              "totalAmountMinor": 50000,
+              "keyId": "21fe31df"
+            }
+          ],
+          "donations/receipts:2027": [
+            {
+              "id": "receipt:leden",
+              "donorId": "donor:eva",
+              "status": "ACTIVE",
+              "kind": "SINGLE",
+              "number": "2027-000003",
+              "donationId": "donation:4",
+              "year": null,
+              "issuedOn": "2027-02-01",
+              "issuedAt": "2027-02-01T08:00:00Z",
+              "supersededAt": null,
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 1,
+              "totalAmountMinor": 10000,
+              "keyId": "21fe31df"
+            }
+          ]
+        },
+        "summary": { "today": "2027-02-10", "receiptsAvailableFrom": 2026 },
+        "queries": [{ "donor": "eva" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "donor": {
+              "donorId": "donor:eva",
+              "name": "Eva Horáková",
+              "type": "PERSON",
+              "variableSymbol": "7700002001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-10T08:00:00Z",
+              "erasedAt": null
+            },
+            "donations": {
+              "items": [
+                {
+                  "id": "donation:4",
+                  "receiptNumber": "2027-000003",
+                  "receivedAt": "2027-01-15",
+                  "amountMinor": 10000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                },
+                {
+                  "id": "donation:3",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-11-20",
+                  "amountMinor": 20000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "REFUNDED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": false
+                },
+                {
+                  "id": "donation:1",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-03-02",
+                  "amountMinor": 50000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                },
+                {
+                  "id": "donation:2",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-03-02",
+                  "amountMinor": 30000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                }
+              ],
+              "totalAmountMinor": 90000,
+              "currency": "CZK",
+              "count": 3
+            },
+            "receipts": [
+              {
+                "id": "receipt:leden",
+                "number": "2027-000003",
+                "kind": "SINGLE",
+                "donationId": "donation:4",
+                "donationReceivedOn": "2027-01-15",
+                "year": null,
+                "issuedOn": "2027-02-01",
+                "issuedAt": "2027-02-01T08:00:00Z",
+                "locale": "cs",
+                "active": true,
+                "withdrawnAt": null,
+                "withdrawalReason": null,
+                "keyId": "21fe31df"
+              },
+              {
+                "id": "receipt:rok",
+                "number": "2027-000002",
+                "kind": "YEARLY",
+                "donationId": null,
+                "donationReceivedOn": null,
+                "year": 2026,
+                "issuedOn": "2027-01-10",
+                "issuedAt": "2027-01-10T08:00:00Z",
+                "locale": "cs",
+                "active": true,
+                "withdrawnAt": null,
+                "withdrawalReason": null,
+                "keyId": "21fe31df"
+              },
+              {
+                "id": "receipt:brezen",
+                "number": "2026-000001",
+                "kind": "SINGLE",
+                "donationId": "donation:1",
+                "donationReceivedOn": "2026-03-02",
+                "year": null,
+                "issuedOn": "2026-03-05",
+                "issuedAt": "2026-03-05T10:00:00Z",
+                "locale": "cs",
+                "active": false,
+                "withdrawnAt": null,
+                "withdrawalReason": null,
+                "keyId": "21fe31df"
+              }
+            ],
+            "yearlyReceiptsAvailableThrough": 2026,
             "receiptsAvailableFrom": 2026
           }
         ]

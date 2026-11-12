@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The donor's gifts that GET /api/donations/me answers to input.donor in Czech (Accept-Language cs), as items in the order they are listed: newest first (receivedAt, then the newer record, then the higher id). Each item names its id, the number of its active single receipt or null, the day, amount and currency, the purpose as the Czech text the site shows (Obecný příspěvek, Ověření účtu), status, source and pairing method, the sender account and the confirmed symbol it was paired through or null, whether it is an account verification, and whether a receipt is available for it: received, not an account verification, and from the year of the setting RECEIPT_FIRST_YEAR on. The cases are those of sync/manifest.json under the same names with the same input, so the browser, which computes these items from the chunks of the device copy, takes the namesake's chunks and summary as its input; ids are the aliases of the case's rows. The rows hold no receipts, bank accounts or symbol answers, so receiptNumber, senderAccount and confirmedSymbol are null throughout; features cover those (donor_device_sync.feature).",
+  "logic": "The donor's gifts that GET /api/donations/me answers to input.donor in Czech (Accept-Language cs), as items in the order they are listed: newest first (receivedAt, then the newer record, then the higher id). Each item names its id, the number of its active single receipt or null, the day, amount and currency, the purpose as the Czech text the site shows (Obecný příspěvek, Ověření účtu), status, source and pairing method, the sender account and the confirmed symbol it was paired through or null, whether it is an account verification, and whether a receipt is available for it: received, not an account verification, and from the year of the setting RECEIPT_FIRST_YEAR on. The cases are those of sync/manifest.json under the same names with the same input, so the browser, which computes these items from the chunks of the device copy, takes the namesake's chunks and summary as its input; ids are the aliases of the case's rows. Where the rows hold receipts (input.receipts, issued by the real issuer as sync/manifest.json says), bank account links or answers about older symbols, receiptNumber is the number of the gift's active single receipt (null once a yearly receipt replaced it), senderAccount the account of the link the gift was paired through and confirmedSymbol the symbol of the answer it was paired by.",
   "cases": [
     {
       "name": "a donor without gifts",
@@ -456,6 +456,209 @@
       },
       "expected": {
         "items": []
+      }
+    },
+    {
+      "name": "a gift paired through a bank account, one by a confirmed older symbol, a single receipt and the yearly receipt that replaced it, and a single receipt of the new year",
+      "input": {
+        "now": "2027-02-10T09:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-10T08:00:00Z",
+            "erasedAt": null,
+            "name": "Jana Nováková",
+            "variableSymbol": "7700004001"
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-02-01",
+            "amountMinor": 100,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "7700004001",
+            "counterpartyAccount": "1234567/0800",
+            "messageForRecipient": "OVERENI UCTU"
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "unpairedByAdminAt": null,
+            "counterpartyAccount": "1234567/0800"
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2026-05-11",
+            "amountMinor": 30000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "123",
+            "counterpartyAccount": "1234567/0800"
+          },
+          {
+            "alias": "p4",
+            "bookedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "7700004001"
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-02-01",
+            "amountMinor": 100,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "ACCOUNT_VERIFICATION"
+          },
+          {
+            "donor": "jana",
+            "payment": "p2",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "SENDER_ACCOUNT",
+            "bankAccount": "ucet"
+          },
+          {
+            "donor": "jana",
+            "payment": "p3",
+            "receivedOn": "2026-05-11",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "CONFIRMED_SYMBOL",
+            "bankAccount": "ucet",
+            "symbolClaim": "stary"
+          },
+          {
+            "donor": "jana",
+            "payment": "p4",
+            "receivedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "links": [
+          {
+            "alias": "ucet",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "status": "ACTIVE",
+            "learnedFrom": "p1",
+            "learnedAt": "2026-02-01T12:00:00Z",
+            "validFrom": "2026-02-01",
+            "validTo": null
+          }
+        ],
+        "symbolClaims": [
+          {
+            "alias": "stary",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "variableSymbol": "123",
+            "answer": "CONFIRMED",
+            "answeredAt": "2026-05-10T09:00:00Z"
+          }
+        ],
+        "receipts": [
+          {
+            "alias": "brezen",
+            "donor": "jana",
+            "kind": "SINGLE",
+            "donation": 2,
+            "issuedAt": "2026-03-05T10:00:00Z"
+          },
+          {
+            "alias": "rok",
+            "donor": "jana",
+            "kind": "YEARLY",
+            "year": 2026,
+            "issuedAt": "2027-01-10T08:00:00Z"
+          },
+          {
+            "alias": "leden",
+            "donor": "jana",
+            "kind": "SINGLE",
+            "donation": 4,
+            "issuedAt": "2027-02-01T08:00:00Z"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026,
+        "bankDataAsOf": "2027-02-10T08:00:00Z"
+      },
+      "expected": {
+        "items": [
+          {
+            "id": "donation:4",
+            "receiptNumber": "2027-000003",
+            "receivedAt": "2027-01-15",
+            "amountMinor": 10000,
+            "currency": "CZK",
+            "purpose": "Obecný příspěvek",
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "pairedBy": "VARIABLE_SYMBOL",
+            "senderAccount": null,
+            "confirmedSymbol": null,
+            "accountVerification": false,
+            "receiptAvailable": true
+          },
+          {
+            "id": "donation:3",
+            "receiptNumber": null,
+            "receivedAt": "2026-05-11",
+            "amountMinor": 30000,
+            "currency": "CZK",
+            "purpose": "Obecný příspěvek",
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "pairedBy": "CONFIRMED_SYMBOL",
+            "senderAccount": "1234567/0800",
+            "confirmedSymbol": "123",
+            "accountVerification": false,
+            "receiptAvailable": true
+          },
+          {
+            "id": "donation:2",
+            "receiptNumber": null,
+            "receivedAt": "2026-03-02",
+            "amountMinor": 50000,
+            "currency": "CZK",
+            "purpose": "Obecný příspěvek",
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "pairedBy": "SENDER_ACCOUNT",
+            "senderAccount": "1234567/0800",
+            "confirmedSymbol": null,
+            "accountVerification": false,
+            "receiptAvailable": true
+          },
+          {
+            "id": "donation:1",
+            "receiptNumber": null,
+            "receivedAt": "2026-02-01",
+            "amountMinor": 100,
+            "currency": "CZK",
+            "purpose": "Ověření účtu",
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "pairedBy": "VARIABLE_SYMBOL",
+            "senderAccount": null,
+            "confirmedSymbol": null,
+            "accountVerification": true,
+            "receiptAvailable": false
+          }
+        ]
       }
     }
   ]
