@@ -16,12 +16,10 @@ describe('Given the landing page, whose photo fills the screen and reaches under
   }
 
   beforeEach(() => {
-    document.documentElement.style.setProperty('--page-resting-scroll', '0px');
     const stage = document.createElement('style');
     stage.id = 'landing-stage-rule';
     stage.textContent = `.${LANDING_STAGE_CLASS} { --page-resting-scroll: 120px; }`;
     document.head.append(stage);
-    document.documentElement.style.removeProperty('--page-resting-scroll');
     hero = document.createElement('section');
     heroHeight = window.innerHeight;
     hero.getBoundingClientRect = () => ({ height: heroHeight }) as DOMRect;
@@ -65,6 +63,34 @@ describe('Given the landing page, whose photo fills the screen and reaches under
 
     expect(document.documentElement.classList).not.toContain(LANDING_STAGE_CLASS);
     expect(window.scrollY).toBe(0);
+  });
+
+  it('when the text no longer fits and the visitor scrolls the page, then it stays where they scrolled it', async () => {
+    heroHeight = window.innerHeight + 200;
+    window.dispatchEvent(new Event('resize'));
+    await nextFrame();
+
+    scrollTo(150);
+    await nextFrame();
+    await nextFrame();
+
+    expect(window.scrollY).toBe(150);
+  });
+
+  it('when a dialog is open and the browser scrolls to show its field above the keyboard, then the page is left alone until the dialog closes', async () => {
+    const dialog = document.createElement('dialog');
+    document.body.append(dialog);
+    dialog.setAttribute('open', '');
+
+    scrollTo(300);
+    await nextFrame();
+    expect(window.scrollY).toBe(300);
+
+    dialog.removeAttribute('open');
+    dialog.dispatchEvent(new Event('close'));
+    await nextFrame();
+    expect(window.scrollY).toBe(120);
+    dialog.remove();
   });
 
   it('when the visitor leaves the landing page, then the stage is taken down', () => {

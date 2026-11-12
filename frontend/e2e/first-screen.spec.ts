@@ -252,6 +252,33 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     });
   });
 
+  test.describe('when it opens on a laptop of 1024 × 700 with text twice as large, where the hero no longer fits one screen', () => {
+    test.use({ viewport: { width: 1024, height: 700 } });
+
+    test('then the page scrolls as any page, and Přispět can be reached and stays in view', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight))
+        .toBe(true);
+
+      await page.mouse.move(512, 350);
+      await page.mouse.wheel(0, 400);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+      const scrolled = await page.evaluate(() => window.scrollY);
+      await waitWhileNothingMayHappen(page, 400);
+      expect(await page.evaluate(() => window.scrollY), 'the page sprang back').toBe(scrolled);
+
+      const donate = page.locator('#uvod').getByRole('link', { name: 'Přispět' });
+      await donate.focus();
+      await waitWhileNothingMayHappen(page, 400);
+      await expect(donate).toBeInViewport();
+    });
+  });
+
   test.describe('when a phone wider than a tablet lies on its side', () => {
     test.use({ viewport: { width: 956, height: 440 } });
 
