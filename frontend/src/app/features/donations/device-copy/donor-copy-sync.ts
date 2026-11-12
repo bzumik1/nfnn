@@ -186,6 +186,7 @@ export class DonorCopySync implements DonorCopy {
           await this.withImages(fetched, before?.images ?? []),
           opened,
           before,
+          await this.vault.sessionWrapOf(store),
         );
         return (await this.vault.replaceContents(store, contents)) ? 'stored' : 'no-copy';
       }
@@ -244,11 +245,12 @@ export class DonorCopySync implements DonorCopy {
     contents: CopyContents,
     opened: OpenedCopy,
     before: CopyContents | null,
+    wrap: string | null,
   ): CopyContents {
     const donor = this.auth.donor();
     const owns = donor !== null && userHandleOf(donor.id) === opened.account.userHandle;
     const profile = owns ? copyProfileOf(donor) : before?.profile;
-    const session = owns ? (this.acceptedSession() ?? before?.session) : before?.session;
+    const session = owns ? (this.acceptedSession(wrap) ?? before?.session) : before?.session;
     return {
       ...contents,
       ...(profile === undefined ? {} : { profile }),
@@ -256,12 +258,12 @@ export class DonorCopySync implements DonorCopy {
     };
   }
 
-  private acceptedSession(): CopySession | null {
+  private acceptedSession(wrap: string | null): CopySession | null {
     const kind = this.auth.session();
     const acceptedAt = this.auth.sessionAcceptedAt();
-    return kind === null || acceptedAt === null || this.auth.fromDevice()
+    return kind === null || acceptedAt === null || wrap === null || this.auth.fromDevice()
       ? null
-      : { kind, acceptedAt };
+      : { kind, acceptedAt, wrap };
   }
 
   private async withImages(

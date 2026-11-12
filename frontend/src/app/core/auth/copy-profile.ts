@@ -12,6 +12,7 @@ export type CopyProfile = Pick<
 export interface CopySession {
   readonly kind: SessionKind;
   readonly acceptedAt: string;
+  readonly wrap: string;
 }
 
 export function copyProfileOf(donor: Donor): CopyProfile {
@@ -50,9 +51,15 @@ export function isCopyProfile(value: unknown): value is CopyProfile {
 export function opensOffline(
   session: unknown,
   expected: SessionKind,
+  wrap: string,
   now: number,
 ): session is CopySession {
-  if (!isRecord(session) || session['kind'] !== expected || !remembers(expected)) {
+  if (
+    !isRecord(session) ||
+    session['kind'] !== expected ||
+    !remembers(expected) ||
+    session['wrap'] !== wrap
+  ) {
     return false;
   }
   const acceptedAt =

@@ -7,7 +7,7 @@ import {
 import { TestBed } from '@angular/core/testing';
 import { Connectivity, PROBE_PATH } from '../connectivity/connectivity';
 import { authInterceptor } from './auth-interceptor';
-import { AuthStore } from './auth-store';
+import { AuthStore, OFFLINE_OPEN_WAIT_MS } from './auth-store';
 import { copyProfileOf } from './copy-profile';
 import {
   type DeviceAccount,
@@ -24,7 +24,7 @@ const JANA_DONOR = sampleDonor({ roles: ['DONOR'] });
 const JANA = deviceAccountOf(JANA_DONOR);
 const REMEMBERED_COPY: OfflineAccount = {
   profile: copyProfileOf(JANA_DONOR),
-  session: { kind: 'REMEMBERED', acceptedAt: '2026-11-10T08:00:00.000Z' },
+  session: { kind: 'REMEMBERED', acceptedAt: '2026-11-10T08:00:00.000Z', wrap: 'wrap-1' },
 };
 
 class OfflineDevice implements SessionDevice {
@@ -222,6 +222,41 @@ describe('Given the auth store of a remembered session on a device that keeps a 
     expect(device.calls.some(([call]) => call === 'openedOffline')).toBe(false);
   });
 
+  it('when the app starts and the server answers the refresh with a problem of its own, then nothing opens from the copy', async () => {
+    const store = setUp();
+
+    const restored = store.restore();
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').flush(problem('server-busy'), {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'application/problem+json' },
+      }),
+    );
+    await restored;
+
+    expect(store.status()).toBe('anonymous');
+    expect(device.calls.some(([call]) => call === 'openedOffline')).toBe(false);
+  });
+
+  it('when the app starts offline and the device does not answer in time, then the visitor waits signed out', async () => {
+    const store = setUp();
+    device.openedOffline = () => new Promise(() => undefined);
+    const probe = goOffline();
+    vi.useFakeTimers();
+    try {
+      const restored = store.restore();
+      await vi.advanceTimersByTimeAsync(OFFLINE_OPEN_WAIT_MS);
+      await restored;
+
+      expect(store.status()).toBe('anonymous');
+      expect(store.fromDevice()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+    probe.error(new ProgressEvent('error'), { status: 0 });
+  });
+
   it('when the installed app starts offline, then it asks the device for the copy of an app session', async () => {
     const store = setUp(APP_JAR);
     device.opening = { ...REMEMBERED_COPY, session: { ...REMEMBERED_COPY.session, kind: 'APP' } };
@@ -254,5 +289,30 @@ describe('Given the auth store of a remembered session on a device that keeps a 
     const call = await vi.waitFor(() => http.expectOne('/api/donations/me'));
     expect(call.request.headers.get('Authorization')).toBe('Bearer token-2');
     call.flush({});
+  });
+
+  it('when the account shows from the copy and the refresh before a call fails without an answer, then the call still goes out without a token, so a kept public answer can serve it', async () => {
+    const store = setUp();
+    const restored = store.restore();
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').error(new ProgressEvent('error'), { status: 0 }),
+    );
+    await restored;
+    http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+    http
+      .match('/api/donors/auth/refresh')
+      .forEach((refresh) => refresh.error(new ProgressEvent('error'), { status: 0 }));
+
+    TestBed.inject(HttpClient)
+      .get('/api/content/home')
+      .subscribe({ error: () => undefined });
+    await vi.waitFor(() =>
+      http.expectOne('/api/donors/auth/refresh').error(new ProgressEvent('error'), { status: 0 }),
+    );
+
+    const call = await vi.waitFor(() => http.expectOne('/api/content/home'));
+    expect(call.request.headers.has('Authorization')).toBe(false);
+    call.flush({});
+    expect(store.fromDevice()).toBe(true);
   });
 });

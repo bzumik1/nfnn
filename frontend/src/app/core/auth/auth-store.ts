@@ -19,8 +19,9 @@ import {
   throwError,
   timeout,
   TimeoutError,
+  EmptyError,
 } from 'rxjs';
-import { Connectivity } from '../connectivity/connectivity';
+import { Connectivity, isUnreachable } from '../connectivity/connectivity';
 import { AuthApi } from './auth-api';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
@@ -64,6 +65,7 @@ export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
 export const SESSION_HINT_KEY = BROWSER_JAR.hintKey;
 export const CONNECTION_CHECK_AFTER_MS = 1_000;
+export const OFFLINE_OPEN_WAIT_MS = 3_000;
 
 export const EMAIL_CONFIRMATION_SESSION: BrowserSessionKind = 'BROWSER';
 
@@ -386,6 +388,10 @@ export class AuthStore {
     } else {
       this.restoring = null;
     }
+    if (!isUnanswered(failure) && !this.connectivity.offline()) {
+      this.waitSignedOut();
+      return undefined;
+    }
     return this.openFromDevice();
   }
 
@@ -396,7 +402,7 @@ export class AuthStore {
     }
     const seen = this.changes;
     const expected: SessionKind = this.jar.installed ? 'APP' : 'REMEMBERED';
-    const opening = await this.device.openedOffline(expected).catch(() => null);
+    const opening = await withinWait(this.device.openedOffline(expected));
     if (opening === null || this.changes !== seen) {
       this.waitSignedOut();
       return;
@@ -508,7 +514,23 @@ export class AuthStore {
   }
 }
 
-function isRefusal(failure: unknown): boolean {
+function isUnanswered(failure: unknown): boolean {
+  return isUnreachable(failure) || isSlow(failure) || failure instanceof EmptyError;
+}
+
+async function withinWait<T>(opening: Promise<T | null>): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>(
+    (resolve) => (timer = setTimeout(() => resolve(null), OFFLINE_OPEN_WAIT_MS)),
+  );
+  try {
+    return await Promise.race([opening.catch(() => null), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function isRefusal(failure: unknown): boolean {
   return (
     failure instanceof HttpErrorResponse &&
     failure.status >= 400 &&

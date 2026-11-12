@@ -22,7 +22,7 @@ function offlineAdministrator(): SessionDevice {
     ...NO_SESSION_DEVICE,
     openedOffline: async () => ({
       profile: copyProfileOf(administrator),
-      session: { kind: 'REMEMBERED', acceptedAt: new Date().toISOString() },
+      session: { kind: 'REMEMBERED', acceptedAt: new Date().toISOString(), wrap: 'wrap-1' },
     }),
   };
 }

@@ -67,12 +67,14 @@ function contentsOf(name: string): CopyContents {
   };
 }
 
-function remembered(
+async function remembered(
+  vault: DeviceVault,
   contents: CopyContents,
   profile: unknown = JANA_PROFILE,
-  session: unknown = { kind: 'REMEMBERED', acceptedAt: new Date(NOW - DAY_MS).toISOString() },
-): CopyContents {
-  return { ...contents, profile, session };
+  session: object = { kind: 'REMEMBERED', acceptedAt: new Date(NOW - DAY_MS).toISOString() },
+): Promise<CopyContents> {
+  const wrap = await vault.sessionWrapOf(vault.opened()!.store);
+  return { ...contents, profile, session: { ...session, wrap } };
 }
 
 function prfReading(fill = 7): PrfReading {
@@ -914,7 +916,10 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     beforeEach(async () => {
       await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
       copyId = vault.opened()!.store.copyId;
-      await vault.replaceContents(vault.opened()!.store, remembered(contentsOf(CANARY)));
+      await vault.replaceContents(
+        vault.opened()!.store,
+        await remembered(vault, contentsOf(CANARY)),
+      );
     });
 
     it('then a new tab opens her copy with the session key for viewing and hands back her profile and session', async () => {
@@ -943,7 +948,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     it('then a start exactly 14 days after the accepted session still opens it', async () => {
       await vault.replaceContents(
         vault.opened()!.store,
-        remembered(contentsOf(CANARY), JANA_PROFILE, {
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
           kind: 'REMEMBERED',
           acceptedAt: new Date(NOW - 14 * DAY_MS).toISOString(),
         }),
@@ -955,7 +960,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     it('then a start more than 14 days after the accepted session opens nothing', async () => {
       await vault.replaceContents(
         vault.opened()!.store,
-        remembered(contentsOf(CANARY), JANA_PROFILE, {
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
           kind: 'REMEMBERED',
           acceptedAt: new Date(NOW - 14 * DAY_MS - 1).toISOString(),
         }),
@@ -996,6 +1001,36 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect(await anotherTab().openedOffline('REMEMBERED', NOW)).toBeNull();
     });
 
+    it('and she signed out and signed in again without a sync since, then the remembered session of the earlier sign-in opens nothing', async () => {
+      await vault.signedOut(JANA);
+      await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+      const reloaded = anotherTab();
+
+      expect(await reloaded.openedOffline('REMEMBERED', NOW)).toBeNull();
+      expect(reloaded.opened()).toBeNull();
+    });
+
+    it('and a tab opened her copy without the server, then that tab cannot store contents into it', async () => {
+      const reloaded = anotherTab();
+      await reloaded.openedOffline('REMEMBERED', NOW);
+
+      expect(
+        await reloaded.replaceContents(reloaded.opened()!.store, contentsOf('Jiný plátce')),
+      ).toBe(false);
+      expect(await anotherTab().openedOffline('REMEMBERED', NOW)).not.toBeNull();
+    });
+
+    it('then the tab that opened the copy names the session wrap it opened it with, and another tab that signed in since names none', async () => {
+      const first = vault.opened()!.store;
+      const wrap = await vault.sessionWrapOf(first);
+      const other = anotherTab();
+      await other.signedIn(JANA, { kind: 'password', password: PASSWORD });
+
+      expect(wrap).not.toBeNull();
+      expect(await other.sessionWrapOf(other.opened()!.store)).not.toBe(wrap);
+      expect(await vault.sessionWrapOf(first)).toBeNull();
+    });
+
     it('and she had signed out, then nothing opens without the server', async () => {
       await vault.signedOut(JANA);
       const reloaded = anotherTab();
@@ -1007,7 +1042,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     it('and the copy keeps the profile of another account, then nothing opens without the server', async () => {
       await vault.replaceContents(
         vault.opened()!.store,
-        remembered(contentsOf(CANARY), PETR_PROFILE),
+        await remembered(vault, contentsOf(CANARY), PETR_PROFILE),
       );
       const reloaded = anotherTab();
 
@@ -1033,7 +1068,7 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
     it('as its session was a browser one, then nothing opens without the server', async () => {
       await vault.replaceContents(
         vault.opened()!.store,
-        remembered(contentsOf(CANARY), JANA_PROFILE, {
+        await remembered(vault, contentsOf(CANARY), JANA_PROFILE, {
           kind: 'BROWSER',
           acceptedAt: new Date(NOW - DAY_MS).toISOString(),
         }),

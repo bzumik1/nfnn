@@ -58,6 +58,11 @@ class FakeVault {
   readonly stored: CopyContents[] = [];
   readonly locked: string[] = [];
   accepts = true;
+  sessionWrap: string | null = 'wrap-1';
+
+  async sessionWrapOf(): Promise<string | null> {
+    return this.sessionWrap;
+  }
 
   async withCopyLock<T>(store: AccountStore, work: () => Promise<T>): Promise<T> {
     this.locked.push(store.copyId);
@@ -308,7 +313,26 @@ describe('Given the sync of the donor copy', () => {
     expect(vault.stored[0].session).toEqual({
       kind: 'REMEMBERED',
       acceptedAt: '2026-11-12T07:55:00.000Z',
+      wrap: 'wrap-1',
     });
+  });
+
+  it('when the session wrap this tab opened the copy with is no longer the one on the device, then the stored contents keep the session the copy had', async () => {
+    const kept = { kind: 'BROWSER', acceptedAt: '2026-11-12T07:50:00.000Z', wrap: 'wrap-2' };
+    await holding([gifts2025]);
+    store.persisted = { ...store.persisted!, session: kept };
+    store.contents.set(store.persisted);
+    signedIn.set(sampleDonor({ id: DONOR_ID, email: 'jana@example.cz' }));
+    session.set('REMEMBERED');
+    acceptedAt.set('2026-11-12T07:55:00.000Z');
+    vault.sessionWrap = null;
+    open('restored');
+
+    await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
+    await answerChunks(['donations:2026'], [gifts2025, gifts2026]);
+    await settled();
+
+    expect(vault.stored[0].session).toEqual(kept);
   });
 
   it('when another donor is signed in while the copy syncs, then the stored contents keep the session the copy had', async () => {

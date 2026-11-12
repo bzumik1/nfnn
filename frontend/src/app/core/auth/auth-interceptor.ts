@@ -9,7 +9,7 @@ import {
 import { inject } from '@angular/core';
 import { catchError, from, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { problemTypeEndsWith } from './api-problem';
-import { AuthStore } from './auth-store';
+import { AuthStore, isRefusal } from './auth-store';
 
 const EXPIRED_TOKEN = 'auth/expired-token';
 const SESSION_ENDED = 'auth/session-ended';
@@ -27,7 +27,13 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const store = inject(AuthStore);
   const token = store.currentAccessToken();
   if (token === null && store.fromDevice()) {
-    return store.refresh().pipe(switchMap((fresh) => send(withBearer(request, fresh), next)));
+    return store.refresh().pipe(
+      map((fresh) => withBearer(request, fresh)),
+      catchError((failure: unknown) =>
+        isRefusal(failure) ? throwError(() => failure) : of(request),
+      ),
+      switchMap((sent) => send(sent, next)),
+    );
   }
   if (token === null) {
     return send(request, next);
