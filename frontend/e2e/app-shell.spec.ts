@@ -53,7 +53,7 @@ async function openSheetSection(page: Page, name: string) {
   await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
   const sheet = page.getByRole('dialog');
   await sheet.getByRole('link', { name }).click();
-  await expect(sheet.getByRole('heading', { level: 2, name })).toBeVisible();
+  await expect(sheet.getByRole('heading', { level: 2, name, exact: true })).toBeVisible();
   return sheet;
 }
 
@@ -239,7 +239,9 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
   }) => {
     const sheet = await openSheetSection(page, 'Bankovní účty');
 
-    await expect(sheet.getByRole('heading', { level: 2, name: 'Bankovní účty' })).toBeFocused();
+    await expect(
+      sheet.getByRole('heading', { level: 2, name: 'Bankovní účty', exact: true }),
+    ).toBeFocused();
   });
 
   test('when they press the account button, then the title of the sheet holds the focus and no control shows a focus ring', async ({
