@@ -87,7 +87,10 @@ export class AdministrationVisit {
   constructor() {
     effect(() => {
       if (this.vault.administration() === null) {
-        untracked(() => this.forget());
+        untracked(() => {
+          this.forget();
+          this.state();
+        });
       }
     });
   }
