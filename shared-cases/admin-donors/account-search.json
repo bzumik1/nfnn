@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the account list of /sprava/darci, GET /api/admin/donors?query=&page=&limit= (limit 20 by default): every account, erased ones and administrators included, whose name or e-mail, with the Czech accented letters folded and lowercased, contains the trimmed query folded the same way, or whose variable symbol starts with it (a blank query finds every account), ordered by name and then e-mail, the page-th page of limit accounts, each the account row of the copy as it is, and hasMore when an account follows the page. Names and e-mails are ordered by their Unicode code points, as the database collation of the server's PostgreSQL image (en_US.utf8 on musl) compares them byte by byte, so lower-case and accented initials come after Z.",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the account list of /sprava/darci, GET /api/admin/donors?query=&page=&limit= (limit 20 by default): every account, erased ones and administrators included, whose name or e-mail, with the Czech accented letters folded and lowercased, contains the trimmed query folded the same way, or whose variable symbol starts with it (a blank query finds every account), ordered by name and then e-mail, the page-th page of limit accounts, each the account row of the copy as it is, and hasMore when an account follows the page. Names are ordered in Czech alphabetical order, as ICU's Czech collation compares them (the server's cs-x-icu, the browser's Intl.Collator('cs')), so Č follows C, Ch follows H and a lower-case initial stands among the upper-case ones; two names the collation finds equal are ordered by their Unicode code points, as PostgreSQL breaks the tie of a deterministic collation byte by byte, and e-mails by their code points, as the database's C.UTF-8 locale orders them.",
   "cases": [
     {
       "name": "Accounts found by name or e-mail without accents or by the start of the symbol, erased ones too, by name then e-mail, a page at a time",
@@ -777,7 +777,7 @@
       }
     },
     {
-      "name": "Names ordered by their characters' code points as the database collation orders them, lower-case and accented initials after Z, a page at a time",
+      "name": "Names in Czech alphabetical order, Č after C, Ch after H and a lower-case initial among the upper-case ones, a page at a time",
       "input": {
         "now": "2026-10-20T10:00:00Z",
         "donors": [
@@ -1435,6 +1435,22 @@
           {
             "items": [
               {
+                "donorId": "donor:o21",
+                "type": "PERSON",
+                "name": "Ábel Adam",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o21@example.cz",
+                "variableSymbol": "4100000021",
+                "preferredLocale": "cs",
+                "registeredAt": "2025-09-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
                 "donorId": "donor:o01",
                 "type": "PERSON",
                 "name": "Adam Ondra",
@@ -1467,15 +1483,31 @@
                 "erasedAt": null
               },
               {
-                "donorId": "donor:o03",
+                "donorId": "donor:o22",
                 "type": "PERSON",
-                "name": "Chalupa Petr",
+                "name": "Čapek Jan",
                 "companyIdentifier": null,
                 "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o03@example.cz",
-                "variableSymbol": "4100000003",
+                "email": "o22@example.cz",
+                "variableSymbol": "4100000022",
                 "preferredLocale": "cs",
-                "registeredAt": "2024-03-10T10:00:00Z",
+                "registeredAt": "2025-10-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:o20",
+                "type": "PERSON",
+                "name": "de Groot Anna",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o20@example.cz",
+                "variableSymbol": "4100000020",
+                "preferredLocale": "cs",
+                "registeredAt": "2025-08-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
@@ -1531,6 +1563,22 @@
                 "erasedAt": null
               },
               {
+                "donorId": "donor:o07",
+                "type": "PERSON",
+                "name": "Hájek Pavel",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o07@example.cz",
+                "variableSymbol": "4100000007",
+                "preferredLocale": "cs",
+                "registeredAt": "2024-07-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
                 "donorId": "donor:o08",
                 "type": "PERSON",
                 "name": "Horák Jan",
@@ -1547,15 +1595,15 @@
                 "erasedAt": null
               },
               {
-                "donorId": "donor:o07",
+                "donorId": "donor:o03",
                 "type": "PERSON",
-                "name": "Hájek Pavel",
+                "name": "Chalupa Petr",
                 "companyIdentifier": null,
                 "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o07@example.cz",
-                "variableSymbol": "4100000007",
+                "email": "o03@example.cz",
+                "variableSymbol": "4100000003",
                 "preferredLocale": "cs",
-                "registeredAt": "2024-07-10T10:00:00Z",
+                "registeredAt": "2024-03-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
@@ -1705,6 +1753,27 @@
                 "secondFactorEnabled": false,
                 "passkeys": 0,
                 "erasedAt": null
+              }
+            ],
+            "hasMore": true
+          },
+          {
+            "items": [
+              {
+                "donorId": "donor:o23",
+                "type": "PERSON",
+                "name": "Šimek Ota",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o23@example.cz",
+                "variableSymbol": "4100000023",
+                "preferredLocale": "cs",
+                "registeredAt": "2025-11-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
               },
               {
                 "donorId": "donor:o17",
@@ -1748,75 +1817,6 @@
                 "variableSymbol": "4100000019",
                 "preferredLocale": "cs",
                 "registeredAt": "2025-07-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              }
-            ],
-            "hasMore": true
-          },
-          {
-            "items": [
-              {
-                "donorId": "donor:o20",
-                "type": "PERSON",
-                "name": "de Groot Anna",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o20@example.cz",
-                "variableSymbol": "4100000020",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-08-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              },
-              {
-                "donorId": "donor:o21",
-                "type": "PERSON",
-                "name": "Ábel Adam",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o21@example.cz",
-                "variableSymbol": "4100000021",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-09-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              },
-              {
-                "donorId": "donor:o22",
-                "type": "PERSON",
-                "name": "Čapek Jan",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o22@example.cz",
-                "variableSymbol": "4100000022",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-10-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              },
-              {
-                "donorId": "donor:o23",
-                "type": "PERSON",
-                "name": "Šimek Ota",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o23@example.cz",
-                "variableSymbol": "4100000023",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-11-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
@@ -1845,6 +1845,22 @@
           {
             "items": [
               {
+                "donorId": "donor:o21",
+                "type": "PERSON",
+                "name": "Ábel Adam",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o21@example.cz",
+                "variableSymbol": "4100000021",
+                "preferredLocale": "cs",
+                "registeredAt": "2025-09-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
                 "donorId": "donor:o01",
                 "type": "PERSON",
                 "name": "Adam Ondra",
@@ -1877,15 +1893,31 @@
                 "erasedAt": null
               },
               {
-                "donorId": "donor:o03",
+                "donorId": "donor:o22",
                 "type": "PERSON",
-                "name": "Chalupa Petr",
+                "name": "Čapek Jan",
                 "companyIdentifier": null,
                 "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o03@example.cz",
-                "variableSymbol": "4100000003",
+                "email": "o22@example.cz",
+                "variableSymbol": "4100000022",
                 "preferredLocale": "cs",
-                "registeredAt": "2024-03-10T10:00:00Z",
+                "registeredAt": "2025-10-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:o20",
+                "type": "PERSON",
+                "name": "de Groot Anna",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o20@example.cz",
+                "variableSymbol": "4100000020",
+                "preferredLocale": "cs",
+                "registeredAt": "2025-08-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
@@ -1941,6 +1973,22 @@
                 "erasedAt": null
               },
               {
+                "donorId": "donor:o07",
+                "type": "PERSON",
+                "name": "Hájek Pavel",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "o07@example.cz",
+                "variableSymbol": "4100000007",
+                "preferredLocale": "cs",
+                "registeredAt": "2024-07-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
                 "donorId": "donor:o08",
                 "type": "PERSON",
                 "name": "Horák Jan",
@@ -1957,15 +2005,15 @@
                 "erasedAt": null
               },
               {
-                "donorId": "donor:o07",
+                "donorId": "donor:o03",
                 "type": "PERSON",
-                "name": "Hájek Pavel",
+                "name": "Chalupa Petr",
                 "companyIdentifier": null,
                 "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o07@example.cz",
-                "variableSymbol": "4100000007",
+                "email": "o03@example.cz",
+                "variableSymbol": "4100000003",
                 "preferredLocale": "cs",
-                "registeredAt": "2024-07-10T10:00:00Z",
+                "registeredAt": "2024-03-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
@@ -2115,54 +2163,6 @@
                 "secondFactorEnabled": false,
                 "passkeys": 0,
                 "erasedAt": null
-              },
-              {
-                "donorId": "donor:o17",
-                "type": "PERSON",
-                "name": "Tomášek Jan",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o17@example.cz",
-                "variableSymbol": "4100000017",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-05-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              },
-              {
-                "donorId": "donor:o18",
-                "type": "PERSON",
-                "name": "Veselá Anna",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o18@example.cz",
-                "variableSymbol": "4100000018",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-06-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
-              },
-              {
-                "donorId": "donor:o19",
-                "type": "PERSON",
-                "name": "Zelený Karel",
-                "companyIdentifier": null,
-                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
-                "email": "o19@example.cz",
-                "variableSymbol": "4100000019",
-                "preferredLocale": "cs",
-                "registeredAt": "2025-07-10T10:00:00Z",
-                "emailVerified": true,
-                "administrator": false,
-                "secondFactorEnabled": false,
-                "passkeys": 0,
-                "erasedAt": null
               }
             ],
             "hasMore": true
@@ -2171,7 +2171,7 @@
       }
     },
     {
-      "name": "A character beyond the Basic Multilingual Plane orders by its code point, after the full-width letters, as the database orders its bytes",
+      "name": "A character beyond the Basic Multilingual Plane and a full-width letter order as the letters they style, as the Czech collation orders them",
       "input": {
         "now": "2026-10-20T10:00:00Z",
         "donors": [
@@ -2257,6 +2257,22 @@
           {
             "items": [
               {
+                "donorId": "donor:a2",
+                "type": "PERSON",
+                "name": "𝐀dam Astra",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a2@example.cz",
+                "variableSymbol": "4200000002",
+                "preferredLocale": "cs",
+                "registeredAt": "2024-02-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
                 "donorId": "donor:a1",
                 "type": "PERSON",
                 "name": "Ｚdeněk Astra",
@@ -2271,17 +2287,125 @@
                 "secondFactorEnabled": false,
                 "passkeys": 0,
                 "erasedAt": null
-              },
+              }
+            ],
+            "hasMore": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "Two names the Czech collation finds equal, one written with a combining accent, ordered by their code points, as the database breaks the tie by bytes",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "a1",
+            "registeredAt": "2024-01-10T10:00:00Z",
+            "erasedAt": null,
+            "name": "Novák Tie",
+            "variableSymbol": "4300000001",
+            "account": { "email": "a1@example.cz", "emailVerified": true }
+          },
+          {
+            "alias": "a2",
+            "registeredAt": "2024-02-10T10:00:00Z",
+            "erasedAt": null,
+            "name": "Novák Tie",
+            "variableSymbol": "4300000002",
+            "account": { "email": "a2@example.cz", "emailVerified": true }
+          }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donors/accounts:2024-01": [
+            {
+              "donorId": "donor:a1",
+              "type": "PERSON",
+              "name": "Novák Tie",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "a1@example.cz",
+              "variableSymbol": "4300000001",
+              "preferredLocale": "cs",
+              "registeredAt": "2024-01-10T10:00:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2024-02": [
+            {
+              "donorId": "donor:a2",
+              "type": "PERSON",
+              "name": "Novák Tie",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "a2@example.cz",
+              "variableSymbol": "4300000002",
+              "preferredLocale": "cs",
+              "registeredAt": "2024-02-10T10:00:00Z",
+              "emailVerified": true,
+              "administrator": false,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ],
+          "donors/accounts:2026-10": [
+            {
+              "donorId": "administrator",
+              "type": "PERSON",
+              "name": "Správce případů",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "email": "spravce@example.cz",
+              "variableSymbol": "3999999999",
+              "preferredLocale": "cs",
+              "registeredAt": "2026-10-20T10:00:00Z",
+              "emailVerified": true,
+              "administrator": true,
+              "secondFactorEnabled": false,
+              "passkeys": 0,
+              "erasedAt": null
+            }
+          ]
+        },
+        "queries": [{ "query": "tie" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "items": [
               {
                 "donorId": "donor:a2",
                 "type": "PERSON",
-                "name": "𝐀dam Astra",
+                "name": "Novák Tie",
                 "companyIdentifier": null,
                 "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
                 "email": "a2@example.cz",
-                "variableSymbol": "4200000002",
+                "variableSymbol": "4300000002",
                 "preferredLocale": "cs",
                 "registeredAt": "2024-02-10T10:00:00Z",
+                "emailVerified": true,
+                "administrator": false,
+                "secondFactorEnabled": false,
+                "passkeys": 0,
+                "erasedAt": null
+              },
+              {
+                "donorId": "donor:a1",
+                "type": "PERSON",
+                "name": "Novák Tie",
+                "companyIdentifier": null,
+                "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+                "email": "a1@example.cz",
+                "variableSymbol": "4300000001",
+                "preferredLocale": "cs",
+                "registeredAt": "2024-01-10T10:00:00Z",
                 "emailVerified": true,
                 "administrator": false,
                 "secondFactorEnabled": false,
