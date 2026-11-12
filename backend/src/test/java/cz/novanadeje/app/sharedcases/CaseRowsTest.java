@@ -19,12 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CaseRowsTest {
 
-    private static final List<String> ROW_FIELDS = List.of("now", "donors", "payments", "donations");
+    private static final List<String> ROW_FIELDS = List.of("now", "donors", "payments", "donations", "links", "symbolClaims");
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
     @ValueSource(strings = {"shared-cases/admin-overview/year-overview.json", "shared-cases/donor-summary/summary.json",
-            "shared-cases/monthly-report/report.json", "shared-cases/sync/manifest.json"})
+            "shared-cases/monthly-report/report.json", "shared-cases/sync/manifest.json",
+            "shared-cases/admin-payments/list.json", "shared-cases/admin-donors/record-search.json", "shared-cases/admin-donors/account-search.json",
+            "shared-cases/admin-donors/donor-card.json"})
     @DisplayName("Given the recorded cases over database rows, when each case's rows are read from its input and written again, then they equal the input's rows")
     void should_equal_the_input_rows_when_each_case_is_read_from_its_input_and_written_again(String cases) throws IOException {
         JsonNode file = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(cases), StandardCharsets.UTF_8));
@@ -32,7 +34,7 @@ class CaseRowsTest {
 
         for (JsonNode entry : file.get("cases")) {
             ObjectNode rows = JSON.createObjectNode();
-            ROW_FIELDS.forEach(field -> rows.set(field, entry.get("input").get(field)));
+            ROW_FIELDS.stream().filter(field -> entry.get("input").has(field)).forEach(field -> rows.set(field, entry.get("input").get(field)));
 
             assertThat(CanonicalJson.write(CaseRows.fromJson(entry.get("input")).toJson())).as("%s: %s", cases, entry.get("name").asString())
                     .isEqualTo(CanonicalJson.write(rows));

@@ -21,6 +21,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -240,6 +241,14 @@ public class AdministrationDeviceStepDefinitions {
                 .containsExactlyElementsOf(list(years));
     }
 
+    @Then("the administration device's summary names the day {date} and the first receipt year the donor card reads")
+    public void theAdministrationDevicesSummaryNamesTheDayAndTheFirstReceiptYear(LocalDate today) {
+        JsonNode summary = device.manifest.get("summary");
+        assertThat(summary.get("today").asString()).isEqualTo(today.toString());
+        assertThat(api.get("/api/admin/donations/donors/" + device.manifest.get("subject").asString()).getStatusCode().value()).isEqualTo(200);
+        assertThat(summary.get("receiptsAvailableFrom").asInt()).isEqualTo(api.lastResponseJson().get("receiptsAvailableFrom").asInt());
+    }
+
     @Then("the administration device's summary of every year is the administration's overview of that year")
     public void theAdministrationDevicesSummaryOfEveryYearIsTheOverview() {
         List<JsonNode> years = device.manifest.get("summary").get("byYear").valueStream().toList();
@@ -364,6 +373,17 @@ public class AdministrationDeviceStepDefinitions {
         List<JsonNode> listed = api.lastResponseJson().get("items").valueStream().toList();
         assertThat(listed).isNotEmpty();
         assertThat(chunk(id).get("rows").valueStream().toList()).containsExactlyElementsOf(listed);
+    }
+
+    @Then("every receipt of the administration device's chunk {string} names the verification key its donor card names")
+    public void everyReceiptOfTheChunkNamesTheVerificationKeyItsDonorCardNames(String id) {
+        List<JsonNode> rows = chunk(id).get("rows").valueStream().toList();
+        assertThat(rows).isNotEmpty();
+        for (JsonNode row : rows) {
+            api.get("/api/admin/donations/donors/" + row.get("donorId").asString());
+            JsonNode card = api.lastResponseJson().get("receipts").valueStream().filter(receipt -> receipt.get("id").equals(row.get("id"))).findFirst().orElseThrow();
+            assertThat(row.get("keyId").asString()).isNotBlank().isEqualTo(card.get("keyId").asString());
+        }
     }
 
     @Then("the administration device's chunk {string} holds every older-symbol answer the administration lists")

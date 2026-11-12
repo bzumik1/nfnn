@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nfnn.cz/shared-cases/schemas/defs/admin-copy.schema.json",
+  "title": "The administration's device copy as the cases over it state it: the rows of its chunks keyed <part>/<chunk id>, the summary, and the answers the administration's pages compute from it",
+  "$defs": {
+    "chunks": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^donations/payments:\\d{4}-(0[1-9]|1[0-2])$": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "../sync/admin-manifest.schema.json#/$defs/paymentRow" }
+        },
+        "^donations/donations:\\d{4}-(0[1-9]|1[0-2])$": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/donationRow" } },
+        "^donations/donor-records:\\d{4}-(0[1-9]|1[0-2])$": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "../sync/admin-manifest.schema.json#/$defs/donorRecordRow" }
+        },
+        "^donations/links:\\d{4}-(0[1-9]|1[0-2])$": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/linkRow" } },
+        "^donations/symbol-claims$": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/symbolClaimRow" } },
+        "^donors/accounts:\\d{4}-(0[1-9]|1[0-2])$": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/accountRow" } }
+      }
+    },
+    "version": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "Opaque to the browser: sent back as If-Match, never recomputed" },
+    "donationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "donorId",
+        "paymentId",
+        "receivedAt",
+        "amountMinor",
+        "currency",
+        "status",
+        "source",
+        "purpose",
+        "pairedBy",
+        "bankAccountId",
+        "symbolClaimId",
+        "recordedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^donation:[1-9][0-9]*$" },
+        "donorId": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
+        "paymentId": { "oneOf": [{ "type": "string", "pattern": "^payment:[a-z][a-z0-9]*$" }, { "type": "null" }] },
+        "receivedAt": { "$ref": "../defs/rows.schema.json#/$defs/day" },
+        "amountMinor": { "$ref": "../defs/rows.schema.json#/$defs/amountMinor" },
+        "currency": { "const": "CZK" },
+        "status": { "enum": ["RECEIVED", "REFUNDED"] },
+        "source": { "enum": ["BANK_TRANSFER", "MANUAL"] },
+        "purpose": { "enum": ["GENERAL", "ACCOUNT_VERIFICATION"] },
+        "pairedBy": { "enum": ["VARIABLE_SYMBOL", "SENDER_ACCOUNT", "CONFIRMED_SYMBOL", "MANUAL", null] },
+        "bankAccountId": { "oneOf": [{ "type": "string", "pattern": "^link:[a-z][a-z0-9]*$" }, { "type": "null" }] },
+        "symbolClaimId": { "oneOf": [{ "type": "string", "pattern": "^claim:[a-z][a-z0-9]*$" }, { "type": "null" }] },
+        "recordedAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" }
+      }
+    },
+    "linkRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "donorId",
+        "accountNumber",
+        "status",
+        "learnedFromPaymentId",
+        "learnedAt",
+        "validFrom",
+        "validTo",
+        "createdAt",
+        "disconnectedAt",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^link:[a-z][a-z0-9]*$" },
+        "donorId": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
+        "accountNumber": { "$ref": "../defs/rows.schema.json#/$defs/account" },
+        "status": { "enum": ["ACTIVE", "AWAITING_PAYMENT", "DISCONNECTED"] },
+        "learnedFromPaymentId": { "oneOf": [{ "type": "string", "pattern": "^payment:[a-z][a-z0-9]*$" }, { "type": "null" }] },
+        "learnedAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+        "validFrom": { "$ref": "../defs/rows.schema.json#/$defs/day" },
+        "validTo": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/day" }, { "type": "null" }] },
+        "createdAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+        "disconnectedAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/instant" }, { "type": "null" }] },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "symbolClaimRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "donorId", "accountNumber", "variableSymbol", "answer", "answeredAt", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^claim:[a-z][a-z0-9]*$" },
+        "donorId": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
+        "accountNumber": { "$ref": "../defs/rows.schema.json#/$defs/account" },
+        "variableSymbol": { "$ref": "../defs/rows.schema.json#/$defs/variableSymbol" },
+        "answer": { "enum": ["CONFIRMED", "DECLINED"] },
+        "answeredAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "address": {
+      "type": "object",
+      "required": ["street", "city", "postalCode"],
+      "additionalProperties": false,
+      "properties": { "street": { "type": "string" }, "city": { "type": "string" }, "postalCode": { "type": "string" } }
+    },
+    "accountRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "donorId",
+        "type",
+        "name",
+        "companyIdentifier",
+        "address",
+        "email",
+        "variableSymbol",
+        "preferredLocale",
+        "registeredAt",
+        "emailVerified",
+        "administrator",
+        "secondFactorEnabled",
+        "passkeys",
+        "erasedAt"
+      ],
+      "properties": {
+        "donorId": { "oneOf": [{ "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" }, { "const": "administrator" }] },
+        "type": { "enum": ["PERSON", "COMPANY"] },
+        "name": { "type": "string", "minLength": 1 },
+        "companyIdentifier": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "address": { "$ref": "#/$defs/address" },
+        "email": { "type": "string", "minLength": 3 },
+        "variableSymbol": { "$ref": "../defs/rows.schema.json#/$defs/variableSymbol" },
+        "preferredLocale": { "enum": ["cs", "en"] },
+        "registeredAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+        "emailVerified": { "type": "boolean" },
+        "administrator": { "type": "boolean" },
+        "secondFactorEnabled": { "type": "boolean" },
+        "passkeys": { "$ref": "../defs/rows.schema.json#/$defs/count" },
+        "erasedAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/instant" }, { "type": "null" }] }
+      }
+    },
+    "paymentListItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "bankTransactionId",
+        "bookedOn",
+        "amountMinor",
+        "currency",
+        "variableSymbol",
+        "counterpartyAccount",
+        "counterpartyName",
+        "messageForRecipient",
+        "importedAt",
+        "unpairedByAdminAt",
+        "accountVerification",
+        "donation",
+        "version"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^payment:[a-z][a-z0-9]*$" },
+        "bankTransactionId": { "type": "integer" },
+        "bookedOn": { "$ref": "../defs/rows.schema.json#/$defs/day" },
+        "amountMinor": { "$ref": "../defs/rows.schema.json#/$defs/amountMinor" },
+        "currency": { "const": "CZK" },
+        "variableSymbol": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/variableSymbol" }, { "type": "null" }] },
+        "counterpartyAccount": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "counterpartyName": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "messageForRecipient": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "importedAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+        "unpairedByAdminAt": { "oneOf": [{ "$ref": "../defs/rows.schema.json#/$defs/instant" }, { "type": "null" }] },
+        "accountVerification": { "type": "boolean" },
+        "version": { "$ref": "#/$defs/version" },
+        "donation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "donorId", "donorName", "pairedBy", "status", "recordedAt", "receiptIssued"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^donation:[1-9][0-9]*$" },
+                "donorId": { "type": "string", "pattern": "^donor:[a-z][a-z0-9]*$" },
+                "donorName": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+                "pairedBy": { "enum": ["VARIABLE_SYMBOL", "SENDER_ACCOUNT", "CONFIRMED_SYMBOL", "MANUAL", null] },
+                "status": { "enum": ["RECEIVED", "REFUNDED"] },
+                "recordedAt": { "$ref": "../defs/rows.schema.json#/$defs/instant" },
+                "receiptIssued": { "type": "boolean" }
+              }
+            },
+            { "type": "null" }
+          ]
+        }
+      }
+    }
+  }
+}

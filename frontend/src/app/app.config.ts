@@ -36,6 +36,7 @@ import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { connectivityInterceptor } from './core/connectivity/connectivity-interceptor';
+import { administrationWritesInterceptor } from './core/admin-writes/administration-writes';
 import { keptAnswerRefreshInterceptor } from './core/connectivity/kept-answer-refresh';
 import { AppInstall } from './core/install/app-install';
 import { AlertNotificationClicks } from './core/push/alert-notification-clicks';
@@ -75,6 +76,7 @@ export const appHttpClient: EnvironmentProviders = provideHttpClient(
     keptAnswerRefreshInterceptor,
     serviceWorkerBypassInterceptor,
     connectivityInterceptor,
+    administrationWritesInterceptor,
   ]),
 );
 

@@ -1,0 +1,562 @@
+{
+  "source": "edited",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor card of /sprava/darci/<id>, GET /api/admin/donations/donors/{id} in Czech, without its bankAccounts, which stay on the server (whether pairing excludes an account is the server's setting): the donor record as the copy has it; the donor's gifts, newest received first (then the later recordedAt, then the higher id), each with its receipt number (that of the active single receipt of a received gift) or null, the Czech purpose text, the sender account of its bank account link and the confirmed symbol of its symbol claim, whether it is an account verification and whether a receipt is available (received, not an account verification, received in summary.receiptsAvailableFrom or later); the total and count of the received gifts, account verifications included; the donor's receipts, newest issued first, with the day of the gift a single receipt names; yearlyReceiptsAvailableThrough the year before summary.today and receiptsAvailableFrom as the summary names it. Receipts come from the issuer, so these cases hold none; the browser's tests cover them.",
+  "cases": [
+    {
+      "name": "Donor cards of a person with every kind of gift, a company, an erased donor and a donor without gifts",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          { "alias": "jana", "registeredAt": "2025-11-15T10:00:00Z", "erasedAt": null, "name": "Jana Nováková", "variableSymbol": "7700001001" },
+          {
+            "alias": "firma",
+            "registeredAt": "2026-03-10T09:30:00Z",
+            "erasedAt": null,
+            "name": "Pekárna U Nováků s.r.o.",
+            "type": "COMPANY",
+            "companyIdentifier": "25596641",
+            "variableSymbol": "7700001003"
+          },
+          { "alias": "smazany", "registeredAt": "2026-04-01T10:00:00Z", "erasedAt": "2026-09-01T10:00:00Z", "variableSymbol": "7700001004" },
+          { "alias": "novy", "registeredAt": "2026-10-19T10:00:00Z", "erasedAt": null, "name": "Ondřej Nový", "variableSymbol": "7700001007" }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2025-12-20",
+            "amountMinor": 100,
+            "unpairedByAdminAt": null,
+            "counterpartyAccount": "1234567/0800",
+            "counterpartyName": "NOVAKOVA JANA",
+            "messageForRecipient": "OVERENI UCTU"
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-01-05",
+            "amountMinor": 50000,
+            "unpairedByAdminAt": null,
+            "counterpartyAccount": "1234567/0800",
+            "counterpartyName": "NOVAKOVA JANA"
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2026-02-10",
+            "amountMinor": 25000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "123",
+            "counterpartyAccount": "1234567/0800",
+            "counterpartyName": "NOVAKOVA JANA"
+          },
+          {
+            "alias": "p4",
+            "bookedOn": "2026-03-15",
+            "amountMinor": 12000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "7700001001",
+            "counterpartyAccount": "2000145399/0800",
+            "counterpartyName": "NOVAKOVA JANA"
+          },
+          {
+            "alias": "p5",
+            "bookedOn": "2026-04-02",
+            "amountMinor": 80000,
+            "unpairedByAdminAt": null,
+            "counterpartyAccount": "2900244444/0800",
+            "counterpartyName": "PEKARNA U NOVAKU"
+          },
+          { "alias": "p6", "bookedOn": "2026-05-01", "amountMinor": 3000, "unpairedByAdminAt": null, "variableSymbol": "7700001004" }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2025-12-20",
+            "amountMinor": 100,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "ACCOUNT_VERIFICATION",
+            "pairedBy": "VARIABLE_SYMBOL"
+          },
+          {
+            "donor": "jana",
+            "payment": "p2",
+            "receivedOn": "2026-01-05",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "SENDER_ACCOUNT",
+            "bankAccount": "ucet"
+          },
+          {
+            "donor": "jana",
+            "payment": "p3",
+            "receivedOn": "2026-02-10",
+            "amountMinor": 25000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "CONFIRMED_SYMBOL",
+            "bankAccount": "ucet",
+            "symbolClaim": "starsi"
+          },
+          {
+            "donor": "jana",
+            "payment": "p4",
+            "receivedOn": "2026-03-15",
+            "amountMinor": 12000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2025-06-01",
+            "amountMinor": 40000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "firma",
+            "payment": "p5",
+            "receivedOn": "2026-04-02",
+            "amountMinor": 80000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "MANUAL"
+          },
+          {
+            "donor": "smazany",
+            "payment": "p6",
+            "receivedOn": "2026-05-01",
+            "amountMinor": 3000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "links": [
+          {
+            "alias": "ucet",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "status": "ACTIVE",
+            "learnedFrom": "p1",
+            "learnedAt": "2025-12-20T12:00:00Z",
+            "validFrom": "2025-12-20",
+            "validTo": null
+          }
+        ],
+        "symbolClaims": [
+          {
+            "alias": "starsi",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "variableSymbol": "123",
+            "answer": "CONFIRMED",
+            "answeredAt": "2026-02-11T09:00:00Z"
+          }
+        ],
+        "chunks": {
+          "donations/donations:2025-06": [
+            {
+              "id": "donation:5",
+              "donorId": "donor:jana",
+              "paymentId": null,
+              "receivedAt": "2025-06-01",
+              "amountMinor": 40000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "MANUAL",
+              "purpose": "GENERAL",
+              "pairedBy": null,
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-06-01T12:00:00Z"
+            }
+          ],
+          "donations/donations:2025-12": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p1",
+              "receivedAt": "2025-12-20",
+              "amountMinor": 100,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "ACCOUNT_VERIFICATION",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-12-20T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-01": [
+            {
+              "id": "donation:2",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-01-05",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "SENDER_ACCOUNT",
+              "bankAccountId": "link:ucet",
+              "symbolClaimId": null,
+              "recordedAt": "2026-01-05T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-02": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-02-10",
+              "amountMinor": 25000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "CONFIRMED_SYMBOL",
+              "bankAccountId": "link:ucet",
+              "symbolClaimId": "claim:starsi",
+              "recordedAt": "2026-02-10T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-03": [
+            {
+              "id": "donation:4",
+              "donorId": "donor:jana",
+              "paymentId": "payment:p4",
+              "receivedAt": "2026-03-15",
+              "amountMinor": 12000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-15T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-04": [
+            {
+              "id": "donation:6",
+              "donorId": "donor:firma",
+              "paymentId": "payment:p5",
+              "receivedAt": "2026-04-02",
+              "amountMinor": 80000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "MANUAL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-04-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-05": [
+            {
+              "id": "donation:7",
+              "donorId": "donor:smazany",
+              "paymentId": "payment:p6",
+              "receivedAt": "2026-05-01",
+              "amountMinor": 3000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-05-01T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2025-11": [
+            {
+              "donorId": "donor:jana",
+              "name": "Jana Nováková",
+              "type": "PERSON",
+              "variableSymbol": "7700001001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-11-15T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-03": [
+            {
+              "donorId": "donor:firma",
+              "name": "Pekárna U Nováků s.r.o.",
+              "type": "COMPANY",
+              "variableSymbol": "7700001003",
+              "companyIdentifier": "25596641",
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-10T09:30:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-04": [
+            {
+              "donorId": "donor:smazany",
+              "name": "Vymazaný dárce",
+              "type": "PERSON",
+              "variableSymbol": "7700001004",
+              "companyIdentifier": null,
+              "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-01T10:00:00Z",
+              "erasedAt": "2026-09-01T10:00:00Z"
+            }
+          ],
+          "donations/donor-records:2026-10": [
+            {
+              "donorId": "donor:novy",
+              "name": "Ondřej Nový",
+              "type": "PERSON",
+              "variableSymbol": "7700001007",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-10-19T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/links:2025-11": [
+            {
+              "id": "link:ucet",
+              "donorId": "donor:jana",
+              "accountNumber": "1234567/0800",
+              "status": "ACTIVE",
+              "learnedFromPaymentId": "payment:p1",
+              "learnedAt": "2025-12-20T12:00:00Z",
+              "validFrom": "2025-12-20",
+              "validTo": null,
+              "createdAt": "2025-12-20T12:00:00Z",
+              "disconnectedAt": null,
+              "version": "811eb3744370c9c5"
+            }
+          ],
+          "donations/symbol-claims": [
+            {
+              "id": "claim:starsi",
+              "donorId": "donor:jana",
+              "accountNumber": "1234567/0800",
+              "variableSymbol": "123",
+              "answer": "CONFIRMED",
+              "answeredAt": "2026-02-11T09:00:00Z",
+              "version": "ba897811cd84db6d"
+            }
+          ]
+        },
+        "summary": { "today": "2026-10-20", "receiptsAvailableFrom": 2026 },
+        "queries": [{ "donor": "jana" }, { "donor": "firma" }, { "donor": "smazany" }, { "donor": "novy" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "donor": {
+              "donorId": "donor:jana",
+              "name": "Jana Nováková",
+              "type": "PERSON",
+              "variableSymbol": "7700001001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-11-15T10:00:00Z",
+              "erasedAt": null
+            },
+            "donations": {
+              "items": [
+                {
+                  "id": "donation:4",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-03-15",
+                  "amountMinor": 12000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "REFUNDED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": false
+                },
+                {
+                  "id": "donation:3",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-02-10",
+                  "amountMinor": 25000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "CONFIRMED_SYMBOL",
+                  "senderAccount": "1234567/0800",
+                  "confirmedSymbol": "123",
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                },
+                {
+                  "id": "donation:2",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-01-05",
+                  "amountMinor": 50000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "SENDER_ACCOUNT",
+                  "senderAccount": "1234567/0800",
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                },
+                {
+                  "id": "donation:1",
+                  "receiptNumber": null,
+                  "receivedAt": "2025-12-20",
+                  "amountMinor": 100,
+                  "currency": "CZK",
+                  "purpose": "Ověření účtu",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": true,
+                  "receiptAvailable": false
+                },
+                {
+                  "id": "donation:5",
+                  "receiptNumber": null,
+                  "receivedAt": "2025-06-01",
+                  "amountMinor": 40000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "MANUAL",
+                  "pairedBy": null,
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": false
+                }
+              ],
+              "totalAmountMinor": 115100,
+              "currency": "CZK",
+              "count": 4
+            },
+            "receipts": [],
+            "yearlyReceiptsAvailableThrough": 2025,
+            "receiptsAvailableFrom": 2026
+          },
+          {
+            "donor": {
+              "donorId": "donor:firma",
+              "name": "Pekárna U Nováků s.r.o.",
+              "type": "COMPANY",
+              "variableSymbol": "7700001003",
+              "companyIdentifier": "25596641",
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-03-10T09:30:00Z",
+              "erasedAt": null
+            },
+            "donations": {
+              "items": [
+                {
+                  "id": "donation:6",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-04-02",
+                  "amountMinor": 80000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "MANUAL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                }
+              ],
+              "totalAmountMinor": 80000,
+              "currency": "CZK",
+              "count": 1
+            },
+            "receipts": [],
+            "yearlyReceiptsAvailableThrough": 2025,
+            "receiptsAvailableFrom": 2026
+          },
+          {
+            "donor": {
+              "donorId": "donor:smazany",
+              "name": "Vymazaný dárce",
+              "type": "PERSON",
+              "variableSymbol": "7700001004",
+              "companyIdentifier": null,
+              "address": { "street": "Vymazáno", "city": "Vymazáno", "postalCode": "00000" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-04-01T10:00:00Z",
+              "erasedAt": "2026-09-01T10:00:00Z"
+            },
+            "donations": {
+              "items": [
+                {
+                  "id": "donation:7",
+                  "receiptNumber": null,
+                  "receivedAt": "2026-05-01",
+                  "amountMinor": 3000,
+                  "currency": "CZK",
+                  "purpose": "Obecný příspěvek",
+                  "status": "RECEIVED",
+                  "source": "BANK_TRANSFER",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "senderAccount": null,
+                  "confirmedSymbol": null,
+                  "accountVerification": false,
+                  "receiptAvailable": true
+                }
+              ],
+              "totalAmountMinor": 3000,
+              "currency": "CZK",
+              "count": 1
+            },
+            "receipts": [],
+            "yearlyReceiptsAvailableThrough": 2025,
+            "receiptsAvailableFrom": 2026
+          },
+          {
+            "donor": {
+              "donorId": "donor:novy",
+              "name": "Ondřej Nový",
+              "type": "PERSON",
+              "variableSymbol": "7700001007",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-10-19T10:00:00Z",
+              "erasedAt": null
+            },
+            "donations": { "items": [], "totalAmountMinor": 0, "currency": "CZK", "count": 0 },
+            "receipts": [],
+            "yearlyReceiptsAvailableThrough": 2025,
+            "receiptsAvailableFrom": 2026
+          }
+        ]
+      }
+    }
+  ]
+}

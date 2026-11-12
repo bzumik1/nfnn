@@ -5,13 +5,16 @@ import cz.novanadeje.app.donations.domain.report.YearOverview;
 import cz.novanadeje.app.donations.interfaces.rest.AdminOverviewResponse.Month;
 import cz.novanadeje.app.donations.interfaces.rest.AdminOverviewResponse.TallyResponse;
 
+import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
+
 import java.time.LocalDate;
 import java.util.List;
 
-record AdminDonationsSyncSummaryResponse(LocalDate today, List<YearResponse> byYear) {
+record AdminDonationsSyncSummaryResponse(LocalDate today, int receiptsAvailableFrom, List<YearResponse> byYear) {
 
-    static AdminDonationsSyncSummaryResponse from(AdminDonationsSyncSnapshot snapshot) {
-        return new AdminDonationsSyncSummaryResponse(snapshot.today(), snapshot.years().stream().map(YearResponse::from).toList());
+    static AdminDonationsSyncSummaryResponse from(AdminDonationsSyncSnapshot snapshot, FirstReceiptYear firstReceiptYear) {
+        return new AdminDonationsSyncSummaryResponse(snapshot.today(), firstReceiptYear.year().getValue(),
+                snapshot.years().stream().map(YearResponse::from).toList());
     }
 
     record YearResponse(int year, long donorsRegistered, long newDonors, long givingDonors, TallyResponse received, TallyResponse paired,
