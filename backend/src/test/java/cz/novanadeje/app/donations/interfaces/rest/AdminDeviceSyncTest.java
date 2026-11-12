@@ -193,7 +193,6 @@ class AdminDeviceSyncTest {
             readRowsPlainly();
             plainReads[run] = Duration.ofNanos(System.nanoTime() - plain).toMillis();
         }
-        System.out.println("Manifest timing (ms): manifests " + Arrays.toString(manifests) + ", plain reads " + Arrays.toString(plainReads));
         Arrays.sort(manifests);
         Arrays.sort(plainReads);
         long manifest = manifests[TIMED_RUNS / 4];
