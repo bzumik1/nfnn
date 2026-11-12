@@ -212,7 +212,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         verify(donors).save(saved.capture());
         assertThat(saved.getValue().roles()).containsExactly(Role.DONOR);
-        verify(signOuts).endAllOf(PETR, DeviceSignOutReason.ADMINISTRATION_CHANGED, NOW);
+        verify(signOuts).endForRoleRemoval(PETR, NOW);
         verify(donors).forgetSignIns(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, times(2)).publishEvent(published.capture());

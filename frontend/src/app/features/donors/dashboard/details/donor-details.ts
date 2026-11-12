@@ -26,5 +26,7 @@ import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/
 })
 export class DonorDetails {
   protected readonly donations = inject(DonorDonations);
-  protected readonly isAdmin = inject(AuthStore).isAdmin;
+  private readonly auth = inject(AuthStore);
+  protected readonly isAdmin = this.auth.isAdmin;
+  protected readonly fromDevice = this.auth.fromDevice;
 }

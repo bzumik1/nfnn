@@ -26,6 +26,11 @@ export interface RecordAddress {
   readonly schemaVersion: number;
 }
 
+export interface DraftAddress {
+  readonly recordId: string;
+  readonly schemaVersion: number;
+}
+
 export interface SealedRecord {
   readonly iv: string;
   readonly sealed: string;
@@ -105,6 +110,22 @@ export class OpenCopy implements CopyIdentity {
     const dataKey = this.openDataKey();
     try {
       return await unseal(dataKey, recordAad(this.copyId, address), record);
+    } catch {
+      throw new CopyRefused('damaged');
+    }
+  }
+
+  async sealDraft(
+    address: DraftAddress,
+    plaintext: Uint8Array<ArrayBuffer>,
+  ): Promise<SealedRecord> {
+    return seal(this.openDataKey(), draftAad(this.copyId, address), plaintext);
+  }
+
+  async openDraft(address: DraftAddress, draft: SealedRecord): Promise<Uint8Array<ArrayBuffer>> {
+    const dataKey = this.openDataKey();
+    try {
+      return await unseal(dataKey, draftAad(this.copyId, address), draft);
     } catch {
       throw new CopyRefused('damaged');
     }
@@ -320,6 +341,10 @@ function recordAad(copyId: string, address: RecordAddress): Uint8Array<ArrayBuff
     address.recordId,
     String(address.schemaVersion),
   );
+}
+
+function draftAad(copyId: string, address: DraftAddress): Uint8Array<ArrayBuffer> {
+  return framed('nfnn-draft-v1', copyId, address.recordId, String(address.schemaVersion));
 }
 
 function passwordWrapAad(

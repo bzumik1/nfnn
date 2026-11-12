@@ -161,6 +161,7 @@ export interface AuthResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
   session?: SessionKind;
+  deviceSecret?: string;
 }
 
 export interface PasskeyCredentialDescriptor {

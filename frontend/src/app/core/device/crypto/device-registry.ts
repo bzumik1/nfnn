@@ -8,6 +8,7 @@ export interface RegistryEntry extends CopyIdentity {
   readonly lookupTag: string;
   readonly userHandleTag: string | null;
   readonly wraps: readonly KeyWrap[];
+  readonly deviceSecret?: string;
 }
 
 export interface RegistryEntryInput {

@@ -15,6 +15,7 @@ export class ChangedMeanwhileDialog {
   readonly subject = input.required<ChangedSubject>();
   readonly keepsDraft = input(false);
   readonly canOverwrite = input(true);
+  readonly fromDraft = input(false);
   readonly savedAt = input<string | null>(null);
   readonly busy = input(false);
   readonly reloadChosen = output<void>();
@@ -33,4 +34,5 @@ export interface ChangedMeanwhileState {
   readonly overwrite: boolean;
   readonly publish: boolean;
   readonly savedAt: string | null;
+  readonly fromDraft?: boolean;
 }

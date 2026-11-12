@@ -132,11 +132,17 @@ describe('Given the privacy policy page', () => {
 
   it('when it renders, then the cookies section gives the encrypted copy of the donor data a paragraph of its own: what it holds, when sign-out keeps it, how to delete it and that the server is unaffected', () => {
     expect(texts('#cookies .device-copy')).toEqual([
-      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte.',
+      'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte. Když zařízení odhlásíte na dálku z jiného zařízení nebo vaše údaje vymažeme, zařízení kopii zpravidla smaže, jakmile se na něm web příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
     ]);
     expect(sectionText('Cookies')).toContain(
       'a po přihlášení zašifrovanou kopii vašich údajů, viz níže.',
     );
+  });
+
+  it('when it renders, then the cookies section says that unsaved edits go only into the encrypted copies and when they go', () => {
+    expect(texts('#cookies .drafts')).toEqual([
+      'Do těchto šifrovaných kopií si portál a správa ukládají i rozepsané, ještě neuložené úpravy (vaše údaje na potvrzení, u správců texty a nastavení webu), aby se neztratily zavřením stránky. Zmizí uložením, zahozením nebo spolu s kopií. Kontaktní formulář nic neukládá a na cizím počítači se neukládá nic.',
+    ]);
   });
 
   it('when it renders, then the cookies section says that administrators keep an encrypted copy of the administration on their devices, how it locks, and when it goes', () => {
@@ -149,6 +155,9 @@ describe('Given the privacy policy page', () => {
     expect(paragraph).toContain('zamkne při každém spuštění aplikace a po pěti minutách mimo ni');
     expect(paragraph).toContain(
       'heslem jde odemknout jen tehdy, když server ověří i kód z ověřovací aplikace',
+    );
+    expect(paragraph).toContain(
+      'zařízení ji zpravidla smaže, jakmile se příště spojí se serverem, a stejně tak zařízení, které správce odhlásí na dálku',
     );
     expect(paragraph).toContain(
       'Když správci roli odebereme, aplikace mu kopii správy už neotevře ani do ní nic nestáhne',

@@ -15,7 +15,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { TrackedForm } from '../../../core/updates/tracked-form';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { describeProblem, problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -31,6 +31,14 @@ import { ReceiptSigningKey } from './receipt-signing-key/receipt-signing-key';
 import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { formatBankTime } from '../../donations/donation-date';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
 
@@ -182,6 +190,8 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
   FIO_HISTORY_FROM: 'date',
 };
 
+const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše úpravy jsme zahodili a načetli uložené nastavení.`;
+
 @Component({
   selector: 'app-admin-settings',
   imports: [
@@ -195,6 +205,8 @@ const INPUTS: Partial<Readonly<Record<SettingName, Input>>> = {
     ReceiptSigningKey,
     TrackedForm,
     NeedsConnection,
+    DraftOffer,
+    ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-settings.html',
   styleUrl: './admin-settings.scss',
@@ -212,6 +224,7 @@ export class AdminSettings {
   private readonly title = viewChild<ElementRef<HTMLHeadingElement>>('title');
   private readonly saveButton = viewChild<ElementRef<HTMLButtonElement>>('saveButton');
   private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
+  private readonly settingsForm = viewChild(NgForm);
 
   protected readonly state = signal<LoadState>('loading');
   protected readonly fields = signal<Field[]>([]);
@@ -224,6 +237,7 @@ export class AdminSettings {
   protected readonly secretsCanBeStored = signal(true);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly saveError = signal('');
+  private reloadingAfterStaleDraft = false;
   protected readonly fieldErrors = signal<string[]>([]);
   protected readonly confirmation = signal<Confirmation | null>(null);
   protected readonly saveStatus = signal<string | null>(null);
@@ -231,6 +245,26 @@ export class AdminSettings {
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
   private verifiedMail: string | null = null;
+  protected readonly staleDraft = signal(false);
+  protected readonly draft = formDraft<Readonly<Record<string, string>>>({
+    copy: 'administration',
+    key: () => 'settings',
+    values: () =>
+      Object.fromEntries(
+        this.fields()
+          .filter((field) => field.input !== 'secret')
+          .map((field) => [field.name, field.value]),
+      ),
+    apply: (values) =>
+      this.fields.update((fields) =>
+        fields.map((field) =>
+          field.input !== 'secret' && typeof values[field.name] === 'string'
+            ? { ...field, value: values[field.name]! }
+            : field,
+        ),
+      ),
+    changedFieldsOnly: true,
+  });
   protected readonly unreadableSecrets = computed(() =>
     this.fields()
       .filter((field) => field.unreadable)
@@ -257,7 +291,14 @@ export class AdminSettings {
             this.technicalOpen.set(true);
           }
           this.state.set('ready');
-          this.focusFragment();
+          this.draft.ready();
+          if (this.reloadingAfterStaleDraft) {
+            this.reloadingAfterStaleDraft = false;
+            this.notice.set({ kind: 'status', text: SETTINGS_RELOADED_TEXT });
+            this.focusTitle();
+          } else {
+            this.focusFragment();
+          }
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -295,6 +336,43 @@ export class AdminSettings {
 
   protected setFlag(field: Field, on: boolean): void {
     field.value = String(on);
+    this.draft.changed();
+  }
+
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeDraft(): void {
+    this.draft.resume();
+    this.notice.set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    afterNextRender(() => this.settingsForm()?.form.markAsDirty(), { injector: this.injector });
+    this.focusTitle();
+  }
+
+  protected discardDraft(): void {
+    this.draft.discard();
+    this.notice.set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    this.focusTitle();
+  }
+
+  protected overwriteStaleDraft(): void {
+    this.staleDraft.set(false);
+    this.draft.overwriteConfirmed();
+    this.askSave();
+  }
+
+  protected reloadAfterStaleDraft(): void {
+    this.staleDraft.set(false);
+    this.draft.discard();
+    this.notice.set(null);
+    this.reloadingAfterStaleDraft = true;
+    this.load();
+  }
+
+  protected keepStaleDraft(): void {
+    this.staleDraft.set(false);
+    this.focusSaveButton();
   }
 
   protected anchor(section: Section): string {
@@ -313,6 +391,10 @@ export class AdminSettings {
     const changes = this.changes();
     if (changes.length === 0) {
       this.saveStatus.set(NOTHING_CHANGED);
+      return;
+    }
+    if (this.draft.resumedStale()) {
+      this.staleDraft.set(true);
       return;
     }
     this.confirmation.set(this.confirmationOf(changes));
@@ -336,6 +418,7 @@ export class AdminSettings {
         next: (saved) => {
           this.saving.set(false);
           this.confirmation.set(null);
+          this.draft.saved();
           if (!saved.restarting) {
             this.saveStatus.set(NOTHING_CHANGED);
             this.focusSaveButton();
@@ -448,6 +531,10 @@ export class AdminSettings {
       warnings: removed.map((field) => this.removalEffect(field)).filter((text) => text !== ''),
       mailUnverified: mailChanged && this.verifiedMail !== JSON.stringify(this.testEmailRequest()),
     };
+  }
+
+  private focusTitle(): void {
+    afterNextRender(() => this.title()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private focusSaveButton(): void {

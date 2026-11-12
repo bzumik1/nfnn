@@ -13,9 +13,11 @@ public final class DonorDevice {
     private Instant lastUsedAt;
     private Instant endedAt;
     private DeviceSignOutReason endReason;
+    private final String statusSecretHash;
+    private final DeviceWipe wipe;
 
     private DonorDevice(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt, Instant lastUsedAt,
-                        Instant endedAt, DeviceSignOutReason endReason) {
+                        Instant endedAt, DeviceSignOutReason endReason, String statusSecretHash, DeviceWipe wipe) {
         if (id == null || donorId == null || description == null || kind == null || signedInAt == null || lastUsedAt == null) {
             throw new IllegalArgumentException("A device needs its id, donor, description, session kind and times");
         }
@@ -30,15 +32,29 @@ public final class DonorDevice {
         this.lastUsedAt = lastUsedAt;
         this.endedAt = endedAt;
         this.endReason = endReason;
+        this.statusSecretHash = statusSecretHash;
+        this.wipe = wipe;
     }
 
     public static DonorDevice signIn(DonorId donorId, DeviceDescription description, SessionKind kind, Instant at) {
-        return new DonorDevice(DeviceId.newId(at), donorId, description, kind, at, at, null, null);
+        return new DonorDevice(DeviceId.newId(at), donorId, description, kind, at, at, null, null, null, null);
+    }
+
+    public static DonorDevice signIn(DonorId donorId, DeviceDescription description, SessionKind kind, Instant at, DeviceStatusSecret statusSecret) {
+        return new DonorDevice(DeviceId.newId(at), donorId, description, kind, at, at, null, null, statusSecret.hash(), null);
     }
 
     public static DonorDevice reconstitute(DeviceId id, DonorId donorId, DeviceDescription description, SessionKind kind, Instant signedInAt,
-                                           Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason) {
-        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason);
+                                           Instant lastUsedAt, Instant endedAt, DeviceSignOutReason endReason, String statusSecretHash,
+                                           DeviceWipe wipe) {
+        return new DonorDevice(id, donorId, description, kind, signedInAt, lastUsedAt, endedAt, endReason, statusSecretHash, wipe);
+    }
+
+    public DeviceStatus status() {
+        if (wipe != null) {
+            return wipe == DeviceWipe.ALL ? DeviceStatus.WIPE_ALL : DeviceStatus.WIPE_ADMINISTRATION;
+        }
+        return isActive() ? DeviceStatus.SIGNED_IN : DeviceStatus.SIGNED_OUT;
     }
 
     public boolean isActive() {
@@ -97,5 +113,13 @@ public final class DonorDevice {
 
     public Optional<DeviceSignOutReason> endReason() {
         return Optional.ofNullable(endReason);
+    }
+
+    public Optional<String> statusSecretHash() {
+        return Optional.ofNullable(statusSecretHash);
+    }
+
+    public Optional<DeviceWipe> wipe() {
+        return Optional.ofNullable(wipe);
     }
 }

@@ -1,6 +1,12 @@
 import { EnvironmentInjector, inject, Injectable } from '@angular/core';
 import type { PrfReading } from './core/device/crypto/prf';
-import type { DeviceAccount, SessionDevice, SignInSecret } from './core/auth/session-device';
+import type {
+  DeviceAccount,
+  OfflineAccount,
+  SessionDevice,
+  SignInSecret,
+} from './core/auth/session-device';
+import type { SessionKind } from './core/auth/session-jar';
 import type { DeviceVault } from './core/device/store/device-vault';
 import type { DeviceCopyDiagnostics } from './core/diagnostics/device-copy-diagnostics';
 
@@ -24,12 +30,17 @@ export class DeviceCopies implements SessionDevice {
     return Promise.race([input, late]).finally(() => clearTimeout(timer));
   }
 
-  signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false): Promise<void> {
+  signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing = false,
+    deviceSecret?: string,
+  ): Promise<void> {
     if (account.administrator === true) {
       this.watchAdministration();
     }
     return this.vault().then(
-      (vault) => vault.signedIn(account, secret, storeNothing),
+      (vault) => vault.signedIn(account, secret, storeNothing, deviceSecret),
       (failure: unknown) => {
         if (secret.kind === 'prf') {
           secret.reading.output.fill(0);
@@ -41,6 +52,13 @@ export class DeviceCopies implements SessionDevice {
 
   restored(account: DeviceAccount, storeNothing = false): Promise<void> {
     return this.vault().then((vault) => vault.restored(account, storeNothing));
+  }
+
+  openedOffline(expected: SessionKind): Promise<OfflineAccount | null> {
+    if (!holdsDeviceCopy()) {
+      return Promise.resolve(null);
+    }
+    return this.vault().then((vault) => vault.openedOffline(expected));
   }
 
   signedOut(account: DeviceAccount): Promise<void> {

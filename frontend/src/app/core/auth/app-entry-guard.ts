@@ -9,7 +9,7 @@ export const appEntryGuard: CanActivateFn = async () => {
   const store = inject(AuthStore);
   const router = inject(Router);
   await store.restore();
-  if (store.isAdmin()) {
+  if (store.isAdmin() && !store.fromDevice()) {
     return router.createUrlTree(['/sprava']);
   }
   if (store.signedIn()) {
