@@ -430,5 +430,71 @@
     "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small",
     "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
     "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small"
+  },
+  {
+    "path": "POST /api/admin/content/news*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "PUT /api/admin/content/news*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "path": "GET /api/content/news*",
+    "scenario": "content/manage_projects: *",
+    "kind": "added",
+    "field": "$*.lookBackYear",
+    "reason": "2.23a: every news answer carries lookBackYear, the year the article looks back on (null for none), so the Pomáháme tab leads from a year to its article",
+    "contract": "docs/api-contract.md, content — public CMS (Article, look-back-year)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #2",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #2"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #3",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #3"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #4",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #4"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #5",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #5"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #6",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #6"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small #7",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small #7"
   }
 ]
