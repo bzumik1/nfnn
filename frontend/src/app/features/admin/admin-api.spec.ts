@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   AdminActivitySinceResponse,
   AdminApi,
+  HistoryImportResponse,
   ImportStateResponse,
   ReceiptSigningKeysResponse,
   YearlyReceiptCandidatesResponse,
@@ -13,6 +14,7 @@ import {
   adminBankLogo,
   activitySince,
   adminPush,
+  historyImport,
   importState,
   pushSubscription,
   receiptSigningKeys,
@@ -43,6 +45,18 @@ describe('Given the administration API', () => {
     request.flush(importState());
 
     expect(received).toEqual(importState());
+  });
+
+  it('when older bank payments are requested, then the day is posted to the history import and the queued run is handed on', () => {
+    let received: HistoryImportResponse | undefined;
+    api.requestHistoryImport('2026-01-01').subscribe((response) => (received = response));
+
+    const request = http.expectOne('/api/admin/donations/import/history');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ from: '2026-01-01' });
+    request.flush(historyImport(), { status: 202, statusText: 'Accepted' });
+
+    expect(received).toEqual(historyImport());
   });
 
   it('when the receipt signing keys are requested, then it asks the admin endpoint and hands the answer on', () => {

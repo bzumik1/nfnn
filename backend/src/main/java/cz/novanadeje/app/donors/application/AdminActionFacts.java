@@ -123,6 +123,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 variant(RECIPIENT_COUNT, "Monthly report for (?<month>\\d{4}-\\d{2}) sent by hand to (?<recipientCount>\\d+) recipient\\(s\\)"),
                 full("Měsíční přehled za (?<month>\\d{4}-\\d{2}) ručně odeslán na (?<recipients>.+)"),
                 full("Monthly report for (?<month>\\d{4}-\\d{2}) sent by hand to (?<recipients>.+)")));
+        shapes.put("REQUEST_HISTORY_IMPORT", List.of(
+                full("Vyžádáno načtení starších plateb z banky od (?<on>" + DAY + ")")));
         shapes.put("CHANGE_RECEIPT_SIGNATURE", List.of(
                 full("Nahrán obrázek podpisu na potvrzení o daru: (?<width>\\d+) × (?<height>\\d+) px, SHA-256 \\S+"),
                 full("Signature image for receipts uploaded: (?<width>\\d+)x(?<height>\\d+) px, SHA-256 \\S+"),

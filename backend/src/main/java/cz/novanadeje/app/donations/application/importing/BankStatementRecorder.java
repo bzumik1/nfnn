@@ -90,8 +90,8 @@ public class BankStatementRecorder {
         ImportPeriod covered = plan.needsUnlockedHistory() ? statement.reported().orElse(requested) : requested;
         BankImportState state = states.current();
         CoverageChange change = state.coverage().extendedBy(covered);
-        change.gap().ifPresent(gap -> log.warn("Fio movements between {} and {} were not downloaded; unlock the history in Fio internet banking, "
-                + "set FIO_HISTORY_FROM={} and restart the backend", gap.from(), gap.to(), gap.from()));
+        change.gap().ifPresent(gap -> log.warn("Fio movements between {} and {} were not downloaded; unlock the history in Fio internet banking "
+                + "and press Načíst starší platby on /sprava from {}", gap.from(), gap.to(), gap.from()));
         state.succeeded(change.coverage(), now).ifPresent(recovery -> {
             log.info("Fio import recovered from the {} outage after {} failures", recovery.outageKind(), recovery.failures());
             alerts.dropWaitingOutages(now);

@@ -1,8 +1,11 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
+import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
+import cz.novanadeje.app.donations.domain.importing.BankImportOff;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
+
 
 @Component
 @Conditional(FioTokenAbsentCondition.class)
@@ -15,5 +18,15 @@ class DisabledBankImportRequests implements BankImportRequests {
     @Override
     public boolean inProgress() {
         return false;
+    }
+
+    @Override
+    public boolean enabled() {
+        return false;
+    }
+
+    @Override
+    public void requestHistoryImport(HistoryImportRun run) {
+        throw new BankImportOff();
     }
 }

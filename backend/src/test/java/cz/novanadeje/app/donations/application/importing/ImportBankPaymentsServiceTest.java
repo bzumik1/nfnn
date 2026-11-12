@@ -30,6 +30,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,12 +61,110 @@ class ImportBankPaymentsServiceTest {
     private ImportAlertDelivery alertDelivery;
 
     private MutableClock clock;
+    private HistoryImportTracker historyImports;
     private ImportBankPaymentsService service;
 
     @BeforeEach
     void setUp() {
         clock = new MutableClock(NOW, ZoneId.of("UTC"));
-        service = new ImportBankPaymentsService(source, recorder, states, alertDelivery, clock);
+        historyImports = new HistoryImportTracker();
+        service = new ImportBankPaymentsService(source, recorder, states, alertDelivery, historyImports, clock);
+    }
+
+    @Test
+    @DisplayName("Given a queued history run, when it completes, then the bank is asked from the requested day and the run records the new payments")
+    void should_ask_from_requested_day_and_record_new_payments_when_history_run_completes_given_queued_run() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 4);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenAnswer(invocation -> {
+            assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.RUNNING);
+            clock.advance(Duration.ofSeconds(2));
+            return statement;
+        });
+        when(recorder.record(statement, new ImportPlan(DEEP, true), NOW.plusSeconds(2))).thenReturn(new ImportCounts(4, 3, 1, 0, 0, 0, 0, 3));
+
+        ImportReport report = service.importHistory(run, ImportSettings.defaults());
+
+        assertThat(report.trigger()).isEqualTo(ImportTrigger.HISTORY);
+        assertThat(historyImports.last()).contains(new HistoryImportRun(run.id(), DEEP, true, NOW, NOW, HistoryImportStatus.COMPLETED,
+                Optional.empty(), Optional.of(3), Optional.of(NOW.plusSeconds(2))));
+    }
+
+    @Test
+    @DisplayName("Given locked history, when a history run fails, then no follow-up is due and the run ends as locked")
+    void should_end_locked_without_follow_up_when_history_run_fails_given_locked_history() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenThrow(unavailable(ImportFailureKind.HISTORY_LOCKED, Optional.of(NOW.plusSeconds(30))));
+
+        ImportReport report = service.importHistory(run, ImportSettings.defaults());
+
+        assertThat(report.failure()).contains(ImportFailureKind.HISTORY_LOCKED);
+        assertThat(report.followUp()).isEmpty();
+        assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.HISTORY_LOCKED);
+        assertThat(historyImports.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.HISTORY_LOCKED);
+        verify(recorder).recordFailure(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given the bank's 30-second limit, when a history run is refused, then a history follow-up is due and the run waits for it")
+    void should_wait_for_history_follow_up_when_history_run_refused_given_rate_limit() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenThrow(unavailable(ImportFailureKind.RATE_LIMITED, Optional.of(NOW.plusSeconds(30))));
+
+        ImportReport report = service.importHistory(run, ImportSettings.defaults());
+
+        assertThat(report.followUp()).contains(new FollowUp(NOW.plusSeconds(31), ImportTrigger.HISTORY));
+        assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.QUEUED);
+        assertThat(historyImports.last()).map(HistoryImportRun::startsAt).contains(NOW.plusSeconds(31));
+    }
+
+    @Test
+    @DisplayName("Given a history run that throws, when it runs, then the failure escapes and the run ends as failed unexpectedly")
+    void should_end_failed_and_rethrow_when_history_run_throws_given_unexpected_failure() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenThrow(new IllegalStateException("boom"));
+
+        assertThatThrownBy(() -> service.importHistory(run, ImportSettings.defaults()))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.FAILED);
+        assertThat(historyImports.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.UNEXPECTED);
+    }
+
+    @Test
+    @DisplayName("Given a history run that ends in an error of the virtual machine, when it runs, then the error escapes and the run still ends as failed unexpectedly")
+    void should_end_failed_and_rethrow_when_history_run_errors_given_virtual_machine_error() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenThrow(new StackOverflowError());
+
+        assertThatThrownBy(() -> service.importHistory(run, ImportSettings.defaults()))
+                .isInstanceOf(StackOverflowError.class);
+
+        assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.FAILED);
+        assertThat(historyImports.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.UNEXPECTED);
+    }
+
+    @Test
+    @DisplayName("Given a newer request for another day, when an older history run completes, then the newer request stays queued")
+    void should_keep_newer_request_queued_when_older_history_run_completes_given_newer_request() {
+        HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 0);
+        AtomicReference<HistoryImportRun> newer = new AtomicReference<>();
+        when(states.current()).thenReturn(BankImportState.initial(NOW));
+        when(source.fetch(DEEP)).thenAnswer(invocation -> {
+            newer.set(historyImports.queue(new ImportPeriod(LocalDate.of(2024, 1, 1), LocalDate.of(2026, 10, 17)), true, NOW, NOW));
+            return statement;
+        });
+        when(recorder.record(any(), any(), any())).thenReturn(ImportCounts.none());
+
+        service.importHistory(run, ImportSettings.defaults());
+
+        assertThat(historyImports.last()).contains(newer.get());
     }
 
     @Test

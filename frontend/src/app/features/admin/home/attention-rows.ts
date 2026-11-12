@@ -2,11 +2,15 @@
 
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { formatMinorUnits } from '../../donations/donation-amount';
-import { AdminBackupsResponse, ImportFailureKind, ImportStateResponse } from '../admin-api';
+import { AdminBackupsResponse, ImportStateResponse } from '../admin-api';
 import { BACKUP_PROBLEM_ACTIONS, BACKUP_PROBLEM_SUMMARIES } from '../backups/backup-texts';
 import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { unpublishedKeysSentence } from '../settings/receipt-signing-key/unpublished-keys';
-import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
+import {
+  IMPORT_FAILURE_LABELS,
+  IMPORT_NEXT_STEPS,
+  ImportNextStepLink,
+} from '../import-failure-labels';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 export type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
@@ -54,48 +58,24 @@ export interface AttentionSources {
   readonly signatory: SignatoryState;
 }
 
-type NextStepLink = 'settings' | 'logs' | null;
-
-interface NextStep {
-  readonly text: string;
-  readonly link: NextStepLink;
-}
-
-const NEXT_STEPS: Record<ImportFailureKind, NextStep> = {
-  RATE_LIMITED: {
-    text: $localize`:@@admin.home.import.next.rateLimited:Banka teď odmítá příliš časté dotazy. Web to zkusí znovu sám, nic dělat nemusíte.`,
-    link: null,
-  },
-  HISTORY_LOCKED: {
-    text: $localize`:@@admin.home.import.next.historyLocked:Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut restartujte backend (v ZimaOS restart aplikace).`,
-    link: null,
-  },
-  UNAUTHORIZED: {
-    text: $localize`:@@admin.home.import.next.unauthorized:V internetovém bankovnictví Fio (Nastavení → API) vytvořte nový token typu „Sledování účtu“ (platí 180 dní) a vložte ho v Nastavení jako Token Fio API.`,
-    link: 'settings',
-  },
-  TRANSPORT: {
-    text: $localize`:@@admin.home.import.next.transport:Banka teď neodpovídá. Web to zkouší znovu sám každou hodinu; pokud to trvá déle, zkontrolujte připojení serveru k internetu.`,
-    link: null,
-  },
-  INVALID_RESPONSE: {
-    text: $localize`:@@admin.home.import.next.invalidResponse:Podrobnosti jsou v logu backendu; může jít o změnu Fio API.`,
-    link: 'logs',
-  },
-  UNEXPECTED: {
-    text: $localize`:@@admin.home.import.next.unexpected:Podrobnosti jsou v logu backendu.`,
-    link: 'logs',
-  },
-};
-
-const NEXT_STEP_LINKS: Record<Exclude<NextStepLink, null>, { path: string; label: string }> = {
+const NEXT_STEP_LINKS: Record<
+  Exclude<ImportNextStepLink, null>,
+  { path: string; fragment: string | undefined; label: string }
+> = {
   settings: {
     path: '/sprava/nastaveni',
+    fragment: undefined,
     label: $localize`:@@admin.home.import.next.settings:Otevřít Nastavení`,
   },
   logs: {
     path: '/sprava/logy',
+    fragment: undefined,
     label: $localize`:@@admin.home.import.next.logs:Otevřít logy`,
+  },
+  history: {
+    path: '/sprava',
+    fragment: 'starsi-platby',
+    label: $localize`:@@admin.home.import.next.history:Přejít ke starším platbám`,
   },
 };
 
@@ -177,7 +157,7 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
   }
   const outage = importState.reportedOutage;
   if (outage) {
-    const step = NEXT_STEPS[outage];
+    const step = IMPORT_NEXT_STEPS[outage];
     const failures = importState.consecutiveFailures;
     const reason = IMPORT_FAILURE_LABELS[outage];
     const outageRow = row({
@@ -198,7 +178,7 @@ function importRows({ importLoad, importState }: AttentionSources): AttentionRow
         key: 'import-next',
         tone: 'action',
         title: target.label,
-        link: { path: target.path, fragment: undefined },
+        link: { path: target.path, fragment: target.fragment },
       }),
     ];
   }
