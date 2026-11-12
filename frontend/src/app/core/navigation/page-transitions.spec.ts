@@ -254,6 +254,15 @@ describe('Given the app on the home screen of a phone, where the news led to the
           { path: 'projekty', component: Blank },
         ]),
         { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: NavigationPreview,
+          useValue: {
+            active: () => false,
+            drives: () => false,
+            discard: () => undefined,
+            visit: () => Promise.resolve(null),
+          },
+        },
       ],
     });
     router = TestBed.inject(Router);
