@@ -8,6 +8,14 @@
     "contract": "docs/frontend-overview.md, AdministrationReads"
   },
   {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given *, when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year, then the administration gets the expected overview, and the manifest's summary of that year and of every other offered year is the overview of that year",
+    "replacement": "donations.interfaces.rest.AdminOverviewSharedCasesTest > Given an empty database in March, when the backend selects its rows with the real queries and compiles the year overview, alone and in the administration's sync manifest for every offered year, beside the chunks of the device copy, then the administration gets the expected overview, the manifest's summary of that year and of every other offered year is the overview of that year, and the copy holds the case's chunks",
+    "reason": "2.20b renames every admin-overview case test: each case now also checks that the administration copy holds exactly the case's chunks, which the browser computes the same overview from, so the when and then of each name say so; every case still runs under its new name",
+    "contract": "docs/system-overview.md, Shared cases"
+  },
+  {
     "kind": "shared-case",
     "caseFile": "shared-cases/admin-overview/year-overview.json",
     "reason": "2.20b: the browser computes the year overview of /sprava from the administration copy, so every case gains input.chunks, the rows of the copy's payments, gifts and donor records; the backend runner checks the copy holds exactly these chunks and the browser compiles the expected overview from them; no expected value changes",
