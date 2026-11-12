@@ -75,7 +75,7 @@ class ImportBankPaymentsServiceTest {
     @DisplayName("Given a queued history run, when it completes, then the bank is asked from the requested day and the run records the new payments")
     void should_ask_from_requested_day_and_record_new_payments_when_history_run_completes_given_queued_run() {
         HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
-        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 4);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 4, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(DEEP)).thenAnswer(invocation -> {
             assertThat(historyImports.last()).map(HistoryImportRun::status).contains(HistoryImportStatus.RUNNING);
@@ -153,7 +153,7 @@ class ImportBankPaymentsServiceTest {
     @DisplayName("Given a newer request for another day, when an older history run completes, then the newer request stays queued")
     void should_keep_newer_request_queued_when_older_history_run_completes_given_newer_request() {
         HistoryImportRun run = historyImports.queue(DEEP, true, NOW, NOW);
-        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 0);
+        BankStatement statement = new BankStatement(DEEP, Optional.of(DEEP), List.of(), 0, Optional.empty());
         AtomicReference<HistoryImportRun> newer = new AtomicReference<>();
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(DEEP)).thenAnswer(invocation -> {
@@ -170,7 +170,7 @@ class ImportBankPaymentsServiceTest {
     @Test
     @DisplayName("Given no coverage yet, when the import runs, then it plans, fetches outside any repository call and records the statement")
     void should_plan_fetch_and_record_in_order_when_import_runs_given_no_coverage() {
-        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 3);
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 3, Optional.empty());
         ImportCounts counts = new ImportCounts(3, 1, 0, 0, 0, 0, 0, 1);
         BankImportState covered = BankImportState.initial(NOW);
         covered.succeeded(ImportCoverage.of(SERVABLE), NOW);
@@ -196,7 +196,7 @@ class ImportBankPaymentsServiceTest {
     @Test
     @DisplayName("Given a run that paired payments in every way, when the import completes, then its info line counts each way, the confirmed symbol included")
     void should_count_each_pairing_way_when_import_completes_given_payments_paired_every_way() {
-        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 9);
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 9, Optional.empty());
         BankImportState covered = BankImportState.initial(NOW);
         covered.succeeded(ImportCoverage.of(SERVABLE), NOW);
         when(states.current()).thenReturn(BankImportState.initial(NOW), covered);
@@ -312,7 +312,7 @@ class ImportBankPaymentsServiceTest {
     @Test
     @DisplayName("Given recording the statement fails, when the import runs, then the failure is recorded as unexpected and rethrown")
     void should_record_and_rethrow_when_recording_fails() {
-        BankStatement statement = new BankStatement(SERVABLE, Optional.empty(), List.of(), 0);
+        BankStatement statement = new BankStatement(SERVABLE, Optional.empty(), List.of(), 0, Optional.empty());
         IllegalStateException failure = new IllegalStateException("pairing failed for payment 1001");
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
@@ -339,7 +339,7 @@ class ImportBankPaymentsServiceTest {
     @Test
     @DisplayName("Given a completed import, when it ends, then the waiting alerts are delivered after the statement is recorded")
     void should_deliver_waiting_alerts_after_recording_when_import_completes() {
-        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0);
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
         when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
@@ -379,7 +379,7 @@ class ImportBankPaymentsServiceTest {
     @Test
     @DisplayName("Given the alert delivery throws, when the import completes, then the report is still returned")
     void should_return_report_when_alert_delivery_throws() {
-        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0);
+        BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
         when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
@@ -413,7 +413,7 @@ class ImportBankPaymentsServiceTest {
         BankImportState attempted = BankImportState.initial(NOW);
         attempted.succeeded(ImportCoverage.of(SERVABLE), NOW.minus(COOLDOWN));
         ImportPeriod recent = new ImportPeriod(LocalDate.of(2026, 10, 14), LocalDate.of(2026, 10, 17));
-        BankStatement statement = new BankStatement(recent, Optional.of(recent), List.of(), 0);
+        BankStatement statement = new BankStatement(recent, Optional.of(recent), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(attempted);
         when(source.fetch(recent)).thenReturn(statement);
         when(recorder.record(statement, new ImportPlan(recent, false), NOW)).thenReturn(ImportCounts.none());

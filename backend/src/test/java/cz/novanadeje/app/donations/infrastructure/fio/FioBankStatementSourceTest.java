@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
@@ -230,6 +231,62 @@ class FioBankStatementSourceTest {
     }
 
     @Test
+    @DisplayName("Given the bank's closing balance at the end of the requested period, when the statement is fetched, then the balance is carried in hellers")
+    void should_carry_closing_balance_when_fetched_given_period_ending_on_requested_day() {
+        fio.answer(statementWithBalance(REQUESTED.to(), "CZK", "123456.78"));
+
+        assertThat(source.fetch(REQUESTED).closingBalance()).contains(Money.czk(12_345_678));
+    }
+
+    @Test
+    @DisplayName("Given an overdrawn account, when the statement is fetched, then the negative balance is carried")
+    void should_carry_negative_balance_when_fetched_given_overdrawn_account() {
+        fio.answer(statementWithBalance(REQUESTED.to(), "CZK", "-15.00"));
+
+        assertThat(source.fetch(REQUESTED).closingBalance()).contains(Money.czk(-1_500));
+    }
+
+    @Test
+    @DisplayName("Given the bank reports a period ending before the requested day or no end, when the statement is fetched, then no balance is carried")
+    void should_carry_no_balance_when_fetched_given_period_not_ending_on_requested_day() {
+        fio.answer(statementWithBalance(REQUESTED.to().minusDays(1), "CZK", "100.00"));
+        assertThat(source.fetch(REQUESTED).closingBalance()).isEmpty();
+
+        fio.answer(statementWithBalance(null, "CZK", "100.00"));
+        assertThat(source.fetch(REQUESTED).closingBalance()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an account in another currency, when the statement is fetched, then no balance is carried and a warning names only the currency")
+    void should_carry_no_balance_and_warn_when_fetched_given_account_in_other_currency() {
+        fio.answer(statementWithBalance(REQUESTED.to(), "EUR", "100.00"));
+
+        assertThat(source.fetch(REQUESTED).closingBalance()).isEmpty();
+        assertThat(messages(Level.WARN)).containsExactly("Fio reported the account in EUR, not CZK; the account balance is not read");
+    }
+
+    @Test
+    @DisplayName("Given a closing balance finer than hellers, when the statement is fetched, then no balance is carried and a warning says so without the amount")
+    void should_carry_no_balance_and_warn_when_fetched_given_balance_finer_than_hundredths() {
+        fio.answer(statementWithBalance(REQUESTED.to(), "CZK", "100.005"));
+
+        assertThat(source.fetch(REQUESTED).closingBalance()).isEmpty();
+        assertThat(messages(Level.WARN)).containsExactly("Fio reported a closing balance that is not a whole number of hellers; the account balance is not read");
+    }
+
+    @Test
+    @DisplayName("Given a closing balance, when the statement is fetched at any log level, then no log line carries the amount")
+    void should_log_no_amount_when_fetched_given_closing_balance() {
+        logger().setLevel(Level.TRACE);
+        fio.answer(statementWithBalance(REQUESTED.to(), "CZK", "987654.32"));
+
+        source.fetch(REQUESTED);
+
+        assertThat(log.list).isNotEmpty().allSatisfy(event -> assertThat(event.getFormattedMessage())
+                .doesNotContain("987654").doesNotContain("987 654").doesNotContain("98765432"));
+    }
+
+    @Test
     @DisplayName("Given the 30-second limit, when the statement is fetched, then it is unavailable as rate limited with the bank's retry time")
     void should_map_rate_limit_when_fetched_given_409() {
         Instant retryAfter = NOW.plusSeconds(30);
@@ -327,6 +384,15 @@ class FioBankStatementSourceTest {
         io.github.bzumik1.fio.Money zero = io.github.bzumik1.fio.Money.czk("0.00");
         return new AccountInfo(DomesticAccount.of("5544332217", "2010"), "CZ2620100000005544332217", "FIOBCZPPXXX",
                 Currency.getInstance("CZK"), zero, zero, dateStart, dateEnd, null, firstTransactionId, lastTransactionId, null);
+    }
+
+    private static AccountStatement statementWithBalance(LocalDate dateEnd, String currency, String closingBalance) {
+        Currency accountCurrency = Currency.getInstance(currency);
+        io.github.bzumik1.fio.Money opening = new io.github.bzumik1.fio.Money(new BigDecimal("0.00"), accountCurrency);
+        io.github.bzumik1.fio.Money closing = new io.github.bzumik1.fio.Money(new BigDecimal(closingBalance), accountCurrency);
+        AccountInfo info = new AccountInfo(DomesticAccount.of("5544332217", "2010"), "CZ2620100000005544332217", "FIOBCZPPXXX",
+                accountCurrency, opening, closing, REQUESTED.from(), dateEnd, null, null, null, null);
+        return new AccountStatement(info, List.of());
     }
 
     private static final class StubFioClient implements FioClient {

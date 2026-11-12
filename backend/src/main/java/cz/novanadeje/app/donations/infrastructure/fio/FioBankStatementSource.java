@@ -54,7 +54,7 @@ class FioBankStatementSource implements BankStatementSource {
                 .map(this::incoming)
                 .flatMap(Optional::stream)
                 .toList();
-        return new BankStatement(requested, reported(info), incoming, statement.transactions().size());
+        return new BankStatement(requested, reported(info), incoming, statement.transactions().size(), closingBalance(info, requested));
     }
 
     private AccountStatement download(ImportPeriod requested) {
@@ -129,6 +129,23 @@ class FioBankStatementSource implements BankStatementSource {
         try {
             return Optional.of(Money.of(transaction.amount().amount(), Currency.CZK));
         } catch (ArithmeticException notRepresentable) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<Money> closingBalance(AccountInfo info, ImportPeriod requested) {
+        if (!requested.to().equals(info.dateEnd())) {
+            return Optional.empty();
+        }
+        String currency = info.currency().getCurrencyCode();
+        if (!Currency.CZK.name().equals(currency)) {
+            log.warn("Fio reported the account in {}, not CZK; the account balance is not read", currency);
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Money.of(info.closingBalance().amount(), Currency.CZK));
+        } catch (ArithmeticException notRepresentable) {
+            log.warn("Fio reported a closing balance that is not a whole number of hellers; the account balance is not read");
             return Optional.empty();
         }
     }

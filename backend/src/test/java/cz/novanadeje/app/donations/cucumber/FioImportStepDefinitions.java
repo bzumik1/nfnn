@@ -146,6 +146,11 @@ public class FioImportStepDefinitions {
         fio.failNextRequestWith(refusal(reason));
     }
 
+    @Given("the account balance at the bank is {word} CZK")
+    public void theAccountBalanceAtTheBankIs(String amount) {
+        fio.reportClosingBalance(amount);
+    }
+
     @Given("the bank reports the period {date} to {date}")
     public void theBankReportsThePeriod(LocalDate start, LocalDate end) {
         fio.reportPeriod(start, end);

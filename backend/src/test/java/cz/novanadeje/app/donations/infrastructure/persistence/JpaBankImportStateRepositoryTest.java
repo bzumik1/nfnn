@@ -1,9 +1,11 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.donations.domain.importing.AccountBalance;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
+import cz.novanadeje.app.shared.domain.Money;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -83,6 +85,31 @@ class JpaBankImportStateRepositoryTest {
         assertThat(reread.failed(ImportFailureKind.TRANSPORT, "timed out", LATER)).isEmpty();
         assertThat(jdbc.sql("select consecutive_failures, reported_outage from bank_import_state").query((rs, i) -> rs.getInt(1) + " " + rs.getString(2)).single())
                 .isEqualTo("3 TRANSPORT");
+    }
+
+    @Test
+    @DisplayName("Given a state with an account balance, when it is saved and read back, then the balance and its time survive")
+    void should_keep_balance_when_saved_given_balance_read() {
+        BankImportState state = states.current();
+        state.succeeded(new ImportCoverage(LocalDate.of(2026, 7, 20), LocalDate.of(2026, 10, 17)), NOW);
+        state.balanceRead(Money.czk(12_345_678), NOW);
+        states.save(state);
+        flushAndClear();
+
+        BankImportState stored = states.current();
+        stored.failed(ImportFailureKind.TRANSPORT, "timed out", LATER);
+        states.save(stored);
+        flushAndClear();
+
+        assertThat(states.current().balance()).contains(new AccountBalance(Money.czk(12_345_678), NOW));
+        assertThat(jdbc.sql("select balance_minor from bank_import_state").query(Long.class).single()).isEqualTo(12_345_678L);
+    }
+
+    @Test
+    @DisplayName("Given the schema, when a balance without the time it was read is inserted, then the balance check refuses it")
+    void should_refuse_when_inserted_given_balance_without_time() {
+        assertThatThrownBy(() -> jdbc.sql("insert into bank_import_state (id, balance_minor, updated_at) values (1, 100, now())").update())
+                .hasMessageContaining("ck_bank_import_state_balance");
     }
 
     @Test

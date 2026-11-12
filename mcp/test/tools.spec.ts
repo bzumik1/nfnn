@@ -237,6 +237,16 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(text).toContain('"outcome":"OK"');
   });
 
+  it('when the status is asked, then the bank import carries the account balance in crowns with the Prague time it was read', async () => {
+    stack.backend.importBalance = { amountMinor: 12345678, readAt: '2026-10-23T05:00:00Z' };
+    try {
+      const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+      expect(text).toContain('"balance":{"amount":123456.78,"readAt":"2026-10-23T07:00:00+02:00"}');
+    } finally {
+      stack.backend.importBalance = undefined;
+    }
+  });
+
   it('when the status is asked, then it names the receipt signing key with its registration time and flags a key that fails its seal', async () => {
     const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
     expect(stack.backend.requests.map((request) => request.path)).toContain(

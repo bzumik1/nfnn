@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.domain.importing.AccountBalance;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
@@ -93,7 +94,7 @@ class BankStatementRecorderTest {
         stateCovering("2026-07-18", "2026-10-15");
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of(new BankTransactionId(1001)));
         when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 2, 5, 3, 4));
-        BankStatement statement = new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 5);
+        BankStatement statement = new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 5, Optional.empty());
 
         ImportCounts counts = recorder.record(statement, new ImportPlan(HOURLY_REQUEST, false), NOW);
 
@@ -119,7 +120,7 @@ class BankStatementRecorderTest {
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
         when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0, 0));
 
-        ImportCounts counts = recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1001)), 2),
+        ImportCounts counts = recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1001)), 2, Optional.empty()),
                 new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         @SuppressWarnings("unchecked")
@@ -136,7 +137,7 @@ class BankStatementRecorderTest {
         BankImportState state = stateCovering("2026-07-18", "2026-10-15");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-18", "2026-10-18")), List.of(), 0),
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-18", "2026-10-18")), List.of(), 0, Optional.empty()),
                 new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         verify(states).save(state);
@@ -146,12 +147,39 @@ class BankStatementRecorderTest {
     }
 
     @Test
+    @DisplayName("Given a statement with the bank's closing balance, when it is recorded, then the state keeps the balance read at the import's time")
+    void should_keep_balance_read_now_when_recorded_given_closing_balance() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        noMovementsKnownAndNothingPaired();
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.of(Money.czk(12_345_678))),
+                new ImportPlan(HOURLY_REQUEST, false), NOW);
+
+        verify(states).save(state);
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(12_345_678), NOW));
+    }
+
+    @Test
+    @DisplayName("Given a known balance, when a statement without a closing balance is recorded, then the last known balance stays")
+    void should_keep_last_known_balance_when_recorded_given_statement_without_balance() {
+        BankImportState state = stateCovering("2026-07-18", "2026-10-15");
+        Instant earlier = Instant.parse("2026-10-15T10:00:00Z");
+        state.balanceRead(Money.czk(50_000), earlier);
+        noMovementsKnownAndNothingPaired();
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()),
+                new ImportPlan(HOURLY_REQUEST, false), NOW);
+
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(50_000), earlier));
+    }
+
+    @Test
     @DisplayName("Given a deep plan, when the bank reports a period, then the coverage is extended by the reported period")
     void should_cover_reported_period_when_recorded_given_deep_plan() {
         BankImportState state = stateCovering("2026-07-21", "2026-10-18");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(DEEP_REQUEST, Optional.of(period("2025-02-03", "2026-10-18")), List.of(), 0),
+        recorder.record(new BankStatement(DEEP_REQUEST, Optional.of(period("2025-02-03", "2026-10-18")), List.of(), 0, Optional.empty()),
                 new ImportPlan(DEEP_REQUEST, true), NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2025-02-03", "2026-10-18"));
@@ -163,7 +191,7 @@ class BankStatementRecorderTest {
         BankImportState state = stateCovering("2026-07-21", "2026-10-18");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(DEEP_REQUEST, true), NOW);
+        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(DEEP_REQUEST, true), NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2025-01-01", "2026-10-18"));
     }
@@ -175,7 +203,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
         ImportPeriod clamped = period("2026-07-21", "2026-10-18");
 
-        recorder.record(new BankStatement(clamped, Optional.empty(), List.of(), 0), new ImportPlan(clamped, false), NOW);
+        recorder.record(new BankStatement(clamped, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(clamped, false), NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2026-07-21", "2026-10-18"));
         assertThat(warnings()).containsExactly("Fio movements between 2026-04-01 and 2026-07-20 were not downloaded; "
@@ -188,7 +216,7 @@ class BankStatementRecorderTest {
         stateCovering("2026-07-18", "2026-10-15");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-01", "2026-10-18")), List.of(), 0),
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-01", "2026-10-18")), List.of(), 0, Optional.empty()),
                 new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         assertThat(warnings()).containsExactly("Fio reported 2026-10-01/2026-10-18 for a request of 2026-10-12/2026-10-18");
@@ -231,7 +259,7 @@ class BankStatementRecorderTest {
         state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         InOrder order = inOrder(alerts, states);
         order.verify(alerts).dropWaitingOutages(NOW);
@@ -246,7 +274,7 @@ class BankStatementRecorderTest {
         stateCovering("2026-07-18", "2026-10-15");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         verifyNoInteractions(alerts);
         verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
@@ -275,7 +303,7 @@ class BankStatementRecorderTest {
         state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
 
         verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
         verifyNoMoreInteractions(events);
