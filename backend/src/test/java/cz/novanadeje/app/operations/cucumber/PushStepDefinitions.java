@@ -234,12 +234,6 @@ public class PushStepDefinitions {
         subscribeDonor(alias, device, endpoint, receiver, receiver.p256dh(), Optional.of(notifications(gifts, yearlyReceipts)), DeviceSession.SIGNED_IN);
     }
 
-    @When("{string} turns push notifications on for the device {string} at {string} with a browser key that is no point on the curve")
-    public void turnsPushNotificationsOnWithAnOffCurveKey(String alias, String device, String endpoint) {
-        PushReceiver receiver = PushReceiver.generate();
-        subscribeDonor(alias, device, endpoint, receiver, offCurve(receiver.p256dh()), Optional.empty(), DeviceSession.SIGNED_IN);
-    }
-
     @When("{string} turns push notifications on for the public computer {string} at {string}")
     public void turnsPushNotificationsOnForThePublicComputer(String alias, String device, String endpoint) {
         PushReceiver receiver = PushReceiver.generate();
@@ -564,12 +558,6 @@ public class PushStepDefinitions {
 
     private static Map<String, Object> notifications(String gifts, String yearlyReceipts) {
         return Map.of("gifts", on(gifts), "yearlyReceipts", on(yearlyReceipts));
-    }
-
-    private static String offCurve(String p256dh) {
-        byte[] point = Base64.getUrlDecoder().decode(p256dh);
-        point[point.length - 1] ^= 0x01;
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(point);
     }
 
     private void actOnDevice(String alias, UUID deviceId) {

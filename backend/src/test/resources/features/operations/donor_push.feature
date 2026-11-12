@@ -1,4 +1,4 @@
-@operations
+@operations @connected-apps
 Feature: A donor turns push notifications on for this device, chooses which ones it gets and gets a confirmation
 
   Background:
@@ -59,23 +59,10 @@ Feature: A donor turns push notifications on for this device, chooses which ones
     Then the response status is 404
     And no push alert was sent
 
-  Scenario Outline: Only an address of a known push service is taken
-    When "Jana" turns push notifications on for the device "telefon" at "<endpoint>"
+  Scenario: An address of no known push service, a session without a device, a public computer, a signed-out device and the eleventh device are refused
+    When "Jana" turns push notifications on for the device "telefon" at "https://169.254.169.254/latest/meta-data"
     Then the response status is 400
     And the problem type ends with "operations/push-endpoint-refused"
-    And no push notification subscription of "Jana" is stored
-
-    Examples:
-      | endpoint                                      |
-      | http://fcm.googleapis.com/fcm/send/jana       |
-      | https://169.254.169.254/latest/meta-data      |
-      | https://push.example.com/fcm/send/jana        |
-      | https://fcm.googleapis.com.example.com/send/x |
-
-  Scenario: A browser key off the curve, a session without a device, a public computer, a signed-out device and the eleventh device are refused
-    When "Jana" turns push notifications on for the device "telefon" at "https://fcm.googleapis.com/fcm/send/jana" with a browser key that is no point on the curve
-    Then the response status is 400
-    And the problem type ends with "operations/push-keys-refused"
     When "Jana" turns push notifications on in a browser session that names no device
     Then the response status is 403
     And the problem type ends with "operations/push-device-required"

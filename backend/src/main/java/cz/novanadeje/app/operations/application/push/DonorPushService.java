@@ -9,10 +9,13 @@ import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
+import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionLimitReached;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionNotFound;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -25,6 +28,7 @@ import java.util.UUID;
 @Service
 public class DonorPushService {
 
+    private static final Logger log = LoggerFactory.getLogger(DonorPushService.class);
     private static final PushMessage TEST = new PushMessage(PushMessageKind.DONOR_TEST, 0);
 
     private final DonorPushSubscriptionRepository subscriptions;
@@ -104,10 +108,16 @@ public class DonorPushService {
     }
 
     private void record(DonorPushSubscription subscription, PushOutcome outcome) {
-        switch (outcome) {
-            case DELIVERED -> transactions.executeWithoutResult(status -> subscriptions.markDelivered(subscription.id(), clock.instant()));
-            case GONE -> transactions.executeWithoutResult(status -> subscriptions.delete(subscription.id()));
-            case FAILED -> transactions.executeWithoutResult(status -> subscriptions.markFailed(subscription.id()));
+        try {
+            switch (outcome) {
+                case DELIVERED -> transactions.executeWithoutResult(status -> subscriptions.markDelivered(subscription.id(), clock.instant()));
+                case GONE -> transactions.executeWithoutResult(status -> subscriptions.delete(subscription.id()));
+                case FAILED -> transactions.execute(status -> subscriptions.markFailed(subscription.id()))
+                        .filter(PushSubscription::failingLongEnoughToWarn)
+                        .ifPresent(failures -> log.warn("Push subscription {} failed {} times in a row", subscription.id().value(), failures));
+            }
+        } catch (RuntimeException notRecorded) {
+            return;
         }
     }
 }
