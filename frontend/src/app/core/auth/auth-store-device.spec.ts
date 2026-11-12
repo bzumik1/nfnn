@@ -1,6 +1,7 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { authInterceptor } from './auth-interceptor';
 import { AuthStore, SESSION_HINT_KEY } from './auth-store';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import {
@@ -34,15 +35,22 @@ class RecordingDevice implements SessionDevice {
   input: Uint8Array<ArrayBuffer> | null = PRF_INPUT;
   secrets: SignInSecret[] = [];
   storesNothing: boolean[] = [];
+  deviceSecrets: (string | undefined)[] = [];
 
   async prfInput() {
     this.calls.push(['prfInput']);
     return this.input;
   }
-  async signedIn(account: DeviceAccount, secret: SignInSecret, storeNothing = false) {
+  async signedIn(
+    account: DeviceAccount,
+    secret: SignInSecret,
+    storeNothing = false,
+    deviceSecret?: string,
+  ) {
     this.calls.push(['signedIn', account, secret.kind]);
     this.secrets.push(secret);
     this.storesNothing.push(storeNothing);
+    this.deviceSecrets.push(deviceSecret);
   }
   async restored(account: DeviceAccount, storeNothing = false) {
     this.calls.push(['restored', account]);
@@ -107,6 +115,22 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
 
     expect(device.calls).toEqual([['signedIn', JANA, 'password']]);
     expect(device.secrets[0]).toEqual({ kind: 'password', password: 'correct horse battery' });
+  });
+
+  it('when the sign-in answer carries a device secret, then the device keeps it with the copy', () => {
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush({ ...authResponse('token-1'), deviceSecret: 'd'.repeat(43) });
+
+    expect(device.deviceSecrets).toEqual(['d'.repeat(43)]);
+  });
+
+  it('when the sign-in answer carries no device secret, then the device gets none', () => {
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+
+    expect(device.deviceSecrets).toEqual([undefined]);
   });
 
   it('when the second factor completes a password sign-in, then the device gets the password the dialog kept', () => {
@@ -366,5 +390,42 @@ describe('Given the auth store on a device that keeps a copy of the donor data',
     http.expectOne('/api/donors/me/password/remove').flush(authResponse('token-9'));
 
     expect(device.calls).toEqual([['passwordRemoved', JANA]]);
+  });
+});
+
+describe('Given an administrator signed in on a device that keeps copies, whose calls pass the auth interceptor', () => {
+  let http: HttpTestingController;
+  let device: RecordingDevice;
+
+  beforeEach(() => {
+    localStorage.clear();
+    device = new RecordingDevice();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: new FakePasskeyAuthenticator() },
+        { provide: SESSION_DEVICE, useValue: device },
+        { provide: SESSION_CHANNEL, useValue: () => new FakeSessionChannel() },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    device.calls.length = 0;
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the administration answers 403, then the device is told nothing, so no copy is closed or deleted', () => {
+    TestBed.inject(HttpClient)
+      .get('/api/admin/donations/sync')
+      .subscribe({ error: () => undefined });
+
+    http
+      .expectOne('/api/admin/donations/sync')
+      .flush(problem('auth/forbidden'), { status: 403, statusText: 'Forbidden' });
+
+    expect(device.calls).toEqual([]);
   });
 });

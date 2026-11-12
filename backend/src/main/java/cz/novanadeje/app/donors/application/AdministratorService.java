@@ -103,7 +103,7 @@ public class AdministratorService {
         }
         donors.save(donor);
         Instant now = clock.instant();
-        signOuts.endAllOf(donorId, DeviceSignOutReason.ADMINISTRATION_CHANGED, now);
+        signOuts.endForRoleRemoval(donorId, now);
         donors.forgetSignIns(donorId);
         events.publishEvent(new AdministrationRevoked(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),

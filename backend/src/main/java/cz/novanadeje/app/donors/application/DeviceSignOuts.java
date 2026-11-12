@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DeviceWipe;
 import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -43,6 +44,18 @@ public class DeviceSignOuts {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public void endForRoleRemoval(DonorId donorId, Instant at) {
+        endAllOf(donorId, DeviceSignOutReason.ADMINISTRATION_CHANGED, at);
+        devices.directWipeOfDonor(donorId, DeviceWipe.ADMINISTRATION);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void endForErasure(DonorId donorId, Instant at) {
+        endAllOf(donorId, DeviceSignOutReason.ERASED, at);
+        devices.reduceErasedOf(donorId, at);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void endOthersOf(DonorId donorId, Optional<DeviceId> kept, Instant at) {
         refreshTokens.lockSessionsOf(donorId);
         refreshTokens.lockAllOf(donorId);
@@ -66,6 +79,7 @@ public class DeviceSignOuts {
         refreshTokens.revokeAllOfDevice(device.id(), at);
         boolean ended = devices.endIfActive(device.id(), reason, at);
         if (ended) {
+            reason.wipe().ifPresent(wipe -> devices.directWipe(device.id(), wipe));
             events.publishEvent(new DeviceSignedOut(device.donorId().value(), device.id().value(), at));
         }
         return ended;
