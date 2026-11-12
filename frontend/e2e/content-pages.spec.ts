@@ -266,9 +266,7 @@ test.describe('Given a visitor paging through the news', () => {
 });
 
 const PAGER_LISTS = [
-  { path: '/projekty?strana=2', api: '/api/content/projects', label: 'Stránky příběhů' },
   { path: '/aktuality?strana=2', api: '/api/content/news', label: 'Stránky aktualit' },
-  { path: '/projekty', api: '/api/content/projects', label: 'Stránky příběhů' },
 ];
 
 async function threePagesOf(page: Page, api: string): Promise<void> {

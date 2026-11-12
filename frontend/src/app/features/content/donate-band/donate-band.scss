@@ -11,6 +11,7 @@ $lead-width: 34rem;
   position: relative;
   display: grid;
   grid-template-areas: 'band';
+  grid-template-columns: minmax(0, 1fr);
   min-height: 24rem;
   overflow: hidden;
   border-radius: var(--radius-media);
@@ -36,6 +37,7 @@ $lead-width: 34rem;
 
 .band-text {
   z-index: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;

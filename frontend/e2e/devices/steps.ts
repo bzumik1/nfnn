@@ -97,24 +97,24 @@ async function newsFeed(ui: Ui): Promise<void> {
   await ui.waitVisible({ css: '.story' });
 }
 
-const PAGED_PROJECTS = Array.from({ length: 10 }, (_, index) => ({
-  ...project,
+const PAGED_NEWS = Array.from({ length: 10 }, (_, index) => ({
+  ...article,
   id: `paged-${index}`,
-  slug: `projekt-${index + 11}`,
-  title: `Projekt ${index + 11}`,
+  slug: `aktualita-${index + 11}`,
+  title: `Aktualita ${index + 11}`,
 }));
 
-async function projectsMiddlePage(ui: Ui): Promise<void> {
+async function newsMiddlePage(ui: Ui): Promise<void> {
   await mockDonorApi(ui.routes);
   await mockPublicContent(ui.routes);
   await ui.routes.route(
-    (url) => url.pathname === '/api/content/projects',
+    (url) => url.pathname === '/api/content/news',
     (route) =>
       route.fulfill({
-        json: { items: PAGED_PROJECTS, page: 1, size: 10, total: 25, hasMore: true },
+        json: { items: PAGED_NEWS, page: 1, size: 10, total: 25, hasMore: true },
       }),
   );
-  await visit(ui, '/projekty?strana=2');
+  await visit(ui, '/aktuality?strana=2');
   await ui.waitVisible({ css: 'nav.pages' });
 }
 
@@ -250,9 +250,9 @@ export const STEPS: Step[] = [
     open: (ui) => publicPage(ui, `/projekty/${project.slug}`),
   },
   {
-    id: 'projects-page',
-    title: 'a middle page of the projects with its paging',
-    open: projectsMiddlePage,
+    id: 'news-page',
+    title: 'a middle page of the news with its paging',
+    open: newsMiddlePage,
   },
   {
     id: 'verify-receipt',

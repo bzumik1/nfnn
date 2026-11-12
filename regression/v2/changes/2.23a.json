@@ -346,5 +346,89 @@
     "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when nothing is published yet, then the page says so",
     "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab follows the approved mockup (summary tiles, year chips, story tiles, Přispět band), so the projects list it replaced is gone with its spec; 2.26 moved the news to the Aktuality tab, so nothing else used it",
     "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when there is no story yet, then it says so, leads home and offers no years"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/list/content-list.spec.ts > Given a visitor opening the list of projects > when a middle page is asked for, then both directions are offered in words with a chevron icon hidden from screen readers",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when a later page is asked for > then each direction carries a chevron icon hidden from screen readers"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 390 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty?strana=2, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 390 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 390 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 390 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty?strana=2, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 200 % at the end of a list > when they reach the pages of /projekty?strana=2, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 200 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 200 % at the end of a list > when they reach the pages of /projekty, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 375 px wide with text at 200 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 320 px wide with text at 200 % at the end of a list > when they reach the pages of /projekty?strana=2, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 320 px wide with text at 200 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 320 px wide with text at 200 % at the end of a list > when they reach the pages of /projekty, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 320 px wide with text at 200 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 1280 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty?strana=2, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 1280 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/content-pages.spec.ts > Given a visitor 1280 px wide with text at 100 % at the end of a list > when they reach the pages of /projekty, then the directions and the position share one row with the position in its middle",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/content-pages.spec.ts > Given a visitor 1280 px wide with text at 100 % at the end of a list > when they reach the pages of /aktuality?strana=2, then the directions and the position share one row with the position in its middle"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the projects with its paging, then nothing is cut off, stacked, covered or too small",
+    "reason": "2.23a (plan v3, Jakub 2026-10-31): the Pomáháme tab shows the stories by year chips instead of a paged list, so only Aktuality keeps the pager, which these cases go on checking",
+    "replacement": "e2e/devices/devices.spec.ts > Given the site on a phone or a tablet > when they open a middle page of the news with its paging, then nothing is cut off, stacked, covered or too small"
   }
 ]
