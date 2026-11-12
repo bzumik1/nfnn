@@ -1,4 +1,4 @@
-FROM postgres:17-alpine
+FROM postgres:17.12-alpine@sha256:34261f594522cf41dfcb76aefd42b9d201098b0e6b23c9c68733f169e4218b6f
 
 ENV POSTGRES_INITDB_ARGS="--data-checksums --locale-provider=builtin --builtin-locale=C.UTF-8"
 
