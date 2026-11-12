@@ -16,7 +16,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
-import { Observable, finalize, from, map, of, switchMap } from 'rxjs';
+import { Observable, Subscription, finalize, from, map, of, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -35,10 +35,10 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
-import { KeptDonorAnswers } from '../kept-donor-answers';
 
 @Component({
   selector: 'app-passkeys-panel',
@@ -59,6 +59,7 @@ export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
+  private listLoad = Subscription.EMPTY;
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly device = inject(SESSION_DEVICE);
   private readonly document = inject(DOCUMENT);
@@ -127,10 +128,11 @@ export class PasskeysPanel {
 
   load(shownBefore = false): void {
     this.loadError.set('');
+    this.listLoad.unsubscribe();
     const passkeys = shownBefore
       ? this.kept.read('passkeys', this.authApi.passkeys())
       : this.authApi.passkeys();
-    passkeys.subscribe({
+    this.listLoad = passkeys.subscribe({
       next: (list) => this.passkeys.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {
@@ -183,6 +185,7 @@ export class PasskeysPanel {
       return;
     }
     const name = this.name.trim();
+    this.listLoad.unsubscribe();
     this.saving.set(true);
     this.error.set('');
     this.confirm()
@@ -266,6 +269,7 @@ export class PasskeysPanel {
     if (form.invalid || this.renameSaving()) {
       return;
     }
+    this.listLoad.unsubscribe();
     this.renameSaving.set(true);
     this.renameError.set('');
     this.authApi.renamePasskey(passkey.id, this.newName.trim()).subscribe({
@@ -302,6 +306,7 @@ export class PasskeysPanel {
     if (this.removing() !== null) {
       return;
     }
+    this.listLoad.unsubscribe();
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
       next: () => {

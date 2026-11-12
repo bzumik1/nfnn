@@ -26,13 +26,15 @@ import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
 })
 class StubSection {}
 
-const SECTION_PAGES: AccountSectionPages = {
-  '/darce/prehled': () => Promise.resolve(StubSection),
-  '/darce/dary': () => Promise.resolve(StubSection),
-  '/darce/potvrzeni': () => Promise.resolve(StubSection),
-  '/darce/ucty': () => Promise.resolve(StubSection),
-  '/darce/udaje': () => Promise.resolve(StubSection),
-};
+function sectionPages(): AccountSectionPages {
+  return {
+    '/darce/prehled': () => Promise.resolve(StubSection),
+    '/darce/dary': () => Promise.resolve(StubSection),
+    '/darce/potvrzeni': () => Promise.resolve(StubSection),
+    '/darce/ucty': () => Promise.resolve(StubSection),
+    '/darce/udaje': () => Promise.resolve(StubSection),
+  };
+}
 
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
@@ -57,7 +59,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: DialogHistory, useClass: FakeDialogHistory },
-        { provide: ACCOUNT_SECTION_PAGES, useValue: SECTION_PAGES },
+        { provide: ACCOUNT_SECTION_PAGES, useFactory: sectionPages },
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: AppInstall, useValue: { way: installWay.asReadonly(), install } },
         {

@@ -365,7 +365,10 @@ test.describe('Given a donor signed in on a phone, whose sections open in the ac
 
     await openAccountItem(page, 'Moje dary');
     await expect(sheet.getByRole('heading', { name: 'Všechny dary' })).toBeVisible();
-    await expect.poll(() => bankChecks.length).toBe(1);
+    await expect(sheet.locator('.bank-check-status')).toHaveText(
+      'Údaje z banky k 18. 10. 2026 10:05',
+    );
+    expect(bankChecks).toHaveLength(1);
     await openAccountItem(page, 'Údaje a zabezpečení');
     await expect(sheet.getByText('Mac · Safari')).toBeVisible();
 
@@ -387,6 +390,12 @@ test.describe('Given a donor signed in on a phone, whose sections open in the ac
     await expect(sheet.getByText('Mac · Safari')).toBeVisible();
     await expect(sheet.getByText(/Načítáme/)).toHaveCount(0);
     expect(bankChecks).toHaveLength(1);
+
+    const refreshed = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/donors/me/devices',
+    );
     answer();
+    await refreshed;
+    await expect(sheet.getByText('Mac · Safari')).toBeVisible();
   });
 });

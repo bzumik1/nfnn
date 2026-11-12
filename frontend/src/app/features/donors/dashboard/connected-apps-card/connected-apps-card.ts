@@ -1,6 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { ChangeDetectionStrategy, Component, effect, inject, output, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -23,6 +24,7 @@ export class ConnectedAppsCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
+  private listLoad = Subscription.EMPTY;
 
   readonly sessionEnded = output<void>();
 
@@ -43,10 +45,11 @@ export class ConnectedAppsCard {
 
   loadConnections(shownBefore = false): void {
     this.connectionsError.set('');
+    this.listLoad.unsubscribe();
     const connections = shownBefore
       ? this.kept.read('connections', this.authApi.connections())
       : this.authApi.connections();
-    connections.subscribe({
+    this.listLoad = connections.subscribe({
       next: (list) => this.connections.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {
@@ -66,6 +69,7 @@ export class ConnectedAppsCard {
     if (this.disconnecting() !== null) {
       return;
     }
+    this.listLoad.unsubscribe();
     this.disconnecting.set(app.id);
     this.connectionsError.set('');
     this.disconnected.set('');

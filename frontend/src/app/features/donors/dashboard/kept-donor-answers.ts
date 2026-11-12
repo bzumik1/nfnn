@@ -2,9 +2,25 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { effect, inject, Injectable, untracked } from '@angular/core';
 import { catchError, concat, defer, EMPTY, Observable, of, tap, throwError } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { ConnectedAppList, PasskeyList, SignedInDeviceList } from '../../../core/auth/donor';
+import { BankAccountItem } from '../../donations/bank-accounts-api';
+import { DonorDonationsRead } from '../../donations/device-copy/donor-donations-repository';
 
-export type KeptDonorAnswer =
-  'devices' | 'passkeys' | 'connections' | 'bank-accounts' | 'donations' | 'bank-check';
+export interface KeptBankCheck {
+  readonly endedAt: number;
+  readonly bankDataAsOf: string | null;
+}
+
+export interface KeptDonorAnswerTypes {
+  readonly devices: SignedInDeviceList;
+  readonly passkeys: PasskeyList;
+  readonly connections: ConnectedAppList;
+  readonly 'bank-accounts': { readonly items: readonly BankAccountItem[] };
+  readonly donations: DonorDonationsRead;
+  readonly 'bank-check': KeptBankCheck;
+}
+
+export type KeptDonorAnswer = keyof KeptDonorAnswerTypes;
 
 const SESSION_REFUSED = 401;
 
@@ -21,10 +37,14 @@ export class KeptDonorAnswers {
     });
   }
 
-  read<T>(answer: KeptDonorAnswer, server: Observable<T>): Observable<T> {
+  read<K extends KeptDonorAnswer>(
+    answer: K,
+    server: Observable<KeptDonorAnswerTypes[K]>,
+  ): Observable<KeptDonorAnswerTypes[K]> {
     return defer(() => {
-      const fresh = server.pipe(tap((value) => this.keep(answer, value)));
-      const shown = this.kept<T>(answer);
+      const askedFor = this.currentOwner();
+      const fresh = server.pipe(tap((value) => this.keepFor(askedFor, answer, value)));
+      const shown = this.kept(answer);
       if (shown === null) {
         return fresh;
       }
@@ -39,17 +59,28 @@ export class KeptDonorAnswers {
     });
   }
 
-  kept<T>(answer: KeptDonorAnswer): T | null {
-    this.follow(untracked(this.donor)?.id ?? null);
-    return this.answers.has(answer) ? (this.answers.get(answer) as T) : null;
+  kept<K extends KeptDonorAnswer>(answer: K): KeptDonorAnswerTypes[K] | null {
+    this.follow(this.currentOwner());
+    return this.answers.has(answer) ? (this.answers.get(answer) as KeptDonorAnswerTypes[K]) : null;
   }
 
-  keep<T>(answer: KeptDonorAnswer, value: T): void {
-    const owner = untracked(this.donor)?.id ?? null;
-    this.follow(owner);
-    if (owner !== null) {
+  keep<K extends KeptDonorAnswer>(answer: K, value: KeptDonorAnswerTypes[K]): void {
+    this.keepFor(this.currentOwner(), answer, value);
+  }
+
+  private keepFor<K extends KeptDonorAnswer>(
+    owner: string | null,
+    answer: K,
+    value: KeptDonorAnswerTypes[K],
+  ): void {
+    this.follow(this.currentOwner());
+    if (owner !== null && owner === this.owner) {
       this.answers.set(answer, value);
     }
+  }
+
+  private currentOwner(): string | null {
+    return untracked(this.donor)?.id ?? null;
   }
 
   private follow(owner: string | null): void {

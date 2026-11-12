@@ -15,6 +15,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { Subscription } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -53,6 +54,7 @@ export class DevicesCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
+  private listLoad = Subscription.EMPTY;
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
@@ -86,10 +88,11 @@ export class DevicesCard {
 
   loadDevices(shownBefore = false): void {
     this.loadError.set('');
+    this.listLoad.unsubscribe();
     const devices = shownBefore
       ? this.kept.read('devices', this.authApi.devices())
       : this.authApi.devices();
-    devices.subscribe({
+    this.listLoad = devices.subscribe({
       next: (list) => this.devices.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure)) {
@@ -204,6 +207,7 @@ export class DevicesCard {
   }
 
   private begin(target: string): void {
+    this.listLoad.unsubscribe();
     this.signingOut.set(target);
     this.actionError.set('');
     this.signedOut.set('');

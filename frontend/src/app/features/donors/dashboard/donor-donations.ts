@@ -67,6 +67,7 @@ import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-p
 import { ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
 import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
 import { KeptDonorAnswers } from './kept-donor-answers';
+import { userHandleOf } from '../../../core/auth/session-device';
 
 export type DonationsState = 'loading' | 'ready' | 'error';
 
@@ -133,11 +134,6 @@ const YEARLY_PROBLEMS_SHOWN_AS_TITLE = [
 ];
 const NOT_FOUND = 404;
 const BANK_CHECK_COOLDOWN_MS = 30_000;
-
-interface KeptBankCheck {
-  readonly endedAt: number;
-  readonly bankDataAsOf: string | null;
-}
 
 interface IncomingDonations {
   readonly read: DonorDonationsRead;
@@ -255,6 +251,10 @@ export class DonorDonations implements GiftFeed {
     });
     this.load();
     this.checkBankUnlessJustChecked();
+    effect(() => {
+      const asOf = this.bankDataAsOf();
+      untracked(() => this.keepBankTime(asOf));
+    });
     this.kept
       .read('bank-accounts', this.bankAccountsApi.list())
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -298,7 +298,7 @@ export class DonorDonations implements GiftFeed {
         switchMap(() => this.bankAccountsApi.list().pipe(catchError(() => EMPTY))),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(({ items }) => this.bankAccounts.set(items));
+      .subscribe(({ items }) => this.showBankAccounts(items));
     this.live
       .changes(['bank-import'])
       .pipe(
@@ -341,7 +341,9 @@ export class DonorDonations implements GiftFeed {
   private showDonations(read: DonorDonationsRead): void {
     this.incoming.set(null);
     this.shown = read;
-    this.kept.keep('donations', read);
+    if (this.belongsToSignedInDonor(read)) {
+      this.kept.keep('donations', read);
+    }
     if (read.owner !== null) {
       this.shownOwner = read.owner;
     }
@@ -392,7 +394,7 @@ export class DonorDonations implements GiftFeed {
   private reloadDonations(offered = false): Observable<readonly DonationItem[] | null> {
     const request = ++this.latestDonationsRequest;
     const copied = this.repository.held();
-    const held = copied ?? this.kept.kept<DonorDonationsRead>('donations');
+    const held = copied ?? this.kept.kept('donations');
     const atOnce = held !== null && this.state() !== 'ready';
     if (atOnce) {
       this.showRead(held);
@@ -661,14 +663,26 @@ export class DonorDonations implements GiftFeed {
   private bankCheckEnded(): void {
     this.checkingBank.set(false);
     this.bankCheckEndedAt = Date.now();
-    this.kept.keep<KeptBankCheck>('bank-check', {
+    this.kept.keep('bank-check', {
       endedAt: this.bankCheckEndedAt,
       bankDataAsOf: this.bankDataAsOf(),
     });
   }
 
+  private keepBankTime(asOf: string | null): void {
+    const last = this.kept.kept('bank-check');
+    if (last !== null && asOf !== null && asOf !== last.bankDataAsOf) {
+      this.kept.keep('bank-check', { ...last, bankDataAsOf: asOf });
+    }
+  }
+
+  private belongsToSignedInDonor(read: DonorDonationsRead): boolean {
+    const donor = untracked(this.auth.donor);
+    return read.owner === null || (donor !== null && read.owner === userHandleOf(donor.id));
+  }
+
   private checkBankUnlessJustChecked(): void {
-    const last = this.kept.kept<KeptBankCheck>('bank-check');
+    const last = this.kept.kept('bank-check');
     if (last === null || Date.now() - last.endedAt > BANK_CHECK_COOLDOWN_MS) {
       this.checkBank(false);
       return;

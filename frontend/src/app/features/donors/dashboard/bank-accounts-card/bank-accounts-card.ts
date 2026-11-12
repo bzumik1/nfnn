@@ -141,6 +141,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
   private readonly kept = inject(KeptDonorAnswers);
+  private keptRefresh = Subscription.EMPTY;
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly live = inject(LiveUpdates);
@@ -276,8 +277,10 @@ export class BankAccountsCard {
   }
 
   private fetch(focusTitle = false, shownBefore = false): void {
-    const list = shownBefore ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
-    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.keptRefresh.unsubscribe();
+    const behindKept = shownBefore && this.kept.kept('bank-accounts') !== null;
+    const list = behindKept ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
+    const load = list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ items }) => {
         this.showAccounts(items);
         if (focusTitle) {
@@ -292,6 +295,9 @@ export class BankAccountsCard {
         this.state.set('error');
       },
     });
+    if (behindKept) {
+      this.keptRefresh = load;
+    }
   }
 
   private showAccounts(items: readonly BankAccountItem[]): void {
@@ -453,6 +459,7 @@ export class BankAccountsCard {
     if (this.busy() !== null) {
       return;
     }
+    this.keptRefresh.unsubscribe();
     this.busy.set(account.id);
     this.actionError.set('');
     this.actionDone.set('');

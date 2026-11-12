@@ -407,6 +407,8 @@ describe("Given a donor's signed-in devices card", () => {
       await listed([THIS_MAC, IPHONE]);
       fixture.destroy();
       fixture = TestBed.createComponent(DevicesCard);
+      sessionEnded = 0;
+      fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
       fixture.detectChanges();
     });
 
@@ -434,6 +436,35 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(rows()).toHaveLength(1);
       http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
+    });
+
+    it('then a device signed out while the refresh is still on its way does not come back with its answer', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      expect(refresh.cancelled).toBe(true);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a refresh refused because the session ended still sends the donor to sign in', async () => {
+      http.expectOne(DEVICES_URL).flush(problem('auth/session-ended', 'Odhlášeno'), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(problem('auth/invalid-refresh-token', 'Neplatné'), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settle();
+
+      expect(sessionEnded).toBe(1);
     });
   });
 
