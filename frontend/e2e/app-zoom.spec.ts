@@ -1,5 +1,6 @@
 import { CDPSession, devices, Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { siteSteps, stepBack } from './app-history';
 import { mockDonorApi } from './donor-session';
 
 const IMAGE_ID = '0199f3e0-0000-7000-8000-00000000a001';
@@ -116,7 +117,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     );
   });
 
-  test('when they tap the photo of a news article and spread two fingers on it, then the photo grows in the viewer while the page stays at its size, and Back returns to the photo', async ({
+  test('when they tap the photo of a news article and spread two fingers on it, then the photo grows in the viewer while the page stays at its size, and a step back returns to the photo', async ({
     page,
   }) => {
     await publishedArticle(page);
@@ -142,7 +143,7 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
       '100\u00a0%',
     );
 
-    await page.goBack();
+    await stepBack(page);
 
     await expect(viewer).toBeHidden();
     await expect(page).toHaveURL(`/aktuality/${article.slug}`);
@@ -167,6 +168,64 @@ test.describe('Given a visitor on a phone, where the site behaves like an app', 
     await tap(cdp, x, y);
     await tap(cdp, x, y);
     await expect.poll(() => width(photo)).toBeCloseTo(fitted, 0);
+  });
+
+  test('when they swipe the photo in the viewer down with a finger, then the photo follows it, the viewer closes as its close button does and leaves no step of its own behind', async ({
+    page,
+  }) => {
+    await publishedArticle(page);
+    const { viewer, photo } = await openArticlePhoto(page);
+    const fitted = (await photo.boundingBox())!.y;
+    const stage = (await viewer.getByRole('group', { name: 'Zvětšená fotka' }).boundingBox())!;
+    const cdp = await page.context().newCDPSession(page);
+    const x = stage.x + stage.width / 2;
+    const y = stage.y + stage.height / 3;
+
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 6; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y + step * 20 }],
+      });
+    }
+    await expect.poll(async () => (await photo.boundingBox())!.y).toBeGreaterThan(fitted + 100);
+    for (let step = 7; step <= 15; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y + step * 20 }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+    await expect(viewer).toBeHidden();
+    await expect(
+      page.getByRole('button', { name: 'Zvětšit fotku: Děti sázejí stromek' }),
+    ).toBeFocused();
+    await expect.poll(() => siteSteps(page)).toBe(1);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+  });
+
+  test('when they swipe the zoomed photo down with a finger, then it moves inside the viewer, which stays open', async ({
+    page,
+  }) => {
+    await publishedArticle(page);
+    const { viewer } = await openArticlePhoto(page);
+    await viewer.getByRole('button', { name: 'Přiblížit' }).click();
+    const stage = (await viewer.getByRole('group', { name: 'Zvětšená fotka' }).boundingBox())!;
+    const cdp = await page.context().newCDPSession(page);
+    const x = stage.x + stage.width / 2;
+    const y = stage.y + stage.height / 3;
+
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 15; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y + step * 20 }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+    await expect(viewer).toBeVisible();
   });
 
   test('when they tap the payment QR in Přispět, then the code opens large in the viewer and the plus button enlarges it further', async ({

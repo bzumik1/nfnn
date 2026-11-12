@@ -139,7 +139,7 @@ html:has(app-tab-bar) .ui-notice--floating {
     );
   }
 
-  body:not(:has(app-site-footer)) {
+  body:not(:has(app-site-footer, app-landing)) {
     padding-bottom: calc(var(--floating-notice-height) + var(--space-8));
   }
 }
@@ -150,7 +150,7 @@ html:has(app-tab-bar) .ui-notice--floating {
       env(safe-area-inset-bottom)
   );
 
-  body:not(:has(app-site-footer)) {
+  body:not(:has(app-site-footer, app-landing)) {
     padding-bottom: calc(
       var(--floating-notice-height) + var(--offline-pill-height) + var(--space-8) + var(--space-4) +
         env(safe-area-inset-bottom)

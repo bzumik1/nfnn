@@ -1,10 +1,12 @@
 package cz.novanadeje.app.donations.application.report;
 
+import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportRecipientsInBrowserOnly;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
@@ -60,17 +62,20 @@ public class ReportSettingsService {
     }
 
     @Transactional
-    public SavedReportSettings change(UUID adminId, ReportSettings changed, ExpectedVersion expected) {
+    public SavedReportSettings change(UUID adminId, AdministrationChannel channel, ReportSettings changed, ExpectedVersion expected) {
         settings.lockForChange();
         StoredReportSettings current = new StoredReportSettings(settings.current(), settings.lastChangedAt());
         String version = rows.reportSettingsVersion(current);
         if (!expected.admits(version)) {
             throw new ChangedMeanwhile(version, rows.reportSettings(current, reportLog.sentReportsNewestFirst()));
         }
+        if (!channel.mayChangeReportRecipients() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
+            throw new ReportRecipientsInBrowserOnly();
+        }
         Instant now = clock.instant();
         settings.save(changed, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Nastavení měsíčního přehledu změněno: příjemci " + String.join(", ", changed.recipients().values())
+                "Nastavení měsíčního přehledu změněno: počet příjemců " + changed.recipients().count()
                         + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()), now));
         log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
                 changed.sendDay(), changed.sendHour(), changed.sections().names());

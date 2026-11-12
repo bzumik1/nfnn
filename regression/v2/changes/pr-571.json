@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a swipe from the middle of the screen goes a third of the screen across, then the app goes back as Zpět does",
+    "reason": "Jakub 2026-11-12: the back swipe goes back when the page, carried by the finger's speed, would come to rest past half the screen's width, as in iOS, instead of a third of the width; the same swipe is now named by the finger moving on across as it lets go",
+    "replacement": "src/app/core/navigation/edge-swipe-back.spec.ts > Given the app opened from the home screen of an iPhone > when a swipe from the middle of the screen moves on across as the finger lets go, then the app goes back as Zpět does",
+    "contract": "docs/frontend-overview.md, edge-swipe-back"
+  }
+]

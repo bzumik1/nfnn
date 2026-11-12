@@ -16,12 +16,14 @@ import { InstallCard } from '../install-card/install-card';
 import { receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { SendGift } from '../send-gift/send-gift';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 const RECENT_DONATIONS_SHOWN = 5;
 
 @Component({
   selector: 'app-donor-overview',
   imports: [
+    DiagnosticsDownload,
     DownloadProgress,
     NgTemplateOutlet,
     RouterLink,

@@ -8,6 +8,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  Injectable,
   signal,
 } from '@angular/core';
 
@@ -23,6 +24,11 @@ interface Stat {
   readonly label: string;
 }
 
+@Injectable({ providedIn: 'root' })
+export class StatsCountUp {
+  counted = false;
+}
+
 @Component({
   selector: 'app-stats-bar',
   templateUrl: './stats-bar.html',
@@ -31,7 +37,8 @@ interface Stat {
 })
 export class StatsBar {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly animates = canAnimate();
+  private readonly countUp = inject(StatsCountUp);
+  private readonly animates = canAnimate() && !this.countUp.counted;
   private readonly progress = signal(this.animates ? 0 : 1);
 
   protected readonly stats: readonly Stat[] = [
@@ -58,7 +65,7 @@ export class StatsBar {
         (entries) => {
           if (entries.some((entry) => entry.isIntersecting)) {
             observer.disconnect();
-            this.countUp(destroyRef);
+            this.countUpOnce(destroyRef);
           }
         },
         { threshold: SHARE_IN_VIEW },
@@ -68,7 +75,8 @@ export class StatsBar {
     });
   }
 
-  private countUp(destroyRef: DestroyRef): void {
+  private countUpOnce(destroyRef: DestroyRef): void {
+    this.countUp.counted = true;
     this.waiting.set(false);
     let start: number | undefined;
     let frame = 0;

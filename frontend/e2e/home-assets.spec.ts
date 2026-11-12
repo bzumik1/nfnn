@@ -55,15 +55,19 @@ test.describe('Given a visitor on the home page', () => {
     });
 
     await page.goto('/');
-    await page.waitForFunction(() => {
-      const loaded = [...document.fonts].filter((face) => face.status === 'loaded');
-      return (
-        loaded.some(
-          (face) => face.family.includes('Playfair Display') && face.style === 'italic',
-        ) && loaded.some((face) => face.family.includes('Inter'))
-      );
-    });
+    await page.waitForFunction(() =>
+      [...document.fonts].some(
+        (face) =>
+          face.status === 'loaded' &&
+          face.family.includes('Playfair Display') &&
+          face.style === 'italic',
+      ),
+    );
+    const interFaces = await page.evaluate(
+      async () => (await document.fonts.load('1rem Inter')).length,
+    );
 
+    expect(interFaces).toBeGreaterThan(0);
     expect(elsewhere).toEqual([]);
   });
 

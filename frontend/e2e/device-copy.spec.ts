@@ -11,6 +11,8 @@ import {
   mockDonorSync,
   noDonations,
   openDonorSection,
+  opensSectionsInSheet,
+  showAccountList,
   session,
   signIn,
 } from './donor-session';
@@ -155,6 +157,9 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     });
 
     await page.reload();
+    if (opensSectionsInSheet(page)) {
+      await openDeviceData(page);
+    }
 
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
     expect((await rawDevice(page)).copyIds).toEqual(before.copyIds);
@@ -186,8 +191,7 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await openDeviceData(page);
     await expect(page.getByText(/Uloženo v zařízení · aktualizováno /)).toBeVisible();
 
-    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+    await (await showAccountList(page)).getByRole('button', { name: 'Odhlásit se' }).click();
     await expect(page).toHaveURL(/\/$/);
 
     await expect.poll(async () => (await rawDevice(page)).wraps).toEqual(['password']);
@@ -205,7 +209,9 @@ test.describe('Given a donor who signs in with a password on a device that keeps
     await expect(
       dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
     ).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    await expect(
+      dialog.getByRole('heading', { name: 'Smazat data z tohoto zařízení?' }),
+    ).toBeFocused();
     await dialog.getByRole('button', { name: 'Smazat data a odhlásit' }).click();
 
     await expect(page).toHaveURL(/\/$/);

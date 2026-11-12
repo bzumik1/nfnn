@@ -55,7 +55,7 @@ describe('Given an address the site does not know', () => {
     const root = fixture.nativeElement as HTMLElement;
 
     expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-      'Tento projekt už na webu není.',
+      'Tento příběh už na webu není.',
     );
     expect(root.querySelector('a')?.getAttribute('href')).toBe('/projekty');
     expect(root.querySelector('a')?.textContent?.trim()).toBe('Kde všude pomáháme');

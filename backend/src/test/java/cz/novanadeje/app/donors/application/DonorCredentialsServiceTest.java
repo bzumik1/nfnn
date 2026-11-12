@@ -110,7 +110,7 @@ class DonorCredentialsServiceTest {
     @DisplayName("Given the right current password, when the password is changed, then the new hash is stored, every other device is signed out, the donor is told and the session continues on this one")
     void should_store_hash_revoke_sessions_and_open_one_when_password_changed_given_right_current_password() {
         Donor donor = donor();
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passwordHasher.hash(new RawPassword(NEXT))).thenReturn(NEW_HASH);
         when(sessions.continueOn(donor, false, DEVICE)).thenReturn(TOKENS);
@@ -130,7 +130,7 @@ class DonorCredentialsServiceTest {
     @Test
     @DisplayName("Given a wrong or malformed current password, when the password is changed, then it is refused as a wrong password and nothing changes")
     void should_refuse_and_change_nothing_when_password_changed_given_wrong_current_password() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword("wrong horse battery"), OLD_HASH)).thenReturn(false);
 
         assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword("wrong horse battery"), NEXT, DEVICE)).isInstanceOf(WrongPassword.class);
@@ -143,7 +143,7 @@ class DonorCredentialsServiceTest {
     @Test
     @DisplayName("Given the right current password and a weak new one, when the password is changed, then the password rule is reported and nothing changes")
     void should_report_weak_password_and_change_nothing_when_password_changed_given_common_new_password() {
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor()));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
 
         assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), "password1234", DEVICE)).isInstanceOf(PasswordTooWeak.class);
@@ -156,7 +156,7 @@ class DonorCredentialsServiceTest {
     @DisplayName("Given a session that has ended, when the password is changed or removed, then it is refused as ended before anything is hashed, stored, signed out or announced")
     void should_refuse_as_ended_and_change_nothing_when_password_changed_or_removed_given_ended_session() {
         Donor donor = donor();
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passkeys.countByDonor(DONOR)).thenReturn(1);
         doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
@@ -174,7 +174,7 @@ class DonorCredentialsServiceTest {
     @Test
     @DisplayName("Given an unknown donor, when the password is changed, then the donor is not found")
     void should_report_not_found_when_password_changed_given_unknown_donor() {
-        when(donors.findById(DONOR)).thenReturn(Optional.empty());
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT, DEVICE)).isInstanceOf(DonorNotFound.class);
 
@@ -185,7 +185,7 @@ class DonorCredentialsServiceTest {
     @DisplayName("Given a passkey and the right password, when the password is removed, then it is gone, every other device is signed out and the session continues on this one")
     void should_remove_password_revoke_sessions_and_open_one_when_removed_given_passkey() {
         Donor donor = donor();
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passkeys.countByDonor(DONOR)).thenReturn(1);
         when(sessions.continueOn(donor, true, DEVICE)).thenReturn(TOKENS);
@@ -204,7 +204,7 @@ class DonorCredentialsServiceTest {
     @DisplayName("Given no passkey, when the password is removed, then it is refused as the last way to sign in and kept")
     void should_refuse_when_password_removed_given_no_passkey() {
         Donor donor = donor();
-        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(passwordHasher.matches(new RawPassword(CURRENT), OLD_HASH)).thenReturn(true);
         when(passkeys.countByDonor(DONOR)).thenReturn(0);
 

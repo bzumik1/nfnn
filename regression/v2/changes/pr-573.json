@@ -1,0 +1,82 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back, as its swipe does, then the page the sheet was opened on returns",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back from Moje dary, as its swipe does, then the account list returns in the sheet and the next step closes it",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they open a section in the sheet, then the browser gains no entry, so its Back would leave the site",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět, then the page the sheet was opened on returns",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět in the sheet, then the account list returns with the focus on the section they left",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose the section already open, then the sheet closes and one step back leaves it",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back, as its swipe does, then the page the sheet was opened on returns #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when the app steps back from Moje dary, as its swipe does, then the account list returns in the sheet and the next step closes it #2",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they open a section from the sheet, then the browser gains no entry, so its Back would leave the site #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they open a section in the sheet, then the browser gains no entry, so its Back would leave the site #2",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět, then the page the sheet was opened on returns #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they press Zpět in the sheet, then the account list returns with the focus on the section they left #2",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose the section already open, then the sheet closes and one step back leaves it #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section chosen in the account sheet opens inside the sheet as a step of a stack, so Back returns the account list instead of the page under the sheet",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen, then the sheet hands its history entry to that page, one level deeper, and closes",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen on a computer, then the sheet hands its history entry to that page, one level deeper, and closes",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section opens inside the sheet, so handing the sheet's history entry to the section's page holds only on a computer",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the sheet kept no history entry of its own, then a chosen section opens as a new entry over the page under it",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when the sheet kept no history entry of its own on a computer, then a chosen section opens as a new entry over the page under it",
+    "reason": "PR #573 (Jakub 2026-11-11, option a): on phones a section opens inside the sheet, so handing the sheet's history entry to the section's page holds only on a computer",
+    "contract": "docs/frontend-overview.md, Donor area (the account sheet on phones)"
+  }
+]

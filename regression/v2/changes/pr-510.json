@@ -1,0 +1,73 @@
+[
+  {
+    "path": "POST /api/admin/donations/donors/*",
+    "scenario": "donations/admin_receipts: The administration shares the donor's cap of 20 replacements in 24 hours, which a first issue does not count against*",
+    "kind": "body",
+    "field": "$.receipt.*",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt, so the first issue that the cap does not count is now the single receipt of a gift of 2027, which no yearly receipt lists, instead of a gift the active yearly receipt of 2026 lists, which is refused",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "path": "POST /api/donations/me/receipts",
+    "scenario": "donations/donation_receipts_frozen: A donor who prefers English gets bilingual receipts*",
+    "kind": "body",
+    "field": "$.receipt.*",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt, so the bilingual single receipt is now the receipt of a gift of 2027, which no yearly receipt lists, instead of a gift the active yearly receipt of 2026 lists, which is refused",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "path": "GET /api/donations/me/receipts",
+    "scenario": "donations/donor_device_sync: A receipt comes in the chunk of the year it certifies, not of the year it was issued, and a replacement keeps the receipt it replaces beside it*",
+    "kind": "body",
+    "field": "$.items[*].*",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt: the yearly receipt of 2026 issued in this scenario lists the gift whose single receipt was issued before it, so that single receipt is now REPLACED with the yearly receipt's issue time as supersededAt",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "path": "GET /api/donations/me/sync/chunks",
+    "scenario": "donations/donor_device_sync: A receipt comes in the chunk of the year it certifies, not of the year it was issued, and a replacement keeps the receipt it replaces beside it*",
+    "kind": "body",
+    "field": "$.chunks[*].rows[*].*",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt: the yearly receipt of 2026 issued in this scenario lists the gift whose single receipt was issued before it, so that single receipt is now REPLACED with the yearly receipt's issue time as supersededAt",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "scenario": "donations/admin_receipts: A connected application with the writing permission issues a receipt, which the audit trail names it for*",
+    "kind": "removed",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt: it issued the single receipt of a gift the connector's yearly receipt lists, which is now refused; replaced by the scenario that has the browser issue a replacement of the yearly receipt instead",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "scenario": "donations/admin_receipts: The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image*",
+    "kind": "removed",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt: it issued the single receipt of a gift the active yearly receipt lists, which is now refused; replaced by the scenario that lists a yearly replacement instead and shows the single receipt replaced by the yearly one",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: A changed address brings replacements of the yearly and the single receipt*",
+    "kind": "removed",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt: it issued the single receipt of a gift the active yearly receipt lists, which is now refused; replaced by the scenario that replaces the single receipt in the running year and then the yearly receipt that replaced it",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A changed address brings replacements of the yearly and the single receipt",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A changed address brings a replacement of the single receipt, and later of the yearly receipt that replaced it",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt, so a single receipt of a gift an active yearly receipt lists is refused and the scenario that issued one is renamed after what it now does"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipts.feature > An administrator or a connected application issues a donor's receipt and reads the issued receipts - The administration lists the issued receipts newest first, a page at a time, by donor and by the year of issue, and reads one with its image",
+    "replacement": "feature_classpath_features/donations/admin_receipts.feature > An administrator or a connected application issues a donor's receipt and reads the issued receipts - The administration lists the issued receipts newest first, replaced ones too, a page at a time, by donor and by the year of issue, and reads one with its image",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt, so a single receipt of a gift an active yearly receipt lists is refused and the scenario that issued one is renamed after what it now does"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/admin_receipts.feature > An administrator or a connected application issues a donor's receipt and reads the issued receipts - A connected application with the writing permission issues a receipt, which the audit trail names it for",
+    "replacement": "feature_classpath_features/donations/admin_receipts.feature > An administrator or a connected application issues a donor's receipt and reads the issued receipts - A connected application with the writing permission issues a yearly receipt, which the audit trail names it for beside the replacement a browser issued",
+    "reason": "#467 (decided on Jakub's delegation of 2026-11-06): one gift is certified by at most one valid receipt, so a single receipt of a gift an active yearly receipt lists is refused and the scenario that issued one is renamed after what it now does"
+  }
+]

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CompactLayout } from '../../../../../core/layout/compact-layout';
+import { ShortViewport } from '../../../../../core/layout/short-viewport';
 
 @Component({
   selector: 'app-hero',
@@ -10,5 +11,7 @@ import { CompactLayout } from '../../../../../core/layout/compact-layout';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Hero {
-  protected readonly compact = inject(CompactLayout).isCompact;
+  private readonly compact = inject(CompactLayout).isCompact;
+  private readonly short = inject(ShortViewport).isShort;
+  protected readonly showsActions = computed(() => !this.compact() && !this.short());
 }

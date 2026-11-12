@@ -3,18 +3,19 @@ import { TestBed } from '@angular/core/testing';
 import { ReceiptRestart } from './receipt-restart';
 
 describe('Given a receipt download whose drawing tools went missing after a new release', () => {
-  let assign: ReturnType<typeof vi.fn<(url: string) => void>>;
+  let reload: ReturnType<typeof vi.fn<() => void>>;
+  let replaceState: ReturnType<typeof vi.fn<History['replaceState']>>;
   let restart: ReceiptRestart;
 
   beforeEach(() => {
     sessionStorage.clear();
-    assign = vi.fn<(url: string) => void>();
+    reload = vi.fn<() => void>();
+    replaceState = vi.fn<History['replaceState']>();
+    const location = { href: 'https://nfnn.cz/darce/potvrzeni?x=1', reload };
+    const history = { state: { nfnnAppDepth: 2 }, replaceState };
     TestBed.configureTestingModule({
       providers: [
-        {
-          provide: DOCUMENT,
-          useValue: { location: { href: 'https://nfnn.cz/darce/potvrzeni?x=1', assign } },
-        },
+        { provide: DOCUMENT, useValue: { location, defaultView: { location, history } } },
       ],
     });
     restart = TestBed.inject(ReceiptRestart);
@@ -22,17 +23,22 @@ describe('Given a receipt download whose drawing tools went missing after a new 
 
   afterEach(() => sessionStorage.clear());
 
-  it('when it fails the first time, then the page loads again with the download named in the address', () => {
+  it('when it fails the first time, then the page loads again in its own place with the download named in the address', () => {
     expect(restart.tryRestart('rok-2025')).toBe('reloading');
 
-    expect(assign).toHaveBeenCalledWith('https://nfnn.cz/darce/potvrzeni?x=1&stahnout=rok-2025');
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(
+      { nfnnAppDepth: 2 },
+      '',
+      'https://nfnn.cz/darce/potvrzeni?x=1&stahnout=rok-2025',
+    );
+    expect(reload).toHaveBeenCalledOnce();
   });
 
   it('when the same download fails again after the reload, then it does not reload a second time', () => {
     restart.tryRestart('rok-2025');
 
     expect(restart.tryRestart('rok-2025')).toBe('reloaded-already');
-    expect(assign).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('when a restarted download finished, then a later failure may restart once again', () => {
@@ -69,7 +75,7 @@ describe('Given a receipt download whose drawing tools went missing after a new 
     });
 
     expect(restart.tryRestart('rok-2025')).toBe('unavailable');
-    expect(assign).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 });

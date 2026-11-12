@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRecoveryRefused;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -33,10 +34,12 @@ public class DonorPasskeyRecoveryService {
     private final DonorPasskeyService passkeys;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
+    private final SecondFactorCodes codes;
 
     public DonorPasskeyRecoveryService(PasswordResetTokenRepository tokens, DonorRepository donors, SecondFactorRepository secondFactors,
-                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts) {
+                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts, SecondFactorCodes codes) {
         this.signOuts = signOuts;
+        this.codes = codes;
         this.tokens = tokens;
         this.donors = donors;
         this.secondFactors = secondFactors;
@@ -44,17 +47,17 @@ public class DonorPasskeyRecoveryService {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = SecondFactorCodeRejected.class)
+    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
     public PasskeyCreationOptions options(String token, String code) {
         Instant now = clock.instant();
-        Donor donor = recoverableDonor(usableToken(token, now));
+        PasswordResetToken found = usableToken(token, now);
+        Donor donor = recoverableDonor(donors.findById(found.donorId()).orElseThrow(InvalidPasswordResetToken::new));
         Optional<SecondFactor> factor = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled);
         if (factor.isPresent()) {
             if (code == null || code.isBlank()) {
                 throw new SecondFactorCodeRequired();
             }
-            factor.get().check(code, now);
-            secondFactors.save(factor.get());
+            codes.check(factor.get(), code, now);
         }
         log.info("Passkey recovery started for donor {}", donor.id());
         return passkeys.optionsFor(donor);
@@ -64,7 +67,7 @@ public class DonorPasskeyRecoveryService {
     public PasskeyView recover(String token, String challenge, String name, PasskeyAttestation attestation) {
         Instant now = clock.instant();
         PasswordResetToken found = usableToken(token, now);
-        Donor donor = recoverableDonor(found);
+        Donor donor = recoverableDonor(donors.findByIdForUpdate(found.donorId()).orElseThrow(InvalidPasswordResetToken::new));
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidPasswordResetToken();
         }
@@ -82,10 +85,10 @@ public class DonorPasskeyRecoveryService {
                 .orElseThrow(InvalidPasswordResetToken::new);
     }
 
-    private Donor recoverableDonor(PasswordResetToken found) {
-        Donor donor = donors.findById(found.donorId())
-                .filter(candidate -> !candidate.isErased() && candidate.isEmailVerified())
-                .orElseThrow(InvalidPasswordResetToken::new);
+    private Donor recoverableDonor(Donor donor) {
+        if (donor.isErased() || !donor.isEmailVerified()) {
+            throw new InvalidPasswordResetToken();
+        }
         if (donor.isAdministrator()) {
             log.warn("Passkey recovery by e-mail refused for administrator {}", donor.id());
             throw new AdministratorRecoveryRefused(donor.id());

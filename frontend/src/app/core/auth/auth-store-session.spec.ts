@@ -1,12 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
 import { AuthStore, SESSION_HINT_KEY } from './auth-store';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { APP_JAR, BROWSER_JAR, SESSION_JAR, SessionJar, SessionKind } from './session-jar';
 import { TAB_LOCKS } from './session-tabs';
 import { FakeTabLocks } from './testing/fake-session-tabs';
-import { authResponse, FakePasskeyAuthenticator } from './testing/donor-fixtures';
+import { authResponse, FakePasskeyAuthenticator, sampleDonor } from './testing/donor-fixtures';
 
 describe('Given the kinds of session in the auth store', () => {
   let store: AuthStore;
@@ -120,6 +121,59 @@ describe('Given the kinds of session in the auth store', () => {
           expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
           expect(store.session()).toBeNull();
         });
+    });
+  });
+
+  describe('when the page holds diagnostic events of a donor', () => {
+    let events: DiagnosticEvents;
+
+    beforeEach(() => {
+      setUp(BROWSER_JAR);
+      events = TestBed.inject(DiagnosticEvents);
+      store.login('jana@example.cz', 'correct horse battery', 'BROWSER').subscribe();
+      http.expectOne('/api/donors/auth/login').flush(answered('BROWSER'));
+      events.record({ kind: 'copy-sync', place: null, name: null, detail: 'stored' });
+    });
+
+    it('then signing out forgets them, so the next file of this page carries none of them', async () => {
+      store.logout().subscribe();
+      (await vi.waitFor(() => http.expectOne('/api/donors/auth/logout'))).flush(null);
+
+      expect(events.listed()).toEqual([]);
+    });
+
+    it('then another account signing in forgets them', () => {
+      store.login('petr@example.cz', 'correct horse battery', 'BROWSER').subscribe();
+      http.expectOne('/api/donors/auth/login').flush({
+        ...authResponse('token-2', sampleDonor({ id: 'donor-2', email: 'petr@example.cz' })),
+        session: 'BROWSER',
+      });
+
+      expect(events.listed()).toEqual([]);
+    });
+
+    it('then a page that starts without a session keeps what it recorded before it knew', async () => {
+      TestBed.resetTestingModule();
+      setUp(BROWSER_JAR);
+      events = TestBed.inject(DiagnosticEvents);
+      events.record({ kind: 'chunk-load', place: 'navigation', name: 'Error', detail: null });
+      localStorage.setItem(SESSION_HINT_KEY, '1');
+
+      const restored = store.restore();
+      (await vi.waitFor(() => http.expectOne('/api/donors/auth/refresh'))).flush(
+        { status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+      await restored;
+
+      expect(events.listed()).toHaveLength(1);
+    });
+
+    it('then the same account renewing its session keeps them', () => {
+      store.login('jana@example.cz', 'correct horse battery', 'BROWSER').subscribe();
+      http.expectOne('/api/donors/auth/login').flush(answered('BROWSER'));
+
+      expect(events.listed()).toHaveLength(1);
     });
   });
 });

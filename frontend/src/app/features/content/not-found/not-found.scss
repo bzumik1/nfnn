@@ -32,3 +32,14 @@
     text-align: center;
   }
 }
+
+@include bp.height-down(hero-lead) {
+  .not-found {
+    padding-top: var(--page-top);
+  }
+
+  .actions {
+    margin-top: var(--space-6);
+    gap: var(--space-3);
+  }
+}

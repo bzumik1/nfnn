@@ -1,4 +1,4 @@
-import { provideHttpClient } from '@angular/common/http';
+import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -28,6 +28,7 @@ import { DialogHistory } from '../../../shared/ui/dialog/dialog-history';
 import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
+import { Connectivity, PROBE_PATH } from '../../../core/connectivity/connectivity';
 
 describe('Given the sign-in dialog', () => {
   let fixture: ComponentFixture<LoginDialog>;
@@ -106,6 +107,50 @@ describe('Given the sign-in dialog', () => {
     fixture.detectChanges();
     await fixture.whenStable();
   }
+
+  describe('when it opens while the app is offline', () => {
+    beforeEach(async () => {
+      TestBed.inject(Connectivity);
+      window.dispatchEvent(new Event('offline'));
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+      await render();
+    });
+
+    it('then it says at once that signing in needs a connection and offers no form that cannot be sent', () => {
+      expect(element('.offline-entry h3')?.textContent?.trim()).toBe('Jste offline');
+      expect(element('.offline-entry')?.textContent).toContain(
+        'Přihlásit se ani zaregistrovat se bez připojení nejde.',
+      );
+      expect(element('.tab-switch')).toBeNull();
+      expect(element('#login-email')).toBeNull();
+    });
+
+    it('and the visitor tries again while the network is still gone, then the dialog says so and stays offline', async () => {
+      await click('.offline-entry-try-again');
+      http.expectOne(PROBE_PATH).error(new ProgressEvent('error'), { status: 0 });
+      await settle();
+
+      expect(element('.offline-entry [role="status"]')?.textContent?.trim()).toBe(
+        'Pořád se nedaří připojit.',
+      );
+      expect(element('#login-email')).toBeNull();
+    });
+
+    it('and the connection comes back, then the sign-in form shows in its place', async () => {
+      await click('.offline-entry-try-again');
+      http.expectOne(PROBE_PATH).flush({});
+      TestBed.inject(Connectivity).answered({
+        status: 200,
+        headers: new HttpHeaders(),
+        fromNetwork: true,
+      });
+      await settle();
+
+      expect(element('.offline-entry')).toBeNull();
+      expect(element('#login-email')).not.toBeNull();
+      expect(element('.tab-switch')).not.toBeNull();
+    });
+  });
 
   describe('when it opens', () => {
     beforeEach(() => render());
@@ -426,7 +471,7 @@ describe('Given the sign-in dialog', () => {
           amountMinor: 100,
           currency: 'CZK',
           usableFrom: '2026-10-27',
-          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*MSG:OBNOVA K7MP4RXA',
+          spayd: 'SPD*1.0*ACC:CZ2620100000005544332217*AM:1.00*CC:CZK*PT:IP*MSG:OBNOVA K7MP4RXA',
         };
 
         async function askForRecovery(): Promise<ReturnType<HttpTestingController['expectOne']>> {

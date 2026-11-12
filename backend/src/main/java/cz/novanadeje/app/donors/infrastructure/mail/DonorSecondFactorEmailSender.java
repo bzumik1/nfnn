@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.mail;
 
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorCodesPaused;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -29,6 +30,8 @@ class DonorSecondFactorEmailSender {
     private static final String ENABLED_TEMPLATE = "email/donors/second-factor-enabled";
     private static final String DISABLED_KEYS = "donors.secondFactorDisabled.email.";
     private static final String DISABLED_TEMPLATE = "email/donors/second-factor-disabled";
+    private static final String CODES_PAUSED_KEYS = "donors.secondFactorCodesPaused.email.";
+    private static final String CODES_PAUSED_TEMPLATE = "email/donors/second-factor-codes-paused";
 
     private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
@@ -52,6 +55,12 @@ class DonorSecondFactorEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendDisabledNotice(DonorSecondFactorDisabled event) {
         send(event.donorId(), event.email(), event.preferredLocale().toLocale(), DISABLED_KEYS, DISABLED_TEMPLATE);
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void sendCodesPausedNotice(DonorSecondFactorCodesPaused event) {
+        send(event.donorId(), event.email(), event.preferredLocale().toLocale(), CODES_PAUSED_KEYS, CODES_PAUSED_TEMPLATE);
     }
 
     private void send(UUID donorId, EmailAddress recipient, Locale locale, String keys, String template) {

@@ -44,17 +44,16 @@ test.describe('Given a visitor with a direct link to the privacy policy', () => 
     await expect(page).toHaveTitle('Zásady ochrany osobních údajů | Nová naděje – nadační fond');
   });
 
-  test('when they go back to the home page through the logo, then the tab shows the site name again', async ({
+  test('when they leave it with Zpět, which stands there without the logo, then O nás opens under its own tab title', async ({
     page,
   }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');
+    const banner = page.getByRole('banner');
+    await expect(banner.getByRole('link', { name: 'Nová naděje – nadační fond' })).toHaveCount(0);
 
-    await page
-      .getByRole('banner')
-      .getByRole('link', { name: 'Nová naděje – nadační fond' })
-      .click();
+    await banner.getByRole('button', { name: 'Zpět' }).click();
 
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page).toHaveTitle('Nová naděje – nadační fond');
+    await expect(page).toHaveURL(/\/o-nas$/);
+    await expect(page).toHaveTitle('O nás | Nová naděje – nadační fond');
   });
 });

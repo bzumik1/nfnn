@@ -14,6 +14,7 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
     private static final String ACCOUNT_VERIFICATION_MESSAGE = "Ověření účtu Nadační fond Nová naděje";
     private static final String HEADER = "SPD*1.0";
     private static final String FIELD_SEPARATOR = "*";
+    private static final String INSTANT_PAYMENT = "PT:IP";
     private static final long LARGEST_AMOUNT_MINOR = 999_999_999L;
 
     public PaymentDetails {
@@ -44,7 +45,8 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
         StringJoiner spayd = new StringJoiner(FIELD_SEPARATOR).add(HEADER)
                 .add("ACC:" + account.iban().value())
                 .add("AM:" + amount.toDecimal().toPlainString())
-                .add("CC:" + currency.name());
+                .add("CC:" + currency.name())
+                .add(INSTANT_PAYMENT);
         if (!recipientName.isEmpty()) {
             spayd.add("RN:" + recipientName.value());
         }

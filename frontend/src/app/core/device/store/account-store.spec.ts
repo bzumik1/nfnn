@@ -87,6 +87,43 @@ describe('Given an account store over IndexedDB', () => {
     expect(leaks(dump, 'f'.repeat(64))).toBe(false);
   });
 
+  it('when contents with the signed-in profile are stored, then a new store of the same copy loads the profile back and the raw database holds neither its name, e-mail nor id', async () => {
+    const profile = {
+      id: '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
+      name: CANARY_NAME,
+      email: 'kanarek.zlatohlavek@example.cz',
+      roles: ['DONOR'],
+      address: { street: 'Kanárkova 17', postalCode: '40001', city: 'Zlatohlávkov' },
+      companyIdentifier: '27074358',
+      variableSymbol: '7319046285',
+    };
+    await store.replace({ ...contents(), profile });
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    expect(await reopened.load()).toBe('loaded');
+    expect(reopened.contents()?.profile).toEqual(profile);
+    const dump = await rawIndexedDbDump();
+    expect(leaks(dump, CANARY_NAME)).toBe(false);
+    expect(leaks(dump, profile.email)).toBe(false);
+    expect(leaks(dump, profile.id)).toBe(false);
+    expect(leaks(dump, profile.address.street)).toBe(false);
+    expect(leaks(dump, profile.address.city)).toBe(false);
+    expect(leaks(dump, profile.companyIdentifier)).toBe(false);
+    expect(leaks(dump, profile.variableSymbol)).toBe(false);
+    reopened.close();
+  });
+
+  it('when contents without a profile are stored, then the loaded contents carry none', async () => {
+    await store.replace(contents());
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+    await reopened.load();
+
+    expect(reopened.contents()).not.toHaveProperty('profile');
+    reopened.close();
+  });
+
   it('when contents are stored, then they are shown at once and a later change to the given object does not reach them', async () => {
     const given = contents();
 

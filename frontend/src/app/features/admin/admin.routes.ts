@@ -5,7 +5,12 @@ import { Routes } from '@angular/router';
 import { AdministrationLockPanel } from './lock/administration-lock-panel';
 import { AdministrationLockService } from './lock/administration-lock-service';
 import { ADMINISTRATION_LOCK, type AdministrationLock } from './shell/administration-lock';
-import { ADMIN_HOME_PATH, ADMIN_MORE_PATH } from './shell/admin-sections';
+import {
+  ADMIN_BACKUPS_PATH,
+  ADMIN_HOME_PATH,
+  ADMIN_LOGS_PATH,
+  ADMIN_MORE_PATH,
+} from './shell/admin-sections';
 import { unsavedChangesGuard } from './unsaved-changes/unsaved-changes-guard';
 
 export const adminRoutes: Routes = [
@@ -80,10 +85,23 @@ export const adminRoutes: Routes = [
           import('./symbol-claims/admin-symbol-claims').then((m) => m.AdminSymbolClaims),
       },
       {
+        path: 'loga-bank',
+        data: { parent: ADMIN_MORE_PATH },
+        title: $localize`:@@admin.bankLogos.pageTitle:Loga bank | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./bank-logos/admin-bank-logos').then((m) => m.AdminBankLogos),
+      },
+      {
         path: 'prehledy',
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.report.pageTitle:Měsíční e-mail | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./report/admin-report').then((m) => m.AdminReport),
+      },
+      {
+        path: 'prehledy/:month',
+        data: { parent: '/sprava/prehledy' },
+        title: $localize`:@@admin.sentReport.pageTitle:Odeslaný přehled | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./report/sent/admin-sent-report').then((m) => m.AdminSentReport),
       },
       {
         path: 'aktuality',
@@ -93,14 +111,14 @@ export const adminRoutes: Routes = [
       },
       {
         path: 'aktuality/nova',
-        data: { parent: '/sprava/aktuality' },
+        data: { parent: '/sprava/aktuality', tabBar: false },
         title: $localize`:@@admin.newsEditor.pageTitle.new:Nová aktualita | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
         canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'aktuality/:id',
-        data: { parent: '/sprava/aktuality' },
+        data: { parent: '/sprava/aktuality', tabBar: false },
         title: $localize`:@@admin.newsEditor.pageTitle.edit:Úprava aktuality | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./news/admin-news-editor').then((m) => m.AdminNewsEditor),
         canDeactivate: [unsavedChangesGuard],
@@ -108,21 +126,21 @@ export const adminRoutes: Routes = [
       {
         path: 'projekty',
         data: { parent: ADMIN_HOME_PATH },
-        title: $localize`:@@admin.projects.pageTitle:Projekty | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.projects.pageTitle:Pomáháme | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./projects/admin-projects').then((m) => m.AdminProjects),
       },
       {
         path: 'projekty/nova',
-        data: { parent: '/sprava/projekty' },
-        title: $localize`:@@admin.projectEditor.pageTitle.new:Nový projekt | Správa | Nová naděje – nadační fond`,
+        data: { parent: '/sprava/projekty', tabBar: false },
+        title: $localize`:@@admin.projectEditor.pageTitle.new:Nový příběh | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
         canDeactivate: [unsavedChangesGuard],
       },
       {
         path: 'projekty/:id',
-        data: { parent: '/sprava/projekty' },
-        title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava projektu | Správa | Nová naděje – nadační fond`,
+        data: { parent: '/sprava/projekty', tabBar: false },
+        title: $localize`:@@admin.projectEditor.pageTitle.edit:Úprava příběhu | Správa | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./projects/admin-project-editor').then((m) => m.AdminProjectEditor),
         canDeactivate: [unsavedChangesGuard],
@@ -146,9 +164,16 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./backups/admin-backups').then((m) => m.AdminBackups),
       },
       {
+        path: 'zalohy/historie',
+        data: { parent: ADMIN_BACKUPS_PATH },
+        title: $localize`:@@admin.backups.history.pageTitle:Všechny zálohy | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./backups/history/admin-backup-history').then((m) => m.AdminBackupHistory),
+      },
+      {
         path: 'upozorneni',
         data: { parent: ADMIN_MORE_PATH },
-        title: $localize`:@@admin.alerts.pageTitle:Upozornění na telefon | Správa | Nová naděje – nadační fond`,
+        title: $localize`:@@admin.alerts.pageTitle:Upozornění | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./alerts/admin-alerts').then((m) => m.AdminAlerts),
       },
       {
@@ -156,6 +181,38 @@ export const adminRoutes: Routes = [
         data: { parent: ADMIN_MORE_PATH },
         title: $localize`:@@admin.logs.pageTitle:Logy a diagnostika | Správa | Nová naděje – nadační fond`,
         loadComponent: () => import('./logs/admin-logs').then((m) => m.AdminLogs),
+      },
+      {
+        path: 'logy/soubory',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.files.pageTitle:Starší soubory logu | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/files/admin-log-files').then((m) => m.AdminLogFiles),
+      },
+      {
+        path: 'logy/soubor',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.reader.pageTitle:Soubor logu | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/reader/admin-log-reader').then((m) => m.AdminLogReader),
+      },
+      {
+        path: 'logy/urovne',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.levels.pageTitle:Úrovně logování | Správa | Nová naděje – nadační fond`,
+        loadComponent: () => import('./logs/levels/admin-log-levels').then((m) => m.AdminLogLevels),
+      },
+      {
+        path: 'logy/stav',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.state.pageTitle:Stav serveru | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./logs/state/admin-server-state').then((m) => m.AdminServerState),
+      },
+      {
+        path: 'logy/vlakna',
+        data: { parent: ADMIN_LOGS_PATH },
+        title: $localize`:@@admin.logs.threads.pageTitle:Výpis vláken | Správa | Nová naděje – nadační fond`,
+        loadComponent: () =>
+          import('./logs/threads/admin-thread-dump').then((m) => m.AdminThreadDump),
       },
       {
         path: 'nastaveni',

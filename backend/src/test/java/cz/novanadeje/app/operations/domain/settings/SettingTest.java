@@ -3,6 +3,8 @@ package cz.novanadeje.app.operations.domain.settings;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SettingTest {
@@ -46,6 +48,14 @@ class SettingTest {
         assertThat(Setting.SESSION_REMEMBER_DAYS.check("31")).contains(SettingProblem.INVALID_DAYS);
         assertThat(Setting.SESSION_REMEMBER_DAYS.check("1x")).contains(SettingProblem.INVALID_DAYS);
         assertThat(Setting.SESSION_REMEMBER_DAYS.changesOnlyInBrowser()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given the settings, when it is asked which change only in a browser, then the secrets, the site's address and every setting that decides where mail goes or whom it seems to come from do, and the rest do not")
+    void should_keep_secrets_the_address_and_every_mail_setting_to_the_browser_when_asked() {
+        assertThat(Arrays.stream(Setting.values()).filter(Setting::changesOnlyInBrowser)).containsExactlyInAnyOrder(
+                Setting.PUBLIC_URL, Setting.MAIL_HOST, Setting.MAIL_PORT, Setting.MAIL_USERNAME, Setting.MAIL_PASSWORD, Setting.MAIL_AUTH,
+                Setting.MAIL_STARTTLS, Setting.MAIL_FROM, Setting.CONTACT_RECIPIENT, Setting.FIO_TOKEN);
     }
 
     @Test

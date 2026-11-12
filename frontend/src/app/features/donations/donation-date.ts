@@ -10,6 +10,7 @@ const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  second: '2-digit',
   hourCycle: 'h23',
 });
 
@@ -26,6 +27,11 @@ export function formatPragueClock(isoInstant: string): string {
 export function pragueDay(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
   return `${parts['year']}-${parts['month']}-${parts['day']}`;
+}
+
+export function pragueTime(isoInstant: string): string {
+  const parts = pragueParts(isoInstant);
+  return `${Number(parts['hour'])}:${parts['minute']}:${parts['second']}`;
 }
 
 export function pragueHour(isoInstant: string): number {

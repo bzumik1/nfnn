@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/auth/app-entry-guard.spec.ts > Given the app opened from its icon on the home screen > when nobody is signed in on this device, then it opens the home page with the sign-in dialog",
+    "replacement": "src/app/core/auth/app-entry-guard.spec.ts > Given the app opened from its icon on the home screen > when nobody is signed in on this device, then it opens the home page without the sign-in dialog",
+    "reason": "#349: the installed app opens the home page for a signed-out visitor without the sign-in modal, whose focused e-mail field raised the keyboard at launch; Jakub's decision names only the home page (docs/roadmap.md)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/auth/app-entry-guard.spec.ts > Given the app opened from its icon on the home screen > when nobody is signed in and the visitor signs in through the dialog, then the app opens their start again",
+    "replacement": "src/app/core/auth/app-entry-guard.spec.ts > Given the app opened from its icon on the home screen > when nobody is signed in on this device, then it opens the home page without the sign-in dialog",
+    "reason": "#349: /aplikace no longer opens the sign-in dialog, so no sign-in returns to it; the test that takes over checks that a signed-out visitor lands on the home page without the dialog, and the header's Přihlásit se behaves as on every public page"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/install-app.spec.ts > Given the installed app opening its start address /aplikace > when nobody is signed in, then it opens the home page with the sign-in dialog, and signing in there opens the overview",
+    "replacement": "e2e/install-app.spec.ts > Given the installed app opening its start address /aplikace > when nobody is signed in, then it opens the home page without a dialog or a focused field, and Přihlásit se there offers the sign-in",
+    "reason": "#349: the installed app opens the home page for a signed-out visitor without the sign-in modal"
+  }
+]

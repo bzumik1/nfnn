@@ -241,6 +241,33 @@ Feature: Donor confirms the e-mail address after registering
     And the registration reminder job runs
     Then 1 e-mail is sent to "petr@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
 
+  Scenario: An unconfirmed registration is deleted once it is more than thirty days old, and its address can register anew
+    Given a person registered with email "jana@example.cz" and password "correct horse battery" but has not confirmed the e-mail
+    When 29 days pass
+    And the registration reminder job runs
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 401
+    And the problem type ends with "auth/email-not-verified"
+    When 1440 minutes pass
+    And the registration reminder job runs
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 401
+    And the problem type ends with "auth/email-not-verified"
+    When 1440 minutes pass
+    And the registration reminder job runs
+    And the donor signs in with email "jana@example.cz" and password "correct horse battery"
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-credentials"
+    And 0 verification links are stored
+    When a verification e-mail is asked for "jana@example.cz"
+    Then the response status is 202
+    And 1 e-mail is sent to "jana@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
+    When a person registers with email "jana@example.cz" and password "a brand new passphrase"
+    Then the response status is 202
+    And 2 e-mails are sent to "jana@example.cz" with the subject "Potvrďte svůj e-mail – Nová naděje"
+    When the donor confirms the e-mail with the link from e-mail 2
+    Then the response status is 200
+
   Scenario: A donor who prefers English gets the reminder in English
     When a person registers with email "john@example.com", password "correct horse battery" and preferred locale "en"
     Then 1 e-mail is sent to "john@example.com" with the subject "Confirm your e-mail – Nová naděje"

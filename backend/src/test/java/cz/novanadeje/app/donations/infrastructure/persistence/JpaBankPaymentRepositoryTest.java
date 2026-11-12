@@ -19,6 +19,7 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -130,6 +131,21 @@ class JpaBankPaymentRepositoryTest {
 
         assertThat(payments.findUnpairedOrderedByBooking()).extracting(payment -> payment.transactionId().value())
                 .containsExactly(1004L, 1001L, 1003L, 1002L);
+    }
+
+    @Test
+    @DisplayName("Given an unpaired payment stored before and one saved in the same transaction, when the automatic pairing lists the unpaired payments, then both are stored and the persistence context keeps neither")
+    void should_store_both_and_keep_neither_managed_when_unpaired_listed_for_pairing_given_payment_saved_in_same_transaction() {
+        payments.saveAll(List.of(payment(1001, "2026-10-14", JANA_ACCOUNT, null)));
+        flushAndClear();
+        payments.saveAll(List.of(payment(1002, "2026-10-15", JANA_ACCOUNT, "4821937560")));
+
+        List<BankPayment> unpaired = payments.findUnpairedOrderedByBooking();
+
+        assertThat(unpaired).extracting(payment -> payment.transactionId().value()).containsExactly(1001L, 1002L);
+        assertThat(entityManager.unwrap(Session.class).getStatistics().getEntityCount()).isZero();
+        assertThat(jdbc.sql("select bank_transaction_id from bank_payment order by bank_transaction_id").query(Long.class).list())
+                .containsExactly(1001L, 1002L);
     }
 
     @Test

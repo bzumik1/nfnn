@@ -34,6 +34,11 @@ export async function rawIndexedDbDump(): Promise<RawDump> {
   return { text, decodedTokens: [...binaries, ...decodedTokensOf(text), ...hexTokensOf(text)] };
 }
 
+export function textDump(raw: string): RawDump {
+  const text = `${raw}\n${urlDecoded(raw)}`;
+  return { text, decodedTokens: [...decodedTokensOf(text), ...hexTokensOf(text)] };
+}
+
 export function leaks(dump: RawDump, canary: string): boolean {
   const bytes = new TextEncoder().encode(canary);
   return (

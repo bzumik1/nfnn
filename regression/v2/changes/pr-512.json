@@ -1,0 +1,16 @@
+[
+  {
+    "scenario": "donors/donor_email_verification: *",
+    "kind": "mails",
+    "subject": "Připomínka: dokončete registraci – Nová naděje",
+    "reason": "#455, decided by the database audit's lead on Jakub's delegation 2026-11-06: an unconfirmed registration is deleted 30 days after it was made, and the reminder says so",
+    "contract": "docs/api-contract.md, E-mail verification (Reminder, Expiry)"
+  },
+  {
+    "scenario": "donors/donor_email_verification: *",
+    "kind": "mails",
+    "subject": "Reminder: finish your registration – Nová naděje",
+    "reason": "#455, decided by the database audit's lead on Jakub's delegation 2026-11-06: an unconfirmed registration is deleted 30 days after it was made, and the reminder says so",
+    "contract": "docs/api-contract.md, E-mail verification (Reminder, Expiry)"
+  }
+]

@@ -107,6 +107,35 @@ Feature: Donor resets a forgotten password by e-mail
     And the donor asks for the profile
     Then the response status is 401
 
+  Scenario: An administrator who holds no second factor gets no reset link and is answered as any address
+    Given a person "Petr" is registered
+    And "Petr" is given the administrator role without signing in again
+    When a password reset is asked for the e-mail of "Petr"
+    Then the response status is 202
+    And 0 password reset links are stored
+    And no reset e-mail is sent to "Petr"
+
+  Scenario: An administrator who holds a passkey gets the reset link as any donor
+    Given a person "Petr" is registered
+    And "Petr" added a passkey named "iPhone"
+    And "Petr" is given the administrator role without signing in again
+    When a password reset is asked for the e-mail of "Petr"
+    Then the response status is 202
+    And 1 password reset link is stored
+    And a reset e-mail is sent to "Petr"
+
+  Scenario: A link sent before an administrator lost the second factor no longer sets the password
+    Given a person "Jana" is registered
+    And a person "Petr" is registered
+    And "Jana" is an administrator
+    And "Petr" is an administrator
+    And "Petr" asked for a password reset
+    And "Jana" turns off the two-factor authentication of "Petr"
+    When "Petr" sets the new password "a brand new passphrase" with the reset link sent to them
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-password-reset-token"
+    And "Petr" signs in again
+
   Scenario: A donor holds at most three live links and keeps the earlier ones
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     When a password reset is asked for "jana@example.cz" 4 times

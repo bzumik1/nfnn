@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { NewsApi } from '../news-api';
 import { NOT_FOUND_TITLE, NotFound } from '../not-found/not-found';
@@ -86,25 +86,8 @@ export class ContentDetail {
   }
 
   private fetch(slug: string): Observable<ContentPage> {
-    if (this.kind === 'news') {
-      return new Observable((subscriber) =>
-        this.newsApi.publishedBySlug(slug).subscribe({
-          next: (article) => {
-            subscriber.next(newsPage(article));
-            subscriber.complete();
-          },
-          error: (failure: unknown) => subscriber.error(failure),
-        }),
-      );
-    }
-    return new Observable((subscriber) =>
-      this.projectsApi.publishedBySlug(slug).subscribe({
-        next: (project) => {
-          subscriber.next(projectPage(project));
-          subscriber.complete();
-        },
-        error: (failure: unknown) => subscriber.error(failure),
-      }),
-    );
+    return this.kind === 'news'
+      ? this.newsApi.publishedBySlug(slug).pipe(map(newsPage))
+      : this.projectsApi.publishedBySlug(slug).pipe(map(projectPage));
   }
 }

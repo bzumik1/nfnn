@@ -89,27 +89,51 @@
       }
 
       @if (pageCount() > 1 && !empty()) {
-        <nav class="pages" [attr.aria-label]="pagesLabel">
+        <nav class="pages ui-pager" [attr.aria-label]="pagesLabel">
           @if (pageNumber() > 1) {
             <a
-              class="ui-cta ui-cta--ghost"
+              class="ui-button ui-pager__step ui-pager__step--newer"
               routerLink="/aktuality"
               [queryParams]="newerQuery()"
-              i18n="@@content.list.newer"
-              >← Novější</a
             >
+              <svg
+                class="ui-pager__icon"
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span class="ui-pager__label" i18n="@@content.list.newer">Novější</span>
+            </a>
           }
-          <span class="pages-position" i18n="@@content.list.position"
+          <span class="pages-position ui-pager__position" i18n="@@content.list.position"
             >Strana {{ pageNumber() }} z {{ pageCount() }}</span
           >
           @if (pageNumber() < pageCount()) {
             <a
-              class="ui-cta ui-cta--ghost"
+              class="ui-button ui-pager__step ui-pager__step--older"
               routerLink="/aktuality"
               [queryParams]="olderQuery()"
-              i18n="@@content.list.older"
-              >Starší →</a
             >
+              <span class="ui-pager__label" i18n="@@content.list.older">Starší</span>
+              <svg
+                class="ui-pager__icon"
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
           }
         </nav>
       }

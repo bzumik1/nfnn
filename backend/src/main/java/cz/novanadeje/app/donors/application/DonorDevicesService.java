@@ -29,7 +29,7 @@ public class DonorDevicesService {
     @Transactional(readOnly = true)
     public List<DeviceView> list(DonorId donorId, Optional<DeviceId> current) {
         return devices.findSignedInOf(donorId, clock.instant()).stream()
-                .map(device -> new DeviceView(device.id(), device.description(), device.signedInAt(), device.lastUsedAt(),
+                .map(device -> new DeviceView(device.id(), device.description(), device.kind(), device.signedInAt(), device.lastUsedAt(),
                         current.filter(device.id()::equals).isPresent()))
                 .sorted(Comparator.comparing(DeviceView::current).reversed()
                         .thenComparing(Comparator.comparing(DeviceView::lastUsedAt).reversed())

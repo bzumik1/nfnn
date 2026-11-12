@@ -97,6 +97,7 @@ tasks.withType<Test> {
 	inputs.file("../frontend/src/app/core/version/api-generation.json").withPropertyName("appApiGeneration").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../frontend/src/app/features/donations/receipt-pdf/receipt-document.ts").withPropertyName("browserReceiptTextKeys").withPathSensitivity(PathSensitivity.NONE)
 	inputs.file("../deploy/backup/revoke-restored-credentials.sql").withPropertyName("restoreRevocations").withPathSensitivity(PathSensitivity.NONE)
+	inputs.file("../deploy/backup/carry-forward.sql").withPropertyName("restoreCarryForward").withPathSensitivity(PathSensitivity.NONE)
 	inputs.files(fileTree("../shared-cases")).withPropertyName("sharedCases").withPathSensitivity(PathSensitivity.RELATIVE)
 	inputs.files(fileTree("../regression")).withPropertyName("baselineArtefacts").withPathSensitivity(PathSensitivity.RELATIVE)
 }

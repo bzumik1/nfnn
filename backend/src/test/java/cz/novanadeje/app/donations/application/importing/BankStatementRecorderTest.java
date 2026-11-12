@@ -88,7 +88,7 @@ class BankStatementRecorderTest {
     }
 
     @Test
-    @DisplayName("Given a statement with a known and a new movement, when it is recorded, then only the new one is saved, before pairing, only it is inspected for a second-factor recovery after pairing, and the counts tell both")
+    @DisplayName("Given a statement with a known and a new movement, when it is recorded, then only the new one is saved and inspected for a second-factor recovery, both before pairing, and the counts tell both")
     void should_save_only_new_movements_before_pairing_when_recorded_given_known_movement() {
         stateCovering("2026-07-18", "2026-10-15");
         when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of(new BankTransactionId(1001)));
@@ -102,8 +102,8 @@ class BankStatementRecorderTest {
         InOrder order = inOrder(payments, pairing, recoveries, states);
         order.verify(payments).findKnownTransactionIds(List.of(new BankTransactionId(1001), new BankTransactionId(1002)));
         order.verify(payments).saveAll(saved.capture());
-        order.verify(pairing).pairUnpaired(NOW);
         order.verify(recoveries).inspect(saved.getValue(), NOW);
+        order.verify(pairing).pairUnpaired(NOW);
         order.verify(states).save(any());
         assertThat(saved.getValue()).singleElement().satisfies(payment -> {
             assertThat(payment.transactionId()).isEqualTo(new BankTransactionId(1002));

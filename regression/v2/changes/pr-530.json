@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/payment/spayd.json",
+    "reason": "Jakub 2026-11-06 (#530): every payment QR asks the payer's bank for an instant payment, so each SPAYD text the browser composes (a gift and the 1 Kč account verification) carries PT:IP right after CC (ČBA standard 26, QR Platba: PT is the payment type, IP an instant payment where the bank allows it)",
+    "contract": "docs/api-contract.md, GET /api/donations/payment-details; docs/frontend-overview.md, spayd.ts; docs/requirements.md, Veřejný web"
+  },
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/qr/payment.json",
+    "reason": "Jakub 2026-11-06 (#530): the SPAYD texts of payment/spayd.json carry PT:IP, so each namesake holds the new text and its symbol as ZXing 3.5.4 encodes it at level H (encoded outside the repository by a program that first gave every earlier symbol of the file byte for byte); eight of the twenty symbols grow by one version (8 to 9 or 9 to 10), the rest keep theirs",
+    "contract": "docs/frontend-overview.md, spayd.ts"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor/recovery",
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "body",
+    "field": "$.spayd",
+    "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment as every payment QR does, PT:IP right after CC, so the 1 Kč reaches the account within seconds",
+    "contract": "docs/api-contract.md, Recovery by payment"
+  },
+  {
+    "path": "POST /api/donors/auth/login/second-factor/recovery",
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "body",
+    "field": "$.spayd",
+    "reason": "Jakub 2026-11-06 (#530): the recovery payment's SPAYD text asks for an instant payment as every payment QR does, PT:IP right after CC; this feature starts a recovery to show that the administration's device copy keeps no stored secret",
+    "contract": "docs/api-contract.md, Recovery by payment"
+  }
+]

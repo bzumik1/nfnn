@@ -6,9 +6,11 @@ import {
   PETR_DETAIL_PATH,
   project,
   servePaymentDetails,
+  serveRecentDonors,
 } from '../baseline/screen-mocks';
 import { mockAdministrationCopy } from '../administration-copy';
-import { administrator, donor, mockDonorApi, session } from '../donor-session';
+import { LOGO_IMAGE_ID, mockBankLogos } from '../bank-logos';
+import { administrator, bankAccountItem, donor, mockDonorApi, session } from '../donor-session';
 import { ADMINISTRATION_COPY_RECORD_PATH, ADMINISTRATION_UNLOCK_PATH } from '../fixtures';
 import {
   serveReceiptKeys,
@@ -101,6 +103,27 @@ async function newsFeed(ui: Ui): Promise<void> {
   await ui.waitVisible({ css: '.story' });
 }
 
+const PAGED_PROJECTS = Array.from({ length: 10 }, (_, index) => ({
+  ...project,
+  id: `paged-${index}`,
+  slug: `projekt-${index + 11}`,
+  title: `Projekt ${index + 11}`,
+}));
+
+async function projectsMiddlePage(ui: Ui): Promise<void> {
+  await mockDonorApi(ui.routes);
+  await mockPublicContent(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === '/api/content/projects',
+    (route) =>
+      route.fulfill({
+        json: { items: PAGED_PROJECTS, page: 1, size: 10, total: 25, hasMore: true },
+      }),
+  );
+  await visit(ui, '/projekty?strana=2');
+  await ui.waitVisible({ css: 'nav.pages' });
+}
+
 async function donorPage(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await rememberedSession(ui, donor);
@@ -110,6 +133,10 @@ async function donorPage(ui: Ui, path: string): Promise<void> {
 async function lockedAdministration(ui: Ui, path: string): Promise<void> {
   await mockDonorApi(ui.routes, donorWithDonations);
   await mockAdministration(ui.routes);
+  await ui.routes.route(
+    (url) => url.pathname === ADMINISTRATION_COPY_RECORD_PATH,
+    (route) => route.fulfill({ status: 204 }),
+  );
   await ui.routes.route(
     (url) => url.pathname === ADMINISTRATION_UNLOCK_PATH,
     (route) => route.fulfill({ status: 204 }),
@@ -216,6 +243,11 @@ export const STEPS: Step[] = [
     open: (ui) => publicPage(ui, `/projekty/${project.slug}`),
   },
   {
+    id: 'projects-page',
+    title: 'a middle page of the projects with its paging',
+    open: projectsMiddlePage,
+  },
+  {
     id: 'verify-receipt',
     title: 'the verification of a scanned receipt',
     open: async (ui) => {
@@ -246,6 +278,37 @@ export const STEPS: Step[] = [
     id: 'donor-details',
     title: "the donor's details",
     open: (ui) => donorPage(ui, '/darce/udaje'),
+  },
+  {
+    id: 'donor-bank-accounts',
+    title: "the donor's bank accounts with a bank logo and a monogram",
+    open: async (ui) => {
+      await mockDonorApi(ui.routes, donorWithDonations);
+      await ui.routes.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000001',
+                  accountNumber: '6020809023/0800',
+                  donationCount: 1,
+                  totalAmountMinor: 200,
+                }),
+                bankAccountItem({
+                  id: '0192f0c4-0000-7000-8000-000000000002',
+                  accountNumber: '123-7092740277/2010',
+                }),
+              ],
+            },
+          }),
+      );
+      await mockBankLogos(ui.routes, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await rememberedSession(ui, donor);
+      await visit(ui, '/darce/ucty');
+      await ui.waitVisible({ css: '.accounts-list' });
+    },
   },
   {
     id: 'donor-device-data-delete',
@@ -291,6 +354,15 @@ export const STEPS: Step[] = [
     open: (ui) => adminPage(ui, '/sprava/darci'),
   },
   {
+    id: 'admin-donors-recent',
+    title: 'the donors who gave last in the administration',
+    open: async (ui) => {
+      await serveRecentDonors(ui.routes);
+      await adminPage(ui, '/sprava/darci');
+      await ui.waitVisible({ css: '.recent-title' });
+    },
+  },
+  {
     id: 'admin-donor-detail',
     title: "a donor's card in the administration",
     open: (ui) => adminPage(ui, PETR_DETAIL_PATH),
@@ -333,6 +405,15 @@ export const STEPS: Step[] = [
     id: 'admin-alerts',
     title: 'the push alerts in the administration',
     open: (ui) => adminPage(ui, '/sprava/upozorneni'),
+  },
+  {
+    id: 'admin-alerts-other-device',
+    title: 'the sheet of another device with its alert switches in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/upozorneni');
+      await ui.click({ css: 'section[aria-labelledby="alerts-others-title"] button.ui-list__row' });
+      await ui.waitVisible(DIALOG);
+    },
   },
   {
     id: 'admin-yearly-receipts',
@@ -386,9 +467,47 @@ export const STEPS: Step[] = [
     },
   },
   {
+    id: 'admin-sent-report',
+    title: 'a sent monthly report with its sendings',
+    open: (ui) => adminPage(ui, '/sprava/prehledy/2026-09'),
+  },
+  {
     id: 'admin-settings',
     title: 'the settings in the administration',
     open: (ui) => adminPage(ui, '/sprava/nastaveni'),
+  },
+  {
+    id: 'admin-logs',
+    title: 'the logs hub',
+    open: (ui) => adminPage(ui, '/sprava/logy'),
+  },
+  {
+    id: 'admin-log-file',
+    title: 'a log file',
+    open: (ui) => adminPage(ui, '/sprava/logy/soubor?nazev=backend.log'),
+  },
+  {
+    id: 'admin-log-levels',
+    title: 'the log levels',
+    open: (ui) => adminPage(ui, '/sprava/logy/urovne'),
+  },
+  {
+    id: 'admin-server-state',
+    title: 'the server state',
+    open: (ui) => adminPage(ui, '/sprava/logy/stav'),
+  },
+  {
+    id: 'admin-backups',
+    title: 'the backups, their key and their schedule in the administration',
+    open: async (ui) => {
+      await adminPage(ui, '/sprava/zalohy');
+      await ui.waitVisible({ css: '#backup-time' });
+    },
+  },
+  {
+    id: 'admin-backup-history',
+    title: 'the history of backups by day in the administration',
+    open: (ui) => adminPage(ui, '/sprava/zalohy/historie'),
   },
   {
     id: 'admin-more',

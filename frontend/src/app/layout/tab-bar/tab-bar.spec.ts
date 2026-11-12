@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -61,6 +62,19 @@ describe('Given the tab bar', () => {
     ]);
   });
 
+  it('when it renders, then every tab shows one decorative filled glyph drawn in the text colour', () => {
+    const icons = tabs().map((link) => link.querySelectorAll('svg'));
+
+    expect(icons.map((found) => found.length)).toEqual([1, 1, 1, 1]);
+    for (const [icon] of icons.map((found) => Array.from(found))) {
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+      expect(icon.getAttribute('viewBox')).not.toBeNull();
+      expect(icon.getAttribute('fill')).toBe('currentColor');
+      expect(icon.querySelectorAll('[stroke], [stroke-width]')).toHaveLength(0);
+      expect(icon.hasAttribute('stroke')).toBe(false);
+    }
+  });
+
   it('when the landing page is open, then no tab is the current page', async () => {
     await visit('/');
 
@@ -100,6 +114,19 @@ describe('Given the tab bar', () => {
     await fixture.whenStable();
 
     expect(router.url).toBe('/projekty');
+  });
+
+  it('when the current tab is pressed on a page opened from its root, then the app steps back to that root instead of opening it again on top', async () => {
+    router.initialNavigation();
+    await visit('/projekty');
+    await visit('/projekty/sofinka');
+    const location = TestBed.inject(Location);
+
+    press(tab('Pomáháme'));
+    await vi.waitFor(() => expect(router.url).toBe('/projekty'));
+
+    location.forward();
+    await vi.waitFor(() => expect(router.url).toBe('/projekty/sofinka'));
   });
 
   it('when the current tab is pressed at its root, then the page scrolls to the top and stays', async () => {

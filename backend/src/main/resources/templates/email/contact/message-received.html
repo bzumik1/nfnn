@@ -4,15 +4,15 @@
 <th:block th:fragment="content">
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 24px; font-size: 15px; line-height: 1.65;">
         <tr>
-            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #6b7280; vertical-align: top;" th:text="#{contact.email.senderName}">Jméno</th>
+            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #676f7d; vertical-align: top;" th:text="#{contact.email.senderName}">Jméno</th>
             <td style="padding: 4px 0; color: #1a1a2e;" th:text="${senderName}">Jana Nováková</td>
         </tr>
         <tr>
-            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #6b7280; vertical-align: top;" th:text="#{contact.email.senderEmail}">E-mail</th>
-            <td style="padding: 4px 0;"><a th:href="'mailto:' + ${senderEmail}" th:text="${senderEmail}" style="color: #2563eb;">jana@example.cz</a></td>
+            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #676f7d; vertical-align: top;" th:text="#{contact.email.senderEmail}">E-mail</th>
+            <td style="padding: 4px 0;"><a th:href="'mailto:' + ${senderEmail}" th:text="${senderEmail}" style="color: #1d5fc9;">jana@example.cz</a></td>
         </tr>
         <tr>
-            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #6b7280; vertical-align: top;" th:text="#{contact.email.receivedAt}">Přijato</th>
+            <th align="left" style="padding: 4px 16px 4px 0; font-weight: 600; color: #676f7d; vertical-align: top;" th:text="#{contact.email.receivedAt}">Přijato</th>
             <td style="padding: 4px 0; color: #1a1a2e;" th:text="${receivedAt}">17. 10. 2026 12:00</td>
         </tr>
     </table>

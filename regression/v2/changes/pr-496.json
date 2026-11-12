@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.importing.BankStatementRecorderTest > Given a statement with a known and a new movement, when it is recorded, then only the new one is saved, before pairing, only it is inspected for a second-factor recovery after pairing, and the counts tell both",
+    "replacement": "donations.application.importing.BankStatementRecorderTest > Given a statement with a known and a new movement, when it is recorded, then only the new one is saved and inspected for a second-factor recovery, both before pairing, and the counts tell both",
+    "reason": "#468: the import now inspects its new payments for a second-factor recovery before it takes the pairing lock, so the recovery takes the donor's locks in the documented order and no longer deadlocks with an erasure; the same test now proves that order",
+    "contract": "docs/system-overview.md, donors (Second factor; Writes to the donor row)"
+  }
+]

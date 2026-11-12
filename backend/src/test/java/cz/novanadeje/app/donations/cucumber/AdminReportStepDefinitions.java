@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import jakarta.mail.MessagingException;
@@ -31,6 +32,7 @@ public class AdminReportStepDefinitions {
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final DonationRowVersions versions;
+    private String exchangedApiToken;
 
     public AdminReportStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, RecordingMailSender mailSender,
                                       JdbcClient jdbc, DonationRowVersions versions) {
@@ -57,6 +59,22 @@ public class AdminReportStepDefinitions {
     @When("{string} changes the monthly report settings:")
     public void changesTheMonthlyReportSettings(String alias, Map<String, String> settings) {
         sessions.actAs(alias);
+        api.put(REPORT + "/settings", reportSettingsBody(settings), ApiClient.ifMatch(versions.ofReportSettings()));
+    }
+
+    @When("the exchanged API token changes the monthly report settings:")
+    public void theExchangedApiTokenChangesTheMonthlyReportSettings(Map<String, String> settings) {
+        JsonNode last = api.lastResponseJson();
+        if (last != null && last.has("access_token")) {
+            exchangedApiToken = last.get("access_token").asString();
+        }
+        String version = versions.ofReportSettings();
+        api.forgetCredentials();
+        api.authorize(exchangedApiToken);
+        api.put(REPORT + "/settings", reportSettingsBody(settings), ApiClient.ifMatch(version));
+    }
+
+    private static Map<String, Object> reportSettingsBody(Map<String, String> settings) {
         List<String> sections = list(settings.getOrDefault("sections", ""));
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("recipients", list(settings.get("recipients")));
@@ -70,13 +88,51 @@ public class AdminReportStepDefinitions {
                 "donations", sections.contains("donations"),
                 "unpairedPayments", sections.contains("unpairedPayments"),
                 "bankImport", sections.contains("bankImport")));
-        api.put(REPORT + "/settings", body, ApiClient.ifMatch(versions.ofReportSettings()));
+        return body;
     }
 
     @When("{string} sends the monthly report for {string} again")
     public void sendsTheMonthlyReportForAgain(String alias, String month) {
         sessions.actAs(alias);
         api.post(REPORT + "/send", Map.of("month", month));
+    }
+
+    @Given("{string} sent the monthly report for {string} again {int} times")
+    public void sentTheMonthlyReportForAgainTimes(String alias, String month, int count) {
+        for (int index = 0; index < count; index++) {
+            sendsTheMonthlyReportForAgain(alias, month);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The sending answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        }
+    }
+
+    @When("{string} opens the sent monthly report for {string}")
+    public void opensTheSentMonthlyReportFor(String alias, String month) {
+        sessions.actAs(alias);
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @When("someone without a token opens the sent monthly report for {string}")
+    public void someoneWithoutATokenOpensTheSentMonthlyReportFor(String month) {
+        api.forgetCredentials();
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @When("the exchanged API token opens the sent monthly report for {string}")
+    public void theExchangedApiTokenOpensTheSentMonthlyReportFor(String month) {
+        String token = api.lastResponseJson().get("access_token").asString();
+        api.forgetCredentials();
+        api.authorize(token);
+        api.get(REPORT + "/sent?month=" + month);
+    }
+
+    @Then("the sent monthly report leaves out {string}")
+    public void theSentMonthlyReportLeavesOut(String path) {
+        assertThat(at(api.lastResponseJson(), path).isNull()).as(path).isTrue();
+    }
+
+    @Then("the sent monthly report lists no sending")
+    public void theSentMonthlyReportListsNoSending() {
+        assertThat(api.lastResponseJson().get("deliveries")).isEmpty();
     }
 
     @When("{string} asks for the donations overview")
@@ -111,6 +167,7 @@ public class AdminReportStepDefinitions {
 
     @Then("the monthly report settings say:")
     @Then("the sent report says:")
+    @Then("the sent monthly report says:")
     @Then("the donations overview says:")
     @Then("the activity since then says:")
     public void theResponseSays(Map<String, String> expected) {
@@ -143,6 +200,12 @@ public class AdminReportStepDefinitions {
                 .query(String.class)
                 .list();
         assertThat(recorded).singleElement().asString().contains(details);
+    }
+
+    @Then("{int} admin actions {string} by {string} are recorded")
+    public void adminActionsByAreRecorded(int count, String action, String alias) {
+        assertThat(jdbc.sql("select count(*) from admin_action where action = ? and admin_id = ?").param(action).param(scenarioDonors.idOf(alias))
+                .query(Long.class).single()).isEqualTo(count);
     }
 
     @Then("no admin action {string} is recorded")

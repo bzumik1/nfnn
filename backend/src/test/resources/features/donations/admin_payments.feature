@@ -28,6 +28,27 @@ Feature: An administrator pairs bank payments by hand
       | messageForRecipient | Dar pro fond    |
       | accountVerification | false           |
 
+  Scenario: An erased donor's payment comes to a browser with what the bank sent, and to a connected application without the payer
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name         | variableSymbol | message      |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr | {Petr}         | Dar pro fond |
+    And the application starts the import
+    And "Jana" erased the donor "Petr"
+    When "Jana" asks for the paired payments of 2026
+    Then the response status is 200
+    And paired payment 1001 says:
+      | counterpartyName    | Svoboda Petr    |
+      | counterpartyAccount | 2900233333/2010 |
+      | messageForRecipient | Dar pro fond    |
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token asks for the paired payments of 2026
+    Then the response status is 200
+    And paired payment 1001 names no payer
+    When the exchanged API token asks for the paired payments with "query=svoboda"
+    Then the response status is 200
+    And the listed payments are none
+
   Scenario: An unpaired 1 Kč account verification is marked as one in the list
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                               |
@@ -267,7 +288,8 @@ Feature: An administrator pairs bank payments by hand
     When "Jana" unpairs payment 1001
     Then the response status is 409
     And the problem type ends with "donations/donation-has-receipt"
-    And 2 receipts are active
+    And 1 receipt is active
+    And receipt "2026-000001" is superseded
     And no admin action "WITHDRAW_RECEIPT" is recorded
 
   Scenario: Donors are found by part of the name or the start of the variable symbol

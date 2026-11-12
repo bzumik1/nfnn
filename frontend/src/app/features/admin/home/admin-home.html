@@ -1,5 +1,8 @@
 <div class="ui-page container">
   <h1 #title class="ui-page-title" tabindex="-1" i18n="@@admin.home.heading">Správa</h1>
+  @if (compact()) {
+    <ng-container *ngTemplateOutlet="attentionBlock" />
+  }
   <section class="ui-card since" aria-labelledby="admin-since-title">
     <h2 id="admin-since-title" class="ui-card__title" i18n="@@admin.home.since.title">
       Od posledního přihlášení
@@ -47,260 +50,9 @@
   </section>
   @if (compact()) {
     <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
+  } @else {
+    <ng-container *ngTemplateOutlet="attentionBlock" />
   }
-  <section class="ui-card attention" aria-labelledby="admin-attention-title">
-    <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
-      Co potřebuje vaši pozornost
-    </h2>
-    @if (attentionLoading()) {
-      <p class="ui-load-state" role="status" i18n="@@admin.home.attention.loading">
-        Zjišťujeme, jestli na vás něco nečeká…
-      </p>
-    } @else if (!needsAttention()) {
-      <p class="healthy" i18n="@@admin.home.attention.allFine">
-        Vše je v pořádku. Platby z banky naposledy stažené {{ lastSuccess() ?? '—' }}, poslední
-        záloha {{ lastBackupTime() ?? '—' }}.
-      </p>
-    }
-    @if (needsAttention()) {
-      <ul class="attention-list">
-        @if (signatoryState() === 'missing') {
-          <li class="attention-item attention-item--danger attention-signatory">
-            <span i18n="@@admin.home.attention.signatory"
-              >Potvrzení o daru nikdo nepodepisuje, a tak je web dárcům nevystaví.</span
-            >
-            &ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/lide-fondu"
-              i18n="@@admin.home.attention.signatory.open"
-              >Vybrat podepisujícího</a
-            >
-          </li>
-        }
-        @if (state() === 'error') {
-          <li class="attention-item" i18n="@@admin.home.attention.import.failed">
-            Stav stahování plateb se nepodařilo zjistit; zkuste to znovu v kartě níže.
-          </li>
-        } @else if (outage(); as outage) {
-          <li class="attention-item attention-item--warning attention-item--stack">
-            <p>
-              <span class="visually-hidden" i18n="@@admin.home.import.outage.label"
-                >Upozornění:
-              </span>
-              <span i18n="@@admin.home.import.outage.text"
-                >Platby z banky se nestahují ({{ consecutiveFailures() }}× za sebou) a fond o tom
-                dostal e-mail. Důvod: {{ outage }}.</span
-              >
-            </p>
-            @if (nextStep(); as step) {
-              <p class="admin-next-step">
-                <span class="admin-next-step-label" i18n="@@admin.home.import.next.label"
-                  >Co udělat:</span
-                >
-                {{ step.text }}
-                @switch (step.link) {
-                  @case ('settings') {
-                    <a routerLink="/sprava/nastaveni" i18n="@@admin.home.import.next.settings"
-                      >Otevřít Nastavení</a
-                    >
-                  }
-                  @case ('logs') {
-                    <a routerLink="/sprava/logy" i18n="@@admin.home.import.next.logs"
-                      >Otevřít logy</a
-                    >
-                  }
-                }
-              </p>
-            }
-          </li>
-        } @else if (neverAttempted()) {
-          <li
-            class="attention-item attention-item--warning admin-pending"
-            i18n="@@admin.home.import.neverAttempted"
-          >
-            Stahování plateb ještě neproběhlo. Pokud to trvá déle než hodinu, zkontrolujte v
-            <a routerLink="/sprava/nastaveni">Nastavení</a> token Fio API.
-          </li>
-        }
-        @if (unpairedState() === 'error') {
-          <li class="attention-item">
-            <span role="alert" i18n="@@admin.home.attention.unpaired.failed"
-              >Platby čekající na přiřazení se nepodařilo zjistit.</span
-            >
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--small"
-              (click)="loadUnpaired()"
-              i18n="@@admin.home.attention.retry"
-            >
-              Zkusit znovu
-            </button>
-          </li>
-        } @else if (unpairedText(); as text) {
-          @if ((unpaired()?.count ?? 0) > 0) {
-            <li class="attention-item attention-unpaired">
-              <span>{{ text }}</span
-              >&ngsp;
-              <a
-                class="ui-button ui-button--small"
-                routerLink="/sprava/platby"
-                i18n="@@admin.home.attention.unpaired.open"
-                >Přiřadit platby</a
-              >
-            </li>
-          }
-        }
-        @if (backupsState() === 'error') {
-          <li class="attention-item" i18n="@@admin.home.attention.backups.failed">
-            Stav záloh se nepodařilo zjistit; zkuste to znovu v kartě níže.
-          </li>
-        } @else if (backupProblems().length > 0) {
-          <li class="attention-item attention-item--danger attention-backups">
-            <ul class="attention-problems">
-              @for (problem of backupProblems(); track problem) {
-                <li>{{ problem }}</li>
-              }
-            </ul>
-            &ngsp;
-            <span class="attention-actions">
-              @if (backupTechnicianMessage(); as message) {
-                <app-copy-button
-                  [value]="message"
-                  what="zprávu pro technika"
-                  i18n-what="@@admin.backups.message.what"
-                  label="Zkopírovat zprávu pro technika"
-                  i18n-label="@@admin.backups.message.copy"
-                />
-                &ngsp;
-              }
-              <a
-                class="ui-button ui-button--small"
-                routerLink="/sprava/zalohy"
-                i18n="@@admin.home.attention.backups.open"
-                >Otevřít zálohy</a
-              >
-            </span>
-          </li>
-        }
-        @if (backupKeyUnconfirmed()) {
-          <li class="attention-item attention-item--warning attention-backup-key">
-            <span i18n="@@admin.home.attention.backupKey"
-              >Klíč k zálohám si zatím nikdo neuložil. Bez něj žádnou zálohu neobnovíte. Uložit ho
-              má někdo ze správní rady, ne technik.</span
-            >
-            &ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/zalohy"
-              fragment="klic-k-zaloham"
-              i18n="@@admin.home.attention.backupKey.open"
-              >Uložit klíč</a
-            >
-          </li>
-        }
-        @if (signingKeysState() === 'error') {
-          <li class="attention-item">
-            <span role="alert" i18n="@@admin.home.attention.signingKey.failed"
-              >Klíč k ověřovacím QR kódům se nepodařilo zkontrolovat.</span
-            >
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--small"
-              (click)="loadSigningKeys()"
-              i18n="@@admin.home.attention.retry"
-            >
-              Zkusit znovu
-            </button>
-          </li>
-        } @else if (unpublishedSigningKeys().length > 0) {
-          <li class="attention-item attention-item--danger attention-signing-key">
-            <span>{{ unpublishedSigningKeysText() }}</span
-            >&ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/nastaveni"
-              fragment="klic-k-overovacim-qr"
-              i18n="@@admin.home.attention.signingKey.open"
-              >Otevřít nastavení</a
-            >
-          </li>
-        }
-        @if (signingKeysState() === 'ready' && signingKeyWarnings().length > 0) {
-          <li class="attention-item attention-item--danger attention-signing-key-warnings">
-            <span>{{ signingKeyWarningsText() }}</span
-            >&ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/nastaveni"
-              fragment="klic-k-overovacim-qr"
-              i18n="@@admin.home.attention.signingKey.open"
-              >Otevřít nastavení</a
-            >
-          </li>
-        }
-        @if (administratorsState() === 'error') {
-          <li class="attention-item">
-            <span role="alert" i18n="@@admin.home.attention.secondFactor.failed"
-              >Správce se nepodařilo zkontrolovat.</span
-            >
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--small"
-              (click)="loadAdministrators()"
-              i18n="@@admin.home.attention.retry"
-            >
-              Zkusit znovu
-            </button>
-          </li>
-        } @else if (withoutSecondFactor().length > 0) {
-          <li class="attention-item attention-administrators">
-            <span>{{ withoutSecondFactorText() }}</span
-            >&ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/spravci"
-              i18n="@@admin.home.attention.secondFactor.open"
-              >Otevřít Správce</a
-            >
-          </li>
-        }
-        @if (signatoryState() === 'error') {
-          <li class="attention-item">
-            <span role="alert" i18n="@@admin.home.attention.signatory.failed"
-              >Nepodařilo se zkontrolovat, kdo podepisuje potvrzení o daru.</span
-            >
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--small"
-              (click)="loadSignatory()"
-              i18n="@@admin.home.attention.retry"
-            >
-              Zkusit znovu
-            </button>
-          </li>
-        } @else if (signatoryState() === 'unsigned') {
-          <li class="attention-item attention-signature">
-            <span i18n="@@admin.home.attention.signature.person"
-              >Kdo podepisuje potvrzení o daru, zatím nemá nahraný podpis; potvrzení mají jen čáru
-              se jménem.</span
-            >
-            &ngsp;
-            <a
-              class="ui-button ui-button--small"
-              routerLink="/sprava/lide-fondu"
-              i18n="@@admin.home.attention.signature.open"
-              >Nahrát podpis</a
-            >
-          </li>
-        }
-      </ul>
-    }
-  </section>
 
   <div class="admin-status">
     <section class="ui-card" aria-labelledby="admin-import-title">
@@ -330,8 +82,23 @@
         @case ('ready') {
           @if (!lastFailure() && !neverAttempted()) {
             @if (lastSuccess(); as at) {
-              <p class="healthy" i18n="@@admin.home.import.healthy">
-                Stahování plateb je v pořádku, naposledy {{ at }}.
+              <p class="healthy">
+                <svg
+                  aria-hidden="true"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span i18n="@@admin.home.import.healthy"
+                  >Stahování plateb je v pořádku, naposledy {{ at }}.</span
+                >
               </p>
             }
           }
@@ -417,8 +184,23 @@
           </div>
         }
         @case ('ready') {
-          @if (backupProblems().length === 0) {
-            <p class="healthy" i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</p>
+          @if (backupsHealthy()) {
+            <p class="healthy">
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span i18n="@@admin.backups.status.healthy">Zálohování je v pořádku.</span>
+            </p>
           }
           <dl class="admin-data">
             <div>
@@ -531,21 +313,21 @@
                       {{ item.newDonors }}
                     </td>
                     <td
-                      class="num"
+                      class="num ui-figures"
                       data-label="Celkem"
                       i18n-data-label="@@admin.home.overview.col.total"
                     >
                       {{ amount(item.received) }}
                     </td>
                     <td
-                      class="num col-paired"
+                      class="num col-paired ui-figures"
                       data-label="Přiřazené"
                       i18n-data-label="@@admin.home.overview.col.paired"
                     >
                       {{ amount(item.paired) }}
                     </td>
                     <td
-                      class="num"
+                      class="num ui-figures"
                       data-label="Bez dárce"
                       i18n-data-label="@@admin.home.overview.col.unpaired"
                     >
@@ -583,21 +365,21 @@
                     {{ data.newDonors }}
                   </td>
                   <td
-                    class="num"
+                    class="num ui-figures"
                     data-label="Celkem"
                     i18n-data-label="@@admin.home.overview.col.total"
                   >
                     {{ amount(data.received) }}
                   </td>
                   <td
-                    class="num col-paired"
+                    class="num col-paired ui-figures"
                     data-label="Přiřazené"
                     i18n-data-label="@@admin.home.overview.col.paired"
                   >
                     {{ amount(data.paired) }}
                   </td>
                   <td
-                    class="num"
+                    class="num ui-figures"
                     data-label="Bez dárce"
                     i18n-data-label="@@admin.home.overview.col.unpaired"
                   >
@@ -616,3 +398,178 @@
     }
   </section>
 </div>
+
+<ng-template #attentionBlock>
+  <section class="attention" aria-labelledby="admin-attention-title">
+    <h2 id="admin-attention-title" class="ui-group-title" i18n="@@admin.home.attention.title">
+      Co potřebuje vaši pozornost
+    </h2>
+    <ul class="ui-list ui-list--inset attention-list">
+      @if (attentionLoading()) {
+        <li>
+          <div class="ui-list__row">
+            <span
+              class="ui-list__title attention-quiet"
+              role="status"
+              i18n="@@admin.home.attention.loading"
+              >Zjišťujeme, jestli na vás něco nečeká…</span
+            >
+          </div>
+        </li>
+      }
+      @for (row of attentionRows(); track row.key) {
+        <li [class]="row.hook">
+          @if (row.link; as link) {
+            <a
+              class="ui-list__row"
+              [class.ui-list__row--action]="row.tone === 'action'"
+              [routerLink]="link.path"
+              [fragment]="link.fragment"
+            >
+              <ng-container *ngTemplateOutlet="rowContent; context: { $implicit: row }" />
+              <svg
+                class="ui-list__chevron"
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </a>
+          } @else {
+            <div class="ui-list__row">
+              <ng-container *ngTemplateOutlet="rowContent; context: { $implicit: row }" />
+              @if (row.retry; as target) {
+                &ngsp;
+                <span class="ui-list__value attention-action">
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-pill-button"
+                    (click)="retry(target)"
+                    i18n="@@admin.home.attention.retry"
+                  >
+                    Zkusit znovu
+                  </button>
+                </span>
+              }
+              @if (row.copy; as message) {
+                &ngsp;
+                <span class="ui-list__value attention-action">
+                  <app-copy-button
+                    [value]="message"
+                    what="zprávu pro technika"
+                    i18n-what="@@admin.backups.message.what"
+                  />
+                </span>
+              }
+            </div>
+          }
+        </li>
+      }
+      @if (!attentionLoading() && attentionRows().length === 0) {
+        <li class="attention-fine">
+          <div class="ui-list__row">
+            <span class="ui-list__lead attention-tile attention-tile--success" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            <span class="ui-list__title" i18n="@@admin.home.attention.allFine.title"
+              >Vše je v pořádku</span
+            >&ngsp;
+            <span class="ui-list__meta" i18n="@@admin.home.attention.allFine.meta"
+              >Platby z banky naposledy stažené {{ lastSuccess() ?? '—' }}, poslední záloha
+              {{ lastBackupTime() ?? '—' }}.</span
+            >
+          </div>
+        </li>
+      }
+    </ul>
+  </section>
+</ng-template>
+
+<ng-template #rowContent let-row>
+  @if (row.icon) {
+    <span
+      class="ui-list__lead attention-tile"
+      [class]="'attention-tile--' + row.tone"
+      aria-hidden="true"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        @switch (row.icon) {
+          @case ('payments') {
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M3 10h18" />
+            <path d="M7 15h3" />
+          }
+          @case ('bank') {
+            <path d="M3 10 12 4l9 6" />
+            <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
+            <path d="M3 20h18" />
+          }
+          @case ('backup') {
+            <ellipse cx="12" cy="6" rx="7" ry="3" />
+            <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
+            <path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+          }
+          @case ('key') {
+            <circle cx="8" cy="15" r="4" />
+            <path d="m10.8 12.2 8.7-8.7" />
+            <path d="m16 7 3 3" />
+          }
+          @case ('administrators') {
+            <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z" />
+          }
+          @case ('signature') {
+            <path d="M4 20h16" />
+            <path d="M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" />
+          }
+        }
+      </svg>
+    </span>
+  }
+  <span class="ui-list__title">
+    @if (toneLabels[row.tone]; as label) {
+      <span class="visually-hidden">{{ label }}&ngsp;</span>
+    }
+    @if (row.alert) {
+      <span role="alert">{{ row.title }}</span>
+    } @else {
+      {{ row.title }}
+    }
+  </span>
+  @if (row.meta; as meta) {
+    &ngsp;<span class="ui-list__meta">{{ meta }}</span>
+  }
+  @if (row.value; as value) {
+    &ngsp;<span class="ui-list__value">{{ value }}</span>
+  }
+  @if (row.step; as step) {
+    &ngsp;<span class="ui-list__extra admin-next-step">{{ step }}</span>
+  }
+</ng-template>

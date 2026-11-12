@@ -13,6 +13,7 @@ import {
 
 import { Dialog } from '../dialog/dialog';
 import { DialogAnnouncer } from '../dialog/dialog-announcer';
+import { SheetDrag } from '../dialog/sheet-drag';
 import { QrCode } from '../qr-code/qr-code';
 import { ZoomContent } from './zoom-content';
 import {
@@ -82,6 +83,16 @@ export class ZoomViewer {
     () => $localize`:@@ui.zoomViewer.reset:${this.level()}:level:, vrátit původní velikost`,
   );
   protected readonly atRest = computed(() => this.view().scale <= 1);
+  protected readonly swipeOffset = signal<ZoomPoint | null>(null);
+  protected readonly swipeTranslate = computed(() => {
+    const offset = this.swipeOffset();
+    return offset === null ? null : `${offset.x}px ${offset.y}px`;
+  });
+  protected readonly swipeProgress = computed(() => {
+    const offset = this.swipeOffset();
+    const height = this.stage().nativeElement.clientHeight;
+    return offset === null ? 0 : Math.min(1, offset.y / Math.max(1, height));
+  });
   protected readonly atLimit = computed(() => this.view().scale >= MAX_SCALE);
 
   private readonly announcer = inject(DialogAnnouncer);
@@ -92,6 +103,8 @@ export class ZoomViewer {
   private pressedAt: ZoomPoint | null = null;
   private moved = false;
   private lastTap: Tap | null = null;
+  private readonly swipe = new SheetDrag();
+  private swipeFrom: ZoomPoint | null = null;
   private silence: () => void = () => undefined;
 
   constructor() {
@@ -143,8 +156,13 @@ export class ZoomViewer {
     if (this.pointers.size === 1) {
       this.pressedAt = point;
       this.moved = false;
+      if (event.pointerType === 'touch' && this.atRest()) {
+        this.swipeFrom = point;
+        this.swipe.start(point.y, event.timeStamp);
+      }
     } else {
       this.moved = true;
+      this.endSwipe();
       this.pinch = this.pinchStart();
     }
   }
@@ -163,6 +181,11 @@ export class ZoomViewer {
     if (this.pressedAt && distance(this.pressedAt, point) > TAP_SLOP) {
       this.moved = true;
     }
+    if (this.swipeFrom) {
+      const down = this.swipe.move(point.y, event.timeStamp);
+      this.swipeOffset.set({ x: point.x - this.swipeFrom.x, y: down });
+      return;
+    }
     this.view.set(panBy(this.view(), point.x - previous.x, point.y - previous.y, this.bounds()));
   }
 
@@ -171,6 +194,14 @@ export class ZoomViewer {
       return;
     }
     this.pinch = this.pointers.size >= 2 ? this.pinchStart() : null;
+    if (this.swipeFrom && this.pointers.size === 0) {
+      const release = this.swipe.end(this.stage().nativeElement.clientHeight, event.timeStamp);
+      this.endSwipe();
+      if (release === 'dismiss') {
+        this.close();
+        return;
+      }
+    }
     if (this.pointers.size === 0 && !this.moved) {
       this.tapped({ at: event.timeStamp, point: this.pointOf(event) });
     }
@@ -178,6 +209,7 @@ export class ZoomViewer {
 
   protected abandon(event: PointerEvent): void {
     this.pointers.delete(event.pointerId);
+    this.endSwipe();
     this.pinch = this.pointers.size >= 2 ? this.pinchStart() : null;
     this.moved = true;
   }
@@ -244,6 +276,16 @@ export class ZoomViewer {
       return;
     }
     this.lastTap = tap;
+  }
+
+  private endSwipe(): void {
+    if (this.swipeFrom === null) {
+      return;
+    }
+    this.swipe.cancel();
+    this.swipeFrom = null;
+    this.easing.set(true);
+    this.swipeOffset.set(null);
   }
 
   private pinchStart(): Pinch {

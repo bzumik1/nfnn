@@ -1,0 +1,16 @@
+.ui-figures {
+  font-family: var(--font-figures);
+  font-variant-numeric: var(--numeric-figures);
+  font-feature-settings: var(--figure-features);
+  white-space: nowrap;
+}
+
+.ui-figures--groups {
+  white-space: normal;
+  overflow-wrap: normal;
+
+  > * {
+    display: inline-block;
+    white-space: nowrap;
+  }
+}

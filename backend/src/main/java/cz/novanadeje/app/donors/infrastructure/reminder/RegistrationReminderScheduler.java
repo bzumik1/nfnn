@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.reminder;
 
+import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.DonorRegistrationReminderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,13 +14,33 @@ class RegistrationReminderScheduler {
     private static final String FOUNDATION_ZONE = "Europe/Prague";
 
     private final DonorRegistrationReminderService service;
+    private final DonorRegistrationExpiryService expiry;
 
-    RegistrationReminderScheduler(DonorRegistrationReminderService service) {
+    RegistrationReminderScheduler(DonorRegistrationReminderService service, DonorRegistrationExpiryService expiry) {
         this.service = service;
+        this.expiry = expiry;
     }
 
     @Scheduled(cron = "${app.donors.registration-reminder.cron}", zone = FOUNDATION_ZONE)
-    void remindUnconfirmedRegistrations() {
+    void tendUnconfirmedRegistrations() {
+        deleteExpiredRegistrations();
+        remindUnconfirmedRegistrations();
+    }
+
+    private void deleteExpiredRegistrations() {
+        try {
+            int deleted = expiry.expireUnconfirmed();
+            if (deleted > 0) {
+                log.info("Deleted {} unconfirmed registrations older than {} days", deleted, DonorRegistrationExpiryService.RETENTION.toDays());
+            } else {
+                log.debug("No unconfirmed registration to delete");
+            }
+        } catch (RuntimeException failure) {
+            log.error("Deleting expired unconfirmed registrations failed: {}; retrying at the next run", failure.getClass().getSimpleName());
+        }
+    }
+
+    private void remindUnconfirmedRegistrations() {
         try {
             int reminded = service.remindUnconfirmed();
             if (reminded > 0) {

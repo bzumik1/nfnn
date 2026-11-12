@@ -20,6 +20,7 @@ import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { StandingOrder } from '../standing-order/standing-order';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
+import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 interface GiftYear {
   readonly year: number;
@@ -33,6 +34,7 @@ interface GiftYear {
 @Component({
   selector: 'app-donor-gifts',
   imports: [
+    DiagnosticsDownload,
     DownloadProgress,
     PageTitle,
     BankCheck,

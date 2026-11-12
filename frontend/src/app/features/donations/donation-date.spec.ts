@@ -4,6 +4,7 @@ import {
   formatPragueClock,
   pragueDay,
   pragueHour,
+  pragueTime,
 } from './donation-date';
 
 describe('Given a date the donations API sends', () => {
@@ -46,5 +47,10 @@ describe('Given an instant the API sends', () => {
   it('when its Prague time of day is asked for, then it comes on a 24-hour clock without a leading zero in the hour', () => {
     expect(formatPragueClock('2026-11-06T02:35:00Z')).toBe('3:35');
     expect(formatPragueClock('2026-07-01T21:05:00Z')).toBe('23:05');
+  });
+
+  it('when its Prague time of day is asked for, then it reads with seconds and no leading zero in the hour', () => {
+    expect(pragueTime('2026-11-10T08:05:07.639+01:00')).toBe('8:05:07');
+    expect(pragueTime('2026-11-10T20:46:01.513Z')).toBe('21:46:01');
   });
 });

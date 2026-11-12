@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
+import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
 
@@ -25,10 +26,12 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
 
     private final BankPaymentJpaRepository jpa;
     private final ApplicationEventPublisher events;
+    private final EntityManager entityManager;
 
-    JpaBankPaymentRepository(BankPaymentJpaRepository jpa, ApplicationEventPublisher events) {
+    JpaBankPaymentRepository(BankPaymentJpaRepository jpa, ApplicationEventPublisher events, EntityManager entityManager) {
         this.jpa = jpa;
         this.events = events;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -62,7 +65,10 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
 
     @Override
     public List<BankPayment> findUnpairedOrderedByBooking() {
-        return toDomain(jpa.findUnpairedOrderByBooking());
+        List<BankPaymentJpaEntity> entities = jpa.findUnpairedOrderByBooking();
+        List<BankPayment> unpaired = toDomain(entities);
+        entities.forEach(entityManager::detach);
+        return unpaired;
     }
 
     @Override

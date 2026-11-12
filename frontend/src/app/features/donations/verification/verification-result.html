@@ -364,7 +364,7 @@
   <dl class="ui-data-list verify-data">
     <div>
       <dt i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
-      <dd>{{ data.number }}</dd>
+      <dd class="ui-figures">{{ data.number }}</dd>
     </div>
     <div>
       <dt i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
@@ -399,7 +399,7 @@
       </div>
       <div>
         <dt i18n="@@donor.verify.data.amount">Částka</dt>
-        <dd>{{ data.total }}</dd>
+        <dd class="ui-figures">{{ data.total }}</dd>
       </div>
     } @else {
       <div>
@@ -408,7 +408,7 @@
       </div>
       <div>
         <dt i18n="@@donor.verify.data.total">Celkem</dt>
-        <dd>{{ data.total }}</dd>
+        <dd class="ui-figures">{{ data.total }}</dd>
       </div>
     }
   </dl>
@@ -431,7 +431,7 @@
         @for (gift of data.gifts; track $index) {
           <tr>
             <th scope="row">{{ gift.receivedOn }}</th>
-            <td class="verify-gifts__amount">{{ gift.amount }}</td>
+            <td class="verify-gifts__amount ui-figures">{{ gift.amount }}</td>
           </tr>
         }
       </tbody>

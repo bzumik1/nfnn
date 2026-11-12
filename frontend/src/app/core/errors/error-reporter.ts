@@ -2,8 +2,10 @@ import { DOCUMENT } from '@angular/common';
 import { DestroyRef, inject, Injectable } from '@angular/core';
 
 import { Connectivity } from '../connectivity/connectivity';
+import { DiagnosticEvents } from '../diagnostics/diagnostic-events';
+import { EventDetail } from '../diagnostics/diagnostics-schema';
 import { APP_REVISION } from './app-revision';
-import { ClientPlatform, detectPlatform } from './client-platform';
+import { ClientPlatform, platformOf } from './client-platform';
 import { ErrorKind, ErrorName, errorNameOf, ErrorPlace } from './error-vocabulary';
 
 export const CLIENT_ERRORS_PATH = '/api/operations/client-errors';
@@ -28,6 +30,7 @@ interface ClientErrorReport {
 export class ErrorReporter {
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly connectivity = inject(Connectivity);
+  private readonly diagnostics = inject(DiagnosticEvents);
   private readonly lastSent = new Map<string, number>();
   private readonly heldBack = new Map<string, number>();
   private readonly queue: ClientErrorReport[] = [];
@@ -40,9 +43,11 @@ export class ErrorReporter {
     inject(DestroyRef).onDestroy(() => this.window?.removeEventListener('online', flush));
   }
 
-  report(kind: ErrorKind, place: ErrorPlace, error?: unknown): void {
+  report(kind: ErrorKind, place: ErrorPlace, error?: unknown, detail?: EventDetail): void {
     try {
-      this.collect(kind, place, errorNameOf(error));
+      const name = errorNameOf(error);
+      this.diagnostics.record({ kind, place, name, detail: detail ?? null });
+      this.collect(kind, place, name);
     } catch {
       return;
     }
@@ -100,27 +105,8 @@ export class ErrorReporter {
   }
 
   private currentPlatform(): ClientPlatform {
-    if (this.platform === null) {
-      const navigator = this.window?.navigator;
-      this.platform = detectPlatform(
-        { userAgent: navigator?.userAgent ?? '', maxTouchPoints: navigator?.maxTouchPoints ?? 0 },
-        this.runsStandalone(),
-      );
-    }
+    this.platform ??= platformOf(this.window);
     return this.platform;
-  }
-
-  private runsStandalone(): boolean {
-    const view = this.window;
-    if (view === null) {
-      return false;
-    }
-    const installed = (view.navigator as Navigator & { readonly standalone?: boolean }).standalone;
-    return (
-      installed === true ||
-      (typeof view.matchMedia === 'function' &&
-        view.matchMedia('(display-mode: standalone)').matches)
-    );
   }
 
   private send(report: ClientErrorReport): void {

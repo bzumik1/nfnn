@@ -98,6 +98,7 @@ public class SetupService {
 
     @Transactional
     public List<Setting> complete(SetupAccess access, List<SettingChange> changes, List<BackupKeyWordCheck> backupKeyWords) {
+        writer.lockForChange();
         requireOpen(access);
         List<SettingError> foreign = changes.stream()
                 .filter(change -> !Setting.inSetup().contains(change.setting()))
