@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when it renders, then the section is introduced as Přispět with a heading about the gift and one sentence why",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when it renders, then the shared header names the gift and says in one sentence why, with no label above the title",
+    "reason": "PR #609, experts' decision with Jakub's mandate of 2026-11-12: every tab opens with the shared .ui-intro header and no label above its title, so Přispět no longer carries the eyebrow \"Přispět\"",
+    "contract": "docs/requirements.md, Veřejný web; docs/frontend-overview.md, _section"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when it shows on a phone, then the eyebrow above the title is left out, as the tab bar names the tab",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when it shows at any width, then the shared header names it with no label above the title, as the tab bar names the tab",
+    "reason": "PR #609, experts' decision with Jakub's mandate of 2026-11-12: the label above a tab's title is gone at every width, not only on phones, so the test no longer depends on the compact layout",
+    "contract": "docs/requirements.md, Veřejný web; docs/frontend-overview.md, _section"
+  }
+]
