@@ -155,6 +155,9 @@
               </dd>
             </div>
           </dl>
+          @if (importState(); as current) {
+            <app-history-import [state]="current" (finished)="historyFinished($event)" />
+          }
         }
       }
     </section>

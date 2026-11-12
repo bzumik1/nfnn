@@ -36,6 +36,7 @@ import { formatReportMonth } from '../report/report-month';
 import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
 import { unpublishedKeyIds } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
+import { HistoryImport } from './history-import/history-import';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -70,7 +71,14 @@ interface SinceFigure {
 
 @Component({
   selector: 'app-admin-home',
-  imports: [NeedsConnection, RouterLink, CopyButton, AdminSectionRows, NgTemplateOutlet],
+  imports: [
+    NeedsConnection,
+    RouterLink,
+    CopyButton,
+    HistoryImport,
+    AdminSectionRows,
+    NgTemplateOutlet,
+  ],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -394,6 +402,14 @@ export class AdminHome {
 
   protected amount(tally: TallyResponse): string {
     return `${formatMinorUnits(tally.totalMinor)}\u00a0Kč`;
+  }
+
+  protected historyFinished(state: ImportStateResponse): void {
+    this.importState.set(state);
+    const run = state.historyImport;
+    if (run?.status === 'COMPLETED' && (run.added ?? 0) > 0) {
+      this.loadUnpaired();
+    }
   }
 
   protected load(): void {

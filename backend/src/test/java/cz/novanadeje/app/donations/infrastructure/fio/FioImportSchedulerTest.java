@@ -6,6 +6,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.FollowUp;
+import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
+import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportCounts;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
@@ -37,6 +39,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 
+import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HISTORY;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.HOURLY;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.ON_DEMAND;
 import static cz.novanadeje.app.donations.domain.importing.ImportTrigger.STARTUP;
@@ -44,6 +47,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
@@ -64,12 +69,16 @@ class FioImportSchedulerTest {
     private static final Duration COOLDOWN = Duration.ofSeconds(30);
     private static final BankImportProperties IMPORT_PROPERTIES = new BankImportProperties(Period.ofDays(3), Period.ofDays(89), "2025-01-01", COOLDOWN);
     private static final ImportSettings SETTINGS = IMPORT_PROPERTIES.toSettings();
+    private static final LocalDate HISTORY_FROM = LocalDate.parse("2026-01-01");
+    private static final ImportPeriod HISTORY_PERIOD = new ImportPeriod(HISTORY_FROM, LocalDate.parse("2026-10-17"));
+    private static final Instant STARTS_AT = NOW.plusSeconds(20);
 
     private final ImportBankPaymentsService service = mock(ImportBankPaymentsService.class);
     private final TaskScheduler taskScheduler = mock(TaskScheduler.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, clock, events);
+    private final HistoryImportTracker historyImports = mock(HistoryImportTracker.class);
+    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, historyImports, clock, events);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
@@ -103,6 +112,22 @@ class FioImportSchedulerTest {
         List<Boolean> inProgressAtHint = new ArrayList<>();
         doAnswer(invocation -> inProgressAtHint.add(scheduler.inProgress())).when(events).publishEvent(any(Object.class));
         scheduler.requestImport();
+
+        scheduledFollowUp().run();
+
+        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        assertThat(inProgressAtHint).containsExactly(false);
+    }
+
+    @Test
+    @DisplayName("Given a queued run of older payments, when it ends, then the bank import hint goes out once the scheduler no longer reports an import in progress")
+    void should_publish_bank_import_hint_after_progress_cleared_when_history_run_ends_given_queued_run() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(null, null));
+        currentRuns(1);
+        List<Boolean> inProgressAtHint = new ArrayList<>();
+        doAnswer(invocation -> inProgressAtHint.add(scheduler.inProgress())).when(events).publishEvent(any(Object.class));
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
 
         scheduledFollowUp().run();
 
@@ -285,7 +310,7 @@ class FioImportSchedulerTest {
 
         assertThat(messages(Level.WARN)).containsExactly(
                 "Fio import STARTUP 2026-07-20/2026-10-17 failed with HISTORY_LOCKED (" + FAILURE_MESSAGE + "): unlock the history in Fio internet banking "
-                        + "(Nastavení > API, the lock icon) and restart the backend within 10 minutes, or shorten FIO_HISTORY_FROM; "
+                        + "(Nastavení > API, the lock icon) and press Načíst starší platby on /sprava within 10 minutes; "
                         + "follow-up HOURLY at 2026-10-17T10:00:31Z");
     }
 
@@ -409,6 +434,234 @@ class FioImportSchedulerTest {
         when(followUp.isDone()).thenReturn(true);
         assertThat(scheduler.inProgress()).isFalse();
         verify(taskScheduler).schedule(any(Runnable.class), eq(RETRY_AT));
+    }
+
+    @Test
+    @DisplayName("Given nothing queued, when older payments are requested twice, then one history run is scheduled at the first run's time and it imports the latest run")
+    void should_schedule_one_history_run_with_latest_run_when_requested_twice_given_nothing_queued() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(null, null));
+        currentRuns(2);
+
+        scheduler.requestHistoryImport(run(1, LocalDate.parse("2025-01-01"), STARTS_AT));
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
+        assertThat(scheduler.inProgress()).isTrue();
+        scheduledFollowUp().run();
+
+        verify(taskScheduler, times(1)).schedule(any(Runnable.class), eq(STARTS_AT));
+        verify(service).importHistory(run(2, HISTORY_FROM, NOW), SETTINGS);
+        verify(service, times(1)).importHistory(any(), any());
+        assertThat(scheduler.inProgress()).isFalse();
+        assertThat(scheduler.enabled()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a newer run already handed over, when an older run's handover arrives late, then the queued task still imports the newer run")
+    void should_import_newer_run_when_older_handover_arrives_late_given_newer_run_handed_over() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(null, null));
+        currentRuns(2);
+
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
+        scheduler.requestHistoryImport(run(1, LocalDate.parse("2025-01-01"), NOW));
+        scheduledFollowUp().run();
+
+        verify(service).importHistory(run(2, HISTORY_FROM, NOW), SETTINGS);
+        verify(service, times(1)).importHistory(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a history run refused by the bank's 30-second limit, when the scheduler ticks before the follow-up, then the history follow-up stays and imports the same run")
+    void should_keep_history_follow_up_across_tick_when_refused_given_rate_limit() {
+        ScheduledFuture<?> queued = mock(ScheduledFuture.class);
+        ScheduledFuture<?> followUp = mock(ScheduledFuture.class);
+        doReturn(queued).doReturn(followUp).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any()))
+                .thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)))
+                .thenReturn(history(null, null));
+        when(service.importIncomingPayments(any(), any())).thenReturn(completed(STARTUP));
+        currentRuns(1);
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+        scheduledFollowUp().run();
+
+        scheduler.tick();
+        assertThat(scheduler.inProgress()).isTrue();
+        scheduledFollowUp().run();
+
+        verify(taskScheduler).schedule(any(Runnable.class), eq(RETRY_AT));
+        verify(followUp, never()).cancel(anyBoolean());
+        verify(service, times(2)).importHistory(run(1, HISTORY_FROM, NOW), SETTINGS);
+    }
+
+    @Test
+    @DisplayName("Given three history follow-ups in a row, when the bank refuses a fourth time, then no follow-up is scheduled, a warning says so and the run is abandoned")
+    void should_abandon_history_run_when_refused_four_times_given_three_follow_ups() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        currentRuns(7);
+        scheduler.requestHistoryImport(run(7, HISTORY_FROM, NOW));
+
+        for (int run = 0; run < 4; run++) {
+            scheduledFollowUp().run();
+        }
+
+        verify(taskScheduler, times(4)).schedule(any(Runnable.class), any(Instant.class));
+        verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
+        assertThat(messages(Level.WARN)).contains("Fio import HISTORY put off 4 times in a row; it waits to be requested again");
+    }
+
+    @Test
+    @DisplayName("Given a history run held back twice, when the hourly import ticks between its follow-ups, then the tick leaves its budget alone and the fourth refusal still abandons it")
+    void should_keep_history_budget_across_tick_when_refused_given_hourly_tick_between() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        when(service.importIncomingPayments(any(), any())).thenReturn(completed(STARTUP));
+        currentRuns(7);
+        scheduler.requestHistoryImport(run(7, HISTORY_FROM, NOW));
+        Runnable historyRun = scheduledFollowUp();
+        historyRun.run();
+        scheduledFollowUp().run();
+
+        scheduler.tick();
+        scheduledFollowUp().run();
+        scheduledFollowUp().run();
+
+        verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
+    }
+
+    @Test
+    @DisplayName("Given a run that used up its follow-ups but one, when a new run is requested, then the new run gets all three follow-ups again and the pending one is cancelled")
+    void should_reset_follow_ups_and_cancel_pending_when_requested_given_earlier_run_put_off() {
+        ScheduledFuture<?> pending = mock(ScheduledFuture.class);
+        doReturn(mock(ScheduledFuture.class)).doReturn(mock(ScheduledFuture.class)).doReturn(pending)
+                .doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        currentRuns(1, 2);
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+        scheduledFollowUp().run();
+        scheduledFollowUp().run();
+
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
+        for (int run = 0; run < 4; run++) {
+            scheduledFollowUp().run();
+        }
+
+        verify(pending).cancel(false);
+        verify(historyImports, never()).abandoned(eq(1L), any(), any());
+        verify(historyImports).abandoned(2, ImportFailureKind.RATE_LIMITED, NOW);
+    }
+
+    @Test
+    @DisplayName("Given another import still running when the history run is due, when it fires, then it is put off by the bank's 30 seconds without using up a follow-up and runs then")
+    void should_put_off_without_follow_up_when_due_given_another_import_running() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(null, null));
+        currentRuns(3);
+        when(service.importIncomingPayments(any(), any())).thenAnswer(invocation -> {
+            scheduler.requestHistoryImport(run(3, HISTORY_FROM, NOW));
+            for (int skipped = 0; skipped < 5; skipped++) {
+                scheduledFollowUp().run();
+            }
+            return completed(STARTUP);
+        });
+
+        scheduler.tick();
+        verify(service, never()).importHistory(any(), any());
+        scheduledFollowUp().run();
+
+        verify(taskScheduler, times(5)).schedule(any(Runnable.class), eq(NOW.plus(COOLDOWN)));
+        verify(service).importHistory(run(3, HISTORY_FROM, NOW), SETTINGS);
+        verify(historyImports, never()).abandoned(anyLong(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a run replaced by a newer request while its follow-up waits, when the old follow-up fires, then it imports nothing")
+    void should_import_nothing_when_old_follow_up_fires_given_run_replaced() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        currentRuns(1);
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+        scheduledFollowUp().run();
+        Runnable oldFollowUp = scheduledFollowUp();
+        when(historyImports.current(1)).thenReturn(false);
+
+        oldFollowUp.run();
+
+        verify(service, times(1)).importHistory(any(), any());
+    }
+
+    @Test
+    @DisplayName("Given a run replaced while it was running, when the bank holds the old one back, then no follow-up is scheduled for it")
+    void should_schedule_no_follow_up_when_held_back_given_run_replaced_while_running() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        currentRuns(1);
+        when(service.importHistory(any(), any())).thenAnswer(invocation -> {
+            when(historyImports.current(1)).thenReturn(false);
+            return history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY));
+        });
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+
+        scheduledFollowUp().run();
+
+        verify(taskScheduler, never()).schedule(any(Runnable.class), eq(RETRY_AT));
+    }
+
+    @Test
+    @DisplayName("Given the task scheduler refuses the history run, when older payments are requested, then the refusal escapes and a later request may schedule again")
+    void should_release_the_queued_history_run_when_requested_given_scheduler_refuses() {
+        doThrow(new TaskRejectedException("shutting down")).doReturn(mock(ScheduledFuture.class))
+                .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+
+        assertThatThrownBy(() -> scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW))).isInstanceOf(TaskRejectedException.class);
+        assertThat(scheduler.inProgress()).isFalse();
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
+
+        verify(taskScheduler, times(2)).schedule(any(Runnable.class), eq(NOW));
+    }
+
+    @Test
+    @DisplayName("Given the task scheduler refuses a history follow-up, when the bank holds the run back, then the run is abandoned instead of waiting forever")
+    void should_abandon_run_when_follow_up_refused_given_scheduler_refuses() {
+        doReturn(mock(ScheduledFuture.class)).doThrow(new TaskRejectedException("shutting down"))
+                .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
+        currentRuns(1);
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+
+        scheduledFollowUp().run();
+
+        verify(historyImports).abandoned(1, ImportFailureKind.UNEXPECTED, NOW);
+        assertThat(messages(Level.WARN)).contains("Fio import HISTORY run 1 could not be scheduled again (TaskRejectedException); it ends as failed");
+    }
+
+    @Test
+    @DisplayName("Given locked history on a history run, when it fails, then a warning tells the operator to unlock it and press the button, and that it waits to be requested again")
+    void should_warn_with_unlock_instruction_when_history_run_fails_given_locked_history() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.HISTORY_LOCKED, null));
+        currentRuns(1);
+        scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
+
+        scheduledFollowUp().run();
+
+        assertThat(messages(Level.WARN)).containsExactly(
+                "Fio import HISTORY 2026-01-01/2026-10-17 failed with HISTORY_LOCKED (" + FAILURE_MESSAGE + "): unlock the history in Fio internet banking "
+                        + "(Nastavení > API, the lock icon) and press Načíst starší platby on /sprava within 10 minutes; it waits to be requested again");
+    }
+
+    private static HistoryImportRun run(long id, LocalDate from, Instant startsAt) {
+        return HistoryImportRun.queued(id, new ImportPeriod(from, LocalDate.parse("2026-10-17")), true, NOW, startsAt);
+    }
+
+    private void currentRuns(long... ids) {
+        for (long id : ids) {
+            when(historyImports.current(id)).thenReturn(true);
+        }
+    }
+
+    private static ImportReport history(ImportFailureKind kind, FollowUp followUp) {
+        return new ImportReport(HISTORY, HISTORY_PERIOD, true, Optional.empty(), ImportCoverage.none(), ImportCounts.none(),
+                Optional.ofNullable(kind), Optional.ofNullable(kind).map(failure -> FAILURE_MESSAGE), Optional.ofNullable(followUp));
     }
 
     private Runnable scheduledFollowUp() {
