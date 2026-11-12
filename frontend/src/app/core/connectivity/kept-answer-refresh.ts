@@ -7,7 +7,7 @@ import {
   HttpRequest,
   HttpResponse,
 } from '@angular/common/http';
-import { inject } from '@angular/core';
+import { DOCUMENT, inject } from '@angular/core';
 import {
   catchError,
   concat,
@@ -24,11 +24,11 @@ import { Connectivity, FRESH_ANSWER_MS } from './connectivity';
 
 export const REFRESH_AFTER_KEPT_COPY = new HttpContextToken<boolean>(() => false);
 export const REFRESH_WAIT_MS = 5_000;
+export const OFFLINE_ANSWER_WAIT_MS = 1_500;
 
 export function refreshedAfterKeptCopy(): HttpContext {
   return new HttpContext().set(REFRESH_AFTER_KEPT_COPY, true);
 }
-export const OFFLINE_ANSWER_WAIT_MS = 1_500;
 
 const REFRESHED_CONTENT = /^\/api\/content\/(?:home|news|projects)(?:[/?]|$)/;
 
@@ -37,11 +37,12 @@ export const keptAnswerRefreshInterceptor: HttpInterceptorFn = (request, next) =
     return next(request);
   }
   const connectivity = inject(Connectivity);
-  const fromWorker = connectivity.offline()
-    ? next(request).pipe(
-        timeout({ each: OFFLINE_ANSWER_WAIT_MS, with: () => throwError(() => offline(request)) }),
-      )
-    : next(request);
+  const fromWorker =
+    connectivity.offline() && !controlledByServiceWorker(inject(DOCUMENT))
+      ? next(request).pipe(
+          timeout({ each: OFFLINE_ANSWER_WAIT_MS, with: () => throwError(() => offline(request)) }),
+        )
+      : next(request);
   if (!request.context.get(REFRESH_AFTER_KEPT_COPY)) {
     return fromWorker;
   }
@@ -65,6 +66,10 @@ export const keptAnswerRefreshInterceptor: HttpInterceptorFn = (request, next) =
     }),
   );
 };
+
+function controlledByServiceWorker(document: Document): boolean {
+  return Boolean(document.defaultView?.navigator.serviceWorker?.controller);
+}
 
 function offline(request: HttpRequest<unknown>): HttpErrorResponse {
   return new HttpErrorResponse({ status: 0, statusText: 'Offline', url: request.urlWithParams });

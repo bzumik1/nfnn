@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { EMPTY, expand, map, Observable, reduce, Subscription, take, timeout } from 'rxjs';
+import { EMPTY, expand, map, Observable, reduce, Subscription, timeout } from 'rxjs';
 import { DonateBand } from '../donate-band/donate-band';
 import { DonateBandPhotoResponse } from '../donate-band-api';
 import { FeaturedNews } from '../featured-news/featured-news';
@@ -196,7 +196,7 @@ export class NewsPage {
   }
 
   private projectsPage(index: number) {
-    return this.projectsApi.published(index, PROJECTS_PAGE_SIZE).pipe(take(1));
+    return this.projectsApi.published(index, PROJECTS_PAGE_SIZE);
   }
 }
 

@@ -113,6 +113,22 @@ test.describe('Given a visitor who opened every public page once with a connecti
     }
   });
 
+  test('when the network leaves every request hanging and the browser says offline (an iPhone in airplane mode), then every page shows what it kept and none waits on the network', async ({
+    page,
+    context,
+  }) => {
+    await context.route('**/api/**', () => new Promise<void>(() => undefined));
+    await page.addInitScript(() =>
+      Object.defineProperty(Navigator.prototype, 'onLine', { get: () => false }),
+    );
+
+    for (const { path, shows } of PAGES) {
+      await page.goto(path);
+      await expect(shows(page), path).toBeVisible(SHOWN_WITHIN);
+      await nothingLoadsForever(page);
+    }
+  });
+
   test.describe('when the connection is gone', () => {
     test.beforeEach(async ({ goOffline }) => {
       await goOffline();

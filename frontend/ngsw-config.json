@@ -91,7 +91,8 @@
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 60,
-        "maxAge": "365d"
+        "maxAge": "365d",
+        "timeout": "10s"
       }
     },
     {
@@ -110,7 +111,8 @@
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 300,
-        "maxAge": "365d"
+        "maxAge": "365d",
+        "timeout": "10s"
       }
     }
   ]

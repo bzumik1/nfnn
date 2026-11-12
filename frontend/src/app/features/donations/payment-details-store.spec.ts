@@ -7,7 +7,7 @@ import { authResponse } from '../../core/auth/testing/donor-fixtures';
 import { Connectivity, PROBE_PATH } from '../../core/connectivity/connectivity';
 import { sharedCases } from '../../../testing/shared-cases';
 import { KEPT_PAYMENT_DETAILS, PaymentDetailsStore } from './payment-details-store';
-import { PaymentDetails } from './payment-details-api';
+import { PAYMENT_DETAILS_WAIT_MS, PaymentDetails } from './payment-details-api';
 import { spayd } from './spayd';
 import {
   FOUNDATION_DETAILS_CASE,
@@ -289,6 +289,20 @@ describe('Given the payment details store', () => {
 
       expect(store.state()).toEqual({ kind: 'ready', details: movedAccount() });
       expect(store.age()).toEqual({ writtenAt: null, kept: false });
+    });
+
+    it('when the server never answers (a phone in airplane mode the app does not yet know is offline), then the kept details are shown once the wait for it ends', () => {
+      vi.useFakeTimers();
+      store.load();
+      const request = http.expectOne(PAYMENT_DETAILS_URL);
+
+      vi.advanceTimersByTime(PAYMENT_DETAILS_WAIT_MS - 1);
+      expect(store.state()).toEqual({ kind: 'loading' });
+      vi.advanceTimersByTime(1);
+
+      expect(request.cancelled).toBe(true);
+      expect(store.state()).toEqual({ kind: 'ready', details: foundationPaymentDetails() });
+      expect(store.age()).toEqual({ writtenAt: written, kept: true });
     });
 
     describe('when the app already knows it is offline', () => {

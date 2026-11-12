@@ -173,6 +173,23 @@ describe('Given the refresh of answers the service worker kept', () => {
       http.expectOne(PROBE_PATH);
     });
 
+    it('and a service worker controls the page, then the app leaves the wait to the worker, which answers from its copy or gives up itself, so a slow start of the worker on an old phone fails nothing it kept', () => {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: { controller: {} },
+      });
+      try {
+        const received = ask(NEWS);
+        vi.advanceTimersByTime(OFFLINE_ANSWER_WAIT_MS * 2);
+        expect(received.failed).toBe(false);
+
+        workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
+        expect(received.answers).toEqual([{ items: ['old'] }]);
+      } finally {
+        delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+      }
+    });
+
     it('and the worker has the page, then the page gets its copy at once', () => {
       const received = ask(NEWS);
       workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
@@ -181,7 +198,7 @@ describe('Given the refresh of answers the service worker kept', () => {
       expect(received.completed).toBe(true);
     });
 
-    it('and the worker gives no answer at once (a page it never kept), then the page is told it is offline instead of waiting on', () => {
+    it('and no service worker controls the page, so nothing can answer, then the page is told it is offline instead of waiting on', () => {
       const received = ask(NEWS);
       const waiting = http.expectOne((asked) => asked.urlWithParams === NEWS);
 
