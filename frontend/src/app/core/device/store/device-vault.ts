@@ -36,7 +36,7 @@ import {
   WorkerPasswordKeyDerivation,
 } from '../crypto/password-key';
 import { prfInput, type PrfReading, readPrf } from '../crypto/prf';
-import { AccountStore, type CopyContents } from './account-store';
+import { AccountStore, type CopyContents, type StoredDraft } from './account-store';
 import type { DeviceStorage, StorageChange } from './device-storage';
 import { idbDeviceStoragePresent, openIdbDeviceStorage } from './idb-device-storage';
 import { MemoryDeviceStorage } from './memory-device-storage';
@@ -366,6 +366,28 @@ export class DeviceVault implements SessionDevice {
           ? this.activeStorage
           : null;
     return storage?.kind === 'indexed-db';
+  }
+
+  drafts(store: AccountStore): Promise<readonly StoredDraft[]> {
+    return this.run(async () => (this.stores(store) ? store.drafts() : []));
+  }
+
+  keepDraft(store: AccountStore, draft: StoredDraft): Promise<boolean> {
+    return this.run(async () => {
+      if (!this.stores(store)) {
+        return false;
+      }
+      await store.keepDraft(draft);
+      return true;
+    });
+  }
+
+  dropDraft(store: AccountStore, key: string): Promise<void> {
+    return this.run(async () => {
+      if (this.stores(store)) {
+        await store.dropDraft(key);
+      }
+    });
   }
 
   administrationPasskeys(account: DeviceAccount, storeNothing: boolean): Promise<string[]> {

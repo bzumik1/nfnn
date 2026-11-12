@@ -50,9 +50,22 @@ import {
 } from '../../content/people-api';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { FormDraft, formDraft } from '../../../core/drafts/form-draft';
+import {
+  DRAFT_DISCARDED_TEXT,
+  DRAFT_RESUMED_TEXT,
+  DraftOffer,
+} from '../../../shared/ui/draft-offer/draft-offer';
+import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { formatBankTime } from '../../donations/donation-date';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type Direction = 'up' | 'down';
+type PageText = 'note' | 'footnote';
+
+interface PageTextValues {
+  readonly text: string;
+}
 
 type ReceiptPreview =
   | { key: string; state: 'loading' }
@@ -79,6 +92,8 @@ const FORBIDDEN = 'auth/forbidden';
 const PREVIEW_WIDTH = 480;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const NEW_PERSON = 'new';
+const TEXT_RELOADED = $localize`:@@admin.people.text.reloaded:Vaše úpravy jsme zahodili a načetli uložený text.`;
+const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený text se nepodařilo načíst. Zkuste to prosím znovu.`;
 
 @Component({
   selector: 'app-admin-people',
@@ -93,6 +108,8 @@ const NEW_PERSON = 'new';
     LiveNotice,
     ReceiptSignature,
     NeedsConnection,
+    DraftOffer,
+    ChangedMeanwhileDialog,
   ],
   templateUrl: './admin-people.html',
   styleUrl: './admin-people.scss',
@@ -111,6 +128,8 @@ export class AdminPeople {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
   private readonly personForm = viewChild<NgForm>('personForm');
   private readonly receiptTitle = viewChild<ElementRef<HTMLHeadingElement>>('receiptTitle');
+  private readonly noteForm = viewChild<NgForm>('noteForm');
+  private readonly footnoteForm = viewChild<NgForm>('footnoteForm');
 
   protected readonly maxNameLength = MAX_PERSON_NAME_LENGTH;
   protected readonly maxRoleLength = MAX_PERSON_ROLE_LENGTH;
@@ -150,6 +169,25 @@ export class AdminPeople {
   protected receiptDraft: ReceiptDraft = { signs: false, role: '' };
   protected noteText = '';
   protected footnoteText = '';
+  protected readonly noteDraft = formDraft<PageTextValues>({
+    copy: 'administration',
+    key: () => 'people/note',
+    values: () => ({ text: this.noteText }),
+    apply: (values) => {
+      this.noteText = values.text;
+      this.noteForm()?.form.markAsDirty();
+    },
+  });
+  protected readonly footnoteDraft = formDraft<PageTextValues>({
+    copy: 'administration',
+    key: () => 'people/footnote',
+    values: () => ({ text: this.footnoteText }),
+    apply: (values) => {
+      this.footnoteText = values.text;
+      this.footnoteForm()?.form.markAsDirty();
+    },
+  });
+  protected readonly staleText = signal<PageText | null>(null);
 
   protected readonly nameMessages = {
     required: $localize`:@@admin.people.name.required:Vyplňte prosím jméno.`,
@@ -219,6 +257,8 @@ export class AdminPeople {
           this.noteText = people.note ?? '';
           this.footnoteText = people.footnote ?? '';
           this.state.set('ready');
+          this.noteDraft.ready();
+          this.footnoteDraft.ready();
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -602,12 +642,86 @@ export class AdminPeople {
       });
   }
 
+  protected draftSavedAt(savedAt: string): string {
+    return formatBankTime(savedAt);
+  }
+
+  protected resumeText(which: PageText): void {
+    this.textDraft(which).resume();
+    this.textNotice(which).set({ kind: 'status', text: DRAFT_RESUMED_TEXT });
+    this.focusLater(which === 'note' ? '#founders-note' : '#people-footnote');
+  }
+
+  protected discardText(which: PageText): void {
+    this.textDraft(which).discard();
+    this.textNotice(which).set({ kind: 'status', text: DRAFT_DISCARDED_TEXT });
+    this.focusLater(which === 'note' ? '#founders-note' : '#people-footnote');
+  }
+
+  protected overwriteStaleText(): void {
+    const which = this.staleText();
+    this.staleText.set(null);
+    const form = which === 'note' ? this.noteForm() : this.footnoteForm();
+    if (which === null || !form) {
+      return;
+    }
+    this.textDraft(which).overwriteConfirmed();
+    if (which === 'note') {
+      this.saveNote(form);
+    } else {
+      this.saveFootnote(form);
+    }
+  }
+
+  protected reloadStaleText(): void {
+    const which = this.staleText();
+    this.staleText.set(null);
+    if (which === null) {
+      return;
+    }
+    const draft = this.textDraft(which);
+    draft.discard();
+    this.api
+      .load()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (people) => {
+          if (which === 'note') {
+            this.noteText = people.note ?? '';
+            this.noteForm()?.form.markAsPristine();
+          } else {
+            this.footnoteText = people.footnote ?? '';
+            this.footnoteForm()?.form.markAsPristine();
+          }
+          draft.ready();
+          this.textNotice(which).set({ kind: 'status', text: TEXT_RELOADED });
+        },
+        error: (failure: unknown) =>
+          this.textNotice(which).set({
+            kind: 'alert',
+            text: describeProblem(failure, TEXT_RELOAD_FAILED),
+          }),
+      });
+  }
+
+  private textDraft(which: PageText): FormDraft<PageTextValues> {
+    return which === 'note' ? this.noteDraft : this.footnoteDraft;
+  }
+
+  private textNotice(which: PageText) {
+    return which === 'note' ? this.noteNotice : this.footnoteNotice;
+  }
+
   protected saveNote(form: NgForm): void {
     if (this.savingNote()) {
       return;
     }
     this.noteNotice.set(null);
     if (form.invalid) {
+      return;
+    }
+    if (this.noteDraft.resumedStale()) {
+      this.staleText.set('note');
       return;
     }
     this.savingNote.set(true);
@@ -619,6 +733,7 @@ export class AdminPeople {
           this.savingNote.set(false);
           this.noteText = note.text ?? '';
           form.form.markAsPristine();
+          this.noteDraft.saved();
           this.noteNotice.set({
             kind: 'status',
             text: note.text
@@ -647,6 +762,10 @@ export class AdminPeople {
     if (form.invalid) {
       return;
     }
+    if (this.footnoteDraft.resumedStale()) {
+      this.staleText.set('footnote');
+      return;
+    }
     this.savingFootnote.set(true);
     this.api
       .saveFootnote(text(this.footnoteText))
@@ -656,6 +775,7 @@ export class AdminPeople {
           this.savingFootnote.set(false);
           this.footnoteText = footnote.text ?? '';
           form.form.markAsPristine();
+          this.footnoteDraft.saved();
           this.footnoteNotice.set({
             kind: 'status',
             text: footnote.text

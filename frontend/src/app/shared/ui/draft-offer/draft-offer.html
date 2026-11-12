@@ -1,0 +1,51 @@
+<section class="ui-callout ui-callout--warning draft-offer" [attr.aria-labelledby]="titleId">
+  @if (headingLevel() === 3) {
+    <h3 class="draft-offer__title" tabindex="-1" [id]="titleId" i18n="@@ui.draftOffer.title">
+      Máte tu rozepsané úpravy
+    </h3>
+  } @else {
+    <h2 class="draft-offer__title" tabindex="-1" [id]="titleId" i18n="@@ui.draftOffer.title">
+      Máte tu rozepsané úpravy
+    </h2>
+  }
+  <p class="draft-offer__text" i18n="@@ui.draftOffer.lead">
+    Na tomto zařízení zůstaly neuložené úpravy z {{ savedAt() }}. Než budete upravovat dál, vyberte,
+    jestli v nich chcete pokračovat, nebo je zahodit.
+  </p>
+  @if (stale()) {
+    <p class="draft-offer__text" i18n="@@ui.draftOffer.stale">
+      Uložená verze se od té doby změnila. Když budete pokračovat, před uložením se vás zeptáme,
+      jestli ji chcete svými úpravami nahradit.
+    </p>
+  }
+  @if (photo()) {
+    <p class="draft-offer__text" i18n="@@ui.draftOffer.photo">
+      Rozepsané úpravy neuchovávají fotky. Pokud jste nahráli novou, vyberte ji prosím znovu a
+      napište k ní popis.
+    </p>
+  }
+  @if (secrets()) {
+    <p class="draft-offer__text" i18n="@@ui.draftOffer.secrets">
+      Hesla a tokeny se z bezpečnostních důvodů neuchovávají. Pokud jste nějaké měnili, zadejte je
+      prosím znovu.
+    </p>
+  }
+  <div class="draft-offer__actions">
+    <button
+      type="button"
+      class="ui-button ui-button--primary ui-button--small draft-offer__resume"
+      (click)="resumed.emit()"
+      i18n="@@ui.draftOffer.resume"
+    >
+      Pokračovat v rozepsaném
+    </button>
+    <button
+      type="button"
+      class="ui-button ui-button--quiet ui-button--small draft-offer__discard"
+      (click)="discarded.emit()"
+      i18n="@@ui.draftOffer.discard"
+    >
+      Zahodit
+    </button>
+  </div>
+</section>
