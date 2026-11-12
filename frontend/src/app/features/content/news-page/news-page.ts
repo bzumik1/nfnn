@@ -142,7 +142,7 @@ export class NewsPage {
     if (!quietly) {
       this.newsState.set('loading');
     }
-    this.newsLoad = this.newsApi.published(this.pageNumber() - 1, PAGE_SIZE).subscribe({
+    this.newsLoad = this.newsApi.publishedWithLatest(this.pageNumber() - 1, PAGE_SIZE).subscribe({
       next: (page) => {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
