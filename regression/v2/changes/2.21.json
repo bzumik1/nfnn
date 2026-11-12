@@ -42,6 +42,13 @@
     "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
   },
   {
+    "scenario": "donations/admin_payments: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
     "scenario": "donors/admin_device_sync: *",
     "kind": "mails",
     "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
@@ -57,6 +64,13 @@
   },
   {
     "scenario": "donors/donor_passkeys: *",
+    "kind": "mails",
+    "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
+    "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
+    "contract": "docs/api-contract.md, Donors (DELETE /api/admin/donors/{donorId}); docs/security-overview.md, Device status"
+  },
+  {
+    "scenario": "donors/device_status: *",
     "kind": "mails",
     "subject": "Vaše osobní údaje jsme vymazali – Nová naděje",
     "reason": "Plan v3 slice 2.21: donors.erased.email.kept gains the sentences on device copies that 1.11 left out because Phase 1 kept none: the copy the donor portal kept on the donor's devices is deleted by each device when it next reaches the server (the wipe-all order of 2.11), receipts the donor downloaded stay with them, and the data leave the administrators' copies at their next synchronisation (2.17); nothing else in the e-mail changes",
