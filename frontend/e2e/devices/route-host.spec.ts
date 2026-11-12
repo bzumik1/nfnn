@@ -53,4 +53,26 @@ test.describe('Given the host that serves the app and its mocks to Safari', () =
     expect(exchange.head.toLowerCase()).toContain('connection: close');
     expect(exchange.closedByHost).toBe(true);
   });
+
+  test('when the app asks the API, then the host keeps each answer it gave to show beside a failed step, and forgets them for the next step', async () => {
+    await host.routes.route('**/api/admin/donations/sync', (route) =>
+      route.fulfill({ json: { chunks: [] } }),
+    );
+    await host.routes.route('**/api/admin/donors/devices/current/administration-copy', (route) =>
+      route.fulfill({ status: 204 }),
+    );
+
+    await fetch(`${baseUrl}/api/admin/donations/sync?since=1`);
+    await fetch(`${baseUrl}/api/admin/donors/devices/current/administration-copy`, {
+      method: 'POST',
+    });
+    await fetch(`${baseUrl}/aktuality`);
+
+    expect(host.answered()).toEqual([
+      'GET /api/admin/donations/sync 200',
+      'POST /api/admin/donors/devices/current/administration-copy 204',
+    ]);
+    host.reset(100);
+    expect(host.answered()).toEqual([]);
+  });
 });
