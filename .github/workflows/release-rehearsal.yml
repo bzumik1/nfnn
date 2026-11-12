@@ -92,6 +92,19 @@ jobs:
           done
           sed -E "s#(image: ghcr\.io/bzumik1/nfnn-[a-z]+):latest\$#\1:$DEPLOYED_REVISION#" "$RUNNER_TEMP/first-candidate.yml" > "$RUNNER_TEMP/first-deployed.yml"
           [ "$(grep -c ":$DEPLOYED_REVISION\$" "$RUNNER_TEMP/first-deployed.yml")" = 5 ] || { echo "::error::the compose file of the older images does not name all five images at $DEPLOYED_REVISION"; exit 1; }
+          base=$(sed -n 's/^FROM //p' deploy/postgres/Dockerfile)
+          echo "$base" | grep -qxE 'postgres:17\.[0-9]+-alpine@sha256:[0-9a-f]{64}' || { echo "::error::deploy/postgres/Dockerfile must start from an exact PostgreSQL 17 minor pinned by digest (postgres:17.<minor>-alpine@sha256:…), got '$base'"; exit 1; }
+          [ "$(sed -n 's/^FROM //p' deploy/backup/Dockerfile)" = "$base" ] || { echo "::error::deploy/backup/Dockerfile must start from the same PostgreSQL image as deploy/postgres/Dockerfile ($base)"; exit 1; }
+          pg_version() { docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$1" | sed -n 's/^PG_VERSION=//p'; }
+          deployed_pg=$(pg_version "ghcr.io/bzumik1/nfnn-postgres:$DEPLOYED_REVISION")
+          candidate_pg=$(pg_version ghcr.io/bzumik1/nfnn-postgres:latest)
+          [ -n "$deployed_pg" ] && [ -n "$candidate_pg" ] || { echo "::error::the PostgreSQL version of the older ($deployed_pg) or the candidate's ($candidate_pg) database image is unknown"; exit 1; }
+          cp "$RUNNER_TEMP/first-deployed.yml" "$RUNNER_TEMP/first-rollback.yml"
+          if [ "$deployed_pg" != "$candidate_pg" ]; then
+            [ "$(printf '%s\n%s\n' "$deployed_pg" "$candidate_pg" | sort -V | tail -n 1)" = "$candidate_pg" ] || { echo "::error::the candidate's database image runs PostgreSQL $candidate_pg, older than the $deployed_pg of $DEPLOYED_REVISION: a database never moves back to an older PostgreSQL, so rebase the change on main"; exit 1; }
+            yq -i '.services.postgres.image = "ghcr.io/bzumik1/nfnn-postgres:latest"' "$RUNNER_TEMP/first-rollback.yml"
+            echo "::notice::the candidate moves the database from PostgreSQL $deployed_pg to $candidate_pg, so the rollback keeps the candidate's database image, as deploy/README.md says for the server: a database never moves back to an older PostgreSQL, whose pg_restore refuses what the newer one wrote into the catalogue"
+          fi
           echo "JOURNEY_STATE=$RUNNER_TEMP/journey.json" >> "$GITHUB_ENV"
           token=$(openssl rand -hex 24)
           echo "::add-mask::$token"
@@ -176,7 +189,7 @@ jobs:
       - name: The older images start again on the candidate's schema, the journeys pass, the import pairs again, and their backup of that schema restores in a test database
         if: env.REHEARSE == 'true'
         env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-deployed.yml
+          COMPOSE_FILE: ${{ runner.temp }}/first-rollback.yml
         run: |
           . "$RUNNER_TEMP/rehearsal.sh"
           logs="$RUNNER_TEMP/first/logs"
@@ -194,7 +207,7 @@ jobs:
       - name: The older images restore the backup taken before the upgrade, the journeys pass and the import brings back the gifts paired since
         if: env.REHEARSE == 'true'
         env:
-          COMPOSE_FILE: ${{ runner.temp }}/first-deployed.yml
+          COMPOSE_FILE: ${{ runner.temp }}/first-rollback.yml
         run: |
           backups="$RUNNER_TEMP/first/backups"
           restore="$RUNNER_TEMP/first/restore"
