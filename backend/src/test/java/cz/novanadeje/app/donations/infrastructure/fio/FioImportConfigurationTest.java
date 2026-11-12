@@ -3,6 +3,10 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 import com.sun.net.httpserver.HttpServer;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
+import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
+import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
+import cz.novanadeje.app.donations.domain.importing.BankImportOff;
+import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import io.github.bzumik1.fio.AccountStatement;
 import io.github.bzumik1.fio.FioClient;
@@ -28,11 +32,13 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.mockito.Mockito.mock;
@@ -78,6 +84,19 @@ class FioImportConfigurationTest {
             assertThat(context.getBean(FioClient.class)).isInstanceOf(DisabledFioClient.class);
             assertThat(context).doesNotHaveBean(FioImportScheduler.class);
             assertThat(context.getBean(BankImportRequests.class)).isInstanceOf(DisabledBankImportRequests.class);
+        });
+    }
+
+    @Test
+    @DisplayName("Given an empty token, when older payments are handed to the import, then it says it is off and refuses the run")
+    void should_report_off_and_refuse_history_run_when_handed_given_empty_token() {
+        contexts.withPropertyValues("app.donations.fio.token=").run(context -> {
+            BankImportRequests requests = context.getBean(BankImportRequests.class);
+            HistoryImportRun run = HistoryImportRun.queued(1, new ImportPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 11, 5)), true,
+                    Instant.parse("2026-11-05T11:00:00Z"), Instant.parse("2026-11-05T11:00:00Z"));
+
+            assertThat(requests.enabled()).isFalse();
+            assertThatThrownBy(() -> requests.requestHistoryImport(run)).isInstanceOf(BankImportOff.class);
         });
     }
 
@@ -259,6 +278,11 @@ class FioImportConfigurationTest {
         @Bean
         TaskScheduler taskScheduler() {
             return mock(TaskScheduler.class);
+        }
+
+        @Bean
+        HistoryImportTracker historyImportTracker() {
+            return new HistoryImportTracker();
         }
     }
 }

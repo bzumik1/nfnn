@@ -69,7 +69,7 @@ class AdminDonationsSyncProjection {
         snapshot.symbolClaims().forEach(claim -> rowsOf(chunks, SYMBOL_CLAIMS).add(rows.symbolClaim(claim)));
         snapshot.receipts().forEach(receipt -> rowsOf(chunks, RECEIPTS + receipt.certifiedYear().getValue())
                 .add(AdminReceiptItemResponse.from(receipt)));
-        snapshot.importState().ifPresent(state -> rowsOf(chunks, IMPORT_STATE).add(ImportStateResponse.from(state)));
+        snapshot.importState().ifPresent(state -> rowsOf(chunks, IMPORT_STATE).add(ImportStateRow.from(state)));
         snapshot.report().ifPresent(report -> rowsOf(chunks, REPORT_SETTINGS).add(rows.reportSettings(new StoredReportSettings(report.settings(), report.changedAt()), report.sentReports())));
         return SyncChunk.allOf(chunks, json);
     }

@@ -11,6 +11,7 @@ import {
   activitySince,
   backupRun,
   backupsView,
+  historyImport,
   importState,
   administrator,
   donorAccount,
@@ -112,6 +113,13 @@ describe('Given an administrator on the administration home', () => {
     fixture.detectChanges();
   }
 
+  async function settleWithFakeTimers(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await vi.advanceTimersByTimeAsync(0);
+      fixture.detectChanges();
+    }
+  }
+
   async function respondOverview(url: string, body: object, status = 200): Promise<void> {
     http.expectOne(url).flush(body, status === 200 ? undefined : { status, statusText: 'Error' });
     await fixture.whenStable();
@@ -157,6 +165,98 @@ describe('Given an administrator on the administration home', () => {
     expect(text('[aria-labelledby="admin-import-title"] .healthy')).toBe(
       'Stahování plateb je v pořádku, naposledy 18. 10. 2026 10:05.',
     );
+  });
+
+  it('when the history is locked, then the next step points at the button for older payments instead of a restart', async () => {
+    await respond(
+      importState({
+        lastAttemptedAt: '2026-10-18T09:00:00Z',
+        lastFailure: {
+          kind: 'HISTORY_LOCKED',
+          message: null,
+          attemptedAt: '2026-10-18T09:00:00Z',
+        },
+        consecutiveFailures: 3,
+        reportedOutage: 'HISTORY_LOCKED',
+      }),
+    );
+
+    expect(text('.attention-import .admin-next-step')).toBe(
+      'Co udělat: Odemkněte historii v internetovém bankovnictví Fio (Nastavení → API, ikona zámku) a do 10 minut stiskněte níže „Načíst starší platby“.',
+    );
+    expect(text('.attention-import')).not.toContain('restart');
+    expect(text('.attention-import-next a')).toBe('Přejít ke starším platbám');
+    expect(
+      fixture.nativeElement.querySelector('.attention-import-next a')?.getAttribute('href'),
+    ).toBe('/sprava#starsi-platby');
+  });
+
+  it('when the import card is ready, then it holds the part for older payments with the default day', async () => {
+    await respond(importState({ defaultHistoryFrom: '2025-01-01' }));
+
+    const card = fixture.nativeElement.querySelector(
+      '.ui-card[aria-labelledby="admin-import-title"]',
+    ) as HTMLElement;
+    expect(card.querySelector('app-history-import h3')?.textContent?.trim()).toBe(
+      'Starší platby z banky',
+    );
+    expect((card.querySelector('input#history-from') as HTMLInputElement).value).toBe('2025-01-01');
+  });
+
+  async function finishRun(added: number): Promise<void> {
+    http.expectOne(UNPAIRED_URL).flush(paymentList([]));
+    http.expectOne(IMPORT_STATE_URL).flush(
+      importState({
+        coveredFrom: '2026-08-08',
+        coveredTo: '2026-11-04',
+        historyImport: historyImport({ status: 'RUNNING' }),
+      }),
+    );
+    await settleWithFakeTimers();
+    expect(dataRows()['Stažené období']).toBe('8. 8. 2026 – 4. 11. 2026');
+    await vi.advanceTimersByTimeAsync(3000);
+
+    http.expectOne(IMPORT_STATE_URL).flush(
+      importState({
+        coveredFrom: '2026-01-01',
+        coveredTo: '2026-11-05',
+        historyImport: historyImport({
+          status: 'COMPLETED',
+          added,
+          finishedAt: '2026-11-05T10:01:00Z',
+        }),
+      }),
+    );
+    await settleWithFakeTimers();
+  }
+
+  it('when a run of older payments finishes with new payments, then the covered period shows the state the run ended with and the unpaired payments are asked again', async () => {
+    vi.useFakeTimers();
+    try {
+      await finishRun(2);
+
+      expect(dataRows()['Stažené období']).toBe('1. 1. 2026 – 5. 11. 2026');
+      expect(text('app-history-import [role="status"]')).toBe(
+        'Hotovo (5. 11. 2026 11:01): staženo období 1. 1. 2026 – 5. 11. 2026, 2 nové platby.',
+      );
+      http.expectOne(UNPAIRED_URL).flush(paymentList([unpairedPayment()]));
+      await settleWithFakeTimers();
+      expect(text('.attention-unpaired .ui-list__title')).toBe('1 platba čeká na přiřazení');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('when a run of older payments finishes without new payments, then the unpaired payments are not asked again', async () => {
+    vi.useFakeTimers();
+    try {
+      await finishRun(0);
+
+      expect(dataRows()['Stažené období']).toBe('1. 1. 2026 – 5. 11. 2026');
+      http.expectNone(UNPAIRED_URL);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('when the import has never run, then a warning row says so and leads to the token in the settings', async () => {
@@ -242,7 +342,7 @@ describe('Given an administrator on the administration home', () => {
     ).click();
     await respond(importState());
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
     expect(dataRows()['Stažené období']).toBe('20. 7. 2026 – 17. 10. 2026');
   });
 

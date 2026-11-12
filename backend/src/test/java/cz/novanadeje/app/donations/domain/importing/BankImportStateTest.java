@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.domain.importing;
 
+import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -248,5 +249,56 @@ class BankImportStateTest {
         state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
 
         assertThat(state.attemptedWithin(COOLDOWN, LATER.plusSeconds(30))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given a new state, when it is created, then it knows no account balance")
+    void should_know_no_balance_when_created_given_initial_state() {
+        assertThat(BankImportState.initial(CREATED).balance()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a successful import, when the bank's closing balance is read, then the state keeps it with the time it was read")
+    void should_keep_balance_with_its_time_when_balance_read_given_successful_import() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
+
+        state.balanceRead(Money.czk(12_345_678), LATER);
+
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(12_345_678), LATER));
+        assertThat(state.updatedAt()).isEqualTo(LATER);
+    }
+
+    @Test
+    @DisplayName("Given a known balance, when an import fails, then the last known balance stays")
+    void should_keep_last_known_balance_when_failed_given_known_balance() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), CREATED);
+        state.balanceRead(Money.czk(50_000), CREATED);
+
+        state.failed(ImportFailureKind.TRANSPORT, "timed out", LATER);
+
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(50_000), CREATED));
+    }
+
+    @Test
+    @DisplayName("Given a known balance, when an import succeeds without a balance, then the last known balance stays")
+    void should_keep_last_known_balance_when_succeeded_without_balance_given_known_balance() {
+        BankImportState state = BankImportState.initial(CREATED);
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), CREATED);
+        state.balanceRead(Money.czk(50_000), CREATED);
+
+        state.succeeded(coverage("2026-07-20", "2026-10-17"), LATER);
+
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(50_000), CREATED));
+    }
+
+    @Test
+    @DisplayName("Given a stored balance, when the state is reconstituted, then it carries the balance")
+    void should_carry_balance_when_reconstituted_given_stored_balance() {
+        BankImportState state = BankImportState.reconstitute(coverage("2026-07-20", "2026-10-17"), Optional.of(CREATED), Optional.of(CREATED),
+                Optional.empty(), Optional.empty(), 0, Optional.empty(), new AccountBalance(Money.czk(-1_500), CREATED), CREATED);
+
+        assertThat(state.balance()).contains(new AccountBalance(Money.czk(-1_500), CREATED));
     }
 }

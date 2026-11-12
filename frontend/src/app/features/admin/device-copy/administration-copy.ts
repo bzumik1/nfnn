@@ -10,6 +10,7 @@ export interface AdministrationYearOverview {
 
 export interface AdministrationDonationsSummary {
   readonly today: string;
+  readonly receiptsAvailableFrom?: number;
   readonly byYear: readonly AdministrationYearOverview[];
 }
 

@@ -127,13 +127,17 @@ UI „ruční přiřazení“ · Code: `ManualPairingService`, `PairingMethod.MA
 An administrator's pairing of one payment to a donor; it teaches no sender account, and a payment unpaired by hand is never paired again automatically.
 
 **Bank import**\
-UI „stahování z banky“ · Code: `ImportBankPaymentsService`, `FioImportScheduler`, `bank_import_state`, `ImportTrigger` `STARTUP`, `HOURLY`, `ON_DEMAND`.\
-The hourly read of new movements from the Fio API with a read-only token, plus the donor's bank check on demand.\
+UI „stahování z banky“; an administrator's run from a chosen day „Načíst starší platby“, „starší platby z banky“ · Code: `ImportBankPaymentsService`, `FioImportScheduler`, `bank_import_state`, `ImportTrigger` `STARTUP`, `HOURLY`, `ON_DEMAND`, `HISTORY` (`HistoryImportService`, `POST /api/admin/donations/import/history`).\
+The hourly read of new movements from the Fio API with a read-only token, plus the donor's bank check on demand and the administrator's run of older payments from a chosen day.\
 _Avoid_: sync (sync is the device copy's download)
 
 **Import outage**\
 UI „porucha stahování z banky“ · Code: `ImportOutage`, `ImportAlert`, `bank_import_state.reported_outage`.\
 Three counted import failures in a row or a rejected Fio token, reported once by e-mail and push alert, and once more on recovery.
+
+**Account balance**\
+UI „zůstatek účtu“ · Code: `donations/domain/importing/AccountBalance`, `bank_import_state.balance_minor`, `balance` of `GET /api/admin/donations/import-state`.\
+The booked balance of the foundation's Fio account as the bank reported it with the last successful import, with the time it was read; only administrators and connected applications see it.
 
 **Payment details and QR payment**\
 UI „QR platba“, „Poslat dar“, section „Přispět“ · Code: `donations/domain/payment/PaymentDetails`, `SpaydText`.\

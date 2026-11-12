@@ -50,7 +50,7 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
     @Query("""
             select new cz.novanadeje.app.donations.infrastructure.persistence.IssuedReceiptSummaryRow(r.id, r.donorId, r.kind, r.number, r.donationId,
                    r.receiptYear, r.issuedOn, r.issuedAt, r.locale, r.status, r.supersededAt, r.withdrawnAt, r.withdrawalReason, r.giftCount,
-                   r.totalAmountMinor, r.certifiedYear)
+                   r.totalAmountMinor, r.certifiedYear, r.signingKeyId)
             from IssuedReceiptJpaEntity r
             order by r.issuedAt desc, r.number desc""")
     List<IssuedReceiptSummaryRow> findAllSummariesNewestFirst();

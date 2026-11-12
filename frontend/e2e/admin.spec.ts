@@ -250,6 +250,8 @@ const quietImport = {
   lastFailure: null,
   consecutiveFailures: 0,
   reportedOutage: null,
+  historyImport: null,
+  defaultHistoryFrom: '2026-01-01',
 };
 
 test.describe('Given an administrator', () => {
@@ -278,6 +280,8 @@ test.describe('Given an administrator', () => {
             lastFailure: null,
             consecutiveFailures: 0,
             reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
           },
         });
       },
@@ -396,6 +400,8 @@ test.describe('Given an administrator', () => {
       },
       consecutiveFailures: 1,
       reportedOutage: 'UNAUTHORIZED',
+      historyImport: null,
+      defaultHistoryFrom: '2026-01-01',
     });
     await rememberedSession(page, administrator);
 
@@ -412,6 +418,98 @@ test.describe('Given an administrator', () => {
     );
     await expect(value(page, 'Poslední chyba')).toContainText(
       'Fio odmítlo token (chybí, ještě neplatí nebo vypršel) 18. 10. 2026 11:00 (HTTP 401)',
+    );
+  });
+
+  test('when the history is locked and they load older payments after unlocking it, then the page waits for the bank and names what was downloaded', async ({
+    page,
+  }) => {
+    await page.clock.install({ time: new Date('2026-11-05T10:00:05Z') });
+    const lockedState = {
+      ...quietImport,
+      coveredFrom: '2026-08-08',
+      coveredTo: '2026-11-04',
+      lastAttemptedAt: '2026-11-05T09:00:00Z',
+      lastSucceededAt: '2026-11-05T09:00:00Z',
+      lastFailure: {
+        kind: 'HISTORY_LOCKED',
+        message: null,
+        attemptedAt: '2026-11-05T08:00:00Z',
+      },
+      consecutiveFailures: 0,
+    };
+    const queued = {
+      from: '2025-06-01',
+      to: '2026-11-05',
+      needsUnlockedHistory: true,
+      requestedAt: '2026-11-05T10:00:05Z',
+      startsAt: '2026-11-05T10:00:25Z',
+      status: 'QUEUED',
+      failure: null,
+      added: null,
+      finishedAt: null,
+    };
+    let requested = false;
+    const posted: unknown[] = [];
+    await page.route(
+      (url) => url.pathname === IMPORT_STATE,
+      (route) =>
+        route.fulfill({
+          json: requested
+            ? {
+                ...lockedState,
+                coveredFrom: '2025-06-01',
+                coveredTo: '2026-11-05',
+                lastFailure: null,
+                historyImport: {
+                  ...queued,
+                  status: 'COMPLETED',
+                  added: 12,
+                  finishedAt: '2026-11-05T10:00:40Z',
+                },
+              }
+            : lockedState,
+        }),
+    );
+    await page.route('**/api/admin/donations/import/history', (route) => {
+      posted.push(route.request().postDataJSON());
+      requested = true;
+      return route.fulfill({ status: 202, json: queued });
+    });
+    await rememberedSession(page, administrator);
+
+    await page.goto('/sprava');
+
+    const card = page.getByRole('region', { name: 'Stav stahování plateb z banky' });
+    const part = card.getByRole('region', { name: 'Starší platby z banky' });
+    await expect(part.getByRole('listitem')).toHaveText([
+      'Níže zvolte den, od kterého platby chcete.',
+      'V internetovém bankovnictví Fio otevřete Nastavení → API.',
+      'U tokenu, který používá tento web, klikněte na ikonu zámku a historii odemkněte.',
+      'Do 10 minut se vraťte sem a stiskněte „Načíst starší platby“.',
+    ]);
+    const from = part.getByLabel('Stáhnout platby od');
+    await expect(from).toHaveValue('2026-01-01');
+
+    await from.fill('2025-06-01');
+    await part.getByRole('button', { name: 'Načíst starší platby' }).click();
+
+    await expect(part.getByRole('status')).toHaveText(
+      'Fio přijímá jeden dotaz za 30 sekund. Stahování začne samo nejpozději v 11:00:25. Stránku můžete zavřít, výsledek tu uvidíte i později.',
+    );
+    const waiting = part.getByRole('button', { name: 'Žádáme banku…' });
+    await expect(waiting).toHaveAttribute('aria-disabled', 'true');
+    await expect(waiting).toBeFocused();
+    expect(posted).toEqual([{ from: '2025-06-01' }]);
+
+    await page.clock.fastForward(3000);
+
+    await expect(part.getByRole('status')).toHaveText(
+      'Hotovo (5. 11. 2026 11:00): staženo období 1. 6. 2025 – 5. 11. 2026, 12 nových plateb.',
+    );
+    await expect(value(page, 'Stažené období')).toHaveText('1. 6. 2025 – 5. 11. 2026');
+    await expect(part.getByRole('button', { name: 'Načíst starší platby' })).not.toHaveAttribute(
+      'aria-disabled',
     );
   });
 
@@ -470,6 +568,8 @@ test.describe('Given an administrator', () => {
                 lastFailure: null,
                 consecutiveFailures: 0,
                 reportedOutage: null,
+                historyImport: null,
+                defaultHistoryFrom: '2026-01-01',
               },
             });
       },
@@ -584,6 +684,8 @@ test.describe('Given an administrator', () => {
       lastFailure: null,
       consecutiveFailures: 0,
       reportedOutage: null,
+      historyImport: null,
+      defaultHistoryFrom: '2026-01-01',
     });
     await rememberedSession(page, administrator);
 

@@ -1,8 +1,10 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.donations.domain.importing.AccountBalance;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
+import cz.novanadeje.app.shared.domain.Money;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -49,6 +51,12 @@ class BankImportStateJpaEntity {
     @Column(name = "reported_outage", length = 32)
     private ImportFailureKind reportedOutage;
 
+    @Column(name = "balance_minor")
+    private Long balanceMinor;
+
+    @Column(name = "balance_read_at")
+    private Instant balanceReadAt;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -66,19 +74,23 @@ class BankImportStateJpaEntity {
         entity.lastFailureMessage = state.lastFailureMessage().orElse(null);
         entity.consecutiveFailures = state.consecutiveFailures();
         entity.reportedOutage = state.reportedOutage().orElse(null);
+        state.balance().ifPresent(balance -> {
+            entity.balanceMinor = balance.amount().amountMinor();
+            entity.balanceReadAt = balance.readAt();
+        });
         entity.updatedAt = state.updatedAt();
         return entity;
     }
 
     BankImportState toDomain() {
-        return BankImportState.reconstitute(
-                new ImportCoverage(coveredFrom, coveredTo),
-                Optional.ofNullable(lastAttemptedAt),
-                Optional.ofNullable(lastSucceededAt),
-                Optional.ofNullable(lastFailureKind),
-                Optional.ofNullable(lastFailureMessage),
-                consecutiveFailures,
-                Optional.ofNullable(reportedOutage),
-                updatedAt);
+        ImportCoverage coverage = new ImportCoverage(coveredFrom, coveredTo);
+        if (balanceMinor == null) {
+            return BankImportState.reconstitute(coverage, Optional.ofNullable(lastAttemptedAt), Optional.ofNullable(lastSucceededAt),
+                    Optional.ofNullable(lastFailureKind), Optional.ofNullable(lastFailureMessage), consecutiveFailures,
+                    Optional.ofNullable(reportedOutage), updatedAt);
+        }
+        return BankImportState.reconstitute(coverage, Optional.ofNullable(lastAttemptedAt), Optional.ofNullable(lastSucceededAt),
+                Optional.ofNullable(lastFailureKind), Optional.ofNullable(lastFailureMessage), consecutiveFailures,
+                Optional.ofNullable(reportedOutage), new AccountBalance(Money.czk(balanceMinor), balanceReadAt), updatedAt);
     }
 }

@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class CaseRows {
@@ -27,11 +28,14 @@ public final class CaseRows {
     private static final long ID_LOW = 0x8000_0000_0000_0000L;
     private static final int ADMINISTRATOR = 0x999;
     private static final String ADMINISTRATOR_ALIAS = "administrator";
+    private static final String DEFAULT_ACCOUNT = "2900233333/2010";
 
     private final String now;
     private final List<Donor> donors = new ArrayList<>();
     private final List<Payment> payments = new ArrayList<>();
     private final List<Gift> donations = new ArrayList<>();
+    private final List<Link> links = new ArrayList<>();
+    private final List<Claim> claims = new ArrayList<>();
     private final Map<String, UUID> ids = new LinkedHashMap<>();
 
     private CaseRows(String now) {
@@ -41,12 +45,20 @@ public final class CaseRows {
     public static CaseRows fromJson(JsonNode input) {
         CaseRows rows = new CaseRows(input.get("now").asString());
         input.get("donors").forEach(donor -> rows.donors.add(new Donor(donor.get("alias").asString(), donor.get("registeredAt").asString(),
-                optional(donor.get("erasedAt")))));
+                optional(donor.get("erasedAt")), optional(donor.get("name")), optional(donor.get("type")), optional(donor.get("companyIdentifier")),
+                optional(donor.get("variableSymbol")), Optional.ofNullable(donor.get("account")).filter(account -> !account.isNull()).map(Account::of))));
         input.get("payments").forEach(payment -> rows.payments.add(new Payment(payment.get("alias").asString(), payment.get("bookedOn").asString(),
-                payment.get("amountMinor").asLong(), optional(payment.get("unpairedByAdminAt")))));
+                payment.get("amountMinor").asLong(), optional(payment.get("unpairedByAdminAt")), optional(payment.get("variableSymbol")),
+                optional(payment.get("counterpartyAccount")), optional(payment.get("counterpartyName")), optional(payment.get("messageForRecipient")))));
         input.get("donations").forEach(gift -> rows.donations.add(new Gift(gift.get("donor").asString(), optional(gift.get("payment")),
                 gift.get("receivedOn").asString(), gift.get("amountMinor").asLong(), gift.get("status").asString(), gift.get("source").asString(),
-                gift.get("purpose").asString())));
+                gift.get("purpose").asString(), optional(gift.get("pairedBy")), optional(gift.get("bankAccount")), optional(gift.get("symbolClaim")))));
+        each(input.get("links"), link -> rows.links.add(new Link(link.get("alias").asString(), link.get("donor").asString(),
+                link.get("accountNumber").asString(), link.get("status").asString(), link.get("learnedFrom").asString(), link.get("learnedAt").asString(),
+                link.get("validFrom").asString(), optional(link.get("validTo")))));
+        each(input.get("symbolClaims"), claim -> rows.claims.add(new Claim(claim.get("alias").asString(), claim.get("donor").asString(),
+                claim.get("accountNumber").asString(), claim.get("variableSymbol").asString(), claim.get("answer").asString(),
+                claim.get("answeredAt").asString())));
         rows.assignIds();
         return rows;
     }
@@ -62,6 +74,18 @@ public final class CaseRows {
         }
         for (int position = 1; position <= donations.size(); position++) {
             id("donation:" + position, ++sequence);
+        }
+        for (Link link : links) {
+            id("link:" + link.alias(), ++sequence);
+        }
+        for (Claim claim : claims) {
+            id("claim:" + claim.alias(), ++sequence);
+        }
+    }
+
+    private static void each(JsonNode list, Consumer<JsonNode> row) {
+        if (list != null && !list.isNull()) {
+            list.forEach(row);
         }
     }
 
@@ -122,18 +146,46 @@ public final class CaseRows {
         for (Donor donor : donors) {
             UUID id = donorId(donor.alias());
             ++sequence;
+            String name = donor.erasedAt().isPresent() ? ErasedPersonalData.NAME : donor.name().orElse("Dárce " + donor.alias());
+            String street = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.street() : "Dlouhá 12";
+            String city = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.city() : "Ústí nad Labem";
+            String postalCode = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.postalCode() : "400 01";
+            String type = donor.type().orElse("PERSON");
+            String companyIdentifier = donor.erasedAt().isPresent() ? null : donor.companyIdentifier().orElse(null);
+            String symbol = donor.variableSymbol().orElse(Long.toString(4000000000L + sequence));
             jdbc.sql("insert into donor_record (donor_id, type, name, company_identifier, street, city, postal_code, variable_symbol, "
-                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, 'PERSON', :name, null, :street, :city, :postalCode, "
-                            + ":symbol, 'cs', :registered, :registered, :erased)")
+                            + "preferred_locale, registered_at, updated_at, erased_at) values (:id, :type, :name, :companyIdentifier, :street, :city, "
+                            + ":postalCode, :symbol, 'cs', :registered, :registered, :erased)")
                     .param("id", id)
-                    .param("name", donor.erasedAt().isPresent() ? ErasedPersonalData.NAME : "Dárce " + donor.alias())
-                    .param("street", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.street() : "Dlouhá 12")
-                    .param("city", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.city() : "Ústí nad Labem")
-                    .param("postalCode", donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.postalCode() : "400 01")
-                    .param("symbol", Long.toString(4000000000L + sequence))
+                    .param("type", type)
+                    .param("name", name)
+                    .param("companyIdentifier", companyIdentifier)
+                    .param("street", street)
+                    .param("city", city)
+                    .param("postalCode", postalCode)
+                    .param("symbol", symbol)
                     .param("registered", timestamp(donor.registeredAt()))
                     .param("erased", donor.erasedAt().map(CaseRows::timestamp).orElse(null))
                     .update();
+            if (donor.account().isPresent()) {
+                Account account = donor.account().get();
+                jdbc.sql("insert into donor (id, type, name, company_identifier, street, city, postal_code, email, password_hash, variable_symbol, "
+                                + "preferred_locale, registered_at, email_verified_at, erased_at) values (:id, :type, :name, :companyIdentifier, :street, "
+                                + ":city, :postalCode, :email, null, :symbol, 'cs', :registered, :verified, :erased)")
+                        .param("id", id)
+                        .param("type", type)
+                        .param("name", name)
+                        .param("companyIdentifier", companyIdentifier)
+                        .param("street", street)
+                        .param("city", city)
+                        .param("postalCode", postalCode)
+                        .param("email", account.email())
+                        .param("symbol", symbol)
+                        .param("registered", timestamp(donor.registeredAt()))
+                        .param("verified", account.emailVerified() ? timestamp(donor.registeredAt()) : null)
+                        .param("erased", donor.erasedAt().map(CaseRows::timestamp).orElse(null))
+                        .update();
+            }
         }
         for (Payment payment : payments) {
             UUID id = ids.get("payment:" + payment.alias());
@@ -141,8 +193,14 @@ public final class CaseRows {
             jdbc.sql("insert into bank_payment (id, bank_transaction_id, booked_on, amount_minor, currency, sender_account_number, sender_bank_code, "
                             + "counterparty_account, counterparty_bank_code, counterparty_name, variable_symbol, matching_variable_symbol, constant_symbol, "
                             + "specific_symbol, message_for_recipient, transaction_type, imported_at, unpaired_by_admin_at) values (:id, :transaction, :booked, "
-                            + ":amount, 'CZK', '2900233333', '2010', '2900233333', '2010', null, null, null, null, null, null, 'Bezhotovostní příjem', :imported, :unpairedAt)")
+                            + ":amount, 'CZK', :account, :bankCode, :account, :bankCode, :name, :symbol, :symbol, null, null, :message, 'Bezhotovostní příjem', "
+                            + ":imported, :unpairedAt)")
                     .param("id", id)
+                    .param("account", accountNumberOf(payment.counterpartyAccount().orElse(DEFAULT_ACCOUNT)))
+                    .param("bankCode", bankCodeOf(payment.counterpartyAccount().orElse(DEFAULT_ACCOUNT)))
+                    .param("name", payment.counterpartyName().orElse(null))
+                    .param("symbol", payment.variableSymbol().orElse(null))
+                    .param("message", payment.messageForRecipient().orElse(null))
                     .param("transaction", 26000000000L + sequence)
                     .param("booked", LocalDate.parse(payment.bookedOn()))
                     .param("amount", payment.amountMinor())
@@ -150,12 +208,40 @@ public final class CaseRows {
                     .param("unpairedAt", payment.unpairedByAdminAt().map(CaseRows::timestamp).orElse(null))
                     .update();
         }
+        for (Link link : links) {
+            jdbc.sql("insert into donor_sender_account (id, donor_id, account_number, bank_code, learned_from_payment_id, learned_at, status, valid_from, "
+                            + "valid_to, created_at, disconnected_at) values (:id, :donor, :account, :bankCode, :payment, :learnedAt, :status, :validFrom, "
+                            + ":validTo, :learnedAt, :disconnectedAt)")
+                    .param("id", ids.get("link:" + link.alias()))
+                    .param("donor", donorId(link.donor()))
+                    .param("account", accountNumberOf(link.accountNumber()))
+                    .param("bankCode", bankCodeOf(link.accountNumber()))
+                    .param("payment", ids.get("payment:" + link.learnedFrom()))
+                    .param("learnedAt", timestamp(link.learnedAt()))
+                    .param("status", link.status())
+                    .param("validFrom", LocalDate.parse(link.validFrom()))
+                    .param("validTo", link.validTo().map(LocalDate::parse).orElse(null))
+                    .param("disconnectedAt", link.validTo().map(day -> timestamp(day + "T12:00:00Z")).orElse(null))
+                    .update();
+        }
+        for (Claim claim : claims) {
+            jdbc.sql("insert into donor_symbol_claim (id, donor_id, account_number, bank_code, variable_symbol, answer, answered_at) "
+                            + "values (:id, :donor, :account, :bankCode, :symbol, :answer, :answeredAt)")
+                    .param("id", ids.get("claim:" + claim.alias()))
+                    .param("donor", donorId(claim.donor()))
+                    .param("account", accountNumberOf(claim.accountNumber()))
+                    .param("bankCode", bankCodeOf(claim.accountNumber()))
+                    .param("symbol", claim.variableSymbol())
+                    .param("answer", claim.answer())
+                    .param("answeredAt", timestamp(claim.answeredAt()))
+                    .update();
+        }
         int position = 0;
         for (Gift gift : donations) {
             UUID id = ids.get("donation:" + (++position));
             jdbc.sql("insert into donation (id, donor_id, bank_payment_id, received_on, amount_minor, currency, source, status, paired_by, "
                             + "recorded_at, sender_account_id, purpose, symbol_claim_id) values (:id, :donor, :payment, :received, :amount, 'CZK', :source, "
-                            + ":status, :pairedBy, :recorded, null, :purpose, null)")
+                            + ":status, :pairedBy, :recorded, :link, :purpose, :claim)")
                     .param("id", id)
                     .param("donor", donorId(gift.donor()))
                     .param("payment", gift.payment().map(alias -> ids.get("payment:" + alias)).orElse(null))
@@ -163,7 +249,9 @@ public final class CaseRows {
                     .param("amount", gift.amountMinor())
                     .param("source", gift.source())
                     .param("status", gift.status())
-                    .param("pairedBy", gift.payment().isPresent() ? "VARIABLE_SYMBOL" : null)
+                    .param("pairedBy", gift.pairedBy().orElse(gift.payment().isPresent() ? "VARIABLE_SYMBOL" : null))
+                    .param("link", gift.bankAccount().map(alias -> ids.get("link:" + alias)).orElse(null))
+                    .param("claim", gift.symbolClaim().map(alias -> ids.get("claim:" + alias)).orElse(null))
                     .param("recorded", timestamp(gift.receivedOn() + "T12:00:00Z"))
                     .param("purpose", gift.purpose())
                     .update();
@@ -178,6 +266,12 @@ public final class CaseRows {
             node.put("alias", donor.alias());
             node.put("registeredAt", donor.registeredAt());
             donor.erasedAt().ifPresentOrElse(at -> node.put("erasedAt", at), () -> node.putNull("erasedAt"));
+            donor.name().ifPresent(name -> node.put("name", name));
+            donor.type().ifPresent(type -> node.put("type", type));
+            donor.companyIdentifier().ifPresent(identifier -> node.put("companyIdentifier", identifier));
+            donor.variableSymbol().ifPresent(symbol -> node.put("variableSymbol", symbol));
+            donor.account().ifPresent(account -> node.set("account", NODES.objectNode().put("email", account.email())
+                    .put("emailVerified", account.emailVerified())));
             return node;
         }));
         input.set("payments", array(payments, payment -> {
@@ -186,6 +280,10 @@ public final class CaseRows {
             node.put("bookedOn", payment.bookedOn());
             node.put("amountMinor", payment.amountMinor());
             payment.unpairedByAdminAt().ifPresentOrElse(at -> node.put("unpairedByAdminAt", at), () -> node.putNull("unpairedByAdminAt"));
+            payment.variableSymbol().ifPresent(symbol -> node.put("variableSymbol", symbol));
+            payment.counterpartyAccount().ifPresent(account -> node.put("counterpartyAccount", account));
+            payment.counterpartyName().ifPresent(name -> node.put("counterpartyName", name));
+            payment.messageForRecipient().ifPresent(message -> node.put("messageForRecipient", message));
             return node;
         }));
         input.set("donations", array(donations, gift -> {
@@ -197,8 +295,37 @@ public final class CaseRows {
             node.put("status", gift.status());
             node.put("source", gift.source());
             node.put("purpose", gift.purpose());
+            gift.pairedBy().ifPresent(method -> node.put("pairedBy", method));
+            gift.bankAccount().ifPresent(alias -> node.put("bankAccount", alias));
+            gift.symbolClaim().ifPresent(alias -> node.put("symbolClaim", alias));
             return node;
         }));
+        if (!links.isEmpty()) {
+            input.set("links", array(links, link -> {
+                ObjectNode node = NODES.objectNode();
+                node.put("alias", link.alias());
+                node.put("donor", link.donor());
+                node.put("accountNumber", link.accountNumber());
+                node.put("status", link.status());
+                node.put("learnedFrom", link.learnedFrom());
+                node.put("learnedAt", link.learnedAt());
+                node.put("validFrom", link.validFrom());
+                link.validTo().ifPresentOrElse(day -> node.put("validTo", day), () -> node.putNull("validTo"));
+                return node;
+            }));
+        }
+        if (!claims.isEmpty()) {
+            input.set("symbolClaims", array(claims, claim -> {
+                ObjectNode node = NODES.objectNode();
+                node.put("alias", claim.alias());
+                node.put("donor", claim.donor());
+                node.put("accountNumber", claim.accountNumber());
+                node.put("variableSymbol", claim.variableSymbol());
+                node.put("answer", claim.answer());
+                node.put("answeredAt", claim.answeredAt());
+                return node;
+            }));
+        }
         return input;
     }
 
@@ -216,12 +343,37 @@ public final class CaseRows {
         return array;
     }
 
-    private record Donor(String alias, String registeredAt, Optional<String> erasedAt) {
+    private static String accountNumberOf(String account) {
+        return account.substring(0, account.indexOf('/'));
     }
 
-    private record Payment(String alias, String bookedOn, long amountMinor, Optional<String> unpairedByAdminAt) {
+    private static String bankCodeOf(String account) {
+        return account.substring(account.indexOf('/') + 1);
     }
 
-    private record Gift(String donor, Optional<String> payment, String receivedOn, long amountMinor, String status, String source, String purpose) {
+    private record Donor(String alias, String registeredAt, Optional<String> erasedAt, Optional<String> name, Optional<String> type,
+                         Optional<String> companyIdentifier, Optional<String> variableSymbol, Optional<Account> account) {
+    }
+
+    private record Account(String email, boolean emailVerified) {
+
+        static Account of(JsonNode account) {
+            return new Account(account.get("email").asString(), account.get("emailVerified").asBoolean());
+        }
+    }
+
+    private record Payment(String alias, String bookedOn, long amountMinor, Optional<String> unpairedByAdminAt, Optional<String> variableSymbol,
+                           Optional<String> counterpartyAccount, Optional<String> counterpartyName, Optional<String> messageForRecipient) {
+    }
+
+    private record Gift(String donor, Optional<String> payment, String receivedOn, long amountMinor, String status, String source, String purpose,
+                        Optional<String> pairedBy, Optional<String> bankAccount, Optional<String> symbolClaim) {
+    }
+
+    private record Link(String alias, String donor, String accountNumber, String status, String learnedFrom, String learnedAt, String validFrom,
+                        Optional<String> validTo) {
+    }
+
+    private record Claim(String alias, String donor, String accountNumber, String variableSymbol, String answer, String answeredAt) {
     }
 }

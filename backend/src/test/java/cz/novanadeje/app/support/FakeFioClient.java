@@ -23,6 +23,7 @@ public class FakeFioClient implements FioClient {
 
     private static final int LOCKED_AFTER_DAYS = 90;
     private static final Currency CZK = Currency.getInstance("CZK");
+    private static final Money NO_MONEY = Money.czk("0.00");
 
     private final Clock clock;
     private final List<Transaction> ledger = new ArrayList<>();
@@ -32,6 +33,7 @@ public class FakeFioClient implements FioClient {
     private boolean historyUnlocked;
     private LocalDate reportedStart;
     private LocalDate reportedEnd;
+    private Money closingBalance = NO_MONEY;
 
     public FakeFioClient(Clock clock) {
         this.clock = clock;
@@ -97,6 +99,10 @@ public class FakeFioClient implements FioClient {
         nextFailure = failure;
     }
 
+    public synchronized void reportClosingBalance(String amount) {
+        closingBalance = Money.czk(amount);
+    }
+
     public synchronized void reportPeriod(LocalDate start, LocalDate end) {
         reportedStart = start;
         reportedEnd = end;
@@ -118,6 +124,7 @@ public class FakeFioClient implements FioClient {
         historyUnlocked = false;
         reportedStart = null;
         reportedEnd = null;
+        closingBalance = NO_MONEY;
     }
 
     private synchronized AccountStatement fetch(LocalDate from, LocalDate to) {
@@ -148,9 +155,8 @@ public class FakeFioClient implements FioClient {
         LocalDate end = reportedEnd != null ? reportedEnd : to;
         Long firstId = rows.isEmpty() ? null : rows.getFirst().id();
         Long lastId = rows.isEmpty() ? null : rows.getLast().id();
-        Money zero = Money.czk("0.00");
         return new AccountInfo(DomesticAccount.of("5544332217", "2010"), "CZ2620100000005544332217", "FIOBCZPPXXX", CZK,
-                zero, zero, start, end, null, firstId, lastId, null);
+                NO_MONEY, closingBalance, start, end, null, firstId, lastId, null);
     }
 
     private static UnsupportedOperationException notUsedByTheImport(String part) {

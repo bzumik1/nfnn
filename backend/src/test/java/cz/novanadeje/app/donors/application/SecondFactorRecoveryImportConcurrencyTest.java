@@ -117,7 +117,7 @@ class SecondFactorRecoveryImportConcurrencyTest {
             }));
             assertThat(erased.await(30, TimeUnit.SECONDS)).isTrue();
             Future<ImportCounts> importRun = callers.submit(() -> recorder.record(
-                    new BankStatement(new ImportPeriod(today.minusDays(1), today), Optional.empty(), List.of(recoveryPayment(today)), 1),
+                    new BankStatement(new ImportPeriod(today.minusDays(1), today), Optional.empty(), List.of(recoveryPayment(today)), 1, Optional.empty()),
                     new ImportPlan(new ImportPeriod(today.minusDays(1), today), false), clock.instant()));
             await().atMost(Duration.ofSeconds(30)).until(() -> waitingOnLocks() > 0);
             commit.countDown();

@@ -34,11 +34,13 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And every gift on the administration device names a donor record, a payment, a bank account and an older-symbol answer it holds, 2 of them a bank account and 1 an older-symbol answer
     And the administration device holds the donor record of "Jana" as the administration reads it, with its bank accounts
     And the administration device's chunk "receipts:2026" holds every receipt the administration lists
+    And every receipt of the administration device's chunk "receipts:2026" names the verification key its donor card names
     And the administration device's chunk "symbol-claims" holds every older-symbol answer the administration lists
-    And the administration device's chunk "import-state" holds the import state the administration reads
+    And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments
     And the administration device's chunk "report-settings" holds the monthly report settings and the sent reports the administration reads
     And the administration device's summary lists the years "2026, 2025"
     And the administration device's summary of every year is the administration's overview of that year
+    And the administration device's summary names the day 2026-10-17 and the first receipt year the donor card reads
 
   Scenario: A bank account learned in a later month stays in the chunk of its owner's registration month
     Given today is 2026-09-28
