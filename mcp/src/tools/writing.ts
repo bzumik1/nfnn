@@ -365,18 +365,26 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Změnit nastavení webu',
       description:
-        'Changes plain settings of the site (see nfnn_settings for the current values); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token), the address of the site and every mail setting (server, port, user, sign-in, STARTTLS, sender and the recipient of the contact form) are changed only in the web administration, because they decide where the e-mails of the site, password reset links included, go.',
+        'Changes plain settings of the site (see nfnn_settings for the current values and their `version`, to pass as expectedVersion); an empty value returns a setting to its default. SESSION_REMEMBER_DAYS is how many days (1 to 30, default 14) a browser sign-in with "Zapamatovat si mě" lasts from its last use. Every value is checked as at startup before anything is stored, a refused one comes back with its reason. A real change restarts the backend, so the site does not answer for about a minute; audited as CHANGE_SETTINGS. Secrets (SMTP password, Fio token), the address of the site and every mail setting (server, port, user, sign-in, STARTTLS, sender and the recipient of the contact form) are changed only in the web administration, because they decide where the e-mails of the site, password reset links included, go.',
       inputSchema: z.object({
         changes: z
           .array(z.object({ name: PLAIN_SETTING, value: z.string().max(1000) }))
           .min(1)
           .max(4),
+        expectedVersion: EXPECTED_VERSION,
       }),
       annotations: WRITING,
     },
-    async ({ changes }, ctx) =>
+    async ({ changes, expectedVersion }, ctx) =>
       answerChange(deps, ctx, 'nfnn_change_settings', async ({ apiToken }) =>
-        text(await backend.put('/api/admin/operations/settings', apiToken, { changes })),
+        text(
+          await backend.put(
+            '/api/admin/operations/settings',
+            apiToken,
+            { changes },
+            expectedVersion,
+          ),
+        ),
       ),
   );
 
@@ -893,15 +901,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Slovo zakladatelů',
       description:
         'Writes the founders note shown under the cards of "Kdo fond vede" on the home page, plain Czech text (no Markdown) with paragraphs split by an empty line, at most 600 characters; an empty text removes it. The web signatures of the featured people show under the note only (nfnn_set_web_signature). Audited as CHANGE_FOUNDERS_NOTE.',
-      inputSchema: z.object({ text: z.string().max(600) }),
+      inputSchema: z.object({ text: z.string().max(600), expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ text: note }, ctx) =>
+    async ({ text: note, expectedVersion }, ctx) =>
       answerChange(deps, ctx, 'nfnn_update_founders_note', async ({ apiToken }) =>
         text(
-          await backend.put('/api/admin/content/people/note', apiToken, {
-            text: note.trim() === '' ? null : note,
-          }),
+          await backend.put(
+            '/api/admin/content/people/note',
+            apiToken,
+            { text: note.trim() === '' ? null : note },
+            expectedVersion,
+          ),
         ),
       ),
   );
@@ -912,15 +923,18 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Řádek pod správní radou',
       description:
         'Writes the one line shown under the board line of "Kdo fond vede" on the home page, after the founders note (for example who runs the site as a volunteer), plain Czech text on one line (line breaks become spaces), at most 200 characters; an empty text removes it. Audited as CHANGE_PEOPLE_FOOTNOTE.',
-      inputSchema: z.object({ text: z.string().max(200) }),
+      inputSchema: z.object({ text: z.string().max(200), expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, idempotentHint: true },
     },
-    async ({ text: footnote }, ctx) =>
+    async ({ text: footnote, expectedVersion }, ctx) =>
       answerChange(deps, ctx, 'nfnn_update_people_footnote', async ({ apiToken }) =>
         text(
-          await backend.put('/api/admin/content/people/footnote', apiToken, {
-            text: footnote.trim() === '' ? null : footnote,
-          }),
+          await backend.put(
+            '/api/admin/content/people/footnote',
+            apiToken,
+            { text: footnote.trim() === '' ? null : footnote },
+            expectedVersion,
+          ),
         ),
       ),
   );

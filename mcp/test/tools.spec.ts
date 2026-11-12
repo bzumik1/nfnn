@@ -1111,6 +1111,27 @@ describe('Given an administrator connected with the writing permission', () => {
         settings,
       ],
       [
+        'nfnn_change_settings',
+        { changes: [{ name: 'SESSION_REMEMBER_DAYS', value: '14' }] },
+        'PUT',
+        '/api/admin/operations/settings',
+        { changes: [{ name: 'SESSION_REMEMBER_DAYS', value: '14' }] },
+      ],
+      [
+        'nfnn_update_founders_note',
+        { text: 'Děkujeme.' },
+        'PUT',
+        '/api/admin/content/people/note',
+        { text: 'Děkujeme.' },
+      ],
+      [
+        'nfnn_update_people_footnote',
+        { text: 'Díky.' },
+        'PUT',
+        '/api/admin/content/people/footnote',
+        { text: 'Díky.' },
+      ],
+      [
         'nfnn_update_news',
         { id: UNKNOWN_ID, ...article, signerId: PERSON_ID },
         'PUT',

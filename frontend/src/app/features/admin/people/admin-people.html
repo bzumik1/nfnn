@@ -779,14 +779,16 @@
     }
   }
 </div>
-@if (staleText()) {
+@if (changedText(); as changed) {
   <app-changed-meanwhile-dialog
     subject="content"
     [keepsDraft]="true"
-    [fromDraft]="true"
+    [fromDraft]="changed.fromDraft"
+    [canOverwrite]="changed.fromDraft || changed.version !== null"
+    [savedAt]="changed.savedAt"
     [busy]="savingNote() || savingFootnote()"
-    (overwriteChosen)="overwriteStaleText()"
-    (reloadChosen)="reloadStaleText()"
-    (dismissed)="staleText.set(null)"
+    (overwriteChosen)="overwriteChangedText()"
+    (reloadChosen)="reloadChangedText()"
+    (dismissed)="changedText.set(null)"
   />
 }

@@ -60,6 +60,7 @@ import {
   SecondFactorEnrolment,
   UpdateDonorProfileRequest,
 } from './donor';
+import type { HeldRecord } from '../version/row-version';
 
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
@@ -257,8 +258,18 @@ export class AuthStore {
     );
   }
 
-  updateProfile(request: UpdateDonorProfileRequest): Observable<Donor> {
-    return this.api.updateProfile(request).pipe(tap((donor) => this.currentDonor.set(donor)));
+  updateProfile(
+    request: UpdateDonorProfileRequest,
+    version: string,
+    held: HeldRecord | null,
+  ): Observable<Donor> {
+    return this.api
+      .updateProfile(request, version, held)
+      .pipe(tap((donor) => this.currentDonor.set(donor)));
+  }
+
+  reloadStoredProfile(): Observable<Donor> {
+    return this.api.profile().pipe(tap((donor) => this.currentDonor.set(donor)));
   }
 
   changePassword(request: ChangePasswordRequest): Observable<Donor> {

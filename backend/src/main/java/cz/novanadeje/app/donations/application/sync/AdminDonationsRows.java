@@ -9,7 +9,6 @@ import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SentReportRow;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
-import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
@@ -95,9 +94,7 @@ public class AdminDonationsRows {
     }
 
     private static PaymentRow unversioned(BankPayment payment) {
-        String account = payment.sender().map(SenderAccount::display)
-                .or(() -> payment.counterpartyAccount().map(number -> payment.counterpartyBankCode().map(code -> number + "/" + code).orElse(number)))
-                .orElse(null);
+        String account = payment.payerAccount().orElse(null);
         return new PaymentRow(payment.id().value(), payment.transactionId().value(), payment.bookedOn(), payment.amount().amountMinor(),
                 payment.amount().currency(), payment.variableSymbol().orElse(null), account, payment.counterpartyName().orElse(null),
                 payment.messageForRecipient().orElse(null), payment.importedAt(), payment.unpairedByAdminAt().orElse(null),

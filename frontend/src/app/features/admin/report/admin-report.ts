@@ -27,7 +27,12 @@ import {
   pragueDay,
   pragueHour,
 } from '../../donations/donation-date';
-import { AdminApi, AdminReportResponse, SentReportResponse } from '../admin-api';
+import {
+  AdminApi,
+  AdminReportResponse,
+  ReportSettingsResponse,
+  SentReportResponse,
+} from '../admin-api';
 import {
   EmailListValidator,
   firstInvalidAddress,
@@ -334,6 +339,11 @@ export class AdminReport {
     });
   }
 
+  private heldSettings(version: string): ReportSettingsResponse | null {
+    const shown = this.report()?.settings ?? null;
+    return shown !== null && shown.version === version ? shown : null;
+  }
+
   private submitSettings(version: string): void {
     this.saving.set(true);
     this.api
@@ -345,6 +355,7 @@ export class AdminReport {
           sections: { ...this.sections },
         },
         version,
+        this.heldSettings(version),
       )
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

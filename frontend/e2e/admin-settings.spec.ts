@@ -63,10 +63,15 @@ test.describe('Given an administrator on the settings page', () => {
       (url) => url.pathname === SETTINGS,
       (route) => {
         if (route.request().method() === 'PUT') {
+          expect(route.request().headers()['if-match']).toBe('"00000000000000c1"');
           saved.push(route.request().postDataJSON());
           return route.fulfill({
             status: 202,
-            json: { changed: ['RECEIPT_FIRST_YEAR', 'FIO_TOKEN'], restarting: true },
+            json: {
+              changed: ['RECEIPT_FIRST_YEAR', 'FIO_TOKEN'],
+              restarting: true,
+              version: '00000000000000c2',
+            },
           });
         }
         return route.fulfill({ json: adminSettings });

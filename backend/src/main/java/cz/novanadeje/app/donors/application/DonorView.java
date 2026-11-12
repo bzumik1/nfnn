@@ -25,11 +25,12 @@ public record DonorView(
         Instant registeredAt,
         boolean hasPassword,
         SecondFactorView secondFactor,
-        Optional<PendingEmailChangeView> pendingEmailChange
+        Optional<PendingEmailChangeView> pendingEmailChange,
+        String version
 ) {
 
     public static DonorView of(Donor donor, Set<Role> sessionRoles, SecondFactorView secondFactor,
-                               Optional<PendingEmailChangeView> pendingEmailChange) {
+                               Optional<PendingEmailChangeView> pendingEmailChange, String version) {
         return new DonorView(
                 donor.id().toString(),
                 donor.type(),
@@ -43,7 +44,8 @@ public record DonorView(
                 donor.registeredAt(),
                 donor.hasPassword(),
                 secondFactor,
-                pendingEmailChange
+                pendingEmailChange,
+                version
         );
     }
 }

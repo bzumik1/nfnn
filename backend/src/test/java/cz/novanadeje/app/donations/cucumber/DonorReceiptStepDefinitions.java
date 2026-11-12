@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.ProfileRowVersions;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.support.MutableClock;
@@ -28,13 +29,15 @@ public class DonorReceiptStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final MutableClock clock;
+    private final ProfileRowVersions profileVersions;
 
-    public DonorReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, MutableClock clock) {
+    public DonorReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, MutableClock clock, ProfileRowVersions profileVersions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.clock = clock;
+        this.profileVersions = profileVersions;
     }
 
     @Given("the time is {string}")
@@ -52,7 +55,7 @@ public class DonorReceiptStepDefinitions {
     public void changesTheAddress(String alias, String street, String postalCode, String city) {
         sessions.actAs(alias);
         ResponseEntity<String> response = api.patch("/api/donors/me",
-                Map.of("address", Map.of("street", street, "city", city, "postalCode", postalCode)));
+                Map.of("address", Map.of("street", street, "city", city, "postalCode", postalCode)), profileVersions.ifMatchOfSignedIn(api));
         assertThat(response.getStatusCode().value()).withFailMessage("Profile update answered %s", response.getBody()).isEqualTo(200);
     }
 

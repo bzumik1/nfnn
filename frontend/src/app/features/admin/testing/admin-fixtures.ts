@@ -619,6 +619,8 @@ export function logFile(overrides: Partial<LogFileResponse> = {}): LogFileRespon
   };
 }
 
+export const SETTINGS_VERSION = '00000000000000c1';
+
 export function settingsView(
   overrides: Partial<AdminSettingsResponse> = {},
 ): AdminSettingsResponse {
@@ -660,6 +662,7 @@ export function settingsView(
       setting({ name: 'SESSION_REMEMBER_DAYS', group: 'SITE', value: '14', stored: false }),
     ],
     secretsCanBeStored: true,
+    version: SETTINGS_VERSION,
     ...overrides,
   };
 }

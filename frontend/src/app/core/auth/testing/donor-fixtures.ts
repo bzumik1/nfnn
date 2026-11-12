@@ -15,6 +15,8 @@ import {
   PasskeyFailure,
 } from '../passkey-authenticator';
 
+export const DONOR_VERSION = '00000000000000d1';
+
 export function sampleDonor(overrides: Partial<Donor> = {}): Donor {
   return {
     id: '01a18e56-bdb0-775a-bd0a-a60756831369',
@@ -30,6 +32,7 @@ export function sampleDonor(overrides: Partial<Donor> = {}): Donor {
     hasPassword: true,
     secondFactor: { enabled: false, neededForAdministration: false },
     pendingEmailChange: null,
+    version: DONOR_VERSION,
     ...overrides,
   };
 }

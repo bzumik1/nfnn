@@ -26,6 +26,7 @@ import {
   SecondFactorRecovery,
   UpdateDonorProfileRequest,
 } from './donor';
+import { type HeldRecord, ifMatch } from '../version/row-version';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
@@ -140,8 +141,12 @@ export class AuthApi {
     return this.http.get<Donor>('/api/donors/me');
   }
 
-  updateProfile(request: UpdateDonorProfileRequest): Observable<Donor> {
-    return this.http.patch<Donor>('/api/donors/me', request);
+  updateProfile(
+    request: UpdateDonorProfileRequest,
+    version: string,
+    held: HeldRecord | null,
+  ): Observable<Donor> {
+    return this.http.patch<Donor>('/api/donors/me', request, ifMatch(version, held));
   }
 
   changePassword(request: ChangePasswordRequest): Observable<AuthResponse> {

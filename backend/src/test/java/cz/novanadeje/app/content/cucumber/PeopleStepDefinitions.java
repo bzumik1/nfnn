@@ -30,15 +30,18 @@ public class PeopleStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final UploadedImages images;
+    private final ContentRowVersions versions;
     private final Map<String, String> idsByName = new HashMap<>();
     private String exchangedApiToken;
 
-    public PeopleStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images) {
+    public PeopleStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, UploadedImages images,
+                                 ContentRowVersions versions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.images = images;
+        this.versions = versions;
     }
 
     @When("{string} asks for the people of the foundation")
@@ -139,19 +142,19 @@ public class PeopleStepDefinitions {
     @Given("{string} writes the founders note:")
     public void writesTheFoundersNote(String alias, String text) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/note", note(text));
+        api.put(PEOPLE + "/note", note(text), ApiClient.ifMatch(versions.ofFoundersNote()));
     }
 
     @When("{string} writes a founders note of {int} characters")
     public void writesAFoundersNoteOfCharacters(String alias, int length) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/note", note("x".repeat(length)));
+        api.put(PEOPLE + "/note", note("x".repeat(length)), ApiClient.ifMatch(versions.ofFoundersNote()));
     }
 
     @When("{string} empties the founders note")
     public void emptiesTheFoundersNote(String alias) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/note", note(null));
+        api.put(PEOPLE + "/note", note(null), ApiClient.ifMatch(versions.ofFoundersNote()));
     }
 
     @When("the exchanged API token writes the founders note:")
@@ -163,19 +166,19 @@ public class PeopleStepDefinitions {
     @When("{string} writes the line under the board:")
     public void writesTheLineUnderTheBoard(String alias, String text) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/footnote", note(text));
+        api.put(PEOPLE + "/footnote", note(text), ApiClient.ifMatch(versions.ofFootnote()));
     }
 
     @When("{string} writes a line under the board of {int} characters")
     public void writesALineUnderTheBoardOfCharacters(String alias, int length) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/footnote", note("x".repeat(length)));
+        api.put(PEOPLE + "/footnote", note("x".repeat(length)), ApiClient.ifMatch(versions.ofFootnote()));
     }
 
     @When("{string} empties the line under the board")
     public void emptiesTheLineUnderTheBoard(String alias) {
         sessions.actAs(alias);
-        api.put(PEOPLE + "/footnote", note(null));
+        api.put(PEOPLE + "/footnote", note(null), ApiClient.ifMatch(versions.ofFootnote()));
     }
 
     @When("the exchanged API token writes the line under the board:")

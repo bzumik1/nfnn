@@ -4,6 +4,8 @@ import java.util.Optional;
 
 public interface FoundersNoteRepository {
 
+    void lockForChange();
+
     Optional<FoundersNote> find();
 
     void save(FoundersNote note);

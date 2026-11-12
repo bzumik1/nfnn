@@ -125,7 +125,7 @@ export class AdminSymbolClaims {
 
   protected reverse(item: SymbolClaimResponse): void {
     this.run(
-      this.api.reverseSymbolClaim(item.id, item.version),
+      this.api.reverseSymbolClaim(item.id, item.version, item),
       $localize`:@@admin.symbolClaims.reverse.done:Přiřazení darů u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme vrátili: ${this.donations(item.donationCount)}:donations: jsme smazali a platby s tímto symbolem zase čekají na přiřazení. Odpověď je teď Ne, dárce se už neptáme.`,
       $localize`:@@admin.symbolClaims.reverse.failed:Přiřazení darů se nepodařilo vrátit. Zkuste to prosím znovu.`,
     );
@@ -133,7 +133,7 @@ export class AdminSymbolClaims {
 
   protected reset(item: SymbolClaimResponse): void {
     this.run(
-      this.api.deleteSymbolClaim(item.id, item.version),
+      this.api.deleteSymbolClaim(item.id, item.version, item),
       $localize`:@@admin.symbolClaims.reset.done:Odpověď Ne u ${this.donorName(item)}:name: (VS ${item.variableSymbol}:symbol:) jsme smazali. Pokud otázka pořád platí, dárce ji uvidí znovu ve svém přehledu.`,
       $localize`:@@admin.symbolClaims.reset.failed:Odpověď se nepodařilo smazat. Zkuste to prosím znovu.`,
     );

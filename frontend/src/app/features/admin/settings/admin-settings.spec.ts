@@ -6,12 +6,11 @@ import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { RESTART_POLL_MS } from '../../operations/setup/setup-api';
-import { settingsView } from '../testing/admin-fixtures';
+import { SETTINGS_VERSION, settingsView } from '../testing/admin-fixtures';
 import {
   draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
-  valuesBase,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
 
@@ -266,6 +265,7 @@ describe('Given an administrator on the settings page', () => {
 
       const request = http.expectOne(SETTINGS_URL);
       expect(request.request.method).toBe('PUT');
+      expect(request.request.headers.get('If-Match')).toBe(`"${SETTINGS_VERSION}"`);
       expect(request.request.body).toEqual({
         changes: [
           { name: 'PUBLIC_URL', value: '' },
@@ -276,7 +276,7 @@ describe('Given an administrator on the settings page', () => {
         ],
       });
       vi.useFakeTimers();
-      request.flush({ changed: ['PUBLIC_URL'], restarting: true });
+      request.flush({ changed: ['PUBLIC_URL'], restarting: true, version: '00000000000000c2' });
       await vi.advanceTimersByTimeAsync(1);
       fixture.detectChanges();
       expect(text('[role="status"]:not(:empty)')).toContain('web se restartuje');
@@ -321,6 +321,91 @@ describe('Given an administrator on the settings page', () => {
 
       expect(texts('.form-error li')).toEqual(['Potvrzení na webu od roku: Rok mezi 2000 a 2100.']);
       expect(document.activeElement).toBe(button('Uložit nastavení'));
+    });
+
+    it('then a save refused because someone saved newer settings meanwhile keeps their edits and saving their version names the newer one', async () => {
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+      await submit();
+      button('Uložit a restartovat').click();
+      await settle();
+
+      http.expectOne(SETTINGS_URL).flush(
+        {
+          type: 'https://nfnn.cz/problems/operations/changed-meanwhile',
+          title: 'Mezitím se to změnilo',
+          status: 409,
+          version: '00000000000000c9',
+          current: {
+            settings: [
+              {
+                name: 'MAIL_FROM',
+                value: 'novy@nfnn.cz',
+                sealed: false,
+                updatedAt: '2026-11-12T08:05:00Z',
+              },
+            ],
+          },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle();
+
+      expect(text('app-changed-meanwhile-dialog dialog')).toContain(
+        'Zatímco jste měli formulář otevřený',
+      );
+      expect(text('app-changed-meanwhile-dialog dialog')).toContain(
+        'Novější verze je z 12. 11. 2026 9:05.',
+      );
+      expect(element<HTMLInputElement>('#setting-RECEIPT_FIRST_YEAR').value).toBe('2025');
+
+      button('Uložit svou verzi místo novější').click();
+      await settle();
+      expect(text('.confirm')).toContain('Uložením se web restartuje');
+      button('Uložit a restartovat').click();
+      await settle();
+
+      const again = http.expectOne(SETTINGS_URL);
+      expect(again.request.headers.get('If-Match')).toBe('"00000000000000c9"');
+      expect(again.request.body).toEqual({
+        changes: [{ name: 'RECEIPT_FIRST_YEAR', value: '2025' }],
+      });
+      again.flush({ changed: [], restarting: false, version: '00000000000000ca' });
+      await settle();
+    });
+
+    it('then a save refused as changed meanwhile can be dropped for the stored settings, read again', async () => {
+      await type('#setting-RECEIPT_FIRST_YEAR', '2025');
+      await submit();
+      button('Uložit a restartovat').click();
+      await settle();
+      http.expectOne(SETTINGS_URL).flush(
+        {
+          type: 'https://nfnn.cz/problems/operations/changed-meanwhile',
+          title: 'Mezitím se to změnilo',
+          status: 409,
+          version: '00000000000000c9',
+          current: { settings: [] },
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await settle();
+
+      button('Zahodit své úpravy a načíst novější verzi').click();
+      await settle();
+      http.expectOne(SETTINGS_URL).flush(settingsView({ version: '00000000000000c9' }));
+      await settle();
+
+      expect(element<HTMLInputElement>('#setting-RECEIPT_FIRST_YEAR').value).toBe('2026');
+      expect(text('.ui-notice--status')).toBe(
+        'Vaše úpravy jsme zahodili a načetli uložené nastavení.',
+      );
+      await type('#setting-RECEIPT_FIRST_YEAR', '2024');
+      await submit();
+      button('Uložit a restartovat').click();
+      await settle();
+      expect(http.expectOne(SETTINGS_URL).request.headers.get('If-Match')).toBe(
+        '"00000000000000c9"',
+      );
     });
 
     it('then the test e-mail goes to the administrator with the form values and without a typed password', async () => {
@@ -446,13 +531,6 @@ describe('Given an administrator changing the settings on a device that keeps dr
   let fixture: ComponentFixture<AdminSettings>;
   let http: HttpTestingController;
 
-  const shown = (): Record<string, string> =>
-    Object.fromEntries(
-      settingsView()
-        .settings.filter((setting) => !setting.secret)
-        .map((setting) => [setting.name, setting.value ?? '']),
-    );
-
   async function settle(): Promise<void> {
     for (let round = 0; round < 3; round++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -509,10 +587,10 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await settle();
   }
 
-  async function keptDraft(startedFrom: Record<string, string>): Promise<void> {
+  function keptDraft(startedFrom: string): void {
     shelf.seed('administration', {
       key: 'settings',
-      base: await valuesBase(startedFrom),
+      base: `version:${startedFrom}`,
       values: { CONTACT_RECIPIENT: 'pavel@example.cz' },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
@@ -553,7 +631,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when the device kept a change started from the saved settings and they continue it, then the form takes it and asks to save as usual', async () => {
-    await keptDraft(shown());
+    keptDraft(SETTINGS_VERSION);
     await open();
     expect(element('app-draft-offer').textContent).not.toContain(
       'Uložená verze se od té doby změnila',
@@ -570,7 +648,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when the device kept a change started from settings saved differently since, then saving asks first and discarding reads them again', async () => {
-    await keptDraft({ ...shown(), MAIL_FROM: 'stary@example.cz' });
+    keptDraft('00000000000000c0');
     await open();
     expect(element('app-draft-offer').textContent).toContain('Uložená verze se od té doby změnila');
 
@@ -599,7 +677,9 @@ describe('Given an administrator changing the settings on a device that keeps dr
     await settle();
     button('Uložit a restartovat').click();
     await settle();
-    http.expectOne(SETTINGS_URL).flush({ changed: ['CONTACT_RECIPIENT'], restarting: false });
+    http
+      .expectOne(SETTINGS_URL)
+      .flush({ changed: ['CONTACT_RECIPIENT'], restarting: false, version: '00000000000000c2' });
     await settle();
     http.match(SETTINGS_URL).forEach((reload) => reload.flush(settingsView()));
     await settle();
@@ -608,7 +688,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when they continue a kept change, then the focus moves to the page heading and the form counts as unsaved', async () => {
-    await keptDraft(shown());
+    keptDraft(SETTINGS_VERSION);
     await open();
 
     button('Pokračovat v rozepsaném').click();
@@ -621,7 +701,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when the kept change is older than settings saved since, then continuing it changes only the field it holds and saving it over the newer ones sends only that field', async () => {
-    await keptDraft({ ...shown(), MAIL_HOST: 'stary.smtp.example.cz' });
+    keptDraft('00000000000000c0');
     await open();
 
     button('Pokračovat v rozepsaném').click();
@@ -643,7 +723,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when a kept change is offered, then the form waits for the choice and the offer says passwords are not kept', async () => {
-    await keptDraft(shown());
+    keptDraft(SETTINGS_VERSION);
     await open();
 
     expect(element<HTMLFormElement>('form.settings-form').inert).toBe(true);
@@ -657,7 +737,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   });
 
   it('when they discard the kept change, then it leaves the device', async () => {
-    await keptDraft(shown());
+    keptDraft(SETTINGS_VERSION);
     await open();
 
     button('Zahodit').click();

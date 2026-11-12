@@ -2649,11 +2649,15 @@ describe('Given a signed-in donor in the donor area', () => {
         it('then a change of the name or address in the same visit drops the ready file, so the next tap issues the receipt again', async () => {
           const donor = store.donor()!;
           store
-            .updateProfile({
-              name: donor.name,
-              address: { ...donor.address, street: 'Krátká 3' },
-              preferredLocale: donor.preferredLocale,
-            })
+            .updateProfile(
+              {
+                name: donor.name,
+                address: { ...donor.address, street: 'Krátká 3' },
+                preferredLocale: donor.preferredLocale,
+              },
+              donor.version,
+              {},
+            )
             .subscribe();
           http
             .expectOne({ method: 'PATCH', url: '/api/donors/me' })
@@ -2672,7 +2676,11 @@ describe('Given a signed-in donor in the donor area', () => {
         it('then a change of only the language keeps the ready file, which the new language does not replace', async () => {
           const donor = store.donor()!;
           store
-            .updateProfile({ name: donor.name, address: donor.address, preferredLocale: 'en' })
+            .updateProfile(
+              { name: donor.name, address: donor.address, preferredLocale: 'en' },
+              donor.version,
+              {},
+            )
             .subscribe();
           http
             .expectOne({ method: 'PATCH', url: '/api/donors/me' })

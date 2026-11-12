@@ -46,11 +46,48 @@ export interface ProjectResponse {
   live: boolean;
   createdAt: string;
   updatedAt: string;
-  version?: string;
 }
 
 export interface ProjectListResponse {
   items: ProjectResponse[];
+}
+
+export interface AdminProjectResponse extends ProjectResponse {
+  version: string;
+}
+
+export interface AdminProjectListResponse {
+  items: AdminProjectResponse[];
+}
+
+export interface StoredProject {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly year: number;
+  readonly category: ProjectCategory;
+  readonly tag: string | null;
+  readonly perex: string;
+  readonly body: string;
+  readonly coverImage: string | null;
+  readonly coverImageAlt: string | null;
+  readonly publishedOn: string | null;
+}
+
+export function storedProjectOf(project: AdminProjectResponse): StoredProject {
+  return {
+    id: project.id,
+    slug: project.slug,
+    title: project.title,
+    year: project.year,
+    category: project.category,
+    tag: project.tag,
+    perex: project.perex,
+    body: project.body,
+    coverImage: project.coverImage?.id ?? null,
+    coverImageAlt: project.coverImage?.alt ?? null,
+    publishedOn: project.publishedOn,
+  };
 }
 
 export interface ProjectPageResponse extends ProjectListResponse {
@@ -115,40 +152,58 @@ export function slugFromText(text: string): string {
 export class ProjectsApi {
   private readonly http = inject(HttpClient);
 
-  list(): Observable<ProjectListResponse> {
-    return this.http.get<ProjectListResponse>(ADMIN_PROJECTS);
+  list(): Observable<AdminProjectListResponse> {
+    return this.http.get<AdminProjectListResponse>(ADMIN_PROJECTS);
   }
 
-  get(id: string): Observable<ProjectResponse> {
-    return this.http.get<ProjectResponse>(`${ADMIN_PROJECTS}/${id}`);
+  get(id: string): Observable<AdminProjectResponse> {
+    return this.http.get<AdminProjectResponse>(`${ADMIN_PROJECTS}/${id}`);
   }
 
-  create(request: ProjectRequest): Observable<ProjectResponse> {
-    return this.http.post<ProjectResponse>(ADMIN_PROJECTS, request);
+  create(request: ProjectRequest): Observable<AdminProjectResponse> {
+    return this.http.post<AdminProjectResponse>(ADMIN_PROJECTS, request);
   }
 
-  update(id: string, request: ProjectRequest, version: string): Observable<ProjectResponse> {
-    return this.http.put<ProjectResponse>(`${ADMIN_PROJECTS}/${id}`, request, ifMatch(version));
+  update(
+    id: string,
+    request: ProjectRequest,
+    version: string,
+    held: StoredProject | null,
+  ): Observable<AdminProjectResponse> {
+    return this.http.put<AdminProjectResponse>(
+      `${ADMIN_PROJECTS}/${id}`,
+      request,
+      ifMatch(version, held),
+    );
   }
 
-  publish(id: string, publishedOn: string, version: string): Observable<ProjectResponse> {
-    return this.http.post<ProjectResponse>(
+  publish(
+    id: string,
+    publishedOn: string,
+    version: string,
+    held: StoredProject | null,
+  ): Observable<AdminProjectResponse> {
+    return this.http.post<AdminProjectResponse>(
       `${ADMIN_PROJECTS}/${id}/publish`,
       { publishedOn },
-      ifMatch(version),
+      ifMatch(version, held),
     );
   }
 
-  unpublish(id: string, version: string): Observable<ProjectResponse> {
-    return this.http.post<ProjectResponse>(
+  unpublish(
+    id: string,
+    version: string,
+    held: StoredProject | null,
+  ): Observable<AdminProjectResponse> {
+    return this.http.post<AdminProjectResponse>(
       `${ADMIN_PROJECTS}/${id}/unpublish`,
       {},
-      ifMatch(version),
+      ifMatch(version, held),
     );
   }
 
-  delete(id: string, version: string): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`, ifMatch(version));
+  delete(id: string, version: string, held: StoredProject | null): Observable<void> {
+    return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`, ifMatch(version, held));
   }
 
   order(): Observable<ProjectOrderResponse> {

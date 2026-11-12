@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.ProfileRowVersions;
 import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donations.application.signing.ReceiptSigner;
@@ -51,16 +52,18 @@ public class DonorFrozenReceiptStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final JdbcClient jdbc;
     private final ReceiptSigner signer;
+    private final ProfileRowVersions profileVersions;
     private final List<JsonNode> issued = new ArrayList<>();
     private Optional<String> signatureImageSeen = Optional.empty();
     private Optional<String> portraitImageSeen = Optional.empty();
 
-    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer) {
+    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer, ProfileRowVersions profileVersions) {
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
         this.jdbc = jdbc;
         this.signer = signer;
+        this.profileVersions = profileVersions;
     }
 
     @When("{string} issues her/his/its yearly receipt for {int}")
@@ -91,7 +94,7 @@ public class DonorFrozenReceiptStepDefinitions {
     public void changedTheAddressAndIssuedTheYearlyReceiptTimes(String alias, int year, int times) {
         for (int round = 1; round <= times; round++) {
             sessions.actAs(alias);
-            assertThat(api.patch("/api/donors/me", Map.of("address", Map.of("street", "Dlouhá " + round, "city", "Ústí nad Labem", "postalCode", "400 01")))
+            assertThat(api.patch("/api/donors/me", Map.of("address", Map.of("street", "Dlouhá " + round, "city", "Ústí nad Labem", "postalCode", "400 01")), profileVersions.ifMatchOfSignedIn(api))
                     .getStatusCode().value()).isEqualTo(200);
             issuesTheYearlyReceipt(alias, year);
             assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Issue %d answered %s", round, api.lastResponse().getBody()).isEqualTo(200);

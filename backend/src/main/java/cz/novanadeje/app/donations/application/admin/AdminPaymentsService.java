@@ -95,7 +95,7 @@ public class AdminPaymentsService {
     private AdminPaymentView pairedView(BankPayment payment, Donation donation, DonorRecord giver, boolean receiptIssued, AdministrationChannel channel) {
         String version = rows.paidPayment(payment, donation, giver).version();
         boolean payerWithheld = channel == AdministrationChannel.CONNECTED_APPLICATION && giver.isErased();
-        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, Optional.of(giver), receiptIssued)), version, payerWithheld);
+        return new AdminPaymentView(payment, Optional.of(new PairedDonationView(donation, giver, receiptIssued)), version, payerWithheld);
     }
 
     public List<DonorRecord> searchDonors(String query) {

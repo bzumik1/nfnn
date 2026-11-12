@@ -39,7 +39,10 @@ import {
   MIN_LOOK_BACK_YEAR,
   NewsApi,
   NewsArticleRequest,
+  AdminNewsArticleResponse,
   NewsArticleResponse,
+  StoredNewsArticle,
+  storedNewsArticleOf,
   NewsSignerResponse,
   SLUG_PATTERN,
   slugFromText,
@@ -157,7 +160,8 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   protected readonly state = signal<LoadState>('loading');
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   private refusedDelete = false;
-  protected readonly article = signal<NewsArticleResponse | null>(null);
+  protected readonly article = signal<AdminNewsArticleResponse | null>(null);
+  private serverVersion: string | null = null;
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
   protected readonly notice = signal<Notice | null>(null);
@@ -557,7 +561,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date, existing.version ?? '');
+      this.sendPublish(existing, date);
       return;
     }
     if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
@@ -566,7 +570,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         .subscribe({
           next: () => {
             if (needsPublish) {
-              this.sendPublish(existing.id, date, existing.version ?? '');
+              this.sendPublish(existing, date);
               return;
             }
             this.saving.set(null);
@@ -584,7 +588,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
         existing
-          ? this.api.update(existing.id, request, existing.version ?? '')
+          ? this.api.update(existing.id, request, existing.version, this.heldOf(existing))
           : this.api.create(request),
       ),
       switchMap((article) => this.placeLookBackYear(article, lookBackYear)),
@@ -599,7 +603,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
         }
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(article.id, date, article.version ?? '');
+          this.sendPublish(article, date);
           return;
         }
         this.saving.set(null);
@@ -722,14 +726,15 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string, version: string): void {
+  private sendPublish(saved: AdminNewsArticleResponse, date: string): void {
     this.api
-      .publish(id, date, version)
+      .publish(saved.id, date, saved.version, this.heldOf(saved))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
           this.saving.set(null);
           this.article.set(article);
+          this.serverVersion = article.version;
           this.draft.saved(article.version);
           const on = formatDonationDate(article.publishedOn ?? date);
           this.notice.set({
@@ -764,12 +769,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id, existing.version ?? '')
+      .unpublish(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
           this.unpublishing.set(false);
           this.article.set(article);
+          this.serverVersion = article.version;
           this.publishDate = todayIso();
           if (this.unsaved()) {
             this.draft.rebased(article.version);
@@ -816,7 +822,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id, existing.version ?? '')
+      .delete(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -914,7 +920,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     answer?.(leave);
   }
 
-  private saved(article: NewsArticleResponse, created: boolean): void {
+  private saved(article: AdminNewsArticleResponse, created: boolean): void {
     this.show(article);
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
@@ -986,8 +992,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     };
   }
 
-  private show(article: NewsArticleResponse): void {
+  private heldOf(saved: AdminNewsArticleResponse): StoredNewsArticle | null {
+    return saved.version === this.serverVersion ? storedNewsArticleOf(saved) : null;
+  }
+
+  private show(article: AdminNewsArticleResponse): void {
     this.article.set(article);
+    this.serverVersion = article.version;
     this.articleTitle = article.title;
     this.slug = article.slug;
     this.slugEdited = true;

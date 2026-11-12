@@ -34,7 +34,8 @@ class AdvisoryLockTest {
                 .containsEntry(AdvisoryLock.DONOR_SESSIONS, 20261109L)
                 .containsEntry(AdvisoryLock.SCHEMA_MIGRATION, 20261110L)
                 .containsEntry(AdvisoryLock.SETTINGS_CHANGES, 20261111L)
-                .containsEntry(AdvisoryLock.ADMINISTRATORS, 20261112L);
+                .containsEntry(AdvisoryLock.ADMINISTRATORS, 20261112L)
+                .containsEntry(AdvisoryLock.PEOPLE_TEXT_CHANGES, 20261113L);
     }
 
     @Test

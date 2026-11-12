@@ -8,6 +8,9 @@ import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.notification.AccountEmails;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,7 +48,8 @@ class SettingsServiceTest {
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final AccountEmails accountEmails = mock(AccountEmails.class);
     private final SettingsService settings = new SettingsService(new SettingsWriter(repository, sealer, validator), current, sealer, mailProbe,
-            accountEmails, restarter, events, TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
+            accountEmails, restarter, events, TransactionOperations.withoutTransaction(), new SettingsVersions(RowVersionsFixture.canonical()),
+            Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("Given running values, when the settings are viewed, then plain values show, secrets only as set and unreadable ones are marked")
@@ -70,7 +74,7 @@ class SettingsServiceTest {
     void should_store_audit_and_restart_when_saved_given_changes() {
         when(validator.validate(any(), any(), any())).thenReturn(List.of());
 
-        settings.change(ADMIN, List.of(new SettingChange(Setting.FIO_TOKEN, "secret-token"), new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")));
+        settings.change(ADMIN, List.of(new SettingChange(Setting.FIO_TOKEN, "secret-token"), new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.none());
 
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
@@ -84,7 +88,7 @@ class SettingsServiceTest {
     @Test
     @DisplayName("Given no changes, when an administrator saves, then nothing is audited and nothing restarts")
     void should_do_nothing_when_saved_given_no_changes() {
-        settings.change(ADMIN, List.of());
+        settings.change(ADMIN, List.of(), ExpectedVersion.none());
 
         verifyNoInteractions(events, restarter);
     }
@@ -92,7 +96,7 @@ class SettingsServiceTest {
     @Test
     @DisplayName("Given the first administrator's e-mail, when an administrator changes it here, then it is refused")
     void should_refuse_when_saved_given_setup_only_setting() {
-        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.ADMIN_EMAILS, "x@example.cz"))))
+        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.ADMIN_EMAILS, "x@example.cz")), ExpectedVersion.none()))
                 .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
                         .containsExactly(SettingError.of(Setting.ADMIN_EMAILS, SettingProblem.NOT_IN_ADMINISTRATION)));
     }
@@ -151,7 +155,7 @@ class SettingsServiceTest {
         for (SettingChange moved : List.of(new SettingChange(Setting.MAIL_HOST, "smtp.attacker.example"), new SettingChange(Setting.MAIL_PORT, "2525"),
                 new SettingChange(Setting.MAIL_USERNAME, "someone-else"), new SettingChange(Setting.MAIL_STARTTLS, "false"),
                 new SettingChange(Setting.MAIL_HOST, ""))) {
-            assertThatThrownBy(() -> settings.change(ADMIN, List.of(moved)))
+            assertThatThrownBy(() -> settings.change(ADMIN, List.of(moved), ExpectedVersion.none()))
                     .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
                             .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
         }
@@ -165,7 +169,7 @@ class SettingsServiceTest {
         when(current.effectiveValue(any())).thenReturn(Optional.empty());
         repository.save(new StoredSetting(Setting.MAIL_PASSWORD, sealer.seal(Setting.MAIL_PASSWORD, "stored-key"), true, NOW));
 
-        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.attacker.example"))))
+        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.attacker.example")), ExpectedVersion.none()))
                 .isInstanceOfSatisfying(SettingsRejected.class, rejected -> assertThat(rejected.errors())
                         .containsExactly(SettingError.of(Setting.MAIL_PASSWORD, SettingProblem.PASSWORD_FOR_NEW_MAIL_SERVER)));
         verifyNoInteractions(events, restarter);
@@ -177,8 +181,8 @@ class SettingsServiceTest {
         runningMailServer();
         when(validator.validate(any(), any(), any())).thenReturn(List.of());
 
-        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"), new SettingChange(Setting.MAIL_PASSWORD, "new-key")));
-        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "SMTP-relay.brevo.com"), new SettingChange(Setting.MAIL_FROM, "info@nfnn.cz")));
+        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "smtp.example.cz"), new SettingChange(Setting.MAIL_PASSWORD, "new-key")), ExpectedVersion.none());
+        settings.change(ADMIN, List.of(new SettingChange(Setting.MAIL_HOST, "SMTP-relay.brevo.com"), new SettingChange(Setting.MAIL_FROM, "info@nfnn.cz")), ExpectedVersion.none());
 
         assertThat(repository.findAll()).extracting(StoredSetting::setting)
                 .containsExactlyInAnyOrder(Setting.MAIL_HOST, Setting.MAIL_PASSWORD, Setting.MAIL_FROM);
@@ -192,6 +196,67 @@ class SettingsServiceTest {
         when(current.effectiveValue(Setting.MAIL_STARTTLS)).thenReturn(Optional.of("true"));
         when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
         when(accountEmails.emailOf(ADMIN)).thenReturn(Optional.of("jana@example.cz"));
+    }
+
+    @Test
+    @DisplayName("Given stored settings, when the settings are viewed, then they carry the version of the stored rows, which no secret's value enters")
+    void should_carry_the_version_of_the_stored_rows_when_viewed_given_stored_settings() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        repository.save(new StoredSetting(Setting.MAIL_HOST, "smtp-relay.brevo.com", false, NOW));
+        repository.save(new StoredSetting(Setting.FIO_TOKEN, "sealed-once", true, NOW));
+        String version = settings.view().version();
+
+        repository.save(new StoredSetting(Setting.FIO_TOKEN, "sealed-again", true, NOW));
+        assertThat(settings.view().version()).isEqualTo(version).matches("[0-9a-f]{16}");
+        repository.save(new StoredSetting(Setting.FIO_TOKEN, "sealed-again", true, NOW.plusSeconds(1)));
+        assertThat(settings.view().version()).isNotEqualTo(version);
+    }
+
+    @Test
+    @DisplayName("Given settings stored since they were read, when a change names the older version, then it is refused with the version and the stored rows now, secrets without their value, and nothing is stored, audited or restarted")
+    void should_refuse_with_the_current_version_and_rows_when_changed_from_an_older_version_given_settings_stored_since() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        String read = settings.view().version();
+        repository.save(new StoredSetting(Setting.MAIL_HOST, "smtp-relay.brevo.com", false, NOW));
+        repository.save(new StoredSetting(Setting.FIO_TOKEN, "sealed-token", true, NOW));
+        String now = settings.view().version();
+
+        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.of(read)))
+                .isInstanceOfSatisfying(SettingsChangedMeanwhile.class, refused -> {
+                    assertThat(refused.code()).isEqualTo("operations/changed-meanwhile");
+                    assertThat(refused.extensions()).containsEntry("version", now).containsEntry("current", new SettingsVersions.StoredSettings(List.of(
+                            new SettingsVersions.StoredSettingRow("FIO_TOKEN", null, true, NOW),
+                            new SettingsVersions.StoredSettingRow("MAIL_HOST", "smtp-relay.brevo.com", false, NOW))));
+                });
+        assertThat(repository.find(Setting.RECEIPT_FIRST_YEAR)).isEmpty();
+        verifyNoInteractions(events, restarter);
+    }
+
+    @Test
+    @DisplayName("Given the first administrators' e-mails stored by the first setup, when the settings are read or refused, then the e-mails enter neither the version nor the stored rows of the refusal")
+    void should_keep_the_first_administrators_out_of_the_version_and_the_refusal_when_read_or_refused_given_stored_first_administrators() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        repository.save(new StoredSetting(Setting.MAIL_HOST, "smtp-relay.brevo.com", false, NOW));
+        String version = settings.view().version();
+        repository.save(new StoredSetting(Setting.ADMIN_EMAILS, "spravce@example.cz", false, NOW));
+
+        assertThat(settings.view().version()).isEqualTo(version);
+        assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.of("0000000000000000")))
+                .isInstanceOfSatisfying(SettingsChangedMeanwhile.class, refused -> assertThat(refused.extensions()).containsEntry("current",
+                        new SettingsVersions.StoredSettings(List.of(new SettingsVersions.StoredSettingRow("MAIL_HOST", "smtp-relay.brevo.com", false, NOW)))));
+    }
+
+    @Test
+    @DisplayName("Given the current version, when a change names it, then it is stored and answers the version of the rows it left")
+    void should_answer_the_new_version_when_changed_from_the_current_version_given_the_current_version() {
+        when(current.effectiveValue(any())).thenReturn(Optional.empty());
+        when(validator.validate(any(), any(), any())).thenReturn(List.of());
+        String read = settings.view().version();
+
+        SavedSettings saved = settings.change(ADMIN, List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.of(read));
+
+        assertThat(saved.changed()).containsExactly(Setting.RECEIPT_FIRST_YEAR);
+        assertThat(saved.version()).isEqualTo(settings.view().version()).isNotEqualTo(read);
     }
 
     private static SettingView viewOf(SettingsView view, Setting setting) {

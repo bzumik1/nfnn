@@ -48,6 +48,7 @@ import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
+import { heldRecordRetryInterceptor } from './core/version/held-record-retry';
 import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { windowControlsAtStart } from './core/layout/window-controls';
@@ -72,6 +73,7 @@ export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
   withInterceptors([
     keptPublicAnswersInterceptor,
+    heldRecordRetryInterceptor,
     authInterceptor,
     versionInterceptor,
     keptAnswerRefreshInterceptor,

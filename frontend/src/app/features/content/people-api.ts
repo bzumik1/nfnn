@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { ifMatch } from '../../core/version/row-version';
 
 export interface PersonImageResponse {
   id: string;
@@ -28,6 +29,12 @@ export interface PeopleResponse {
   members: PersonResponse[];
   note: string | null;
   footnote: string | null;
+  noteVersion: string;
+  footnoteVersion: string;
+}
+
+export interface StoredPageText {
+  text: string | null;
 }
 
 export interface PersonRequest {
@@ -47,10 +54,12 @@ export interface OwnPersonResponse {
 
 export interface FoundersNoteResponse {
   text: string | null;
+  version: string;
 }
 
 export interface PeopleFootnoteResponse {
   text: string | null;
+  version: string;
 }
 
 export interface PublicPersonCard {
@@ -124,12 +133,28 @@ export class PeopleApi {
     return this.http.put<PeopleResponse>(`${ADMIN_PEOPLE}/order`, { memberIds });
   }
 
-  saveNote(text: string | null): Observable<FoundersNoteResponse> {
-    return this.http.put<FoundersNoteResponse>(`${ADMIN_PEOPLE}/note`, { text });
+  saveNote(
+    text: string | null,
+    version: string,
+    held: StoredPageText | null,
+  ): Observable<FoundersNoteResponse> {
+    return this.http.put<FoundersNoteResponse>(
+      `${ADMIN_PEOPLE}/note`,
+      { text },
+      ifMatch(version, held),
+    );
   }
 
-  saveFootnote(text: string | null): Observable<PeopleFootnoteResponse> {
-    return this.http.put<PeopleFootnoteResponse>(`${ADMIN_PEOPLE}/footnote`, { text });
+  saveFootnote(
+    text: string | null,
+    version: string,
+    held: StoredPageText | null,
+  ): Observable<PeopleFootnoteResponse> {
+    return this.http.put<PeopleFootnoteResponse>(
+      `${ADMIN_PEOPLE}/footnote`,
+      { text },
+      ifMatch(version, held),
+    );
   }
 
   setWebSignature(id: string, imageId: string): Observable<PersonResponse> {

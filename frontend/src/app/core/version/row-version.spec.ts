@@ -1,6 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import { ifMatch, isChangedMeanwhile, savedAtInRefusal, versionInRefusal } from './row-version';
+import {
+  heldRecordOf,
+  ifMatch,
+  isChangedMeanwhile,
+  savedAtInRefusal,
+  versionInRefusal,
+} from './row-version';
 
 function refusal(
   status: number,
@@ -66,5 +72,16 @@ describe('Given a changed-meanwhile refusal with the current row', () => {
       savedAtInRefusal(refusal(409, 'donations/changed-meanwhile', 'fedcba9876543210', {})),
     ).toBeNull();
     expect(savedAtInRefusal(refusal(428, 'shared/version-required'))).toBeNull();
+  });
+});
+
+describe('Given a row version and the record the page held', () => {
+  it('when it is sent, then the held record travels with the request but not to the server', () => {
+    const held = { title: 'Léto' };
+    const options = ifMatch('0123456789abcdef', held);
+
+    expect(options.headers.get('If-Match')).toBe('"0123456789abcdef"');
+    expect(heldRecordOf(options.context)).toBe(held);
+    expect(heldRecordOf(ifMatch('0123456789abcdef').context)).toBeNull();
   });
 });

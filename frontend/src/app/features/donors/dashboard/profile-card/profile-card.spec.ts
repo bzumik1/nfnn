@@ -4,12 +4,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor } from '../../../../core/auth/donor';
-import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import {
+  authResponse,
+  DONOR_VERSION,
+  problem,
+  sampleDonor,
+} from '../../../../core/auth/testing/donor-fixtures';
+import { heldRecordOf } from '../../../../core/version/row-version';
 import {
   draftWorkOf,
   MemoryDraftShelf,
   memoryDraftShelfProviders,
-  valuesBase,
 } from '../../../../core/drafts/testing/memory-draft-shelf';
 import { ProfileCard } from './profile-card';
 
@@ -102,6 +107,14 @@ describe('Given the donor data card in the overview', () => {
         name: 'Jana Nováková',
         address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 11' },
         preferredLocale: 'en',
+      });
+      expect(request.request.headers.get('If-Match')).toBe(`"${DONOR_VERSION}"`);
+      expect(heldRecordOf(request.request.context)).toEqual({
+        name: 'Jana Nováková',
+        street: 'Dlouhá 12',
+        city: 'Ústí nad Labem',
+        postalCode: '400 01',
+        preferredLocale: 'cs',
       });
       request.flush(
         sampleDonor({
@@ -255,6 +268,103 @@ describe('Given the donor data card in the overview', () => {
       await settle();
     });
 
+    describe('and saves while the profile was changed meanwhile, as in another window', () => {
+      beforeEach(async () => {
+        await click('.profile-edit');
+        await fillIn('#profile-street', 'Krátká 3');
+        await submit();
+        http.expectOne({ method: 'PATCH', url: '/api/donors/me' }).flush(
+          {
+            type: 'https://nfnn.cz/problems/donors/changed-meanwhile',
+            title: 'Mezitím se to změnilo',
+            status: 409,
+            version: '00000000000000d9',
+            current: {
+              name: 'Jana Nováková',
+              street: 'Dlouhá 12',
+              city: 'Děčín',
+              postalCode: '405 02',
+              preferredLocale: 'cs',
+            },
+          },
+          { status: 409, statusText: 'Conflict' },
+        );
+        await settle();
+      });
+
+      it('then the card says so calmly and keeps what they typed', () => {
+        const notice = element('.profile-changed');
+        expect(notice.getAttribute('role')).toBe('alert');
+        expect(notice.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+          'Mezitím se profil změnil, třeba v jiném okně nebo na jiném zařízení. Vaše úpravy jsme zatím neuložili, zůstávají ve formuláři.',
+        );
+        expect(element<HTMLInputElement>('#profile-street').value).toBe('Krátká 3');
+        expect(element('.profile-error')?.textContent?.trim() ?? '').toBe('');
+      });
+
+      it('then saving their changes sends them again over the newer profile', async () => {
+        await click('.profile-changed-keep');
+
+        const again = http.expectOne({ method: 'PATCH', url: '/api/donors/me' });
+        expect(again.request.headers.get('If-Match')).toBe('"00000000000000d9"');
+        expect(heldRecordOf(again.request.context)).toEqual({
+          name: 'Jana Nováková',
+          street: 'Dlouhá 12',
+          city: 'Děčín',
+          postalCode: '405 02',
+          preferredLocale: 'cs',
+        });
+        expect(again.request.body.address.street).toBe('Krátká 3');
+        again.flush(
+          sampleDonor({
+            address: { street: 'Krátká 3', city: 'Ústí nad Labem', postalCode: '400 01' },
+            version: '00000000000000da',
+          }),
+        );
+        await settle();
+
+        expect(element('.profile-form')).toBeNull();
+        expect(element('.profile-changed')).toBeNull();
+        expect(store.donor()?.version).toBe('00000000000000da');
+      });
+
+      it('then loading the saved profile shows it and drops their changes', async () => {
+        await click('.profile-changed-load');
+
+        http.expectOne({ method: 'GET', url: '/api/donors/me' }).flush(
+          sampleDonor({
+            address: { street: 'Dlouhá 12', city: 'Děčín', postalCode: '405 02' },
+            version: '00000000000000d9',
+          }),
+        );
+        await settle();
+
+        expect(element('.profile-form')).toBeNull();
+        expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 405 02 Děčín', 'čeština']);
+        expect(element('.profile-status').textContent?.trim()).toBe(
+          'Načetli jsme uložený profil. Vaše úpravy jsme zahodili.',
+        );
+        expect(document.activeElement).toBe(element('.profile-edit'));
+      });
+    });
+
+    it('and the app is older than the server and sends no version, then the form line says what the server said', async () => {
+      await click('.profile-edit');
+      await submit();
+      http.expectOne({ method: 'PATCH', url: '/api/donors/me' }).flush(
+        {
+          type: 'https://nfnn.cz/problems/shared/version-required',
+          title: 'Načtěte stránku znovu',
+          status: 428,
+        },
+        { status: 428, statusText: 'Precondition Required' },
+      );
+      await settle();
+
+      expect(element('.profile-error').textContent).toContain('Načtěte stránku znovu');
+      expect(element('.profile-changed')).toBeNull();
+    });
+
     it('and the session has ended, then the overview is told to send the donor to sign in', async () => {
       await click('.profile-edit');
 
@@ -297,13 +407,6 @@ describe('Given the donor data card in the overview', () => {
 });
 
 describe('Given the donor data card on a device that keeps drafts', () => {
-  const saved = {
-    name: 'Jana Nováková',
-    street: 'Dlouhá 12',
-    city: 'Ústí nad Labem',
-    postalCode: '400 01',
-    preferredLocale: 'cs',
-  };
   let shelf: MemoryDraftShelf;
   let fixture: ComponentFixture<ProfileCard>;
   let http: HttpTestingController;
@@ -356,10 +459,10 @@ describe('Given the donor data card on a device that keeps drafts', () => {
     await settle();
   }
 
-  async function keptDraft(startedFrom: typeof saved): Promise<void> {
+  function keptDraft(startedFrom: string): void {
     shelf.seed('donor', {
       key: 'profile',
-      base: await valuesBase(startedFrom),
+      base: `version:${startedFrom}`,
       values: { street: 'Krátká 3' },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
@@ -404,7 +507,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
   describe('when the device kept an edit started from the saved data', () => {
     beforeEach(async () => {
-      await keptDraft(saved);
+      keptDraft(DONOR_VERSION);
       await render();
     });
 
@@ -443,7 +546,7 @@ describe('Given the donor data card on a device that keeps drafts', () => {
 
   describe('when the device kept an edit started from data saved differently since', () => {
     beforeEach(async () => {
-      await keptDraft({ ...saved, city: 'Děčín' });
+      keptDraft('00000000000000d0');
       await render();
       button('Pokračovat v rozepsaném').click();
       await settle();

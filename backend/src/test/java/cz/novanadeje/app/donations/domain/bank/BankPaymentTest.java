@@ -137,4 +137,26 @@ class BankPaymentTest {
                 SenderAccount.parse("2900233333", "2010"), Optional.of("2900233333"), Optional.of("2010"), Optional.empty(),
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "t"), NOW);
     }
+
+    @Test
+    @DisplayName("Given a payment with a sender account, when its payer's account is shown, then it is the sender's number and bank code")
+    void should_show_the_sender_account_when_shown_given_a_sender() {
+        assertThat(withCounterparty(Optional.of(new SenderAccount("2900233333", "2010")), Optional.of("2900233333"), Optional.of("2010")).payerAccount())
+                .contains("2900233333/2010");
+    }
+
+    @Test
+    @DisplayName("Given a payment whose counterparty is no sender account, when its payer's account is shown, then it is the counterparty's number, with its bank code when the bank wrote one")
+    void should_show_the_counterparty_account_when_shown_given_no_sender() {
+        assertThat(withCounterparty(Optional.empty(), Optional.of("CZ6508000000192000145399"), Optional.empty()).payerAccount())
+                .contains("CZ6508000000192000145399");
+        assertThat(withCounterparty(Optional.empty(), Optional.of("19-2000145399"), Optional.of("0800")).payerAccount()).contains("19-2000145399/0800");
+        assertThat(withCounterparty(Optional.empty(), Optional.empty(), Optional.of("0800")).payerAccount()).isEmpty();
+    }
+
+    private static BankPayment withCounterparty(Optional<SenderAccount> sender, Optional<String> account, Optional<String> bankCode) {
+        return new BankPayment(PAYMENT_ID, new BankTransactionId(1001), LocalDate.of(2026, 10, 15), Money.czk(50000), sender, account, bankCode,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem", NOW,
+                Optional.empty());
+    }
 }

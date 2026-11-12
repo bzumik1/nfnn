@@ -3467,7 +3467,13 @@ test.describe('Given a donor whose unsaved edit of the data on the receipt is ke
   }) => {
     await page.unroute('**/api/donors/auth/refresh');
     await page.route('**/api/donors/auth/refresh', (route) =>
-      route.fulfill(session(200, { ...donor, address: { ...donor.address, city: 'Děčín' } })),
+      route.fulfill(
+        session(200, {
+          ...donor,
+          address: { ...donor.address, city: 'Děčín' },
+          version: '00000000000000d9',
+        }),
+      ),
     );
     await page.reload();
     const offer = page.locator('app-draft-offer');
@@ -3477,6 +3483,41 @@ test.describe('Given a donor whose unsaved edit of the data on the receipt is ke
     await page.getByRole('button', { name: 'Uložit údaje' }).click();
 
     await expect(page.locator('.profile-stale')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the profile changed meanwhile in another window and the save is refused, then the warning in the form has no violations', async ({
+    page,
+  }) => {
+    await page.route('**/api/donors/me', (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({
+            status: 409,
+            contentType: 'application/problem+json',
+            body: JSON.stringify({
+              type: 'https://nfnn.cz/problems/donors/changed-meanwhile',
+              title: 'Mezitím se to změnilo',
+              status: 409,
+              version: '00000000000000d9',
+              current: {
+                name: donor.name,
+                street: donor.address.street,
+                city: 'Děčín',
+                postalCode: donor.address.postalCode,
+                preferredLocale: 'en',
+              },
+            }),
+          })
+        : route.fallback(),
+    );
+
+    await page.getByRole('button', { name: 'Uložit údaje' }).click();
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Mezitím se profil změnil' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Uložit moje změny' })).toBeEnabled();
+    await expect(page.getByLabel('Ulice a číslo')).toHaveValue('Krátká 3');
     expect(await violations(page)).toEqual([]);
   });
 });
