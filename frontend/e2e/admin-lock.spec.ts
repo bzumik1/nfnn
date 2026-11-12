@@ -7,6 +7,7 @@ import {
   test,
   unlockAdministration,
 } from './fixtures';
+import { comeBack, leaveTheApp } from './page-visibility';
 
 const REPORT = '/api/admin/donations/report';
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -31,26 +32,6 @@ async function rememberedSession(page: Page): Promise<void> {
   );
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
-}
-
-async function leaveTheApp(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'hidden',
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
-}
-
-async function comeBack(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'visibilityState', {
-      configurable: true,
-      get: () => 'visible',
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
 }
 
 test.describe('Given an administrator whose administration locks on this device', () => {

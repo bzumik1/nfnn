@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor search of pairing a payment, GET /api/admin/donations/donors?query=: a query blank after trimming finds nobody; otherwise every donor record that is not erased whose name, with the Czech accented letters folded to plain ones and lowercased, contains the query folded the same way, or whose variable symbol starts with the trimmed query, both matched literally (a percent sign or an underscore is no wildcard), ordered by name and then donor id, at most 20, each as donorId, name, type, variableSymbol and companyIdentifier. Names are ordered in Czech alphabetical order, as ICU's Czech collation compares them (the server's cs-x-icu, the browser's Intl.Collator('cs')), so Č follows C, Ch follows H and a lower-case initial stands among the upper-case ones; two names the collation finds equal are ordered by their Unicode code points, as PostgreSQL breaks the tie of a deterministic collation byte by byte.",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links, symbolClaims and receipts) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the donor search of pairing a payment, GET /api/admin/donations/donors?query=: a query blank after trimming finds nobody; otherwise every donor record that is not erased whose name, with the Czech accented letters folded to plain ones and lowercased, contains the query folded the same way, or whose variable symbol starts with the trimmed query, both matched literally (a percent sign or an underscore is no wildcard), ordered by name and then donor id, at most 20, each as donorId, name, type, variableSymbol and companyIdentifier. Names are ordered in Czech alphabetical order, as ICU's Czech collation compares them (the server's cs-x-icu, the browser's Intl.Collator('cs')), so Č follows C, Ch follows H and a lower-case initial stands among the upper-case ones; two names the collation finds equal are ordered by their Unicode code points, as PostgreSQL breaks the tie of a deterministic collation byte by byte. An alias that breaks a tie by id sorts as that id does (CaseRows numbers the rows in the order of the input), so the browser, which compares the aliases, orders as the server does.",
   "cases": [
     {
       "name": "Donor records found by a part of the name without accents or by the start of the symbol, never an erased one",
@@ -996,6 +996,87 @@
             "items": [
               { "donorId": "donor:a2", "name": "Novák Tie", "type": "PERSON", "variableSymbol": "4300000002", "companyIdentifier": null },
               { "donorId": "donor:a1", "name": "Novák Tie", "type": "PERSON", "variableSymbol": "4300000001", "companyIdentifier": null }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Three donor records of one name, by the lower donor id first, whatever the order of their registration",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          { "alias": "dvorak1", "registeredAt": "2026-05-01T10:00:00Z", "erasedAt": null, "name": "Jan Dvořák", "variableSymbol": "7700003003" },
+          { "alias": "dvorak2", "registeredAt": "2026-02-01T10:00:00Z", "erasedAt": null, "name": "Jan Dvořák", "variableSymbol": "7700003002" },
+          {
+            "alias": "dvorak3",
+            "registeredAt": "2026-08-01T10:00:00Z",
+            "erasedAt": null,
+            "name": "Jan Dvořák",
+            "type": "COMPANY",
+            "companyIdentifier": "27278794",
+            "variableSymbol": "7700003001"
+          }
+        ],
+        "payments": [],
+        "donations": [],
+        "chunks": {
+          "donations/donor-records:2026-02": [
+            {
+              "donorId": "donor:dvorak2",
+              "name": "Jan Dvořák",
+              "type": "PERSON",
+              "variableSymbol": "7700003002",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-02-01T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-05": [
+            {
+              "donorId": "donor:dvorak1",
+              "name": "Jan Dvořák",
+              "type": "PERSON",
+              "variableSymbol": "7700003003",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-05-01T10:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-08": [
+            {
+              "donorId": "donor:dvorak3",
+              "name": "Jan Dvořák",
+              "type": "COMPANY",
+              "variableSymbol": "7700003001",
+              "companyIdentifier": "27278794",
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-08-01T10:00:00Z",
+              "erasedAt": null
+            }
+          ]
+        },
+        "queries": [{ "query": "dvorak" }, { "query": "Jan Dvořák" }]
+      },
+      "expected": {
+        "answers": [
+          {
+            "items": [
+              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003003", "companyIdentifier": null },
+              { "donorId": "donor:dvorak2", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003002", "companyIdentifier": null },
+              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003001", "companyIdentifier": "27278794" }
+            ]
+          },
+          {
+            "items": [
+              { "donorId": "donor:dvorak1", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003003", "companyIdentifier": null },
+              { "donorId": "donor:dvorak2", "name": "Jan Dvořák", "type": "PERSON", "variableSymbol": "7700003002", "companyIdentifier": null },
+              { "donorId": "donor:dvorak3", "name": "Jan Dvořák", "type": "COMPANY", "variableSymbol": "7700003001", "companyIdentifier": "27278794" }
             ]
           }
         ]

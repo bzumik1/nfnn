@@ -36,6 +36,7 @@ public final class CaseRows {
     private final List<Gift> donations = new ArrayList<>();
     private final List<Link> links = new ArrayList<>();
     private final List<Claim> claims = new ArrayList<>();
+    private final List<Receipt> receipts = new ArrayList<>();
     private final Map<String, UUID> ids = new LinkedHashMap<>();
 
     private CaseRows(String now) {
@@ -52,13 +53,17 @@ public final class CaseRows {
                 optional(payment.get("counterpartyAccount")), optional(payment.get("counterpartyName")), optional(payment.get("messageForRecipient")))));
         input.get("donations").forEach(gift -> rows.donations.add(new Gift(gift.get("donor").asString(), optional(gift.get("payment")),
                 gift.get("receivedOn").asString(), gift.get("amountMinor").asLong(), gift.get("status").asString(), gift.get("source").asString(),
-                gift.get("purpose").asString(), optional(gift.get("pairedBy")), optional(gift.get("bankAccount")), optional(gift.get("symbolClaim")))));
+                gift.get("purpose").asString(), optional(gift.get("pairedBy")), optional(gift.get("bankAccount")), optional(gift.get("symbolClaim")),
+                optional(gift.get("recordedAt")))));
         each(input.get("links"), link -> rows.links.add(new Link(link.get("alias").asString(), link.get("donor").asString(),
                 link.get("accountNumber").asString(), link.get("status").asString(), link.get("learnedFrom").asString(), link.get("learnedAt").asString(),
                 link.get("validFrom").asString(), optional(link.get("validTo")))));
         each(input.get("symbolClaims"), claim -> rows.claims.add(new Claim(claim.get("alias").asString(), claim.get("donor").asString(),
                 claim.get("accountNumber").asString(), claim.get("variableSymbol").asString(), claim.get("answer").asString(),
                 claim.get("answeredAt").asString())));
+        each(input.get("receipts"), receipt -> rows.receipts.add(new Receipt(receipt.get("alias").asString(), receipt.get("donor").asString(),
+                receipt.get("kind").asString(), optionalNumber(receipt.get("year")), optionalNumber(receipt.get("donation")),
+                receipt.get("issuedAt").asString())));
         rows.assignIds();
         return rows;
     }
@@ -93,12 +98,43 @@ public final class CaseRows {
         return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asString());
     }
 
+    private static Optional<Integer> optionalNumber(JsonNode value) {
+        return value == null || value.isNull() ? Optional.empty() : Optional.of(value.asInt());
+    }
+
+    private static boolean yearly(String kind) {
+        return switch (kind) {
+            case "YEARLY" -> true;
+            case "SINGLE" -> false;
+            default -> throw new IllegalArgumentException("A receipt of a case is YEARLY or SINGLE, not " + kind);
+        };
+    }
+
     public UUID donorId(String alias) {
         return ids.get("donor:" + alias);
     }
 
     public UUID donationId(int position) {
         return ids.get("donation:" + position);
+    }
+
+    public List<ReceiptToIssue> receiptsToIssue() {
+        for (int next = 1; next < receipts.size(); next++) {
+            if (Instant.parse(receipts.get(next).issuedAt()).isBefore(Instant.parse(receipts.get(next - 1).issuedAt()))) {
+                throw new IllegalArgumentException("The receipts of a case are listed in the order they are issued, but " + receipts.get(next).alias()
+                        + " is issued before " + receipts.get(next - 1).alias());
+            }
+        }
+        return receipts.stream().map(receipt -> new ReceiptToIssue(receipt.alias(), donorId(receipt.donor()), yearly(receipt.kind()),
+                receipt.year(), receipt.donation().map(this::donationId), Instant.parse(receipt.issuedAt()))).toList();
+    }
+
+    public void issued(ReceiptToIssue receipt, UUID id) {
+        ids.put("receipt:" + receipt.alias(), id);
+    }
+
+    public Instant now() {
+        return Instant.parse(now);
     }
 
     public JsonNode aliased(JsonNode answer) {
@@ -252,7 +288,7 @@ public final class CaseRows {
                     .param("pairedBy", gift.pairedBy().orElse(gift.payment().isPresent() ? "VARIABLE_SYMBOL" : null))
                     .param("link", gift.bankAccount().map(alias -> ids.get("link:" + alias)).orElse(null))
                     .param("claim", gift.symbolClaim().map(alias -> ids.get("claim:" + alias)).orElse(null))
-                    .param("recorded", timestamp(gift.receivedOn() + "T12:00:00Z"))
+                    .param("recorded", timestamp(gift.recordedAt().orElse(gift.receivedOn() + "T12:00:00Z")))
                     .param("purpose", gift.purpose())
                     .update();
         }
@@ -298,6 +334,7 @@ public final class CaseRows {
             gift.pairedBy().ifPresent(method -> node.put("pairedBy", method));
             gift.bankAccount().ifPresent(alias -> node.put("bankAccount", alias));
             gift.symbolClaim().ifPresent(alias -> node.put("symbolClaim", alias));
+            gift.recordedAt().ifPresent(at -> node.put("recordedAt", at));
             return node;
         }));
         if (!links.isEmpty()) {
@@ -323,6 +360,18 @@ public final class CaseRows {
                 node.put("variableSymbol", claim.variableSymbol());
                 node.put("answer", claim.answer());
                 node.put("answeredAt", claim.answeredAt());
+                return node;
+            }));
+        }
+        if (!receipts.isEmpty()) {
+            input.set("receipts", array(receipts, receipt -> {
+                ObjectNode node = NODES.objectNode();
+                node.put("alias", receipt.alias());
+                node.put("donor", receipt.donor());
+                node.put("kind", receipt.kind());
+                receipt.year().ifPresent(year -> node.put("year", year));
+                receipt.donation().ifPresent(position -> node.put("donation", position));
+                node.put("issuedAt", receipt.issuedAt());
                 return node;
             }));
         }
@@ -367,7 +416,7 @@ public final class CaseRows {
     }
 
     private record Gift(String donor, Optional<String> payment, String receivedOn, long amountMinor, String status, String source, String purpose,
-                        Optional<String> pairedBy, Optional<String> bankAccount, Optional<String> symbolClaim) {
+                        Optional<String> pairedBy, Optional<String> bankAccount, Optional<String> symbolClaim, Optional<String> recordedAt) {
     }
 
     private record Link(String alias, String donor, String accountNumber, String status, String learnedFrom, String learnedAt, String validFrom,
@@ -375,5 +424,11 @@ public final class CaseRows {
     }
 
     private record Claim(String alias, String donor, String accountNumber, String variableSymbol, String answer, String answeredAt) {
+    }
+
+    private record Receipt(String alias, String donor, String kind, Optional<Integer> year, Optional<Integer> donation, String issuedAt) {
+    }
+
+    public record ReceiptToIssue(String alias, UUID donor, boolean yearly, Optional<Integer> year, Optional<UUID> donation, Instant issuedAt) {
     }
 }

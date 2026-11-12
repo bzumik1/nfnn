@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "The donor's sync manifest and chunks that GET /api/donations/me/sync and GET /api/donations/me/sync/chunks?ids= answer to input.donor, joined: each chunk of the manifest with its id, rowsSha256 and count, and the rows the chunks endpoint answers for it. Only the donations chunks are specified here (the rows hold donors, payments and donations; receipts, bank accounts and symbol claims come from features). A chunk donations:<year> holds the donor's donations received in that year, refunded ones too, newest first (receivedAt, then the newer record, then the higher id), and a year without any has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON (members sorted by name, no whitespace, integers only), so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, donation:<n> for the n-th donation of input.donations); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The summary is the donor-summary computation (count, total, last day and per year over the RECEIVED donations), the receipt years (yearlyReceiptsAvailableThrough is the last completed year in Prague at now, receiptsAvailableFrom the setting RECEIPT_FIRST_YEAR) and bankDataAsOf, the last successful bank import (input.bankDataAsOf, written as bank_import_state.last_succeeded_at, or no import yet). The rows hold only the columns the computation reads: a runner fills every other column with any valid value; a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
+  "logic": "The donor's sync manifest and chunks that GET /api/donations/me/sync and GET /api/donations/me/sync/chunks?ids= answer to input.donor, joined: each chunk of the manifest with its id, rowsSha256 and count, and the rows the chunks endpoint answers for it. Every chunk the manifest lists is specified. Besides donations:<year> (below), a case whose rows hold them has receipts:<year>, the donor's receipts of the year a receipt certifies (a single receipt by its gift's year), newest issued first, each with its state and the receipt the issuer froze, so a change to a receipt text rewrites these rows; bank-accounts, the donor's bank account links; and symbol-claims, the donor's answers about older symbols. Input.receipts names the receipts issued over these rows; the backend runner issues them in that order through the donor's own issuer with the server clock at each issuedAt (the signing key and the signatory chosen first), so their numbers and states are the real issuer's and a yearly receipt replaces the single receipts of its gifts. A chunk donations:<year> holds the donor's donations received in that year, refunded ones too, newest first (receivedAt, then the newer record, then the higher id), and a year without any has no chunk; chunks are listed by id. rowsSha256 is the SHA-256 (lowercase hex) of the UTF-8 bytes of the rows array written as RFC 8785 canonical JSON (members sorted by name, no whitespace, integers only), so each side computes it from the rows of the case itself. Ids are the aliases of the case's rows (donor:<alias>, donation:<n> for the n-th donation of input.donations); a runner replaces the real ids of its answer by them and computes rowsSha256 over the rows as aliased, after checking that the answer's own rowsSha256 is that SHA-256 of the rows it answered. The summary is the donor-summary computation (count, total, last day and per year over the RECEIVED donations), the receipt years (yearlyReceiptsAvailableThrough is the last completed year in Prague at now, receiptsAvailableFrom the setting RECEIPT_FIRST_YEAR) and bankDataAsOf, the last successful bank import (input.bankDataAsOf, written as bank_import_state.last_succeeded_at, or no import yet). The rows hold only the columns the computation reads: a runner fills every other column with any valid value; a donation with a payment is paired by its variable symbol, one without is recorded by hand.",
   "cases": [
     {
       "name": "a donor without gifts",
@@ -544,6 +544,697 @@
           "bankDataAsOf": null
         },
         "chunks": []
+      }
+    },
+    {
+      "name": "a gift paired through a bank account, one by a confirmed older symbol, a single receipt and the yearly receipt that replaced it, and a single receipt of the new year",
+      "input": {
+        "now": "2027-02-10T09:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-10T08:00:00Z",
+            "erasedAt": null,
+            "name": "Jana Nováková",
+            "variableSymbol": "7700004001"
+          }
+        ],
+        "payments": [
+          {
+            "alias": "p1",
+            "bookedOn": "2026-02-01",
+            "amountMinor": 100,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "7700004001",
+            "counterpartyAccount": "1234567/0800",
+            "messageForRecipient": "OVERENI UCTU"
+          },
+          {
+            "alias": "p2",
+            "bookedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "unpairedByAdminAt": null,
+            "counterpartyAccount": "1234567/0800"
+          },
+          {
+            "alias": "p3",
+            "bookedOn": "2026-05-11",
+            "amountMinor": 30000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "123",
+            "counterpartyAccount": "1234567/0800"
+          },
+          {
+            "alias": "p4",
+            "bookedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "unpairedByAdminAt": null,
+            "variableSymbol": "7700004001"
+          }
+        ],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": "p1",
+            "receivedOn": "2026-02-01",
+            "amountMinor": 100,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "ACCOUNT_VERIFICATION"
+          },
+          {
+            "donor": "jana",
+            "payment": "p2",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "SENDER_ACCOUNT",
+            "bankAccount": "ucet"
+          },
+          {
+            "donor": "jana",
+            "payment": "p3",
+            "receivedOn": "2026-05-11",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "pairedBy": "CONFIRMED_SYMBOL",
+            "bankAccount": "ucet",
+            "symbolClaim": "stary"
+          },
+          {
+            "donor": "jana",
+            "payment": "p4",
+            "receivedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "links": [
+          {
+            "alias": "ucet",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "status": "ACTIVE",
+            "learnedFrom": "p1",
+            "learnedAt": "2026-02-01T12:00:00Z",
+            "validFrom": "2026-02-01",
+            "validTo": null
+          }
+        ],
+        "symbolClaims": [
+          {
+            "alias": "stary",
+            "donor": "jana",
+            "accountNumber": "1234567/0800",
+            "variableSymbol": "123",
+            "answer": "CONFIRMED",
+            "answeredAt": "2026-05-10T09:00:00Z"
+          }
+        ],
+        "receipts": [
+          {
+            "alias": "brezen",
+            "donor": "jana",
+            "kind": "SINGLE",
+            "donation": 2,
+            "issuedAt": "2027-01-05T09:00:00Z"
+          },
+          {
+            "alias": "rok",
+            "donor": "jana",
+            "kind": "YEARLY",
+            "year": 2026,
+            "issuedAt": "2027-01-10T08:00:00Z"
+          },
+          {
+            "alias": "leden",
+            "donor": "jana",
+            "kind": "SINGLE",
+            "donation": 4,
+            "issuedAt": "2027-02-01T08:00:00Z"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026,
+        "bankDataAsOf": "2027-02-10T08:00:00Z"
+      },
+      "expected": {
+        "subject": "donor:jana",
+        "summary": {
+          "totalAmountMinor": 90100,
+          "currency": "CZK",
+          "count": 4,
+          "lastReceivedAt": "2027-01-15",
+          "byYear": [
+            {
+              "year": 2027,
+              "count": 1,
+              "totalAmountMinor": 10000
+            },
+            {
+              "year": 2026,
+              "count": 3,
+              "totalAmountMinor": 80100
+            }
+          ],
+          "yearlyReceiptsAvailableThrough": 2026,
+          "receiptsAvailableFrom": 2026,
+          "bankDataAsOf": "2027-02-10T08:00:00Z"
+        },
+        "chunks": [
+          {
+            "id": "bank-accounts",
+            "rowsSha256": "82279db75578fd97f7c70b167a3eb574d7b6357aca93599cfbe373e7d72ccf80",
+            "count": 1,
+            "rows": [
+              {
+                "id": "link:ucet",
+                "accountNumber": "1234567/0800",
+                "status": "ACTIVE",
+                "verifiedOn": "2026-02-01",
+                "connectedFrom": "2026-02-01",
+                "disconnectedOn": null,
+                "shared": false,
+                "pairingExcluded": false,
+                "verificationPaymentOn": "2026-02-01",
+                "symbolOffer": null
+              }
+            ]
+          },
+          {
+            "id": "donations:2026",
+            "rowsSha256": "a3bd07b1369881d10be6b5a14150dade67e762cb7ae924507f911ff344dfbfb6",
+            "count": 3,
+            "rows": [
+              {
+                "id": "donation:3",
+                "receivedAt": "2026-05-11",
+                "amountMinor": 30000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "CONFIRMED_SYMBOL",
+                "bankAccountId": "link:ucet",
+                "symbolClaimId": "claim:stary"
+              },
+              {
+                "id": "donation:2",
+                "receivedAt": "2026-03-02",
+                "amountMinor": 50000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "SENDER_ACCOUNT",
+                "bankAccountId": "link:ucet",
+                "symbolClaimId": null
+              },
+              {
+                "id": "donation:1",
+                "receivedAt": "2026-02-01",
+                "amountMinor": 100,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "ACCOUNT_VERIFICATION",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null
+              }
+            ]
+          },
+          {
+            "id": "donations:2027",
+            "rowsSha256": "7aea073d80e5456cf3b064026fd7cdcff6cfe307f95e2515b14d41abee6c16d7",
+            "count": 1,
+            "rows": [
+              {
+                "id": "donation:4",
+                "receivedAt": "2027-01-15",
+                "amountMinor": 10000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "BANK_TRANSFER",
+                "purpose": "GENERAL",
+                "pairedBy": "VARIABLE_SYMBOL",
+                "bankAccountId": null,
+                "symbolClaimId": null
+              }
+            ]
+          },
+          {
+            "id": "receipts:2026",
+            "rowsSha256": "d429c79ef8ddbaf87f135b7ace74a1182a1eba208722a8c4f4c155fcd52fa1c6",
+            "count": 2,
+            "rows": [
+              {
+                "id": "receipt:rok",
+                "status": "ACTIVE",
+                "kind": "YEARLY",
+                "number": "2027-000002",
+                "donationId": null,
+                "year": 2026,
+                "issuedAt": "2027-01-10T08:00:00Z",
+                "supersededAt": null,
+                "receipt": {
+                  "schemaVersion": 1,
+                  "kind": "YEARLY",
+                  "number": "2027-000002",
+                  "issuedOn": "2027-01-10",
+                  "locale": "cs",
+                  "year": 2026,
+                  "replaces": null,
+                  "foundation": {
+                    "name": "Nová naděje - nadační fond",
+                    "companyIdentifier": "27278794",
+                    "address": {
+                      "street": "Jiráskova 436",
+                      "city": "Nový Bor",
+                      "postalCode": "473 01"
+                    },
+                    "registryCourt": "Krajský soud v Ústí nad Labem",
+                    "registryFile": "N 78",
+                    "bankAccountNumber": "5544332217/2010",
+                    "issuePlace": "V Novém Boru",
+                    "issuePlaceEn": "Nový Bor"
+                  },
+                  "donor": {
+                    "type": "PERSON",
+                    "name": "Jana Nováková",
+                    "companyIdentifier": null,
+                    "address": {
+                      "street": "Dlouhá 12",
+                      "city": "Ústí nad Labem",
+                      "postalCode": "400 01"
+                    },
+                    "variableSymbol": "7700004001"
+                  },
+                  "gifts": [
+                    {
+                      "receivedOn": "2026-02-01",
+                      "amountMinor": 100,
+                      "source": "BANK_TRANSFER"
+                    },
+                    {
+                      "receivedOn": "2026-03-02",
+                      "amountMinor": 50000,
+                      "source": "BANK_TRANSFER"
+                    },
+                    {
+                      "receivedOn": "2026-05-11",
+                      "amountMinor": 30000,
+                      "source": "BANK_TRANSFER"
+                    }
+                  ],
+                  "total": {
+                    "amountMinor": 80100,
+                    "currency": "CZK"
+                  },
+                  "signatory": {
+                    "name": "Josef Vzorový",
+                    "role": "předseda správní rady",
+                    "signatureImage": null,
+                    "portraitImage": null
+                  },
+                  "texts": {
+                    "cs": {
+                      "receipt.declaration.single": "{0} potvrzuje, že od výše uvedeného dárce přijal dne {1} peněžitý dar ve výši {2}, poukázaný bankovním převodem na účet nadačního fondu č. {3}. Dar byl poskytnut bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty daru od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.declaration.yearly": "{0} potvrzuje, že od výše uvedeného dárce přijal v roce {1} peněžité dary uvedené v tomto potvrzení v celkové výši {2}, poukázané bankovním převodem na účet nadačního fondu č. {3}. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.donee": "Obdarovaný",
+                      "receipt.donee.companyIdentifier": "IČO: {0}",
+                      "receipt.donee.name": "Název: {0}",
+                      "receipt.donee.registry": "zapsaný v nadačním rejstříku, spisová značka {0}, rejstříkový soud: {1}",
+                      "receipt.donee.seat": "Sídlo: {0}",
+                      "receipt.donor": "Dárce",
+                      "receipt.donor.company.identifier": "IČO: {0}",
+                      "receipt.donor.company.name": "Název: {0}",
+                      "receipt.donor.company.seat": "Sídlo: {0}",
+                      "receipt.donor.person.name": "Jméno a příjmení: {0}",
+                      "receipt.donor.person.residence": "Bydliště: {0}",
+                      "receipt.donor.variableSymbol": "Variabilní symbol: {0}",
+                      "receipt.footer": "{0} · IČO {1} · {2} · Číslo potvrzení: {3}",
+                      "receipt.gift.account": "Účet příjemce: {0}",
+                      "receipt.gift.amount": "Částka: {0}",
+                      "receipt.gift.form.BANK_TRANSFER": "Forma daru: peněžitý dar, bankovní převod",
+                      "receipt.gift.form.MANUAL": "Forma daru: peněžitý dar",
+                      "receipt.gift.receivedOn": "Datum připsání na účet: {0}",
+                      "receipt.issuedAt": "{0} dne {1}",
+                      "receipt.issuedOn": "Datum vystavení: {0}",
+                      "receipt.number": "Číslo potvrzení: {0}",
+                      "receipt.portrait.alt": "Fotografie podepisujícího",
+                      "receipt.replaces": "Toto potvrzení nahrazuje potvrzení č. {0} ze dne {1}, které tímto pozbývá platnosti.",
+                      "receipt.signature.alt": "Podpis",
+                      "receipt.signature.for": "Za {0}:",
+                      "receipt.table.amount": "Částka",
+                      "receipt.table.receivedOn": "Datum připsání na účet",
+                      "receipt.title.single": "Potvrzení o přijetí daru",
+                      "receipt.title.yearly": "Potvrzení o přijatých darech za rok {0}",
+                      "receipt.verification.alt": "QR kód pro ověření potvrzení na nfnn.cz/overit",
+                      "receipt.verification.heading": "Ověření potvrzení",
+                      "receipt.verification.text": "Načtěte kód telefonem a uvidíte, co fond podepsal.",
+                      "receipt.yearly.count": "Počet darů: {0}",
+                      "receipt.yearly.total": "Celkem darováno v roce {0}: {1}"
+                    },
+                    "en": null
+                  },
+                  "verification": {
+                    "keyId": "21fe31df",
+                    "qrText": "https://nfnn.cz/overit#10031885061882086400002364631673359209362749803925593342914531147539545328760243713384550647800949680034347409174974475027413162624115301306814435670848562818854817195702943823140490768644713099622386211084106623650894449827070117767487262672061263161914501292186631024724421573020852427464640505820314989762835183665466111203217604021223373006"
+                  }
+                }
+              },
+              {
+                "id": "receipt:brezen",
+                "status": "REPLACED",
+                "kind": "SINGLE",
+                "number": "2027-000001",
+                "donationId": "donation:2",
+                "year": null,
+                "issuedAt": "2027-01-05T09:00:00Z",
+                "supersededAt": "2027-01-10T08:00:00Z",
+                "receipt": {
+                  "schemaVersion": 1,
+                  "kind": "SINGLE",
+                  "number": "2027-000001",
+                  "issuedOn": "2027-01-05",
+                  "locale": "cs",
+                  "year": null,
+                  "replaces": null,
+                  "foundation": {
+                    "name": "Nová naděje - nadační fond",
+                    "companyIdentifier": "27278794",
+                    "address": {
+                      "street": "Jiráskova 436",
+                      "city": "Nový Bor",
+                      "postalCode": "473 01"
+                    },
+                    "registryCourt": "Krajský soud v Ústí nad Labem",
+                    "registryFile": "N 78",
+                    "bankAccountNumber": "5544332217/2010",
+                    "issuePlace": "V Novém Boru",
+                    "issuePlaceEn": "Nový Bor"
+                  },
+                  "donor": {
+                    "type": "PERSON",
+                    "name": "Jana Nováková",
+                    "companyIdentifier": null,
+                    "address": {
+                      "street": "Dlouhá 12",
+                      "city": "Ústí nad Labem",
+                      "postalCode": "400 01"
+                    },
+                    "variableSymbol": "7700004001"
+                  },
+                  "gifts": [
+                    {
+                      "receivedOn": "2026-03-02",
+                      "amountMinor": 50000,
+                      "source": "BANK_TRANSFER"
+                    }
+                  ],
+                  "total": {
+                    "amountMinor": 50000,
+                    "currency": "CZK"
+                  },
+                  "signatory": {
+                    "name": "Josef Vzorový",
+                    "role": "předseda správní rady",
+                    "signatureImage": null,
+                    "portraitImage": null
+                  },
+                  "texts": {
+                    "cs": {
+                      "receipt.declaration.single": "{0} potvrzuje, že od výše uvedeného dárce přijal dne {1} peněžitý dar ve výši {2}, poukázaný bankovním převodem na účet nadačního fondu č. {3}. Dar byl poskytnut bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty daru od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.declaration.yearly": "{0} potvrzuje, že od výše uvedeného dárce přijal v roce {1} peněžité dary uvedené v tomto potvrzení v celkové výši {2}, poukázané bankovním převodem na účet nadačního fondu č. {3}. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.donee": "Obdarovaný",
+                      "receipt.donee.companyIdentifier": "IČO: {0}",
+                      "receipt.donee.name": "Název: {0}",
+                      "receipt.donee.registry": "zapsaný v nadačním rejstříku, spisová značka {0}, rejstříkový soud: {1}",
+                      "receipt.donee.seat": "Sídlo: {0}",
+                      "receipt.donor": "Dárce",
+                      "receipt.donor.company.identifier": "IČO: {0}",
+                      "receipt.donor.company.name": "Název: {0}",
+                      "receipt.donor.company.seat": "Sídlo: {0}",
+                      "receipt.donor.person.name": "Jméno a příjmení: {0}",
+                      "receipt.donor.person.residence": "Bydliště: {0}",
+                      "receipt.donor.variableSymbol": "Variabilní symbol: {0}",
+                      "receipt.footer": "{0} · IČO {1} · {2} · Číslo potvrzení: {3}",
+                      "receipt.gift.account": "Účet příjemce: {0}",
+                      "receipt.gift.amount": "Částka: {0}",
+                      "receipt.gift.form.BANK_TRANSFER": "Forma daru: peněžitý dar, bankovní převod",
+                      "receipt.gift.form.MANUAL": "Forma daru: peněžitý dar",
+                      "receipt.gift.receivedOn": "Datum připsání na účet: {0}",
+                      "receipt.issuedAt": "{0} dne {1}",
+                      "receipt.issuedOn": "Datum vystavení: {0}",
+                      "receipt.number": "Číslo potvrzení: {0}",
+                      "receipt.portrait.alt": "Fotografie podepisujícího",
+                      "receipt.replaces": "Toto potvrzení nahrazuje potvrzení č. {0} ze dne {1}, které tímto pozbývá platnosti.",
+                      "receipt.signature.alt": "Podpis",
+                      "receipt.signature.for": "Za {0}:",
+                      "receipt.table.amount": "Částka",
+                      "receipt.table.receivedOn": "Datum připsání na účet",
+                      "receipt.title.single": "Potvrzení o přijetí daru",
+                      "receipt.title.yearly": "Potvrzení o přijatých darech za rok {0}",
+                      "receipt.verification.alt": "QR kód pro ověření potvrzení na nfnn.cz/overit",
+                      "receipt.verification.heading": "Ověření potvrzení",
+                      "receipt.verification.text": "Načtěte kód telefonem a uvidíte, co fond podepsal.",
+                      "receipt.yearly.count": "Počet darů: {0}",
+                      "receipt.yearly.total": "Celkem darováno v roce {0}: {1}"
+                    },
+                    "en": null
+                  },
+                  "verification": {
+                    "keyId": "21fe31df",
+                    "qrText": "https://nfnn.cz/overit#10031885061882060800001265036642913310690388209476514543559772848973819259524383294369090612903541213313286624563929942809091180401093888439815695440160060107369893539014119430777656897612155357423956599603512807414846066567370993578399838408597526099591033431465134166130146667485721410892379605845854427520216662949633"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "receipts:2027",
+            "rowsSha256": "9aee2a8db10e2f49997270ad96ef4c36609a445db5ad889ceef2737ff53a9cd6",
+            "count": 1,
+            "rows": [
+              {
+                "id": "receipt:leden",
+                "status": "ACTIVE",
+                "kind": "SINGLE",
+                "number": "2027-000003",
+                "donationId": "donation:4",
+                "year": null,
+                "issuedAt": "2027-02-01T08:00:00Z",
+                "supersededAt": null,
+                "receipt": {
+                  "schemaVersion": 1,
+                  "kind": "SINGLE",
+                  "number": "2027-000003",
+                  "issuedOn": "2027-02-01",
+                  "locale": "cs",
+                  "year": null,
+                  "replaces": null,
+                  "foundation": {
+                    "name": "Nová naděje - nadační fond",
+                    "companyIdentifier": "27278794",
+                    "address": {
+                      "street": "Jiráskova 436",
+                      "city": "Nový Bor",
+                      "postalCode": "473 01"
+                    },
+                    "registryCourt": "Krajský soud v Ústí nad Labem",
+                    "registryFile": "N 78",
+                    "bankAccountNumber": "5544332217/2010",
+                    "issuePlace": "V Novém Boru",
+                    "issuePlaceEn": "Nový Bor"
+                  },
+                  "donor": {
+                    "type": "PERSON",
+                    "name": "Jana Nováková",
+                    "companyIdentifier": null,
+                    "address": {
+                      "street": "Dlouhá 12",
+                      "city": "Ústí nad Labem",
+                      "postalCode": "400 01"
+                    },
+                    "variableSymbol": "7700004001"
+                  },
+                  "gifts": [
+                    {
+                      "receivedOn": "2027-01-15",
+                      "amountMinor": 10000,
+                      "source": "BANK_TRANSFER"
+                    }
+                  ],
+                  "total": {
+                    "amountMinor": 10000,
+                    "currency": "CZK"
+                  },
+                  "signatory": {
+                    "name": "Josef Vzorový",
+                    "role": "předseda správní rady",
+                    "signatureImage": null,
+                    "portraitImage": null
+                  },
+                  "texts": {
+                    "cs": {
+                      "receipt.declaration.single": "{0} potvrzuje, že od výše uvedeného dárce přijal dne {1} peněžitý dar ve výši {2}, poukázaný bankovním převodem na účet nadačního fondu č. {3}. Dar byl poskytnut bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty daru od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.declaration.yearly": "{0} potvrzuje, že od výše uvedeného dárce přijal v roce {1} peněžité dary uvedené v tomto potvrzení v celkové výši {2}, poukázané bankovním převodem na účet nadačního fondu č. {3}. Dary byly poskytnuty bezúplatně a bez jakéhokoli protiplnění na účely sociální, zdravotnické, charitativní a na podporu a ochranu mládeže ve smyslu § 15 odst. 1 a § 20 odst. 8 zákona č. 586/1992 Sb., o daních z příjmů, ve znění pozdějších předpisů, a to v souladu s účelem nadačního fondu. Potvrzení se vydává na žádost dárce pro účely uplatnění odpočtu hodnoty darů od základu daně podle § 15 odst. 1 (poplatník daně z příjmů fyzických osob) nebo § 20 odst. 8 (poplatník daně z příjmů právnických osob) uvedeného zákona.",
+                      "receipt.donee": "Obdarovaný",
+                      "receipt.donee.companyIdentifier": "IČO: {0}",
+                      "receipt.donee.name": "Název: {0}",
+                      "receipt.donee.registry": "zapsaný v nadačním rejstříku, spisová značka {0}, rejstříkový soud: {1}",
+                      "receipt.donee.seat": "Sídlo: {0}",
+                      "receipt.donor": "Dárce",
+                      "receipt.donor.company.identifier": "IČO: {0}",
+                      "receipt.donor.company.name": "Název: {0}",
+                      "receipt.donor.company.seat": "Sídlo: {0}",
+                      "receipt.donor.person.name": "Jméno a příjmení: {0}",
+                      "receipt.donor.person.residence": "Bydliště: {0}",
+                      "receipt.donor.variableSymbol": "Variabilní symbol: {0}",
+                      "receipt.footer": "{0} · IČO {1} · {2} · Číslo potvrzení: {3}",
+                      "receipt.gift.account": "Účet příjemce: {0}",
+                      "receipt.gift.amount": "Částka: {0}",
+                      "receipt.gift.form.BANK_TRANSFER": "Forma daru: peněžitý dar, bankovní převod",
+                      "receipt.gift.form.MANUAL": "Forma daru: peněžitý dar",
+                      "receipt.gift.receivedOn": "Datum připsání na účet: {0}",
+                      "receipt.issuedAt": "{0} dne {1}",
+                      "receipt.issuedOn": "Datum vystavení: {0}",
+                      "receipt.number": "Číslo potvrzení: {0}",
+                      "receipt.portrait.alt": "Fotografie podepisujícího",
+                      "receipt.replaces": "Toto potvrzení nahrazuje potvrzení č. {0} ze dne {1}, které tímto pozbývá platnosti.",
+                      "receipt.signature.alt": "Podpis",
+                      "receipt.signature.for": "Za {0}:",
+                      "receipt.table.amount": "Částka",
+                      "receipt.table.receivedOn": "Datum připsání na účet",
+                      "receipt.title.single": "Potvrzení o přijetí daru",
+                      "receipt.title.yearly": "Potvrzení o přijatých darech za rok {0}",
+                      "receipt.verification.alt": "QR kód pro ověření potvrzení na nfnn.cz/overit",
+                      "receipt.verification.heading": "Ověření potvrzení",
+                      "receipt.verification.text": "Načtěte kód telefonem a uvidíte, co fond podepsal.",
+                      "receipt.yearly.count": "Počet darů: {0}",
+                      "receipt.yearly.total": "Celkem darováno v roce {0}: {1}"
+                    },
+                    "en": null
+                  },
+                  "verification": {
+                    "keyId": "21fe31df",
+                    "qrText": "https://nfnn.cz/overit#100318850618820608000034645128832973106903882094765145435597728489738192595243832943690906129035412133132866245639299428090911804010938884398156956490555040618465226142358644351512287421550106771979699703332925515988937940424794135013877635508322156670179009015342297749577535000148949290571617593860554744108460288"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "symbol-claims",
+            "rowsSha256": "fe2d24de79e2a84ffdb83a105f670cf431e9b7a32a80381385ce4b4a47ce6c99",
+            "count": 1,
+            "rows": [
+              {
+                "id": "claim:stary",
+                "accountNumber": "1234567/0800",
+                "variableSymbol": "123",
+                "answer": "CONFIRMED"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "two gifts of one day, the one with the lower id recorded later, so the later record comes first",
+      "input": {
+        "now": "2026-10-20T10:00:00Z",
+        "donors": [
+          {
+            "alias": "jana",
+            "registeredAt": "2026-01-15T10:00:00Z",
+            "erasedAt": null
+          }
+        ],
+        "payments": [],
+        "donations": [
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 20000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL",
+            "recordedAt": "2026-04-10T15:30:00.000001Z"
+          },
+          {
+            "donor": "jana",
+            "payment": null,
+            "receivedOn": "2026-04-10",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "MANUAL",
+            "purpose": "GENERAL"
+          }
+        ],
+        "donor": "jana",
+        "firstReceiptYear": 2026,
+        "bankDataAsOf": null
+      },
+      "expected": {
+        "subject": "donor:jana",
+        "summary": {
+          "totalAmountMinor": 30000,
+          "currency": "CZK",
+          "count": 2,
+          "lastReceivedAt": "2026-04-10",
+          "byYear": [
+            {
+              "year": 2026,
+              "count": 2,
+              "totalAmountMinor": 30000
+            }
+          ],
+          "yearlyReceiptsAvailableThrough": 2025,
+          "receiptsAvailableFrom": 2026,
+          "bankDataAsOf": null
+        },
+        "chunks": [
+          {
+            "id": "donations:2026",
+            "rowsSha256": "91648f0b8494aba17b307d4d8bcfe5dac9b1087442daf7e95b96cd74631243d3",
+            "count": 2,
+            "rows": [
+              {
+                "id": "donation:1",
+                "receivedAt": "2026-04-10",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "MANUAL",
+                "purpose": "GENERAL",
+                "pairedBy": null,
+                "bankAccountId": null,
+                "symbolClaimId": null
+              },
+              {
+                "id": "donation:2",
+                "receivedAt": "2026-04-10",
+                "amountMinor": 10000,
+                "currency": "CZK",
+                "status": "RECEIVED",
+                "source": "MANUAL",
+                "purpose": "GENERAL",
+                "pairedBy": null,
+                "bankAccountId": null,
+                "symbolClaimId": null
+              }
+            ]
+          }
+        ]
       }
     }
   ]

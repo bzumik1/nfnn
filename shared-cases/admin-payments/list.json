@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links and symbolClaims) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the payment list of /sprava/platby, GET /api/admin/donations/payments: pairing unpaired (the default) lists every bank payment without a gift, whatever its unpairedByAdminAt, with year null and availableYears empty; pairing paired lists the payments of the gifts received in the requested year, or, without a year, in every year from the oldest to the newest year any gift was received (a manual gift without a payment counts for the years, never as an item), limited further by from and to, with year the requested one or null and availableYears every year with a gift, newest first. A paired item carries its gift (id, donorId, donorName, pairedBy, status, recordedAt, receiptIssued: an issued receipt, active or not, names the gift), refunded ones included. Every item keeps the payment row of the copy as it is, its version too. Filters: from and to bound the booking day; donor keeps the items whose gift is that donor's; query, trimmed, accents removed (Unicode decomposition without combining marks) and lowercased, keeps an item when the bank transaction id, the variable symbol, the counterparty account, the counterparty name, the message or the donor's name contains it, or when the query without spaces, with an optional kc or czk, reads as crowns with up to two decimals (comma or point) equal to the amount. Items are ordered by booking day, newest first, then by the higher bank transaction id; total counts every matching item and offset and limit cut the page. A payment of a gift of an erased donor reaches the device without the payer's account, name and message and without the donor's receipts (Jakub 2026-11-05), so it is left out of these cases: online the browser asks the server for a paired list that would hold one, and offline it shows the payment as the copy holds it. Whether a receipt was issued for a gift (receiptIssued) is specified only by the browser's tests until the cases can hold issued receipts. A text is trimmed as Java's trim() trims (only characters up to U+0020) and is blank as Java's isBlank() says.",
+  "logic": "Each case states database rows as in sync/admin-manifest.json (input: now, donors, payments, donations and, where the computation reads them, links, symbolClaims and receipts) and, in input.chunks, the rows of every chunk of the administration's device copy the computation reads, keyed <part>/<chunk id> as the device stores them (donations/payments:<yyyy-mm>, donations/donations:<yyyy-mm>, donations/donor-records:<yyyy-mm>, donations/links:<yyyy-mm>, donations/symbol-claims, donations/receipts:<year>, donors/accounts:<yyyy-mm>), with ids aliased as CaseRows names them. The backend runner writes the rows, checks that the sync endpoints answer exactly input.chunks (and input.summary where given), then asks the endpoint for every query of input.queries; the browser runner computes each answer from input.chunks alone. Both compare the whole list of answers with expected.answers. The computation is the payment list of /sprava/platby, GET /api/admin/donations/payments: pairing unpaired (the default) lists every bank payment without a gift, whatever its unpairedByAdminAt, with year null and availableYears empty; pairing paired lists the payments of the gifts received in the requested year, or, without a year, in every year from the oldest to the newest year any gift was received (a manual gift without a payment counts for the years, never as an item), limited further by from and to, with year the requested one or null and availableYears every year with a gift, newest first. A paired item carries its gift (id, donorId, donorName, pairedBy, status, recordedAt, receiptIssued: an issued receipt, active or not, names the gift), refunded ones included. Every item keeps the payment row of the copy as it is, its version too. Filters: from and to bound the booking day; donor keeps the items whose gift is that donor's; query, trimmed, accents removed (Unicode decomposition without combining marks) and lowercased, keeps an item when the bank transaction id, the variable symbol, the counterparty account, the counterparty name, the message or the donor's name contains it, or when the query without spaces, with an optional kc or czk, reads as crowns with up to two decimals (comma or point) equal to the amount. Items are ordered by booking day, newest first, then by the higher bank transaction id; total counts every matching item and offset and limit cut the page. A payment of a gift of an erased donor reaches the device without the payer's account, name and message and without the donor's receipts (Jakub 2026-11-05), so it is left out of these cases: online the browser asks the server for a paired list that would hold one, and offline it shows the payment as the copy holds it. Receipts come from the issuer: input.receipts names the receipts issued over these rows; the backend runner issues them in that order through the donor's own issuer with the server clock at each issuedAt (the signing key and the signatory chosen first), so their numbers and states are the real issuer's and a yearly receipt replaces the single receipts of its gifts; a yearly receipt names no gift, so receiptIssued stays false for the gifts it lists unless a single receipt named them. A text is trimmed as Java's trim() trims (only characters up to U+0020) and is blank as Java's isBlank() says.",
   "cases": [
     {
       "name": "Unpaired and paired payments searched by name, message, amount, symbol, days, donor, year and page",
@@ -1427,6 +1427,606 @@
                 "accountVerification": false,
                 "donation": null,
                 "version": "856196747d29ebe8"
+              }
+            ],
+            "total": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Receipts of two years mark the gifts they name, a replaced single receipt included, and a year whose only gift was refunded is still offered",
+      "input": {
+        "now": "2027-02-10T09:00:00Z",
+        "donors": [
+          { "alias": "eva", "registeredAt": "2026-01-10T08:00:00Z", "erasedAt": null, "name": "Eva Horáková", "variableSymbol": "7700002001" },
+          { "alias": "petr", "registeredAt": "2025-05-02T08:00:00Z", "erasedAt": null, "name": "Petr Malý", "variableSymbol": "7700002002" }
+        ],
+        "payments": [
+          { "alias": "p1", "bookedOn": "2026-03-02", "amountMinor": 50000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p2", "bookedOn": "2026-03-02", "amountMinor": 30000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p3", "bookedOn": "2026-11-20", "amountMinor": 20000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p4", "bookedOn": "2027-01-15", "amountMinor": 10000, "unpairedByAdminAt": null, "variableSymbol": "7700002001" },
+          { "alias": "p5", "bookedOn": "2025-06-10", "amountMinor": 15000, "unpairedByAdminAt": null, "variableSymbol": "7700002002" }
+        ],
+        "donations": [
+          {
+            "donor": "eva",
+            "payment": "p1",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 50000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL",
+            "recordedAt": "2026-03-02T12:00:00.000001Z"
+          },
+          {
+            "donor": "eva",
+            "payment": "p2",
+            "receivedOn": "2026-03-02",
+            "amountMinor": 30000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "eva",
+            "payment": "p3",
+            "receivedOn": "2026-11-20",
+            "amountMinor": 20000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "eva",
+            "payment": "p4",
+            "receivedOn": "2027-01-15",
+            "amountMinor": 10000,
+            "status": "RECEIVED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          },
+          {
+            "donor": "petr",
+            "payment": "p5",
+            "receivedOn": "2025-06-10",
+            "amountMinor": 15000,
+            "status": "REFUNDED",
+            "source": "BANK_TRANSFER",
+            "purpose": "GENERAL"
+          }
+        ],
+        "receipts": [
+          { "alias": "brezen", "donor": "eva", "kind": "SINGLE", "donation": 1, "issuedAt": "2027-01-05T09:00:00Z" },
+          { "alias": "rok", "donor": "eva", "kind": "YEARLY", "year": 2026, "issuedAt": "2027-01-10T08:00:00Z" },
+          { "alias": "leden", "donor": "eva", "kind": "SINGLE", "donation": 4, "issuedAt": "2027-02-01T08:00:00Z" }
+        ],
+        "chunks": {
+          "donations/donations:2025-06": [
+            {
+              "id": "donation:5",
+              "donorId": "donor:petr",
+              "paymentId": "payment:p5",
+              "receivedAt": "2025-06-10",
+              "amountMinor": 15000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2025-06-10T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-03": [
+            {
+              "id": "donation:1",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p1",
+              "receivedAt": "2026-03-02",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00.000001Z"
+            },
+            {
+              "id": "donation:2",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p2",
+              "receivedAt": "2026-03-02",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-03-02T12:00:00Z"
+            }
+          ],
+          "donations/donations:2026-11": [
+            {
+              "id": "donation:3",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p3",
+              "receivedAt": "2026-11-20",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "status": "REFUNDED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2026-11-20T12:00:00Z"
+            }
+          ],
+          "donations/donations:2027-01": [
+            {
+              "id": "donation:4",
+              "donorId": "donor:eva",
+              "paymentId": "payment:p4",
+              "receivedAt": "2027-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "status": "RECEIVED",
+              "source": "BANK_TRANSFER",
+              "purpose": "GENERAL",
+              "pairedBy": "VARIABLE_SYMBOL",
+              "bankAccountId": null,
+              "symbolClaimId": null,
+              "recordedAt": "2027-01-15T12:00:00Z"
+            }
+          ],
+          "donations/donor-records:2025-05": [
+            {
+              "donorId": "donor:petr",
+              "name": "Petr Malý",
+              "type": "PERSON",
+              "variableSymbol": "7700002002",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2025-05-02T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/donor-records:2026-01": [
+            {
+              "donorId": "donor:eva",
+              "name": "Eva Horáková",
+              "type": "PERSON",
+              "variableSymbol": "7700002001",
+              "companyIdentifier": null,
+              "address": { "street": "Dlouhá 12", "city": "Ústí nad Labem", "postalCode": "400 01" },
+              "preferredLocale": "cs",
+              "registeredAt": "2026-01-10T08:00:00Z",
+              "erasedAt": null
+            }
+          ],
+          "donations/payments:2025-06": [
+            {
+              "id": "payment:p5",
+              "bankTransactionId": 26000000007,
+              "bookedOn": "2025-06-10",
+              "amountMinor": 15000,
+              "currency": "CZK",
+              "variableSymbol": "7700002002",
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2025-06-10T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "5dbec7dcfa9c502f"
+            }
+          ],
+          "donations/payments:2026-03": [
+            {
+              "id": "payment:p2",
+              "bankTransactionId": 26000000004,
+              "bookedOn": "2026-03-02",
+              "amountMinor": 30000,
+              "currency": "CZK",
+              "variableSymbol": "7700002001",
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-03-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "9a9f40d00966ee10"
+            },
+            {
+              "id": "payment:p1",
+              "bankTransactionId": 26000000003,
+              "bookedOn": "2026-03-02",
+              "amountMinor": 50000,
+              "currency": "CZK",
+              "variableSymbol": "7700002001",
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-03-02T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "17b7eb4e2c898e1e"
+            }
+          ],
+          "donations/payments:2026-11": [
+            {
+              "id": "payment:p3",
+              "bankTransactionId": 26000000005,
+              "bookedOn": "2026-11-20",
+              "amountMinor": 20000,
+              "currency": "CZK",
+              "variableSymbol": "7700002001",
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2026-11-20T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "28b9fcc1d3b227f0"
+            }
+          ],
+          "donations/payments:2027-01": [
+            {
+              "id": "payment:p4",
+              "bankTransactionId": 26000000006,
+              "bookedOn": "2027-01-15",
+              "amountMinor": 10000,
+              "currency": "CZK",
+              "variableSymbol": "7700002001",
+              "counterpartyAccount": "2900233333/2010",
+              "counterpartyName": null,
+              "messageForRecipient": null,
+              "importedAt": "2027-01-15T12:00:00Z",
+              "unpairedByAdminAt": null,
+              "accountVerification": false,
+              "version": "c44d50abbb21c9bb"
+            }
+          ],
+          "donations/receipts:2026": [
+            {
+              "id": "receipt:rok",
+              "donorId": "donor:eva",
+              "status": "ACTIVE",
+              "kind": "YEARLY",
+              "number": "2027-000002",
+              "donationId": null,
+              "year": 2026,
+              "issuedOn": "2027-01-10",
+              "issuedAt": "2027-01-10T08:00:00Z",
+              "supersededAt": null,
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 2,
+              "totalAmountMinor": 80000,
+              "keyId": "21fe31df"
+            },
+            {
+              "id": "receipt:brezen",
+              "donorId": "donor:eva",
+              "status": "REPLACED",
+              "kind": "SINGLE",
+              "number": "2027-000001",
+              "donationId": "donation:1",
+              "year": null,
+              "issuedOn": "2027-01-05",
+              "issuedAt": "2027-01-05T09:00:00Z",
+              "supersededAt": "2027-01-10T08:00:00Z",
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 1,
+              "totalAmountMinor": 50000,
+              "keyId": "21fe31df"
+            }
+          ],
+          "donations/receipts:2027": [
+            {
+              "id": "receipt:leden",
+              "donorId": "donor:eva",
+              "status": "ACTIVE",
+              "kind": "SINGLE",
+              "number": "2027-000003",
+              "donationId": "donation:4",
+              "year": null,
+              "issuedOn": "2027-02-01",
+              "issuedAt": "2027-02-01T08:00:00Z",
+              "supersededAt": null,
+              "withdrawnAt": null,
+              "withdrawalReason": null,
+              "locale": "cs",
+              "giftCount": 1,
+              "totalAmountMinor": 10000,
+              "keyId": "21fe31df"
+            }
+          ]
+        },
+        "queries": [
+          { "pairing": "paired" },
+          { "pairing": "paired", "year": 2026 },
+          { "pairing": "paired", "year": 2025 },
+          { "pairing": "paired", "donor": "eva", "query": "100" }
+        ]
+      },
+      "expected": {
+        "answers": [
+          {
+            "year": null,
+            "availableYears": [2027, 2026, 2025],
+            "items": [
+              {
+                "id": "payment:p4",
+                "bankTransactionId": 26000000006,
+                "bookedOn": "2027-01-15",
+                "amountMinor": 10000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2027-01-15T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:4",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2027-01-15T12:00:00Z",
+                  "receiptIssued": true
+                },
+                "version": "c44d50abbb21c9bb"
+              },
+              {
+                "id": "payment:p3",
+                "bankTransactionId": 26000000005,
+                "bookedOn": "2026-11-20",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-11-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:3",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "REFUNDED",
+                  "recordedAt": "2026-11-20T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "28b9fcc1d3b227f0"
+              },
+              {
+                "id": "payment:p2",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-03-02",
+                "amountMinor": 30000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-02T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:2",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-03-02T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "9a9f40d00966ee10"
+              },
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000003,
+                "bookedOn": "2026-03-02",
+                "amountMinor": 50000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-02T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:1",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-03-02T12:00:00.000001Z",
+                  "receiptIssued": true
+                },
+                "version": "17b7eb4e2c898e1e"
+              },
+              {
+                "id": "payment:p5",
+                "bankTransactionId": 26000000007,
+                "bookedOn": "2025-06-10",
+                "amountMinor": 15000,
+                "currency": "CZK",
+                "variableSymbol": "7700002002",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2025-06-10T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:5",
+                  "donorId": "donor:petr",
+                  "donorName": "Petr Malý",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "REFUNDED",
+                  "recordedAt": "2025-06-10T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "5dbec7dcfa9c502f"
+              }
+            ],
+            "total": 5
+          },
+          {
+            "year": 2026,
+            "availableYears": [2027, 2026, 2025],
+            "items": [
+              {
+                "id": "payment:p3",
+                "bankTransactionId": 26000000005,
+                "bookedOn": "2026-11-20",
+                "amountMinor": 20000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-11-20T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:3",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "REFUNDED",
+                  "recordedAt": "2026-11-20T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "28b9fcc1d3b227f0"
+              },
+              {
+                "id": "payment:p2",
+                "bankTransactionId": 26000000004,
+                "bookedOn": "2026-03-02",
+                "amountMinor": 30000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-02T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:2",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-03-02T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "9a9f40d00966ee10"
+              },
+              {
+                "id": "payment:p1",
+                "bankTransactionId": 26000000003,
+                "bookedOn": "2026-03-02",
+                "amountMinor": 50000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2026-03-02T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:1",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2026-03-02T12:00:00.000001Z",
+                  "receiptIssued": true
+                },
+                "version": "17b7eb4e2c898e1e"
+              }
+            ],
+            "total": 3
+          },
+          {
+            "year": 2025,
+            "availableYears": [2027, 2026, 2025],
+            "items": [
+              {
+                "id": "payment:p5",
+                "bankTransactionId": 26000000007,
+                "bookedOn": "2025-06-10",
+                "amountMinor": 15000,
+                "currency": "CZK",
+                "variableSymbol": "7700002002",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2025-06-10T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:5",
+                  "donorId": "donor:petr",
+                  "donorName": "Petr Malý",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "REFUNDED",
+                  "recordedAt": "2025-06-10T12:00:00Z",
+                  "receiptIssued": false
+                },
+                "version": "5dbec7dcfa9c502f"
+              }
+            ],
+            "total": 1
+          },
+          {
+            "year": null,
+            "availableYears": [2027, 2026, 2025],
+            "items": [
+              {
+                "id": "payment:p4",
+                "bankTransactionId": 26000000006,
+                "bookedOn": "2027-01-15",
+                "amountMinor": 10000,
+                "currency": "CZK",
+                "variableSymbol": "7700002001",
+                "counterpartyAccount": "2900233333/2010",
+                "counterpartyName": null,
+                "messageForRecipient": null,
+                "importedAt": "2027-01-15T12:00:00Z",
+                "unpairedByAdminAt": null,
+                "accountVerification": false,
+                "donation": {
+                  "id": "donation:4",
+                  "donorId": "donor:eva",
+                  "donorName": "Eva Horáková",
+                  "pairedBy": "VARIABLE_SYMBOL",
+                  "status": "RECEIVED",
+                  "recordedAt": "2027-01-15T12:00:00Z",
+                  "receiptIssued": true
+                },
+                "version": "c44d50abbb21c9bb"
               }
             ],
             "total": 1

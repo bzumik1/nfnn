@@ -241,6 +241,121 @@ describe('Given the download of the administration into its copy on this device'
     });
   });
 
+  describe('when a copy already stored opens again and the server answers for something other than this administrator', () => {
+    const OTHER_ID = '0190c3a2-7b1e-7cc1-8a52-3f1e2d4c5b6b';
+    let outcome: Promise<string>;
+
+    beforeEach(async () => {
+      vault.open('unlocked');
+      await flush();
+      outcome = download.refresh();
+    });
+
+    async function donationsManifest(): Promise<void> {
+      await answer('/api/admin/donations/sync', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [{ id: 'payments:2026-11', rowsSha256: await rowsSha256(PAYMENTS), count: 1 }],
+      });
+    }
+
+    async function donationsChunks(fields: object): Promise<void> {
+      await answer('/api/admin/donations/sync/chunks', {
+        subject: ADMIN_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [
+          {
+            id: 'payments:2026-11',
+            rowsSha256: await rowsSha256(PAYMENTS),
+            count: 1,
+            rows: PAYMENTS,
+          },
+        ],
+        missing: [],
+        ...fields,
+      });
+    }
+
+    it('and the donations manifest names another account, then the donors part is not asked for and nothing is stored or cleared', async () => {
+      await answer('/api/admin/donations/sync', {
+        subject: OTHER_ID,
+        administrator: true,
+        summary: SUMMARY,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('another-account');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored).toEqual([]);
+      expect(vault.revoked).toEqual([]);
+    });
+
+    it('and only the donors manifest says the account is no longer an administrator, then the copy of the administration is cleared without asking for chunks', async () => {
+      await donationsManifest();
+      await answer('/api/admin/donors/sync', {
+        subject: ADMIN_ID,
+        administrator: false,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('revoked');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.revoked).toEqual([JANA]);
+      expect(vault.stored).toEqual([]);
+    });
+
+    it('and the donors manifest names another account, then nothing is stored or cleared', async () => {
+      await donationsManifest();
+      await answer('/api/admin/donors/sync', {
+        subject: OTHER_ID,
+        administrator: true,
+        chunks: [],
+      });
+
+      expect(await outcome).toBe('another-account');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored).toEqual([]);
+      expect(vault.revoked).toEqual([]);
+    });
+
+    it('and the chunks answer says the account is no longer an administrator, then the copy of the administration is cleared and nothing is stored', async () => {
+      await manifests();
+      await donationsChunks({ administrator: false, chunks: [] });
+
+      expect(await outcome).toBe('revoked');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.revoked).toEqual([JANA]);
+      expect(vault.stored).toEqual([]);
+    });
+
+    it('and the chunks answer names another account, then nothing is stored or cleared', async () => {
+      await manifests();
+      await donationsChunks({ subject: OTHER_ID });
+
+      expect(await outcome).toBe('another-account');
+      expect(http.match(() => true)).toHaveLength(0);
+      expect(vault.stored).toEqual([]);
+      expect(vault.revoked).toEqual([]);
+    });
+
+    it('and the chunks answer misses a chunk its manifest listed, then the manifests are read again and the second download is stored without a mismatch', async () => {
+      await manifests();
+      await donationsChunks({ chunks: [], missing: ['payments:2026-11'] });
+      await manifests();
+      await chunks();
+
+      expect(await outcome).toBe('stored');
+      expect(vault.stored).toHaveLength(1);
+      expect(vault.stored[0].chunks.map((chunk) => chunk.id)).toEqual([
+        'donations/payments:2026-11',
+        'donors/accounts:2026-11',
+      ]);
+      expect(reporter.report).not.toHaveBeenCalled();
+    });
+  });
+
   describe('when an empty copy opens on a public computer, which keeps it only in memory', () => {
     it('then no record is made, since nothing is stored on the device', async () => {
       vault.storesOnDevice = false;
