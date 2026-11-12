@@ -43,6 +43,7 @@ describe.each(IMPLEMENTATIONS)('Given the %s device storage', (_name, open) => {
     expect(await storage.entries()).toEqual([]);
     expect(await storage.sessionKey('a')).toBeNull();
     expect(await storage.records('a')).toEqual([]);
+    expect(await storage.drafts('a')).toEqual([]);
   });
 
   it('when a salt, entries, a session key and records are written, then they read back as written', async () => {
@@ -119,6 +120,54 @@ describe.each(IMPLEMENTATIONS)('Given the %s device storage', (_name, open) => {
     expect(await storage.records('b')).toHaveLength(1);
   });
 
+  it('when drafts are put and one is deleted, then the others of the copy read back and another copy keeps its own', async () => {
+    await storage.write({
+      putEntries: [entry('a'), entry('b')],
+      putDrafts: [record('a', 'd1'), record('a', 'd2'), record('b', 'd1')],
+    });
+
+    await storage.write({ deleteDrafts: [{ copyId: 'a', recordId: 'd1' }] });
+
+    expect(await storage.drafts('a')).toEqual([record('a', 'd2')]);
+    expect(await storage.drafts('b')).toEqual([record('b', 'd1')]);
+  });
+
+  it('when the records of a copy are replaced, then its drafts stay', async () => {
+    await storage.write({
+      putEntries: [entry('a')],
+      replaceRecords: { copyId: 'a', records: [record('a', 'r1')] },
+      putDrafts: [record('a', 'd1')],
+    });
+
+    await storage.write({ replaceRecords: { copyId: 'a', records: [record('a', 'r2')] } });
+
+    expect(await storage.drafts('a')).toEqual([record('a', 'd1')]);
+    expect(await storage.records('a')).toEqual([record('a', 'r2')]);
+  });
+
+  it('when a copy is deleted, then its drafts go with it and the other copy keeps its own', async () => {
+    await storage.write({
+      putEntries: [entry('a'), entry('b')],
+      putDrafts: [record('a', 'd1'), record('b', 'd2')],
+    });
+
+    await storage.write({ deleteCopies: ['a'] });
+
+    expect(await storage.drafts('a')).toEqual([]);
+    expect(await storage.drafts('b')).toEqual([record('b', 'd2')]);
+  });
+
+  it('when a draft of a copy the registry does not hold is put, then nothing of the change is written', async () => {
+    await storage.write({ putEntries: [entry('a')] });
+
+    await expect(
+      storage.write({ deviceSalt: 'bmV3', putDrafts: [record('gone', 'd1')] }),
+    ).rejects.toBeInstanceOf(RangeError);
+
+    expect(await storage.deviceSalt()).toBeNull();
+    expect(await storage.drafts('gone')).toEqual([]);
+  });
+
   it('when the salt is set to null and a session key is deleted, then both are gone', async () => {
     await storage.write({
       deviceSalt: 'c2FsdA',
@@ -147,10 +196,13 @@ describe.each(IMPLEMENTATIONS)('Given the %s device storage', (_name, open) => {
       deviceSalt: 'c2FsdA',
       putEntries: [entry('a')],
       replaceRecords: { copyId: 'a', records: [record('a', 'r1')] },
+      putDrafts: [record('a', 'd1')],
     });
 
     await storage.destroy();
     storage = await open();
+
+    expect(await storage.drafts('a')).toEqual([]);
 
     expect(await storage.deviceSalt()).toBeNull();
     expect(await storage.entries()).toEqual([]);
@@ -163,18 +215,44 @@ describe('Given the IndexedDB device storage', () => {
     globalThis.indexedDB = new IDBFactory();
   });
 
-  it('when it opens, then the database is named nfnn.device and holds the four stores', async () => {
+  it('when it opens, then the database is named nfnn.device and holds the five stores', async () => {
     const storage = await openIdbDeviceStorage();
     storage.close();
 
     const database = await openDB(DEVICE_DATABASE);
+    expect(database.version).toBe(2);
     expect([...database.objectStoreNames].sort()).toEqual([
       'copies',
+      'drafts',
       'meta',
       'records',
       'session-keys',
     ]);
     database.close();
+  });
+
+  it('when a database of the first version holds a copy, then opening it adds the drafts and keeps the copy and its records', async () => {
+    const first = await openDB(DEVICE_DATABASE, 1, {
+      upgrade: (database) => {
+        database.createObjectStore('meta');
+        database.createObjectStore('copies', { keyPath: 'copyId' });
+        database.createObjectStore('session-keys', { keyPath: 'copyId' });
+        database
+          .createObjectStore('records', { keyPath: ['copyId', 'recordId'] })
+          .createIndex('copyId', 'copyId');
+      },
+    });
+    await first.put('copies', entry('a'));
+    await first.put('records', record('a', 'r1'));
+    first.close();
+
+    const storage = await openIdbDeviceStorage();
+    await storage.write({ putDrafts: [record('a', 'd1')] });
+
+    expect((await storage.entries()).map((stored) => stored.copyId)).toEqual(['a']);
+    expect(await storage.records('a')).toEqual([record('a', 'r1')]);
+    expect(await storage.drafts('a')).toEqual([record('a', 'd1')]);
+    await storage.destroy();
   });
 
   async function heldOpen(): Promise<{ release(): void }> {

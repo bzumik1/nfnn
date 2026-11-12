@@ -155,6 +155,9 @@ class Disk implements DeviceStorage {
   records(copyId: string) {
     return this.inner.records(copyId);
   }
+  drafts(copyId: string) {
+    return this.inner.drafts(copyId);
+  }
   async write(change: StorageChange): Promise<void> {
     if (this.crashNextWrite) {
       this.crashNextWrite = false;

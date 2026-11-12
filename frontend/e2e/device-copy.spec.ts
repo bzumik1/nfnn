@@ -17,11 +17,11 @@ import {
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { DEVICE_DATABASE, leaked, rawDevice } from './raw-device';
 
 const CANARY_PAYER = 'Zlatohlávek Kanárkový';
 const CANARY_IBAN = 'CZ4955000000001041000071';
 const PASSWORD = 'correct horse battery';
-const DEVICE_DATABASE = 'nfnn.device';
 
 async function canarySync(): Promise<DonorSyncMock> {
   const rows = [{ payerName: CANARY_PAYER, counterpartyIban: CANARY_IBAN, amountMinor: 50_000 }];
@@ -29,89 +29,6 @@ async function canarySync(): Promise<DonorSyncMock> {
     summary: { totalAmountMinor: 50_000, count: 1 },
     chunks: [{ id: 'donations:2026', rowsSha256: await rowsSha256(rows), count: 1, rows }],
   };
-}
-
-interface RawDevice {
-  readonly databases: readonly string[];
-  readonly text: string;
-  readonly wraps: readonly string[];
-  readonly copyIds: readonly string[];
-  readonly marker: string | null;
-}
-
-function rawDevice(page: Page): Promise<RawDevice> {
-  return page.evaluate(async (name) => {
-    const listed = (await indexedDB.databases()).map((database) => database.name ?? '');
-    if (!listed.includes(name)) {
-      return {
-        databases: listed,
-        text: '',
-        wraps: [],
-        copyIds: [],
-        marker: localStorage.getItem('nfnn.device-copy'),
-      };
-    }
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(name);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    const values: unknown[] = [];
-    for (const store of Array.from(database.objectStoreNames)) {
-      const read = (method: 'getAll' | 'getAllKeys') =>
-        new Promise((resolve, reject) => {
-          const request = database.transaction(store).objectStore(store)[method]();
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
-        });
-      values.push(store, await read('getAll'), await read('getAllKeys'));
-    }
-    database.close();
-    const copies = (values[values.indexOf('copies') + 1] ?? []) as {
-      copyId: string;
-      wraps: { kind: string }[];
-    }[];
-    const webStorage = [localStorage, sessionStorage].map((storage) =>
-      Array.from({ length: storage.length }, (_, index) => {
-        const key = storage.key(index) ?? '';
-        return [key, storage.getItem(key)];
-      }),
-    );
-    values.push(webStorage, document.cookie);
-    const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
-    return {
-      databases: listed,
-      text: JSON.stringify(values, (_key, value: unknown) => {
-        if (value instanceof CryptoKey) {
-          return '<CryptoKey>';
-        }
-        if (value instanceof ArrayBuffer) {
-          return base64(new Uint8Array(value));
-        }
-        if (ArrayBuffer.isView(value)) {
-          return base64(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
-        }
-        return value;
-      }),
-      wraps: copies.flatMap((copy) => copy.wraps.map((wrap) => wrap.kind)).sort(),
-      copyIds: copies.map((copy) => copy.copyId),
-      marker: localStorage.getItem('nfnn.device-copy'),
-    };
-  }, DEVICE_DATABASE);
-}
-
-function leaked(text: string, canary: string): boolean {
-  const forms = [0, 1, 2].flatMap((pad) => {
-    const base64 = Buffer.concat([Buffer.alloc(pad), Buffer.from(canary)]).toString('base64');
-    const stable = base64.slice([0, 2, 3][pad], -3);
-    return [stable, stable.replace(/\+/g, '-').replace(/\//g, '_')];
-  });
-  const hex = Buffer.from(canary).toString('hex');
-  const lower = text.toLowerCase();
-  return (
-    [canary, encodeURIComponent(canary), ...forms].some((form) => text.includes(form)) ||
-    lower.includes(hex)
-  );
 }
 
 async function openDeviceData(page: Page): Promise<void> {

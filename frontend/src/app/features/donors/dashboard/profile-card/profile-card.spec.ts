@@ -5,6 +5,12 @@ import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import {
+  draftWorkOf,
+  MemoryDraftShelf,
+  memoryDraftShelfProviders,
+  valuesBase,
+} from '../../../../core/drafts/testing/memory-draft-shelf';
 import { ProfileCard } from './profile-card';
 
 describe('Given the donor data card in the overview', () => {
@@ -286,6 +292,193 @@ describe('Given the donor data card in the overview', () => {
 
       expect(element('label[for="profile-name"]').textContent).toContain('Název firmy');
       expect(element('#profile-company-identifier')).toBeNull();
+    });
+  });
+});
+
+describe('Given the donor data card on a device that keeps drafts', () => {
+  const saved = {
+    name: 'Jana Nováková',
+    street: 'Dlouhá 12',
+    city: 'Ústí nad Labem',
+    postalCode: '400 01',
+    preferredLocale: 'cs',
+  };
+  let shelf: MemoryDraftShelf;
+  let fixture: ComponentFixture<ProfileCard>;
+  let http: HttpTestingController;
+
+  const root = () => fixture.nativeElement as HTMLElement;
+
+  async function settle(): Promise<void> {
+    for (let round = 0; round < 3; round++) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await draftWorkOf(fixture.componentInstance);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+  }
+
+  function button(name: string): HTMLButtonElement {
+    const found = Array.from(root().querySelectorAll('button')).find(
+      (candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name,
+    );
+    if (found === undefined) {
+      throw new Error(`No button ${name}`);
+    }
+    return found;
+  }
+
+  function input(selector: string): HTMLInputElement {
+    return root().querySelector(selector) as HTMLInputElement;
+  }
+
+  async function fillIn(selector: string, value: string): Promise<void> {
+    input(selector).value = value;
+    input(selector).dispatchEvent(new Event('input'));
+    await settle();
+  }
+
+  async function render(): Promise<void> {
+    await TestBed.configureTestingModule({
+      imports: [ProfileCard],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        ...memoryDraftShelfProviders(shelf),
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor()));
+    fixture = TestBed.createComponent(ProfileCard);
+    await settle();
+  }
+
+  async function keptDraft(startedFrom: typeof saved): Promise<void> {
+    shelf.seed('donor', {
+      key: 'profile',
+      base: await valuesBase(startedFrom),
+      values: { street: 'Krátká 3' },
+      savedAt: '2026-11-06T09:00:00.000Z',
+    });
+  }
+
+  beforeEach(() => {
+    shelf = new MemoryDraftShelf();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the donor edits the address, then it is kept in the copy of their own account until they save', async () => {
+    await render();
+    button('Upravit údaje').click();
+    await settle();
+
+    await fillIn('#profile-street', 'Krátká 3');
+    expect(shelf.draftOf('donor', 'profile')?.values).toEqual({ street: 'Krátká 3' });
+    expect(shelf.draftOf('administration', 'profile')).toBeNull();
+
+    root().querySelector('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+    http
+      .expectOne({ method: 'PATCH', url: '/api/donors/me' })
+      .flush(sampleDonor({ address: { ...sampleDonor().address, street: 'Krátká 3' } }));
+    await settle();
+    expect(shelf.draftOf('donor', 'profile')).toBeNull();
+  });
+
+  it('when the donor cancels the edit, then the draft leaves the device', async () => {
+    await render();
+    button('Upravit údaje').click();
+    await settle();
+    await fillIn('#profile-street', 'Krátká 3');
+    expect(shelf.draftOf('donor', 'profile')).not.toBeNull();
+
+    button('Zrušit').click();
+    await settle();
+
+    expect(shelf.draftOf('donor', 'profile')).toBeNull();
+  });
+
+  describe('when the device kept an edit started from the saved data', () => {
+    beforeEach(async () => {
+      await keptDraft(saved);
+      await render();
+    });
+
+    it('and they continue it, then the form opens with it and saves it without asking', async () => {
+      expect(root().querySelector('app-draft-offer')?.textContent).not.toContain(
+        'Uložená verze se od té doby změnila',
+      );
+      expect(root().querySelector('.profile-edit')).toBeNull();
+
+      button('Pokračovat v rozepsaném').click();
+      await settle();
+      expect(input('#profile-street').value).toBe('Krátká 3');
+      expect(root().querySelector('[role="status"]:not(:empty)')?.textContent?.trim()).toBe(
+        'Pokračujete v rozepsaných úpravách. Zůstanou jen na tomto zařízení, dokud je neuložíte.',
+      );
+
+      root().querySelector('form')!.dispatchEvent(new Event('submit'));
+      await settle();
+      const save = http.expectOne({ method: 'PATCH', url: '/api/donors/me' });
+      expect(save.request.body.address.street).toBe('Krátká 3');
+      save.flush(sampleDonor({ address: { ...sampleDonor().address, street: 'Krátká 3' } }));
+      await settle();
+      expect(shelf.draftOf('donor', 'profile')).toBeNull();
+    });
+
+    it('and they discard it, then it leaves the device and the card shows the saved data', async () => {
+      button('Zahodit').click();
+      await settle();
+
+      expect(document.activeElement).toBe(button('Upravit údaje'));
+      expect(shelf.draftOf('donor', 'profile')).toBeNull();
+      expect(root().textContent).toContain('Dlouhá 12');
+      expect(root().querySelector('app-draft-offer')).toBeNull();
+    });
+  });
+
+  describe('when the device kept an edit started from data saved differently since', () => {
+    beforeEach(async () => {
+      await keptDraft({ ...saved, city: 'Děčín' });
+      await render();
+      button('Pokračovat v rozepsaném').click();
+      await settle();
+      root().querySelector('form')!.dispatchEvent(new Event('submit'));
+      await settle();
+    });
+
+    it('then only the field the draft changed comes back and the newer saved data stay in the others', () => {
+      expect(input('#profile-street').value).toBe('Krátká 3');
+      expect(input('#profile-city').value).toBe('Ústí nad Labem');
+      http.expectNone('/api/donors/me');
+    });
+
+    it('then saving asks first instead of overwriting silently, and keeping the edits saves them', async () => {
+      http.expectNone('/api/donors/me');
+      expect(root().querySelector('.profile-stale')?.textContent).toContain(
+        'se uložené údaje změnily',
+      );
+
+      button('Uložit své úpravy místo nich').click();
+      await settle();
+      http
+        .expectOne({ method: 'PATCH', url: '/api/donors/me' })
+        .flush(sampleDonor({ address: { ...sampleDonor().address, street: 'Krátká 3' } }));
+      await settle();
+      expect(shelf.draftOf('donor', 'profile')).toBeNull();
+    });
+
+    it('and they drop the edits, then the draft leaves the device and the saved data show', async () => {
+      button('Zahodit své úpravy').click();
+      await settle();
+
+      http.expectNone('/api/donors/me');
+      expect(shelf.draftOf('donor', 'profile')).toBeNull();
+      expect(root().textContent).toContain('Dlouhá 12');
     });
   });
 });

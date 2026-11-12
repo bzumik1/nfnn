@@ -33,6 +33,15 @@
       </div>
     }
     @case ('ready') {
+      @if (draft.offer(); as offer) {
+        <app-draft-offer
+          [savedAt]="draftSavedAt(offer.savedAt)"
+          [stale]="offer.stale"
+          [photo]="true"
+          (resumed)="resumeDraft()"
+          (discarded)="discardDraft()"
+        />
+      }
       <div
         class="ui-segmented editor-mode"
         role="group"
@@ -60,6 +69,7 @@
       </div>
 
       <form
+        [inert]="draft.offer() !== null"
         #projectForm="ngForm"
         #projectFormElement
         class="project-form"
@@ -534,6 +544,7 @@
     subject="content"
     [keepsDraft]="changed.draft"
     [canOverwrite]="changed.overwrite && changed.version !== null"
+    [fromDraft]="changed.fromDraft === true"
     [savedAt]="changed.savedAt"
     [busy]="busy()"
     (overwriteChosen)="overwriteAfterChange()"
