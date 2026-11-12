@@ -113,6 +113,7 @@ describe('Given the device vault keeping drafts in the encrypted copies of an ad
 
       expect(await restarted.drafts(restarted.opened()!.store)).toEqual([PROFILE]);
       expect(restarted.administration()).toBeNull();
+      access.unlock();
       await restarted.unlockAdministrationWithPassword(JANA, PASSWORD, false);
       expect(await restarted.drafts(restarted.administration()!.store)).toEqual([NEWS]);
     });
