@@ -281,7 +281,7 @@ export class AdminBankLogos {
     this.removeError.set(null);
     this.busy.set({ code: item.code, action: 'remove' });
     this.api
-      .removeBankLogo(item.code, item.version)
+      .removeBankLogo(item.code, item.version, item)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -372,9 +372,11 @@ export class AdminBankLogos {
     fromAddForm: boolean,
   ): void {
     this.clearRowError(code);
-    const previous = this.items().find((item) => item.code === code)?.sourceUrl;
+    const shown = this.items().find((item) => item.code === code);
+    const previous = shown?.sourceUrl;
+    const held = shown !== undefined && shown.version === version ? shown : null;
     this.busy.set({ code, action: fromAddForm ? 'add' : 'save' });
-    this.request(this.api.setBankLogoSource(code, sourceUrl, version)).subscribe({
+    this.request(this.api.setBankLogoSource(code, sourceUrl, version, held)).subscribe({
       next: (answer) => {
         this.busy.set(null);
         this.stale.set(null);

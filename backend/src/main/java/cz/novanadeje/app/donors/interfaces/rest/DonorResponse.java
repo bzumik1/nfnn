@@ -20,7 +20,8 @@ record DonorResponse(
         Instant registeredAt,
         boolean hasPassword,
         SecondFactorResponse secondFactor,
-        PendingEmailChangeResponse pendingEmailChange
+        PendingEmailChangeResponse pendingEmailChange,
+        String version
 ) {
 
     record AddressResponse(String street, String city, String postalCode) {
@@ -46,7 +47,8 @@ record DonorResponse(
                 view.registeredAt(),
                 view.hasPassword(),
                 new SecondFactorResponse(view.secondFactor().enabled(), view.secondFactor().neededForAdministration()),
-                view.pendingEmailChange().map(pending -> new PendingEmailChangeResponse(pending.newEmail(), pending.expiresAt())).orElse(null)
+                view.pendingEmailChange().map(pending -> new PendingEmailChangeResponse(pending.newEmail(), pending.expiresAt())).orElse(null),
+                view.version()
         );
     }
 }

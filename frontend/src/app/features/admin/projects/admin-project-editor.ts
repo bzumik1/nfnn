@@ -42,7 +42,10 @@ import {
   ProjectCategory,
   ProjectsApi,
   ProjectRequest,
+  AdminProjectResponse,
   ProjectResponse,
+  StoredProject,
+  storedProjectOf,
   SLUG_PATTERN,
   slugFromText,
 } from '../../content/projects-api';
@@ -162,7 +165,8 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   protected readonly state = signal<LoadState>('loading');
   protected readonly changedMeanwhile = signal<ChangedMeanwhileState | null>(null);
   private refusedDelete = false;
-  protected readonly project = signal<ProjectResponse | null>(null);
+  protected readonly project = signal<AdminProjectResponse | null>(null);
+  private serverVersion: string | null = null;
   protected readonly mode = signal<EditorMode>('edit');
   protected readonly preview = signal<PreviewContent | null>(null);
   protected readonly notice = signal<Notice | null>(null);
@@ -516,7 +520,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const needsPublish = publish && existing?.publishedOn !== date;
     this.saving.set(publish ? 'publish' : 'save');
     if (existing && needsPublish && !this.unsaved()) {
-      this.sendPublish(existing.id, date, existing.version ?? '');
+      this.sendPublish(existing, date);
       return;
     }
     if (existing && !this.edited() && !this.coverUnsaved() && this.focalPointUnsaved()) {
@@ -525,7 +529,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         .subscribe({
           next: () => {
             if (needsPublish) {
-              this.sendPublish(existing.id, date, existing.version ?? '');
+              this.sendPublish(existing, date);
               return;
             }
             this.saving.set(null);
@@ -542,7 +546,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     const call = this.placeFocalPoint().pipe(
       switchMap(() =>
         existing
-          ? this.api.update(existing.id, request, existing.version ?? '')
+          ? this.api.update(existing.id, request, existing.version, this.heldOf(existing))
           : this.api.create(request),
       ),
     );
@@ -551,7 +555,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
         this.saved(project, existing === null);
         if (needsPublish) {
           this.publishDate = date;
-          this.sendPublish(project.id, date, project.version ?? '');
+          this.sendPublish(project, date);
           return;
         }
         this.saving.set(null);
@@ -640,14 +644,15 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.uploadError.set(null);
   }
 
-  private sendPublish(id: string, date: string, version: string): void {
+  private sendPublish(saved: AdminProjectResponse, date: string): void {
     this.api
-      .publish(id, date, version)
+      .publish(saved.id, date, saved.version, this.heldOf(saved))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
           this.saving.set(null);
           this.project.set(project);
+          this.serverVersion = project.version;
           this.draft.saved(project.version);
           const on = formatDonationDate(project.publishedOn ?? date);
           this.notice.set({
@@ -682,12 +687,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     this.notice.set(null);
     this.unpublishing.set(true);
     this.api
-      .unpublish(existing.id, existing.version ?? '')
+      .unpublish(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (project) => {
           this.unpublishing.set(false);
           this.project.set(project);
+          this.serverVersion = project.version;
           this.publishDate = todayIso();
           if (this.unsaved()) {
             this.draft.rebased(project.version);
@@ -734,7 +740,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     }
     this.deleting.set(true);
     this.api
-      .delete(existing.id, existing.version ?? '')
+      .delete(existing.id, existing.version, this.heldOf(existing))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
@@ -832,7 +838,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     answer?.(leave);
   }
 
-  private saved(project: ProjectResponse, created: boolean): void {
+  private saved(project: AdminProjectResponse, created: boolean): void {
     this.show(project);
     this.projectForm()?.form.markAsPristine();
     this.edited.set(false);
@@ -905,8 +911,13 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
     };
   }
 
-  private show(project: ProjectResponse): void {
+  private heldOf(saved: AdminProjectResponse): StoredProject | null {
+    return saved.version === this.serverVersion ? storedProjectOf(saved) : null;
+  }
+
+  private show(project: AdminProjectResponse): void {
     this.project.set(project);
+    this.serverVersion = project.version;
     this.projectTitle = project.title;
     this.year = project.year;
     this.category = project.category;

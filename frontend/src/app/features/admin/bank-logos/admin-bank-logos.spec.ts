@@ -2,6 +2,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -248,6 +249,7 @@ describe('Given an administrator on the bank logos page', () => {
     const request = http.expectOne({ method: 'PUT', url: `${LIST_URL}/0800` });
     expect(request.request.body).toEqual({ sourceUrl: NEW_SOURCE });
     expect(request.request.headers.get('If-Match')).toBe(`"${csas.version}"`);
+    expect(heldRecordOf(request.request.context)).toEqual(csas);
     expect(button(row('0800'), 'Stahujeme…').disabled).toBe(true);
     request.flush({
       ...csas,

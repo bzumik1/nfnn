@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
@@ -353,6 +354,7 @@ describe('Given an administrator on the monthly report page', () => {
       await submit();
       const request = http.expectOne(SETTINGS_URL);
       expect(request.request.headers.get('If-Match')).toBe(`"${reportView().settings.version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(reportView().settings);
       const refusal = problem(
         409,
         'donations/changed-meanwhile',
@@ -386,6 +388,7 @@ describe('Given an administrator on the monthly report page', () => {
 
       const request = http.expectOne(SETTINGS_URL);
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.recipients).toEqual(['pavel@example.cz']);
       expect(button('Ukládáme…').disabled).toBe(true);
       request.flush({});

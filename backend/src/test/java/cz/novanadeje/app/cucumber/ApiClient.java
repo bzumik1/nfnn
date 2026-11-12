@@ -32,6 +32,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Base64;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -76,6 +78,10 @@ public class ApiClient {
 
     public ResponseEntity<String> patch(String path, Map<String, ?> body) {
         return exchange(HttpMethod.PATCH, path, body);
+    }
+
+    public ResponseEntity<String> patch(String path, Map<String, ?> body, Map<String, String> headers) {
+        return exchange(HttpMethod.PATCH, path, body, headers);
     }
 
     public ResponseEntity<String> put(String path, Map<String, ?> body) {
@@ -261,6 +267,15 @@ public class ApiClient {
         } catch (IOException unreachable) {
             throw new IllegalStateException("The raw request to " + target + " failed", unreachable);
         }
+    }
+
+    public Optional<String> authorizedSubject() {
+        return Optional.ofNullable(defaultHeaders.get(HttpHeaders.AUTHORIZATION))
+                .filter(header -> header.startsWith("Bearer "))
+                .map(header -> header.substring("Bearer ".length()).split("\\."))
+                .filter(parts -> parts.length == 3)
+                .map(parts -> jsonMapper.readTree(new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8)).get("sub"))
+                .map(JsonNode::asString);
     }
 
     public void authorize(String accessToken) {

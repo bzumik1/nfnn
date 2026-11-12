@@ -265,7 +265,7 @@ describe('Given the auth store', () => {
   it('when the profile is updated, then the store shows the new profile', () => {
     signIn();
 
-    store.updateProfile({ name: 'Jana Svobodová' }).subscribe();
+    store.updateProfile({ name: 'Jana Svobodová' }, '00000000000000d1', null).subscribe();
     const request = http.expectOne('/api/donors/me');
     expect(request.request.method).toBe('PATCH');
     request.flush({ ...authResponse('token-1').user, name: 'Jana Svobodová' });

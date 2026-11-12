@@ -5,6 +5,8 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
+import { storedProjectOf } from '../../content/projects-api';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -1212,6 +1214,7 @@ describe('Given an administrator editing a published project on a device that ke
       await submit(fixture);
       const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${project().version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(storedProjectOf(project()));
       expect(request.request.body.title).toBe('Zahrada pro všechny děti');
       request.flush(project({ title: 'Zahrada pro všechny děti', version: '2222222222222222' }));
       await drafted();
@@ -1241,6 +1244,7 @@ describe('Given an administrator editing a published project on a device that ke
     await submit(fixture);
     const request = http.expectOne(`${PROJECTS_URL}/${project().id}`);
     expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+    expect(heldRecordOf(request.request.context)).toBeNull();
     request.flush(
       {
         type: 'https://nfnn.cz/problems/content/changed-meanwhile',

@@ -85,6 +85,11 @@ public record BankPayment(
         return matchingVariableSymbol.or(this::symbolInMessage);
     }
 
+    public Optional<String> payerAccount() {
+        return sender.map(SenderAccount::display)
+                .or(() -> counterpartyAccount.map(number -> counterpartyBankCode.map(code -> number + "/" + code).orElse(number)));
+    }
+
     public boolean hasSender() {
         return sender.isPresent();
     }

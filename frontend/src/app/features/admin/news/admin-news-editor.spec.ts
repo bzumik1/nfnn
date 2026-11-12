@@ -5,6 +5,8 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { heldRecordOf } from '../../../core/version/row-version';
+import { storedNewsArticleOf } from '../../content/news-api';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -874,6 +876,7 @@ describe('Given an administrator editing a published news article', () => {
       await submit(fixture);
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${newsArticle().version}"`);
+      expect(heldRecordOf(request.request.context)).toEqual(storedNewsArticleOf(newsArticle()));
       request.flush(
         {
           type: 'https://nfnn.cz/problems/content/changed-meanwhile',
@@ -903,6 +906,7 @@ describe('Given an administrator editing a published news article', () => {
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.method).toBe('PUT');
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.title).toBe('Zahrada pro všechny děti');
       request.flush(
         newsArticle({ title: 'Zahrada pro všechny děti', version: 'c3e8a1f05b9d7264' }),
@@ -1699,6 +1703,7 @@ describe('Given an administrator editing a published news article on a device th
       await submit(fixture);
       const request = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
       expect(request.request.headers.get('If-Match')).toBe(`"${older}"`);
+      expect(heldRecordOf(request.request.context)).toBeNull();
       request.flush(
         {
           type: 'https://nfnn.cz/problems/content/changed-meanwhile',

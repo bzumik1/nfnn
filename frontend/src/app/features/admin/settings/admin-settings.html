@@ -376,13 +376,15 @@
     }
   }
 </div>
-@if (staleDraft()) {
+@if (changedMeanwhile(); as changed) {
   <app-changed-meanwhile-dialog
     subject="content"
     [keepsDraft]="true"
-    [fromDraft]="true"
-    (overwriteChosen)="overwriteStaleDraft()"
-    (reloadChosen)="reloadAfterStaleDraft()"
-    (dismissed)="keepStaleDraft()"
+    [fromDraft]="changed.fromDraft"
+    [canOverwrite]="changed.fromDraft || changed.version !== null"
+    [savedAt]="changed.savedAt"
+    (overwriteChosen)="overwriteAfterChange()"
+    (reloadChosen)="reloadAfterChange()"
+    (dismissed)="keepAfterChange()"
   />
 }

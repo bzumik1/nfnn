@@ -160,7 +160,7 @@
       </app-form-field>
 
       @if (error()) {
-        <p class="ui-field-error" role="alert">{{ error() }}</p>
+        <p class="ui-field-error profile-error" role="alert">{{ error() }}</p>
       }
 
       @if (confirmingStale()) {
@@ -191,22 +191,64 @@
         </div>
       }
 
-      <div class="profile-actions">
-        <button
-          appNeedsConnection
-          type="submit"
-          class="ui-button ui-button--primary profile-save"
-          [disabled]="saving()"
-        >
-          @if (saving()) {
-            <span i18n="@@donor.profile.saving">Ukládáme…</span>
-          } @else {
-            <span i18n="@@donor.profile.save">Uložit údaje</span>
+      @if (newerVersion()) {
+        <div class="ui-callout ui-callout--warning profile-changed" role="alert">
+          <p i18n="@@donor.profile.changed.text">
+            Mezitím se uložené údaje změnily, třeba v jiném okně nebo na jiném zařízení. Vaše úpravy
+            jsme zatím neuložili, zůstávají ve formuláři.
+          </p>
+          @if (newerNotice(); as notice) {
+            <p>{{ notice }}</p>
           }
-        </button>
+          <div class="profile-actions">
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-button ui-button--primary profile-changed-keep"
+              [disabled]="saving() || loadingStored()"
+              (click)="saveOverNewer(profile)"
+              i18n="@@donor.profile.changed.keep"
+            >
+              Uložit své úpravy
+            </button>
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-button ui-button--danger-outline profile-changed-load"
+              [disabled]="saving() || loadingStored()"
+              (click)="loadStored()"
+            >
+              @if (loadingStored()) {
+                <span i18n="@@donor.profile.changed.loading">Načítáme…</span>
+              } @else {
+                <span i18n="@@donor.profile.changed.load"
+                  >Zahodit své úpravy a načíst uložené údaje</span
+                >
+              }
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="profile-actions">
+        @if (!newerVersion()) {
+          <button
+            appNeedsConnection
+            type="submit"
+            class="ui-button ui-button--primary profile-save"
+            [attr.aria-disabled]="saving() ? 'true' : null"
+          >
+            @if (saving()) {
+              <span i18n="@@donor.profile.saving">Ukládáme…</span>
+            } @else {
+              <span i18n="@@donor.profile.save">Uložit údaje</span>
+            }
+          </button>
+        }
         <button
           type="button"
           class="ui-button ui-button--large profile-cancel"
+          [disabled]="loadingStored()"
           (click)="cancel()"
           i18n="@@donor.profile.cancel"
         >

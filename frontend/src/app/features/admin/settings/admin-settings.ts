@@ -38,6 +38,11 @@ import {
   DraftOffer,
 } from '../../../shared/ui/draft-offer/draft-offer';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import {
+  currentInRefusal,
+  isChangedMeanwhile,
+  versionInRefusal,
+} from '../../../core/version/row-version';
 import { formatBankTime } from '../../donations/donation-date';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'restarting' | 'slow';
@@ -245,7 +250,8 @@ export class AdminSettings {
   protected readonly testingMail = signal(false);
   protected readonly mailNotice = signal<Notice | null>(null);
   private verifiedMail: string | null = null;
-  protected readonly staleDraft = signal(false);
+  protected readonly changedMeanwhile = signal<SettingsChanged | null>(null);
+  private version = '';
   protected readonly draft = formDraft<Readonly<Record<string, string>>>({
     copy: 'administration',
     key: () => 'settings',
@@ -287,11 +293,12 @@ export class AdminSettings {
           const fields = fieldsOf(response.settings);
           this.fields.set(fields);
           this.secretsCanBeStored.set(response.secretsCanBeStored);
+          this.version = response.version;
           if (fields.some((field) => field.unreadable)) {
             this.technicalOpen.set(true);
           }
           this.state.set('ready');
-          this.draft.ready();
+          this.draft.ready(response.version);
           if (this.reloadingAfterStaleDraft) {
             this.reloadingAfterStaleDraft = false;
             this.notice.set({ kind: 'status', text: SETTINGS_RELOADED_TEXT });
@@ -356,22 +363,26 @@ export class AdminSettings {
     this.focusTitle();
   }
 
-  protected overwriteStaleDraft(): void {
-    this.staleDraft.set(false);
+  protected overwriteAfterChange(): void {
+    const newer = this.changedMeanwhile()?.version ?? null;
+    this.changedMeanwhile.set(null);
+    if (newer !== null) {
+      this.version = newer;
+    }
     this.draft.overwriteConfirmed();
     this.askSave();
   }
 
-  protected reloadAfterStaleDraft(): void {
-    this.staleDraft.set(false);
+  protected reloadAfterChange(): void {
+    this.changedMeanwhile.set(null);
     this.draft.discard();
     this.notice.set(null);
     this.reloadingAfterStaleDraft = true;
     this.load();
   }
 
-  protected keepStaleDraft(): void {
-    this.staleDraft.set(false);
+  protected keepAfterChange(): void {
+    this.changedMeanwhile.set(null);
     this.focusSaveButton();
   }
 
@@ -394,7 +405,7 @@ export class AdminSettings {
       return;
     }
     if (this.draft.resumedStale()) {
-      this.staleDraft.set(true);
+      this.changedMeanwhile.set({ fromDraft: true, version: null, savedAt: null });
       return;
     }
     this.confirmation.set(this.confirmationOf(changes));
@@ -412,13 +423,14 @@ export class AdminSettings {
     }
     this.saving.set(true);
     this.api
-      .changeSettings(this.changes())
+      .changeSettings(this.changes(), this.version)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (saved) => {
           this.saving.set(false);
           this.confirmation.set(null);
-          this.draft.saved();
+          this.version = saved.version;
+          this.draft.saved(saved.version);
           if (!saved.restarting) {
             this.saveStatus.set(NOTHING_CHANGED);
             this.focusSaveButton();
@@ -430,6 +442,14 @@ export class AdminSettings {
         error: (failure: unknown) => {
           this.saving.set(false);
           this.confirmation.set(null);
+          if (isChangedMeanwhile(failure)) {
+            this.changedMeanwhile.set({
+              fromDraft: false,
+              version: versionInRefusal(failure),
+              savedAt: latestSettingSaved(failure),
+            });
+            return;
+          }
           this.saveError.set(
             describeProblem(
               failure,
@@ -616,4 +636,22 @@ function fieldsOf(settings: AdminSettingResponse[]): Field[] {
       unreadable: setting.unreadable,
     };
   });
+}
+
+interface SettingsChanged {
+  readonly fromDraft: boolean;
+  readonly version: string | null;
+  readonly savedAt: string | null;
+}
+
+function latestSettingSaved(failure: unknown): string | null {
+  const stored = currentInRefusal(failure)?.['settings'];
+  if (!Array.isArray(stored)) {
+    return null;
+  }
+  const times = stored
+    .map((setting: unknown) => (setting as Record<string, unknown> | null)?.['updatedAt'])
+    .filter((time): time is string => typeof time === 'string' && time !== '')
+    .sort();
+  return times.at(-1) ?? null;
 }

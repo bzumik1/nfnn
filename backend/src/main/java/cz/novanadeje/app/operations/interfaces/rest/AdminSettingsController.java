@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.settings.SettingsService;
 import cz.novanadeje.app.operations.domain.settings.SecretSettingsInBrowserOnly;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -40,12 +41,12 @@ class AdminSettingsController {
 
     @PutMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    SettingsSavedResponse change(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsChangeRequest request) {
+    SettingsSavedResponse change(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsChangeRequest request, ExpectedVersion expected) {
         List<SettingChange> changes = SettingValueRequest.toChanges(request.changes());
         if (jwt.hasClaim(SCOPE_CLAIM) && changes.stream().anyMatch(change -> change.setting().changesOnlyInBrowser())) {
             throw new SecretSettingsInBrowserOnly();
         }
-        return SettingsSavedResponse.of(settings.change(UUID.fromString(jwt.getSubject()), changes));
+        return SettingsSavedResponse.of(settings.change(UUID.fromString(jwt.getSubject()), changes, expected));
     }
 
     @PostMapping("/test-email")

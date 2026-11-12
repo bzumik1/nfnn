@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
@@ -84,7 +85,7 @@ class DonorEmailVerificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorEmailVerificationService(donors, tokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC)),
+        service = new DonorEmailVerificationService(donors, tokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new DonorEmailVerificationProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts);
     }

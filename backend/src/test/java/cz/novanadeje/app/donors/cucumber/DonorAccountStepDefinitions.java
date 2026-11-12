@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.cucumber.ProfileRowVersions;
 import cz.novanadeje.app.cucumber.DonorRegistrations;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
@@ -25,14 +26,16 @@ public class DonorAccountStepDefinitions {
 
     private final ApiClient api;
     private final DonorRegistrations registrations;
+    private final ProfileRowVersions profileVersions;
     private String currentRefreshCookie;
     private String previousRefreshCookie;
     private String lostRefreshCookie;
     private String keptRefreshCookie;
 
-    public DonorAccountStepDefinitions(ApiClient api, DonorRegistrations registrations) {
+    public DonorAccountStepDefinitions(ApiClient api, DonorRegistrations registrations, ProfileRowVersions profileVersions) {
         this.api = api;
         this.registrations = registrations;
+        this.profileVersions = profileVersions;
     }
 
     @When("a person registers")
@@ -173,7 +176,7 @@ public class DonorAccountStepDefinitions {
                 "city", fields.get("city"),
                 "postalCode", fields.get("postalCode")
         ));
-        api.patch(PROFILE_PATH, body);
+        api.patch(PROFILE_PATH, body, profileVersions.ifMatchOfSignedIn(api));
     }
 
     @Then("the response carries an access token and a refresh cookie")

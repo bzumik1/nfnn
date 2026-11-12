@@ -72,9 +72,9 @@ class SetupController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    SettingsSavedResponse complete(HttpServletRequest http, @Valid @RequestBody SetupRequest request) {
+    SetupCompletedResponse complete(HttpServletRequest http, @Valid @RequestBody SetupRequest request) {
         rateLimiter.check(http.getRemoteAddr());
-        return SettingsSavedResponse.of(setup.complete(access(http, request.code()), SettingValueRequest.toChanges(request.settings()), BackupKeyWordRequest.toChecks(request.backupKeyWords())));
+        return SetupCompletedResponse.of(setup.complete(access(http, request.code()), SettingValueRequest.toChanges(request.settings()), BackupKeyWordRequest.toChecks(request.backupKeyWords())));
     }
 
     @PutMapping(path = "/restore", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
