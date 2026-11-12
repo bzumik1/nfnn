@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AboutResponse } from './about-api';
+import { DonateBandResponse } from './donate-band-api';
 import { NewsArticleResponse } from './news-api';
 import { PublicPeopleResponse } from './people-api';
 import { ProjectResponse } from './projects-api';
@@ -11,6 +12,7 @@ export interface HomeResponse {
   projects: ProjectResponse[];
   about?: AboutResponse;
   people?: PublicPeopleResponse | null;
+  donateBand?: DonateBandResponse;
 }
 
 const HOME = '/api/content/home';

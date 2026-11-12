@@ -110,9 +110,9 @@ test.describe('Given a visitor on the Aktuality and Pomáháme tabs', () => {
 
     await expect(page).toHaveURL('/projekty');
     await expect(page).toHaveTitle('Kde pomáháme | Nová naděje – nadační fond');
-    const projects = page.locator('app-project-card');
-    await expect(projects).toHaveCount(1);
-    await expect(projects.locator('.card-year')).toHaveText('2024');
+    await expect(page.getByRole('heading', { level: 1, name: 'Komu jsme pomohli' })).toBeVisible();
+    await expect(page.locator('app-story-tile')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 2, name: /2024/ })).toBeVisible();
     await page.getByRole('link', { name: 'Dominik, 7 let' }).click();
 
     await expect(page).toHaveURL('/projekty/dominik-7-let');
@@ -266,9 +266,7 @@ test.describe('Given a visitor paging through the news', () => {
 });
 
 const PAGER_LISTS = [
-  { path: '/projekty?strana=2', api: '/api/content/projects', label: 'Stránky příběhů' },
   { path: '/aktuality?strana=2', api: '/api/content/news', label: 'Stránky aktualit' },
-  { path: '/projekty', api: '/api/content/projects', label: 'Stránky příběhů' },
 ];
 
 async function threePagesOf(page: Page, api: string): Promise<void> {

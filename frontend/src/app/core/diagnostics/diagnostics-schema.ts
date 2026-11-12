@@ -69,6 +69,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/projekty',
   '/sprava/projekty/:param',
   '/sprava/projekty/nova',
+  '/sprava/pruh-prispet',
   '/sprava/spravci',
   '/sprava/starsi-symboly',
   '/sprava/upozorneni',

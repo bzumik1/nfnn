@@ -1,3 +1,9 @@
 <app-about [photo]="aboutPhoto()" [people]="people()" />
-<app-stats-bar />
+<app-donate-band
+  i18n-heading="@@content.about.band.heading"
+  heading="Pomozte nám napsat další příběh"
+  i18n-lead="@@content.about.band.lead"
+  lead="Každý příspěvek jde do poslední koruny konkrétnímu dítěti nebo rodině."
+  [photo]="bandPhoto()"
+/>
 <app-contact-form />

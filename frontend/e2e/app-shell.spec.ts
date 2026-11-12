@@ -350,7 +350,7 @@ test.describe('Given an address of a section of the old one-page home', () => {
   for (const [old, now, heading] of [
     ['/#prispet', '/prispet', 'Přispějte na pomůcky pro děti'],
     ['/#o-nas', '/o-nas', null],
-    ['/#projekty', '/projekty', 'Pomáháme'],
+    ['/#projekty', '/projekty', 'Komu jsme pomohli'],
     ['/#aktuality', '/aktuality', 'Co je u nás nového'],
     ['/#uvod', '/', null],
   ] as const) {

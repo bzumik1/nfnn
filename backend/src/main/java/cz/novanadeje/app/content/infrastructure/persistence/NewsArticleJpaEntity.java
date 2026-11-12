@@ -50,6 +50,9 @@ class NewsArticleJpaEntity {
     @Column(name = "published_on")
     private LocalDate publishedOn;
 
+    @Column(name = "look_back_year")
+    private Short lookBackYear;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -71,6 +74,7 @@ class NewsArticleJpaEntity {
         entity.coverImageAlt = article.content().coverImageAlt().orElse(null);
         entity.signerPersonId = article.content().signer().map(PersonId::value).orElse(null);
         entity.publishedOn = article.publishedOn().orElse(null);
+        entity.lookBackYear = article.lookBackYear().map(Integer::shortValue).orElse(null);
         entity.createdAt = article.createdAt();
         entity.updatedAt = article.updatedAt();
         return entity;
@@ -79,6 +83,7 @@ class NewsArticleJpaEntity {
     NewsArticle toDomain() {
         NewsContent content = new NewsContent(new Slug(slug), title, Optional.ofNullable(tag), perex, body,
                 Optional.ofNullable(coverMediaId).map(MediaId::new), Optional.ofNullable(coverImageAlt), Optional.ofNullable(signerPersonId).map(PersonId::new));
-        return new NewsArticle(new NewsArticleId(id), content, Optional.ofNullable(publishedOn), createdAt, updatedAt);
+        return new NewsArticle(new NewsArticleId(id), content, Optional.ofNullable(publishedOn),
+                Optional.ofNullable(lookBackYear).map(Short::intValue), createdAt, updatedAt);
     }
 }

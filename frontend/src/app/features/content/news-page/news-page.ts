@@ -15,7 +15,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EMPTY, expand, map, Observable, reduce, Subscription, take, timeout } from 'rxjs';
+import { DonateBand } from '../donate-band/donate-band';
+import { DonateBandPhotoResponse } from '../donate-band-api';
 import { FeaturedNews } from '../featured-news/featured-news';
+import { HomeApi } from '../home-api';
 import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
@@ -38,7 +41,7 @@ type StoriesState = { kind: 'loading' } | { kind: 'settled'; stories: StoriesOfY
 
 @Component({
   selector: 'app-news-page',
-  imports: [NeedsConnection, RouterLink, NewsCard, FeaturedNews, YearStories],
+  imports: [NeedsConnection, RouterLink, NewsCard, FeaturedNews, YearStories, DonateBand],
   templateUrl: './news-page.html',
   styleUrl: './news-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,6 +64,7 @@ export class NewsPage {
   protected readonly offline = signal(false);
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
+  protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
 
   protected readonly state = computed<LoadState>(() => {
     const news = this.newsState();
@@ -101,6 +105,13 @@ export class NewsPage {
       this.newsLoad.unsubscribe();
       this.projectsLoad.unsubscribe();
     });
+    inject(HomeApi)
+      .load()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (home) => this.bandPhoto.set(home.donateBand?.photo ?? null),
+        error: () => this.bandPhoto.set(null),
+      });
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
     effect(() => {
       const state = this.state();

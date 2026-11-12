@@ -45,12 +45,15 @@ enum AdminHandlerReach {
         Map<String, AdminHandlerReach> table = new LinkedHashMap<>();
         table.put("GET /api/admin/content/about", CONNECTOR);
         table.put("PUT /api/admin/content/about", CONNECTOR);
+        table.put("GET /api/admin/content/donate-band", CONNECTOR);
+        table.put("PUT /api/admin/content/donate-band", CONNECTOR);
         table.put("POST /api/admin/content/media", CONNECTOR);
         table.put("PUT /api/admin/content/media/{id}", CONNECTOR);
         table.put("GET /api/admin/content/news", CONNECTOR);
         table.put("POST /api/admin/content/news", CONNECTOR);
         table.put("GET /api/admin/content/news/{id}", CONNECTOR);
         table.put("PUT /api/admin/content/news/{id}", CONNECTOR);
+        table.put("PUT /api/admin/content/news/{id}/look-back-year", CONNECTOR);
         table.put("DELETE /api/admin/content/news/{id}", BROWSER_ONLY);
         table.put("POST /api/admin/content/news/{id}/publish", CONNECTOR);
         table.put("POST /api/admin/content/news/{id}/unpublish", CONNECTOR);

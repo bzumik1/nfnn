@@ -285,6 +285,40 @@ describe('Given an administrator writing a new news article', () => {
     expect(fixture.nativeElement.querySelector('.public-link')).toBeNull();
   });
 
+  it('when they save and publish a draft whose year another article already looks back on, then the alert says the draft is saved but not published, and nothing is published', async () => {
+    await type(fixture, '#news-title', 'Ohlédnutí za rokem 2025');
+    await type(fixture, '#news-perex', 'Co se nám podařilo.');
+    await type(fixture, '#news-body', 'Text.');
+    await type(fixture, '#news-publish-date', '2026-10-30');
+    const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (option) => option.textContent?.trim() === '2025',
+    );
+    select.dispatchEvent(new Event('change'));
+    await settle(fixture);
+    button(fixture, 'Uložit a zveřejnit').click();
+    await settle(fixture);
+    http.expectOne(NEWS_URL).flush(draftArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${draftArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${draftArticle().id}/publish`);
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Aktualitu jsme uložili jako koncept, ale nezveřejnili, protože rok ohlédnutí se uložit nepodařilo. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    expect(text(fixture, '.publish-state .ui-badge')).toBe('Koncept');
+  });
+
   it('when they publish without a date, then the date field says so, takes the focus and nothing is sent', async () => {
     await type(fixture, '#news-title', 'Benefiční koncert');
     await type(fixture, '#news-perex', 'Zveme vás na koncert.');
@@ -1164,6 +1198,132 @@ describe('Given an administrator editing a published news article', () => {
 
     expect(navigated).toHaveBeenCalledWith('/sprava/aktuality');
   });
+
+  async function chooseLookBackYear(label: string): Promise<void> {
+    const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
+    const index = Array.from(select.options).findIndex(
+      (option) => option.textContent?.trim() === label,
+    );
+    expect(index).toBeGreaterThanOrEqual(0);
+    select.selectedIndex = index;
+    select.dispatchEvent(new Event('change'));
+    await settle(fixture);
+  }
+
+  it('when they choose the year it looks back on and save, then the year goes to its own address with the version of the saved article', async () => {
+    await loaded();
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('Není ohlédnutím');
+
+    await chooseLookBackYear('2025');
+    await submit(fixture);
+    const saving = http.expectOne(`${NEWS_URL}/${newsArticle().id}`);
+    expect(saving.request.method).toBe('PUT');
+    expect(saving.request.body.lookBackYear).toBeUndefined();
+    saving.flush(newsArticle({ version: '5d0f2b8c31e4a967' }));
+    await settle(fixture);
+
+    const placing = http.expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`);
+    expect(placing.request.method).toBe('PUT');
+    expect(placing.request.body).toEqual({ year: 2025 });
+    expect(placing.request.headers.get('If-Match')).toBe('"5d0f2b8c31e4a967"');
+    placing.flush(newsArticle({ version: '6e1a3c9d42f5b078', lookBackYear: 2025 }));
+    await settle(fixture);
+
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2025');
+  });
+
+  it('when they save other changes and the year stays, then nothing is sent to the address of the year', async () => {
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle({ lookBackYear: 2024 }));
+    await settle(fixture);
+
+    await type(fixture, '#news-perex', 'Nový souhrn.');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle({ lookBackYear: 2024 }));
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}/look-back-year`);
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+  });
+
+  it('when they also move the date of the published article and another article already looks back on the chosen year, then the alert says the article stays on the web under its old date', async () => {
+    await loaded();
+    await chooseLookBackYear('2025');
+    await type(fixture, '#news-publish-date', '2026-10-25');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    http.expectNone(`${NEWS_URL}/${newsArticle().id}/publish`);
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Ostatní změny jsme uložili, rok ohlédnutí a nové datum zveřejnění ale ne, takže aktualita zůstává na webu s původním datem. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+  });
+
+  it('when another article already looks back on the chosen year, then the rest is saved, the alert says why and the choice stays to try again', async () => {
+    await loaded();
+    await chooseLookBackYear('2025');
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+
+    const taken = problem(
+      409,
+      'content/look-back-year-taken',
+      'Rok už má ohlédnutí',
+      'Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(taken.body, taken.options);
+    await settle(fixture);
+
+    expect(text(fixture, '[role="alert"]:not(:empty)')).toBe(
+      'Ostatní změny jsme uložili, rok ohlédnutí ale ne. Rok už má ohlédnutí. Za rokem 2025 se už ohlíží jiná aktualita.',
+    );
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2025');
+
+    await submit(fixture);
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle());
+    await settle(fixture);
+    http
+      .expectOne(`${NEWS_URL}/${newsArticle().id}/look-back-year`)
+      .flush(newsArticle({ lookBackYear: 2025 }));
+    await settle(fixture);
+    expect(text(fixture, '[role="status"]:not(:empty)')).toBe(
+      'Změny jsme uložili a na webu už jsou.',
+    );
+  });
 });
 
 describe('Given an administrator linked to a person of the foundation writing a new news article', () => {
@@ -1271,6 +1431,7 @@ describe('Given an administrator editing a published news article on a device th
     title: string,
     base = `version:${newsArticle().version}`,
     cover: { readonly id: string | null; readonly alt: string } = { id: IMAGE_ID, alt: '' },
+    lookBackYear?: number | null,
   ) {
     shelf.seed('administration', {
       key,
@@ -1285,6 +1446,7 @@ describe('Given an administrator editing a published news article on a device th
         coverImageId: cover.id,
         signerId: '',
         publishDate: '2026-10-20',
+        ...(lookBackYear === undefined ? {} : { lookBackYear }),
       },
       savedAt: '2026-11-06T09:00:00.000Z',
     });
@@ -1354,6 +1516,53 @@ describe('Given an administrator editing a published news article on a device th
       base: 'version:5555555555555555',
       values: { body: 'Rozepsaný odstavec.' },
     });
+  });
+
+  it('when they choose the year it looks back on, then the year is kept on the device with the rest of the form', async () => {
+    await open();
+
+    const select = element<HTMLSelectElement>(fixture, '#news-look-back-year');
+    select.selectedIndex = Array.from(select.options).findIndex(
+      (option) => option.textContent?.trim() === '2025',
+    );
+    select.dispatchEvent(new Event('change'));
+    await drafted();
+
+    expect(shelf.draftOf('administration', key)).toMatchObject({
+      values: { title: 'Zahrada pro děti', lookBackYear: 2025 },
+    });
+  });
+
+  it('when they continue a draft that chose the year it looks back on, then the year comes back with it', async () => {
+    keptDraft('Zahrada pro všechny děti', `version:${newsArticle().version}`, undefined, 2024);
+    await open();
+
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2024');
+  });
+
+  it('when they continue a draft kept before the look-back year existed, then the saved year stays', async () => {
+    keptDraft('Zahrada pro všechny děti');
+    ({ fixture, http } = await setUp(newsArticle().id, {}, memoryDraftShelfProviders(shelf)));
+    http.expectOne(`${NEWS_URL}/${newsArticle().id}`).flush(newsArticle({ lookBackYear: 2023 }));
+    await drafted();
+
+    button(fixture, 'Pokračovat v rozepsaném').click();
+    await drafted();
+
+    expect(
+      element<HTMLSelectElement>(
+        fixture,
+        '#news-look-back-year',
+      ).selectedOptions[0].textContent?.trim(),
+    ).toBe('2023');
   });
 
   it('when the device kept the description of a photo they have not saved, then the description does not come back onto the saved photo', async () => {

@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.news;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
+import cz.novanadeje.app.content.domain.news.LookBackYearTaken;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
@@ -39,6 +40,7 @@ public class NewsAdminService {
     static final String PUBLISH_ACTION = "PUBLISH_NEWS";
     static final String UNPUBLISH_ACTION = "UNPUBLISH_NEWS";
     static final String DELETE_ACTION = "DELETE_NEWS";
+    static final String LOOK_BACK_ACTION = "CHANGE_NEWS_LOOK_BACK_YEAR";
 
     private static final Logger log = LoggerFactory.getLogger(NewsAdminService.class);
 
@@ -73,13 +75,21 @@ public class NewsAdminService {
     }
 
     public Versioned<NewsArticleView> create(UUID adminId, NewsArticleCommand command) {
+        return create(adminId, command, Optional.empty());
+    }
+
+    public Versioned<NewsArticleView> create(UUID adminId, NewsArticleCommand command, Optional<Integer> lookBackYear) {
         Instant now = clock.instant();
         NewsArticleId id = NewsArticleId.newId(now);
         NewsContent content = checked(command.toContent(), id);
-        NewsArticle article = NewsArticle.create(id, content, now);
+        requireFreeYear(lookBackYear, id);
+        NewsArticle article = NewsArticle.create(id, content, lookBackYear, now);
         news.save(article);
         formerSlugs.forgetNews(content.slug());
         audit(adminId, CREATE_ACTION, article, "Aktualita " + id + " „" + content.slug() + "“ napsána", now);
+        if (lookBackYear.isPresent()) {
+            auditLookBack(adminId, article, lookBackYear, now);
+        }
         return versioned(article, today(now));
     }
 
@@ -113,6 +123,24 @@ public class NewsAdminService {
         return versioned(draft, today(now));
     }
 
+    public Versioned<NewsArticleView> changeLookBackYear(UUID adminId, NewsArticleId id, ExpectedVersion expected, Optional<Integer> year) {
+        NewsArticle stored = requireUnchanged(id, expected);
+        Instant now = clock.instant();
+        if (stored.lookBackYear().equals(year)) {
+            return versioned(stored, today(now));
+        }
+        requireFreeYear(year, id);
+        NewsArticle changed = stored.lookBackOn(year, now);
+        news.save(changed);
+        auditLookBack(adminId, changed, year, now);
+        return versioned(changed, today(now));
+    }
+
+    private void auditLookBack(UUID adminId, NewsArticle article, Optional<Integer> year, Instant now) {
+        String looking = year.map(chosen -> "se ohlíží za rokem " + chosen).orElse("se už neohlíží za žádným rokem");
+        audit(adminId, LOOK_BACK_ACTION, article, "Aktualita " + article.id() + " „" + article.slug() + "“ " + looking, now);
+    }
+
     public void delete(UUID adminId, NewsArticleId id, ExpectedVersion expected) {
         NewsArticle article = requireUnchanged(id, expected);
         Instant now = clock.instant();
@@ -138,6 +166,12 @@ public class NewsAdminService {
         });
         signers.requireExisting(content.signer());
         return content;
+    }
+
+    private void requireFreeYear(Optional<Integer> year, NewsArticleId id) {
+        year.filter(chosen -> news.isLookBackYearTakenByAnother(chosen, id)).ifPresent(chosen -> {
+            throw new LookBackYearTaken(chosen);
+        });
     }
 
     private void dropUnusedImage(Optional<MediaId> previous, Optional<MediaId> current) {

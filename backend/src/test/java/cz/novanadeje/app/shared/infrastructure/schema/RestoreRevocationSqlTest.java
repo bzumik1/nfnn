@@ -42,7 +42,7 @@ class RestoreRevocationSqlTest {
 
     private static final Set<String> HOLD_NO_SESSION_OR_ONE_TIME_SECRET = Set.of(
             "admin_action", "backup_alert_state", "bank_code", "bank_code_list_state", "bank_import_state", "bank_logo", "bank_logo_image", "bank_payment", "contact_message",
-            "content_about", "content_former_slug", "content_founders_note", "content_media", "content_media_variant", "content_news",
+            "content_about", "content_donate_band", "content_former_slug", "content_founders_note", "content_media", "content_media_variant", "content_news",
             "content_people_footnote", "content_person", "content_project", "content_project_order",
             "donation", "donation_import_alert", "donation_monthly_report", "donation_person_receipt_signature", "donation_receipt_signatory",
             "donation_receipt_signature", "donation_report_delivery", "donation_report_settings", "donor_record", "donor_sender_account", "donor_symbol_claim",

@@ -1,44 +1,32 @@
-@use 'breakpoints' as bp;
-
 .stats {
-  background: var(--color-accent-fill);
-  padding: var(--space-9) 0;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
 }
 
 .stats-grid {
-  max-width: var(--content-max);
-  margin: 0 auto;
-  padding: 0 var(--space-8);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(max(8rem, 20%), 1fr));
-  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  gap: var(--space-5) var(--space-6);
 }
 
 .stat {
   --stat-order: 0;
-  text-align: center;
-  color: var(--color-on-accent);
 }
 
 .stat-value {
+  color: var(--color-text);
   font-family: var(--font-display);
-  font-size: var(--text-6xl);
-  font-weight: var(--weight-extrabold);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
   line-height: var(--leading-none);
+  font-variant-numeric: var(--numeric-figures);
 }
 
 .stat-label {
-  font-size: var(--text-sm);
-  opacity: 0.92;
   margin-top: var(--space-1-5);
-  letter-spacing: var(--tracking-slight);
-}
-
-@include bp.down(tablet) {
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(max(7rem, 40%), 1fr));
-    padding: 0 var(--space-5);
-  }
+  color: var(--color-text-soft);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
 }
 
 .stat:not(.is-waiting) {
@@ -50,5 +38,5 @@
 
 .stat.is-waiting {
   opacity: 0;
-  transform: translateY(var(--space-6));
+  transform: translateY(var(--space-3));
 }
