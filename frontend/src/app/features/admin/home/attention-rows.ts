@@ -2,7 +2,8 @@
 
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { formatMinorUnits } from '../../donations/donation-amount';
-import { AdminBackupsResponse, ImportStateResponse } from '../admin-api';
+import { AdminBackupsResponse } from '../admin-api';
+import type { StoredImportState } from '../device-copy/administration-reads';
 import { BACKUP_PROBLEM_ACTIONS, BACKUP_PROBLEM_SUMMARIES } from '../backups/backup-texts';
 import { needsTechnician, technicianMessage } from '../backups/backup-message';
 import { unpublishedKeysSentence } from '../settings/receipt-signing-key/unpublished-keys';
@@ -45,7 +46,7 @@ export interface AttentionRow {
 
 export interface AttentionSources {
   readonly importLoad: LoadState;
-  readonly importState: ImportStateResponse | null;
+  readonly importState: StoredImportState | null;
   readonly unpairedLoad: LoadState;
   readonly unpaired: UnpairedSummary | null;
   readonly backupsLoad: LoadState;

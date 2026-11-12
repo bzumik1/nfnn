@@ -1,9 +1,12 @@
 import { Page } from '@playwright/test';
+import { everyOfferedYear } from '../src/app/features/admin/device-copy/administration-overview';
 import { rowsSha256 } from '../src/app/features/donations/sync/canonical-rows';
 import { expect, test } from './fixtures';
 import { administrator, mockDonorApi, signIn } from './donor-session';
 
 const PAYMENTS = '/api/admin/donations/payments';
+const OVERVIEW = '/api/admin/donations/overview';
+const TODAY = '2026-10-18';
 
 const payment = {
   id: '019a1c00-0000-7000-8000-000000001001',
@@ -32,6 +35,26 @@ const record = {
   registeredAt: '2026-01-15T10:00:00Z',
   erasedAt: null,
 };
+
+const importState = {
+  coveredFrom: '2026-07-20',
+  coveredTo: '2026-10-17',
+  lastAttemptedAt: '2026-10-18T10:00:00Z',
+  lastSucceededAt: '2026-10-17T10:00:00Z',
+  lastFailure: {
+    kind: 'UNAUTHORIZED',
+    message: 'Fio refused the token',
+    attemptedAt: '2026-10-18T10:00:00Z',
+  },
+  consecutiveFailures: 1,
+  reportedOutage: 'UNAUTHORIZED',
+  balance: null,
+};
+
+const byYear = everyOfferedYear(
+  { payments: [payment], donations: [], donorRecords: [record] },
+  TODAY,
+);
 
 const account = {
   donorId: record.donorId,
@@ -63,9 +86,7 @@ async function chunk(id: string, rows: readonly unknown[]): Promise<Chunk> {
 
 async function serveCopy(page: Page, part: 'donations' | 'donors', chunks: Chunk[]) {
   const summary =
-    part === 'donations'
-      ? { summary: { today: '2026-10-18', receiptsAvailableFrom: 2026, byYear: [] } }
-      : {};
+    part === 'donations' ? { summary: { today: TODAY, receiptsAvailableFrom: 2026, byYear } } : {};
   const head = { subject: administrator.id, administrator: true, ...summary };
   await page.route(
     (url) => url.pathname === `/api/admin/${part}/sync`,
@@ -98,6 +119,7 @@ test.describe('Given an administrator whose device keeps the administration copy
     await serveCopy(page, 'donations', [
       await chunk('payments:2026-10', [payment]),
       await chunk('donor-records:2026-01', [record]),
+      await chunk('import-state', [importState]),
     ]);
     await serveCopy(page, 'donors', [await chunk('accounts:2026-01', [account])]);
   });
@@ -146,6 +168,49 @@ test.describe('Given an administrator whose device keeps the administration copy
     await expect(
       dialog.getByRole('button', { name: 'Přiřadit dárci Jana Nováková' }),
     ).toHaveAttribute('aria-disabled', 'true');
+    expect(serverReads).toEqual([]);
+    await context.setOffline(false);
+  });
+
+  test('when the administration home opens and the device goes offline, then the year overview and the waiting payments come from the copy and the import state shows the failure without its text', async ({
+    page,
+    context,
+  }) => {
+    const stored = Promise.all(
+      ['donations', 'donors'].map((part) =>
+        page.waitForResponse(
+          (response) => new URL(response.url()).pathname === `/api/admin/${part}/sync/chunks`,
+        ),
+      ),
+    );
+    await signIn(page, administrator);
+    await stored;
+    const serverReads: string[] = [];
+    page.on('request', (request) => {
+      if ([OVERVIEW, PAYMENTS].includes(new URL(request.url()).pathname)) {
+        serverReads.push(request.url());
+      }
+    });
+    await page.getByRole('link', { name: 'Správa' }).click();
+
+    await expect(page.getByRole('row').filter({ hasText: 'říjen 2026' })).toContainText(/500\sKč/);
+    await expect(page.getByText('1 platba čeká na přiřazení')).toBeVisible();
+    expect(serverReads).toEqual([]);
+
+    await page.getByRole('link', { name: 'Platby z banky' }).click();
+    await expect(page.getByRole('row').filter({ hasText: 'Nováková Jana' })).toBeVisible();
+    await page.route(
+      (url) => url.pathname.startsWith('/api/'),
+      (route) => route.abort('internetdisconnected'),
+    );
+    await context.setOffline(true);
+    await page.getByRole('link', { name: 'Přehled', exact: true }).click();
+
+    const importCard = page.locator('.ui-card[aria-labelledby="admin-import-title"]');
+    await expect(importCard).toContainText('Fio odmítlo token');
+    await expect(importCard).not.toContainText('Fio refused');
+    await expect(page.getByRole('row').filter({ hasText: 'říjen 2026' })).toContainText(/500\sKč/);
+    await expect(page.getByText('1 platba čeká na přiřazení')).toBeVisible();
     expect(serverReads).toEqual([]);
     await context.setOffline(false);
   });

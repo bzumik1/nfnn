@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { type DeviceAccount, userHandleOf } from '../../../core/auth/session-device';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
+import { AdministrationWrites } from '../../../core/admin-writes/administration-writes';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { rowsSha256 } from '../../donations/sync/canonical-rows';
@@ -99,6 +100,21 @@ describe('Given the download of the administration into its copy on this device'
         chunks: [{ id: 'accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), count: 1 }],
       });
     }
+  }
+
+  async function stored(): Promise<CopyContents> {
+    return {
+      chunks: [
+        {
+          id: 'donations/payments:2026-11',
+          rowsSha256: await rowsSha256(PAYMENTS),
+          rows: PAYMENTS,
+        },
+        { id: 'donors/accounts:2026-11', rowsSha256: await rowsSha256(ACCOUNTS), rows: ACCOUNTS },
+      ],
+      summary: { donations: SUMMARY },
+      storedAt: '2026-11-05T08:00:00.000Z',
+    };
   }
 
   async function chunks(): Promise<void> {
@@ -465,6 +481,57 @@ describe('Given the download of the administration into its copy on this device'
       expect(await forFirst).toBe('unchanged');
       expect(await forSecond).toBe('unchanged');
       expect(manifestReads).toBe(3);
+    });
+  });
+
+  describe('when the server refuses a refresh as too many requests', () => {
+    it('then the refresh says it was refused as too many, apart from any other failure', async () => {
+      vault.open('unlocked', await stored());
+      await flush();
+      await manifests();
+
+      const refused = download.refresh();
+      await flush();
+      (await vi.waitFor(() => http.expectOne('/api/admin/donations/sync'))).flush(
+        { type: 'https://nfnn.cz/problems/donations/rate-limited' },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+      expect(await refused).toBe('rate-limited');
+
+      const failed = download.refresh();
+      await flush();
+      (await vi.waitFor(() => http.expectOne('/api/admin/donations/sync'))).flush(null, {
+        status: 500,
+        statusText: 'Error',
+      });
+
+      expect(await failed).toBe('failed');
+      expect(vault.stored).toEqual([]);
+    });
+  });
+
+  describe('when an administration write is made while a download of the open copy runs', () => {
+    it('then the copy names the writes made before that download started, so a later read knows the download does not show the write', async () => {
+      const writes = TestBed.inject(AdministrationWrites);
+      expect(download.writesAtStart(null)).toBeNull();
+      writes.record();
+      vault.open('unlocked', await stored());
+      await flush();
+      writes.record();
+
+      expect(download.writesAtStart(vault.administration())).toBe(1);
+      await manifests();
+      expect(download.writesAtStart(vault.administration())).toBe(1);
+
+      const next = download.refresh(true);
+      await manifests();
+      expect(await next).toBe('unchanged');
+      expect(download.writesAtStart(vault.administration())).toBe(2);
+
+      vault.open('unlocked', await stored());
+      expect(download.writesAtStart(vault.administration())).toBeNull();
+      await flush();
+      await manifests();
     });
   });
 

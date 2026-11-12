@@ -394,13 +394,28 @@ public class AdministrationDeviceStepDefinitions {
         assertThat(chunk(id).get("rows").valueStream().map(row -> fields(row, SYMBOL_CLAIM_FIELDS)).toList()).containsExactlyElementsOf(listed);
     }
 
-    @Then("the administration device's chunk {string} holds the stored import state the administration reads, without the run of older payments")
+    @Then("the administration device's chunk {string} holds the stored import state the administration reads, without the run of older payments and the text of the failure")
     public void theAdministrationDevicesChunkHoldsTheStoredImportState(String id) {
         api.get("/api/admin/donations/import-state");
         ObjectNode expected = ((ObjectNode) api.lastResponseJson()).deepCopy();
         expected.remove("historyImport");
         expected.remove("defaultHistoryFrom");
+        if (expected.get("lastFailure") instanceof ObjectNode failure) {
+            failure.remove("message");
+        }
         assertThat(chunk(id).get("rows").valueStream().toList()).containsExactly(expected);
+    }
+
+    @Then("the administration device's chunk {string} holds the failure {string} attempted at {string} without its text")
+    public void theAdministrationDevicesChunkHoldsTheFailureWithoutItsText(String id, String kind, String attemptedAt) {
+        api.get("/api/admin/donations/import-state");
+        assertThat(api.lastResponseJson().get("lastFailure").get("message").isString()).as("the administration reads the text of the failure").isTrue();
+        List<JsonNode> rows = chunk(id).get("rows").valueStream().toList();
+        assertThat(rows).hasSize(1);
+        JsonNode failure = rows.getFirst().get("lastFailure");
+        assertThat(failure.propertyNames()).containsExactlyInAnyOrder("kind", "attemptedAt");
+        assertThat(failure.get("kind").asString()).isEqualTo(kind);
+        assertThat(failure.get("attemptedAt").asString()).isEqualTo(attemptedAt);
     }
 
     @Then("the administration device's chunk {string} holds the monthly report settings and the sent reports the administration reads")
