@@ -8,7 +8,6 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import {
-  activitySince,
   backupRun,
   backupsView,
   historyImport,
@@ -26,6 +25,7 @@ import {
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
+import { AdministrationVisit, type VisitState } from '../device-copy/administration-visit';
 import { AdminHome } from './admin-home';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
@@ -33,8 +33,6 @@ const OVERVIEW_URL = '/api/admin/donations/overview';
 const BACKUPS_URL = '/api/admin/operations/backups';
 const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
-const PREVIOUS_SIGN_IN_URL = '/api/admin/donors/me/previous-sign-in';
-const SINCE_URL = '/api/admin/donations/overview/since';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 
@@ -54,6 +52,16 @@ describe('Given an administrator on the administration home', () => {
         provideHttpClientTesting(),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         provideRouter([]),
+        {
+          provide: AdministrationVisit,
+          useValue: {
+            state: signal<VisitState>({ kind: 'checking' }).asReadonly(),
+            opened: signal(null).asReadonly(),
+            dismissed: signal(false).asReadonly(),
+            check: () => Promise.resolve(),
+            keepMark: () => Promise.resolve(),
+          },
+        },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -74,12 +82,6 @@ describe('Given an administrator on the administration home', () => {
     http
       .match(ADMINISTRATORS_URL)
       .forEach((pending) => pending.flush({ items: [administrator()] }));
-    http
-      .match(PREVIOUS_SIGN_IN_URL)
-      .forEach((pending) => pending.flush({ previousSignInAt: null }));
-    http
-      .match((request) => request.url === SINCE_URL)
-      .forEach((pending) => pending.flush(activitySince()));
     http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
     http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
     http.verify();
@@ -468,140 +470,6 @@ describe('Given an administrator on the administration home', () => {
         'prosinec 2025 1 1 0 500 Kč 500 Kč 0 Kč',
         'Celkem 2025 1 1 0 500 Kč 500 Kč 0 Kč',
       ]);
-    });
-  });
-
-  describe('when the previous sign-in arrives', () => {
-    const SINCE_CARD = '.ui-card[aria-labelledby="admin-since-title"]';
-
-    function sinceRequest(from: string) {
-      return http.expectOne(
-        (request) => request.url === SINCE_URL && request.params.get('from') === from,
-      );
-    }
-
-    async function signedInBefore(at: string, activity = activitySince()): Promise<void> {
-      await respondOverview(PREVIOUS_SIGN_IN_URL, { previousSignInAt: at });
-      sinceRequest(at).flush(activity);
-      await fixture.whenStable();
-      fixture.detectChanges();
-    }
-
-    function links(): { text: string; href: string | null }[] {
-      return Array.from(
-        fixture.nativeElement.querySelectorAll(`${SINCE_CARD} a`) as NodeListOf<HTMLAnchorElement>,
-      ).map((link) => ({
-        text: (link.textContent ?? '').replace(/\s+/g, ' ').trim(),
-        href: link.getAttribute('href'),
-      }));
-    }
-
-    it('then the block is the first card and says it is loading until both answers come', () => {
-      const first = fixture.nativeElement.querySelector('.ui-card') as HTMLElement;
-      expect(first.getAttribute('aria-labelledby')).toBe('admin-since-title');
-      expect(text('#admin-since-title')).toBe('Od posledního přihlášení');
-      expect(text(`${SINCE_CARD} [role="status"]`)).toBe('Zjišťujeme, co je od minula nového…');
-    });
-
-    it('then it names the sign-in, sums the new payments and links the paired, the waiting payments and the new donors', async () => {
-      await signedInBefore('2026-10-28T20:14:00Z');
-
-      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby přišlo 5 plateb za 12 500 Kč.',
-      );
-      expect(dataRows('admin-since-title')).toEqual({
-        'Přiřazené dárcům': '3 platby za 7 500 Kč',
-        'Čekají na přiřazení': '2 platby za 5 000 Kč',
-        'Noví dárci': '3 nové registrace',
-      });
-      expect(links()).toEqual([
-        { text: '3 platby za 7 500 Kč', href: '/sprava/platby?stav=prirazene&od=2026-10-28' },
-        { text: '2 platby za 5 000 Kč', href: '/sprava/platby?od=2026-10-28' },
-        { text: '3 nové registrace', href: '/sprava/darci' },
-      ]);
-    });
-
-    it('then one payment and one donor read in the singular and a figure of none has no link', async () => {
-      await signedInBefore(
-        '2026-10-28T23:30:00Z',
-        activitySince({
-          payments: { count: 1, totalMinor: 50000, currency: 'CZK' },
-          paired: { count: 1, totalMinor: 50000, currency: 'CZK' },
-          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
-          newDonors: 1,
-        }),
-      );
-
-      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 29. 10. 2026 0:30. Od té doby přišla 1 platba za 500 Kč.',
-      );
-      expect(dataRows('admin-since-title')).toEqual({
-        'Přiřazené dárcům': '1 platba za 500 Kč',
-        'Čekají na přiřazení': 'žádná',
-        'Noví dárci': '1 nová registrace',
-      });
-      expect(links().map((link) => link.href)).toEqual([
-        '/sprava/platby?stav=prirazene&od=2026-10-29',
-        '/sprava/darci',
-      ]);
-    });
-
-    it('then registrations without any payment say no payment came and leave the payment figures out', async () => {
-      await signedInBefore(
-        '2026-10-28T20:14:00Z',
-        activitySince({
-          payments: { count: 0, totalMinor: 0, currency: 'CZK' },
-          paired: { count: 0, totalMinor: 0, currency: 'CZK' },
-          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
-          newDonors: 2,
-        }),
-      );
-
-      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby nepřišla žádná platba.',
-      );
-      expect(dataRows('admin-since-title')).toEqual({ 'Noví dárci': '2 nové registrace' });
-    });
-
-    it('then nothing new is said in one sentence instead of zeros', async () => {
-      await signedInBefore(
-        '2026-10-28T20:14:00Z',
-        activitySince({
-          payments: { count: 0, totalMinor: 0, currency: 'CZK' },
-          paired: { count: 0, totalMinor: 0, currency: 'CZK' },
-          unpaired: { count: 0, totalMinor: 0, currency: 'CZK' },
-          newDonors: 0,
-        }),
-      );
-
-      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Poslední přihlášení 28. 10. 2026 21:14. Od té doby nepřišla žádná platba a nikdo nový se nezaregistroval.',
-      );
-      expect(fixture.nativeElement.querySelector(`${SINCE_CARD} dl`)).toBeNull();
-    });
-
-    it('then a first sign-in says so and asks for nothing more', async () => {
-      await respondOverview(PREVIOUS_SIGN_IN_URL, { previousSignInAt: null });
-
-      expect(text(`${SINCE_CARD} .since-lead`)).toBe(
-        'Jste tu poprvé. Od příštího přihlášení tu uvidíte nové platby a nové dárce.',
-      );
-      http.expectNone((request) => request.url === SINCE_URL);
-    });
-
-    it('then a failure offers a retry that asks again', async () => {
-      await respondOverview(PREVIOUS_SIGN_IN_URL, { title: 'Server error' }, 500);
-
-      const card = fixture.nativeElement.querySelector(SINCE_CARD) as HTMLElement;
-      expect(card.querySelector('[role="alert"]')?.textContent).toContain(
-        'Co je od minula nového, se nepodařilo zjistit.',
-      );
-
-      (card.querySelector('[role="alert"] button') as HTMLButtonElement).click();
-      await signedInBefore('2026-10-28T20:14:00Z');
-
-      expect(card.querySelector('[role="alert"]')).toBeNull();
-      expect(text(`${SINCE_CARD} .since-lead`)).toContain('Od té doby přišlo 5 plateb');
     });
   });
 
@@ -1073,7 +941,7 @@ describe('Given an administrator on the administration home', () => {
       fixture.detectChanges();
     });
 
-    it('then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away', () => {
+    it('then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last visit, each one tap away', () => {
       expect(fixture.nativeElement.querySelector('h1')?.nextElementSibling).toBe(
         fixture.nativeElement.querySelector('.attention'),
       );

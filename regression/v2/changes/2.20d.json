@@ -1,0 +1,98 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then the block is the first card and says it is loading until both answers come",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when it appears, then it is a card named for the last visit that says it is finding out, and it asks for the copy to catch up",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then it names the sign-in, sums the new payments and links the paired, the waiting payments and the new donors",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when a lot came in, then it names the last visit, sums the payments and lists every kind with its link",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then one payment and one donor read in the singular and a figure of none has no link",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when one of each came in, then each reads in the singular and a kind with none says so without a link",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then registrations without any payment say no payment came and leave the payment figures out",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when only another administrator acted, then no payment came and the payment figures are left out",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then nothing new is said in one sentence instead of zeros",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when nothing is new, then it says so in one sentence instead of zeros",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then a first sign-in says so and asks for nothing more",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when this is the first visit on this device, then it says what it will show next time and keeps the mark",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the previous sign-in arrives > then a failure offers a retry that asks again",
+    "replacement": "src/app/features/admin/home/since-last-visit/since-last-visit.spec.ts > Given the block of what is new since the last visit on the administration home > when the copy cannot catch up, then an alert offers a retry that checks again",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last sign-in, each one tap away",
+    "replacement": "src/app/features/admin/home/admin-home.spec.ts > Given an administrator on the administration home > when the window is as narrow as a phone or a tablet > then what needs attention comes right under the heading, and the sections of every day and the way to the rest follow what is new since the last visit, each one tap away",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/admin-api.spec.ts > Given the administration API > when the previous sign-in is requested, then it asks the endpoint of the signed-in administrator",
+    "replacement": "src/app/features/admin/device-copy/administration-visit.spec.ts > Given the summary of what is new since the last visit on this device > when it is asked to check, then the copy catches up and the summary compares it with the mark of the last visit",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/admin-api.spec.ts > Given the administration API > when what came in since a moment is requested, then the moment travels as the from parameter",
+    "replacement": "src/app/features/admin/device-copy/administration-visit.spec.ts > Given the summary of what is new since the last visit on this device > when it is asked to check, then the copy catches up and the summary compares it with the mark of the last visit",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin.spec.ts > Given an administrator > when they come back after an earlier sign-in, then the overview opens with what came in since then and leads to the waiting payments",
+    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they come back after payments, a donor, a receipt and another administrator came in, then the block names each and leads to the waiting payments",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/admin.spec.ts > Given an administrator > when they sign in to the administration for the first time, then the block says there is nothing to compare yet",
+    "replacement": "e2e/admin-since-last-visit.spec.ts > Given an administrator whose device keeps the administration > when they open the administration on this device for the first time, then the block says what it will show next time",
+    "reason": "Plan v3 2.20d: the card \"Od posledního přihlášení\" of /sprava, which asked the server for the previous sign-in and what came in since, became \"Od minulé návštěvy\", computed in the browser from the administration copy and a mark of the last visit kept in it; the endpoints stay for the connector, the frontend no longer calls them",
+    "contract": "docs/frontend-overview.md, admin home/ (the card \"Od minulé návštěvy\")"
+  }
+]

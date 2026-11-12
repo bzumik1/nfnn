@@ -501,18 +501,6 @@ export interface AdminOverviewResponse {
   months: MonthOverviewResponse[];
 }
 
-export interface AdminActivitySinceResponse {
-  from: string;
-  payments: TallyResponse;
-  paired: TallyResponse;
-  unpaired: TallyResponse;
-  newDonors: number;
-}
-
-export interface PreviousSignInResponse {
-  previousSignInAt: string | null;
-}
-
 export type SettingGroup = 'SITE' | 'MAIL' | 'BANK' | 'RECEIPTS' | 'ADMINISTRATORS';
 
 export interface AdminTestEmailRequest extends MailServerRequest {
@@ -992,16 +980,6 @@ export class AdminApi {
       params['year'] = String(year);
     }
     return this.http.get<AdminOverviewResponse>('/api/admin/donations/overview', { params });
-  }
-
-  overviewSince(from: string): Observable<AdminActivitySinceResponse> {
-    return this.http.get<AdminActivitySinceResponse>('/api/admin/donations/overview/since', {
-      params: { from },
-    });
-  }
-
-  previousSignIn(): Observable<PreviousSignInResponse> {
-    return this.http.get<PreviousSignInResponse>('/api/admin/donors/me/previous-sign-in');
   }
 
   donorDonations(donorId: string): Observable<AdminDonorDetailResponse> {

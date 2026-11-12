@@ -17,8 +17,6 @@ const OVERVIEW = '/api/admin/donations/overview';
 const BACKUPS = '/api/admin/operations/backups';
 const PAYMENTS = '/api/admin/donations/payments';
 const ADMINISTRATORS = '/api/admin/donors/administrators';
-const PREVIOUS_SIGN_IN = '/api/admin/donors/me/previous-sign-in';
-const SINCE = '/api/admin/donations/overview/since';
 const SIGNING_KEYS = '/api/admin/donations/receipt-signing-keys';
 
 const backups = {
@@ -108,26 +106,6 @@ async function mockOverview(page: Page): Promise<void> {
             : overview,
       });
     },
-  );
-}
-
-async function mockSince(page: Page, previousSignInAt: string | null): Promise<void> {
-  await page.route(
-    (url) => url.pathname === PREVIOUS_SIGN_IN,
-    (route) => route.fulfill({ json: { previousSignInAt } }),
-  );
-  await page.route(
-    (url) => url.pathname === SINCE,
-    (route) =>
-      route.fulfill({
-        json: {
-          from: new URL(route.request().url()).searchParams.get('from'),
-          payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
-          paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
-          unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
-          newDonors: 3,
-        },
-      }),
   );
 }
 
@@ -260,7 +238,6 @@ test.describe('Given an administrator', () => {
     await mockOverview(page);
     await mockBackups(page);
     await mockAttentionSources(page);
-    await mockSince(page, '2026-10-28T20:14:00Z');
   });
 
   test('when they sign in, then the overview offers the administration and it shows how the bank import is doing', async ({
@@ -342,47 +319,6 @@ test.describe('Given an administrator', () => {
     await openAccountItem(page, 'Můj přehled');
 
     await expect(page).toHaveURL(/\/darce\/prehled$/);
-  });
-
-  test('when they come back after an earlier sign-in, then the overview opens with what came in since then and leads to the waiting payments', async ({
-    page,
-  }) => {
-    await mockImportState(page, quietImport);
-    await rememberedSession(page, administrator);
-
-    await page.goto('/sprava');
-
-    const since = page.getByRole('region', { name: 'Od posledního přihlášení' });
-    await expect(since).toContainText(
-      'Poslední přihlášení 28. 10. 2026 21:14. Od té doby přišlo 5 plateb za 12 500 Kč.',
-    );
-    await expect(since.getByRole('link', { name: '3 platby za 7 500 Kč' })).toHaveAttribute(
-      'href',
-      '/sprava/platby?stav=prirazene&od=2026-10-28',
-    );
-    await expect(since.getByRole('link', { name: '3 nové registrace' })).toHaveAttribute(
-      'href',
-      '/sprava/darci',
-    );
-
-    await since.getByRole('link', { name: '2 platby za 5 000 Kč' }).click();
-
-    await expect(page).toHaveURL(/\/sprava\/platby\?od=2026-10-28$/);
-    await expect(page.getByLabel('Od', { exact: true })).toHaveValue('2026-10-28');
-  });
-
-  test('when they sign in to the administration for the first time, then the block says there is nothing to compare yet', async ({
-    page,
-  }) => {
-    await mockSince(page, null);
-    await mockImportState(page, quietImport);
-    await rememberedSession(page, administrator);
-
-    await page.goto('/sprava');
-
-    await expect(page.getByRole('region', { name: 'Od posledního přihlášení' })).toContainText(
-      'Jste tu poprvé. Od příštího přihlášení tu uvidíte nové platby a nové dárce.',
-    );
   });
 
   test('when the bank import keeps failing, then the administration says so and names the failure', async ({

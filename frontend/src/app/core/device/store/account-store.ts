@@ -32,6 +32,7 @@ export interface CopyContents {
   readonly images?: readonly StoredImage[];
   readonly profile?: unknown;
   readonly session?: unknown;
+  readonly seen?: unknown;
 }
 
 export interface StoredDraft {
@@ -66,6 +67,7 @@ interface MetaPlaintext {
   readonly storedAt: string;
   readonly profile?: unknown;
   readonly session?: unknown;
+  readonly seen?: unknown;
 }
 
 export class AccountStore {
@@ -102,7 +104,9 @@ export class AccountStore {
     }
   }
 
-  async replace(contents: CopyContents): Promise<void> {
+  async replace(replacement: CopyContents): Promise<void> {
+    const seen = replacement.seen ?? this.current()?.seen;
+    const contents: CopyContents = seen === undefined ? replacement : { ...replacement, seen };
     const plaintexts: (ChunkPlaintext | MetaPlaintext | ImagePlaintext)[] = [
       {
         type: 'meta',
@@ -110,6 +114,7 @@ export class AccountStore {
         storedAt: contents.storedAt,
         ...(contents.profile === undefined ? {} : { profile: contents.profile }),
         ...(contents.session === undefined ? {} : { session: contents.session }),
+        ...(contents.seen === undefined ? {} : { seen: contents.seen }),
       },
       ...contents.chunks.map((chunk): ChunkPlaintext => ({
         type: 'chunk',
@@ -234,6 +239,7 @@ export class AccountStore {
       ...(images.length === 0 ? {} : { images }),
       ...(meta.profile === undefined ? {} : { profile: meta.profile }),
       ...(meta.session === undefined ? {} : { session: meta.session }),
+      ...(meta.seen === undefined ? {} : { seen: meta.seen }),
     };
   }
 

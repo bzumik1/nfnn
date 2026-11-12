@@ -2,7 +2,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import {
-  AdminActivitySinceResponse,
   AdminApi,
   HistoryImportResponse,
   ImportStateResponse,
@@ -12,7 +11,6 @@ import {
 } from './admin-api';
 import {
   adminBankLogo,
-  activitySince,
   adminPush,
   historyImport,
   importState,
@@ -113,31 +111,6 @@ describe('Given the administration API', () => {
     request.flush(yearlyReceiptsIssued());
 
     expect(received).toEqual(yearlyReceiptsIssued());
-  });
-
-  it('when the previous sign-in is requested, then it asks the endpoint of the signed-in administrator', () => {
-    let received: string | null | undefined;
-    api.previousSignIn().subscribe((response) => (received = response.previousSignInAt));
-
-    const request = http.expectOne('/api/admin/donors/me/previous-sign-in');
-    expect(request.request.method).toBe('GET');
-    request.flush({ previousSignInAt: '2026-10-28T20:14:00Z' });
-
-    expect(received).toBe('2026-10-28T20:14:00Z');
-  });
-
-  it('when what came in since a moment is requested, then the moment travels as the from parameter', () => {
-    let received: AdminActivitySinceResponse | undefined;
-    api.overviewSince('2026-10-28T20:14:00Z').subscribe((response) => (received = response));
-
-    const request = http.expectOne(
-      (candidate) =>
-        candidate.url === '/api/admin/donations/overview/since' &&
-        candidate.params.get('from') === '2026-10-28T20:14:00Z',
-    );
-    request.flush(activitySince());
-
-    expect(received).toEqual(activitySince());
   });
 
   it('when the push alerts are read and changed, then each call goes to its endpoint of the contract', () => {

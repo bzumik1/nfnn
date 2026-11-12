@@ -96,22 +96,6 @@
   }
 }
 
-.since-lead {
-  margin: 0 0 var(--space-4);
-  font-size: var(--text-md);
-  color: var(--color-text);
-  line-height: var(--leading-normal);
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.since .admin-data a {
-  color: var(--color-accent);
-  font-weight: var(--weight-semibold);
-}
-
 .overview-hint {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
