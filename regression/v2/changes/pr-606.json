@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "e2e",
+    "test": "back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then a plain ground shows under it and the list opens",
+    "reason": "Jakub 2026-11-12 (exact iOS): a page never shown in the visit is drawn under cover and lies under the finger instead of the plain ground, and is the page that opens on release without being asked for again",
+    "replacement": "back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then the list, never shown before, is drawn under it and on letting go is the page that opens without being asked for again",
+    "contract": "docs/frontend-overview.md, page-transitions and navigation-preview"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/app.config.spec.ts > Given the pages of the tabs > when the app starts, then the router keeps them while another tab is shown, for the donor signed in when they were shown",
+    "reason": "Jakub 2026-11-12 (exact iOS): the router's reuse strategy is now PreviewingReuse in front of the kept tab pages, which also keeps the live page through the back swipe's preview",
+    "replacement": "src/app/app.config.spec.ts > Given the pages of the tabs and the page a back swipe previews > when the app starts, then the router keeps them while another tab is shown, for the donor signed in when they were shown, and keeps the live page through a preview",
+    "contract": "docs/frontend-overview.md, navigation-preview"
+  }
+]
