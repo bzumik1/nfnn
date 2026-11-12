@@ -8,7 +8,20 @@ import {
   untracked,
 } from '@angular/core';
 import { AdministrationAccess } from '../../auth/administration-access';
-import type { DeviceAccount, SessionDevice, SignInSecret } from '../../auth/session-device';
+import {
+  type CopyProfile,
+  type CopySession,
+  isCopyProfile,
+  opensOffline,
+} from '../../auth/copy-profile';
+import {
+  type DeviceAccount,
+  deviceAccountOf,
+  type SessionDevice,
+  type SignInSecret,
+  userHandleOf,
+} from '../../auth/session-device';
+import type { SessionKind } from '../../auth/session-jar';
 import { SignedOutNotice } from '../../auth/signed-out-notice';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import type { DeviceCopyDiagnostics } from '../../diagnostics/device-copy-diagnostics';
@@ -100,7 +113,12 @@ export const STORAGE_PERSISTENCE = new InjectionToken<() => void>('STORAGE_PERSI
   },
 });
 
-export type OpenReason = 'sign-in' | 'restored' | 'unlocked' | 'empty';
+export type OpenReason = 'sign-in' | 'restored' | 'unlocked' | 'empty' | 'offline';
+
+export interface OfflineOpening {
+  readonly profile: CopyProfile;
+  readonly session: CopySession;
+}
 
 export interface OpenedCopy {
   readonly store: AccountStore;
@@ -156,6 +174,7 @@ export class DeviceVault implements SessionDevice {
   private pendingSalt: string | null = null;
   private sessionsWritten = new Set<string>();
   private sessionGeneration = 0;
+  private openedSessionWrap: string | null = null;
   private readonly copies = new WeakMap<AccountStore, OpenCopy>();
 
   readonly opened = this.openedCopy.asReadonly();
@@ -232,6 +251,31 @@ export class DeviceVault implements SessionDevice {
         storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
       ),
     ).then(() => this.checkStatus(false));
+  }
+
+  openedOffline(expected: SessionKind, now = Date.now()): Promise<OfflineOpening | null> {
+    return this.run(async () => {
+      const already = this.openedCopy();
+      if (already !== null) {
+        return already.reason === 'offline' && this.openedSessionWrap !== null
+          ? offlineOpeningOf(already.store.contents(), expected, this.openedSessionWrap, now)
+          : null;
+      }
+      return this.openOffline(expected, now);
+    });
+  }
+
+  sessionWrapOf(store: AccountStore): Promise<string | null> {
+    return this.run(async () => {
+      const wrap = this.openedSessionWrap;
+      if (this.openedCopy()?.store !== store || wrap === null || this.activeStorage === null) {
+        return null;
+      }
+      const entry = (await this.activeStorage.entries()).find(
+        (candidate) => candidate.copyId === store.copyId,
+      );
+      return entry !== undefined && sessionWrapIn(entry)?.iv === wrap ? wrap : null;
+    });
   }
 
   signedOut(account: DeviceAccount): Promise<void> {
@@ -352,9 +396,10 @@ export class DeviceVault implements SessionDevice {
   replaceContents(store: AccountStore, contents: CopyContents): Promise<boolean> {
     return this.run(async () => {
       const administration = this.openedAdministration()?.store === store;
+      const opened = this.openedCopy();
       const storage = administration
         ? this.administrationStorage
-        : this.openedCopy()?.store === store
+        : opened?.store === store && opened.reason !== 'offline'
           ? this.activeStorage
           : null;
       if (storage === null) {
@@ -673,7 +718,8 @@ export class DeviceVault implements SessionDevice {
     const copy = opening?.copy ?? (await OpenCopy.create());
     const kept = opening === null ? [] : entry!.wraps.filter((wrap) => wrap.kind !== 'session');
     const sessionKey = await generateSessionKey();
-    const wraps: KeyWrap[] = [...kept, await copy.wrapWithSessionKey(sessionKey)];
+    const sessionWrap = await copy.wrapWithSessionKey(sessionKey);
+    const wraps: KeyWrap[] = [...kept, sessionWrap];
     if (secret.kind === 'prf') {
       wraps.splice(0, wraps.length, ...withoutPrfOf(wraps, secret.reading.credentialId));
       wraps.push(await copy.wrapWithPrf(secret.reading.credentialId, secret.reading.output));
@@ -687,6 +733,7 @@ export class DeviceVault implements SessionDevice {
       }),
     );
     const store = await this.adopt(storage, account, copy);
+    this.openedSessionWrap = sessionWrap.iv;
     const load = await store.load();
     this.openedCopy.set({ store, reason: load === 'loaded' ? 'sign-in' : 'empty', account });
     if (secret.kind === 'password' && opening?.by !== 'password') {
@@ -932,8 +979,55 @@ export class DeviceVault implements SessionDevice {
     }
   }
 
+  private async openOffline(expected: SessionKind, now: number): Promise<OfflineOpening | null> {
+    const storage = await this.presentStorage().catch(() => null);
+    const salt = storage?.kind === 'indexed-db' ? await storage.deviceSalt() : null;
+    if (storage === null || salt === null) {
+      return null;
+    }
+    const withSession = (await storage.entries()).filter(
+      (entry) => isDonor(entry) && sessionWrapIn(entry) !== undefined,
+    );
+    if (withSession.length !== 1) {
+      return null;
+    }
+    const entry = withSession[0];
+    const wrap = sessionWrapIn(entry)!.iv;
+    const opening = await this.openExisting(storage, entry, { kind: 'none' });
+    if (opening === null || opening === 'undecided') {
+      return null;
+    }
+    const store = await this.adopt(storage, { email: '', userHandle: '' }, opening.copy);
+    try {
+      const found =
+        (await store.load()) === 'loaded'
+          ? offlineOpeningOf(store.contents(), expected, wrap, now)
+          : null;
+      if (
+        found === null ||
+        (await userHandleTag(salt, userHandleOf(found.profile.id))) !== entry.userHandleTag
+      ) {
+        throw new CopyRefused('wrong-wrap');
+      }
+      const account = deviceAccountOf(found.profile);
+      this.account = account;
+      this.openedSessionWrap = wrap;
+      this.openedCopy.set({ store, reason: 'offline', account });
+      return found;
+    } catch {
+      store.close();
+      this.closeOpen();
+      return null;
+    }
+  }
+
   private async openAtRestore(account: DeviceAccount): Promise<void> {
-    if (this.openedFor(account) !== null) {
+    const opened = this.openedFor(account);
+    if (opened !== null) {
+      if (opened.reason === 'offline') {
+        this.account = account;
+        this.openedCopy.set({ store: opened.store, reason: 'restored', account });
+      }
       return;
     }
     this.closeOpen();
@@ -953,6 +1047,7 @@ export class DeviceVault implements SessionDevice {
         }),
       );
       const store = await this.adopt(storage, account, opening.copy);
+      this.openedSessionWrap = sessionWrapIn(entry!)?.iv ?? null;
       const load = await store.load();
       this.openedCopy.set({ store, reason: load === 'loaded' ? 'restored' : 'empty', account });
       return;
@@ -967,21 +1062,16 @@ export class DeviceVault implements SessionDevice {
     }
     const copy = await OpenCopy.create();
     const sessionKey = await generateSessionKey();
+    const sessionWrap = await copy.wrapWithSessionKey(sessionKey);
     await this.committed(
       storage,
       joined(withoutSessions(others), {
-        putEntries: [
-          {
-            copyId: copy.copyId,
-            kind: 'donor',
-            ...tags,
-            wraps: [await copy.wrapWithSessionKey(sessionKey)],
-          },
-        ],
+        putEntries: [{ copyId: copy.copyId, kind: 'donor', ...tags, wraps: [sessionWrap] }],
         putSessionKeys: [{ copyId: copy.copyId, key: sessionKey }],
       }),
     );
     const store = await this.adopt(storage, account, copy);
+    this.openedSessionWrap = sessionWrap.iv;
     this.openedCopy.set({ store, reason: 'empty', account });
   }
 
@@ -1129,6 +1219,7 @@ export class DeviceVault implements SessionDevice {
     this.channel?.close();
     this.channel = null;
     this.account = null;
+    this.openedSessionWrap = null;
     if (this.activeStorage === this.memoryOnly) {
       this.memoryOnly = null;
       this.currentMode.set(this.sharedStorage === null ? null : 'stored');
@@ -1277,6 +1368,23 @@ async function accountTags(salt: string, account: DeviceAccount): Promise<Accoun
     lookupTag: await lookupTag(salt, account.email),
     userHandleTag: await userHandleTag(salt, account.userHandle),
   };
+}
+
+function offlineOpeningOf(
+  contents: CopyContents | null,
+  expected: SessionKind,
+  wrap: string,
+  now: number,
+): OfflineOpening | null {
+  const profile = contents?.profile;
+  const session = contents?.session;
+  return isCopyProfile(profile) && opensOffline(session, expected, wrap, now)
+    ? { profile, session }
+    : null;
+}
+
+function sessionWrapIn(entry: RegistryEntry): KeyWrap | undefined {
+  return entry.wraps.find((wrap) => wrap.kind === 'session');
 }
 
 function entryFor(entries: readonly RegistryEntry[], tags: AccountTags): RegistryEntry | null {

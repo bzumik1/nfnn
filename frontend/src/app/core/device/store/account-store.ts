@@ -31,6 +31,7 @@ export interface CopyContents {
   readonly storedAt: string;
   readonly images?: readonly StoredImage[];
   readonly profile?: unknown;
+  readonly session?: unknown;
 }
 
 export interface StoredDraft {
@@ -64,6 +65,7 @@ interface MetaPlaintext {
   readonly summary: unknown;
   readonly storedAt: string;
   readonly profile?: unknown;
+  readonly session?: unknown;
 }
 
 export class AccountStore {
@@ -107,6 +109,7 @@ export class AccountStore {
         summary: contents.summary,
         storedAt: contents.storedAt,
         ...(contents.profile === undefined ? {} : { profile: contents.profile }),
+        ...(contents.session === undefined ? {} : { session: contents.session }),
       },
       ...contents.chunks.map((chunk): ChunkPlaintext => ({
         type: 'chunk',
@@ -230,6 +233,7 @@ export class AccountStore {
       storedAt: meta.storedAt,
       ...(images.length === 0 ? {} : { images }),
       ...(meta.profile === undefined ? {} : { profile: meta.profile }),
+      ...(meta.session === undefined ? {} : { session: meta.session }),
     };
   }
 

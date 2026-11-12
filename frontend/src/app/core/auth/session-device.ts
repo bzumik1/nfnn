@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
 import type { PrfReading } from '../device/crypto/prf';
+import type { CopyProfile, CopySession } from './copy-profile';
+import type { SessionKind } from './session-jar';
 
 export interface DeviceAccount {
   readonly email: string;
@@ -12,8 +14,14 @@ export type SignInSecret =
   | { readonly kind: 'prf'; readonly reading: PrfReading }
   | { readonly kind: 'none' };
 
+export interface OfflineAccount {
+  readonly profile: CopyProfile;
+  readonly session: CopySession;
+}
+
 export interface SessionDevice {
   prepare?(): void;
+  openedOffline?(expected: SessionKind): Promise<OfflineAccount | null>;
   prfInput(): Promise<Uint8Array<ArrayBuffer> | null>;
   signedIn(
     account: DeviceAccount,
