@@ -5,6 +5,7 @@ import { pathOf, tabOf } from './app-tabs';
 
 export const APP_DEPTH_KEY = 'nfnnAppDepth';
 export const APP_BEHIND_KEY = 'nfnnAppBehind';
+export const BACK_NAVIGATION = 'nfnn.back';
 
 export type BackDestination =
   | { readonly kind: 'step'; readonly depth: number; readonly path: string | null }
@@ -58,7 +59,7 @@ export class BackTarget {
       this.buttonPressed = true;
       this.location.back();
     } else {
-      void this.router.navigateByUrl(parent, { replaceUrl: true });
+      void this.router.navigateByUrl(parent, { replaceUrl: true, info: BACK_NAVIGATION });
     }
   }
 
@@ -67,7 +68,7 @@ export class BackTarget {
       this.buttonPressed = true;
       this.location.back();
     } else {
-      void this.router.navigateByUrl(root, { replaceUrl: true });
+      void this.router.navigateByUrl(root, { replaceUrl: true, info: BACK_NAVIGATION });
     }
   }
 

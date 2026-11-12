@@ -8,6 +8,7 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
+import { REMOVE_STYLES_ON_COMPONENT_DESTROY } from '@angular/platform-browser';
 import {
   InMemoryScrollingFeature,
   InMemoryScrollingOptions,
@@ -27,6 +28,7 @@ import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
 import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
+import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
 import { TabPagesPreloading } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
@@ -75,6 +77,11 @@ export const appHttpClient: EnvironmentProviders = provideHttpClient(
     connectivityInterceptor,
   ]),
 );
+
+export const keptPageStyles: Provider = {
+  provide: REMOVE_STYLES_ON_COMPONENT_DESTROY,
+  useValue: false,
+};
 
 export const appErrorHandler: Provider = {
   provide: ErrorHandler,
@@ -134,5 +141,7 @@ export const appConfig: ApplicationConfig = {
     windowControlsAtStart,
     navigationAtStart,
     edgeSwipeBackAtStart,
+    pageTransitionsAtStart,
+    keptPageStyles,
   ],
 };
