@@ -306,6 +306,11 @@ UI „upozornění“ (e-mailem; on a device the page and section „Upozorněn�
 A message to the administrators that an import, backups or mail stopped working or works again, sent once per outage and once on recovery.\
 _Avoid_: notification for these (security e-mails to a donor are not alerts)
 
+**Donor notification**\
+UI „upozornění“ (on the donor's device, card „Upozornění“ in „Údaje a zabezpečení“; Jakub 2026-11-12) · Code: `DonorPushSubscription`, `DonorNotifications` (`gifts`, `yearlyReceipts`), `PushMessageKind.DONOR_TEST`, `operations_donor_push_subscription`, `/api/operations/push`.\
+A push message to a donor's device that a gift arrived or a yearly receipt is ready, a fixed sentence of its kind; never an alert, which goes only to administrators.\
+_Avoid_: alert for these
+
 **Settings**\
 UI „Nastavení“, „Technické nastavení (pro správce serveru)“ · Code: `operations/domain/settings/Setting`, `operations_setting`.\
 Values the administrator changes on `/sprava/nastaveni`; secrets among them (passwords, tokens) change only in a browser session and are never returned.

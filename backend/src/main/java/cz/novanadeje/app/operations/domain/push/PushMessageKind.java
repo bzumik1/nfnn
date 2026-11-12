@@ -12,16 +12,26 @@ public enum PushMessageKind {
     BACKUPS_OUTAGE("backups-outage", Optional.of(MonitoredArea.BACKUPS), true),
     BACKUPS_RECOVERED("backups-recovered", Optional.of(MonitoredArea.BACKUPS), false),
     MAIL_OUTAGE("mail-outage", Optional.of(MonitoredArea.MAIL), true),
-    MAIL_RECOVERED("mail-recovered", Optional.of(MonitoredArea.MAIL), false);
+    MAIL_RECOVERED("mail-recovered", Optional.of(MonitoredArea.MAIL), false),
+    DONOR_TEST("donor-test");
 
     private final String token;
     private final Optional<MonitoredArea> area;
     private final boolean outage;
+    private final boolean toDonors;
 
     PushMessageKind(String token, Optional<MonitoredArea> area, boolean outage) {
         this.token = token;
         this.area = area;
         this.outage = outage;
+        this.toDonors = false;
+    }
+
+    PushMessageKind(String token) {
+        this.token = token;
+        this.area = Optional.empty();
+        this.outage = false;
+        this.toDonors = true;
     }
 
     public static PushMessageKind of(MonitoredArea area, boolean opened) {
@@ -34,5 +44,9 @@ public enum PushMessageKind {
 
     public Optional<MonitoredArea> area() {
         return area;
+    }
+
+    public boolean carriesOpenAlertCount() {
+        return !toDonors;
     }
 }

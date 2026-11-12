@@ -4,5 +4,5 @@ import java.util.UUID;
 
 public interface SignedInDevices {
 
-    void holdSignedIn(UUID donorId, UUID deviceId);
+    SignedInDevice holdSignedIn(UUID donorId, UUID deviceId);
 }

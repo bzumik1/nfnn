@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="009-subscribe-donors-to-push" author="nfnn">
+        <createTable tableName="operations_donor_push_subscription">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" primaryKeyName="pk_operations_donor_push_subscription" nullable="false"/>
+            </column>
+            <column name="donor_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_id" type="uuid">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_operations_donor_push_subscription_device"/>
+            </column>
+            <column name="endpoint" type="varchar(1024)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_operations_donor_push_subscription_endpoint"/>
+            </column>
+            <column name="p256dh" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auth" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gift_notifications" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="yearly_receipt_notifications" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_delivered_at" type="timestamp with time zone"/>
+            <column name="failures_in_a_row" type="integer" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <sql>alter table operations_donor_push_subscription add constraint ck_operations_donor_push_subscription_failures check (failures_in_a_row &gt;= 0)</sql>
+        <createIndex tableName="operations_donor_push_subscription" indexName="ix_operations_donor_push_subscription_donor">
+            <column name="donor_id"/>
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

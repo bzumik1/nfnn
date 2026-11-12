@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.push;
 
-import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import org.springframework.context.MessageSource;
@@ -31,7 +30,9 @@ class PushPayloads {
         PushMessageKind kind = message.kind();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("kind", kind.token());
-        data.put("count", message.count());
+        if (kind.carriesOpenAlertCount()) {
+            data.put("count", message.count());
+        }
         Map<String, Object> click = new LinkedHashMap<>();
         click.put("operation", CLICK_OPERATION);
         click.put("url", routeOf(kind));
@@ -47,7 +48,9 @@ class PushPayloads {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("v", PushMessage.VERSION);
         payload.put("kind", kind.token());
-        payload.put("count", message.count());
+        if (kind.carriesOpenAlertCount()) {
+            payload.put("count", message.count());
+        }
         payload.put("notification", notification);
         byte[] written = JSON.writeValueAsString(payload).getBytes(StandardCharsets.UTF_8);
         if (written.length >= WebPushDelivery.PADDED_MESSAGE_BYTES) {
@@ -57,19 +60,23 @@ class PushPayloads {
     }
 
     static String routeOf(PushMessageKind kind) {
-        return kind.area().map(PushPayloads::routeOf).orElse("/sprava/upozorneni");
-    }
-
-    private static String routeOf(MonitoredArea area) {
-        return switch (area) {
-            case BANK_IMPORT -> "/sprava";
-            case BACKUPS -> "/sprava/zalohy";
-            case MAIL -> "/sprava/nastaveni";
+        return switch (kind) {
+            case TEST -> "/sprava/upozorneni";
+            case BANK_IMPORT_OUTAGE, BANK_IMPORT_RECOVERED -> "/sprava";
+            case BACKUPS_OUTAGE, BACKUPS_RECOVERED -> "/sprava/zalohy";
+            case MAIL_OUTAGE, MAIL_RECOVERED -> "/sprava/nastaveni";
+            case DONOR_TEST -> "/darce/udaje";
         };
     }
 
     private static String tagOf(PushMessageKind kind) {
-        return "nfnn-" + kind.area().map(area -> area.name().toLowerCase(Locale.ROOT).replace('_', '-')).orElse("test");
+        return switch (kind) {
+            case TEST -> "nfnn-test";
+            case BANK_IMPORT_OUTAGE, BANK_IMPORT_RECOVERED -> "nfnn-bank-import";
+            case BACKUPS_OUTAGE, BACKUPS_RECOVERED -> "nfnn-backups";
+            case MAIL_OUTAGE, MAIL_RECOVERED -> "nfnn-mail";
+            case DONOR_TEST -> "nfnn-donor-test";
+        };
     }
 
     private String text(PushMessageKind kind, String part) {
