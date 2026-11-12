@@ -1,5 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { AdministrationWrites } from '../../../core/admin-writes/administration-writes';
 import { userHandleOf } from '../../../core/auth/session-device';
 import type { CopyContents, StoredChunk } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
@@ -31,6 +33,7 @@ export interface DownloadProgress {
 
 const PARTS: readonly AdministrationCopyPart[] = ['donations', 'donors'];
 const ATTEMPTS = 2;
+const TOO_MANY_REQUESTS = 429;
 
 type Fetched = CopyContents | 'unchanged' | 'changed' | 'another-account' | 'revoked';
 
@@ -39,6 +42,8 @@ export class AdministrationCopyDownload {
   private readonly vault = inject(DeviceVault);
   private readonly api = inject(AdministrationSyncApi);
   private readonly reporter = inject(ErrorReporter);
+  private readonly writes = inject(AdministrationWrites);
+  private started: { readonly copy: OpenedCopy; readonly writes: number } | null = null;
   private readonly progress = signal<DownloadProgress | null>(null);
   private readonly checked = signal<string | null>(null);
   private running: {
@@ -64,7 +69,7 @@ export class AdministrationCopyDownload {
   }
 
   writesAtStart(opened: OpenedCopy | null): number | null {
-    return opened === null ? null : null;
+    return opened !== null && this.started?.copy === opened ? this.started.writes : null;
   }
 
   refresh(startingNow = false): Promise<AdministrationDownloadOutcome> {
@@ -93,6 +98,7 @@ export class AdministrationCopyDownload {
     if (this.running?.copy === opened) {
       return this.running.outcome;
     }
+    this.started = { copy: opened, writes: this.writes.made() };
     const outcome = this.download(opened).finally(() => {
       if (this.running?.outcome === outcome) {
         this.running = null;
@@ -121,8 +127,10 @@ export class AdministrationCopyDownload {
           let contents: Fetched;
           try {
             contents = await this.fetched(opened.account.userHandle, first, store.contents());
-          } catch {
-            return 'failed';
+          } catch (failure: unknown) {
+            return failure instanceof HttpErrorResponse && failure.status === TOO_MANY_REQUESTS
+              ? 'rate-limited'
+              : 'failed';
           }
           if (contents === 'revoked') {
             await this.vault.administrationRevoked(opened.account);

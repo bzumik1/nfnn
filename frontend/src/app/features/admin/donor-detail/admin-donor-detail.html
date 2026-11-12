@@ -191,9 +191,16 @@
             }
             @case ('error') {
               <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-                <p i18n="@@admin.donorDetail.donations.error.text">
-                  Účty, dary a potvrzení se nepodařilo načíst.
-                </p>
+                @if (donationsAwaitConnection()) {
+                  <p i18n="@@admin.donorDetail.donations.offline.text">
+                    Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, jakmile bude
+                    zařízení online.
+                  </p>
+                } @else {
+                  <p i18n="@@admin.donorDetail.donations.error.text">
+                    Účty, dary a potvrzení se nepodařilo načíst.
+                  </p>
+                }
                 <button
                   appNeedsConnection
                   type="button"
@@ -553,9 +560,16 @@
           }
           @case ('error') {
             <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
-              <p i18n="@@admin.donorDetail.donations.error.text">
-                Účty, dary a potvrzení se nepodařilo načíst.
-              </p>
+              @if (donationsAwaitConnection()) {
+                <p i18n="@@admin.donorDetail.donations.offline.text">
+                  Účty, dary a potvrzení tohoto dárce v zařízení nejsou. Načteme je, jakmile bude
+                  zařízení online.
+                </p>
+              } @else {
+                <p i18n="@@admin.donorDetail.donations.error.text">
+                  Účty, dary a potvrzení se nepodařilo načíst.
+                </p>
+              }
               <button
                 appNeedsConnection
                 type="button"

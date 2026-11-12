@@ -19,7 +19,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { from, Observable, switchMap } from 'rxjs';
+import { from, Observable, Subscription, switchMap } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { Connectivity } from '../../../core/connectivity/connectivity';
@@ -163,6 +163,8 @@ export class AdminDonorDetail {
   protected readonly accountState = signal<LoadState>('loading');
   protected readonly account = signal<DonorAccountResponse | null>(null);
   protected readonly donationsState = signal<LoadState>('loading');
+  protected readonly donationsAwaitConnection = signal(false);
+  private cardRead: Subscription | null = null;
   protected readonly detail = signal<AdminDonorDetailResponse | null>(null);
   protected readonly bankAccountsSource = signal<BankAccountsSource>('server');
   protected readonly cardNotice = signal<CardNotice | null>(null);
@@ -262,7 +264,9 @@ export class AdminDonorDetail {
     effect(() => {
       const offline = this.connectivity.offline();
       untracked(() => {
-        if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
+        if (wasOffline && !offline && this.donationsAwaitConnection()) {
+          this.loadDonations();
+        } else if (wasOffline && !offline && this.bankAccountsSource() === 'offline') {
           this.bankAccountsSource.set('pending');
           this.readCard();
         }
@@ -363,8 +367,10 @@ export class AdminDonorDetail {
     if (onLoaded !== undefined) {
       this.reads.changed();
     }
+    this.donationsAwaitConnection.set(false);
     let loaded = onLoaded;
-    this.reads
+    this.cardRead?.unsubscribe();
+    this.cardRead = this.reads
       .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -378,7 +384,10 @@ export class AdminDonorDetail {
             loaded = undefined;
           }
         },
-        error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
+        error: (failure: unknown) => {
+          this.donationsAwaitConnection.set(this.connectivity.offline());
+          this.donationsState.set(this.stateAfter(failure));
+        },
       });
   }
 
@@ -447,7 +456,8 @@ export class AdminDonorDetail {
   }
 
   private readCard(retried = false): void {
-    this.reads
+    this.cardRead?.unsubscribe();
+    this.cardRead = this.reads
       .donorCard(this.donorId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -465,7 +475,10 @@ export class AdminDonorDetail {
           }
           this.loadWithdrawnKeysFor(detail);
         },
-        error: (failure: unknown) => this.donationsState.set(this.stateAfter(failure)),
+        error: (failure: unknown) => {
+          this.donationsAwaitConnection.set(this.connectivity.offline());
+          this.donationsState.set(this.stateAfter(failure));
+        },
       });
   }
 

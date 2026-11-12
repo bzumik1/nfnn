@@ -1,24 +1,43 @@
 import { HttpHeaders } from '@angular/common/http';
-import { computed, effect, inject, Injectable, untracked } from '@angular/core';
-import { catchError, concat, defer, from, map, type Observable, of, switchMap } from 'rxjs';
+import { computed, DestroyRef, effect, inject, Injectable, untracked } from '@angular/core';
+import {
+  catchError,
+  concat,
+  defer,
+  from,
+  map,
+  type Observable,
+  of,
+  switchMap,
+  throwError,
+} from 'rxjs';
 import { Connectivity, isUnreachable } from '../../../core/connectivity/connectivity';
 import { AdministrationWrites } from '../../../core/admin-writes/administration-writes';
 import { ShownAnswers } from '../../../core/connectivity/shown-answers';
-import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import {
+  COPY_CHANNELS,
+  type CopyChannel,
+  DeviceVault,
+  type OpenedCopy,
+} from '../../../core/device/store/device-vault';
+import { ErrorReporter } from '../../../core/errors/error-reporter';
+import { canonicalRows } from '../../donations/sync/canonical-rows';
 import {
   AdminApi,
-  type AdminDonorDetailResponse,
   type AdminOverviewResponse,
-  type ImportStateResponse,
+  type AdminDonorDetailResponse,
   type AdminDonorSearchResponse,
   type AdminPaymentListResponse,
   type DonorAccountListResponse,
   type DonorAccountResponse,
+  type ImportFailureKind,
+  type ImportStateResponse,
   type PairingFilter,
   type PaymentQuery,
 } from '../admin-api';
 import { AdministrationCopy } from './administration-copy';
 import { AdministrationCopyDownload } from './administration-copy-download';
+import { everyOfferedYear, yearOverview } from './administration-overview';
 import {
   accountSearch,
   type CopyAccountRow,
@@ -38,6 +57,14 @@ import {
 export const REFRESH_AFTER_MS = 60_000;
 export const FORCED_REFRESH_GAP_MS = 30_000;
 export const RATE_LIMITED_PAUSE_MS = 5 * 60_000;
+export const CHECKS_CHANNEL = 'nfnn.administration-checks';
+
+export type BankAccountsSource = 'server' | 'pending' | 'offline' | 'failed';
+
+export interface DonorCardRead {
+  readonly detail: AdminDonorDetailResponse;
+  readonly bankAccounts: BankAccountsSource;
+}
 
 export type StoredImportState = Omit<ImportStateResponse, 'historyImport' | 'defaultHistoryFrom'>;
 
@@ -45,11 +72,17 @@ export type ImportStateRead =
   | { readonly source: 'server'; readonly state: ImportStateResponse }
   | { readonly source: 'copy'; readonly state: StoredImportState };
 
-export type BankAccountsSource = 'server' | 'pending' | 'offline' | 'failed';
+interface CopyImportStateRow extends Omit<StoredImportState, 'lastFailure'> {
+  readonly lastFailure: {
+    readonly kind: ImportFailureKind;
+    readonly attemptedAt: string | null;
+  } | null;
+}
 
-export interface DonorCardRead {
-  readonly detail: AdminDonorDetailResponse;
-  readonly bankAccounts: BankAccountsSource;
+interface CheckMessage {
+  readonly copyId: string;
+  readonly kind: 'checked' | 'rate-limited';
+  readonly at: number;
 }
 
 const SHOWN_COPY = 'device-copy:administration';
@@ -63,10 +96,15 @@ export class AdministrationReads {
   private readonly shown = inject(ShownAnswers);
   private readonly vault = inject(DeviceVault);
   private readonly writes = inject(AdministrationWrites);
+  private readonly reporter = inject(ErrorReporter);
+  private readonly checks: CopyChannel | null = inject(COPY_CHANNELS)(CHECKS_CHANNEL);
   private checkedCopy: OpenedCopy | null = null;
   private freshFor = 0;
   private checkedAt = Number.NEGATIVE_INFINITY;
+  private startedAt = Number.NEGATIVE_INFINITY;
   private failedAt = Number.NEGATIVE_INFINITY;
+  private pausedUntil = Number.NEGATIVE_INFINITY;
+  private reportedDisagreement: unknown = null;
 
   private readonly payments = this.copy.rows<CopyPaymentRow>('donations', 'payments');
   private readonly donations = this.copy.rows<CopyDonationRow>('donations', 'donations');
@@ -75,6 +113,21 @@ export class AdministrationReads {
   private readonly symbolClaims = this.copy.rows<CopySymbolClaimRow>('donations', 'symbol-claims');
   private readonly receipts = this.copy.rows<CopyReceiptRow>('donations', 'receipts');
   private readonly accounts = this.copy.rows<CopyAccountRow>('donors', 'accounts');
+  private readonly importStates = this.copy.rows<CopyImportStateRow>('donations', 'import-state');
+
+  private readonly overviews = computed(() => {
+    const rows = this.donationsRows();
+    const summary = this.copy.summary();
+    if (rows === null || summary === null) {
+      return null;
+    }
+    const years = everyOfferedYear(rows, summary.today);
+    return {
+      rows,
+      today: summary.today,
+      agrees: canonicalRows(years) === canonicalRows(summary.byYear),
+    };
+  });
 
   private readonly copyTime = computed(() =>
     latest(this.download.checkedAt(), this.copy.storedAt()),
@@ -85,20 +138,14 @@ export class AdministrationReads {
       const opened = this.vault.administration();
       untracked(() => this.forgetAnotherCopy(opened));
     });
+    this.checks?.addEventListener('message', (event: Event) =>
+      this.heardCheck((event as MessageEvent<unknown>).data),
+    );
+    inject(DestroyRef).onDestroy(() => this.checks?.close());
   }
 
   changed(): void {
     this.writes.record();
-  }
-
-  overview(year: number | null = null): Observable<AdminOverviewResponse> {
-    return this.api.overview(year);
-  }
-
-  importState(): Observable<ImportStateRead> {
-    return this.api
-      .importState()
-      .pipe(map((state): ImportStateRead => ({ source: 'server', state })));
   }
 
   paymentList(
@@ -143,6 +190,48 @@ export class AdministrationReads {
       () => this.accounts()?.find((account) => account.donorId === donorId) ?? null,
       () => this.api.donor(donorId),
     );
+  }
+
+  overview(year: number | null = null): Observable<AdminOverviewResponse> {
+    return this.read(
+      () => {
+        const held = this.overviews();
+        if (held === null) {
+          return null;
+        }
+        if (!held.agrees) {
+          this.reportDisagreement(held);
+          return null;
+        }
+        return yearOverview(held.rows, held.today, year);
+      },
+      () => this.api.overview(year),
+    );
+  }
+
+  importState(): Observable<ImportStateRead> {
+    const fromCopy = (): ImportStateRead | null => {
+      const row = this.copy.opened() ? this.importStates()?.[0] : undefined;
+      return row === undefined ? null : { source: 'copy', state: storedImportState(row) };
+    };
+    return defer(() => {
+      const offline = this.connectivity.offline() ? fromCopy() : null;
+      if (offline !== null) {
+        this.held(offline);
+        return of(offline);
+      }
+      return this.api.importState().pipe(
+        map((state): ImportStateRead => ({ source: 'server', state })),
+        catchError((failure: unknown) => {
+          const held = isUnreachable(failure) || this.connectivity.offline() ? fromCopy() : null;
+          if (held === null) {
+            return throwError(() => failure);
+          }
+          this.held(held);
+          return of(held);
+        }),
+      );
+    });
   }
 
   donorCard(donorId: string): Observable<DonorCardRead> {
@@ -220,12 +309,17 @@ export class AdministrationReads {
     this.forgetAnotherCopy(opened);
     const changes = this.writes.made();
     const changed = changes !== this.freshFor;
-    if (!changed && Date.now() - this.checkedAt < REFRESH_AFTER_MS) {
+    const now = Date.now();
+    if (!changed && now - this.checkedAt < REFRESH_AFTER_MS) {
       return true;
     }
-    if (Date.now() - this.failedAt < REFRESH_AFTER_MS) {
+    if (now < this.pausedUntil || now - this.failedAt < REFRESH_AFTER_MS) {
       return false;
     }
+    if (changed && now - this.startedAt < FORCED_REFRESH_GAP_MS) {
+      return false;
+    }
+    this.startedAt = now;
     const outcome = await this.download.refresh(changed);
     if (this.vault.administration() !== opened) {
       return false;
@@ -234,9 +328,16 @@ export class AdministrationReads {
       this.checkedAt = Date.now();
       this.failedAt = Number.NEGATIVE_INFINITY;
       this.freshFor = Math.max(this.freshFor, changes);
+      if (outcome === 'unchanged') {
+        this.tellOtherTabs(opened, 'checked', this.checkedAt);
+      }
       return true;
     }
     this.failedAt = Date.now();
+    if (outcome === 'rate-limited') {
+      this.pausedUntil = this.failedAt + RATE_LIMITED_PAUSE_MS;
+      this.tellOtherTabs(opened, 'rate-limited', this.pausedUntil);
+    }
     return this.connectivity.offline();
   }
 
@@ -244,8 +345,40 @@ export class AdministrationReads {
     if (opened !== this.checkedCopy) {
       this.checkedCopy = opened;
       this.checkedAt = Number.NEGATIVE_INFINITY;
+      this.startedAt = Number.NEGATIVE_INFINITY;
       this.failedAt = Number.NEGATIVE_INFINITY;
-      this.freshFor = this.writes.made();
+      this.pausedUntil = Number.NEGATIVE_INFINITY;
+      this.freshFor = this.download.writesAtStart(opened) ?? this.writes.made();
+    }
+  }
+
+  private tellOtherTabs(opened: OpenedCopy | null, kind: CheckMessage['kind'], at: number): void {
+    if (opened !== null) {
+      this.checks?.postMessage({ copyId: opened.store.copyId, kind, at } satisfies CheckMessage);
+    }
+  }
+
+  private heardCheck(message: unknown): void {
+    const opened = this.vault.administration();
+    if (!isCheckMessage(message) || opened === null || message.copyId !== opened.store.copyId) {
+      return;
+    }
+    this.forgetAnotherCopy(opened);
+    const now = Date.now();
+    if (message.kind === 'checked') {
+      this.checkedAt = Math.max(this.checkedAt, Math.min(message.at, now));
+    } else {
+      this.pausedUntil = Math.max(
+        this.pausedUntil,
+        Math.min(message.at, now + RATE_LIMITED_PAUSE_MS),
+      );
+    }
+  }
+
+  private reportDisagreement(held: object): void {
+    if (this.reportedDisagreement !== held) {
+      this.reportedDisagreement = held;
+      this.reporter.report('device-copy-mismatch', 'global');
     }
   }
 
@@ -294,6 +427,29 @@ export class AdministrationReads {
     }
     return { payments, donations, donorRecords, links, symbolClaims, receipts };
   }
+}
+
+function storedImportState(row: CopyImportStateRow): StoredImportState {
+  return {
+    ...row,
+    lastFailure:
+      row.lastFailure === null
+        ? null
+        : { kind: row.lastFailure.kind, message: null, attemptedAt: row.lastFailure.attemptedAt },
+  };
+}
+
+function isCheckMessage(message: unknown): message is CheckMessage {
+  if (typeof message !== 'object' || message === null) {
+    return false;
+  }
+  const candidate = message as Record<string, unknown>;
+  return (
+    typeof candidate['copyId'] === 'string' &&
+    (candidate['kind'] === 'checked' || candidate['kind'] === 'rate-limited') &&
+    typeof candidate['at'] === 'number' &&
+    Number.isFinite(candidate['at'])
+  );
 }
 
 function latest(first: string | null, second: string | null): string | null {

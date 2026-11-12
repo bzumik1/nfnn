@@ -37,6 +37,7 @@ import { IMPORT_FAILURE_LABELS } from '../import-failure-labels';
 import { unpublishedKeyIds } from '../settings/receipt-signing-key/unpublished-keys';
 import { signingKeyWarnings } from '../settings/receipt-signing-key/key-warnings';
 import { HistoryImport } from './history-import/history-import';
+import { AdministrationReads, type StoredImportState } from '../device-copy/administration-reads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { ADMIN_DAILY, ADMIN_MORE_PATH, ADMIN_PAYMENTS_PATH } from '../shell/admin-sections';
@@ -85,6 +86,7 @@ interface SinceFigure {
 })
 export class AdminHome {
   private readonly api = inject(AdminApi);
+  private readonly reads = inject(AdministrationReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -97,7 +99,11 @@ export class AdminHome {
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
   protected readonly sections = computed(() => sectionRows(this.unpaired()?.count ?? 0));
   protected readonly state = signal<LoadState>('loading');
-  protected readonly importState = signal<ImportStateResponse | null>(null);
+  protected readonly importState = signal<ImportStateResponse | StoredImportState | null>(null);
+  protected readonly historyState = computed(() => {
+    const state = this.importState();
+    return state !== null && 'defaultHistoryFrom' in state ? state : null;
+  });
   protected readonly overviewState = signal<LoadState>('loading');
   protected readonly overview = signal<AdminOverviewResponse | null>(null);
   protected readonly unpairedState = signal<LoadState>('loading');
@@ -251,7 +257,7 @@ export class AdminHome {
 
   protected loadOverview(year: number | null = null): void {
     this.overviewState.set('loading');
-    this.api
+    this.reads
       .overview(year)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -302,8 +308,8 @@ export class AdminHome {
 
   protected loadUnpaired(): void {
     this.unpairedState.set('loading');
-    this.api
-      .payments('unpaired')
+    this.reads
+      .paymentList('unpaired')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {
@@ -414,11 +420,11 @@ export class AdminHome {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
+    this.reads
       .importState()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (state) => {
+        next: ({ state }) => {
           this.importState.set(state);
           this.state.set('ready');
         },
