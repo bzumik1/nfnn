@@ -17,6 +17,7 @@ export type AdministrationDownloadOutcome =
   | 'stored'
   | 'unchanged'
   | 'failed'
+  | 'rate-limited'
   | 'mismatch'
   | 'revoked'
   | 'another-account'
@@ -60,6 +61,10 @@ export class AdministrationCopyDownload {
         untracked(() => void this.synced(opened));
       }
     });
+  }
+
+  writesAtStart(opened: OpenedCopy | null): number | null {
+    return opened === null ? null : null;
   }
 
   refresh(startingNow = false): Promise<AdministrationDownloadOutcome> {

@@ -8,12 +8,43 @@ import { firstValueFrom, toArray } from 'rxjs';
 import { AdministrationWrites } from '../../../core/admin-writes/administration-writes';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
-import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import {
+  COPY_CHANNELS,
+  type CopyChannel,
+  DeviceVault,
+  type OpenedCopy,
+} from '../../../core/device/store/device-vault';
+import { ErrorReporter } from '../../../core/errors/error-reporter';
 import {
   AdministrationCopyDownload,
   type AdministrationDownloadOutcome,
 } from './administration-copy-download';
-import { AdministrationReads, REFRESH_AFTER_MS } from './administration-reads';
+import {
+  AdministrationReads,
+  FORCED_REFRESH_GAP_MS,
+  RATE_LIMITED_PAUSE_MS,
+  REFRESH_AFTER_MS,
+} from './administration-reads';
+import { everyOfferedYear } from './administration-overview';
+
+class TabChannels {
+  private readonly listeners = new Map<string, ((event: Event) => void)[]>();
+  readonly posted: { name: string; message: unknown }[] = [];
+
+  readonly factory = (name: string): CopyChannel =>
+    ({
+      postMessage: (message: unknown) => this.posted.push({ name, message }),
+      addEventListener: (_type: string, listener: (event: Event) => void) =>
+        this.listeners.set(name, [...(this.listeners.get(name) ?? []), listener]),
+      close: () => undefined,
+    }) as unknown as CopyChannel;
+
+  fromAnotherTab(name: string, message: unknown): void {
+    for (const listener of this.listeners.get(name) ?? []) {
+      listener(new MessageEvent('message', { data: message }));
+    }
+  }
+}
 
 const RECORD = {
   donorId: 'donor-1',
@@ -130,6 +161,9 @@ describe('Given the administration pages reading through the copy on this device
   let refresh: ReturnType<
     typeof vi.fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>
   >;
+  let writesAtStart: ReturnType<typeof vi.fn<() => number | null>>;
+  let tabs: TabChannels;
+  let reporter: { report: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-20T09:00:00Z') });
@@ -138,6 +172,9 @@ describe('Given the administration pages reading through the copy on this device
     refresh = vi
       .fn<(startingNow?: boolean) => Promise<AdministrationDownloadOutcome>>()
       .mockResolvedValue('unchanged');
+    writesAtStart = vi.fn<() => number | null>().mockReturnValue(null);
+    tabs = new TabChannels();
+    reporter = { report: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -147,8 +184,14 @@ describe('Given the administration pages reading through the copy on this device
         { provide: Connectivity, useValue: { offline: offline.asReadonly() } },
         {
           provide: AdministrationCopyDownload,
-          useValue: { refresh, checkedAt: signal<string | null>(null).asReadonly() },
+          useValue: {
+            refresh,
+            checkedAt: signal<string | null>(null).asReadonly(),
+            writesAtStart,
+          },
         },
+        { provide: COPY_CHANNELS, useValue: tabs.factory },
+        { provide: ErrorReporter, useValue: reporter },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -234,8 +277,9 @@ describe('Given the administration pages reading through the copy on this device
       expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
     });
 
-    it('and something changed, then the copy is refreshed at once, and the server answers when that refresh fails', async () => {
+    it('and something changed after the last refresh started at least half a minute ago, then the copy is refreshed at once, and the server answers when that refresh fails', async () => {
       await firstValueFrom(reads.paymentList('unpaired'));
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
       reads.changed();
       refresh.mockResolvedValue('failed');
 
@@ -252,6 +296,7 @@ describe('Given the administration pages reading through the copy on this device
 
     it('and a refresh after a change failed, then the server answers for a minute without another refresh, and the copy is refreshed again after it', async () => {
       await firstValueFrom(reads.paymentList('unpaired'));
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
       reads.changed();
       refresh.mockResolvedValue('failed');
       for (const attempt of [1, 2]) {
@@ -271,6 +316,126 @@ describe('Given the administration pages reading through the copy on this device
 
       expect(refresh).toHaveBeenCalledTimes(3);
       expect(fromCopy.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
+    it('and something changed less than half a minute after the last refresh started, then the server answers without a refresh, and the copy is refreshed once the half minute is over', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+      reads.changed();
+
+      const answer = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+      expect(await answer).toEqual(SERVER_LIST);
+      expect(refresh).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
+      const fromCopy = await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh.mock.calls).toEqual([[false], [true]]);
+      expect(fromCopy.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
+    it('and the server refused a refresh as too many, then the server answers for five minutes without another refresh, the other tabs are told, and the copy is refreshed after them', async () => {
+      refresh.mockResolvedValue('rate-limited');
+      const refusedFrom = Date.now();
+      const refused = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+      expect(await refused).toEqual(SERVER_LIST);
+      expect(tabs.posted).toEqual([
+        {
+          name: 'nfnn.administration-checks',
+          message: { copyId: 'copy-1', kind: 'rate-limited', at: expect.any(Number) },
+        },
+      ]);
+      expect((tabs.posted[0].message as { at: number }).at).toBeGreaterThanOrEqual(
+        refusedFrom + RATE_LIMITED_PAUSE_MS,
+      );
+
+      vi.setSystemTime(Date.now() + REFRESH_AFTER_MS);
+      const stillPaused = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+      expect(await stillPaused).toEqual(SERVER_LIST);
+      expect(refresh).toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(Date.now() + RATE_LIMITED_PAUSE_MS - REFRESH_AFTER_MS);
+      refresh.mockResolvedValue('unchanged');
+      const fromCopy = await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh).toHaveBeenCalledTimes(2);
+      expect(fromCopy.items.map((item) => item.id)).toEqual(['payment-1']);
+    });
+
+    it('and another tab found the same copy unchanged, then this tab reads the copy for a minute without a refresh of its own, but a change made here still refreshes it', async () => {
+      tabs.fromAnotherTab('nfnn.administration-checks', {
+        copyId: 'copy-1',
+        kind: 'checked',
+        at: Date.now(),
+      });
+
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh).not.toHaveBeenCalled();
+
+      reads.changed();
+      await firstValueFrom(reads.paymentList('unpaired'));
+      expect(refresh.mock.calls).toEqual([[true]]);
+    });
+
+    it('and another tab was refused as too many, then this tab asks the server instead of refreshing', async () => {
+      tabs.fromAnotherTab('nfnn.administration-checks', {
+        copyId: 'copy-1',
+        kind: 'rate-limited',
+        at: Date.now() + RATE_LIMITED_PAUSE_MS,
+      });
+
+      const answer = firstValueFrom(reads.paymentList('unpaired'));
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/payments')
+          .flush(SERVER_LIST),
+      );
+
+      expect(await answer).toEqual(SERVER_LIST);
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('then a check that found the copy unchanged is told to the other tabs, and one that stored a new copy is not, as their copy reloads by itself', async () => {
+      await firstValueFrom(reads.paymentList('unpaired'));
+      vi.setSystemTime(Date.now() + REFRESH_AFTER_MS);
+      refresh.mockResolvedValue('stored');
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(tabs.posted).toEqual([
+        {
+          name: 'nfnn.administration-checks',
+          message: { copyId: 'copy-1', kind: 'checked', at: Date.now() - REFRESH_AFTER_MS },
+        },
+      ]);
+    });
+
+    it('and another tab tells of another copy or sends something else, then this tab takes no notice', async () => {
+      for (const message of [
+        { copyId: 'copy-9', kind: 'checked', at: Date.now() },
+        { copyId: 'copy-1', kind: 'deleted', at: Date.now() },
+        { copyId: 'copy-1', kind: 'checked', at: 'now' },
+        null,
+      ]) {
+        tabs.fromAnotherTab('nfnn.administration-checks', message);
+      }
+
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh).toHaveBeenCalledTimes(1);
     });
 
     it('and the account is not in the copy, then the server is asked for it', async () => {
@@ -310,6 +475,7 @@ describe('Given the administration pages reading through the copy on this device
     it('and something changed, then the refresh asked for is one that starts after the change, and a change during that refresh asks for another', async () => {
       await firstValueFrom(reads.paymentList('unpaired'));
       expect(refresh).toHaveBeenLastCalledWith(false);
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
       reads.changed();
       let finish: (outcome: AdministrationDownloadOutcome) => void = () => undefined;
       refresh.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
@@ -319,6 +485,7 @@ describe('Given the administration pages reading through the copy on this device
       reads.changed();
       finish('unchanged');
       await duringRefresh;
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
       await firstValueFrom(reads.paymentList('unpaired'));
 
       expect(refresh.mock.calls).toEqual([[false], [true], [true]]);
@@ -326,6 +493,7 @@ describe('Given the administration pages reading through the copy on this device
 
     it('and any administration write succeeded since, then the next read asks for a refresh that starts after it', async () => {
       await firstValueFrom(reads.paymentList('unpaired'));
+      vi.setSystemTime(Date.now() + FORCED_REFRESH_GAP_MS);
       TestBed.inject(AdministrationWrites).record();
 
       await firstValueFrom(reads.paymentList('unpaired'));
@@ -460,6 +628,192 @@ describe('Given the administration pages reading through the copy on this device
         counterpartyName: null,
         donation: { donorId: 'donor-2', donorName: 'Vymazaný dárce', receiptIssued: false },
       });
+    });
+  });
+
+  describe('when an administration write was made while the download at the opening ran, before any page read the copy', () => {
+    it('then the first read asks for a refresh that starts after the write instead of joining that older download', async () => {
+      writesAtStart.mockReturnValue(0);
+      TestBed.inject(AdministrationWrites).record();
+      open(contents());
+
+      await firstValueFrom(reads.paymentList('unpaired'));
+
+      expect(refresh.mock.calls).toEqual([[true]]);
+    });
+  });
+
+  describe('when the administration reads its year overview', () => {
+    function heldWith(summary: (byYear: readonly object[]) => readonly object[]): CopyContents {
+      const held = withErasedDonor(contents());
+      const rows = {
+        payments: [PAYMENT, PAYMENT_2025, ERASED_PAYMENT],
+        donations: [GIFT_2025, ERASED_GIFT],
+        donorRecords: [RECORD, ERASED_RECORD],
+      };
+      const byYear = everyOfferedYear(rows as never, '2026-10-20');
+      return {
+        ...held,
+        summary: {
+          donations: { today: '2026-10-20', receiptsAvailableFrom: 2026, byYear: summary(byYear) },
+        },
+      };
+    }
+
+    it('and no copy is open, then the server answers it', async () => {
+      const answer = firstValueFrom(reads.overview(2025));
+      await vi.waitFor(() =>
+        http
+          .expectOne(
+            (request) =>
+              request.url === '/api/admin/donations/overview' &&
+              request.params.get('year') === '2025',
+          )
+          .flush({ year: 2025 }),
+      );
+
+      expect(await answer).toEqual({ year: 2025 });
+    });
+
+    it('and the copy agrees with the summary of the server, then the overview of the asked year comes from the copy, offered years included', async () => {
+      open(heldWith((byYear) => byYear));
+
+      const latest = await firstValueFrom(reads.overview());
+      const earlier = await firstValueFrom(reads.overview(2025));
+
+      expect(latest.year).toBe(2026);
+      expect(latest.availableYears).toEqual([2026, 2025]);
+      expect(latest.paired).toEqual({ count: 1, totalMinor: 20000, currency: 'CZK' });
+      expect(latest.unpaired).toEqual({ count: 1, totalMinor: 50000, currency: 'CZK' });
+      expect(latest.months.map((month) => month.month)[0]).toBe('2026-10');
+      expect(earlier.year).toBe(2025);
+      expect(earlier.received).toEqual({ count: 1, totalMinor: 50000, currency: 'CZK' });
+      expect(reporter.report).not.toHaveBeenCalled();
+    });
+
+    it('and the device is offline, then the overview comes from the copy and the offline label gets the time of the copy', async () => {
+      open(heldWith((byYear) => byYear));
+      offline.set(true);
+
+      const overview = await firstValueFrom(reads.overview());
+
+      expect(overview.year).toBe(2026);
+      expect(refresh).not.toHaveBeenCalled();
+      expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+    });
+
+    it('and what the copy computes differs from the summary of the server, then the server answers, the difference is reported once, and the copy is not used', async () => {
+      open(
+        heldWith((byYear) =>
+          byYear.map((entry, index) => (index === 0 ? { ...entry, newDonors: 7 } : entry)),
+        ),
+      );
+
+      for (const attempt of [1, 2]) {
+        const answer = firstValueFrom(reads.overview());
+        await vi.waitFor(() =>
+          http
+            .expectOne((request) => request.url === '/api/admin/donations/overview')
+            .flush({ year: 2026 }),
+        );
+        expect(await answer, `attempt ${attempt}`).toEqual({ year: 2026 });
+      }
+
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+      expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+    });
+
+    it('and the copy holds no summary, then the server answers', async () => {
+      open({ ...contents(), summary: { donations: null } });
+
+      const answer = firstValueFrom(reads.overview());
+      await vi.waitFor(() =>
+        http
+          .expectOne((request) => request.url === '/api/admin/donations/overview')
+          .flush({ year: 2026 }),
+      );
+
+      expect(await answer).toEqual({ year: 2026 });
+    });
+  });
+
+  describe('when the administration reads the state of the bank import', () => {
+    const STORED = {
+      coveredFrom: '2026-07-20',
+      coveredTo: '2026-10-17',
+      lastAttemptedAt: '2026-10-18T10:00:00Z',
+      lastSucceededAt: '2026-10-17T10:00:00Z',
+      lastFailure: { kind: 'UNAUTHORIZED', attemptedAt: '2026-10-18T10:00:00Z' },
+      consecutiveFailures: 1,
+      reportedOutage: 'UNAUTHORIZED',
+      balance: null,
+    };
+    const SERVER_STATE = {
+      ...STORED,
+      lastFailure: { ...STORED.lastFailure, message: 'Token není platný' },
+      historyImport: null,
+      defaultHistoryFrom: '2026-01-01',
+    };
+
+    function withImportState(): CopyContents {
+      const held = contents();
+      return {
+        ...held,
+        chunks: [...held.chunks, { id: 'donations/import-state', rowsSha256: 'i', rows: [STORED] }],
+      };
+    }
+
+    it('and the device is online, then the server answers it, the run of older payments included, although a copy is open', async () => {
+      open(withImportState());
+
+      const answer = firstValueFrom(reads.importState());
+      http.expectOne('/api/admin/donations/import-state').flush(SERVER_STATE);
+
+      expect(await answer).toEqual({ source: 'server', state: SERVER_STATE });
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('and the device is offline, then the copy answers it with the kind and time of the failure and without its text', async () => {
+      open(withImportState());
+      offline.set(true);
+
+      const read = await firstValueFrom(reads.importState());
+
+      expect(read).toEqual({
+        source: 'copy',
+        state: {
+          ...STORED,
+          lastFailure: { kind: 'UNAUTHORIZED', message: null, attemptedAt: '2026-10-18T10:00:00Z' },
+        },
+      });
+      expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
+    });
+
+    it('and the server cannot be reached, then the copy answers it', async () => {
+      open(withImportState());
+
+      const answer = firstValueFrom(reads.importState());
+      http
+        .expectOne('/api/admin/donations/import-state')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+
+      expect((await answer).source).toBe('copy');
+    });
+
+    it('and the server refuses it, or the copy holds no import state, then the failure reaches the page', async () => {
+      open(withImportState());
+      const refused = firstValueFrom(reads.importState());
+      http
+        .expectOne('/api/admin/donations/import-state')
+        .flush(null, { status: 500, statusText: 'Error' });
+      await expect(refused).rejects.toBeTruthy();
+
+      open(contents(), 'copy-2');
+      const unreachable = firstValueFrom(reads.importState());
+      http
+        .expectOne('/api/admin/donations/import-state')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await expect(unreachable).rejects.toBeTruthy();
     });
   });
 

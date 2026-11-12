@@ -27,6 +27,12 @@ import {
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
 import { AdminHome } from './admin-home';
+import { Connectivity } from '../../../core/connectivity/connectivity';
+import { ShownAnswers } from '../../../core/connectivity/shown-answers';
+import type { AccountStore, CopyContents } from '../../../core/device/store/account-store';
+import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
+import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
+import { everyOfferedYear } from '../device-copy/administration-overview';
 
 const IMPORT_STATE_URL = '/api/admin/donations/import-state';
 const OVERVIEW_URL = '/api/admin/donations/overview';
@@ -1133,5 +1139,161 @@ describe('Given an administrator on the administration home', () => {
         fixture.nativeElement.querySelector('.attention'),
       );
     });
+  });
+});
+
+describe('Given an administrator on the administration home with the administration copy on the device', () => {
+  const RECORD = {
+    donorId: 'donor-1',
+    name: 'Jana Nováková',
+    type: 'PERSON',
+    variableSymbol: '7700001001',
+    companyIdentifier: null,
+    address: { street: 'Dlouhá 12', city: 'Ústí nad Labem', postalCode: '400 01' },
+    preferredLocale: 'cs',
+    registeredAt: '2026-01-15T10:00:00Z',
+    erasedAt: null,
+  };
+  const PAID = {
+    id: 'payment-1',
+    version: '0123456789abcdef',
+    bankTransactionId: 26000000001,
+    bookedOn: '2026-10-01',
+    amountMinor: 50000,
+    currency: 'CZK',
+    variableSymbol: '7700001001',
+    counterpartyAccount: '1234567/0800',
+    counterpartyName: 'NOVAKOVA JANA',
+    messageForRecipient: null,
+    importedAt: '2026-10-01T12:00:00Z',
+    unpairedByAdminAt: null,
+    accountVerification: false,
+  };
+  const UNPAIRED = {
+    ...PAID,
+    id: 'payment-2',
+    bankTransactionId: 26000000002,
+    bookedOn: '2026-10-05',
+    amountMinor: 30000,
+    variableSymbol: null,
+    importedAt: '2026-10-05T12:00:00Z',
+  };
+  const GIFT = {
+    id: 'donation-1',
+    donorId: 'donor-1',
+    paymentId: 'payment-1',
+    receivedAt: '2026-10-01',
+    amountMinor: 50000,
+    currency: 'CZK',
+    status: 'RECEIVED',
+    source: 'BANK',
+    purpose: 'GENERAL',
+    pairedBy: 'VARIABLE_SYMBOL',
+    bankAccountId: null,
+    symbolClaimId: null,
+    recordedAt: '2026-10-01T12:00:00Z',
+  };
+  const STORED_IMPORT = {
+    coveredFrom: '2026-07-20',
+    coveredTo: '2026-10-17',
+    lastAttemptedAt: '2026-10-18T10:00:00Z',
+    lastSucceededAt: '2026-10-17T10:00:00Z',
+    lastFailure: { kind: 'UNAUTHORIZED', attemptedAt: '2026-10-18T10:00:00Z' },
+    consecutiveFailures: 1,
+    reportedOutage: 'UNAUTHORIZED',
+    balance: null,
+  };
+  let fixture: ComponentFixture<AdminHome>;
+  let http: HttpTestingController;
+  let refresh: ReturnType<typeof vi.fn>;
+
+  beforeEach(async () => {
+    localStorage.clear();
+    refresh = vi.fn().mockResolvedValue('unchanged');
+    const rows = { payments: [PAID, UNPAIRED], donations: [GIFT], donorRecords: [RECORD] };
+    const contents: CopyContents = {
+      chunks: [
+        { id: 'donations/payments:2026-10', rowsSha256: 'a', rows: [UNPAIRED, PAID] },
+        { id: 'donations/donations:2026-10', rowsSha256: 'b', rows: [GIFT] },
+        { id: 'donations/donor-records:2026-01', rowsSha256: 'c', rows: [RECORD] },
+        { id: 'donations/import-state', rowsSha256: 'd', rows: [STORED_IMPORT] },
+      ],
+      summary: {
+        donations: {
+          today: '2026-10-20',
+          receiptsAvailableFrom: 2026,
+          byYear: everyOfferedYear(rows as never, '2026-10-20'),
+        },
+      },
+      storedAt: '2026-10-20T08:00:00.000Z',
+    };
+    const opened: OpenedCopy = {
+      store: {
+        copyId: 'copy-1',
+        contents: signal(contents).asReadonly(),
+      } as unknown as AccountStore,
+      reason: 'unlocked',
+      account: { email: 'admin@example.cz', userHandle: 'h', administrator: true },
+    };
+    await TestBed.configureTestingModule({
+      imports: [AdminHome],
+      providers: [
+        provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
+        { provide: CompactLayout, useValue: { isCompact: signal(false).asReadonly() } },
+        provideRouter([]),
+        { provide: DeviceVault, useValue: { administration: signal(opened).asReadonly() } },
+        {
+          provide: Connectivity,
+          useValue: {
+            offline: signal(true).asReadonly(),
+            cause: signal('network').asReadonly(),
+          },
+        },
+        {
+          provide: AdministrationCopyDownload,
+          useValue: {
+            refresh,
+            checkedAt: signal<string | null>(null).asReadonly(),
+            writesAtStart: () => null,
+            firstDownload: signal(null).asReadonly(),
+          },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    fixture = TestBed.createComponent(AdminHome);
+    fixture.detectChanges();
+    for (let round = 0; round < 3; round++) {
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+  });
+
+  afterEach(() => {
+    http.match(() => true).forEach((pending) => pending.flush(null, { status: 0, statusText: '' }));
+    http.verify();
+  });
+
+  function text(selector: string): string {
+    return (fixture.nativeElement.querySelector(selector)?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  it('when the device is offline, then the year overview, the payments waiting for a donor and the import state come from the copy without asking the server', () => {
+    expect(http.match(IMPORT_STATE_URL)).toEqual([]);
+    expect(http.match((request) => request.url === OVERVIEW_URL)).toEqual([]);
+    expect(http.match((request) => request.url === '/api/admin/donations/payments')).toEqual([]);
+    expect(refresh).not.toHaveBeenCalled();
+
+    expect(text('.ui-card[aria-labelledby="admin-overview-title"] .admin-summary')).toBe(
+      'Registrovaní dárci: 1, z toho nových v roce 2026: 1.',
+    );
+    expect(text('.overview-table tbody tr')).toContain('říjen 2026');
+    expect(text('.ui-card[aria-labelledby="admin-import-title"]')).toContain('Poslední chyba');
+    expect(text('.ui-card[aria-labelledby="admin-import-title"]')).not.toContain('12:00 (');
+    expect(fixture.nativeElement.textContent).toContain('1 platba čeká na přiřazení');
+    expect(TestBed.inject(ShownAnswers).oldest()).toBe(Date.parse('2026-10-20T08:00:00.000Z'));
   });
 });

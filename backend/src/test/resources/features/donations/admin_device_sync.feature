@@ -36,11 +36,23 @@ Feature: An administrator's device keeps a copy of the administration's donation
     And the administration device's chunk "receipts:2026" holds every receipt the administration lists
     And every receipt of the administration device's chunk "receipts:2026" names the verification key its donor card names
     And the administration device's chunk "symbol-claims" holds every older-symbol answer the administration lists
-    And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments
+    And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments and the text of the failure
     And the administration device's chunk "report-settings" holds the monthly report settings and the sent reports the administration reads
     And the administration device's summary lists the years "2026, 2025"
     And the administration device's summary of every year is the administration's overview of that year
     And the administration device's summary names the day 2026-10-17 and the first receipt year the donor card reads
+
+  Scenario: A failed import reaches the device with its kind and time, never the bank's or the server's text of the failure
+    Given today is 2026-10-17
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
+    And the application starts the import
+    And 1 days pass
+    And Fio refuses the next request because the token is not valid
+    And the hourly import runs
+    When an administration device of "Andrea" syncs the donations
+    Then the administration device's chunk "import-state" holds the failure "UNAUTHORIZED" attempted at "2026-10-18T10:00:00Z" without its text
+    And the administration device's chunk "import-state" holds the stored import state the administration reads, without the run of older payments and the text of the failure
 
   Scenario: A bank account learned in a later month stays in the chunk of its owner's registration month
     Given today is 2026-09-28

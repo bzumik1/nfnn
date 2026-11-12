@@ -8,6 +8,8 @@ import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-
 import {
   AdminApi,
   type AdminDonorDetailResponse,
+  type AdminOverviewResponse,
+  type ImportStateResponse,
   type AdminDonorSearchResponse,
   type AdminPaymentListResponse,
   type DonorAccountListResponse,
@@ -34,6 +36,14 @@ import {
 } from './administration-views';
 
 export const REFRESH_AFTER_MS = 60_000;
+export const FORCED_REFRESH_GAP_MS = 30_000;
+export const RATE_LIMITED_PAUSE_MS = 5 * 60_000;
+
+export type StoredImportState = Omit<ImportStateResponse, 'historyImport' | 'defaultHistoryFrom'>;
+
+export type ImportStateRead =
+  | { readonly source: 'server'; readonly state: ImportStateResponse }
+  | { readonly source: 'copy'; readonly state: StoredImportState };
 
 export type BankAccountsSource = 'server' | 'pending' | 'offline' | 'failed';
 
@@ -79,6 +89,16 @@ export class AdministrationReads {
 
   changed(): void {
     this.writes.record();
+  }
+
+  overview(year: number | null = null): Observable<AdminOverviewResponse> {
+    return this.api.overview(year);
+  }
+
+  importState(): Observable<ImportStateRead> {
+    return this.api
+      .importState()
+      .pipe(map((state): ImportStateRead => ({ source: 'server', state })));
   }
 
   paymentList(
