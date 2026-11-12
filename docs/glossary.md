@@ -135,6 +135,10 @@ _Avoid_: sync (sync is the device copy's download)
 UI „porucha stahování z banky“ · Code: `ImportOutage`, `ImportAlert`, `bank_import_state.reported_outage`.\
 Three counted import failures in a row or a rejected Fio token, reported once by e-mail and push alert, and once more on recovery.
 
+**Account balance**\
+UI „zůstatek účtu“ · Code: `donations/domain/importing/AccountBalance`, `bank_import_state.balance_minor`, `balance` of `GET /api/admin/donations/import-state`.\
+The booked balance of the foundation's Fio account as the bank reported it with the last successful import, with the time it was read; only administrators and connected applications see it.
+
 **Payment details and QR payment**\
 UI „QR platba“, „Poslat dar“, section „Přispět“ · Code: `donations/domain/payment/PaymentDetails`, `SpaydText`.\
 The foundation's account, amount, message and (for a signed-in donor) variable symbol that the browser draws into a SPAYD QR code for the donor's banking app.

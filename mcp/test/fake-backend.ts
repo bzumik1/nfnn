@@ -194,6 +194,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
           coveredTo: '2026-10-22',
           lastSucceededAt: '2026-10-23T05:00:00Z',
           consecutiveFailures: 0,
+          balance: { amountMinor: 12345678, readAt: '2026-10-23T05:00:00Z' },
         },
       ];
     case 'GET /api/admin/donations/receipt-signing-keys':

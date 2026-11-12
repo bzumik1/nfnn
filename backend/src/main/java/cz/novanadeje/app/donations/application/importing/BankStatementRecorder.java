@@ -97,6 +97,7 @@ public class BankStatementRecorder {
             alerts.dropWaitingOutages(now);
             alerts.add(recovery, now);
         });
+        statement.closingBalance().ifPresent(balance -> state.balanceRead(balance, now));
         events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, now));
         states.save(state);
     }
