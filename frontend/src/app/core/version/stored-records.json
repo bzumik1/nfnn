@@ -13,6 +13,7 @@
       "coverImageAlt",
       "signer",
       "publishedOn",
+      "lookBackYear",
       "createdAt",
       "updatedAt"
     ]

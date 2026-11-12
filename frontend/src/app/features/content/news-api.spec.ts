@@ -51,6 +51,7 @@ describe('Given the news API', () => {
       coverImageAlt: newsArticle().coverImage?.alt ?? null,
       signer: newsArticle().signer?.id ?? null,
       publishedOn: newsArticle().publishedOn,
+      lookBackYear: newsArticle().lookBackYear ?? null,
     });
     request.flush(newsArticle());
 

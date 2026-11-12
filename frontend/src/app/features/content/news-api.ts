@@ -57,6 +57,7 @@ export interface StoredNewsArticle {
   readonly coverImageAlt: string | null;
   readonly signer: string | null;
   readonly publishedOn: string | null;
+  readonly lookBackYear: number | null;
 }
 
 export function storedNewsArticleOf(article: AdminNewsArticleResponse): StoredNewsArticle {
@@ -71,6 +72,7 @@ export function storedNewsArticleOf(article: AdminNewsArticleResponse): StoredNe
     coverImageAlt: article.coverImage?.alt ?? null,
     signer: article.signer?.id ?? null,
     publishedOn: article.publishedOn,
+    lookBackYear: article.lookBackYear ?? null,
   };
 }
 
@@ -190,8 +192,8 @@ export class NewsApi {
     id: string,
     year: number | null,
     version: string,
-  ): Observable<NewsArticleResponse> {
-    return this.http.put<NewsArticleResponse>(
+  ): Observable<AdminNewsArticleResponse> {
+    return this.http.put<AdminNewsArticleResponse>(
       `${ADMIN_NEWS}/${id}/look-back-year`,
       { year },
       ifMatch(version),

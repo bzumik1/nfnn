@@ -679,13 +679,13 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   }
 
   private placeLookBackYear(
-    article: NewsArticleResponse,
+    article: AdminNewsArticleResponse,
     year: number | null,
-  ): Observable<{ article: NewsArticleResponse; refusal: unknown }> {
+  ): Observable<{ article: AdminNewsArticleResponse; refusal: unknown }> {
     if ((article.lookBackYear ?? null) === year) {
       return of({ article, refusal: null });
     }
-    return this.api.setLookBackYear(article.id, year, article.version ?? '').pipe(
+    return this.api.setLookBackYear(article.id, year, article.version).pipe(
       map((placed) => ({ article: placed, refusal: null })),
       catchError((refusal: unknown) => of({ article, refusal })),
     );
