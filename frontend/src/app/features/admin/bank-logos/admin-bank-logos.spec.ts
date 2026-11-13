@@ -615,4 +615,90 @@ describe('Given an administrator on the bank logos page', () => {
 
     expect(text('.ui-card__empty')).toContain('Žádná banka zatím logo nemá.');
   });
+
+  describe('when the page was shown once and is opened again', () => {
+    async function openAgain(): Promise<void> {
+      fixture.nativeElement.remove();
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminBankLogos);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+    }
+
+    beforeEach(async () => {
+      await listed();
+      await openAgain();
+    });
+
+    it('then the logos show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-code]')).toHaveLength(
+        3,
+      );
+
+      await listed([csas]);
+
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-code]')).toHaveLength(
+        1,
+      );
+    });
+
+    it('then a refresh that brings the same logos leaves the rows as they are', async () => {
+      row('0800').setAttribute('data-still-the-same', '');
+
+      await listed();
+
+      expect(row('0800').hasAttribute('data-still-the-same')).toBe(true);
+    });
+
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const forbidden = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      http.expectOne(LIST_URL).flush(forbidden.body, forbidden.options);
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('then a logo removed before the refresh answers does not come back with that answer, and the list is asked for again', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
+      button(row('0800'), 'Odebrat').click();
+      await settle();
+      button(document.querySelector('dialog') as HTMLElement, 'Odebrat logo').click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${LIST_URL}/0800` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      refresh.flush({ items: [csas, fio, unknown] });
+      await settle();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+      await listed([{ ...fio, sourceUrl: NEW_SOURCE }, unknown]);
+      expect(element<HTMLInputElement>('#bank-logo-source-2010').value).toBe(NEW_SOURCE);
+
+      await openAgain();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+      expect(element<HTMLInputElement>('#bank-logo-source-2010').value).toBe(NEW_SOURCE);
+      await listed([{ ...fio, sourceUrl: NEW_SOURCE }, unknown]);
+    });
+
+    it('then an address saved while the refresh answers keeps the saved logo, and the list is asked for again', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
+      await type('#bank-logo-source-0800', NEW_SOURCE);
+      await submit(row('0800'));
+      const save = http.expectOne({ method: 'PUT', url: `${LIST_URL}/0800` });
+
+      refresh.flush({ items: [csas, fio, unknown] });
+      await settle();
+      save.flush({ ...csas, sourceUrl: NEW_SOURCE, version: NEWER_VERSION });
+      await settle();
+
+      expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(NEW_SOURCE);
+      await listed([{ ...csas, sourceUrl: NEW_SOURCE, version: NEWER_VERSION }, fio, unknown]);
+      expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(NEW_SOURCE);
+    });
+  });
 });
