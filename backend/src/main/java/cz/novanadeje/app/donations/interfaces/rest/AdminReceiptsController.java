@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
-import cz.novanadeje.app.donations.application.receipt.AdminReceiptView;
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsRun;
@@ -79,10 +78,7 @@ class AdminReceiptsController {
 
     @GetMapping("/receipts/{id}")
     ResponseEntity<AdminReceiptResponse> receipt(AdministrationChannel channel, @PathVariable UUID id) {
-        AdminReceiptView view = receipts.receipt(new DonationReceiptId(id));
-        return notStored(view.donorErased() && channel.isConnectedApplication()
-                ? AdminReceiptResponse.withoutErasedDonor(view.receipt())
-                : AdminReceiptResponse.asIssued(view.receipt(), view.donorErased()));
+        return notStored(AdminReceiptResponse.from(receipts.receipt(channel, new DonationReceiptId(id))));
     }
 
     @GetMapping("/receipt-images/{sha256}")

@@ -62,11 +62,11 @@ public class AdminReceiptsService {
     }
 
     @Transactional(readOnly = true)
-    public AdminReceiptView receipt(DonationReceiptId id) {
+    public AdminReceiptView receipt(AdministrationChannel channel, DonationReceiptId id) {
         DonationReceipt receipt = receipts.findById(id).orElseThrow(() -> new ReceiptNotFound(id));
         DonorRecord donor = donorRecords.findById(receipt.donor())
                 .orElseThrow(() -> new IllegalStateException("Receipt " + id + " names donor " + receipt.donor() + " without a donor record"));
-        return new AdminReceiptView(receipt, donor.isErased());
+        return new AdminReceiptView(receipt, donor.isErased(), donor.isErased() && channel.isConnectedApplication());
     }
 
     @Transactional(readOnly = true)
