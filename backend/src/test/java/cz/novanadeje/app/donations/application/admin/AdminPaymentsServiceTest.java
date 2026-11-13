@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.application.admin;
 
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;

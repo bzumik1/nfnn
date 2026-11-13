@@ -1,8 +1,8 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.DonationRow;
 import cz.novanadeje.app.donations.application.sync.AdminDonationsSyncSnapshot;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;

@@ -1,11 +1,12 @@
 package cz.novanadeje.app.donations.application.report;
 
 import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.ReportSettingsRow;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
@@ -71,7 +72,7 @@ class ReportSettingsServiceTest {
         assertThat(view.settings()).isEqualTo(DEFAULTS);
         assertThat(view.changedAt()).isEmpty();
         assertThat(view.sentReports()).isEmpty();
-        assertThat(view.nextReport()).isEqualTo(new ReportAdministrationView.NextReport(ReportMonth.of(2026, 9), LocalDate.of(2026, 10, 1)));
+        assertThat(view.nextReport()).isEqualTo(new NextReport(ReportMonth.of(2026, 9), LocalDate.of(2026, 10, 1)));
         assertThat(view.lastEndedMonth()).isEqualTo(ReportMonth.of(2026, 9));
     }
 
@@ -88,7 +89,7 @@ class ReportSettingsServiceTest {
         assertThat(view.settings()).isEqualTo(CHANGED);
         assertThat(view.changedAt()).contains(NOW.minusSeconds(3600));
         assertThat(view.sentReports()).containsExactly(september);
-        assertThat(view.nextReport()).isEqualTo(new ReportAdministrationView.NextReport(ReportMonth.of(2026, 10), LocalDate.of(2026, 11, 5)));
+        assertThat(view.nextReport()).isEqualTo(new NextReport(ReportMonth.of(2026, 10), LocalDate.of(2026, 11, 5)));
     }
 
     @Test
