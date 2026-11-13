@@ -53,7 +53,7 @@ class BankCodeScheduler {
         try {
             work.run();
         } catch (BankCodeSourceUnavailable unavailable) {
-            log.warn("Bank code list could not be fetched: {}" + KEEPING, unavailable.getMessage());
+            log.warn("Bank code list could not be fetched: {}" + KEEPING, unavailable.outcome());
         } catch (RuntimeException unexpected) {
             log.error("Bank code list refresh failed unexpectedly: {}" + KEEPING, unexpected.getClass().getSimpleName());
         }

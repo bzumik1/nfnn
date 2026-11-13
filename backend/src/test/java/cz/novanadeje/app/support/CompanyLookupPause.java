@@ -1,6 +1,6 @@
 package cz.novanadeje.app.support;
 
-import cz.novanadeje.app.donors.application.CompanyLookupService;
+import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -13,19 +13,19 @@ public final class CompanyLookupPause {
     private CompanyLookupPause() {
     }
 
-    public static void reset(CompanyLookupService lookup) {
-        synchronized (lookup) {
-            FRESH_STATE.forEach((name, value) -> write(lookup, name, value));
+    public static void reset(CompanyRegistryBreaker breaker) {
+        synchronized (breaker) {
+            FRESH_STATE.forEach((name, value) -> write(breaker, name, value));
         }
     }
 
-    private static void write(CompanyLookupService lookup, String name, Object value) {
+    private static void write(CompanyRegistryBreaker breaker, String name, Object value) {
         try {
-            Field field = CompanyLookupService.class.getDeclaredField(name);
+            Field field = CompanyRegistryBreaker.class.getDeclaredField(name);
             field.setAccessible(true);
-            field.set(lookup, value);
+            field.set(breaker, value);
         } catch (NoSuchFieldException | IllegalAccessException changed) {
-            throw new IllegalStateException("CompanyLookupService no longer keeps its pause in " + name
+            throw new IllegalStateException("CompanyRegistryBreaker no longer keeps its pause in " + name
                     + ", so a recorded scenario would inherit the previous one's pause; adapt CompanyLookupPause", changed);
         }
     }

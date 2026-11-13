@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.cnb;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeFetch;
+import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceFailure;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceUnavailable;
 import cz.novanadeje.app.donations.domain.bankcode.BankCodeListState;
 import org.junit.jupiter.api.AfterEach;
@@ -85,7 +86,7 @@ class CnbBankCodeSourceTest {
     void should_be_unavailable_with_status_when_fetched_given_other_status() {
         for (int status : new int[]{500, 503, 429, 404, 301, 302}) {
             answer.set(Answer.of(status, new byte[0], null));
-            assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("status " + status);
+            assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.outcome()).isEqualTo("status " + status));
         }
     }
 
@@ -94,7 +95,7 @@ class CnbBankCodeSourceTest {
     void should_be_unavailable_as_refused_list_when_fetched_given_wrong_content() {
         answer.set(Answer.of(200, "<html>Údržba</html>".getBytes(StandardCharsets.UTF_8), LAST_MODIFIED));
 
-        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("refused list");
+        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.REFUSED_LIST));
     }
 
     @Test
@@ -103,7 +104,7 @@ class CnbBankCodeSourceTest {
         byte[] large = (CnbBankCodeCsvTest.HEADER + "\r\n" + CnbBankCodeCsvTest.rows(400, "\r\n") + "x".repeat(66_000)).getBytes(StandardCharsets.UTF_8);
         answer.set(Answer.of(200, large, null));
 
-        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("too large");
+        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.TOO_LARGE));
     }
 
     @Test
@@ -113,7 +114,7 @@ class CnbBankCodeSourceTest {
         CnbBankCodeSource impatient = localSource(Duration.ofSeconds(2));
         long started = System.nanoTime();
 
-        assertThatThrownBy(() -> impatient.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("timeout");
+        assertThatThrownBy(() -> impatient.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.TIMEOUT));
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(5_500));
     }
 
@@ -122,7 +123,7 @@ class CnbBankCodeSourceTest {
     void should_be_unavailable_as_unreachable_when_fetched_given_stopped_server() {
         server.stop(0);
 
-        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("unreachable");
+        assertThatThrownBy(() -> source.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.UNREACHABLE));
     }
 
     @Test
@@ -133,8 +134,8 @@ class CnbBankCodeSourceTest {
         CnbBankCodeSource plain = new CnbBankCodeSource(HttpClient.newHttpClient(), URI.create("http://www.cnb.cz" + PATH), false,
                 Duration.ofMillis(500));
 
-        assertThatThrownBy(() -> strict.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("non-public address");
-        assertThatThrownBy(() -> plain.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("not https");
+        assertThatThrownBy(() -> strict.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.NON_PUBLIC_ADDRESS));
+        assertThatThrownBy(() -> plain.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.NOT_HTTPS));
         assertThat(askedIfModifiedSince).isEmpty();
     }
 
@@ -150,7 +151,7 @@ class CnbBankCodeSourceTest {
         long started = System.nanoTime();
 
         try {
-            assertThatThrownBy(() -> stalled.fetch(BankCodeListState.none())).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("timeout");
+            assertThatThrownBy(() -> stalled.fetch(BankCodeListState.none())).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(BankCodeSourceFailure.TIMEOUT));
             assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(3_000));
         } finally {
             release.countDown();

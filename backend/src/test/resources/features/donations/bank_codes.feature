@@ -50,9 +50,9 @@ Feature: A signed-in person reads the Czech bank codes to name the bank beside a
     And the bank code list is refreshed
     And a person "Jana" is registered
     When 8 days pass
-    And the ČNB answers the bank codes with "status 503"
+    And the ČNB answers the bank codes with status 503
     And the bank code list is refreshed
     And "Jana" asks for the bank codes
-    Then the bank code refresh failed with "status 503"
+    Then the bank code refresh failed with status 503
     And the bank code list was last checked at "2026-11-04T09:00:00Z"
     And the bank codes fetched at "2026-11-04T09:00:00Z" are 20, from "0000" "Banka 0, a.s." to "0019" "Banka 19, a.s."
