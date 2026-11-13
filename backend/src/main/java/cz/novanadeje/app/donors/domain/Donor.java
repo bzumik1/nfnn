@@ -115,7 +115,7 @@ public final class Donor {
     public void verifyEmail(Instant at) {
         requireNotErased();
         if (emailVerifiedAt != null) {
-            throw new IllegalStateException("The e-mail of donor " + id + " is already verified");
+            throw new EmailAlreadyConfirmed(id);
         }
         this.emailVerifiedAt = require(at, "Verification time");
     }
@@ -151,7 +151,7 @@ public final class Donor {
     public void changeEmail(EmailAddress newEmail) {
         requireNotErased();
         if (emailVerifiedAt == null) {
-            throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
+            throw new EmailNotConfirmed(id);
         }
         if (require(newEmail, "Email").equals(email)) {
             throw new EmailUnchanged();

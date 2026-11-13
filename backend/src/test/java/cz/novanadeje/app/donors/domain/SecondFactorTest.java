@@ -40,7 +40,9 @@ class SecondFactorTest {
         assertThat(factor.isEnabled()).isTrue();
         assertThat(factor.confirmedAt()).contains(NOW);
         assertThat(factor.lastUsedStep()).hasValue(Totp.stepAt(NOW));
-        assertThatThrownBy(() -> factor.confirm(codeAt(NOW), NOW)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> factor.confirm(codeAt(NOW), NOW))
+                .isInstanceOf(SecondFactorAlreadyEnabled.class)
+                .hasFieldOrPropertyWithValue("code", "donors/second-factor-already-enabled");
     }
 
     @Test

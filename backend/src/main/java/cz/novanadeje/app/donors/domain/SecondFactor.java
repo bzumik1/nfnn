@@ -30,7 +30,7 @@ public final class SecondFactor {
 
     public void confirm(String code, Instant now) {
         if (isEnabled()) {
-            throw new IllegalStateException("The second factor of donor " + donorId + " is already enabled");
+            throw new SecondFactorAlreadyEnabled();
         }
         OptionalLong step = Totp.matchingStep(secret, code, now);
         if (step.isEmpty()) {
