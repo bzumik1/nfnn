@@ -2,6 +2,8 @@ package cz.novanadeje.app.donors.domain;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -36,6 +38,14 @@ class CompanyIdentifierTest {
     @DisplayName("Given letters, when the identifier is created, then it is rejected")
     void should_reject_when_created_given_letters() {
         assertThatIllegalArgumentException().isThrownBy(() -> new CompanyIdentifier("4527464A"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"\uff14\uff15\uff12\uff17\uff14\uff16\uff14\uff19", "\u0664\u0665\u0662\u0667\u0664\u0666\u0664\u0669", "4527464\u0669"})
+    @DisplayName("Given the digits of a valid identifier written in another script, when the identifier is created or checked, then it is rejected")
+    void should_reject_when_created_given_digits_of_another_script(String digits) {
+        assertThatIllegalArgumentException().isThrownBy(() -> new CompanyIdentifier(digits));
+        assertThat(CompanyIdentifier.isValid(digits)).isFalse();
     }
 
     @Test
