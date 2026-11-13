@@ -615,4 +615,71 @@ describe('Given an administrator on the bank logos page', () => {
 
     expect(text('.ui-card__empty')).toContain('Žádná banka zatím logo nemá.');
   });
+
+  describe('when the page was shown once and is opened again', () => {
+    async function openAgain(): Promise<void> {
+      fixture.nativeElement.remove();
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminBankLogos);
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+    }
+
+    beforeEach(async () => {
+      await listed();
+      await openAgain();
+    });
+
+    it('then the logos show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-code]')).toHaveLength(
+        3,
+      );
+
+      await listed([csas]);
+
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('[data-code]')).toHaveLength(
+        1,
+      );
+    });
+
+    it('then a refresh that brings the same logos leaves the rows as they are', async () => {
+      row('0800').setAttribute('data-still-the-same', '');
+
+      await listed();
+
+      expect(row('0800').hasAttribute('data-still-the-same')).toBe(true);
+    });
+
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const forbidden = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      http.expectOne(LIST_URL).flush(forbidden.body, forbidden.options);
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('then a logo removed while the refresh is on its way does not come back with its answer, nor on the next visit', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
+      button(row('0800'), 'Odebrat').click();
+      await settle();
+      button(document.querySelector('dialog') as HTMLElement, 'Odebrat logo').click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${LIST_URL}/0800` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      refresh.flush({ items: [csas, fio, unknown] });
+      await settle();
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+
+      await openAgain();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+      await listed([fio, unknown]);
+    });
+  });
 });

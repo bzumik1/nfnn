@@ -17,6 +17,7 @@ import { Observable } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
+import { ListChanges } from '../../../core/kept/list-changes';
 import { isChangedMeanwhile, versionInRefusal } from '../../../core/version/row-version';
 import { BankLogoRemoveDialog } from './bank-logo-remove-dialog';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
@@ -29,8 +30,14 @@ import { BankNames } from '../../donations/bank-names';
 import { bankLogoImageUrl } from '../../donations/bank-logos-api';
 import { shortBankName } from '../../donations/czech-banks';
 import { formatBankTime } from '../../donations/donation-date';
-import { AdminApi, AdminBankLogoResponse, BankLogoFailure } from '../admin-api';
+import {
+  AdminApi,
+  AdminBankLogoListResponse,
+  AdminBankLogoResponse,
+  BankLogoFailure,
+} from '../admin-api';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type RowAction = 'save' | 'refresh';
@@ -87,6 +94,8 @@ const FAILURE_WORDS: Readonly<Record<BankLogoFailure, string>> = {
 })
 export class AdminBankLogos {
   private readonly api = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
+  private readonly changes = new ListChanges(() => this.load(undefined, true));
   private readonly bankNames = inject(BankNames);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -129,24 +138,27 @@ export class AdminBankLogos {
   };
 
   constructor() {
-    this.load();
+    const shown = this.kept.kept('bank-logos');
+    if (shown !== null) {
+      this.showList(shown);
+    }
+    this.load(undefined, shown !== null);
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(onLoaded?: () => void): void {
+  protected load(onLoaded?: () => void, quietly = false): void {
     if (this.state() !== 'ready') {
       this.state.set('loading');
     }
-    this.api
-      .bankLogos()
+    this.changes
+      .track(this.api.bankLogos())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {
-          this.forms.clear();
-          this.items.set(list.items);
-          this.generation.update((value) => value + 1);
-          this.rowErrors.set({});
-          this.state.set('ready');
+          if (!quietly || !sameLogos(this.items(), list.items)) {
+            this.showList(list);
+          }
+          this.kept.keep('bank-logos', list);
           onLoaded?.();
         },
         error: (failure: unknown) => {
@@ -158,9 +170,34 @@ export class AdminBankLogos {
             this.router.navigateByUrl('/darce/prehled');
             return;
           }
+          if (quietly && this.state() === 'ready') {
+            return;
+          }
           this.state.set('error');
         },
       });
+  }
+
+  private showList(list: AdminBankLogoListResponse): void {
+    this.forms.clear();
+    this.items.set(list.items);
+    this.generation.update((value) => value + 1);
+    this.rowErrors.set({});
+    this.state.set('ready');
+  }
+
+  private changing(): void {
+    this.changes.changing();
+  }
+
+  private changedHere(): void {
+    this.changes.changed(false);
+    this.changes.answeredByChange();
+    this.kept.keep('bank-logos', { items: this.items() });
+  }
+
+  private notChanged(): void {
+    this.changes.changed();
   }
 
   protected bankName(item: AdminBankLogoResponse): string {
@@ -236,6 +273,7 @@ export class AdminBankLogos {
     }
     this.clearRowError(item.code);
     this.busy.set({ code: item.code, action: 'refresh' });
+    this.changing();
     this.api
       .refreshBankLogo(item.code)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -243,6 +281,7 @@ export class AdminBankLogos {
         next: (answer) => {
           this.busy.set(null);
           this.replace(answer);
+          this.changedHere();
           this.bankNames.forgetLogos();
           this.announce(
             answer.imageId === item.imageId
@@ -252,6 +291,7 @@ export class AdminBankLogos {
         },
         error: (failure: unknown) => {
           this.busy.set(null);
+          this.notChanged();
           this.refused(item.code, failure, undefined);
         },
       });
@@ -280,6 +320,7 @@ export class AdminBankLogos {
     }
     this.removeError.set(null);
     this.busy.set({ code: item.code, action: 'remove' });
+    this.changing();
     this.api
       .removeBankLogo(item.code, item.version, item)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -289,6 +330,7 @@ export class AdminBankLogos {
           this.removing.set(null);
           this.items.update((items) => items.filter((each) => each.code !== item.code));
           this.forms.delete(item.code);
+          this.changedHere();
           this.bankNames.forgetLogos();
           this.announce(
             $localize`:@@admin.bankLogos.remove.done:Logo banky ${item.code}:code: jsme odebrali. U jejích účtů se teď ukazuje zkratka názvu.`,
@@ -297,6 +339,7 @@ export class AdminBankLogos {
         },
         error: (failure: unknown) => {
           this.busy.set(null);
+          this.notChanged();
           if (isChangedMeanwhile(failure)) {
             this.removing.set(null);
             this.stale.set({ code: item.code, sourceUrl: null, version: null, fromAddForm: false });
@@ -376,6 +419,7 @@ export class AdminBankLogos {
     const previous = shown?.sourceUrl;
     const held = shown !== undefined && shown.version === version ? shown : null;
     this.busy.set({ code, action: fromAddForm ? 'add' : 'save' });
+    this.changing();
     this.request(this.api.setBankLogoSource(code, sourceUrl, version, held)).subscribe({
       next: (answer) => {
         this.busy.set(null);
@@ -389,6 +433,7 @@ export class AdminBankLogos {
           this.replace(answer);
           this.forms.get(answer.code)?.resetForm({ [SOURCE_CONTROL]: answer.sourceUrl });
         }
+        this.changedHere();
         if (fromAddForm) {
           this.newCode = '';
           this.newSource = '';
@@ -399,6 +444,7 @@ export class AdminBankLogos {
       },
       error: (failure: unknown) => {
         this.busy.set(null);
+        this.notChanged();
         if (isChangedMeanwhile(failure)) {
           const newer = versionInRefusal(failure);
           this.stale.set({
@@ -514,4 +560,11 @@ export class AdminBankLogos {
       this.loginDialog.open('login', { returnTo });
     });
   }
+}
+
+function sameLogos(
+  shown: readonly AdminBankLogoResponse[],
+  answered: readonly AdminBankLogoResponse[],
+): boolean {
+  return JSON.stringify(shown) === JSON.stringify(answered);
 }

@@ -20,6 +20,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
+import { ListChanges } from '../../../core/kept/list-changes';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { PushAvailability, pushAvailability } from '../../../core/push/push-availability';
 import {
@@ -38,6 +39,7 @@ import {
   PushSubscriptionResponse,
   PushTestResponse,
 } from '../admin-api';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { DeviceAlertMarks } from './device-alert-marks';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
@@ -93,6 +95,8 @@ const SERVICE_NAMES: Record<PushService, string> = {
 })
 export class AdminAlerts {
   private readonly api = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
+  private readonly changes = new ListChanges(() => this.fetch(true));
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -154,7 +158,13 @@ export class AdminAlerts {
   );
 
   constructor() {
-    this.load();
+    const shown = this.kept.kept('push');
+    if (shown !== null) {
+      this.showView(shown);
+      this.fetch(true);
+    } else {
+      this.load();
+    }
     const changes = this.push.controllerChanges.subscribe(() =>
       this.availability.set(this.availabilityNow()),
     );
@@ -236,6 +246,7 @@ export class AdminAlerts {
     this.savingAlerts.set(item.id);
     notice.set(null);
     this.replaceOne({ ...item, alerts });
+    this.changes.changing();
     this.api
       .changePushAlerts(item.id, alerts)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -243,6 +254,7 @@ export class AdminAlerts {
         next: (saved) => {
           this.savingAlerts.set(null);
           this.replaceOne({ ...saved, current: item.current });
+          this.changedHere();
           notice.set({
             kind: 'status',
             text: $localize`:@@admin.alerts.switches.saved:Uloženo pro ${device}:device:: ${AREA_LABELS[area]}:area: – ${on ? ON_TEXT : OFF_TEXT}:state:.`,
@@ -251,6 +263,7 @@ export class AdminAlerts {
         error: (failure: unknown) => {
           this.savingAlerts.set(null);
           this.replaceOne(item);
+          this.changes.changed();
           notice.set({
             kind: 'alert',
             text: describeProblem(
@@ -298,6 +311,7 @@ export class AdminAlerts {
     }
     this.turningOff.set(true);
     this.deviceNotice.set(null);
+    this.changes.changing();
     this.api
       .removePushSubscription(item.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -308,6 +322,7 @@ export class AdminAlerts {
             this.turningOff.set(false);
             this.browserState.set('unknown');
             this.replaceSubscriptions((items) => items.filter((other) => other.id !== item.id));
+            this.changedHere();
             this.deviceNotice.set({
               kind: 'status',
               text: $localize`:@@admin.alerts.device.turnedOff:Upozornění jsme na tomto zařízení vypnuli.`,
@@ -317,6 +332,7 @@ export class AdminAlerts {
         },
         error: (failure: unknown) => {
           this.turningOff.set(false);
+          this.changes.changed();
           this.deviceNotice.set({
             kind: 'alert',
             text: describeProblem(
@@ -335,6 +351,7 @@ export class AdminAlerts {
     this.removing.set(item.id);
     this.othersNotice.set(null);
     this.sheetNotice.set(null);
+    this.changes.changing();
     this.api
       .removePushSubscription(item.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -343,6 +360,7 @@ export class AdminAlerts {
           this.removing.set(null);
           this.openedId.set(null);
           this.replaceSubscriptions((items) => items.filter((other) => other.id !== item.id));
+          this.changedHere();
           this.othersNotice.set({
             kind: 'status',
             text: $localize`:@@admin.alerts.others.removed:Zařízení ${this.serviceName(item)}:service: jsme odebrali; upozornění na ně už nechodí.`,
@@ -351,6 +369,7 @@ export class AdminAlerts {
         },
         error: (failure: unknown) => {
           this.removing.set(null);
+          this.changes.changed();
           this.sheetNotice.set({
             kind: 'alert',
             text: describeProblem(
@@ -362,17 +381,15 @@ export class AdminAlerts {
       });
   }
 
-  private fetch(): void {
-    this.api
-      .push()
+  private fetch(quietly = false): void {
+    this.changes
+      .track(this.api.push())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
-          this.view.set(view);
-          this.availability.set(this.availabilityNow());
+          this.showView(view);
           this.openAlerts.accept(view.openAlerts ?? []);
-          this.state.set('ready');
-          this.checkBrowserSubscription();
+          this.kept.keep('push', view);
         },
         error: (failure: unknown) => {
           if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
@@ -381,6 +398,9 @@ export class AdminAlerts {
           }
           if (problemTypeEndsWith(failure, FORBIDDEN)) {
             void this.router.navigateByUrl('/darce/prehled');
+            return;
+          }
+          if (quietly && this.state() === 'ready') {
             return;
           }
           this.loadError.set(
@@ -394,7 +414,24 @@ export class AdminAlerts {
       });
   }
 
+  private showView(view: AdminPushResponse): void {
+    this.view.set(view);
+    this.availability.set(this.availabilityNow());
+    this.state.set('ready');
+    this.checkBrowserSubscription();
+  }
+
+  private changedHere(): void {
+    this.changes.changed(false);
+    this.changes.answeredByChange();
+    const view = this.view();
+    if (view !== null) {
+      this.kept.keep('push', view);
+    }
+  }
+
   private registerDevice(endpoint: string, p256dh: string, auth: string): void {
+    this.changes.changing();
     this.api
       .subscribePush({ endpoint, keys: { p256dh, auth } })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -410,6 +447,7 @@ export class AdminAlerts {
             ...items.filter((item) => item.id !== subscription.id && !item.current),
             { ...subscription, current: true },
           ]);
+          this.changedHere();
           this.deviceNotice.set({
             kind: 'status',
             text: $localize`:@@admin.alerts.device.turnedOn:Upozornění jsme na tomto zařízení zapnuli. Zkušebním upozorněním si můžete ověřit, že dorazí.`,
@@ -419,6 +457,7 @@ export class AdminAlerts {
         },
         error: (failure: unknown) => {
           this.subscribing.set(false);
+          this.changes.changed();
           void this.push.unsubscribe();
           this.deviceNotice.set({
             kind: 'alert',

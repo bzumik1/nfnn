@@ -757,4 +757,76 @@ describe('Given an administrator on the alerts page', () => {
 
     expect(text('h2')).toBe('Co se hlídá');
   });
+
+  describe('when the page was shown once and is opened again', () => {
+    const phone = pushSubscription({
+      id: 'push-phone',
+      service: 'apple',
+      current: false,
+      createdAt: '2026-10-30T10:00:00Z',
+      lastDeliveredAt: null,
+      failuresInARow: 0,
+    });
+
+    beforeEach(async () => {
+      withPushApi();
+      await open(adminPush({ subscriptions: [phone, pushSubscription()] }));
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAlerts);
+      fixture.detectChanges();
+    });
+
+    it('then the devices show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(sectionText('Další zařízení')).toContain('Apple');
+
+      http
+        .expectOne({ method: 'GET', url: PUSH_URL })
+        .flush(adminPush({ subscriptions: [pushSubscription()] }));
+      await settle();
+
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+    });
+
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const forbidden = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(forbidden.body, forbidden.options);
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('then a device removed while the refresh is on its way does not come back with its answer, nor on the next visit', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: PUSH_URL });
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      refresh.flush(adminPush({ subscriptions: [phone, pushSubscription()] }));
+      await settle();
+
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAlerts);
+      fixture.detectChanges();
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+      http
+        .expectOne({ method: 'GET', url: PUSH_URL })
+        .flush(adminPush({ subscriptions: [pushSubscription()] }));
+      await settle();
+    });
+  });
 });
