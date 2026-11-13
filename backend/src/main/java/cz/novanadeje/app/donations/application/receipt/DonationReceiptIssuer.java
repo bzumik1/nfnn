@@ -42,7 +42,7 @@ import java.util.UUID;
 @Service
 public class DonationReceiptIssuer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DonationReceiptIssuer.class);
+    private static final Logger log = LoggerFactory.getLogger(DonationReceiptIssuer.class);
     private static final long SERIAL_WORTH_A_WARNING = (ReceiptNumber.LAST_SERIAL + 1) / 10 * 9;
     static final int REPLACEMENTS_PER_DONOR_A_DAY = 20;
     static final int REPLACEMENTS_PER_DONOR_A_YEAR = 60;
@@ -115,7 +115,7 @@ public class DonationReceiptIssuer {
             case PUBLISHED -> {
             }
             case WITHDRAWN -> {
-                LOG.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor,
+                log.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor,
                         key.id());
                 throw new ReceiptSigningPaused(key.id());
             }
@@ -163,7 +163,7 @@ public class DonationReceiptIssuer {
     }
 
     private static DonationReceipt returnedAgain(DonationReceipt active, ReceiptRequest request) {
-        LOG.debug("Returning issued receipt {} again for donor {}", active.number(), request.donor());
+        log.debug("Returning issued receipt {} again for donor {}", active.number(), request.donor());
         return active;
     }
 
@@ -197,7 +197,7 @@ public class DonationReceiptIssuer {
         long serial = receipts.nextSerial();
         ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
         if (serial >= SERIAL_WORTH_A_WARNING) {
-            LOG.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
+            log.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
         }
         LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
         ReceiptDocument document = request.document(foundation, signatory.signatory(), number, locale,
@@ -215,7 +215,7 @@ public class DonationReceiptIssuer {
         });
         receipts.save(issued);
         String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
-        AfterCommit.run(() -> LOG.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
+        AfterCommit.run(() -> log.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
         return issued;
     }
 
