@@ -45,6 +45,7 @@ class SecretMaskingRulesTest {
             "cz.novanadeje.app.donations.application.banklogo.BankLogoVersions$VersionedFields", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.application.banklogo.PublishedBankLogo", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.infrastructure.persistence.BankLogoRow", BANK_CODE_REASON,
+            "cz.novanadeje.app.donations.interfaces.rest.AdminBankLogoResponse", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.interfaces.rest.BankCodesResponse$Item", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.interfaces.rest.BankLogosResponse$Item", BANK_CODE_REASON);
     private static final Set<String> SETTING_NAMES = Set.of("name", "setting");

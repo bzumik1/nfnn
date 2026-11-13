@@ -13,21 +13,42 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @AnalyzeClasses(packagesOf = AppApplication.class, importOptions = ImportOption.DoNotIncludeTests.class)
 class ExpectedVersionRulesTest {
+
+    private static final String SHARED_RESOLVERS = "cz.novanadeje.app.shared.interfaces.rest";
+    private static final Set<String> PRECONDITION_HEADERS = Set.of(HttpHeaders.IF_MATCH.toLowerCase(Locale.ROOT), HttpHeaders.IF_NONE_MATCH.toLowerCase(Locale.ROOT));
+
+    @ArchTest
+    static final ArchRule precondition_headers_are_read_only_by_the_shared_resolvers = noMethods()
+            .that().areDeclaredInClassesThat().resideOutsideOfPackage(SHARED_RESOLVERS)
+            .should(new ArchCondition<>("read If-Match or If-None-Match with @RequestHeader, which ExpectedVersion and WritePrecondition read for every write") {
+                @Override
+                public void check(JavaMethod method, ConditionEvents events) {
+                    method.getParameters().stream().filter(ExpectedVersionRulesTest::readsAPreconditionHeader)
+                            .forEach(parameter -> events.add(SimpleConditionEvent.satisfied(method, method.getFullName() + " reads a precondition header itself")));
+                }
+            });
 
     @ArchTest
     static final ArchRule a_versioned_handler_reads_its_body_before_the_version = methods()
@@ -37,7 +58,7 @@ class ExpectedVersionRulesTest {
                     return method.getParameters().stream().anyMatch(ExpectedVersionRulesTest::isExpectedVersion);
                 }
             })
-            .should(new ArchCondition<>("declare every @RequestBody parameter before the expected version, so a body that fails validation answers 400 before a missing version answers 428") {
+            .should(new ArchCondition<>("declare every @RequestBody parameter before the expected version or write precondition, so a body that fails validation answers 400 before a missing version answers 428") {
                 @Override
                 public void check(JavaMethod method, ConditionEvents events) {
                     List<JavaParameter> parameters = method.getParameters();
@@ -79,7 +100,79 @@ import java.nio.file.Path;
                 .singleElement().satisfies(detail -> assertThat(detail).contains("versionFirst"));
     }
 
+    @Test
+    @DisplayName("Given a planted controller that reads its body after the write precondition and one that reads it first, when the rule checks them, then only the first is reported")
+    void should_report_a_body_after_the_precondition_when_checked_given_planted_handlers(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.interfaces.rest.PlantedPreconditionController", """
+                package cz.novanadeje.app.planteda.interfaces.rest;
+
+                import cz.novanadeje.app.shared.application.version.WritePrecondition;
+                import org.springframework.web.bind.annotation.RequestBody;
+
+                class PlantedPreconditionController {
+
+                    record Change(String text) {
+                    }
+
+                    void preconditionFirst(WritePrecondition precondition, @RequestBody Change change) {
+                    }
+
+                    void bodyFirst(@RequestBody Change change, WritePrecondition precondition) {
+                    }
+                }
+                """));
+
+        assertThat(a_versioned_handler_reads_its_body_before_the_version.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().satisfies(detail -> assertThat(detail).contains("preconditionFirst"));
+    }
+
+    @Test
+    @DisplayName("Given planted handlers that read If-Match or If-None-Match by any spelling, another header, and a shared resolver's own read, when the rule checks them, then only the context's precondition reads are reported")
+    void should_report_a_precondition_header_read_outside_the_shared_resolvers_when_checked_given_planted_handlers(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.planteda.interfaces.rest.PlantedHeaderController", """
+                        package cz.novanadeje.app.planteda.interfaces.rest;
+
+                        import org.springframework.http.HttpHeaders;
+                        import org.springframework.web.bind.annotation.RequestHeader;
+
+                        class PlantedHeaderController {
+
+                            void ifMatchByConstant(@RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch) {
+                            }
+
+                            void ifNoneMatchByName(@RequestHeader(name = "if-none-match") String ifNoneMatch) {
+                            }
+
+                            void language(@RequestHeader(HttpHeaders.ACCEPT_LANGUAGE) String language) {
+                            }
+                        }
+                        """,
+                SHARED_RESOLVERS + ".PlantedSharedHeaderReader", """
+                        package cz.novanadeje.app.shared.interfaces.rest;
+
+                        import org.springframework.web.bind.annotation.RequestHeader;
+
+                        class PlantedSharedHeaderReader {
+
+                            void ifMatch(@RequestHeader("If-Match") String ifMatch) {
+                            }
+                        }
+                        """));
+
+        assertThat(precondition_headers_are_read_only_by_the_shared_resolvers.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("ifMatchByConstant"))
+                .anySatisfy(detail -> assertThat(detail).contains("ifNoneMatchByName"));
+    }
+
     private static boolean isExpectedVersion(JavaParameter parameter) {
-        return parameter.getRawType().isEquivalentTo(ExpectedVersion.class);
+        return parameter.getRawType().isEquivalentTo(ExpectedVersion.class) || parameter.getRawType().isEquivalentTo(WritePrecondition.class);
+    }
+
+    private static boolean readsAPreconditionHeader(JavaParameter parameter) {
+        return parameter.tryGetAnnotationOfType(RequestHeader.class)
+                .map(header -> Stream.of(header.value(), header.name()).map(name -> name.toLowerCase(Locale.ROOT)).anyMatch(PRECONDITION_HEADERS::contains))
+                .orElse(false);
     }
 }
