@@ -54,8 +54,12 @@ public class DonorRegistrationService {
                 ? Optional.empty()
                 : Optional.of(new CompanyIdentifier(command.companyIdentifier()));
         PostalAddress address = new PostalAddress(command.street(), command.city(), command.postalCode());
-        Optional<PasswordHash> passwordHash = Optional.ofNullable(command.password()).map(password -> passwordHasher.hash(new RawPassword(password)));
+        Optional<PasswordHash> passwordHash = hashOf(command.password());
         writes.executeWithoutResult(status -> register(command, email, companyIdentifier, address, passwordHash, now));
+    }
+
+    private Optional<PasswordHash> hashOf(String password) {
+        return Optional.ofNullable(password).map(given -> passwordHasher.hash(new RawPassword(given)));
     }
 
     private void register(RegisterDonorCommand command, EmailAddress email, Optional<CompanyIdentifier> companyIdentifier, PostalAddress address,
