@@ -2,8 +2,8 @@ package cz.novanadeje.app.donations.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofMessage;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;

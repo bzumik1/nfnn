@@ -36,7 +36,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProof;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;

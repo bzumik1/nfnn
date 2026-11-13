@@ -1,8 +1,6 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.Donation;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

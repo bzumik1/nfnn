@@ -6,7 +6,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProof;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
 import cz.novanadeje.app.shared.domain.LocaleCode;

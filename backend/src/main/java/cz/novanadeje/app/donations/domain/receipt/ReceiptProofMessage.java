@@ -1,6 +1,7 @@
-package cz.novanadeje.app.donations.domain.receipt.proof;
+package cz.novanadeje.app.donations.domain.receipt;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
@@ -19,7 +20,7 @@ public final class ReceiptProofMessage {
         ByteArrayOutputStream message = new ByteArrayOutputStream();
         message.writeBytes(DOMAIN_TAG.getBytes(StandardCharsets.US_ASCII));
         message.write(0);
-        message.writeBytes(new ProofBytesWriter().u32(Long.parseLong(foundationCompanyIdentifier)).toByteArray());
+        message.writeBytes(ByteBuffer.allocate(Integer.BYTES).putInt(Integer.parseInt(foundationCompanyIdentifier)).array());
         message.writeBytes(body);
         return message.toByteArray();
     }
