@@ -16,7 +16,9 @@ import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -109,7 +111,25 @@ class HttpClientPushTransportTest {
         assertThat(HttpClientPushTransport.TIMEOUT).hasSeconds(10);
     }
 
-    private HttpClientPushTransport transport(HttpClientPushTransport.HostResolver resolver) {
+    @Test
+    @DisplayName("Given a host whose name lookup never answers, when a message is posted, then it is unreachable within the lookup's time limit")
+    void should_be_unreachable_within_the_limit_when_posted_given_a_lookup_that_never_answers() {
+        CountDownLatch never = new CountDownLatch(1);
+        HttpClientPushTransport transport = new HttpClientPushTransport(HttpClient.newBuilder().connectTimeout(HttpClientPushTransport.TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NEVER).proxy(HttpClient.Builder.NO_PROXY).build(), host -> {
+                    never.await();
+                    return new InetAddress[]{PUBLIC};
+                }, Duration.ofMillis(300));
+        long started = System.nanoTime();
+
+        int status = transport.post(local("/created"), Map.of(), new byte[]{1});
+
+        assertThat(status).isEqualTo(HttpClientPushTransport.UNREACHABLE);
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+        assertThat(requests).isEmpty();
+    }
+
+    private HttpClientPushTransport transport(HostResolver resolver) {
         return new HttpClientPushTransport(HttpClient.newBuilder().connectTimeout(HttpClientPushTransport.TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NEVER).proxy(HttpClient.Builder.NO_PROXY).build(), resolver);
     }
