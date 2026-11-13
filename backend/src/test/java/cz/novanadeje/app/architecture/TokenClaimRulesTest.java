@@ -6,6 +6,8 @@ import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaParameter;
+import com.tngtech.archunit.core.domain.JavaParameterizedType;
+import com.tngtech.archunit.core.domain.JavaType;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -26,9 +28,13 @@ import org.springframework.security.oauth2.core.ClaimAccessor;
 import org.springframework.security.oauth2.server.resource.authentication.AbstractOAuth2TokenAuthenticationToken;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -116,13 +122,50 @@ class TokenClaimRulesTest {
         return annotation.get("expression").map(String.class::cast).filter(expression -> !expression.isBlank()).isPresent();
     }
 
+    private static boolean wraps(JavaType type, Class<?> resolved) {
+        return type instanceof JavaParameterizedType parameterized && parameterized.getActualTypeArguments().stream()
+                .anyMatch(argument -> argument.toErasure().isEquivalentTo(resolved) || wraps(argument, resolved));
+    }
+
+    @Test
+    @DisplayName("Given the main sources, when they are searched for the session claim, then only its parser, the issuer, the liveness check and the claim's own constant name it")
+    void should_name_the_session_claim_only_where_it_is_parsed_or_signed_when_searched_given_the_main_sources() throws IOException {
+        assertThat(filesNamingTheSessionClaim(Path.of("src", "main", "java")))
+                .map(file -> file.getFileName().toString())
+                .containsExactlyInAnyOrder("SessionClaim.java", "JwtProperties.java", "JwtAccessTokenIssuer.java", "LiveSessionValidator.java");
+    }
+
+    @Test
+    @DisplayName("Given a planted source that reads the session claim itself, when the sources are searched, then it is found")
+    void should_find_a_planted_session_claim_read_when_searched_given_a_planted_source(@TempDir Path sources) throws IOException {
+        Files.writeString(sources.resolve("PlantedSessionReader.java"),
+                "class PlantedSessionReader { Object v(org.springframework.security.oauth2.jwt.Jwt jwt) { return jwt.getClaimAsString(JwtProperties.SESSION_CLAIM); } }");
+        Files.writeString(sources.resolve("Unrelated.java"), "class Unrelated { String n = \"scope\"; }");
+
+        assertThat(filesNamingTheSessionClaim(sources)).containsExactly(sources.resolve("PlantedSessionReader.java"));
+    }
+
+    private static List<Path> filesNamingTheSessionClaim(Path root) throws IOException {
+        try (Stream<Path> files = Files.walk(root)) {
+            return files.filter(Files::isRegularFile).filter(TokenClaimRulesTest::namesTheSessionClaim).toList();
+        }
+    }
+
+    private static boolean namesTheSessionClaim(Path file) {
+        try {
+            return Files.readString(file).contains("SESSION_CLAIM");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private static ArchCondition<JavaMethod> takeOnlyBare(Class<?> resolved) {
         return new ArchCondition<>("take a " + resolved.getSimpleName() + " only without an annotation") {
             @Override
             public void check(JavaMethod method, ConditionEvents events) {
                 method.getParameters().stream()
-                        .filter(parameter -> parameter.getRawType().isEquivalentTo(resolved))
-                        .filter(parameter -> !parameter.getAnnotations().isEmpty())
+                        .filter(parameter -> parameter.getRawType().isEquivalentTo(resolved) && !parameter.getAnnotations().isEmpty()
+                                || !parameter.getRawType().isEquivalentTo(resolved) && wraps(parameter.getType(), resolved))
                         .map(JavaParameter::getIndex)
                         .forEach(index -> events.add(SimpleConditionEvent.violated(method,
                                 method.getFullName() + " binds the " + resolved.getSimpleName() + " from the request")));
@@ -187,7 +230,7 @@ class TokenClaimRulesTest {
     }
 
     @Test
-    @DisplayName("Given a planted controller that binds the current device from the query and one that takes it bare, when the rule checks it, then only the bound one is reported")
+    @DisplayName("Given a planted controller that binds the current device from the query, takes it inside an Optional and takes it bare, when the rule checks it, then the bound and the wrapped ones are reported")
     void should_report_a_bound_device_when_checked_given_a_planted_controller(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.interfaces.rest.PlantedDeviceController", """
                 package cz.novanadeje.app.planteda.interfaces.rest;
@@ -204,10 +247,16 @@ class TokenClaimRulesTest {
                     String session(CurrentDevice device) {
                         return device.toString();
                     }
+
+                    String optional(java.util.Optional<CurrentDevice> device) {
+                        return device.toString();
+                    }
                 }
                 """));
 
         assertThat(the_current_device_is_never_bound_from_the_request.evaluate(planted).getFailureReport().getDetails())
-                .singleElement().satisfies(detail -> assertThat(detail).contains("named"));
+                .hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("named"))
+                .anySatisfy(detail -> assertThat(detail).contains("optional"));
     }
 }

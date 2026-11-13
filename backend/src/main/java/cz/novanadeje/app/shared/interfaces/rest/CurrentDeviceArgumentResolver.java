@@ -1,7 +1,7 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.application.session.CurrentDevice;
-import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.shared.infrastructure.security.SessionClaim;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,11 +13,8 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 final class CurrentDeviceArgumentResolver implements HandlerMethodArgumentResolver {
-
-    private static final Pattern DEVICE_ID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
@@ -34,8 +31,6 @@ final class CurrentDeviceArgumentResolver implements HandlerMethodArgumentResolv
         if (!(authentication instanceof JwtAuthenticationToken token)) {
             return Optional.empty();
         }
-        return Optional.ofNullable(token.getToken().getClaimAsString(JwtProperties.SESSION_CLAIM))
-                .filter(session -> DEVICE_ID.matcher(session).matches())
-                .map(UUID::fromString);
+        return SessionClaim.of(token.getToken());
     }
 }
