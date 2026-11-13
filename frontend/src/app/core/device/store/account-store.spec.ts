@@ -128,6 +128,47 @@ describe('Given an account store over IndexedDB', () => {
     reopened.close();
   });
 
+  it('when contents with the mark of what this device last showed are stored, then a new store of the same copy loads it back and the raw database holds none of it', async () => {
+    const seen = {
+      at: '2026-11-10T13:05:41.207Z',
+      payments: ['019a1c00-0000-7000-8000-0000000c0de1'],
+    };
+    await store.replace({ ...contents(), seen });
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+
+    expect(await reopened.load()).toBe('loaded');
+    expect(reopened.contents()?.seen).toEqual(seen);
+    const dump = await rawIndexedDbDump();
+    expect(leaks(dump, seen.at)).toBe(false);
+    expect(leaks(dump, seen.payments[0])).toBe(false);
+    reopened.close();
+  });
+
+  it('when contents without a mark replace contents that had one, then the stored copy keeps the earlier mark', async () => {
+    const seen = { at: '2026-11-10T13:05:41.207Z', payments: [] };
+    await store.replace({ ...contents(), seen });
+
+    await store.replace({ ...contents(), storedAt: '2026-11-11T08:00:00Z' });
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+    await reopened.load();
+    expect(store.contents()?.seen).toEqual(seen);
+    expect(reopened.contents()?.seen).toEqual(seen);
+    expect(reopened.contents()?.storedAt).toBe('2026-11-11T08:00:00Z');
+    reopened.close();
+  });
+
+  it('when contents never shown are stored, then the loaded contents carry no mark', async () => {
+    await store.replace(contents());
+
+    const reopened = new AccountStore(await sameCopy(copy), storage, 'donor');
+    await reopened.load();
+
+    expect(reopened.contents()).not.toHaveProperty('seen');
+    reopened.close();
+  });
+
   it('when contents without a profile are stored, then the loaded contents carry none', async () => {
     await store.replace(contents());
 

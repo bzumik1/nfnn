@@ -28,6 +28,7 @@ import {
   openDonorSection,
   openSignInDialog,
   problem,
+  serveAdministrationCopy,
   receiptSigningKeys,
   samplePngBase64,
   secondFactorEnrolment,
@@ -38,7 +39,6 @@ import {
   signIn,
   session,
   openUnlockedAdministrationPage,
-  serveAdministrationCopy,
 } from './donor-session';
 import {
   chunkLoadNotice,
@@ -1210,31 +1210,13 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
           },
         }),
     );
-    await page.route(
-      (url) => url.pathname === '/api/admin/donors/me/previous-sign-in',
-      (route) => route.fulfill({ json: { previousSignInAt: '2026-10-28T20:14:00Z' } }),
-    );
-    await page.route(
-      (url) => url.pathname === '/api/admin/donations/overview/since',
-      (route) =>
-        route.fulfill({
-          json: {
-            from: '2026-10-28T20:14:00Z',
-            payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
-            paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
-            unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
-            newDonors: 3,
-          },
-        }),
-    );
+    await serveAdministrationCopy(page, { donations: {}, donors: {} });
     await signIn(page, administrator);
     await page.getByRole('link', { name: 'Správa' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Správa' })).toBeFocused();
-    await expect(
-      page
-        .getByRole('region', { name: 'Od posledního přihlášení' })
-        .getByRole('link', { name: '2 platby za 5 000 Kč' }),
-    ).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Od minulé návštěvy' })).toContainText(
+      'Na tomto zařízení zatím není s čím porovnat.',
+    );
     await expect(page.getByRole('region', { name: 'Co potřebuje vaši pozornost' })).toContainText(
       'Platby z banky se nestahují',
     );
