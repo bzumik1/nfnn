@@ -20,6 +20,9 @@ public record SignInMethods(DonorId donor, boolean password, int passkeys) {
     }
 
     public SignInMethods withoutPasskey() {
+        if (passkeys == 0) {
+            throw new IllegalStateException("A donor without a passkey has none to remove");
+        }
         return kept(new SignInMethods(donor, password, passkeys - 1));
     }
 

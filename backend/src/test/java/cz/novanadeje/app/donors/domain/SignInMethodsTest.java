@@ -63,6 +63,16 @@ class SignInMethodsTest {
     }
 
     @Test
+    @DisplayName("Given no passkey, when a passkey is removed, then it is refused as the code's own mistake, never as the client's")
+    void should_refuse_as_a_server_failure_when_passkey_removed_given_none() {
+        SignInMethods methods = new SignInMethods(DONOR, true, 0);
+
+        assertThatThrownBy(methods::withoutPasskey)
+                .isInstanceOf(IllegalStateException.class)
+                .isNotInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("Given as many passkeys as the limit, when a passkey is added, then it is refused with the limit")
     void should_refuse_when_passkey_added_given_limit_reached() {
         SignInMethods methods = new SignInMethods(DONOR, true, 3);
