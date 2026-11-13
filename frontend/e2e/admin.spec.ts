@@ -565,7 +565,7 @@ test.describe('Given an administrator', () => {
     const back = page.getByRole('banner').getByRole('button', { name: 'Zpět' });
     await expect(page.getByRole('navigation', { name: 'Správa' })).toHaveCount(0);
     await expect(sections.getByRole('link', { name: /Platby z banky/ })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Hlavní sekce' })).toHaveCount(0);
 
     await sections.getByRole('link', { name: /Lidé fondu, správci, zálohy/ }).click();
 

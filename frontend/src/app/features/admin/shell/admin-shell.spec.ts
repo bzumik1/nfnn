@@ -56,7 +56,6 @@ describe('Given an administrator anywhere in the administration', () => {
           { path: 'sprava/darci', component: Page },
           { path: 'sprava/darci/:id', component: Page },
           { path: 'sprava/platby', component: Page },
-          { path: 'sprava/aktuality/nova', component: Page, data: { tabBar: false } },
         ]),
       ],
     }).compileComponents();
@@ -185,17 +184,7 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('button.side-nav-toggle')).toBeNull();
     });
 
-    it('then the site tabs stay at the bottom, as everywhere in the app', () => {
-      const tabs = element('nav[aria-label="Hlavní sekce"]');
-      expect(
-        Array.from(tabs?.querySelectorAll('a') ?? []).map((link) => clean(link.textContent)),
-      ).toEqual(['O nás', 'Aktuality', 'Pomáháme', 'Přispět']);
-    });
-
-    it('and a full-screen editor opens, then the site tabs give way to it', async () => {
-      await router.navigateByUrl('/sprava/aktuality/nova');
-      await settle();
-
+    it('then no site tabs stand at the bottom, since the administration is no tab of the site', () => {
       expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
     });
   });
@@ -216,12 +205,11 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('#admin-nav')).not.toBeNull();
     });
 
-    it('and the window is a phone, then the header and the tabs stay, so the administrator can still leave', async () => {
+    it('and the window is a phone, then the header stays, so the administrator can still leave', async () => {
       compact.set(true);
       await settle();
 
       expect(element('header.app-header')).not.toBeNull();
-      expect(element('nav[aria-label="Hlavní sekce"]')).not.toBeNull();
     });
 
     it('and it is unlocked again, then the page comes back', async () => {

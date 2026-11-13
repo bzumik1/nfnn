@@ -609,6 +609,17 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('main#obsah h1')).toBe(heading);
     });
 
+    it('then no site tabs stand at the bottom on a computer or a phone, since the account is no tab of the site', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
+
+      compact.set(true);
+      await settle();
+
+      expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
+    });
+
     it('then the header offers the account under the initials of the donor and the logo leads home', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());

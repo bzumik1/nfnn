@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { openSection, signIn } from './donor-session';
+import { leaveAccountForSite, openSection, signIn } from './donor-session';
 import { expect, test } from './fixtures';
 import { GIFT_THANKS, giftArrivesAfterSavingQr, serveGifts } from './gift-arrival';
 
@@ -30,6 +30,7 @@ test.describe('Given a signed-in donor paying from Přispět', () => {
     await page.clock.install();
     const gifts = await serveGifts(page);
     await signIn(page);
+    await leaveAccountForSite(page);
     await openSection(page, 'Přispět');
     await expect(page.getByRole('img', { name: /QR platba/ })).toBeVisible();
     const checksOnPrispet = gifts.bankChecks();

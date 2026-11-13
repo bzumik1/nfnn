@@ -19,7 +19,6 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { PageFocus } from '../../../core/navigation/page-focus';
 import { AccountBadges } from '../../../core/layout/account-badges';
 import { AppHeader } from '../../../layout/app-header/app-header';
-import { TabBar } from '../../../layout/tab-bar/tab-bar';
 import { SideNav, SideNavBadge, SideNavGroup } from '../../../shared/ui/side-nav/side-nav';
 import { GIFT_FEED } from '../../donations/gift-arrival/gift-feed';
 import { DonorDonations } from './donor-donations';
@@ -49,7 +48,7 @@ export const DONOR_ADMINISTRATION: SideNavGroup = {
 
 @Component({
   selector: 'app-donor-area',
-  imports: [RouterOutlet, AppHeader, SideNav, TabBar, FirstSyncNotice],
+  imports: [RouterOutlet, AppHeader, SideNav, FirstSyncNotice],
   providers: [DonorDonations, { provide: GIFT_FEED, useExisting: DonorDonations }],
   templateUrl: './donor-area.html',
   styleUrl: './donor-area.scss',

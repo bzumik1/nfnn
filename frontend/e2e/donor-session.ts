@@ -501,6 +501,11 @@ export async function openDonorSection(page: Page, name: string): Promise<void> 
   await openAccountItem(page, name);
 }
 
+export async function leaveAccountForSite(page: Page): Promise<void> {
+  await page.getByRole('banner').getByRole('link', { name: 'Nová naděje – nadační fond' }).click();
+  await expect(page).toHaveURL('/');
+}
+
 export async function openSection(page: Page, name: string): Promise<void> {
   const tabs = page.getByRole('navigation', { name: 'Hlavní sekce' });
   const tab = tabs.getByRole('link', { name, exact: true });

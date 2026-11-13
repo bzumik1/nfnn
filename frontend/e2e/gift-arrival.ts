@@ -3,6 +3,7 @@ import {
   donationItem,
   DonorSyncMock,
   donorSyncOf,
+  leaveAccountForSite,
   mockDonorApi,
   noDonations,
   openSection,
@@ -135,6 +136,7 @@ export async function giftArrivesAfterSavingQr(page: Page): Promise<ThankedGift>
   const gifts = await serveGifts(page);
   const announce = await holdLiveStream(page);
   await signIn(page);
+  await leaveAccountForSite(page);
   await openSection(page, 'Přispět');
   await expect(page.getByRole('img', { name: /QR platba/ })).toBeVisible();
   const checksBeforeIntent = gifts.bankChecks();

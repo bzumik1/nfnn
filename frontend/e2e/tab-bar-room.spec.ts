@@ -78,6 +78,13 @@ async function expectTheEndAboveTheTabBar(page: Page): Promise<void> {
   expect(await lowestContentEdge(page)).toBeLessThanOrEqual(bar!.y);
 }
 
+async function expectTheEndOnScreenWithoutTheTabBar(page: Page): Promise<void> {
+  await expect(tabBar(page)).toHaveCount(0);
+  await scrolledToTheEnd(page);
+  const height = await page.evaluate(() => window.innerHeight);
+  expect(await lowestContentEdge(page)).toBeLessThanOrEqual(height);
+}
+
 async function rememberedAdministrator(page: Page): Promise<void> {
   await mockDonorApi(page);
   await page.route('**/api/donors/auth/refresh', (route) =>
@@ -112,7 +119,7 @@ test.describe('Given a signed-in donor', () => {
     ['a phone', PHONE],
     ['a computer', COMPUTER],
   ] as const) {
-    test(`when they scroll their overview to its end on ${width}, then its last line stands above the tab bar`, async ({
+    test(`when they scroll their overview to its end on ${width}, then no tab bar shows and its last line stands on screen`, async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -120,7 +127,7 @@ test.describe('Given a signed-in donor', () => {
       await signIn(page);
       await page.setViewportSize(viewport);
 
-      await expectTheEndAboveTheTabBar(page);
+      await expectTheEndOnScreenWithoutTheTabBar(page);
     });
   }
 });
@@ -130,14 +137,14 @@ test.describe('Given an administrator', () => {
     await rememberedAdministrator(page);
   });
 
-  test('when they scroll the administration to its end on a phone, then its last line stands above the tab bar', async ({
+  test('when they scroll the administration to its end on a phone, then no tab bar shows and its last line stands on screen', async ({
     page,
   }) => {
     await page.setViewportSize(PHONE);
     await page.goto('/sprava/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: 'Aktuality' })).toBeVisible();
 
-    await expectTheEndAboveTheTabBar(page);
+    await expectTheEndOnScreenWithoutTheTabBar(page);
   });
 
   test('when they open the administration on a computer, then the side panel leads and no tab bar shows', async ({
