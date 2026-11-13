@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { RouteChromeData } from '../../core/navigation/route-chrome';
 import { LOADED_AHEAD } from '../../core/navigation/tab-preloading';
+import { articleReady } from './detail/article-ready';
 import { oldSectionRedirect } from './landing/old-section-redirect';
 import { NOT_FOUND_TITLE } from './not-found/not-found';
 
@@ -50,13 +51,15 @@ export const contentRoutes: Routes = [
   {
     path: 'aktuality/:slug',
     title: $localize`:@@content.newsDetail.pageTitle:Aktualita | Nová naděje – nadační fond`,
-    data: { ...LIGHT_HEAD, kind: 'news', parent: '/aktuality' },
+    data: { ...LIGHT_HEAD, kind: 'news', parent: '/aktuality', ...LOADED_AHEAD },
+    resolve: { ready: articleReady },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },
   {
     path: 'projekty/:slug',
     title: $localize`:@@content.projectDetail.pageTitle:Příběh | Nová naděje – nadační fond`,
-    data: { ...LIGHT_HEAD, kind: 'project', parent: '/projekty' },
+    data: { ...LIGHT_HEAD, kind: 'project', parent: '/projekty', ...LOADED_AHEAD },
+    resolve: { ready: articleReady },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },
   {

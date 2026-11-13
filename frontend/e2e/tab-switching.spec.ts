@@ -175,8 +175,9 @@ async function newsAnsweredOnceThenHeld(page: Page): Promise<HeldNews> {
   await page.route(
     (url) => url.pathname === '/api/content/news',
     async (route) => {
-      asked += 1;
-      if (asked > 1) {
+      const firstPageOfTheList = new URL(route.request().url()).searchParams.get('size') === '10';
+      asked += firstPageOfTheList ? 1 : 0;
+      if (firstPageOfTheList && asked > 1) {
         await held;
       }
       await route.fulfill({
@@ -317,5 +318,54 @@ test.describe('Given a visitor switching between the tabs', () => {
     );
     expect(askedAgain(photosAsked, askedBefore, photos)).toEqual([]);
     expect(backToList.map((frame) => frame.scrollY)).toEqual(backToList.map(() => listTop));
+  });
+
+  test('when the first page has opened, then the lists of the other tabs are asked for ahead, so the first switch shows them at once', async ({
+    page,
+  }) => {
+    const news = await newsAnsweredOnceThenHeld(page);
+    const listAhead = page.waitForResponse((response) =>
+      response.url().endsWith('/api/content/news?page=0&size=10'),
+    );
+    await page.goto('/o-nas');
+    await listAhead;
+    expect(news.asked()).toBe(1);
+
+    await tab(page, 'Aktuality').click();
+
+    await expect(page.getByRole('heading', { name: article.title })).toBeVisible();
+    await expect(page.getByText('Načítáme aktuality…')).toHaveCount(0);
+    news.release();
+  });
+
+  test('when the pointer rests on an article before opening it, then the article is fetched ahead and opens complete, without its loading line', async ({
+    page,
+  }) => {
+    await newsWithPhotos(page);
+    await page.goto('/aktuality');
+    const link = page.getByRole('main').getByRole('link', { name: 'Zpráva 2' }).first();
+    await expect(link).toBeVisible();
+    const fetchedAhead = page.waitForResponse((response) =>
+      response.url().endsWith('/api/content/news/zprava-2'),
+    );
+    await link.hover();
+    await fetchedAhead;
+    await page.evaluate(() => {
+      const seen = { loading: false };
+      Object.assign(window, { nfnnArticleLoading: seen });
+      new MutationObserver(() => {
+        seen.loading ||= document.body.textContent?.includes('Načítáme stránku') ?? false;
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+
+    await link.click();
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Zpráva 2' })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () =>
+          (window as unknown as { nfnnArticleLoading: { loading: boolean } }).nfnnArticleLoading,
+      ),
+    ).toEqual({ loading: false });
   });
 });
