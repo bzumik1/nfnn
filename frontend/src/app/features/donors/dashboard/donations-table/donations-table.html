@@ -1,5 +1,9 @@
 @if (rows()) {
-  <ul class="ui-list donation-rows" [attr.aria-labelledby]="labelledBy()">
+  <ul
+    class="ui-list donation-rows"
+    [class.ui-list--inset]="inset()"
+    [attr.aria-labelledby]="labelledBy()"
+  >
     @for (item of items(); track item.id) {
       <li [class.is-verification]="item.accountVerification">
         <div class="ui-list__row">

@@ -1,18 +1,16 @@
 <app-page-title i18n="@@donor.gifts.heading">Moje dary</app-page-title>
 
 @if (donations.state() === 'ready') {
+  <app-bank-check class="gifts-bank-check" />
   <div class="ui-card payments-card">
     <div class="ui-card__bar">
-      <div class="payments-title-row">
-        <h2
-          id="payments-title"
-          class="ui-card__title ui-card__title--large"
-          i18n="@@donor.dashboard.payments.title"
-        >
-          Všechny dary
-        </h2>
-        <app-bank-check />
-      </div>
+      <h2
+        id="payments-title"
+        class="ui-card__title ui-card__title--large"
+        i18n="@@donor.dashboard.payments.title"
+      >
+        Všechny dary
+      </h2>
       @if (donations.items().length > 0) {
         <p class="gifts-tax-note" i18n="@@donor.gifts.taxNote">
           Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna

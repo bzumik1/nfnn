@@ -1161,6 +1161,18 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
+    it('then the last gift and the bank check are rows of one list under the heading Poslední dar', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const group = element('section[aria-labelledby="last-gift-title"]');
+      expect(normalized(group?.querySelector('h2')?.textContent ?? '')).toBe('Poslední dar');
+      const rows = [...(group?.querySelectorAll('ul > li') ?? [])].map((row) =>
+        normalized(row.textContent ?? ''),
+      );
+      expect(rows).toEqual(['15. 3. 2026 Přijato 500 Kč', 'Zkontrolovat nové platby']);
+    });
+
     it('then a payment that verified an account never becomes the last gift: the newest gift does', async () => {
       const list = twoYearDonations();
       list.items = [accountVerificationItem({ receivedAt: '2026-03-20' }), ...list.items];
@@ -1242,6 +1254,9 @@ describe('Given a signed-in donor in the donor area', () => {
         'Máme na vás otázku k platbám z účtu 19-2000145399/0800. Odpovědět',
       ]);
       expect(element('.overview-question a')?.getAttribute('href')).toBe('/darce/ucty');
+      expect(text('.overview-question a')).toBe(
+        'Máme na vás otázku k platbám z účtu 19-2000145399/0800. Odpovědět',
+      );
     });
 
     it('then no question is announced while no bank account carries one', async () => {
@@ -1416,13 +1431,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.send-gift .missing-gift')).toBeNull();
       const card = element('.first-gift')!;
       const order = [...card.querySelectorAll('h2, .missing-gift, .first-gift-steps')].map(
-        (node) => node.className || node.tagName,
+        (node) => (node.tagName === 'H2' ? 'H2' : node.className),
       );
-      expect(order).toEqual([
-        'ui-card__title ui-card__title--large',
-        'missing-gift',
-        'first-gift-steps',
-      ]);
+      expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
     });
 
     it('then a donor with gifts can still open the standing order guide in the card Poslat dar', async () => {

@@ -25,6 +25,7 @@ export function donationStatusLabel(status: DonationStatus): string {
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.ui-card]': 'inset() && !rows()' },
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);
@@ -32,6 +33,7 @@ export class DonationsTable {
 
   readonly items = input.required<readonly DonationItem[]>();
   readonly withReceipts = input(true);
+  readonly inset = input(false);
   readonly errorsAtRows = input(false);
   readonly labelledBy = input<string | null>(null);
 
