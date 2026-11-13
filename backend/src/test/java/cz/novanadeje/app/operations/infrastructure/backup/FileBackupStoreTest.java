@@ -22,6 +22,8 @@ import org.springframework.util.unit.DataSize;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -149,13 +151,17 @@ class FileBackupStoreTest {
     }
 
     @Test
-    @DisplayName("Given a dump in the folder, when it is opened, then its path and size come back; an unknown or odd name opens nothing")
+    @DisplayName("Given a dump in the folder, when it is opened, then its size and its content come back; an unknown or odd name opens nothing")
     void should_open_dump_when_opened_given_it_exists() throws IOException {
-        write(backups.resolve("nfnn-2026-10-23_0300.dump.age"), 1590, NEWER);
+        Files.write(backups.resolve("nfnn-2026-10-23_0300.dump.age"), "age-encrypted dump".getBytes(StandardCharsets.US_ASCII));
 
         assertThat(store.open("nfnn-2026-10-23_0300.dump.age")).hasValueSatisfying(download -> {
-            assertThat(download.path()).isEqualTo(backups.resolve("nfnn-2026-10-23_0300.dump.age"));
-            assertThat(download.file().sizeBytes()).isEqualTo(1590);
+            assertThat(download.file().sizeBytes()).isEqualTo(18);
+            try (InputStream content = download.content().open()) {
+                assertThat(content.readAllBytes()).asString(StandardCharsets.US_ASCII).isEqualTo("age-encrypted dump");
+            } catch (IOException unreadable) {
+                throw new UncheckedIOException(unreadable);
+            }
         });
         assertThat(store.open("nfnn-2026-10-22_0300.dump.age")).isEmpty();
         assertThat(store.open("../restore/zaloha.dump")).isEmpty();

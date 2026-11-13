@@ -1,7 +1,8 @@
 package cz.novanadeje.app.donations.application.donor;
 
+import cz.novanadeje.app.donations.application.pairing.DonorPaymentsPairing;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
-import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.application.pairing.PairingRaceLost;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -12,8 +13,6 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,12 +30,12 @@ public class DonorRecordService {
     private final DonorRecordRepository donorRecords;
     private final SymbolClaimRepository claims;
     private final DonationRepository donations;
-    private final PaymentPairingService pairing;
+    private final DonorPaymentsPairing pairing;
     private final PairingLock lock;
     private final Clock clock;
 
     public DonorRecordService(DonorRecordRepository donorRecords, SymbolClaimRepository claims, DonationRepository donations,
-                              PaymentPairingService pairing, PairingLock lock, Clock clock) {
+                              DonorPaymentsPairing pairing, PairingLock lock, Clock clock) {
         this.donorRecords = donorRecords;
         this.claims = claims;
         this.donations = donations;
@@ -63,7 +62,7 @@ public class DonorRecordService {
             if (pairing.pairPaymentsOf(new DonorReference(donorId), clock.instant()).isEmpty()) {
                 log.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
             }
-        } catch (DataIntegrityViolationException | PessimisticLockingFailureException e) {
+        } catch (PairingRaceLost lost) {
             log.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
         }
     }

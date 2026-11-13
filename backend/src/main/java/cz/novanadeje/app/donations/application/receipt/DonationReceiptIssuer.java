@@ -56,11 +56,12 @@ public class DonationReceiptIssuer {
     private final ReceiptSigningKeys signingKeys;
     private final FoundationIdentity foundation;
     private final ApplicationEventPublisher events;
+    private final AfterCommitWork afterCommit;
     private final Clock clock;
 
     public DonationReceiptIssuer(DonationReceiptRepository receipts, ReceiptRequestReader requests, ReceiptFreezer freezer,
                                  IssuingSignatory signatories, ReceiptSigningKeys signingKeys, FoundationIdentity foundation,
-                                 ApplicationEventPublisher events, Clock clock) {
+                                 ApplicationEventPublisher events, AfterCommitWork afterCommit, Clock clock) {
         this.receipts = receipts;
         this.requests = requests;
         this.freezer = freezer;
@@ -68,6 +69,7 @@ public class DonationReceiptIssuer {
         this.signingKeys = signingKeys;
         this.foundation = foundation;
         this.events = events;
+        this.afterCommit = afterCommit;
         this.clock = clock;
     }
 
@@ -215,7 +217,7 @@ public class DonationReceiptIssuer {
         });
         receipts.save(issued);
         String replacing = replaced.map(old -> " replacing " + old.number()).orElse("");
-        AfterCommit.run(() -> log.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
+        afterCommit.run(() -> log.info("Issued receipt {} ({}) for donor {}{}", number, issued.kind(), request.donor(), replacing));
         return issued;
     }
 

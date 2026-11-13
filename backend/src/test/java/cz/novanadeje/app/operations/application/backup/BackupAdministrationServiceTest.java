@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.nio.file.Path;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -118,7 +118,7 @@ class BackupAdministrationServiceTest {
     @Test
     @DisplayName("Given a backup in the folder, when it is downloaded, then the file comes back and the download is audited with its name")
     void should_open_and_audit_when_downloaded_given_the_backup_exists() {
-        BackupDownload download = new BackupDownload(new BackupFile(FILE, 1590, NOW), Path.of("/backups", FILE));
+        BackupDownload download = new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream);
         when(store.open(FILE)).thenReturn(Optional.of(download));
 
         assertThat(service.download(ADMIN, FILE)).isEqualTo(download);

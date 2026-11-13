@@ -4,9 +4,10 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.donations.application.pairing.DonorPaymentsPairing;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
-import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.application.pairing.PairingRaceLost;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
@@ -41,8 +42,6 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -80,7 +79,7 @@ class DonorRecordServiceTest {
     @Mock
     private DonationRepository donations;
     @Mock
-    private PaymentPairingService pairing;
+    private DonorPaymentsPairing pairing;
     @Mock
     private PairingLock lock;
 
@@ -206,20 +205,9 @@ class DonorRecordServiceTest {
     }
 
     @Test
-    @DisplayName("Given pairing that loses a race with the import, when payments are paired after the registration, then the integrity violation is logged and swallowed")
+    @DisplayName("Given pairing that loses a race with the import, when payments are paired after the registration, then the lost race is logged and swallowed")
     void should_swallow_and_warn_when_pairing_after_registration_given_lost_race() {
-        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new DataIntegrityViolationException("uq_donation_bank_payment"));
-
-        service.pairPaymentsOf(DONOR_ID);
-
-        assertThat(warnings()).singleElement().isEqualTo("pairing after registration of donor " + DONOR_ID
-                + " lost a race with the import; the hourly pass completes it");
-    }
-
-    @Test
-    @DisplayName("Given pairing that deadlocks with the import, when payments are paired after the registration, then the lock failure is logged as a lost race and swallowed")
-    void should_swallow_and_warn_when_pairing_after_registration_given_deadlock_with_import() {
-        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new CannotAcquireLockException("deadlock detected"));
+        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new PairingRaceLost(new IllegalStateException("uq_donation_bank_payment")));
 
         service.pairPaymentsOf(DONOR_ID);
 
