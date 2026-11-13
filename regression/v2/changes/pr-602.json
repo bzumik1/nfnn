@@ -1,0 +1,154 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders in 2031, then the copyright carries the current year",
+    "replacement": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact form > when it is shown, then a grey note under the details for accountants links the privacy policy of the whole site",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the copyright line went with it; the note under the details for accountants carries the site-wide privacy link instead",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders, then its links sit in a named navigation that also offers Přispět",
+    "replacement": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens on a phone or a wider screen, then the header and the tab bar frame it, with no footer under it and room for the bar at its end",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the tab bar alone holds the sections",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders on a phone, then it links only to the contact, because the tab bar holds the sections",
+    "replacement": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens on a phone or a wider screen, then the header and the tab bar frame it, with no footer under it and room for the bar at its end",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the tab bar alone holds the sections",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders, then the logo is its variant for the dark footer, whose star keeps its face",
+    "replacement": "src/app/layout/app-header/app-header.spec.ts > Given the header of the app > when the page has a light head, then the logo is the blue one, and over a photo or a dark head the white one",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the header's logo is the only one left",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when it renders, then the foundation e-mail address is there to write to",
+    "replacement": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact section around the form > when it is shown, then the e-mail stays beside the heading alone and the seat is never called Adresa",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the e-mail stays beside the contact heading",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when the list of news is open, then the footer item Aktuality leads to it and is marked as the current place",
+    "replacement": "src/app/layout/tab-bar/tab-bar.spec.ts > Given the tab bar > when a page deeper in a tab is open, then that tab is marked current but not as the page itself, which is deeper",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the tab bar marks the current section",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when the page scrolls it into view > then the page says so, for Safari to paint the strip under its toolbar in the footer colour, and stops saying it once the footer leaves the screen",
+    "replacement": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact form > when the page scrolls it into view > then the page says so, for Safari to paint the strip under its toolbar in the colour of the section, and stops saying it once the section leaves the screen",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the contact section at the end of O nás now colours the strip under Safari's toolbar (contact-in-view)",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/site-footer/site-footer.spec.ts > Given the site footer > when the page scrolls it into view > then a page without the footer forgets it, and the footer stops watching",
+    "replacement": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact form > when the page scrolls it into view > and the page without the section opens, then the page forgets it and the section stops watching",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the contact section now colours the strip under Safari's toolbar and forgets it when it goes",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens, then the header, the tab bar and the footer frame it",
+    "replacement": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens on a phone or a wider screen, then the header and the tab bar frame it, with no footer under it and room for the bar at its end",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; no page ends with a footer",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when the landing page opens, then it shows no footer under the photo, which keeps the room for the bar itself",
+    "replacement": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when the landing page opens, then the photo keeps the room for the bar itself",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; no page has a footer, so the landing page's case only keeps its own room for the bar",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens on a phone, then only the About page ends with the footer",
+    "replacement": "src/app/layout/public-shell/public-shell.spec.ts > Given the public shell around the pages of the tabs > when a page of a tab opens on a phone or a wider screen, then the header and the tab bar frame it, with no footer under it and room for the bar at its end",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; O nás no longer ends with the footer on a phone",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor 1280 px wide whose next page could not be loaded > when they scroll to the end of the page, then the footer reaches down to the bar with its own colour",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor 1280 px wide whose next page could not be loaded > when they scroll to the end of the page, then the contact section and the room kept under it reach down to the bar in the colour of the section",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; O nás ends with its contact section, whose colour reaches the bar",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor 320 px wide whose next page could not be loaded > when they scroll to the end of the page, then the footer reaches down to the bar with its own colour",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor 320 px wide whose next page could not be loaded > when they scroll to the end of the page, then the contact section and the room kept under it reach down to the bar in the colour of the section",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; O nás ends with its contact section, whose colour reaches the bar",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor 390 px wide whose next page could not be loaded > when they scroll to the end of the page, then the footer reaches down to the bar with its own colour",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor 390 px wide whose next page could not be loaded > when they scroll to the end of the page, then the contact section and the room kept under it reach down to the bar in the colour of the section",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; O nás ends with its contact section, whose colour reaches the bar",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they follow the footer link to the contact section, then the section takes the focus and Tab continues inside it",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they follow the link from the privacy policy to the contact form, then the contact section of O nás takes the focus and Tab continues inside it",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the footer's Kontakt link is gone; the policy's link to the contact form leads to the same section",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they open another page from the footer, then its heading takes the focus",
+    "replacement": "e2e/accessibility-keyboard.spec.ts > Given a visitor who uses only the keyboard or a screen reader > when they open the privacy policy from the note under the contact section, then its heading takes the focus",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the privacy link moved to the note under the contact section",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/page-end.spec.ts > Given a visitor on an iPhone, whose Safari paints the strip under its toolbar in the colour of the page body > when they scroll O nás to its dark footer, then that strip takes the footer colour, the content keeps its own, and back at the top the strip is light again",
+    "replacement": "e2e/page-end.spec.ts > Given a visitor 390 px wide, whose Safari paints the strip under its toolbar in the colour of the page body > when they scroll O nás to its dark contact section, then that strip takes the colour of the section, the page ends without a footer, and back at the top the strip is light again",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; O nás ends with its dark contact section, which colours the strip",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/privacy-policy.spec.ts > Given a visitor at the bottom of the About page > when they click the privacy policy link in the footer, then the policy opens scrolled to the top",
+    "replacement": "e2e/privacy-policy.spec.ts > Given a visitor at the bottom of the About page > when they click the privacy policy link in the note under the contact section, then the policy opens scrolled to the top",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the privacy link moved to the note under the contact section",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/touch-targets.spec.ts > Given a visitor tapping small controls on a phone > when they tap near the edges of the footer links, then a finger-sized area around each still reaches it, or the control beside it, never empty space",
+    "replacement": "e2e/privacy-policy.spec.ts > Given a visitor at the bottom of the About page > when they click the privacy policy link in the note under the contact section, then the policy opens scrolled to the top",
+    "reason": "PR #602: Jakub 2026-11-12 removed the site footer at every width and in every environment; the footer's links are gone; the privacy link left is a link inside a sentence, which WCAG 2.5.8 exempts from the target size",
+    "contract": "docs/frontend-overview.md, Layout (the site has no footer)"
+  }
+]

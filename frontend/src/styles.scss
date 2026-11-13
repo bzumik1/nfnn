@@ -61,8 +61,8 @@ html:has(app-root .ui-grouped) body {
   background: var(--color-surface-grouped);
 }
 
-html.footer-in-view body {
-  background: var(--color-surface-inverse-strong);
+html.contact-in-view body {
+  background: var(--color-surface-inverse);
 }
 
 :focus-visible {

@@ -17,19 +17,17 @@ import {
   Router,
   RouterOutlet,
 } from '@angular/router';
-import { CompactLayout } from '../../core/layout/compact-layout';
 import { KeptTabPages } from '../../core/navigation/kept-tab-pages';
 import { PageFocus } from '../../core/navigation/page-focus';
 import { RouteChrome } from '../../core/navigation/route-chrome';
 import { AppHeader } from '../app-header/app-header';
 import { TabBar } from '../tab-bar/tab-bar';
-import { SiteFooter } from '../site-footer/site-footer';
 import { SignedOutNotice } from '../signed-out-notice/signed-out-notice';
 import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 
 @Component({
   selector: 'app-public-shell',
-  imports: [RouterOutlet, AppHeader, SiteFooter, TabBar, SignedOutNotice],
+  imports: [RouterOutlet, AppHeader, TabBar, SignedOutNotice],
   templateUrl: './public-shell.html',
   styleUrl: './public-shell.scss',
   host: { class: 'page-layer' },
@@ -41,14 +39,8 @@ export class PublicShell {
   private readonly router = inject(Router);
   private readonly pageFocus = inject(PageFocus);
   private readonly chrome = inject(RouteChrome).current;
-  private readonly compact = inject(CompactLayout).isCompact;
   protected readonly tabBar = computed(() => this.chrome().tabBar);
-  protected readonly footer = computed(() =>
-    this.compact() ? this.chrome().phoneFooter : !this.chrome().landing,
-  );
-  protected readonly roomForTabBar = computed(
-    () => this.tabBar() && !this.footer() && !this.chrome().landing,
-  );
+  protected readonly roomForTabBar = computed(() => this.tabBar() && !this.chrome().landing);
 
   constructor() {
     inject(SetupRedirect).checkOnce();

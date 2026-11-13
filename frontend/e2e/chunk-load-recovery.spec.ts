@@ -12,7 +12,7 @@ import {
   chunkLoadPageHeading,
   LostChunks,
   openAboutThenLoseNewChunks,
-  openPolicyFromFooter,
+  openPolicyFromContact,
   policyHeading,
   policyPath,
   withoutSessionStorage,
@@ -25,7 +25,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
     const chunks = await openAboutThenLoseNewChunks(page);
     chunks.bringBackAtDocument(1);
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     await expect(page.getByRole('heading', policyHeading)).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`${policyPath}$`));
@@ -38,7 +38,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
   }) => {
     const chunks = await openAboutThenLoseNewChunks(page);
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     const heading = page.getByRole('main').getByRole('heading', chunkLoadPageHeading);
     await expect(heading).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Given a visitor whose browser keeps no session storage', () => {
   }) => {
     const chunks = await openAboutThenLoseNewChunks(page);
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     await expect(chunkLoadNotice(page)).toBeVisible();
     await expect(chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' })).toBeFocused();
@@ -128,7 +128,7 @@ test.describe('Given a visitor with the sign-in dialog open and no session stora
     const chunks = await openAboutThenLoseNewChunks(page);
     const release = chunks.hold();
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
     await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -154,7 +154,7 @@ test.describe('Given a visitor who lost the connection', () => {
     chunks.bringBack();
     await context.setOffline(true);
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     await expect(chunkLoadNotice(page)).toBeVisible();
     expect(chunks.documents).toEqual([]);
@@ -175,7 +175,7 @@ test.describe('Given a visitor whose connection fails while the browser still sa
     await chunks.open('/o-nas');
     chunks.cutOffEveryChunkNotLoadedYet();
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     await expect(chunkLoadNotice(page)).toBeVisible();
     await expect(chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' })).toBeFocused();

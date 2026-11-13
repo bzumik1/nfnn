@@ -206,6 +206,18 @@ describe('Given the donate section', () => {
     ).toEqual(['Zaplaťte', 'Co bude dál']);
   });
 
+  it('when it renders, then a grey note at the end of what comes next says what the bank passes on with the payment and links the privacy policy', async () => {
+    await openWithQr();
+
+    const note = fixture.nativeElement.querySelector('.next .donate-privacy') as HTMLElement;
+    expect(note.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'S platbou nám banka předá vaše jméno, číslo účtu a zprávu pro příjemce. Jak s nimi naložíme, popisují zásady ochrany osobních údajů.',
+    );
+    expect(note.querySelector('a')?.getAttribute('href')).toBe(
+      '/zasady-ochrany-osobnich-udaju#udaje',
+    );
+  });
+
   it('when nobody is signed in, then before the payment a line offers the receipt for the tax return with the account actions', async () => {
     await openWithQr();
 

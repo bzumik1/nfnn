@@ -6,6 +6,8 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -28,6 +30,7 @@ import { ContactApi, ContactMessageRequest } from '../contact-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 const TOO_MANY_REQUESTS = 429;
+const CONTACT_IN_VIEW = 'contact-in-view';
 const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
   fullName: 'fullName',
   email: 'email',
@@ -57,6 +60,7 @@ export class ContactForm {
   private readonly successTitle = viewChild<ElementRef<HTMLElement>>('successTitle');
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly section = viewChild.required<ElementRef<HTMLElement>>('section');
 
   protected readonly sent = signal(false);
   protected readonly sentTo = signal('');
@@ -85,6 +89,25 @@ export class ContactForm {
       if (donor !== null) {
         this.fillInFrom(donor);
       }
+    });
+    this.markWhileInView();
+  }
+
+  private markWhileInView(): void {
+    const root = inject(DOCUMENT).documentElement;
+    let observer: IntersectionObserver | null = null;
+    afterNextRender(() => {
+      if (typeof IntersectionObserver !== 'function') {
+        return;
+      }
+      observer = new IntersectionObserver((entries) =>
+        root.classList.toggle(CONTACT_IN_VIEW, entries[entries.length - 1].isIntersecting),
+      );
+      observer.observe(this.section().nativeElement);
+    });
+    inject(DestroyRef).onDestroy(() => {
+      observer?.disconnect();
+      root.classList.remove(CONTACT_IN_VIEW);
     });
   }
 

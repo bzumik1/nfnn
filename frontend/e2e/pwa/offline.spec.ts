@@ -60,7 +60,7 @@ test.describe('Given a visitor who opened the site once with a connection', () =
       const send = page.locator('#kontakt').getByRole('button', { name: /^Odeslat zprávu/ });
       await expect(send).toHaveAttribute('aria-disabled', 'true');
       await expect(send).toHaveAccessibleDescription('Potřebuje připojení');
-      await page.locator('app-site-footer').scrollIntoViewIfNeeded();
+      await page.locator('#kontakt .contact-legal').scrollIntoViewIfNeeded();
       const unseen = page.locator('img.is-unavailable').first();
       await expect(unseen).toBeAttached();
       await expect(unseen).toHaveAttribute('alt');
