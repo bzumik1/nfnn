@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptUnprintable;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import org.slf4j.Logger;
@@ -133,7 +134,7 @@ public class DonationReceiptIssuer {
             return new AdministratorIssue(returnedAgain(active.get(), request), active);
         }
         List<DonationReceipt> singles = activeSinglesListedBy(request);
-        if (!channel.mayReplaceReceipts()) {
+        if (channel.isConnectedApplication()) {
             Optional<DonationReceipt> replaced = active.or(() -> singles.stream().findFirst());
             if (replaced.isPresent()) {
                 throw new ReceiptReplacementInBrowserOnly(replaced.get().number());

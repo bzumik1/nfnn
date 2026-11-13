@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.application.banklogo.BankLogoAdminService;
 import cz.novanadeje.app.donations.application.banklogo.BankLogoPrecondition;
 import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.interfaces.rest.VersionRequiredException;
 import jakarta.validation.Valid;
@@ -32,7 +33,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/donations/bank-logos")
 class AdminBankLogosController {
 
-    private static final String SCOPE_CLAIM = "scope";
     private static final String CODE = "[0-9]{4}";
     private static final String ANY = "*";
     private static final char QUOTE = '"';
@@ -51,11 +51,11 @@ class AdminBankLogosController {
     }
 
     @PutMapping("/{code}")
-    BankLogoAdminRow setSource(@AuthenticationPrincipal Jwt jwt, @PathVariable @Pattern(regexp = CODE) String code,
+    BankLogoAdminRow setSource(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @PathVariable @Pattern(regexp = CODE) String code,
                                @Valid @RequestBody BankLogoSourceRequest request,
                                @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
                                @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
-        BankLogoPrecondition precondition = precondition(jwt, ifMatch, ifNoneMatch);
+        BankLogoPrecondition precondition = precondition(channel, ifMatch, ifNoneMatch);
         BankLogoSource source = new BankLogoSource(new BankCode(code), request.sourceUrl());
         fetchRateLimiter.check(jwt.getSubject());
         return logos.set(admin(jwt), source, precondition);
@@ -73,7 +73,7 @@ class AdminBankLogosController {
         return ResponseEntity.noContent().build();
     }
 
-    private static BankLogoPrecondition precondition(Jwt jwt, String ifMatch, String ifNoneMatch) {
+    private static BankLogoPrecondition precondition(AdministrationChannel channel, String ifMatch, String ifNoneMatch) {
         Optional<String> matching = present(ifMatch);
         if (matching.isPresent()) {
             return BankLogoPrecondition.matching(ExpectedVersion.of(version(matching.get())));
@@ -85,7 +85,7 @@ class AdminBankLogosController {
             }
             return BankLogoPrecondition.absent();
         }
-        if (jwt.hasClaim(SCOPE_CLAIM)) {
+        if (channel.isConnectedApplication()) {
             return BankLogoPrecondition.anything();
         }
         throw new VersionRequiredException();

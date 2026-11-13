@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import org.springframework.context.ApplicationEventPublisher;

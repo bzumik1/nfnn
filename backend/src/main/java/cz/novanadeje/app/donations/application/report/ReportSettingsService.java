@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.application.report;
 
 import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
@@ -71,7 +71,7 @@ public class ReportSettingsService {
             LocalDate today = FoundationCalendar.today(clock);
             throw new ChangedMeanwhile(version, rows.reportSettings(current, sent, NextReport.after(current.settings(), sent, today), ReportMonth.previousTo(today)));
         }
-        if (!channel.mayChangeReportRecipients() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
+        if (channel.isConnectedApplication() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
             throw new ReportRecipientsInBrowserOnly();
         }
         Instant now = clock.instant();

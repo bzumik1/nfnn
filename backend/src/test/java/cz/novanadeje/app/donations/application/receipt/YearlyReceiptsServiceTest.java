@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.BROWSER;
+import static cz.novanadeje.app.shared.application.administration.AdministrationChannel.BROWSER;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.ACME;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;

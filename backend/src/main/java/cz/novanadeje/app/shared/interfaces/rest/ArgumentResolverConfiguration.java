@@ -7,10 +7,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
-class ExpectedVersionConfiguration implements WebMvcConfigurer {
+class ArgumentResolverConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new ExpectedVersionArgumentResolver());
+        resolvers.add(new AdministrationChannelArgumentResolver());
     }
 }

@@ -1,12 +1,9 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
-import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -29,7 +26,7 @@ final class ExpectedVersionArgumentResolver implements HandlerMethodArgumentReso
         Optional<String> sent = Optional.ofNullable(request.getHeader(HttpHeaders.IF_MATCH)).map(String::strip).filter(value -> !value.isEmpty())
                 .map(ExpectedVersionArgumentResolver::unquoted);
         if (sent.isEmpty()) {
-            if (isConnection(SecurityContextHolder.getContext().getAuthentication())) {
+            if (AdministrationChannels.of(SecurityContextHolder.getContext().getAuthentication()).isConnectedApplication()) {
                 return ExpectedVersion.none();
             }
             throw new VersionRequiredException();
@@ -41,9 +38,5 @@ final class ExpectedVersionArgumentResolver implements HandlerMethodArgumentReso
     private static String unquoted(String value) {
         boolean quoted = value.length() >= 2 && value.charAt(0) == QUOTE && value.charAt(value.length() - 1) == QUOTE;
         return quoted ? value.substring(1, value.length() - 1) : value;
-    }
-
-    private static boolean isConnection(Authentication authentication) {
-        return authentication instanceof JwtAuthenticationToken token && token.getToken().getClaimAsString(JwtProperties.SCOPE_CLAIM) != null;
     }
 }
