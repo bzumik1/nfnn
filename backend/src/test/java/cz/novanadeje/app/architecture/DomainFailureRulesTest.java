@@ -42,16 +42,15 @@ class DomainFailureRulesTest {
             .because(FAILURES);
 
     @ArchTest
-    static final ArchRule no_domain_class_extends_the_argument_or_state_exceptions = noClasses()
-            .that().resideInAPackage("..domain..")
+    static final ArchRule no_class_extends_the_argument_or_state_exceptions = noClasses()
             .should().beAssignableTo(IllegalArgumentException.class)
             .orShould().beAssignableTo(IllegalStateException.class)
-            .because(FAILURES + "; the API answers every IllegalArgumentException as the client's error, so a failure of its own is a DomainException "
-                    + "when the client caused it and a plain RuntimeException when the server did");
+            .because("the API answers every IllegalArgumentException with 400 as the client's error, and adapters catch IllegalStateException "
+                    + "generically around library calls; a failure of its own is a DomainException when the client caused it and a plain RuntimeException when the server did");
 
     @BeforeAll
     static void plantMisplacedFailures(@TempDir Path folder) throws IOException {
-        planted = PlantedClasses.compiled(folder, plantedClasses().collect(Collectors.toMap(PlantedClass::className, PlantedClass::source)));
+        planted = PlantedClasses.compiled(folder, plantedClasses().collect(Collectors.toMap(PlantedClass::sourceName, PlantedClass::source)));
     }
 
     @ParameterizedTest(name = "{0} reports {1}")
@@ -69,18 +68,26 @@ class DomainFailureRulesTest {
                 planted("placement", domain_failures_live_in_the_domain, "donors.interfaces.rest.PlantedFailure",
                         "public class PlantedFailure extends cz.novanadeje.app.shared.domain.error.Conflict { "
                                 + "PlantedFailure() { super(\"donors/planted\", \"planted\"); } }"),
-                planted("argument", no_domain_class_extends_the_argument_or_state_exceptions, "donations.domain.PlantedArgumentFailure",
+                planted("nested placement", domain_failures_live_in_the_domain, "donors.interfaces.rest.PlantedController",
+                        "public class PlantedController { static final class Ended extends cz.novanadeje.app.shared.domain.error.AuthenticationFailure { "
+                                + "Ended() { super(\"auth/planted\", \"planted\"); } } }", "cz.novanadeje.app.donors.interfaces.rest.PlantedController$Ended"),
+                planted("argument", no_class_extends_the_argument_or_state_exceptions, "donations.domain.PlantedArgumentFailure",
                         "public class PlantedArgumentFailure extends IllegalArgumentException {}"),
-                planted("state", no_domain_class_extends_the_argument_or_state_exceptions, "donations.domain.PlantedStateFailure",
+                planted("state", no_class_extends_the_argument_or_state_exceptions, "donations.application.PlantedStateFailure",
                         "public class PlantedStateFailure extends IllegalStateException {}"));
     }
 
     private static PlantedClass planted(String label, ArchRule rule, String relativeName, String body) {
-        String className = "cz.novanadeje.app." + relativeName;
-        return new PlantedClass(Named.of(label, rule), className, "package " + className.substring(0, className.lastIndexOf('.')) + ";\n" + body + "\n");
+        return planted(label, rule, relativeName, body, "cz.novanadeje.app." + relativeName);
     }
 
-    record PlantedClass(Named<ArchRule> rule, String className, String source) implements Arguments {
+    private static PlantedClass planted(String label, ArchRule rule, String relativeName, String body, String reportedClass) {
+        String sourceName = "cz.novanadeje.app." + relativeName;
+        return new PlantedClass(Named.of(label, rule), sourceName, reportedClass,
+                "package " + sourceName.substring(0, sourceName.lastIndexOf('.')) + ";\n" + body + "\n");
+    }
+
+    record PlantedClass(Named<ArchRule> rule, String sourceName, String className, String source) implements Arguments {
 
         @Override
         public Object[] get() {
