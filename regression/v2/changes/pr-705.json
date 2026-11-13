@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/push/notification.json",
+    "reason": "Jakub 2026-11-12: donor push slice 3; the yearly-receipt-ready notification gets its tag nfnn-receipts and the route /darce/potvrzeni",
+    "contract": "docs/api-contract.md, Push notifications of donors"
+  }
+]
