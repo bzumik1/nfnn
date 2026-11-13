@@ -39,6 +39,7 @@ import {
   PushSubscriptionResponse,
   PushTestResponse,
 } from '../admin-api';
+import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { DeviceAlertMarks } from './device-alert-marks';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
@@ -113,6 +114,11 @@ export class AdminAlerts {
   protected readonly areaLabels = AREA_LABELS;
   protected readonly areaDescriptions = AREA_DESCRIPTIONS;
   protected readonly state = signal<LoadState>('loading');
+  private refreshMissed = false;
+  private readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.refreshMissed,
+    () => this.fetch(true),
+  );
   protected readonly loadError = signal('');
   protected readonly view = signal<AdminPushResponse | null>(null);
   protected readonly availability = signal<PushAvailability>(this.availabilityNow());
@@ -129,7 +135,7 @@ export class AdminAlerts {
   protected readonly browserState = signal<BrowserPushSubscriptionState>('unknown');
 
   protected readonly rows = computed<AreaRow[]>(() => {
-    const open = this.view()?.openAlerts ?? [];
+    const open = this.openAlerts.alerts() ?? this.view()?.openAlerts ?? [];
     return ALERT_AREAS.map((area) => {
       const alert = open.find((item) => item.area === area);
       return {
@@ -289,7 +295,7 @@ export class AdminAlerts {
           this.testing.set(false);
           this.testNotice.set({ kind: 'status', text: testOutcome(result) });
           if (result.removed > 0) {
-            this.fetch();
+            this.fetch(true);
           }
         },
         error: (failure: unknown) => {
@@ -387,6 +393,7 @@ export class AdminAlerts {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
+          this.refreshMissed = false;
           this.showView(view);
           this.openAlerts.accept(view.openAlerts ?? []);
           this.kept.keep('push', view);
@@ -401,6 +408,7 @@ export class AdminAlerts {
             return;
           }
           if (quietly && this.state() === 'ready') {
+            this.refreshMissed = this.onlineAgain.offline();
             return;
           }
           this.loadError.set(
@@ -422,8 +430,7 @@ export class AdminAlerts {
   }
 
   private changedHere(): void {
-    this.changes.changed(false);
-    this.changes.answeredByChange();
+    this.changes.changed();
     const view = this.view();
     if (view !== null) {
       this.kept.keep('push', view);
@@ -447,13 +454,13 @@ export class AdminAlerts {
             ...items.filter((item) => item.id !== subscription.id && !item.current),
             { ...subscription, current: true },
           ]);
-          this.changedHere();
+          this.changes.changed(false);
           this.deviceNotice.set({
             kind: 'status',
             text: $localize`:@@admin.alerts.device.turnedOn:Upozornění jsme na tomto zařízení zapnuli. Zkušebním upozorněním si můžete ověřit, že dorazí.`,
           });
           this.focusAfterRender('alerts-device-title');
-          this.fetch();
+          this.fetch(true);
         },
         error: (failure: unknown) => {
           this.subscribing.set(false);

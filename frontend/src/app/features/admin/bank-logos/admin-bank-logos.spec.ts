@@ -661,7 +661,7 @@ describe('Given an administrator on the bank logos page', () => {
       expect(navigate).toHaveBeenCalledWith('/darce/prehled');
     });
 
-    it('then a logo removed while the refresh is on its way does not come back with its answer, nor on the next visit', async () => {
+    it('then a logo removed before the refresh answers does not come back with that answer, and the list is asked for again', async () => {
       const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
       button(row('0800'), 'Odebrat').click();
       await settle();
@@ -676,10 +676,29 @@ describe('Given an administrator on the bank logos page', () => {
       await settle();
 
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
+      await listed([{ ...fio, sourceUrl: NEW_SOURCE }, unknown]);
+      expect(element<HTMLInputElement>('#bank-logo-source-2010').value).toBe(NEW_SOURCE);
 
       await openAgain();
       expect((fixture.nativeElement as HTMLElement).querySelector('[data-code="0800"]')).toBeNull();
-      await listed([fio, unknown]);
+      expect(element<HTMLInputElement>('#bank-logo-source-2010').value).toBe(NEW_SOURCE);
+      await listed([{ ...fio, sourceUrl: NEW_SOURCE }, unknown]);
+    });
+
+    it('then an address saved while the refresh answers keeps the saved logo, and the list is asked for again', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
+      await type('#bank-logo-source-0800', NEW_SOURCE);
+      await submit(row('0800'));
+      const save = http.expectOne({ method: 'PUT', url: `${LIST_URL}/0800` });
+
+      refresh.flush({ items: [csas, fio, unknown] });
+      await settle();
+      save.flush({ ...csas, sourceUrl: NEW_SOURCE, version: NEWER_VERSION });
+      await settle();
+
+      expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(NEW_SOURCE);
+      await listed([{ ...csas, sourceUrl: NEW_SOURCE, version: NEWER_VERSION }, fio, unknown]);
+      expect(element<HTMLInputElement>('#bank-logo-source-0800').value).toBe(NEW_SOURCE);
     });
   });
 });

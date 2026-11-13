@@ -37,6 +37,7 @@ import {
   BankLogoFailure,
 } from '../admin-api';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
+import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -109,6 +110,11 @@ export class AdminBankLogos {
   private readonly forms = new Map<string, NgForm>();
 
   protected readonly state = signal<LoadState>('loading');
+  private refreshMissed = false;
+  private readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.refreshMissed,
+    () => this.load(undefined, true),
+  );
   protected readonly items = signal<AdminBankLogoResponse[]>([]);
   private readonly generation = signal(0);
   protected readonly rows = computed(() =>
@@ -155,6 +161,7 @@ export class AdminBankLogos {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {
+          this.refreshMissed = false;
           if (!quietly || !sameLogos(this.items(), list.items)) {
             this.showList(list);
           }
@@ -171,6 +178,7 @@ export class AdminBankLogos {
             return;
           }
           if (quietly && this.state() === 'ready') {
+            this.refreshMissed = this.onlineAgain.offline();
             return;
           }
           this.state.set('error');
@@ -191,8 +199,7 @@ export class AdminBankLogos {
   }
 
   private changedHere(): void {
-    this.changes.changed(false);
-    this.changes.answeredByChange();
+    this.changes.changed();
     this.kept.keep('bank-logos', { items: this.items() });
   }
 
