@@ -64,7 +64,6 @@ export const contentRoutes: Routes = [
   },
   {
     path: '**',
-    data: { darkThroughout: true } satisfies RouteChromeData,
     title: NOT_FOUND_TITLE,
     data: LIGHT_HEAD,
     loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),

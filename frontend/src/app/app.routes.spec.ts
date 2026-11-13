@@ -83,7 +83,7 @@ describe('Given a visitor and the app routes', () => {
 
     expect(await darkThroughout('/')).toBe(true);
     expect(await darkThroughout('/overit')).toBe(true);
-    expect(await darkThroughout('/neexistuje')).toBe(true);
+    expect(await darkThroughout('/neexistuje')).toBe(false);
     expect(await darkThroughout('/obnova-hesla')).toBe(true);
     expect(await darkThroughout('/potvrzeni-emailu')).toBe(true);
     expect(await darkThroughout('/aktuality/zahrada-pro-deti')).toBe(false);
