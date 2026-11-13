@@ -1588,7 +1588,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
-      expect(text(`${yearSection(2025)} .gift-year-head .receipt-saved`)).toBe(
+      expect(text(`${yearSection(2025)} .yearly-receipt-progress`)).toBe(
         'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
       );
     });
@@ -1597,7 +1597,7 @@ describe('Given a signed-in donor in the donor area', () => {
       receiptEnvironment.autoDraw = false;
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
-      const yearlyLine = `${yearSection(2025)} .gift-year-head .receipt-saved`;
+      const yearlyLine = `${yearSection(2025)} .yearly-receipt-progress`;
       const singleLine = `${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`;
 
       await click(`${yearSection(2025)} .yearly-pdf`);
@@ -1666,8 +1666,10 @@ describe('Given a signed-in donor in the donor area', () => {
       );
       await settleBlobFailure();
 
-      expect(text(`${yearSection(2025)} .gift-year-head [role="alert"]`)).toBe('Za rok 2025 nic');
-      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
+      expect(text(`${yearSection(2025)} .year-receipt-error[role="alert"]`)).toBe(
+        'Za rok 2025 nic',
+      );
+      expect(element('.payments-card > [role="alert"]')).toBeNull();
     });
 
     it('then a year before the first receipt year offers no yearly receipt at its heading', async () => {
@@ -1728,6 +1730,80 @@ describe('Given a signed-in donor in the donor area', () => {
           .querySelector(`${yearSection(2026)} .donation-rows`)
           ?.getAttribute('aria-labelledby'),
       ).toBe('gifts-year-2026');
+    });
+
+    it('then on a phone a screen reader reads the date, the purpose and the amount of a gift row as separate words', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const row = element(`${yearSection(2025)} .donation-rows > li:nth-child(2) .ui-list__row`);
+      expect(normalized(row?.textContent ?? '')).toMatch(
+        /^20\. 8\. 2025 Obecný příspěvek 2 000 Kč Vráceno/,
+      );
+    });
+
+    it('then on a phone the yearly receipt of a completed year is the last row of that year', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const rows = [
+        ...root().querySelectorAll<HTMLElement>(`${yearSection(2025)} .donation-rows > li`),
+      ];
+      expect(rows).toHaveLength(3);
+      expect(normalized(rows[2].querySelector('button')?.textContent ?? '')).toBe(
+        'Stáhnout potvrzení za rok 2025 (PDF)',
+      );
+      expect(element(`${yearSection(2026)} .donation-rows .yearly-pdf`)).toBeNull();
+    });
+
+    it('then on a wide screen the yearly receipt is a row of its own list under the table of its year', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const table = element(`${yearSection(2025)} table`)!;
+      const yearlyRow = element(`${yearSection(2025)} ul > li .yearly-pdf`);
+      expect(normalized(yearlyRow?.textContent ?? '')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
+      expect(
+        table.compareDocumentPosition(yearlyRow!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('then the note of a year that is not over follows the gifts of that year', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const table = element(`${yearSection(2026)} table`)!;
+      const note = element(`${yearSection(2026)} .gift-year-note`)!;
+      expect(table.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('then the note about checking the bank follows the bank check, before the years', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const hint = element('.bank-hint')!;
+      expect(element('.payments-card .bank-hint')).toBeNull();
+      expect(
+        element('app-bank-check')!.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        hint.compareDocumentPosition(element('.payments-card')!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('then the standing order guide is a disclosure row at the end of the page', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const toggle = element('.payments-card app-standing-order button[aria-expanded]')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.querySelector('svg')).not.toBeNull();
+      const lastYear = element(yearSection(2025))!;
+      expect(
+        lastYear.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     it('then a donation with hellers shows two decimals', async () => {
@@ -2183,7 +2259,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         text(`${yearSection(2026)} tbody tr:nth-child(2) app-diagnostics-download button`),
       ).toBe('Stáhnout diagnostický soubor');
-      expect(element('.payments-card > .ui-card__bar app-diagnostics-download')).toBeNull();
+      expect(element('.payments-card > app-diagnostics-download')).toBeNull();
     });
 
     it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
@@ -2213,7 +2289,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení k tomuto daru nelze vystavit',
       );
-      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
+      expect(element('.payments-card > [role="alert"]')).toBeNull();
       expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
       expect(element(secondRowButton)).toBeNull();
     });
@@ -2236,7 +2312,7 @@ describe('Given a signed-in donor in the donor area', () => {
       without.items.splice(1, 1);
       await respond(twoYearSummary(), without);
 
-      expect(text('.payments-card > .ui-card__bar [role="alert"]')).toBe(
+      expect(text('.payments-card > [role="alert"]')).toBe(
         'Potvrzení k tomuto daru nelze vystavit',
       );
       expect(element('.payments-card tbody [role="alert"]')).toBeNull();
@@ -2314,7 +2390,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
       );
-      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
+      expect(element('.payments-card > [role="alert"]')).toBeNull();
       expect(scrolled).toEqual([]);
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
 

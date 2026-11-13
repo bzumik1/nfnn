@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -103,12 +104,24 @@ tr.is-verification td.amount {
   font-size: var(--text-sm);
 }
 
+.download-btn.ui-pill-button {
+  @include touch-target.reaches-finger-size;
+}
+
+.donation-table-card {
+  margin-bottom: 0;
+}
+
+.donation-last-list {
+  margin-top: var(--space-3);
+}
+
 .receipt-note {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
-.download-btn {
+.download-btn:not(.ui-pill-button) {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;

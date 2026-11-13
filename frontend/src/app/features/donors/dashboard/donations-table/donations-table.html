@@ -7,16 +7,15 @@
     @for (item of items(); track item.id) {
       <li [class.is-verification]="item.accountVerification">
         <div class="ui-list__row">
-          <span class="ui-list__title">{{ formatDate(item.receivedAt) }}</span>
-          <span class="ui-list__meta">
-            {{ item.purpose }}
-            <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" />
-          </span>
-          <span class="ui-list__value donation-amount ui-figures"
+          <span class="ui-list__title">{{ formatDate(item.receivedAt) }}</span
+          >&ngsp;<span class="ui-list__meta"
+            >{{ item.purpose }}
+            <ng-container *ngTemplateOutlet="pairingPart; context: { $implicit: item }" /></span
+          >&ngsp;<span class="ui-list__value donation-amount ui-figures"
             >{{ crowns(item.amountMinor) }}&nbsp;Kč</span
           >
           @if (item.status === 'REFUNDED') {
-            <span class="ui-list__state">
+            &ngsp;<span class="ui-list__state">
               <span class="status-pill status-pill--refunded">{{ statusLabel(item.status) }}</span>
             </span>
           }
@@ -31,8 +30,28 @@
         </div>
       </li>
     }
+    @if (lastRow(); as last) {
+      <li class="donation-last">
+        <ng-container *ngTemplateOutlet="last" />
+      </li>
+    }
   </ul>
+} @else if (inset()) {
+  <div class="ui-card donation-table-card">
+    <ng-container *ngTemplateOutlet="tablePart" />
+  </div>
+  @if (lastRow(); as last) {
+    <ul class="ui-list ui-list--inset donation-last-list">
+      <li class="donation-last">
+        <ng-container *ngTemplateOutlet="last" />
+      </li>
+    </ul>
+  }
 } @else {
+  <ng-container *ngTemplateOutlet="tablePart" />
+}
+
+<ng-template #tablePart>
   <table [attr.aria-labelledby]="labelledBy()">
     <thead>
       <tr>
@@ -83,7 +102,7 @@
       }
     </tbody>
   </table>
-}
+</ng-template>
 
 <ng-template #pairingPart let-item>
   @if (item.pairedBy === 'SENDER_ACCOUNT' && item.senderAccount) {
@@ -114,6 +133,8 @@
     <button
       type="button"
       class="download-btn"
+      [class.ui-pill-button]="inset()"
+      [class.ui-pill-button--tinted]="inset()"
       [attr.data-receipt-download]="donations.singleTarget(item)"
       [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
       [attr.aria-busy]="donations.singleDownloading(item)"
