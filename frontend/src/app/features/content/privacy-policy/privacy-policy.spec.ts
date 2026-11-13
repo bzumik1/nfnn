@@ -149,7 +149,7 @@ describe('Given the privacy policy page', () => {
     const [paragraph] = texts('#cookies .administration-copy');
 
     expect(paragraph).toContain(
-      'kopii údajů správy (dárci a jejich bankovní účty, dary, platby a potvrzení)',
+      'kopii údajů správy (dárci a jejich bankovní účty, dary, platby a potvrzení, historie změn ve správě, lidé fondu s jejich e-maily, obsah a nastavení webu bez hesel a klíčů a seznam záloh)',
     );
     expect(paragraph).toContain('každé takové zařízení se zapíše do historie změn správy');
     expect(paragraph).toContain('zamkne při každém spuštění aplikace a po pěti minutách mimo ni');

@@ -1,3 +1,4 @@
+import { OpenAlert, OpenAlertArea } from '../../core/push/open-alerts-api';
 import { BackupKeyWordCheck } from '../operations/backup-key/backup-key-word-check';
 import { ifMatch } from '../../core/version/row-version';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -55,7 +56,7 @@ export interface HistoryImportResponse {
   finishedAt: string | null;
 }
 
-export type PushAlertArea = 'bankImport' | 'backups' | 'mail';
+export type PushAlertArea = OpenAlertArea;
 
 export type PushAlertSwitches = Record<PushAlertArea, boolean>;
 
@@ -71,10 +72,7 @@ export interface PushSubscriptionResponse {
   current: boolean;
 }
 
-export interface OpenAlertResponse {
-  area: PushAlertArea;
-  since: string;
-}
+export type OpenAlertResponse = OpenAlert;
 
 export interface AdminPushResponse {
   publicKey: string;
@@ -209,7 +207,7 @@ export function storedSymbolClaimOf(claim: SymbolClaimResponse): StoredSymbolCla
   };
 }
 
-const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports'];
+const REPORT_SETTINGS_KEYS_THAT_MAY_DIFFER = ['sentReports', 'nextReport', 'lastEndedMonth'];
 
 export type BankLogoFailure =
   | 'status'

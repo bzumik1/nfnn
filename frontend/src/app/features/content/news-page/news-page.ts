@@ -23,6 +23,7 @@ import { NewsApi, NewsArticleResponse } from '../news-api';
 import { NewsCard } from '../news-card/news-card';
 import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
+import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 
 export const PAGE_SIZE = 10;
@@ -101,6 +102,11 @@ export class NewsPage {
       this.pageNumber.set(pageFrom(query.get('strana')));
       this.load();
     });
+    whenShownAgain(() => {
+      if (this.newsLoad.closed) {
+        this.load(true);
+      }
+    });
     this.destroyRef.onDestroy(() => {
       this.newsLoad.unsubscribe();
       this.projectsLoad.unsubscribe();
@@ -131,29 +137,36 @@ export class NewsPage {
     this.load();
   }
 
-  private load(): void {
+  private load(quietly = false): void {
     this.newsLoad.unsubscribe();
-    this.newsState.set('loading');
+    if (!quietly) {
+      this.newsState.set('loading');
+    }
     this.newsLoad = this.newsApi.published(this.pageNumber() - 1, PAGE_SIZE).subscribe({
       next: (page) => {
         this.list.set({ items: page.items, total: page.total });
         this.newsState.set('ready');
       },
       error: (failure: unknown) => {
+        if (quietly && this.newsState() === 'ready') {
+          return;
+        }
         this.offline.set(failure instanceof HttpErrorResponse && failure.status === 0);
         this.newsState.set('error');
       },
     });
     if (this.pageNumber() === 1) {
-      this.loadStories();
+      this.loadStories(quietly);
     }
   }
 
-  private loadStories(): void {
+  private loadStories(quietly: boolean): void {
     if (this.storiesKept || !this.projectsLoad.closed) {
       return;
     }
-    this.storiesState.set({ kind: 'loading' });
+    if (!quietly) {
+      this.storiesState.set({ kind: 'loading' });
+    }
     this.projectsLoad = this.publishedProjects()
       .pipe(timeout({ first: STORIES_WAIT_MS }), map(storiesOfNewestYear))
       .subscribe({

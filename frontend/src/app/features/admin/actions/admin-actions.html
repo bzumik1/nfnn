@@ -60,7 +60,9 @@
                       }
                     </span>
                     <div class="ui-list__extra action-extra">
-                      <span class="summary">{{ item.summary }}</span>
+                      @if (item.summary) {
+                        <span class="summary">{{ item.summary }}</span>
+                      }
                       @if (item.donorId; as donorId) {
                         <a
                           class="donor-link"
@@ -76,7 +78,19 @@
                         @if (item.adminEmail) {
                           <span class="details-text">{{ item.adminEmail }}</span>
                         }
-                        <span class="details-text">{{ item.details }}</span>
+                        @if (detailsOnServerOnly(item)) {
+                          @if (serverAway()) {
+                            <span class="details-text" i18n="@@admin.actions.details.serverAway"
+                              >Podrobnosti ukážeme, až server zase odpoví.</span
+                            >
+                          } @else {
+                            <span class="details-text" i18n="@@admin.actions.details.needConnection"
+                              >Podrobnosti ukážeme, až budete online.</span
+                            >
+                          }
+                        } @else {
+                          <span class="details-text">{{ item.details }}</span>
+                        }
                         @if (!item.adminName && !byServer(item)) {
                           <span class="details-text" i18n="@@admin.actions.details.adminId"
                             >Správce: {{ item.adminId }}</span
@@ -137,12 +151,26 @@
                       }
                     </td>
                     <td data-label="Podrobnosti" i18n-data-label="@@admin.actions.col.details">
-                      <span class="summary">{{ item.summary }}</span>
+                      @if (item.summary) {
+                        <span class="summary">{{ item.summary }}</span>
+                      }
                       <details class="details">
                         <summary i18n="@@admin.actions.details.summary">
                           Technické podrobnosti
                         </summary>
-                        <span class="details-text">{{ item.details }}</span>
+                        @if (detailsOnServerOnly(item)) {
+                          @if (serverAway()) {
+                            <span class="details-text" i18n="@@admin.actions.details.serverAway"
+                              >Podrobnosti ukážeme, až server zase odpoví.</span
+                            >
+                          } @else {
+                            <span class="details-text" i18n="@@admin.actions.details.needConnection"
+                              >Podrobnosti ukážeme, až budete online.</span
+                            >
+                          }
+                        } @else {
+                          <span class="details-text">{{ item.details }}</span>
+                        }
                         @if (!item.adminName && !byServer(item)) {
                           <span class="details-text" i18n="@@admin.actions.details.adminId"
                             >Správce: {{ item.adminId }}</span
@@ -158,7 +186,6 @@
           @if (hasMore()) {
             <div class="admin-more">
               <button
-                appNeedsConnection
                 type="button"
                 class="ui-button ui-button--small"
                 [disabled]="loadingMore()"

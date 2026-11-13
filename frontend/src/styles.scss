@@ -45,27 +45,27 @@ html.follows-system-text-size {
   overflow-wrap: break-word;
 }
 
-html:has(app-tab-bar) {
+html:has(app-root app-tab-bar) {
   scroll-padding-bottom: var(--tab-bar-clearance);
 }
 
-html:has(app-landing),
-html:has(app-landing) body {
+html:has(app-root app-landing),
+html:has(app-root app-landing) body {
   background: var(--color-image-shade);
 }
 
-html:has(app-landing) {
+html:has(app-root app-landing) {
   overscroll-behavior: none;
 }
 
 @include bp.down(nav) {
-  html:has(app-not-found),
-  html:has(app-not-found) body {
+  html:has(app-root app-not-found),
+  html:has(app-root app-not-found) body {
     background: var(--color-surface-inverse);
   }
 }
 
-html:has(.ui-grouped) body {
+html:has(app-root .ui-grouped) body {
   background: var(--color-surface-grouped);
 }
 

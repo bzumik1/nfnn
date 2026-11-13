@@ -393,6 +393,15 @@ export async function openSignInDialog(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
+export async function rememberedDonorSession(
+  page: Page,
+  { installed = false, user = donor }: { installed?: boolean; user?: typeof donor } = {},
+): Promise<void> {
+  const hintKey = installed ? 'nfnn.donor-session-app' : 'nfnn.donor-session';
+  await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, user)));
+  await page.addInitScript((key) => localStorage.setItem(key, '1'), hintKey);
+}
+
 export async function signIn(page: Page, user: typeof donor = donor): Promise<void> {
   await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200, user)));
   await openSignInDialog(page);
@@ -501,9 +510,14 @@ export async function openSection(page: Page, name: string): Promise<void> {
 
 export async function serveAdministrationCopy(
   page: RouteTarget,
-  parts: { donations: Record<string, unknown[]>; donors: Record<string, unknown[]> },
+  parts: {
+    donations: Record<string, unknown[]>;
+    donors: Record<string, unknown[]>;
+    content?: Record<string, unknown[]>;
+    operations?: Record<string, unknown[]>;
+  },
 ): Promise<void> {
-  for (const [part, chunks] of Object.entries(parts)) {
+  for (const [part, chunks] of Object.entries({ content: {}, operations: {}, ...parts })) {
     const served = await Promise.all(
       Object.entries(chunks).map(async ([id, rows]) => ({
         id,
@@ -574,6 +588,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
     { timeout: 10_000 },
   );
   return async () => {
+    await expect(page.locator('.admin-page h1')).toBeVisible();
     await synced;
     await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
   };

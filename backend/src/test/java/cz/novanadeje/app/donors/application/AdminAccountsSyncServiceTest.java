@@ -6,7 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
-import cz.novanadeje.app.shared.application.audit.AdminActionSummary;
+import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -80,24 +80,32 @@ class AdminAccountsSyncServiceTest {
     }
 
     @Test
-    @DisplayName("Given an administrator, a donor with a second factor and passkeys and the trail, when the snapshot is taken, then every account comes with its factor and passkey count, and the whole trail")
+    @DisplayName("Given an administrator, a donor with a second factor and passkeys and the trail, when the snapshot is taken, then every account comes with its factor and passkey count, and the whole trail with the donor each action is about")
     void should_list_every_account_with_factor_and_passkeys_when_snapshot_taken_given_administrator() {
         Donor admin = donor("andrea@example.cz", "4821937560");
         admin.verifyEmail(NOW);
         admin.grantAdministration();
         Donor jana = donor("jana@example.cz", "4821937561");
-        AdminActionSummary entry = new AdminActionSummary(UUID.randomUUID(), admin.id().value(), "PAIR_PAYMENT", Optional.empty(), NOW, Optional.empty());
+        AdminActionEntry granted = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "GRANT_ADMINISTRATION", Optional.of(jana.id().value()),
+                "Role správce udělena dárci " + jana.id().value(), NOW, Optional.empty());
+        AdminActionEntry unknown = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "SOMETHING_NEW", Optional.empty(), "Něco se stalo", NOW,
+                Optional.of("claude.ai"));
         when(donors.findById(admin.id())).thenReturn(Optional.of(admin));
         when(donors.findAll()).thenReturn(List.of(admin, jana));
         when(secondFactors.findDonorsWithEnabledFactor()).thenReturn(Set.of(jana.id()));
         when(passkeys.countByDonors()).thenReturn(Map.of(jana.id(), 2));
-        when(trail.findAllSummariesNewestFirst()).thenReturn(List.of(entry));
+        when(trail.findAllNewestFirst()).thenReturn(List.of(granted, unknown));
 
         AdminAccountsSyncSnapshot snapshot = service.snapshotFor(admin.id());
 
         assertThat(snapshot.administrator()).isTrue();
         assertThat(snapshot.accounts()).containsExactly(new DonorAccountView(admin, false, 0), new DonorAccountView(jana, true, 2));
-        assertThat(snapshot.actions()).containsExactly(entry);
+        assertThat(snapshot.actions()).extracting(AdminActionView::id).containsExactly(granted.id(), unknown.id());
+        assertThat(snapshot.actions().getFirst().admin()).contains(admin);
+        assertThat(snapshot.actions().getFirst().donorId()).contains(jana.id().value());
+        assertThat(snapshot.actions().getFirst().donor()).contains(jana);
+        assertThat(snapshot.actions().getLast().facts()).isEmpty();
+        assertThat(snapshot.actions().getLast().donor()).isEmpty();
     }
 
     private static Donor donor(String email, String variableSymbol) {

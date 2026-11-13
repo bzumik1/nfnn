@@ -14,7 +14,8 @@ import { Router, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
-import { NewsApi, NewsArticleResponse } from '../../content/news-api';
+import { NewsArticleResponse } from '../../content/news-api';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
@@ -32,7 +33,7 @@ const FORBIDDEN = 'auth/forbidden';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminNews {
-  private readonly api = inject(NewsApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -58,8 +59,8 @@ export class AdminNews {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
-      .list()
+    this.reads
+      .newsList()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (list) => {

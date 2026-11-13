@@ -51,6 +51,13 @@ public final class AdminSyncRows {
     }
 
     public record ReportSettingsRow(List<String> recipients, int sendDay, int sendHour, ReportSectionsRow sections, Instant changedAt,
+                                    List<SentReportRow> sentReports, NextReportRow nextReport, String lastEndedMonth, String version) {
+    }
+
+    public record NextReportRow(String month, LocalDate dueOn) {
+    }
+
+    record ReportSettingsVersionRow(List<String> recipients, int sendDay, int sendHour, ReportSectionsRow sections, Instant changedAt,
                                     List<SentReportRow> sentReports, String version) {
     }
 

@@ -66,8 +66,11 @@ import {
 } from '../../../shared/ui/draft-offer/draft-offer';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
 import { formatBankTime } from '../../donations/donation-date';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
+import { reloadWhenOnlineAgain } from '../device-copy/online-again';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type SignatoryState = LoadState | 'offline';
 type Direction = 'up' | 'down';
 type PageText = 'note' | 'footnote';
 
@@ -143,6 +146,7 @@ const TEXT_RELOAD_FAILED = $localize`:@@admin.people.text.reloadFailed:Uložený
 })
 export class AdminPeople {
   private readonly api = inject(PeopleApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly admin = inject(AdminApi);
   private readonly media = inject(NewsApi);
   private readonly auth = inject(AuthStore);
@@ -184,7 +188,11 @@ export class AdminPeople {
   protected readonly editorNotice = signal<Notice | null>(null);
   protected readonly noteNotice = signal<Notice | null>(null);
   protected readonly signatory = signal<ReceiptSignatoryResponse | null>(null);
-  protected readonly signatoryState = signal<LoadState>('loading');
+  protected readonly signatoryState = signal<SignatoryState>('loading');
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.signatoryState() === 'offline',
+    () => this.loadSignatory(),
+  );
   protected readonly receiptPreviews = signal<ReadonlyMap<string, ReceiptPreview>>(new Map());
   protected readonly signatureBusy = signal(false);
   protected readonly savingReceipt = signal(false);
@@ -278,8 +286,8 @@ export class AdminPeople {
 
   protected load(): void {
     this.state.set('loading');
-    this.api
-      .load()
+    this.reads
+      .people()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (people) => {
@@ -329,7 +337,7 @@ export class AdminPeople {
         },
         error: () => {
           if (this.signatoryState() !== 'ready') {
-            this.signatoryState.set('error');
+            this.signatoryState.set(this.onlineAgain.offline() ? 'offline' : 'error');
           }
         },
       });
@@ -718,8 +726,9 @@ export class AdminPeople {
     }
     const draft = this.textDraft(which);
     draft.discard();
-    this.api
-      .load()
+    this.reads.changed();
+    this.reads
+      .people()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (people) => {

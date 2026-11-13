@@ -20,7 +20,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-pro
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
-import { AppBadge } from '../../../core/push/app-badge';
+import { OpenAlerts } from '../../../core/push/open-alerts';
 import { PushAvailability, pushAvailability } from '../../../core/push/push-availability';
 import {
   BrowserPushSubscriptionState,
@@ -97,7 +97,7 @@ export class AdminAlerts {
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
   private readonly push = inject(SERVICE_WORKER_PUSH);
-  private readonly badge = inject(AppBadge);
+  private readonly openAlerts = inject(OpenAlerts);
   private readonly marks = inject(DeviceAlertMarks);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
@@ -370,7 +370,7 @@ export class AdminAlerts {
         next: (view) => {
           this.view.set(view);
           this.availability.set(this.availabilityNow());
-          this.badge.show(view.openAlerts?.length ?? 0);
+          this.openAlerts.accept(view.openAlerts ?? []);
           this.state.set('ready');
           this.checkBrowserSubscription();
         },

@@ -67,7 +67,9 @@ public class ReportSettingsService {
         StoredReportSettings current = new StoredReportSettings(settings.current(), settings.lastChangedAt());
         String version = rows.reportSettingsVersion(current);
         if (!expected.admits(version)) {
-            throw new ChangedMeanwhile(version, rows.reportSettings(current, reportLog.sentReportsNewestFirst()));
+            List<SentReport> sent = reportLog.sentReportsNewestFirst();
+            LocalDate today = FoundationCalendar.today(clock);
+            throw new ChangedMeanwhile(version, rows.reportSettings(current, sent, nextReport(current.settings(), sent, today), ReportMonth.previousTo(today)));
         }
         if (!channel.mayChangeReportRecipients() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
             throw new ReportRecipientsInBrowserOnly();

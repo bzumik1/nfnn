@@ -33,6 +33,7 @@ import {
   ImportStateResponse,
   TallyResponse,
 } from '../admin-api';
+import { OpenAlerts } from '../../../core/push/open-alerts';
 import { formatSize } from '../backups/backup-format';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { formatReportMonth } from '../report/report-month';
@@ -61,6 +62,7 @@ import {
   UnpairedSummary,
   unpairedCount,
 } from './attention-rows';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
@@ -94,6 +96,7 @@ interface SinceFigure {
 export class AdminHome {
   private readonly api = inject(AdminApi);
   private readonly reads = inject(AdministrationReads);
+  private readonly pageReads = inject(AdministrationPageReads);
   private readonly connectivity = inject(Connectivity);
   private overviewRead: Subscription | null = null;
   private readonly auth = inject(AuthStore);
@@ -103,6 +106,7 @@ export class AdminHome {
   private readonly injector = inject(Injector);
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
+  private readonly openAlerts = inject(OpenAlerts);
   protected readonly donor = this.auth.donor;
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly sectionsLabel = $localize`:@@admin.home.sections.nav:Sekce správy`;
@@ -233,6 +237,7 @@ export class AdminHome {
       unpublishedSigningKeys: this.unpublishedSigningKeys(),
       signingKeyWarnings: this.signingKeyWarnings(),
       signatory: this.signatoryState(),
+      openAlerts: this.openAlerts.alerts(),
     }),
   );
   protected readonly attentionLoading = computed(() =>
@@ -254,6 +259,7 @@ export class AdminHome {
   };
 
   constructor() {
+    this.openAlerts.refresh();
     this.loadSince();
     this.load();
     this.loadOverview();
@@ -315,8 +321,8 @@ export class AdminHome {
 
   protected loadBackups(): void {
     this.backupsState.set('loading');
-    this.api
-      .backups()
+    this.pageReads
+      .backupsWithoutRunErrors()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {

@@ -48,6 +48,7 @@ import {
   slugFromText,
 } from '../../content/news-api';
 import { OwnPersonResponse, PeopleApi } from '../../content/people-api';
+import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FocalPoint } from '../../../shared/ui/focal-point/focal-point';
@@ -131,6 +132,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   private readonly api = inject(NewsApi);
   private readonly photos = inject(PhotosApi);
   private readonly peopleApi = inject(PeopleApi);
+  private readonly reads = inject(AdministrationPageReads);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -359,8 +361,8 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
 
   protected load(id: string, loaded?: () => void): void {
     this.state.set('loading');
-    this.api
-      .get(id)
+    this.reads
+      .newsArticle(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (article) => {
@@ -390,7 +392,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   private loadSigners(withDefault: boolean): void {
     const noMember: OwnPersonResponse = { member: null };
     forkJoin({
-      people: this.peopleApi.load(),
+      people: this.reads.people(),
       own: withDefault ? this.peopleApi.mine().pipe(catchError(() => of(noMember))) : of(noMember),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -879,6 +881,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
     }
     this.articleForm()?.form.markAsPristine();
     this.edited.set(false);
+    this.reads.changed();
     this.load(saved.id, () => {
       this.notice.set({
         kind: 'status',

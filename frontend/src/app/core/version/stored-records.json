@@ -55,7 +55,17 @@
   "reportSettings": {
     "source": "backend/src/main/java/cz/novanadeje/app/donations/application/sync/AdminSyncRows.java",
     "record": "ReportSettingsRow",
-    "keys": ["recipients", "sendDay", "sendHour", "sections", "changedAt", "sentReports", "version"]
+    "keys": [
+      "recipients",
+      "sendDay",
+      "sendHour",
+      "sections",
+      "changedAt",
+      "sentReports",
+      "nextReport",
+      "lastEndedMonth",
+      "version"
+    ]
   },
   "bankLogo": {
     "source": "backend/src/main/java/cz/novanadeje/app/donations/application/banklogo/BankLogoAdminRow.java",

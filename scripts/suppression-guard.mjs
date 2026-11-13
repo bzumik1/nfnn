@@ -43,11 +43,13 @@ const CHECK_SCRIPTS = new Set([
   'scripts/agent-context-budget.mjs',
   'mcp/src/tool-list.ts',
 ]);
+const TOKEN_WRITING_SCRIPTS = new Set(['scripts/pr-labels.mjs']);
 const BUILD_DEFINITION =
   /(?:^|\/)settings\.gradle(?:\.kts)?$|(?:^|\/)buildSrc\/|(?:^|\/)gradle\/(?:.*\/)?[^/]+\.gradle(?:\.kts)?$|(?:^|\/)gradle\/wrapper\/gradle-wrapper\.properties$|^\.github\/docker-bake\.hcl$/;
 const WHOLE_FILE_RULES = [
   { matches: (path) => CI_DEFINITION.test(path), label: 'a CI definition' },
   { matches: (path) => CHECK_SCRIPTS.has(path), label: 'a script that decides a required check' },
+  { matches: (path) => TOKEN_WRITING_SCRIPTS.has(path), label: "a script that writes to GitHub with the workflows' token" },
   { matches: (path) => BUILD_DEFINITION.test(path), label: 'the build definition' },
   { matches: (path) => /(?:^|\/)\.(?:npmrc|yarnrc(?:\.yml)?)$/.test(path), label: "the package manager's configuration" },
   { matches: (path) => path === 't3.json', label: 'the commands T3 Code runs on worktree setup and settle' },

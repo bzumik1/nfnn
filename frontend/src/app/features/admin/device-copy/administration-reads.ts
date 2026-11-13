@@ -133,9 +133,7 @@ export class AdministrationReads {
     };
   });
 
-  private readonly copyTime = computed(() =>
-    latest(this.download.checkedAt(), this.copy.storedAt()),
-  );
+  readonly copyTime = computed(() => latest(this.download.checkedAt(), this.copy.storedAt()));
 
   constructor() {
     effect(() => {
@@ -156,7 +154,7 @@ export class AdministrationReads {
     pairing: PairingFilter,
     query: PaymentQuery = {},
   ): Observable<AdminPaymentListResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const rows = this.donationsRows();
         if (rows === null) {
@@ -170,7 +168,7 @@ export class AdministrationReads {
   }
 
   donorSearch(query: string): Observable<AdminDonorSearchResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const records = this.donorRecords();
         return records === null ? null : donorRecordSearch(records, query);
@@ -180,7 +178,7 @@ export class AdministrationReads {
   }
 
   accountList(query: string, limit?: number): Observable<DonorAccountListResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const accounts = this.accounts();
         return accounts === null ? null : accountSearch(accounts, query, 0, limit);
@@ -190,14 +188,14 @@ export class AdministrationReads {
   }
 
   account(donorId: string): Observable<DonorAccountResponse> {
-    return this.read(
+    return this.copyFirst(
       () => this.accounts()?.find((account) => account.donorId === donorId) ?? null,
       () => this.api.donor(donorId),
     );
   }
 
   overview(year: number | null = null): Observable<AdminOverviewResponse> {
-    return this.read(
+    return this.copyFirst(
       () => {
         const held = this.overviews();
         if (held === null) {
@@ -218,18 +216,28 @@ export class AdministrationReads {
   }
 
   importState(): Observable<ImportStateRead> {
-    const fromCopy = (): ImportStateRead | null => {
-      const row = this.copy.opened() ? this.importStates()?.[0] : undefined;
-      return row === undefined ? null : { source: 'copy', state: storedImportState(row) };
-    };
+    return this.serverFirst(
+      () => {
+        const row = this.importStates()?.[0];
+        return row === undefined ? null : { source: 'copy', state: storedImportState(row) };
+      },
+      () =>
+        this.api.importState().pipe(map((state): ImportStateRead => ({ source: 'server', state }))),
+    );
+  }
+
+  serverFirst<Answer>(
+    local: () => Answer | null,
+    server: () => Observable<Answer>,
+  ): Observable<Answer> {
+    const fromCopy = (): Answer | null => (this.copy.opened() ? local() : null);
     return defer(() => {
       const offline = this.connectivity.offline() ? fromCopy() : null;
       if (offline !== null) {
         this.held(offline);
         return of(offline);
       }
-      return this.api.importState().pipe(
-        map((state): ImportStateRead => ({ source: 'server', state })),
+      return server().pipe(
         catchError((failure: unknown) => {
           const held = isUnreachable(failure) || this.connectivity.offline() ? fromCopy() : null;
           if (held === null) {
@@ -286,7 +294,7 @@ export class AdministrationReads {
     );
   }
 
-  private read<Answer>(
+  copyFirst<Answer>(
     local: () => Answer | null,
     server: () => Observable<Answer>,
   ): Observable<Answer> {

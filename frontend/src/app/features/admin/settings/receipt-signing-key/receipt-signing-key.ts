@@ -32,8 +32,9 @@ import {
 } from './key-warnings';
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
 
-type LoadState = 'loading' | 'ready' | 'error';
+type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
 type UnfinishedRenewal = Exclude<KeyRenewal['outcome'], 'answered'>;
 
@@ -64,6 +65,10 @@ export class ReceiptSigningKey {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly onlineAgain = reloadWhenOnlineAgain(
+    () => this.state() === 'offline',
+    () => this.load(),
+  );
   protected readonly keys = signal<ReceiptSigningKeysResponse | null>(null);
   protected readonly withdrawal = signal<Withdrawal | null>(null);
   protected readonly opening = signal(false);
@@ -135,7 +140,7 @@ export class ReceiptSigningKey {
           this.keys.set(keys);
           this.state.set('ready');
         },
-        error: () => this.state.set('error'),
+        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
       });
   }
 

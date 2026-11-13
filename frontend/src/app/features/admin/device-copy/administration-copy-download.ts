@@ -31,7 +31,7 @@ export interface DownloadProgress {
   readonly total: number;
 }
 
-const PARTS: readonly AdministrationCopyPart[] = ['donations', 'donors'];
+const PARTS: readonly AdministrationCopyPart[] = ['donations', 'donors', 'content', 'operations'];
 const ATTEMPTS = 2;
 const TOO_MANY_REQUESTS = 429;
 

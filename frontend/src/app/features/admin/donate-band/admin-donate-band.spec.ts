@@ -8,6 +8,12 @@ import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixt
 import { DONATE_BAND_PHOTO_ID, donateBandPhoto } from '../../content/testing/donate-band-fixtures';
 import { IMAGE_ID, uploadedImage } from '../../content/testing/news-fixtures';
 import { AdminDonateBand } from './admin-donate-band';
+import {
+  contentCopy,
+  openOfflineFromCopy,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
+import { donateBandPhoto as heldPhoto } from '../../content/testing/donate-band-fixtures';
 
 const BAND_URL = '/api/admin/content/donate-band';
 const MEDIA_URL = '/api/admin/content/media';
@@ -296,5 +302,19 @@ describe('Given an administrator whose Přispět band does not load', () => {
     await settle(fixture);
 
     expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the Přispět band opens, then its photo comes from the copy', async () => {
+    const photo = heldPhoto();
+    const { page, http } = await openOfflineFromCopy(
+      AdminDonateBand,
+      contentCopy({ 'content/donate-band': [{ photo }] }),
+    );
+
+    expect(page.querySelector(`img[src*="${photo.id}"]`)).not.toBeNull();
+    waitsForConnection(page, 'Uložit a ukázat na webu');
+    http.verify();
   });
 });

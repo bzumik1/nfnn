@@ -53,7 +53,11 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/sync",
             "/api/admin/donations/sync/chunks",
             "/api/admin/donors/sync",
-            "/api/admin/donors/sync/chunks"};
+            "/api/admin/donors/sync/chunks",
+            "/api/admin/content/sync",
+            "/api/admin/content/sync/chunks",
+            "/api/admin/operations/sync",
+            "/api/admin/operations/sync/chunks"};
 
     @Bean
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, ProblemDetailSecurityErrorHandler errorHandler,

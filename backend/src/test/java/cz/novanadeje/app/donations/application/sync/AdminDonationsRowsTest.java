@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.application.sync;
 
+import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
 import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
+import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
@@ -10,6 +12,13 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportSections;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
+import cz.novanadeje.app.donations.domain.report.SentReport;
+import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -20,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
@@ -34,6 +44,7 @@ class AdminDonationsRowsTest {
 
     private static final Instant NOW = Instant.parse("2026-11-05T12:00:00Z");
     private static final SenderAccount ACCOUNT = new SenderAccount("2900233333", "2010");
+    private static final String PINNED_REPORT_SETTINGS_VERSION = "8c96ea2c6edad06a";
 
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
@@ -79,5 +90,20 @@ class AdminDonationsRowsTest {
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
 
         assertThatThrownBy(() -> rows.paidPayment(payment, gift, other)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Given stored report settings, when their row is made for two months with different next reports and sent reports, then both rows carry the version these settings had before the row named its next report")
+    void should_keep_the_version_from_before_the_next_report_when_rows_are_made_given_other_months() {
+        StoredReportSettings stored = new StoredReportSettings(new ReportSettings(ReportRecipients.of(new EmailAddress("info@nfnn.cz"),
+                new EmailAddress("pokladni@example.cz")), 3, 7, new ReportSections(true, true, false, true)), Optional.of(Instant.parse("2026-10-01T08:00:00Z")));
+
+        ReportSettingsRow october = rows.reportSettings(stored, List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 10),
+                LocalDate.of(2026, 11, 3)), ReportMonth.of(2026, 10));
+        ReportSettingsRow november = rows.reportSettings(stored, List.of(new SentReport(ReportMonth.of(2026, 10), Instant.parse("2026-11-03T06:00:00Z"))),
+                new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 3)), ReportMonth.of(2026, 11));
+
+        assertThat(october.version()).isEqualTo(PINNED_REPORT_SETTINGS_VERSION).isEqualTo(rows.reportSettingsVersion(stored));
+        assertThat(november.version()).isEqualTo(PINNED_REPORT_SETTINGS_VERSION);
     }
 }

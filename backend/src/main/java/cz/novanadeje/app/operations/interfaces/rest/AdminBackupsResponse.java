@@ -26,6 +26,16 @@ record AdminBackupsResponse(boolean available, List<Backup> backups, Run lastBac
                 BackupScheduleResponse.from(schedule), Key.from(key));
     }
 
+    AdminBackupsResponse withoutRunErrors() {
+        return new AdminBackupsResponse(available, backups, withoutError(lastBackup), withoutError(lastTestRestore), withoutError(lastRestore),
+                restoreFiles, pendingRequests, restorePending, problems, schedule, key);
+    }
+
+    private static Run withoutError(Run run) {
+        return run == null ? null : new Run(run.outcome(), run.startedAt(), run.finishedAt(), run.fileName(), run.sizeBytes(), run.tables(),
+                run.requestId(), null);
+    }
+
     private static Run run(Optional<BackupRun> run) {
         return run.map(Run::from).orElse(null);
     }

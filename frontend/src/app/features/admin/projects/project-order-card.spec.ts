@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { DirtyForms } from '../../../core/updates/dirty-forms';
 import { ProjectOrder } from '../../content/projects-api';
+import { type FakeConnectivity, fakeConnectivity } from '../device-copy/testing/opened-copy';
 import { ProjectOrderCard } from './project-order-card';
 
 const ORDER_URL = '/api/admin/content/project-order';
@@ -11,11 +13,20 @@ describe('Given an administrator choosing the order of the projects', () => {
   let fixture: ComponentFixture<ProjectOrderCard>;
   let http: HttpTestingController;
   let changes: ProjectOrder[];
+  let connectivity: FakeConnectivity;
 
   beforeEach(async () => {
+    connectivity = fakeConnectivity(null);
     await TestBed.configureTestingModule({
       imports: [ProjectOrderCard],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: Connectivity,
+          useValue: { offline: connectivity.offline, cause: connectivity.cause },
+        },
+      ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ProjectOrderCard);
@@ -52,6 +63,40 @@ describe('Given an administrator choosing the order of the projects', () => {
     query<HTMLFormElement>('.order-form').requestSubmit();
     await settle();
   }
+
+  it('when the server cannot be reached while the device is online, then the card shows the error with its retry', async () => {
+    http.expectOne(ORDER_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(text(query('.ui-load-state--error'))).toContain('Řazení se nepodařilo načíst.');
+    expect(text(query('.ui-load-state--error button'))).toBe('Zkusit znovu');
+  });
+
+  it('when the device is offline, then a status line says the order shows once online, and the card loads it when the device is back online', async () => {
+    connectivity.set('network');
+    http.expectOne(ORDER_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(query('.ui-load-state--error')).toBeNull();
+    expect(text(query('.order-offline[role="status"]'))).toBe('Řazení ukážeme, až budete online.');
+
+    connectivity.set(null);
+    await settle();
+    await loaded('YEAR');
+
+    expect(text(query('.order-offline[role="status"]'))).toBe('');
+    expect(radio('YEAR').checked).toBe(true);
+  });
+
+  it('when the server is away rather than the internet, then the status line says the order shows when the server answers again', async () => {
+    connectivity.set('server');
+    http.expectOne(ORDER_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(text(query('.order-offline[role="status"]'))).toBe(
+      'Řazení ukážeme, až server zase odpoví.',
+    );
+  });
 
   it('when the order is still loading, then the card says so', () => {
     expect(text(query('[role="status"].ui-load-state'))).toBe('Načítáme řazení…');

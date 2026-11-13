@@ -12,21 +12,24 @@ import tools.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CaseRowsTest {
 
-    private static final List<String> ROW_FIELDS = List.of("now", "donors", "payments", "donations", "links", "symbolClaims");
+    private static final List<String> ROW_FIELDS = List.of("now", "donors", "payments", "donations", "links", "symbolClaims", "receipts");
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
     @ParameterizedTest
     @ValueSource(strings = {"shared-cases/admin-overview/year-overview.json", "shared-cases/donor-summary/summary.json",
             "shared-cases/monthly-report/report.json", "shared-cases/sync/manifest.json",
             "shared-cases/admin-payments/list.json", "shared-cases/admin-donors/record-search.json", "shared-cases/admin-donors/account-search.json",
-            "shared-cases/admin-donors/donor-card.json"})
+            "shared-cases/admin-donors/donor-card.json", "shared-cases/donor-donations/list.json"})
     @DisplayName("Given the recorded cases over database rows, when each case's rows are read from its input and written again, then they equal the input's rows")
     void should_equal_the_input_rows_when_each_case_is_read_from_its_input_and_written_again(String cases) throws IOException {
         JsonNode file = JSON.readTree(Files.readString(SharedCases.repositoryRoot().resolve(cases), StandardCharsets.UTF_8));
@@ -72,5 +75,75 @@ class CaseRowsTest {
                 + "\",\"note\":\"other\",\"amountMinor\":200}]}"));
 
         assertThat(aliased.toString()).isEqualTo("{\"subject\":\"donor:jana\",\"rows\":[{\"id\":\"donation:2\",\"note\":\"other\",\"amountMinor\":200}]}");
+    }
+
+    @Test
+    @DisplayName("Given rows that name a single receipt of the second gift and a yearly receipt, when the receipts to issue are read and one is issued, then they keep their order, donor, gift and instant, and the issued receipt aliases as receipt:<alias>")
+    void should_keep_order_donor_gift_and_instant_and_alias_the_issued_receipt_when_the_receipts_to_issue_are_read_given_a_single_and_a_yearly_receipt() {
+        ObjectNode input = JSON.createObjectNode();
+        input.put("now", "2027-02-10T09:00:00Z");
+        input.set("donors", JSON.readTree("[{\"alias\":\"jana\",\"registeredAt\":\"2026-01-15T10:00:00Z\",\"erasedAt\":null}]"));
+        input.set("payments", JSON.readTree("[]"));
+        input.set("donations", JSON.readTree("[{\"donor\":\"jana\",\"payment\":null,\"receivedOn\":\"2026-02-01\",\"amountMinor\":100,"
+                + "\"status\":\"RECEIVED\",\"source\":\"MANUAL\",\"purpose\":\"GENERAL\"},{\"donor\":\"jana\",\"payment\":null,"
+                + "\"receivedOn\":\"2026-02-02\",\"amountMinor\":200,\"status\":\"RECEIVED\",\"source\":\"MANUAL\",\"purpose\":\"GENERAL\","
+                + "\"recordedAt\":\"2026-02-02T12:00:00.000001Z\"}]"));
+        input.set("receipts", JSON.readTree("[{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"SINGLE\",\"donation\":2,\"issuedAt\":\"2026-02-05T10:00:00Z\"},"
+                + "{\"alias\":\"rok\",\"donor\":\"jana\",\"kind\":\"YEARLY\",\"year\":2026,\"issuedAt\":\"2027-01-10T08:00:00Z\"}]"));
+        CaseRows rows = CaseRows.fromJson(input);
+        UUID receipt = UUID.fromString("0190a000-0000-7000-8000-0000000000ff");
+
+        List<CaseRows.ReceiptToIssue> receipts = rows.receiptsToIssue();
+        rows.issued(receipts.getFirst(), receipt);
+
+        assertThat(receipts).containsExactly(
+                new CaseRows.ReceiptToIssue("unor", rows.donorId("jana"), false, Optional.empty(), Optional.of(rows.donationId(2)),
+                        Instant.parse("2026-02-05T10:00:00Z")),
+                new CaseRows.ReceiptToIssue("rok", rows.donorId("jana"), true, Optional.of(2026), Optional.empty(), Instant.parse("2027-01-10T08:00:00Z")));
+        assertThat(rows.aliased(JSON.readTree("{\"id\":\"" + receipt + "\"}")).toString()).isEqualTo("{\"id\":\"receipt:unor\"}");
+        assertThat(rows.now()).isEqualTo(Instant.parse("2027-02-10T09:00:00Z"));
+    }
+
+    @Test
+    @DisplayName("Given a single receipt that states its year as null and a yearly receipt that states its gift as null, when the receipts to issue are read, then both are read as absent")
+    void should_read_an_explicit_null_year_and_gift_as_absent_when_the_receipts_to_issue_are_read_given_receipts_that_state_them_as_null() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"SINGLE\",\"year\":null,\"donation\":1,"
+                + "\"issuedAt\":\"2026-02-05T10:00:00Z\"},{\"alias\":\"rok\",\"donor\":\"jana\",\"kind\":\"YEARLY\",\"year\":2026,\"donation\":null,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"}]"));
+
+        List<CaseRows.ReceiptToIssue> receipts = rows.receiptsToIssue();
+
+        assertThat(receipts).extracting(CaseRows.ReceiptToIssue::year).containsExactly(Optional.empty(), Optional.of(2026));
+        assertThat(receipts).extracting(CaseRows.ReceiptToIssue::donation).containsExactly(Optional.of(rows.donationId(1)), Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given a receipt of a kind that is neither YEARLY nor SINGLE, when the receipts to issue are read, then the rows are refused and name the kind")
+    void should_refuse_the_rows_when_the_receipts_to_issue_are_read_given_a_receipt_of_an_unknown_kind() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"YEARLY \",\"year\":2026,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"}]"));
+
+        assertThatThrownBy(rows::receiptsToIssue).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("YEARLY ");
+    }
+
+    @Test
+    @DisplayName("Given receipts listed out of the order of their issuedAt, when the receipts to issue are read, then the rows are refused, because the server clock never runs back")
+    void should_refuse_the_rows_when_the_receipts_to_issue_are_read_given_receipts_listed_out_of_issue_order() {
+        CaseRows rows = CaseRows.fromJson(inputWithReceipts("[{\"alias\":\"rok\",\"donor\":\"jana\",\"kind\":\"YEARLY\",\"year\":2026,"
+                + "\"issuedAt\":\"2027-01-10T08:00:00Z\"},{\"alias\":\"unor\",\"donor\":\"jana\",\"kind\":\"SINGLE\",\"donation\":1,"
+                + "\"issuedAt\":\"2026-02-05T10:00:00Z\"}]"));
+
+        assertThatThrownBy(rows::receiptsToIssue).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("unor");
+    }
+
+    private static ObjectNode inputWithReceipts(String receipts) {
+        ObjectNode input = JSON.createObjectNode();
+        input.put("now", "2027-02-10T09:00:00Z");
+        input.set("donors", JSON.readTree("[{\"alias\":\"jana\",\"registeredAt\":\"2026-01-15T10:00:00Z\",\"erasedAt\":null}]"));
+        input.set("payments", JSON.readTree("[]"));
+        input.set("donations", JSON.readTree("[{\"donor\":\"jana\",\"payment\":null,\"receivedOn\":\"2026-02-01\",\"amountMinor\":100,"
+                + "\"status\":\"RECEIVED\",\"source\":\"MANUAL\",\"purpose\":\"GENERAL\"}]"));
+        input.set("receipts", JSON.readTree(receipts));
+        return input;
     }
 }

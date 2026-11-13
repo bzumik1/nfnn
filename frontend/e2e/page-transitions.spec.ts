@@ -145,7 +145,7 @@ test.describe('Given a visitor reading the news on a phone', () => {
     expect(new Set(transition.moved)).toEqual(new Set(['transform', 'opacity']));
   });
 
-  test('when they press Zpět on the article, then the article slides away off the list and the list heading takes the focus', async ({
+  test('when they press Zpět on the article, then the article slides away off the list and the link to that article takes the focus', async ({
     page,
   }) => {
     await openArticleFromList(page);
@@ -154,7 +154,9 @@ test.describe('Given a visitor reading the news on a phone', () => {
     await back(page).click();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
+    await expect(
+      page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
+    ).toBeFocused();
     await expect(overlays(page)).toHaveCount(0);
     expect(await seenTransitions(page)).toEqual([
       expect.objectContaining({ kind: 'pop', hiddenFromAssistiveTech: true, copies: 2 }),
@@ -207,7 +209,9 @@ test.describe('Given a visitor reading the news on a phone', () => {
     await back(page).click();
 
     await expect(page).toHaveURL('/aktuality');
-    await expect(page.getByRole('heading', { level: 1, name: 'Co je u nás nového' })).toBeFocused();
+    await expect(
+      page.getByRole('main').locator(`a[href="/aktuality/${article.slug}"]`).first(),
+    ).toBeFocused();
     expect(await seenTransitions(page)).toEqual([]);
   });
 });

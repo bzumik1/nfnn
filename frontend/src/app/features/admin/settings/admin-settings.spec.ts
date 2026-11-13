@@ -13,6 +13,12 @@ import {
   memoryDraftShelfProviders,
 } from '../../../core/drafts/testing/memory-draft-shelf';
 import { AdminSettings } from './admin-settings';
+import {
+  copyOf,
+  openOfflineFromCopy,
+  textOf,
+  waitsForConnection,
+} from '../device-copy/testing/opened-copy';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -745,5 +751,27 @@ describe('Given an administrator changing the settings on a device that keeps dr
 
     expect(shelf.draftOf('administration', 'settings')).toBeNull();
     expect(element<HTMLInputElement>('#setting-CONTACT_RECIPIENT').value).toBe('info@nfnn.cz');
+  });
+});
+
+describe('Given an administrator offline whose device keeps the administration copy', () => {
+  it('when the settings open, then they come from the copy and the receipt key and signatory say they show once the connection is back', async () => {
+    const { page, http, settle } = await openOfflineFromCopy(
+      AdminSettings,
+      copyOf({ 'operations/settings': [settingsView()] }),
+    );
+    http.expectOne('/api/admin/donations/receipt-signatory').error(new ProgressEvent('error'));
+    http.expectOne('/api/admin/donations/receipt-signing-keys').error(new ProgressEvent('error'));
+    await settle();
+
+    expect(
+      Array.from(page.querySelectorAll('input')).map((input) => (input as HTMLInputElement).value),
+    ).toContain('smtp-relay.brevo.com');
+    const statuses = [...page.querySelectorAll('[role="status"]')].map((line) => textOf(line));
+    expect(statuses).toContain('Klíč ukážeme, až budete online.');
+    expect(statuses).toContain('Kdo potvrzení podepisuje, ukážeme, až budete online.');
+    expect(page.querySelector('.signing-key-error, .signatory-error')).toBeNull();
+    waitsForConnection(page, 'Uložit nastavení');
+    http.verify();
   });
 });

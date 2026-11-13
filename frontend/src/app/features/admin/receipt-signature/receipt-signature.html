@@ -140,5 +140,18 @@
         </div>
       }
     }
+    <div class="signature-offline" role="status">
+      @if (state() === 'offline') {
+        @if (onlineAgain.serverAway()) {
+          <p class="signature-status" i18n="@@admin.signature.serverAway">
+            Podpis ukážeme, až server zase odpoví.
+          </p>
+        } @else {
+          <p class="signature-status" i18n="@@admin.signature.offline">
+            Podpis ukážeme, až budete online.
+          </p>
+        }
+      }
+    </div>
   </div>
 </div>
