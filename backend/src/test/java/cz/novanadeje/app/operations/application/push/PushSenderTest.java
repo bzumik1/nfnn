@@ -13,6 +13,7 @@ import cz.novanadeje.app.operations.domain.push.PushKeyRepository;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
+import cz.novanadeje.app.operations.domain.push.PushRecipient;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import org.junit.jupiter.api.AfterEach;
@@ -52,8 +53,8 @@ class PushSenderTest {
     private final Set<PushEndpoint> throwing = ConcurrentHashMap.newKeySet();
     private final AtomicReference<CountDownLatch> allStarted = new AtomicReference<>();
     private final ListAppender<ILoggingEvent> log = new ListAppender<>();
-    private final PushSender sender = new PushSender((subscription, message, keys) -> deliverTo(subscription),
-            new PushKeyService(new StoredKey(), subscriptions, new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), Clock.fixed(NOW, ZoneOffset.UTC)),
+    private final PushSender sender = new PushSender((recipient, message, keys) -> deliverTo(recipient),
+            new PushKeyService(new StoredKey(), subscriptions, new InMemoryDonorPushSubscriptions(), new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), Clock.fixed(NOW, ZoneOffset.UTC)),
             subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
@@ -168,7 +169,7 @@ class PushSenderTest {
         assertThat(sender.send(List.of(), new PushMessage(PushMessageKind.TEST, 0))).isEqualTo(PushDeliveryReport.NONE);
     }
 
-    private PushOutcome deliverTo(PushSubscription subscription) {
+    private PushOutcome deliverTo(PushRecipient subscription) {
         if (throwing.contains(subscription.endpoint())) {
             throw new IllegalStateException("The push service could not be reached");
         }

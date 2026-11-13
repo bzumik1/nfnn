@@ -34,7 +34,8 @@ class RestoreRevocationSqlTest {
 
     private static final Path REVOCATIONS = Path.of("deploy", "backup", "revoke-restored-credentials.sql");
 
-    private static final List<String> ENDED_AS_SESSIONS = List.of("donor_refresh_token", "donor_device", "operations_push_subscription");
+    private static final List<String> ENDED_AS_SESSIONS = List.of("donor_refresh_token", "donor_device", "operations_push_subscription",
+            "operations_donor_push_subscription");
 
     private static final Map<String, String> KEPT_USABLE_AFTER_A_RESTORE = Map.of(
             "donor_second_factor_recovery", "the 1 Kč recovery unlocks nothing without a payment from the donor's verified account, and a payment made between"
@@ -80,7 +81,7 @@ class RestoreRevocationSqlTest {
     }
 
     @Test
-    @DisplayName("Given a restored copy with a live browser session, a connected application, a rotated token, an expired one, a push subscription and a device and token that ended before, when the sessions end, then every refresh token is revoked, every active device ends as expired, the push subscription goes, what ended before keeps its end and only the two live sessions are counted")
+    @DisplayName("Given a restored copy with a live browser session, a connected application, a rotated token, an expired one, an administrator's and a donor's push subscription and a device and token that ended before, when the sessions end, then every refresh token is revoked, every active device ends as expired, both push subscriptions go, what ended before keeps its end and only the two live sessions are counted")
     void should_revoke_every_refresh_token_and_end_every_device_when_sessions_end_given_restored_copy() {
         refreshToken("019a0000-0000-7000-8000-0000000000e1", "now() + interval '14 days'", "null", DEVICE, "null");
         refreshToken("019a0000-0000-7000-8000-0000000000e2", "now() + interval '14 days'", "null", null, "'https://claude.ai/.well-known/oauth-client'");
@@ -94,6 +95,9 @@ class RestoreRevocationSqlTest {
         jdbc.sql("insert into operations_push_subscription (id, administrator_id, device_id, endpoint, p256dh, auth, created_at)"
                         + " values (gen_random_uuid(), ?::uuid, ?::uuid, 'https://web.push.apple.com/fictional', 'p256dh', 'auth', now())")
                 .params(DONOR, DEVICE).update();
+        jdbc.sql("insert into operations_donor_push_subscription (id, donor_id, device_id, endpoint, p256dh, auth, created_at)"
+                        + " values (gen_random_uuid(), ?::uuid, ?::uuid, 'https://web.push.apple.com/fictional', 'p256dh', 'auth', now())")
+                .params(DONOR, DEVICE).update();
 
         long ended = endSessions();
 
@@ -102,6 +106,7 @@ class RestoreRevocationSqlTest {
         assertThat(jdbc.sql("select end_reason from donor_device where id = ?::uuid").param(DEVICE).query(String.class).single()).isEqualTo("EXPIRED");
         assertThat(count("select count(*) from donor_device where ended_at is null")).isZero();
         assertThat(count("select count(*) from operations_push_subscription")).isZero();
+        assertThat(count("select count(*) from operations_donor_push_subscription")).isZero();
         assertThat(count("select count(*) from donor_device where id = '" + SIGNED_OUT_DEVICE + "'::uuid and end_reason = 'SIGNED_OUT' and ended_at = '"
                 + USED_BEFORE_THE_DUMP + "'::timestamptz")).isOne();
         assertThat(count("select count(*) from donor_refresh_token where id = '" + REVOKED_TOKEN + "'::uuid and revoked_at = '" + USED_BEFORE_THE_DUMP
@@ -132,6 +137,7 @@ class RestoreRevocationSqlTest {
         plantSecrets("now() + interval '1 hour'", "null", '4');
         statements.execute("alter table donor_refresh_token drop column used_at");
         statements.execute("drop table operations_push_subscription");
+        statements.execute("drop table operations_donor_push_subscription");
         statements.execute("drop table donor_device cascade");
         statements.execute("drop table donor_password_reset_token");
 

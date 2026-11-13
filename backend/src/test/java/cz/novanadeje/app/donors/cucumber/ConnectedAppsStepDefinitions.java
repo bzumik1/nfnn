@@ -374,6 +374,25 @@ public class ConnectedAppsStepDefinitions {
         api.get("/api/admin/operations/push");
     }
 
+    @When("the exchanged API token reads the push notifications")
+    public void theExchangedApiTokenReadsThePushNotifications() {
+        actAsExchangedApiToken();
+        api.get("/api/operations/push");
+    }
+
+    @When("the exchanged API token turns push notifications on")
+    public void theExchangedApiTokenTurnsPushNotificationsOn() {
+        actAsExchangedApiToken();
+        api.put("/api/operations/push/device", Map.of("endpoint", "https://fcm.googleapis.com/fcm/send/konektor",
+                "keys", Map.of("p256dh", "BAAA", "auth", "AAAA")));
+    }
+
+    @When("the exchanged API token sends a test push notification")
+    public void theExchangedApiTokenSendsATestPushNotification() {
+        actAsExchangedApiToken();
+        api.post("/api/operations/push/test", Map.of());
+    }
+
     @When("the exchanged API token changes the push alerts of the first device to bank import {word}, backups {word} and mail {word}")
     public void theExchangedApiTokenChangesThePushAlertsOfTheFirstDevice(String bankImport, String backups, String mail) {
         actAsExchangedApiToken();

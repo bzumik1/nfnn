@@ -3,7 +3,7 @@ package cz.novanadeje.app.operations.infrastructure.push;
 import cz.novanadeje.app.operations.application.push.PushDelivery;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
-import cz.novanadeje.app.operations.domain.push.PushSubscription;
+import cz.novanadeje.app.operations.domain.push.PushRecipient;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,16 +39,16 @@ class WebPushDelivery implements PushDelivery {
     }
 
     @Override
-    public PushOutcome deliver(PushSubscription subscription, PushMessage message, VapidKeys keys) {
-        byte[] body = encryption.encrypt(subscription.keys().p256dhBytes(), subscription.keys().authBytes(),
+    public PushOutcome deliver(PushRecipient recipient, PushMessage message, VapidKeys keys) {
+        byte[] body = encryption.encrypt(recipient.keys().p256dhBytes(), recipient.keys().authBytes(),
                 payloads.of(message), PADDED_MESSAGE_BYTES);
         Map<String, String> headers = Map.of(
-                "Authorization", VapidToken.authorization(keys, subscription.endpoint(), site.publicUrl(), clock.instant()),
+                "Authorization", VapidToken.authorization(keys, recipient.endpoint(), site.publicUrl(), clock.instant()),
                 "Content-Encoding", "aes128gcm",
                 "Content-Type", "application/octet-stream",
                 "TTL", Long.toString(TIME_TO_LIVE.toSeconds()),
                 "Urgency", "high");
-        int status = transport.post(subscription.endpoint().uri(), headers, body);
+        int status = transport.post(recipient.endpoint().uri(), headers, body);
         if (status >= 200 && status < 300) {
             return PushOutcome.DELIVERED;
         }

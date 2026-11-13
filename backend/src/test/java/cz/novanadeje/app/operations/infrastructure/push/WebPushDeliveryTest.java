@@ -89,14 +89,18 @@ class WebPushDeliveryTest {
     }
 
     @Test
-    @DisplayName("Given every kind of alert with the largest count, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size")
+    @DisplayName("Given every kind of alert with the largest count and every kind of donor notification, when they are delivered, then their bodies have the same length, so the push service cannot tell them apart by size, and only the alerts carry a count")
     void should_send_bodies_of_one_length_when_delivered_given_every_kind() {
         Set<Integer> lengths = new HashSet<>();
         for (PushMessageKind kind : PushMessageKind.values()) {
-            for (int count : new int[]{0, PushMessage.MAX_COUNT}) {
+            for (int count : kind.carriesOpenAlertCount() ? new int[]{0, PushMessage.MAX_COUNT} : new int[]{0}) {
                 delivery.deliver(SUBSCRIPTION, new PushMessage(kind, count), keys);
                 lengths.add(sent.get().body().length);
-                assertThat(decrypted()).contains("\"kind\":\"" + kind.token() + "\",\"count\":" + count + ",");
+                if (kind.carriesOpenAlertCount()) {
+                    assertThat(decrypted()).contains("\"kind\":\"" + kind.token() + "\",\"count\":" + count + ",");
+                } else {
+                    assertThat(decrypted()).contains("\"kind\":\"" + kind.token() + "\",\"notification\"").doesNotContain("\"count\"");
+                }
             }
         }
 

@@ -5,7 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record PushSubscription(PushSubscriptionId id, UUID administratorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys keys,
-                               PushAlerts alerts, Instant createdAt, Optional<Instant> lastDeliveredAt, int failuresInARow) {
+                               PushAlerts alerts, Instant createdAt, Optional<Instant> lastDeliveredAt, int failuresInARow)
+        implements PushRecipient {
 
     public static final int MAX_PER_ADMINISTRATOR = 10;
     public static final int FAILURES_WORTH_A_WARNING = 3;

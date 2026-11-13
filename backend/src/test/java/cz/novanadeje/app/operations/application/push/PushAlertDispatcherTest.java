@@ -56,7 +56,7 @@ class PushAlertDispatcherTest {
             delivered.add(new Delivered(subscription.endpoint(), message));
         }
         return outcomes.getOrDefault(subscription.endpoint(), PushOutcome.DELIVERED);
-    }, new PushKeyService(new StoredKey(), subscriptions, new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), CLOCK),
+    }, new PushKeyService(new StoredKey(), subscriptions, new InMemoryDonorPushSubscriptions(), new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), CLOCK),
             subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), CLOCK);
     private final PushAlertDispatcher dispatcher = new PushAlertDispatcher(sender, subscriptions, alerts, timer, CLOCK);
 

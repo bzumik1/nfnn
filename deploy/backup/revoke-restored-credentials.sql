@@ -20,6 +20,9 @@ begin
   if to_regclass('public.operations_push_subscription') is not null then
     delete from public.operations_push_subscription;
   end if;
+  if to_regclass('public.operations_donor_push_subscription') is not null then
+    delete from public.operations_donor_push_subscription;
+  end if;
   return ended;
 end
 $$;

@@ -5,6 +5,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.operations.application.settings.CarriedSettingsKeyService;
 import cz.novanadeje.app.operations.application.settings.ReversibleSealer;
+import cz.novanadeje.app.operations.domain.push.DonorNotifications;
+import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
@@ -41,10 +43,11 @@ class PushKeyServiceTest {
 
     private final InMemoryPushKeys stored = new InMemoryPushKeys();
     private final InMemoryPushSubscriptions subscriptions = new InMemoryPushSubscriptions();
+    private final InMemoryDonorPushSubscriptions donorSubscriptions = new InMemoryDonorPushSubscriptions();
     private final ReversibleSealer sealer = new ReversibleSealer();
     private final Deque<VapidKeys> generated = new ArrayDeque<>(List.of(FIRST, SECOND));
     private final CarriedSettingsKeyService carriedKeys = mock(CarriedSettingsKeyService.class);
-    private final PushKeyService service = new PushKeyService(stored, subscriptions, sealer, generated::removeFirst, carriedKeys,
+    private final PushKeyService service = new PushKeyService(stored, subscriptions, donorSubscriptions, sealer, generated::removeFirst, carriedKeys,
             Clock.fixed(NOW, ZoneOffset.UTC));
     private final ListAppender<ILoggingEvent> log = new ListAppender<>();
 
@@ -76,20 +79,24 @@ class PushKeyServiceTest {
     }
 
     @Test
-    @DisplayName("Given push keys sealed by another settings key, when they are asked for, then new keys replace them, every subscription is removed and one warning without a key is logged")
+    @DisplayName("Given push keys sealed by another settings key, when they are asked for, then new keys replace them, every administrator's and donor's subscription is removed and one warning without a key is logged")
     void should_replace_keys_and_remove_subscriptions_when_asked_given_unreadable_keys() {
         stored.replace(new PushKey(SECOND.publicKey(), new ReversibleSealer("other:").seal(PushKey.SEAL_PURPOSE, SECOND.privateKey()), NOW));
         subscriptions.save(PushSubscription.subscribe(UUID.randomUUID(), UUID.randomUUID(), new PushEndpoint("https://fcm.googleapis.com/fcm/send/a"),
                 new PushClientKeys("BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", "BTBZMqHH6r4Tts7J_aSIgg"),
                 PushAlerts.ALL, NOW));
+        donorSubscriptions.save(DonorPushSubscription.subscribe(UUID.randomUUID(), UUID.randomUUID(), new PushEndpoint("https://fcm.googleapis.com/fcm/send/b"),
+                new PushClientKeys("BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", "BTBZMqHH6r4Tts7J_aSIgg"),
+                DonorNotifications.ALL, NOW));
 
         assertThat(service.current()).isEqualTo(FIRST);
 
         assertThat(subscriptions.all()).isEmpty();
+        assertThat(donorSubscriptions.all()).isEmpty();
         assertThat(stored.find()).map(PushKey::publicKey).contains(FIRST.publicKey());
         assertThat(log.list).singleElement().satisfies(event -> {
             assertThat(event.getLevel().toString()).isEqualTo("WARN");
-            assertThat(event.getFormattedMessage()).contains("1 push subscriptions removed").doesNotContain(FIRST.privateKey()).doesNotContain(SECOND.privateKey());
+            assertThat(event.getFormattedMessage()).contains("2 push subscriptions removed").doesNotContain(FIRST.privateKey()).doesNotContain(SECOND.privateKey());
         });
     }
 
