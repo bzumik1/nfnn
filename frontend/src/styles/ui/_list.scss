@@ -428,6 +428,9 @@ button.ui-list__row {
 
   > .ui-pill-button {
     @include touch-target.reaches-finger-size;
+
+    max-width: 100%;
+    white-space: normal;
   }
 }
 

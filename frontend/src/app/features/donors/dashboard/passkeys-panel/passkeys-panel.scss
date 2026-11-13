@@ -48,10 +48,6 @@
   font-size: var(--text-xs);
 }
 
-.passkey-date {
-  white-space: nowrap;
-}
-
 .passkey-list + .passkeys-hint {
   margin-top: var(--space-3);
 }
@@ -87,6 +83,12 @@
 
 .passkeys-form {
   max-width: 560px;
+}
+
+@include bp.container-up(passkey-rows, tiny) {
+  .passkey-date {
+    white-space: nowrap;
+  }
 }
 
 @include bp.container-down(passkey-rows, tiny) {
