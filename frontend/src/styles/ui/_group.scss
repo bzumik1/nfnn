@@ -37,7 +37,17 @@
   color: var(--color-text-soft);
 }
 
-a.ui-group-aside {
+button.ui-group-aside {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  text-align: start;
+  cursor: pointer;
+}
+
+a.ui-group-aside,
+button.ui-group-aside {
   @include touch-target.reaches-finger-size;
 
   color: var(--color-accent);

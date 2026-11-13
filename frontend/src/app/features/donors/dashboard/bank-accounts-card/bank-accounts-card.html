@@ -1,38 +1,25 @@
-<section class="ui-card ui-card--padded accounts-card" aria-labelledby="bank-accounts-title">
-  <div class="accounts-head">
-    <div class="accounts-heading">
-      <h2
-        #title
-        id="bank-accounts-title"
-        class="ui-card__title accounts-title"
-        tabindex="-1"
-        i18n="@@donor.bankAccounts.title"
-      >
-        Moje bankovní účty
-      </h2>
-      <button
-        #helpToggle
-        type="button"
-        class="accounts-help"
-        aria-controls="accounts-help-panel"
-        [attr.aria-expanded]="helpOpen()"
-        (click)="toggleHelp()"
-        (keydown.escape)="closeHelp()"
-      >
-        <span class="accounts-help-icon" aria-hidden="true">?</span>
-        <span i18n="@@donor.bankAccounts.help.toggle">Jak přiřazujeme platby?</span>
-      </button>
-    </div>
-    <button
-      appNeedsConnection
-      #addButton
-      type="button"
-      class="ui-button ui-button--primary accounts-add"
-      [disabled]="!variableSymbol()"
-      (click)="openAdd()"
-      i18n="@@donor.bankAccounts.add"
+<section class="accounts-card" aria-labelledby="bank-accounts-title">
+  <div class="ui-group-head accounts-head">
+    <h2
+      #title
+      id="bank-accounts-title"
+      class="ui-group-title accounts-title"
+      tabindex="-1"
+      i18n="@@donor.bankAccounts.title"
     >
-      Přidat účet
+      Moje bankovní účty
+    </h2>
+    <button
+      #helpToggle
+      type="button"
+      class="ui-group-aside accounts-help"
+      aria-controls="accounts-help-panel"
+      [attr.aria-expanded]="helpOpen()"
+      (click)="toggleHelp()"
+      (keydown.escape)="closeHelp()"
+    >
+      <span class="accounts-help-icon" aria-hidden="true">?</span>
+      <span i18n="@@donor.bankAccounts.help.toggle">Jak přiřazujeme platby?</span>
     </button>
   </div>
 
@@ -42,115 +29,89 @@
     (closeRequested)="closeHelp()"
   />
 
-  @switch (state()) {
-    @case ('loading') {
-      <p class="accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
-        Načítáme vaše účty…
-      </p>
-    }
-    @case ('error') {
-      <div class="ui-callout ui-callout--danger accounts-load-error" role="alert">
-        <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button accounts-retry"
-          (click)="retry()"
-          i18n="@@donor.bankAccounts.error.retry"
-        >
-          Zkusit znovu
-        </button>
-      </div>
-    }
-    @case ('ready') {
-      @if (accounts().length > 0) {
-        <ul class="accounts-list">
-          @for (account of accounts(); track account.id) {
-            <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
-              <div class="account-main">
-                @if (isCzech(account)) {
-                  <app-bank-logo
-                    class="account-logo"
-                    [account]="account.accountNumber"
-                    [size]="40"
+  <ul class="ui-list ui-list--inset accounts-list">
+    @if (state() === 'ready') {
+      @for (account of accounts(); track account.id) {
+        <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
+          <div class="ui-list__row account-row">
+            <span class="ui-list__lead account-lead">
+              @if (isCzech(account)) {
+                <app-bank-logo class="account-logo" [account]="account.accountNumber" [size]="40" />
+              } @else {
+                <app-bank-mark class="account-logo" [size]="40" />
+              }
+            </span>
+            @let number = accountParts(account.accountNumber);
+            <span class="ui-list__title account-line"
+              ><span class="account-number ui-figures"
+                >{{ number.head }}<wbr />{{ number.bankCode }}</span
+              >&ngsp;<span class="ui-badge account-status" [class]="labelModifier(account)">{{
+                label(account)
+              }}</span></span
+            >
+            @let bank = bankName(account);
+            @if (
+              bank || account.verifiedOn || account.disconnectedOn || account.donationCount > 0
+            ) {
+              &ngsp;
+              <div class="ui-list__meta account-meta-wrap">
+                <ul class="account-meta">
+                  @if (bank) {
+                    <li class="account-bank">{{ bank }}</li>
+                  }
+                  @if (account.verifiedOn; as verifiedOn) {
+                    <li i18n="@@donor.bankAccounts.verifiedOn">
+                      ověřeno {{ formatDate(verifiedOn) }}
+                    </li>
+                  }
+                  @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
+                    <li i18n="@@donor.bankAccounts.disconnectedFrom">
+                      vypnuto od {{ firstDayOff(account.disconnectedOn) }}
+                    </li>
+                  }
+                  @if (account.donationCount > 0) {
+                    <li i18n="@@donor.bankAccounts.donationCount">
+                      {account.donationCount, plural,
+                        one {{{ account.donationCount }} dar bez symbolu}
+                        few {{{ account.donationCount }} dary bez symbolu}
+                        other {{{ account.donationCount }} darů bez symbolu}
+                      }
+                    </li>
+                    <li class="account-total ui-figures">
+                      {{ crowns(account.totalAmountMinor) }}&nbsp;Kč
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+            <div class="ui-list__extra account-body">
+              @if (hint(account); as hint) {
+                @if (warns(account)) {
+                  <ng-container
+                    [ngTemplateOutlet]="warning"
+                    [ngTemplateOutletContext]="{ $implicit: hint }"
+                  />
+                } @else {
+                  <p class="account-hint">{{ hint }}</p>
+                }
+              }
+              @for (symbol of account.confirmedSymbols; track symbol) {
+                <p class="account-hint" i18n="@@donor.bankAccounts.claim.confirmed">
+                  Platby se symbolem <strong class="ui-figures">{{ symbol }}</strong> z tohoto účtu
+                  jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez symbolu.
+                </p>
+              }
+              @if (account.symbolOffer; as offer) {
+                @if (confirming() !== account.id && !asksInDialog(account)) {
+                  <app-symbol-claim
+                    [accountId]="account.id"
+                    [offer]="offer"
+                    [donorName]="donorName()"
+                    [busy]="busy() === account.id"
+                    (answer)="answer(account, offer, $event)"
                   />
                 }
-                <div class="account-identity">
-                  <div class="account-line">
-                    <span class="account-number ui-figures">{{ account.accountNumber }}</span>
-                    <span class="account-status" [class]="labelModifier(account)">{{
-                      label(account)
-                    }}</span>
-                  </div>
-                  @let bank = bankName(account);
-                  @if (
-                    bank ||
-                    account.verifiedOn ||
-                    account.disconnectedOn ||
-                    account.donationCount > 0
-                  ) {
-                    <div class="account-meta-wrap">
-                      <ul class="account-meta">
-                        @if (bank) {
-                          <li class="account-bank">{{ bank }}</li>
-                        }
-                        @if (account.verifiedOn; as verifiedOn) {
-                          <li i18n="@@donor.bankAccounts.verifiedOn">
-                            ověřeno {{ formatDate(verifiedOn) }}
-                          </li>
-                        }
-                        @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
-                          <li i18n="@@donor.bankAccounts.disconnectedFrom">
-                            vypnuto od {{ firstDayOff(account.disconnectedOn) }}
-                          </li>
-                        }
-                        @if (account.donationCount > 0) {
-                          <li i18n="@@donor.bankAccounts.donationCount">
-                            {account.donationCount, plural,
-                              one {{{ account.donationCount }} dar bez symbolu}
-                              few {{{ account.donationCount }} dary bez symbolu}
-                              other {{{ account.donationCount }} darů bez symbolu}
-                            }
-                          </li>
-                          <li class="account-total ui-figures">
-                            {{ crowns(account.totalAmountMinor) }}&nbsp;Kč
-                          </li>
-                        }
-                      </ul>
-                    </div>
-                  }
-                </div>
-                <div class="account-body">
-                  @if (hint(account); as hint) {
-                    @if (warns(account)) {
-                      <ng-container
-                        [ngTemplateOutlet]="warning"
-                        [ngTemplateOutletContext]="{ $implicit: hint }"
-                      />
-                    } @else {
-                      <p class="account-hint">{{ hint }}</p>
-                    }
-                  }
-                  @for (symbol of account.confirmedSymbols; track symbol) {
-                    <p class="account-hint" i18n="@@donor.bankAccounts.claim.confirmed">
-                      Platby se symbolem <strong class="ui-figures">{{ symbol }}</strong> z tohoto
-                      účtu jste potvrdili jako své a přiřazujeme vám je stejně jako platby bez
-                      symbolu.
-                    </p>
-                  }
-                  @if (account.symbolOffer; as offer) {
-                    @if (confirming() !== account.id && !asksInDialog(account)) {
-                      <app-symbol-claim
-                        [accountId]="account.id"
-                        [offer]="offer"
-                        [donorName]="donorName()"
-                        [busy]="busy() === account.id"
-                        (answer)="answer(account, offer, $event)"
-                      />
-                    }
-                  }
-                </div>
-              </div>
+              }
 
               @if (confirming() !== account.id) {
                 @if (offersReconnect(account)) {
@@ -230,30 +191,87 @@
                   </div>
                 </div>
               }
-            </li>
-          }
-        </ul>
+            </div>
+          </div>
+        </li>
+      }
+    }
+    <li>
+      <button
+        appNeedsConnection
+        #addButton
+        type="button"
+        class="ui-list__row ui-list__row--action accounts-add"
+        [disabled]="!variableSymbol()"
+        (click)="openAdd()"
+      >
+        <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v8" />
+            <path d="M8 12h8" />
+          </svg>
+        </span>
+        <span class="ui-list__title" i18n="@@donor.bankAccounts.add">Přidat účet</span>
+      </button>
+    </li>
+  </ul>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="ui-group-note accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
+        Načítáme vaše účty…
+      </p>
+    }
+    @case ('error') {
+      <div class="ui-callout ui-callout--danger accounts-load-error" role="alert">
+        <p i18n="@@donor.bankAccounts.error.load">Bankovní účty se nepodařilo načíst.</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button accounts-retry"
+          (click)="retry()"
+          i18n="@@donor.bankAccounts.error.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      @if (accounts().length > 0) {
         @if (nudgesStandingOrder()) {
-          <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.list">
+          <p class="ui-group-note accounts-nudge" i18n="@@donor.bankAccounts.nudge.list">
             Posíláte trvalým příkazem se starším symbolem? Ověřte platbou 1&nbsp;Kč ze stejného účtu
             a uvidíte i dřívější dary.
           </p>
         }
       } @else {
-        <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
+        <p class="ui-group-note accounts-empty" i18n="@@donor.bankAccounts.empty">
           Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. Poslali
           jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? Přidejte účet, ze
           kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme
           také.
         </p>
         @if (variableSymbol(); as symbol) {
-          <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
+          <p class="ui-group-note accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
             Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu variabilní
             symbol na <strong class="ui-figures">{{ symbol }}</strong
             >. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
           </p>
         } @else {
-          <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.emptyWithoutNumber">
+          <p
+            class="ui-group-note accounts-nudge"
+            i18n="@@donor.bankAccounts.nudge.emptyWithoutNumber"
+          >
             Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu variabilní
             symbol na váš. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
           </p>
@@ -263,9 +281,13 @@
   }
 
   @if (actionError()) {
-    <p class="ui-callout ui-callout--danger accounts-error" role="alert">{{ actionError() }}</p>
+    <p class="ui-group-note ui-group-note--alert accounts-error" role="alert">
+      {{ actionError() }}
+    </p>
   }
-  <p class="accounts-status" role="status">{{ actionDone() }}</p>
+  <p class="ui-group-note ui-group-note--status accounts-status" role="status">
+    {{ actionDone() }}
+  </p>
 </section>
 
 <ng-template #warning let-text>
