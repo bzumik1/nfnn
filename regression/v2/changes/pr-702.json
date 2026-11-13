@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.donor.DonorRecordServiceTest > Given pairing that deadlocks with the import, when payments are paired after the registration, then the lock failure is logged as a lost race and swallowed",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): Spring's lock failure is translated into a lost race in the new pairing adapter, so the test of the translation moved there",
+    "replacement": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given a deadlock with the import, when the donor's payments are paired, then the lock failure becomes a lost race",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.donor.DonorRecordServiceTest > Given pairing that loses a race with the import, when payments are paired after the registration, then the integrity violation is logged and swallowed",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the service now receives the adapter's lost race instead of Spring's integrity violation, so the test names the lost race",
+    "replacement": "donations.application.donor.DonorRecordServiceTest > Given pairing that loses a race with the import, when payments are paired after the registration, then the lost race is logged and swallowed",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.receipt.DonationReceiptIssuerTest > Given an issue inside a transaction, when the receipt is stored, then the line naming the issued receipt is written only once the transaction commits, and never when it rolls back",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the issuer hands the line to the AfterCommitWork port; the issuer test pins the hand-over and the adapter test pins commit and rollback",
+    "replacement": "donations.application.receipt.DonationReceiptIssuerTest > Given a receipt to issue, when it is stored, then the line naming the issued receipt is handed over to run after the commit and is not written before",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.backup.FileBackupStoreTest > Given a dump in the folder, when it is opened, then its path and size come back; an unknown or odd name opens nothing",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): a backup download carries a content handle instead of a file path, so the store gives the size and the content",
+    "replacement": "operations.infrastructure.backup.FileBackupStoreTest > Given a dump in the folder, when it is opened, then its size and its content come back; an unknown or odd name opens nothing",
+    "contract": "docs/api-contract.md, Backups"
+  }
+]

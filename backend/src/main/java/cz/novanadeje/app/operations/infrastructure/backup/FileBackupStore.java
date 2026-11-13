@@ -252,7 +252,7 @@ class FileBackupStore implements BackupStore {
         if (!Files.isRegularFile(path)) {
             return Optional.empty();
         }
-        return Optional.of(new BackupDownload(new BackupFile(fileName, size(path), lastModified(path)), path));
+        return Optional.of(new BackupDownload(new BackupFile(fileName, size(path), lastModified(path)), () -> Files.newInputStream(path)));
     }
 
     private static Optional<BackupRequestKind> requestKind(String fileName) {
