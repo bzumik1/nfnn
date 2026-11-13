@@ -3,6 +3,7 @@ import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
   bankAccountItem,
   donationItem,
+  donor,
   mockDonorApi,
   noDonations,
   openDonorSection,
@@ -353,6 +354,78 @@ for (const { width, height } of [
         for (const row of await rows.all()) {
           await expect.poll(() => numbersSplitAcrossLines(row), textSize).toEqual([]);
           await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
+        }
+      }
+    });
+
+    test('when a signed-in donor opens Údaje a zabezpečení and the passkeys, then every row stays whole within its cell and its actions stand under its state', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donors/me/passkeys',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000001',
+                  name: 'iPhone Jany Novákové',
+                  createdAt: '2026-10-17T08:00:00Z',
+                  lastUsedAt: '2026-10-22T09:00:00Z',
+                },
+                {
+                  id: '019a1b2c-3d4e-7f00-8000-000000000002',
+                  name: 'Pracovní notebook',
+                  createdAt: '2026-10-20T08:00:00Z',
+                  lastUsedAt: null,
+                },
+              ],
+            },
+          }),
+      );
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page, {
+        ...donor,
+        pendingEmailChange: {
+          newEmail: 'jana.novakova@example.cz',
+          expiresAt: '2026-10-19T11:00:00Z',
+        },
+      });
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.getByRole('button', { name: 'Spravovat přístupové klíče' }).click();
+      await expect(page.locator('.passkey-name')).toHaveCount(2);
+      await page.setViewportSize({ width, height });
+      const accountRows = page.locator('.account-row');
+      const passkeyRows = page.locator('.passkey-row');
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        for (const row of [
+          ...(await page.locator('.profile-row').all()),
+          ...(await accountRows.all()),
+          ...(await passkeyRows.all()),
+        ]) {
+          await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
+        }
+        for (const [row, state, actions] of [
+          [accountRows.nth(1), '.account-value', '.account-actions'],
+          [passkeyRows.first(), '.passkey-dates', '.passkey-actions'],
+        ] as const) {
+          await expect
+            .poll(
+              () =>
+                row.evaluate(
+                  (element, parts) =>
+                    element.querySelector(parts.actions)!.getBoundingClientRect().top >=
+                    element.querySelector(parts.state)!.getBoundingClientRect().bottom - 1,
+                  { state, actions },
+                ),
+              textSize,
+            )
+            .toBe(true);
         }
       }
     });

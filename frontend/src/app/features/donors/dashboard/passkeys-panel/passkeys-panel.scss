@@ -33,7 +33,6 @@
 }
 
 .passkey-list {
-  margin-bottom: var(--space-3);
   border-top: 1px solid var(--color-separator);
 
   > li + li {
@@ -51,6 +50,10 @@
 
 .passkey-date {
   white-space: nowrap;
+}
+
+.passkey-list + .passkeys-hint {
+  margin-top: var(--space-3);
 }
 
 .passkey .passkeys-hint {
