@@ -1,13 +1,12 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.content.infrastructure.mail;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.donors.domain.DonorId;
-import cz.novanadeje.app.shared.application.event.ReceiptSignatureChanged;
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
@@ -51,8 +50,8 @@ import static org.mockito.Mockito.when;
 class ReceiptSignatureChangedEmailSenderTest {
 
     private static final Instant CHANGED_AT = Instant.parse("2026-11-12T09:05:00Z");
-    private static final DonorId JANA = DonorId.newId(CHANGED_AT.minusSeconds(3000));
-    private static final DonorId PETR = DonorId.newId(CHANGED_AT.minusSeconds(2000));
+    private static final UUID JANA = UUID.fromString("019a3a00-0000-7000-8000-00000000a001");
+    private static final UUID PETR = UUID.fromString("019a3a00-0000-7000-8000-00000000a002");
     private static final UUID PERSON = UUID.fromString("019a3a00-0000-7000-8000-00000000f001");
     private static final AdministratorContact JANA_CONTACT = new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS);
     private static final AdministratorContact PETR_CONTACT = new AdministratorContact(PETR, new EmailAddress("petr@example.cz"), LocaleCode.EN);
@@ -61,7 +60,7 @@ class ReceiptSignatureChangedEmailSenderTest {
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration.class, ThymeleafAutoConfiguration.class));
-    private final AdministratorService administrators = mock(AdministratorService.class);
+    private final AdministratorContacts administrators = mock(AdministratorContacts.class);
 
     private ListAppender<ILoggingEvent> logged;
     private Logger senderLog;
@@ -72,7 +71,7 @@ class ReceiptSignatureChangedEmailSenderTest {
         logged = new ListAppender<>();
         logged.start();
         senderLog.addAppender(logged);
-        when(administrators.contacts()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
     }
 
     @AfterEach
@@ -85,7 +84,7 @@ class ReceiptSignatureChangedEmailSenderTest {
     void should_tell_every_administrator_when_changed_given_two_administrators_and_a_connection() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA.value(), Optional.of("claude.ai"), PERSON, "Josef Vzorový", false, CHANGED_AT));
+            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA, Optional.of("claude.ai"), PERSON, "Josef Vzorový", false, CHANGED_AT));
 
             assertThat(recording.sent()).hasSize(2);
             MimeMessage czech = MailContents.asReceived(recording.sent().getFirst());
@@ -127,10 +126,10 @@ class ReceiptSignatureChangedEmailSenderTest {
     @Test
     @DisplayName("Given the administrator who removed the signature is no longer one and no connection took part, when the notice goes out, then it names no address and no connection and says the receipts carry the line only")
     void should_name_no_address_when_removed_given_administrator_gone() {
-        when(administrators.contacts()).thenReturn(List.of(PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(PETR_CONTACT));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA.value(), Optional.empty(), PERSON, "Josef Vzorový", true, CHANGED_AT));
+            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA, Optional.empty(), PERSON, "Josef Vzorový", true, CHANGED_AT));
 
             String english = MailContents.plainText(MailContents.asReceived(recording.sent().getFirst()));
             assertThat(english)
@@ -149,7 +148,7 @@ class ReceiptSignatureChangedEmailSenderTest {
         doThrow(new MailSendException("Failed messages: 550 jana@example.cz rejected")).when(failing).send(any(MimeMessage.class));
 
         contexts.withBean(JavaMailSender.class, () -> failing).run(context -> {
-            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA.value(), Optional.empty(), PERSON, "Josef Vzorový", false, CHANGED_AT));
+            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA, Optional.empty(), PERSON, "Josef Vzorový", false, CHANGED_AT));
 
             assertThat(logged.list).hasSize(2).allSatisfy(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
@@ -157,21 +156,21 @@ class ReceiptSignatureChangedEmailSenderTest {
                 assertThat(line.getThrowableProxy()).isNull();
             });
             assertThat(logged.list.getFirst().getFormattedMessage())
-                    .isEqualTo("The notice of the changed receipt signature for admin " + JANA.value() + " could not be sent: MailSendException");
+                    .isEqualTo("The notice of the changed receipt signature for admin " + JANA + " could not be sent: MailSendException");
         });
     }
 
     @Test
     @DisplayName("Given the administrators cannot be read, when the notices are prepared, then the failure is logged with the admin id and the exception class only")
     void should_log_when_prepared_given_unreadable_administrators() {
-        when(administrators.contacts()).thenThrow(new IllegalStateException("database gone"));
+        when(administrators.all()).thenThrow(new IllegalStateException("database gone"));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA.value(), Optional.empty(), PERSON, "Josef Vzorový", false, CHANGED_AT));
+            sender(context).sendChangedNotice(new ReceiptSignatureChanged(JANA, Optional.empty(), PERSON, "Josef Vzorový", false, CHANGED_AT));
 
             assertThat(recording.sent()).isEmpty();
             assertThat(logged.list).singleElement().satisfies(line -> assertThat(line.getFormattedMessage())
-                    .isEqualTo("The notices that admin " + JANA.value() + " changed the receipt signature could not be prepared: IllegalStateException"));
+                    .isEqualTo("The notices that admin " + JANA + " changed the receipt signature could not be prepared: IllegalStateException"));
         });
     }
 

@@ -841,6 +841,7 @@ export class AdminPeople {
     call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (saved) => {
         this.uploadingSignature.set(false);
+        this.kept.forget('receipt-signatory');
         this.members.update((members) =>
           members.map((member) => (member.id === saved.id ? saved : member)),
         );

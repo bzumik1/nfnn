@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.application.people;
 
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
@@ -19,7 +20,6 @@ import cz.novanadeje.app.content.domain.people.TooManyPeople;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
-import cz.novanadeje.app.shared.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
 import cz.novanadeje.app.shared.domain.PrintableText;
 import cz.novanadeje.app.shared.domain.EmailAddress;

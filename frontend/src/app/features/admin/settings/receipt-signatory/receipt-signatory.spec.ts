@@ -171,8 +171,7 @@ describe('Given an administrator who saw the card of who signs the receipts once
   async function signatoryArrives(): Promise<void> {
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
   }
 
@@ -220,8 +219,7 @@ describe('Given an administrator who saw the card of who signs the receipts once
   async function signatoryArrives(): Promise<void> {
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
   }
 

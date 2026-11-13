@@ -19,7 +19,7 @@ import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
-import cz.novanadeje.app.shared.application.event.ReceiptSignatureChanged;
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;

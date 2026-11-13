@@ -695,7 +695,9 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(fixture.nativeElement.querySelector('.remove-part .ui-callout')).toBeNull();
   });
 
-  it('when they upload the signature of the person who signs the receipts, then the page says the receipts print it from now on and the administrators are told', async () => {
+  it('when they upload the signature of the person who signs the receipts, then the page says the receipts print it from now on, the administrators are told and the kept card of who signs is forgotten', async () => {
+    const kept = TestBed.inject(KeptAdministrationAnswers);
+    kept.keep('receipt-signatory', { block: null });
     await click(fixture, `#person-edit-${PERSON_ID}`);
     expect(text(fixture, '#person-signature-hint')).toContain(
       'vytiskne se na potvrzeních o daru, která osoba podepisuje',
@@ -722,6 +724,7 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(text(fixture, '.signature-part .ui-notice--status')).toBe(
       'Podpis je uložený. Ukáže se pod slovem zakladatelů a vytiskne se na potvrzeních o daru vystavených od teď; správci o změně dostanou e-mail.',
     );
+    expect(kept.kept('receipt-signatory')).toBeNull();
   });
 
   it('when they let another person sign without a receipt role, then the field says so and nothing is sent', async () => {

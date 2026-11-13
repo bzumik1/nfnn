@@ -1,8 +1,8 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.content.infrastructure.mail;
 
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.shared.application.event.ReceiptSignatureChanged;
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
@@ -29,17 +29,17 @@ import java.util.Optional;
 class ReceiptSignatureChangedEmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(ReceiptSignatureChangedEmailSender.class);
-    private static final String KEYS = "donors.receiptSignatureChanged.email.";
-    private static final String TEMPLATE = "email/donors/receipt-signature-changed";
+    private static final String KEYS = "content.receiptSignatureChanged.email.";
+    private static final String TEMPLATE = "email/content/receipt-signature-changed";
 
     private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final MailSenderProperties sender;
-    private final AdministratorService administrators;
+    private final AdministratorContacts administrators;
 
     ReceiptSignatureChangedEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender,
-                                       AdministratorService administrators) {
+                                       AdministratorContacts administrators) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
@@ -51,9 +51,9 @@ class ReceiptSignatureChangedEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendChangedNotice(ReceiptSignatureChanged event) {
         try {
-            List<AdministratorContact> recipients = administrators.contacts();
+            List<AdministratorContact> recipients = administrators.all();
             Optional<String> changedBy = recipients.stream()
-                    .filter(contact -> contact.id().value().equals(event.adminId()))
+                    .filter(contact -> contact.accountId().equals(event.adminId()))
                     .map(contact -> contact.email().value())
                     .findFirst();
             recipients.forEach(recipient -> send(recipient, changedBy, event));
@@ -79,7 +79,7 @@ class ReceiptSignatureChangedEmailSender {
         try {
             mailSender.send(emails.compose(draft));
         } catch (MailException e) {
-            log.error("The notice of the changed receipt signature for admin {} could not be sent: {}", recipient.id(), e.getClass().getSimpleName());
+            log.error("The notice of the changed receipt signature for admin {} could not be sent: {}", recipient.accountId(), e.getClass().getSimpleName());
         }
     }
 
