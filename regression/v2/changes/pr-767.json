@@ -1,0 +1,58 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest > Given the register throws something unexpected, when a company is looked up, then nothing comes back and the warning names only the exception class",
+    "reason": "Architecture audit #621 (R3-A4, #757): the adapter's breaker turns an unexpected exception into the closed failure UNEXPECTED_EXCEPTION naming only its class, so the service's test starts from that failure; the line is unchanged",
+    "replacement": "donors.application.CompanyLookupServiceTest > Given the register is unavailable for an unexpected exception, when a company is looked up, then nothing comes back and the warning names only the exception class",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest > Given two failures followed by an answer, when the register fails again, then it is still asked next time",
+    "reason": "Architecture audit #621 (R3-A4, #757): the circuit breaker moved from CompanyLookupService into the adapter as CompanyRegistryBreaker, a decorator of the port, so its test moved with it; thresholds, timing and the API's answers are unchanged",
+    "replacement": "donors.infrastructure.ares.CompanyRegistryBreakerTest > Given two failures followed by an answer, when the register fails again, then it is still asked next time",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest > Given two failures more than five minutes ago, when the register fails once more, then it is still asked next time",
+    "reason": "Architecture audit #621 (R3-A4, #757): the circuit breaker moved from CompanyLookupService into the adapter as CompanyRegistryBreaker, a decorator of the port, so its test moved with it; thresholds, timing and the API's answers are unchanged",
+    "replacement": "donors.infrastructure.ares.CompanyRegistryBreakerTest > Given two failures more than five minutes ago, when the register fails once more, then it is still asked next time",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest$GivenThreeFailuresInARow > when a company is looked up within five minutes, then the register is not asked and nothing more is logged",
+    "reason": "Architecture audit #621 (R3-A4, #757): the circuit breaker moved from CompanyLookupService into the adapter as CompanyRegistryBreaker, a decorator of the port, so its test moved with it; thresholds, timing and the API's answers are unchanged",
+    "replacement": "donors.infrastructure.ares.CompanyRegistryBreakerTest$GivenThreeFailuresInARow > when a company is found within five minutes, then the register is not asked and the lookup is paused",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest$GivenThreeFailuresInARow > when five minutes have passed and the register answers, then the company comes back and the next failure does not pause again",
+    "reason": "Architecture audit #621 (R3-A4, #757): the circuit breaker moved from CompanyLookupService into the adapter as CompanyRegistryBreaker, a decorator of the port, so its test moved with it; thresholds, timing and the API's answers are unchanged",
+    "replacement": "donors.infrastructure.ares.CompanyRegistryBreakerTest$GivenThreeFailuresInARow > when five minutes have passed and the register answers, then the company comes back and the next failure does not pause again",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest$GivenThreeFailuresInARow > when five minutes have passed and the register still fails, then it is skipped for another five minutes",
+    "reason": "Architecture audit #621 (R3-A4, #757): the circuit breaker moved from CompanyLookupService into the adapter as CompanyRegistryBreaker, a decorator of the port, so its test moved with it; thresholds, timing and the API's answers are unchanged",
+    "replacement": "donors.infrastructure.ares.CompanyRegistryBreakerTest$GivenThreeFailuresInARow > when five minutes have passed and the register still fails, then it is skipped for another five minutes",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.CompanyLookupServiceTest$GivenThreeFailuresInARow > when the third failure is logged, then the warning says the register is skipped for a while",
+    "reason": "Architecture audit #621 (R3-A4, #757): the breaker now lives in the adapter and hands the service a closed failure with the pause it started, so the service's test of the pause warning starts from that failure; the line is unchanged",
+    "replacement": "donors.application.CompanyLookupServiceTest > Given the failure that pauses the register, when a company is looked up, then the warning says how many failures came in a row and that the register is skipped for five minutes",
+    "contract": "docs/system-overview.md, donors (Company lookup)"
+  }
+]
