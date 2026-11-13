@@ -2,7 +2,7 @@ package cz.novanadeje.app.donors.domain;
 
 public record CompanyIdentifier(String value) {
 
-    private static final int LENGTH = 8;
+    public static final int LENGTH = 8;
     private static final int[] WEIGHTS = {8, 7, 6, 5, 4, 3, 2};
 
     public CompanyIdentifier {

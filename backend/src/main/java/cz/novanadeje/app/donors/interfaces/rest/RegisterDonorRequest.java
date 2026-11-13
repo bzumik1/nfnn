@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.RegisterDonorCommand;
+import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
@@ -16,11 +17,11 @@ import jakarta.validation.constraints.Size;
 record RegisterDonorRequest(
         @NotNull DonorType type,
         @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) @PrintableOnReceipt String name,
-        @ValidCompanyIdentifier String companyIdentifier,
+        @Size(max = CompanyIdentifier.LENGTH) @ValidCompanyIdentifier String companyIdentifier,
         @NotNull @Valid AddressRequest address,
         @NotBlank @Email(message = "{donors.email.invalid}") @Pattern(regexp = EmailAddress.SHAPE_REGEX, message = "{donors.email.invalid}") @Size(max = 254) String email,
         @Size(min = RawPassword.MIN_LENGTH, max = RawPassword.MAX_LENGTH) String password,
-        @Pattern(regexp = "cs|en") String preferredLocale,
+        @Size(max = 2) @Pattern(regexp = "cs|en") String preferredLocale,
         @Pattern(regexp = RegistrationReturn.PATHS) @Size(max = RegistrationReturn.MAX_PATH_LENGTH) String returnTo
 ) {
 

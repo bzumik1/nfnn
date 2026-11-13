@@ -18,7 +18,7 @@ import java.util.UUID;
 public record ProjectRequest(
         @NotBlank @Size(max = ProjectContent.MAX_TITLE_LENGTH) String title,
         @NotNull @Min(ProjectContent.MIN_YEAR) @Max(ProjectContent.MAX_YEAR) Integer year,
-        @Pattern(regexp = ProjectCategory.NAMES_PATTERN) String category,
+        @Size(max = ProjectCategory.MAX_NAME_LENGTH) @Pattern(regexp = ProjectCategory.NAMES_PATTERN) String category,
         @Size(max = Slug.MAX_LENGTH) @Pattern(regexp = "^$|" + Slug.SHAPE_REGEX) String slug,
         @Size(max = ProjectContent.MAX_TAG_LENGTH) String tag,
         @NotBlank @Size(max = ProjectContent.MAX_PEREX_LENGTH) String perex,

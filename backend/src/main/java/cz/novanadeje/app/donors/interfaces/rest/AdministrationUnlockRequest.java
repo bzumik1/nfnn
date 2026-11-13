@@ -12,7 +12,7 @@ import java.util.Optional;
 @PasskeyOrPasswordWithCode
 record AdministrationUnlockRequest(
         @Size(max = RawPassword.MAX_LENGTH) String password,
-        @Pattern(regexp = Totp.CODE_SHAPE) String secondFactorCode,
+        @Size(max = Totp.DIGITS) @Pattern(regexp = Totp.CODE_SHAPE) String secondFactorCode,
         @Valid PasskeySignInRequest passkey
 ) {
 
