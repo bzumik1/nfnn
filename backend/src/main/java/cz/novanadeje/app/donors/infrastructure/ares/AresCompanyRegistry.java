@@ -3,12 +3,11 @@ package cz.novanadeje.app.donors.infrastructure.ares;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import cz.novanadeje.app.donors.application.CompanyRegistry;
+import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +29,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@Component
 class AresCompanyRegistry implements CompanyRegistry {
 
     static final URI ARES = URI.create("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/");
@@ -49,7 +47,6 @@ class AresCompanyRegistry implements CompanyRegistry {
     private final AresAnswers answers = new AresAnswers();
     private final Cache<CompanyIdentifier, Optional<RegisteredCompany>> cache;
 
-    @Autowired
     AresCompanyRegistry(Clock clock) {
         this(HttpClient.newBuilder().connectTimeout(TIMEOUT).followRedirects(HttpClient.Redirect.NEVER).build(), ARES, false, TIMEOUT, clock);
     }
@@ -85,15 +82,15 @@ class AresCompanyRegistry implements CompanyRegistry {
                 return Optional.empty();
             }
             if (response.statusCode() != OK) {
-                throw new CompanyRegistryUnavailable("status " + response.statusCode());
+                throw CompanyRegistryUnavailable.status(response.statusCode());
             }
             String contentType = response.headers().firstValue("Content-Type").orElse("");
             if (!contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
-                throw new CompanyRegistryUnavailable(AresAnswers.UNEXPECTED);
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNEXPECTED_RESPONSE);
             }
             return Optional.of(answers.parse(readBounded(body, deadline), identifier));
         } catch (IOException unreadable) {
-            throw new CompanyRegistryUnavailable("unreachable");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNREACHABLE);
         }
     }
 
@@ -102,17 +99,17 @@ class AresCompanyRegistry implements CompanyRegistry {
             return;
         }
         if (!"https".equals(base.getScheme())) {
-            throw new CompanyRegistryUnavailable("not https");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NOT_HTTPS);
         }
         InetAddress[] addresses;
         try {
             addresses = InetAddress.getAllByName(base.getHost());
         } catch (UnknownHostException unknown) {
-            throw new CompanyRegistryUnavailable("unknown host");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNKNOWN_HOST);
         }
         for (InetAddress address : addresses) {
             if (!PublicAddresses.isPublic(address)) {
-                throw new CompanyRegistryUnavailable("non-public address");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NON_PUBLIC_ADDRESS);
             }
         }
     }
@@ -121,12 +118,12 @@ class AresCompanyRegistry implements CompanyRegistry {
         try {
             return http.send(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (HttpTimeoutException slow) {
-            throw new CompanyRegistryUnavailable("timeout");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
         } catch (IOException unreachable) {
-            throw new CompanyRegistryUnavailable("unreachable");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNREACHABLE);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new CompanyRegistryUnavailable("interrupted");
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.INTERRUPTED);
         }
     }
 
@@ -139,15 +136,15 @@ class AresCompanyRegistry implements CompanyRegistry {
             } catch (TimeoutException slow) {
                 read.cancel(true);
                 body.close();
-                throw new CompanyRegistryUnavailable("timeout");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
             } catch (ExecutionException failed) {
-                throw new CompanyRegistryUnavailable("unreachable");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNREACHABLE);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                throw new CompanyRegistryUnavailable("interrupted");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.INTERRUPTED);
             }
             if (bytes.length > MAX_BYTES) {
-                throw new CompanyRegistryUnavailable("too large");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TOO_LARGE);
             }
             return bytes;
         }

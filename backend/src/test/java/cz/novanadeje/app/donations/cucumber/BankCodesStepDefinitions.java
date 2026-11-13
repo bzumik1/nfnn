@@ -51,9 +51,9 @@ public class BankCodesStepDefinitions {
                 .toList()), lastModified);
     }
 
-    @When("the ČNB answers the bank codes with {string}")
-    public void theCnbAnswersWith(String reason) {
-        source.failWith(reason);
+    @When("the ČNB answers the bank codes with status {int}")
+    public void theCnbAnswersWithStatus(int status) {
+        source.failWith(BankCodeSourceUnavailable.status(status));
     }
 
     @When("the bank code list is refreshed")
@@ -62,13 +62,13 @@ public class BankCodesStepDefinitions {
             refreshes.refresh();
             failure = Optional.empty();
         } catch (BankCodeSourceUnavailable unavailable) {
-            failure = Optional.of(unavailable.getMessage());
+            failure = Optional.of(unavailable.outcome());
         }
     }
 
-    @Then("the bank code refresh failed with {string}")
-    public void theBankCodeRefreshFailedWith(String reason) {
-        assertThat(failure).contains(reason);
+    @Then("the bank code refresh failed with status {int}")
+    public void theBankCodeRefreshFailedWithStatus(int status) {
+        assertThat(failure).contains("status " + status);
     }
 
     @Then("the ČNB was asked whether the list changed since {string}")

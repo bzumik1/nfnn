@@ -13,21 +13,23 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class FakeBankCodeSource implements BankCodeSource {
 
+    private static final int NOT_FOUND = 404;
+
     private final AtomicReference<BankCodeList> published = new AtomicReference<>();
     private final AtomicReference<String> lastModified = new AtomicReference<>();
-    private final AtomicReference<String> failure = new AtomicReference<>();
+    private final AtomicReference<BankCodeSourceUnavailable> failure = new AtomicReference<>();
     private final List<Optional<String>> askedIfModifiedSince = new CopyOnWriteArrayList<>();
 
     @Override
     public BankCodeFetch fetch(BankCodeListState known) {
         askedIfModifiedSince.add(known.sourceLastModified());
-        String reason = failure.get();
-        if (reason != null) {
-            throw new BankCodeSourceUnavailable(reason);
+        BankCodeSourceUnavailable unavailable = failure.get();
+        if (unavailable != null) {
+            throw unavailable;
         }
         BankCodeList list = published.get();
         if (list == null) {
-            throw new BankCodeSourceUnavailable("status 404");
+            throw BankCodeSourceUnavailable.status(NOT_FOUND);
         }
         Optional<String> modified = Optional.ofNullable(lastModified.get());
         if (modified.isPresent() && modified.equals(known.sourceLastModified())) {
@@ -42,8 +44,8 @@ public class FakeBankCodeSource implements BankCodeSource {
         failure.set(null);
     }
 
-    public void failWith(String reason) {
-        failure.set(reason);
+    public void failWith(BankCodeSourceUnavailable unavailable) {
+        failure.set(unavailable);
     }
 
     public List<Optional<String>> askedIfModifiedSince() {

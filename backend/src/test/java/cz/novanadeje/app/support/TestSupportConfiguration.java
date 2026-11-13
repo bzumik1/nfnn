@@ -2,6 +2,7 @@ package cz.novanadeje.app.support;
 
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
+import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
 import java.time.Clock;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -59,9 +60,14 @@ public class TestSupportConfiguration {
     }
 
     @Bean
-    @Primary
     public FakeCompanyRegistry fakeCompanyRegistry() {
         return new FakeCompanyRegistry();
+    }
+
+    @Bean
+    @Primary
+    public CompanyRegistryBreaker fakeCompanyRegistryBehindBreaker(FakeCompanyRegistry registry, MutableClock clock) {
+        return new CompanyRegistryBreaker(registry, clock);
     }
 
     @Bean

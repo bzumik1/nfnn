@@ -2,7 +2,7 @@ package cz.novanadeje.app.cucumber;
 
 import cz.novanadeje.app.cucumber.transcript.ApiTranscripts;
 import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
-import cz.novanadeje.app.donors.application.CompanyLookupService;
+import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
 import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
 import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
 import cz.novanadeje.app.support.AsyncTaskTracker;
@@ -82,7 +82,7 @@ public class CommonStepDefinitions {
         clock.set(ApiTranscripts.RECORDING_CLOCK);
         ServerReceiptSigningKey.storeAfterEmptyTables(context);
         RateLimiterWindows.reset(context);
-        CompanyLookupPause.reset(context.getBean(CompanyLookupService.class));
+        CompanyLookupPause.reset(context.getBean(CompanyRegistryBreaker.class));
         ClientErrorCapWindows.reset(context.getBean(ClientErrorCap.class));
         BackupKeyWordDraws.reseed(context.getBean(BackupKeyWordChallenges.class));
         context.getBean(SwitchablePublicBackupKeyPolicy.class).reset();

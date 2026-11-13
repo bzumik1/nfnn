@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class FakeCompanyRegistry implements CompanyRegistry {
 
+    private static final int SERVICE_UNAVAILABLE = 503;
+
     private final Map<CompanyIdentifier, RegisteredCompany> companies = new ConcurrentHashMap<>();
     private final AtomicBoolean down = new AtomicBoolean();
     private final AtomicInteger requests = new AtomicInteger();
@@ -21,7 +23,7 @@ public class FakeCompanyRegistry implements CompanyRegistry {
     public Optional<RegisteredCompany> find(CompanyIdentifier identifier) {
         requests.incrementAndGet();
         if (down.get()) {
-            throw new CompanyRegistryUnavailable("status 503");
+            throw CompanyRegistryUnavailable.status(SERVICE_UNAVAILABLE);
         }
         return Optional.ofNullable(companies.get(identifier));
     }

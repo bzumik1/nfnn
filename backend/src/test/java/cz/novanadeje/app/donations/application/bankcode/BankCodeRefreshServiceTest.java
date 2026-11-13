@@ -74,9 +74,9 @@ class BankCodeRefreshServiceTest {
         source.publish(list(25), LAST_MODIFIED);
         refreshes.refresh();
         clock.advance(Duration.ofDays(8));
-        source.failWith("status 503");
+        source.failWith(BankCodeSourceUnavailable.status(503));
 
-        assertThatThrownBy(refreshes::refresh).isInstanceOf(BankCodeSourceUnavailable.class).hasMessage("status 503");
+        assertThatThrownBy(refreshes::refresh).isInstanceOfSatisfying(BankCodeSourceUnavailable.class, failure -> assertThat(failure.outcome()).isEqualTo("status 503"));
 
         assertThat(lists.list().banks()).hasSize(25);
         assertThat(repository.state().checkedAt()).contains(START);

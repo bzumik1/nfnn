@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.infrastructure.cnb;
 
 import cz.novanadeje.app.donations.application.bankcode.BankCodeFetch;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeSource;
+import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceFailure;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceUnavailable;
 import cz.novanadeje.app.donations.domain.bankcode.BankCodeList;
 import cz.novanadeje.app.donations.domain.bankcode.BankCodeListState;
@@ -70,11 +71,11 @@ class CnbBankCodeSource implements BankCodeSource {
                 return new BankCodeFetch.Unchanged();
             }
             if (response.statusCode() != OK) {
-                throw new BankCodeSourceUnavailable("status " + response.statusCode());
+                throw BankCodeSourceUnavailable.status(response.statusCode());
             }
             return new BankCodeFetch.Fetched(parse(readBounded(body, deadline)), response.headers().firstValue("Last-Modified"));
         } catch (IOException unreadable) {
-            throw new BankCodeSourceUnavailable("unreachable");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.UNREACHABLE);
         }
     }
 
@@ -82,7 +83,7 @@ class CnbBankCodeSource implements BankCodeSource {
         try {
             return CnbBankCodeCsv.parse(bytes);
         } catch (IllegalArgumentException refused) {
-            throw new BankCodeSourceUnavailable("refused list");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.REFUSED_LIST);
         }
     }
 
@@ -91,11 +92,11 @@ class CnbBankCodeSource implements BankCodeSource {
             return;
         }
         if (!"https".equals(source.getScheme())) {
-            throw new BankCodeSourceUnavailable("not https");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.NOT_HTTPS);
         }
         for (InetAddress address : resolveBounded(source.getHost(), deadline)) {
             if (!PublicAddresses.isPublic(address)) {
-                throw new BankCodeSourceUnavailable("non-public address");
+                throw new BankCodeSourceUnavailable(BankCodeSourceFailure.NON_PUBLIC_ADDRESS);
             }
         }
     }
@@ -107,20 +108,20 @@ class CnbBankCodeSource implements BankCodeSource {
             return lookup.get(remaining(deadline), TimeUnit.NANOSECONDS);
         } catch (TimeoutException slow) {
             lookup.cancel(true);
-            throw new BankCodeSourceUnavailable("timeout");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.TIMEOUT);
         } catch (ExecutionException failed) {
-            throw new BankCodeSourceUnavailable(failed.getCause() instanceof UnknownHostException ? "unknown host" : "unreachable");
+            throw new BankCodeSourceUnavailable(failed.getCause() instanceof UnknownHostException ? BankCodeSourceFailure.UNKNOWN_HOST : BankCodeSourceFailure.UNREACHABLE);
         } catch (InterruptedException interrupted) {
             lookup.cancel(true);
             Thread.currentThread().interrupt();
-            throw new BankCodeSourceUnavailable("interrupted");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.INTERRUPTED);
         }
     }
 
     private static long remaining(long deadline) {
         long remaining = deadline - System.nanoTime();
         if (remaining <= 0) {
-            throw new BankCodeSourceUnavailable("timeout");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.TIMEOUT);
         }
         return remaining;
     }
@@ -129,12 +130,12 @@ class CnbBankCodeSource implements BankCodeSource {
         try {
             return http.send(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (HttpTimeoutException slow) {
-            throw new BankCodeSourceUnavailable("timeout");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.TIMEOUT);
         } catch (IOException unreachable) {
-            throw new BankCodeSourceUnavailable("unreachable");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.UNREACHABLE);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            throw new BankCodeSourceUnavailable("interrupted");
+            throw new BankCodeSourceUnavailable(BankCodeSourceFailure.INTERRUPTED);
         }
     }
 
@@ -147,15 +148,15 @@ class CnbBankCodeSource implements BankCodeSource {
             } catch (TimeoutException slow) {
                 read.cancel(true);
                 body.close();
-                throw new BankCodeSourceUnavailable("timeout");
+                throw new BankCodeSourceUnavailable(BankCodeSourceFailure.TIMEOUT);
             } catch (ExecutionException failed) {
-                throw new BankCodeSourceUnavailable("unreachable");
+                throw new BankCodeSourceUnavailable(BankCodeSourceFailure.UNREACHABLE);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                throw new BankCodeSourceUnavailable("interrupted");
+                throw new BankCodeSourceUnavailable(BankCodeSourceFailure.INTERRUPTED);
             }
             if (bytes.length > MAX_BYTES) {
-                throw new BankCodeSourceUnavailable("too large");
+                throw new BankCodeSourceUnavailable(BankCodeSourceFailure.TOO_LARGE);
             }
             return bytes;
         }
