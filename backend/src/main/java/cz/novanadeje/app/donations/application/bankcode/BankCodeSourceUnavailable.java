@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.application.bankcode;
 public class BankCodeSourceUnavailable extends RuntimeException {
 
     private static final int LOWEST_STATUS = 100;
-    private static final int HIGHEST_STATUS = 599;
+    private static final int HIGHEST_STATUS = 999;
 
     private final BankCodeSourceFailure failure;
     private final String outcome;

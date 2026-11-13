@@ -5,7 +5,7 @@ import java.util.Optional;
 public class CompanyRegistryUnavailable extends RuntimeException {
 
     private static final int LOWEST_STATUS = 100;
-    private static final int HIGHEST_STATUS = 599;
+    private static final int HIGHEST_STATUS = 999;
 
     private final CompanyRegistryFailure failure;
     private final String outcome;

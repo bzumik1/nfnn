@@ -33,7 +33,7 @@ class CompanyRegistryUnavailableTest {
     @DisplayName("Given a number that is no HTTP status, when the register is unavailable with it, then it is refused")
     void should_refuse_when_unavailable_given_no_http_status() {
         assertThatThrownBy(() -> CompanyRegistryUnavailable.status(99)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> CompanyRegistryUnavailable.status(600)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> CompanyRegistryUnavailable.status(1000)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -61,5 +61,11 @@ class CompanyRegistryUnavailableTest {
 
         assertThat(pausing.outcome()).isEqualTo("status 503");
         assertThat(pausing.pause()).contains(pause);
+    }
+
+    @Test
+    @DisplayName("Given a three-digit status above the registered ones, when the source answers with it, then it is kept as a status, not turned into a failure of the code")
+    void should_keep_the_status_when_unavailable_given_a_three_digit_status_above_599() {
+        assertThat(CompanyRegistryUnavailable.status(600).outcome()).isEqualTo("status 600");
     }
 }

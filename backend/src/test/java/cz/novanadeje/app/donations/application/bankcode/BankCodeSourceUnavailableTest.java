@@ -31,7 +31,13 @@ class BankCodeSourceUnavailableTest {
     @DisplayName("Given a number that is no HTTP status, or the status failure without one, when the source is unavailable with it, then it is refused")
     void should_refuse_when_unavailable_given_no_http_status() {
         assertThatThrownBy(() -> BankCodeSourceUnavailable.status(99)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> BankCodeSourceUnavailable.status(600)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> BankCodeSourceUnavailable.status(1000)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new BankCodeSourceUnavailable(BankCodeSourceFailure.STATUS)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Given a three-digit status above the registered ones, when the source answers with it, then it is kept as a status, not turned into a failure of the code")
+    void should_keep_the_status_when_unavailable_given_a_three_digit_status_above_599() {
+        assertThat(BankCodeSourceUnavailable.status(600).outcome()).isEqualTo("status 600");
     }
 }
