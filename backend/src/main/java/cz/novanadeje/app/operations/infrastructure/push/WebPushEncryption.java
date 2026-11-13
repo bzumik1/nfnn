@@ -116,5 +116,10 @@ final class WebPushEncryption {
     }
 
     record Derived(byte[] ecdhSecret, byte[] ikm, byte[] contentEncryptionKey, byte[] nonce) {
+
+        @Override
+        public String toString() {
+            return "Derived[***]";
+        }
     }
 }

@@ -10,4 +10,10 @@ import java.util.List;
 record SetupRequest(@Size(max = SetupCodeRequest.MAX_CODE_LENGTH) String code,
                     @NotNull @Size(max = SettingValueRequest.MAX_SETTINGS) List<@Valid SettingValueRequest> settings,
                     @Size(max = BackupKeyWordPositions.ASKED) List<@Valid @NotNull BackupKeyWordRequest> backupKeyWords) {
+
+    @Override
+    public String toString() {
+        return "SetupRequest[code=" + (code == null ? "none" : "***") + ", settings=" + (settings == null ? "none" : settings.size())
+                + ", backupKeyWords=" + (backupKeyWords == null ? "none" : backupKeyWords.size()) + "]";
+    }
 }

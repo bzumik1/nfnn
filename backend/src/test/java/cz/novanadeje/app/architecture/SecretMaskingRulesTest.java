@@ -47,10 +47,11 @@ class SecretMaskingRulesTest {
             "cz.novanadeje.app.donations.infrastructure.persistence.BankLogoRow", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.interfaces.rest.BankCodesResponse$Item", BANK_CODE_REASON,
             "cz.novanadeje.app.donations.interfaces.rest.BankLogosResponse$Item", BANK_CODE_REASON);
+    private static final Set<String> SETTING_NAMES = Set.of("name", "setting");
     private static final Set<String> PLAIN_TYPES = Set.of(String.class.getName(), char[].class.getName(), byte[].class.getName());
 
     private static final DescribedPredicate<JavaClass> HOLDING_A_PLAIN_SECRET = describe(
-            "hold a password, secret, token, seed, key or code as a plain String, char[] or byte[], also inside an Optional or a List",
+            "hold a password, secret, token, seed, key, code or a setting's value (a value beside a name or a setting) as a plain String, char[] or byte[], also inside an Optional or a List",
             type -> type.isRecord() && !secretComponentsOf(type).isEmpty());
 
     @ArchTest
@@ -69,7 +70,7 @@ class SecretMaskingRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted records holding secrets as text, inside an Optional, as bytes, masked, final, typed or public, when the rule checks them, then exactly the unmasked ones and the final toString are reported")
+    @DisplayName("Given planted records holding secrets as text, inside an Optional, as bytes, as a setting's value, masked, final, typed or public, when the rule checks them, then exactly the unmasked ones, a setting's value and the final toString are reported")
     void should_report_every_unmasked_secret_when_checked_given_planted_records(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.application.PlantedRecords", """
                 package cz.novanadeje.app.planteda.application;
@@ -112,25 +113,36 @@ class SecretMaskingRulesTest {
 
                     record PlantedPublic(String bankCode, String publicKey, String summaryKey) {
                     }
+
+                    record PlantedSettingValue(String name, String value) {
+                    }
+
+                    record PlantedAmount(long value) {
+                    }
                 }
                 """));
 
         assertThat(records_holding_a_plain_secret_mask_it_in_to_string.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(5)
+                .hasSize(6)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSignIn holds [password]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedResetLink holds [resetToken]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedKeys holds [privateKey]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSetup holds [code]"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedFinalMask holds [password]"));
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedFinalMask holds [password]"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedSettingValue holds [value]"));
     }
 
     static List<JavaField> secretComponentsOf(JavaClass type) {
         return type.getFields().stream()
                 .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC))
-                .filter(field -> SECRET_NAME.matcher(field.getName()).matches())
+                .filter(field -> SECRET_NAME.matcher(field.getName()).matches() || isASettingValue(type, field))
                 .filter(field -> !(field.getName().equals("code") && PUBLIC_CODES.containsKey(type.getName())))
                 .filter(field -> holdsPlainText(field.getType()))
                 .toList();
+    }
+
+    private static boolean isASettingValue(JavaClass type, JavaField field) {
+        return field.getName().equals("value") && type.getFields().stream().map(JavaField::getName).anyMatch(SETTING_NAMES::contains);
     }
 
     private static boolean holdsPlainText(JavaType type) {
