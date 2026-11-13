@@ -12,7 +12,7 @@ import cz.novanadeje.app.content.domain.news.NewsContent;
 import cz.novanadeje.app.content.application.ContentVersions;
 import cz.novanadeje.app.content.application.Versioned;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
-import cz.novanadeje.app.content.domain.FormerSlugs;
+import cz.novanadeje.app.content.domain.news.FormerNewsSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -46,13 +46,13 @@ public class NewsAdminService {
 
     private final NewsArticleRepository news;
     private final MediaImageRepository media;
-    private final FormerSlugs formerSlugs;
+    private final FormerNewsSlugs formerSlugs;
     private final NewsSigners signers;
     private final ContentVersions versions;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, FormerSlugs formerSlugs, NewsSigners signers,
+    public NewsAdminService(NewsArticleRepository news, MediaImageRepository media, FormerNewsSlugs formerSlugs, NewsSigners signers,
                             ContentVersions versions, ApplicationEventPublisher events, Clock clock) {
         this.news = news;
         this.media = media;

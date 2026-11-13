@@ -1,11 +1,12 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
-import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
+import cz.novanadeje.app.content.domain.news.FormerNewsSlugs;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
 import cz.novanadeje.app.content.domain.news.NewsContent;
+import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.domain.project.ProjectId;
@@ -35,7 +36,9 @@ class JpaFormerSlugsTest {
     private static final Instant NOW = Instant.parse("2026-10-23T10:00:00Z");
 
     @Autowired
-    private FormerSlugs formerSlugs;
+    private FormerNewsSlugs formerNewsSlugs;
+    @Autowired
+    private FormerProjectSlugs formerProjectSlugs;
     @Autowired
     private NewsArticleRepository news;
     @Autowired
@@ -50,15 +53,15 @@ class JpaFormerSlugsTest {
     void should_lead_to_its_own_kind_when_looked_up_given_former_slugs_of_both() {
         NewsArticle article = article("koncert-v-kostele");
         Project project = project("dominik-8-let");
-        formerSlugs.rememberNews(new Slug("beneficni-koncert"), article.id(), NOW);
-        formerSlugs.rememberProject(new Slug("dominik-7-let"), project.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("beneficni-koncert"), article.id(), NOW);
+        formerProjectSlugs.rememberProject(new Slug("dominik-7-let"), project.id(), NOW);
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("beneficni-koncert"))).contains(article.id());
-        assertThat(formerSlugs.project(new Slug("beneficni-koncert"))).isEmpty();
-        assertThat(formerSlugs.project(new Slug("dominik-7-let"))).contains(project.id());
-        assertThat(formerSlugs.newsArticle(new Slug("dominik-7-let"))).isEmpty();
-        assertThat(formerSlugs.newsArticle(new Slug("nikdy-nebyla"))).isEmpty();
+        assertThat(formerNewsSlugs.newsArticle(new Slug("beneficni-koncert"))).contains(article.id());
+        assertThat(formerProjectSlugs.project(new Slug("beneficni-koncert"))).isEmpty();
+        assertThat(formerProjectSlugs.project(new Slug("dominik-7-let"))).contains(project.id());
+        assertThat(formerNewsSlugs.newsArticle(new Slug("dominik-7-let"))).isEmpty();
+        assertThat(formerNewsSlugs.newsArticle(new Slug("nikdy-nebyla"))).isEmpty();
     }
 
     @Test
@@ -66,17 +69,17 @@ class JpaFormerSlugsTest {
     void should_lead_nowhere_when_forgotten_or_deleted_given_former_slugs() {
         NewsArticle forgotten = article("koncert-v-kostele");
         NewsArticle deleted = article("jarni-koncert");
-        formerSlugs.rememberNews(new Slug("beneficni-koncert"), forgotten.id(), NOW);
-        formerSlugs.rememberNews(new Slug("koncert"), deleted.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("beneficni-koncert"), forgotten.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("koncert"), deleted.id(), NOW);
         flushAndClear();
 
-        formerSlugs.forgetNews(new Slug("beneficni-koncert"));
-        formerSlugs.forgetNews(new Slug("nikdy-nebyla"));
+        formerNewsSlugs.forgetNews(new Slug("beneficni-koncert"));
+        formerNewsSlugs.forgetNews(new Slug("nikdy-nebyla"));
         news.delete(deleted.id());
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("beneficni-koncert"))).isEmpty();
-        assertThat(formerSlugs.newsArticle(new Slug("koncert"))).isEmpty();
+        assertThat(formerNewsSlugs.newsArticle(new Slug("beneficni-koncert"))).isEmpty();
+        assertThat(formerNewsSlugs.newsArticle(new Slug("koncert"))).isEmpty();
     }
 
     @Test
@@ -84,14 +87,14 @@ class JpaFormerSlugsTest {
     void should_lead_to_each_by_kind_when_a_project_leaves_the_address_given_an_article_left_it_before() {
         NewsArticle article = article("letni-tabor-2026");
         Project project = project("letni-tabor-pro-deti");
-        formerSlugs.rememberNews(new Slug("letni-tabor"), article.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("letni-tabor"), article.id(), NOW);
         flushAndClear();
 
-        formerSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
+        formerProjectSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("letni-tabor"))).contains(article.id());
-        assertThat(formerSlugs.project(new Slug("letni-tabor"))).contains(project.id());
+        assertThat(formerNewsSlugs.newsArticle(new Slug("letni-tabor"))).contains(article.id());
+        assertThat(formerProjectSlugs.project(new Slug("letni-tabor"))).contains(project.id());
     }
 
     @Test
@@ -99,23 +102,23 @@ class JpaFormerSlugsTest {
     void should_still_lead_to_the_article_when_the_projects_is_forgotten_given_both_kinds_at_one_address() {
         NewsArticle article = article("letni-tabor-2026");
         Project project = project("letni-tabor-pro-deti");
-        formerSlugs.rememberNews(new Slug("letni-tabor"), article.id(), NOW);
-        formerSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("letni-tabor"), article.id(), NOW);
+        formerProjectSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
         flushAndClear();
 
-        formerSlugs.forgetProject(new Slug("letni-tabor"));
+        formerProjectSlugs.forgetProject(new Slug("letni-tabor"));
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("letni-tabor"))).contains(article.id());
-        assertThat(formerSlugs.project(new Slug("letni-tabor"))).isEmpty();
+        assertThat(formerNewsSlugs.newsArticle(new Slug("letni-tabor"))).contains(article.id());
+        assertThat(formerProjectSlugs.project(new Slug("letni-tabor"))).isEmpty();
 
-        formerSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
+        formerProjectSlugs.rememberProject(new Slug("letni-tabor"), project.id(), NOW);
         flushAndClear();
-        formerSlugs.forgetNews(new Slug("letni-tabor"));
+        formerNewsSlugs.forgetNews(new Slug("letni-tabor"));
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("letni-tabor"))).isEmpty();
-        assertThat(formerSlugs.project(new Slug("letni-tabor"))).contains(project.id());
+        assertThat(formerNewsSlugs.newsArticle(new Slug("letni-tabor"))).isEmpty();
+        assertThat(formerProjectSlugs.project(new Slug("letni-tabor"))).contains(project.id());
     }
 
     @Test
@@ -123,13 +126,13 @@ class JpaFormerSlugsTest {
     void should_lead_to_the_other_article_when_it_leaves_the_address_given_a_former_address_of_an_article() {
         NewsArticle first = article("letni-tabor-2025");
         NewsArticle second = article("letni-tabor-2026");
-        formerSlugs.rememberNews(new Slug("letni-tabor"), first.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("letni-tabor"), first.id(), NOW);
         flushAndClear();
 
-        formerSlugs.rememberNews(new Slug("letni-tabor"), second.id(), NOW.plusSeconds(60));
+        formerNewsSlugs.rememberNews(new Slug("letni-tabor"), second.id(), NOW.plusSeconds(60));
         flushAndClear();
 
-        assertThat(formerSlugs.newsArticle(new Slug("letni-tabor"))).contains(second.id());
+        assertThat(formerNewsSlugs.newsArticle(new Slug("letni-tabor"))).contains(second.id());
         assertThat(jdbc.sql("select count(*) from content_former_slug where slug = 'letni-tabor'").query(Long.class).single()).isOne();
     }
 
@@ -141,12 +144,12 @@ class JpaFormerSlugsTest {
         jdbc.sql("insert into content_former_slug (slug, project_id, replaced_at) values ('dominik-7-let', ?, ?)")
                 .param(project.id().value()).param(Timestamp.from(NOW)).update();
 
-        assertThat(formerSlugs.project(new Slug("dominik-7-let"))).contains(project.id());
+        assertThat(formerProjectSlugs.project(new Slug("dominik-7-let"))).contains(project.id());
 
-        formerSlugs.forgetProject(new Slug("dominik-7-let"));
+        formerProjectSlugs.forgetProject(new Slug("dominik-7-let"));
         flushAndClear();
 
-        assertThat(formerSlugs.project(new Slug("dominik-7-let"))).isEmpty();
+        assertThat(formerProjectSlugs.project(new Slug("dominik-7-let"))).isEmpty();
     }
 
     @Test
@@ -154,7 +157,7 @@ class JpaFormerSlugsTest {
     void should_refuse_it_when_a_second_row_of_one_kind_is_written_given_a_former_address() {
         NewsArticle first = article("letni-tabor-2025");
         NewsArticle second = article("letni-tabor-2026");
-        formerSlugs.rememberNews(new Slug("letni-tabor"), first.id(), NOW);
+        formerNewsSlugs.rememberNews(new Slug("letni-tabor"), first.id(), NOW);
         flushAndClear();
 
         assertThatThrownBy(() -> jdbc.sql("insert into content_former_slug (slug, news_id, replaced_at) values ('letni-tabor', ?, ?)")

@@ -354,7 +354,7 @@ UI „koncept“, „zveřejnit“, „Stáhnout z webu“ · Code: `publishedOn
 A draft is seen only by administrators; publishing sets the day it appears (judged by the Prague date on the server); taking it off hides it again.
 
 **Address (slug)**\
-UI „adresa“ · Code: `content/domain/Slug`, `FormerSlugs`.\
+UI „adresa“ · Code: `content/domain/Slug`, `FormerNewsSlugs`, `FormerProjectSlugs`.\
 The Czech path of an article or project without diacritics; a former address keeps leading to the new one.
 
 **About section**\

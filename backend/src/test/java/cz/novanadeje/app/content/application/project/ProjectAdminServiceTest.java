@@ -11,7 +11,7 @@ import cz.novanadeje.app.content.domain.project.ProjectOrder;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.content.domain.project.ProjectContent;
-import cz.novanadeje.app.content.domain.FormerSlugs;
+import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.content.application.ContentVersions;
@@ -59,7 +59,7 @@ class ProjectAdminServiceTest {
     @Mock
     private MediaImageRepository media;
     @Mock
-    private FormerSlugs formerSlugs;
+    private FormerProjectSlugs formerSlugs;
     @Mock
     private ApplicationEventPublisher events;
 
@@ -176,16 +176,6 @@ class ProjectAdminServiceTest {
         service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
 
         verify(formerSlugs).forgetProject(new Slug("dominik"));
-    }
-
-    @Test
-    @DisplayName("Given an address an article had before, when a project is created there, then the article's redirect is kept")
-    void should_keep_the_other_kinds_former_slug_when_created_given_its_address() {
-        when(projects.isSlugTakenByAnother(any(), any())).thenReturn(false);
-
-        service().create(ADMIN, command("Dominik", Optional.of("dominik"), Optional.empty()));
-
-        verify(formerSlugs, never()).forgetNews(any());
     }
 
     @Test

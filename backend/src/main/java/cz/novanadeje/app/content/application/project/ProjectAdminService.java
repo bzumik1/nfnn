@@ -12,7 +12,7 @@ import cz.novanadeje.app.content.domain.project.ProjectContent;
 import cz.novanadeje.app.content.application.ContentVersions;
 import cz.novanadeje.app.content.application.Versioned;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
-import cz.novanadeje.app.content.domain.FormerSlugs;
+import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -46,12 +46,12 @@ public class ProjectAdminService {
     private final ProjectRepository projects;
     private final ProjectOrderRepository orders;
     private final MediaImageRepository media;
-    private final FormerSlugs formerSlugs;
+    private final FormerProjectSlugs formerSlugs;
     private final ContentVersions versions;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, FormerSlugs formerSlugs,
+    public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, FormerProjectSlugs formerSlugs,
                                ContentVersions versions, ApplicationEventPublisher events, Clock clock) {
         this.projects = projects;
         this.orders = orders;
