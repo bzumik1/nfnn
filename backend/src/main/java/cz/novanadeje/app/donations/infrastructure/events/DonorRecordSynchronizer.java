@@ -3,14 +3,20 @@ package cz.novanadeje.app.donations.infrastructure.events;
 import cz.novanadeje.app.donations.application.donor.ChangeDonorRecordProfileCommand;
 import cz.novanadeje.app.donations.application.donor.DonorRecordService;
 import cz.novanadeje.app.donations.application.donor.RegisterDonorRecordCommand;
+import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.event.DonorErased;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.time.Clock;
 
 @Component
 class DonorRecordSynchronizer {
@@ -18,9 +24,13 @@ class DonorRecordSynchronizer {
     private static final Logger log = LoggerFactory.getLogger(DonorRecordSynchronizer.class);
 
     private final DonorRecordService donorRecordService;
+    private final PaymentPairingService pairing;
+    private final Clock clock;
 
-    DonorRecordSynchronizer(DonorRecordService donorRecordService) {
+    DonorRecordSynchronizer(DonorRecordService donorRecordService, PaymentPairingService pairing, Clock clock) {
         this.donorRecordService = donorRecordService;
+        this.pairing = pairing;
+        this.clock = clock;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
@@ -32,7 +42,11 @@ class DonorRecordSynchronizer {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void pairAfterRegistration(DonorRegistered event) {
         try {
-            donorRecordService.pairPaymentsOf(event.donorId());
+            if (pairing.pairPaymentsOf(new DonorReference(event.donorId()), clock.instant()).isEmpty()) {
+                log.warn("Payments of donor {} were not paired: donations has no record of the donor", event.donorId());
+            }
+        } catch (DataIntegrityViolationException | PessimisticLockingFailureException lost) {
+            log.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", event.donorId());
         } catch (RuntimeException failure) {
             log.warn("Pairing the payments of donor {} after the registration failed ({}); the hourly import pairs them", event.donorId(),
                     failure.getClass().getName());

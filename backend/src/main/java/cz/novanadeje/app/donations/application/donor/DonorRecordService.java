@@ -1,8 +1,6 @@
 package cz.novanadeje.app.donations.application.donor;
 
-import cz.novanadeje.app.donations.application.pairing.DonorPaymentsPairing;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
-import cz.novanadeje.app.donations.application.pairing.PairingRaceLost;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
@@ -30,16 +28,14 @@ public class DonorRecordService {
     private final DonorRecordRepository donorRecords;
     private final SymbolClaimRepository claims;
     private final DonationRepository donations;
-    private final DonorPaymentsPairing pairing;
     private final PairingLock lock;
     private final Clock clock;
 
     public DonorRecordService(DonorRecordRepository donorRecords, SymbolClaimRepository claims, DonationRepository donations,
-                              DonorPaymentsPairing pairing, PairingLock lock, Clock clock) {
+                              PairingLock lock, Clock clock) {
         this.donorRecords = donorRecords;
         this.claims = claims;
         this.donations = donations;
-        this.pairing = pairing;
         this.lock = lock;
         this.clock = clock;
     }
@@ -55,16 +51,6 @@ public class DonorRecordService {
             return;
         }
         donorRecords.save(newRecord(id, command));
-    }
-
-    public void pairPaymentsOf(UUID donorId) {
-        try {
-            if (pairing.pairPaymentsOf(new DonorReference(donorId), clock.instant()).isEmpty()) {
-                log.warn("Payments of donor {} were not paired: donations has no record of the donor", donorId);
-            }
-        } catch (PairingRaceLost lost) {
-            log.warn("pairing after registration of donor {} lost a race with the import; the hourly pass completes it", donorId);
-        }
     }
 
     @Transactional
