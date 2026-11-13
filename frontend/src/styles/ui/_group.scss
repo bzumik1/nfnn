@@ -38,10 +38,12 @@
 }
 
 button.ui-group-aside {
+  min-height: var(--space-6);
   padding: 0;
   border: 0;
   background: none;
-  font-family: var(--font-sans);
+  font: inherit;
+  font-size: var(--text-sm);
   text-align: start;
   cursor: pointer;
 }

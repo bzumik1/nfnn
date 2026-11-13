@@ -8,9 +8,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
-  min-height: var(--space-6);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
 }
 
 .accounts-help-icon {
@@ -33,6 +30,11 @@
 
   @media (forced-colors: active) {
     border: 1px solid;
+
+    [aria-expanded='true'] > & {
+      background: Highlight;
+      color: HighlightText;
+    }
   }
 }
 
@@ -87,7 +89,6 @@
 
 .account-number {
   font-size: var(--text-account-number);
-  color: var(--color-text);
   max-width: 100%;
   white-space: normal;
 }
@@ -178,10 +179,8 @@
   text-align: start;
 }
 
-@include bp.down(tablet) {
-  .account-action--apart {
-    margin-top: var(--space-2-5);
-  }
+.account-action--apart {
+  margin-top: var(--space-2-5);
 }
 
 .account-confirm-text {

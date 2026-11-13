@@ -285,7 +285,12 @@
       {{ actionError() }}
     </p>
   }
-  <p class="ui-group-note ui-group-note--status accounts-status" role="status">
+  <p
+    class="accounts-status"
+    role="status"
+    [class.ui-group-note]="actionDone()"
+    [class.ui-group-note--status]="actionDone()"
+  >
     {{ actionDone() }}
   </p>
 </section>
