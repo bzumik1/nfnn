@@ -1,8 +1,9 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
-import cz.novanadeje.app.content.domain.FormerSlugs;
 import cz.novanadeje.app.content.domain.Slug;
+import cz.novanadeje.app.content.domain.news.FormerNewsSlugs;
 import cz.novanadeje.app.content.domain.news.NewsArticleId;
+import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.project.ProjectId;
 import org.springframework.stereotype.Repository;
 
@@ -10,7 +11,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 @Repository
-class JpaFormerSlugs implements FormerSlugs {
+class JpaFormerSlugs implements FormerNewsSlugs, FormerProjectSlugs {
 
     private final FormerSlugJpaRepository jpa;
 

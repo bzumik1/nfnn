@@ -3,7 +3,7 @@ package cz.novanadeje.app.content.application.news;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
-import cz.novanadeje.app.content.domain.FormerSlugs;
+import cz.novanadeje.app.content.domain.news.FormerNewsSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.springframework.stereotype.Service;
@@ -20,11 +20,11 @@ public class PublicNewsService {
     public static final int MAX_PAGE_SIZE = 50;
 
     private final NewsArticleRepository news;
-    private final FormerSlugs formerSlugs;
+    private final FormerNewsSlugs formerSlugs;
     private final NewsSigners signers;
     private final Clock clock;
 
-    public PublicNewsService(NewsArticleRepository news, FormerSlugs formerSlugs, NewsSigners signers, Clock clock) {
+    public PublicNewsService(NewsArticleRepository news, FormerNewsSlugs formerSlugs, NewsSigners signers, Clock clock) {
         this.news = news;
         this.formerSlugs = formerSlugs;
         this.signers = signers;
