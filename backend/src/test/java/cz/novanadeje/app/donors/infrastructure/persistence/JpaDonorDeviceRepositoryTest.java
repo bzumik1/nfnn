@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -131,6 +132,22 @@ class JpaDonorDeviceRepositoryTest {
         assertThat(devices.signedInAmong(List.of(live.id(), spent.id(), ended.id(), petrs.id(), DeviceId.newId(NOW)), NOW))
                 .containsExactlyInAnyOrder(live.id(), petrs.id());
         assertThat(devices.signedInAmong(List.of(), NOW)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given more devices than one query takes, of which only the first and the last are signed in, when the list is checked, then both come")
+    void should_check_across_queries_when_checked_given_more_devices_than_one_query_takes() {
+        DonorDevice first = deviceWithToken(jana, NOW, TTL);
+        DonorDevice last = deviceWithToken(petr, NOW, TTL);
+        flushAndClear();
+        List<DeviceId> ids = new ArrayList<>();
+        ids.add(first.id());
+        for (int index = 1; index < JpaDonorDeviceRepository.DEVICES_PER_QUERY; index++) {
+            ids.add(DeviceId.newId(NOW));
+        }
+        ids.add(last.id());
+
+        assertThat(devices.signedInAmong(ids, NOW)).containsExactlyInAnyOrder(first.id(), last.id());
     }
 
     @Test
