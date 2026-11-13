@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { refreshedAfterKeptCopy } from '../../core/connectivity/kept-answer-refresh';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -22,7 +22,7 @@ const HOME = '/api/content/home';
 export class HomeApi {
   private readonly http = inject(HttpClient);
 
-  load(): Observable<HomeResponse> {
-    return this.http.get<HomeResponse>(HOME, { context: refreshedAfterKeptCopy() });
+  load(context: HttpContext = refreshedAfterKeptCopy()): Observable<HomeResponse> {
+    return this.http.get<HomeResponse>(HOME, { context });
   }
 }

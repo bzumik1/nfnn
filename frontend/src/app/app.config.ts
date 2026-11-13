@@ -58,6 +58,7 @@ import { pagePinchLockAtStart } from './core/zoom/page-pinch-lock';
 import { systemTextSizeAtStart } from './core/zoom/system-text-size';
 import { windowControlsAtStart } from './core/layout/window-controls';
 import { launchScreenAtStart } from './core/layout/launch-screen';
+import { contentAheadAtStart } from './features/content/content-ahead';
 import { DEVICE_COPY_DIAGNOSTICS } from './core/diagnostics/device-copy-diagnostics';
 import { DeviceCopies } from './device-copies';
 import { DialogHistory } from './shared/ui/dialog/dialog-history';
@@ -170,6 +171,7 @@ export const appConfig: ApplicationConfig = {
     windowControlsAtStart,
     navigationAtStart,
     launchScreenAtStart,
+    contentAheadAtStart,
     edgeSwipeBackAtStart,
     pageTransitionsAtStart,
     keptPageStyles,

@@ -1,4 +1,6 @@
 import {
+  HttpContext,
+  HttpContextToken,
   HttpEvent,
   HttpHandlerFn,
   HttpInterceptorFn,
@@ -6,9 +8,10 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { finalize, Observable, of, tap } from 'rxjs';
+import { EMPTY, finalize, Observable, of, share, tap } from 'rxjs';
 import { ShownAnswers } from '../connectivity/shown-answers';
 
+export const ASKED_AHEAD = new HttpContextToken<boolean>(() => false);
 export const KEPT_ANSWER_MAX_AGE_MS = 10 * 60 * 1000;
 export const KEPT_ANSWERS_LIMIT = 50;
 
@@ -37,17 +40,27 @@ export function isKeptPublicAnswer(request: HttpRequest<unknown>): boolean {
 export class KeptPublicAnswers {
   private readonly answers = new Map<string, KeptAnswer>();
   private readonly refreshing = new Set<string>();
+  private readonly onTheirWay = new Map<string, Observable<HttpEvent<unknown>>>();
   private readonly shown = inject(ShownAnswers);
 
   answer(request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
     const key = request.urlWithParams;
     const kept = this.answers.get(key);
-    if (kept === undefined || performance.now() - kept.keptAt > KEPT_ANSWER_MAX_AGE_MS) {
-      return this.fromServer(key, request, next);
+    if (kept === undefined || this.tooOld(kept)) {
+      return this.sharedFromServer(key, request, next);
     }
     this.shown.record(key, kept.response.headers, kept.receivedAt);
     this.refresh(key, request, next);
     return of(kept.response.clone({ body: structuredClone(kept.response.body) }));
+  }
+
+  ahead(request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
+    const key = request.urlWithParams;
+    const kept = this.answers.get(key);
+    if ((kept !== undefined && !this.tooOld(kept)) || this.onTheirWay.has(key)) {
+      return EMPTY;
+    }
+    return this.sharedFromServer(key, request, next);
   }
 
   forget(): void {
@@ -62,6 +75,27 @@ export class KeptPublicAnswers {
     this.fromServer(key, request, next)
       .pipe(finalize(() => this.refreshing.delete(key)))
       .subscribe({ error: () => undefined });
+  }
+
+  private tooOld(kept: KeptAnswer): boolean {
+    return performance.now() - kept.keptAt > KEPT_ANSWER_MAX_AGE_MS;
+  }
+
+  private sharedFromServer(
+    key: string,
+    request: HttpRequest<unknown>,
+    next: HttpHandlerFn,
+  ): Observable<HttpEvent<unknown>> {
+    const running = this.onTheirWay.get(key);
+    if (running !== undefined) {
+      return running;
+    }
+    const shared = this.fromServer(key, request, next).pipe(
+      finalize(() => this.onTheirWay.delete(key)),
+      share(),
+    );
+    this.onTheirWay.set(key, shared);
+    return shared;
   }
 
   private fromServer(
@@ -106,11 +140,18 @@ export const keptPublicAnswersInterceptor: HttpInterceptorFn = (request, next) =
   if (request.method !== 'GET' && CONTENT_WRITES.test(request.url)) {
     return next(request).pipe(finalize(() => kept.forget()));
   }
-  return isKeptPublicAnswer(request) ? kept.answer(request, next) : next(request);
+  if (!isKeptPublicAnswer(request)) {
+    return next(request);
+  }
+  return request.context.get(ASKED_AHEAD) ? kept.ahead(request, next) : kept.answer(request, next);
 };
 
 function isGone(failure: unknown): boolean {
   return typeof failure === 'object' && failure !== null && 'status' in failure
     ? failure.status === 404
     : false;
+}
+
+export function askedAhead(): HttpContext {
+  return new HttpContext().set(ASKED_AHEAD, true);
 }

@@ -1,4 +1,10 @@
-import { HttpClient, HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpRequest,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -6,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { ShownAnswers } from '../connectivity/shown-answers';
 import { mayComeFromServiceWorker } from '../updates/service-worker-bypass';
 import {
+  ASKED_AHEAD,
   isKeptPublicAnswer,
   KEPT_ANSWER_MAX_AGE_MS,
   KEPT_ANSWERS_LIMIT,
@@ -57,6 +64,59 @@ describe('Given the public answers the app keeps in memory', () => {
     backend.expectOne(HOME).flush({ news: [] });
 
     expect(await answer).toEqual({ news: [] });
+  });
+
+  describe('when the app asks for an answer ahead of the page that shows it', () => {
+    function ahead(url: string): Promise<unknown> {
+      return new Promise((done) =>
+        http
+          .get(url, { context: new HttpContext().set(ASKED_AHEAD, true) })
+          .subscribe({ complete: () => done('done'), error: () => done('failed') }),
+      );
+    }
+
+    it('then an answer not kept yet is asked for and kept for the page', async () => {
+      const asked = ahead(HOME);
+      backend.expectOne(HOME).flush({ news: ['ahead'] });
+      await asked;
+
+      expect(await get(HOME)).toEqual({ news: ['ahead'] });
+      backend.expectOne(HOME).flush({ news: ['ahead'] });
+    });
+
+    it('then an answer already kept or on its way is not asked for again', async () => {
+      await seen(HOME, { news: [] });
+      const onItsWay = get(NEWS);
+
+      expect(await ahead(HOME)).toBe('done');
+      expect(await ahead(NEWS)).toBe('done');
+
+      backend.expectOne(NEWS).flush({ items: [] });
+      await onItsWay;
+    });
+  });
+
+  it('when a page asks for an answer that is already on its way, then both wait for that one request', async () => {
+    const ahead = get(HOME);
+    const page = get(HOME);
+
+    backend.expectOne(HOME).flush({ news: ['first'] });
+
+    expect(await ahead).toEqual({ news: ['first'] });
+    expect(await page).toEqual({ news: ['first'] });
+  });
+
+  it('when the request on its way fails, then the next asking goes to the server again', async () => {
+    const ahead = get(HOME).catch(() => 'failed');
+    const page = get(HOME).catch(() => 'failed');
+    backend.expectOne(HOME).flush(null, { status: 503, statusText: 'Unavailable' });
+    expect(await ahead).toBe('failed');
+    expect(await page).toBe('failed');
+
+    const again = get(HOME);
+    backend.expectOne(HOME).flush({ news: [] });
+
+    expect(await again).toEqual({ news: [] });
   });
 
   describe('when a page asks again for an answer it already had', () => {

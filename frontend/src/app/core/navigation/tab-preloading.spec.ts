@@ -45,7 +45,7 @@ describe('Given the preloading of the pages behind the tab bar', () => {
     const shell = routes.find((route) => route.data?.['loadedAhead'] === true);
     expect(loadedAhead(shell?.children ?? [])).toEqual(['']);
     expect(loadedAhead(contentRoutes).sort()).toEqual(
-      APP_TABS.map((tab) => tab.path.slice(1)).sort(),
+      [...APP_TABS.map((tab) => tab.path.slice(1)), 'aktuality/:slug', 'projekty/:slug'].sort(),
     );
   });
 });

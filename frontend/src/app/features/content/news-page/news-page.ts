@@ -25,9 +25,10 @@ import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { NEWS_PAGE_SIZE, PROJECTS_PAGE_SIZE } from '../content-page-sizes';
 
-export const PAGE_SIZE = 10;
-export const PROJECTS_PAGE_SIZE = 50;
+export const PAGE_SIZE = NEWS_PAGE_SIZE;
+export { PROJECTS_PAGE_SIZE };
 export const MAX_PROJECT_PAGES = 20;
 export const STORIES_WAIT_MS = 4000;
 

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { refreshedAfterKeptCopy } from '../../core/connectivity/kept-answer-refresh';
 import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
@@ -211,8 +211,8 @@ export class NewsApi {
     return this.http.post<UploadedImageResponse>(ADMIN_MEDIA, form);
   }
 
-  published(page: number, size: number): Observable<NewsPageResponse> {
-    return this.http.get<NewsPageResponse>(PUBLIC_NEWS, { params: { page, size } });
+  published(page: number, size: number, context?: HttpContext): Observable<NewsPageResponse> {
+    return this.http.get<NewsPageResponse>(PUBLIC_NEWS, { params: { page, size }, context });
   }
 
   publishedWithLatest(page: number, size: number): Observable<NewsPageResponse> {
@@ -222,9 +222,10 @@ export class NewsApi {
     });
   }
 
-  publishedBySlug(slug: string): Observable<NewsArticleResponse> {
-    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${slug}`, {
-      context: refreshedAfterKeptCopy(),
-    });
+  publishedBySlug(
+    slug: string,
+    context: HttpContext = refreshedAfterKeptCopy(),
+  ): Observable<NewsArticleResponse> {
+    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${slug}`, { context });
   }
 }
