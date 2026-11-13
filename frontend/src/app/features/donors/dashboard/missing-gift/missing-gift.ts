@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 export const ADD_ACCOUNT_QUERY = { pridat: 'ucet' } as const;
@@ -11,5 +11,7 @@ export const ADD_ACCOUNT_QUERY = { pridat: 'ucet' } as const;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MissingGift {
+  readonly grouped = input(false);
+
   protected readonly addAccountQuery = ADD_ACCOUNT_QUERY;
 }

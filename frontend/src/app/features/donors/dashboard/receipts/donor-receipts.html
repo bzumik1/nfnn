@@ -1,5 +1,5 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
-<p class="receipts-intro" i18n="@@donor.receipts.intro">
+<p class="ui-page-intro receipts-intro" i18n="@@donor.receipts.intro">
   Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna dalšího
   roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí, protože roční obsahuje
   všechny dary roku. Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a
@@ -7,21 +7,16 @@
 </p>
 
 @if (donations.state() === 'ready') {
-  <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
-    <h2
-      id="yearly-title"
-      class="ui-card__title ui-card__title--large"
-      i18n="@@donor.dashboard.yearly.title"
-    >
+  <section class="receipts-group yearly-card" aria-labelledby="yearly-title">
+    <h2 id="yearly-title" class="ui-group-title" i18n="@@donor.dashboard.yearly.title">
       Roční potvrzení o darech
     </h2>
-    <p class="yearly-sub" i18n="@@donor.receipts.yearly.sub">
-      Souhrnný doklad pro daňové účely za všechny dary jednoho roku. Stáhnete ho po skončení roku.
-    </p>
 
     @if (donations.receiptError(); as error) {
       @if (error.scope === 'yearly') {
-        <p class="ui-callout ui-callout--danger receipt-error" role="alert">{{ error.message }}</p>
+        <p class="ui-group-note ui-group-note--alert receipt-error" role="alert">
+          {{ error.message }}
+        </p>
         @if (donations.offersDiagnostics()) {
           <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
         }
@@ -29,81 +24,87 @@
     }
 
     @if (rows().length > 0) {
-      <ul class="years">
+      <ul class="ui-list ui-list--inset years" aria-labelledby="yearly-title">
         @for (row of rows(); track row.year) {
-          <li class="year-row">
-            <span class="year">{{ row.year }}</span>
-            <span class="year-count"
-              ><app-gift-count [gifts]="row.gifts" [verifications]="row.verifications"
-            /></span>
-            <span class="year-total ui-figures">{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span>
-            <span class="year-action">
-              @switch (row.receipt) {
-                @case ('available') {
-                  <button
-                    type="button"
-                    class="ui-button ui-button--primary yearly-pdf"
-                    [attr.data-receipt-download]="donations.yearlyTarget(row.year)"
-                    [attr.aria-disabled]="donations.yearlyDownloading(row.year) ? 'true' : null"
-                    [attr.aria-busy]="donations.yearlyDownloading(row.year)"
-                    (click)="donations.downloadYearlyReceipt(row.year)"
-                  >
-                    @if (donations.yearlyDownloading(row.year)) {
-                      <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                    } @else if (donations.yearlyReady(row.year)) {
-                      <span i18n="@@donor.dashboard.yearly.open"
-                        >Otevřít potvrzení za rok {{ row.year }} (PDF)</span
-                      >
-                    } @else {
-                      <svg
-                        class="yearly-pdf-icon"
-                        aria-hidden="true"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M12 3v12" />
-                        <path d="m7 10 5 5 5-5" />
-                        <path d="M5 21h14" />
-                      </svg>
-                      <span i18n="@@donor.dashboard.yearly.pdf"
-                        >Stáhnout potvrzení za rok {{ row.year }} (PDF)</span
-                      >
-                    }
-                  </button>
-                  <app-download-progress
-                    class="receipt-saved"
-                    [progress]="donations.yearlyProgress(row.year)"
-                    (cancelled)="donations.cancelYearlyReceipt(row.year)"
-                  />
+          <li>
+            <div class="ui-list__row year-row">
+              <span class="ui-list__title year">{{ row.year }}</span
+              >&ngsp;<span class="ui-list__meta year-count"
+                ><app-gift-count [gifts]="row.gifts" [verifications]="row.verifications" /></span
+              >&ngsp;<span class="ui-list__value year-total ui-figures"
+                >{{ crowns(row.totalAmountMinor) }}&nbsp;Kč</span
+              >&ngsp;
+              <div class="ui-list__extra year-action">
+                @switch (row.receipt) {
+                  @case ('available') {
+                    <button
+                      type="button"
+                      class="ui-pill-button ui-pill-button--tinted yearly-pdf"
+                      [attr.data-receipt-download]="donations.yearlyTarget(row.year)"
+                      [attr.aria-disabled]="donations.yearlyDownloading(row.year) ? 'true' : null"
+                      [attr.aria-busy]="donations.yearlyDownloading(row.year)"
+                      (click)="donations.downloadYearlyReceipt(row.year)"
+                    >
+                      @if (donations.yearlyDownloading(row.year)) {
+                        <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
+                      } @else if (donations.yearlyReady(row.year)) {
+                        <span i18n="@@donor.dashboard.yearly.open"
+                          >Otevřít potvrzení za rok {{ row.year }} (PDF)</span
+                        >
+                      } @else {
+                        <svg
+                          class="yearly-pdf-icon"
+                          aria-hidden="true"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <path d="M12 3v12" />
+                          <path d="m7 10 5 5 5-5" />
+                          <path d="M5 21h14" />
+                        </svg>
+                        <span i18n="@@donor.dashboard.yearly.pdf"
+                          >Stáhnout potvrzení za rok {{ row.year }} (PDF)</span
+                        >
+                      }
+                    </button>
+                    <app-download-progress
+                      class="receipt-saved"
+                      [progress]="donations.yearlyProgress(row.year)"
+                      (cancelled)="donations.cancelYearlyReceipt(row.year)"
+                    />
+                  }
+                  @case ('after-year-end') {
+                    <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"
+                      >Ke stažení od 1.&nbsp;ledna&nbsp;{{ row.year + 1 }}</span
+                    >
+                  }
+                  @case ('not-issued') {
+                    <span class="year-note" i18n="@@donor.receipts.year.notIssued"
+                      >Za tento rok potvrzení na webu nevystavujeme. Potřebujete ho? Napište nám na
+                      <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.</span
+                    >
+                  }
                 }
-                @case ('after-year-end') {
-                  <span class="year-note" i18n="@@donor.receipts.year.afterYearEnd"
-                    >Ke stažení od 1.&nbsp;ledna&nbsp;{{ row.year + 1 }}</span
-                  >
-                }
-                @case ('not-issued') {
-                  <span class="year-note" i18n="@@donor.receipts.year.notIssued"
-                    >Za tento rok potvrzení na webu nevystavujeme. Potřebujete ho? Napište nám na
-                    <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.</span
-                  >
-                }
-              }
-            </span>
+              </div>
+            </div>
           </li>
         }
       </ul>
+      <p class="ui-group-note yearly-sub" i18n="@@donor.receipts.yearly.sub">
+        Souhrnný doklad pro daňové účely za všechny dary jednoho roku. Stáhnete ho po skončení roku.
+      </p>
       @if (someNotIssued()) {
-        <p class="yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
+        <p class="ui-group-note yearly-hint" i18n="@@donor.dashboard.yearly.beforeReceipts">
           Potvrzení za rok tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}.
         </p>
       } @else {
-        <p class="yearly-earlier">
+        <p class="ui-group-note yearly-earlier">
           <span i18n="@@donor.receipts.yearly.earlier"
             >Potvrzení tu vystavujeme za dary od roku {{ donations.receiptsFrom() }}. Za dřívější
             dary nám napište na</span
@@ -111,24 +112,23 @@
         </p>
       }
     } @else {
-      <p class="yearly-empty" i18n="@@donor.dashboard.yearly.empty">
+      <p class="ui-card ui-card--padded yearly-empty" i18n="@@donor.dashboard.yearly.empty">
         Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se
         tady.
       </p>
-      <app-missing-gift />
+      <p class="ui-group-note yearly-sub" i18n="@@donor.receipts.yearly.sub">
+        Souhrnný doklad pro daňové účely za všechny dary jednoho roku. Stáhnete ho po skončení roku.
+      </p>
+      <app-missing-gift class="yearly-missing-gift" [grouped]="true" />
     }
   </section>
 
-  <section class="ui-card ui-card--padded single-card" aria-labelledby="single-title">
-    <h2
-      id="single-title"
-      class="ui-card__title ui-card__title--large"
-      i18n="@@donor.receipts.single.title"
-    >
+  <section class="receipts-group single-card" aria-labelledby="single-title">
+    <h2 id="single-title" class="ui-group-title" i18n="@@donor.receipts.single.title">
       Potvrzení k jednotlivému daru
     </h2>
     @if (runningYearGifts().length > 0) {
-      <p class="yearly-sub">
+      <p class="ui-group-note yearly-sub single-sub">
         <span i18n="@@donor.receipts.single.runningYear"
           >Potvrzení k letošním darům stáhnete tady hned po jejich připsání, ke starším darům v
           části</span
@@ -136,7 +136,7 @@
       </p>
       @if (donations.receiptError(); as error) {
         @if (error.scope === 'single') {
-          <p class="ui-callout ui-callout--danger receipt-error" role="alert">
+          <p class="ui-group-note ui-group-note--alert receipt-error" role="alert">
             {{ error.message }}
           </p>
           @if (donations.offersDiagnostics()) {
@@ -144,11 +144,14 @@
           }
         }
       }
-      <div class="single-gifts">
-        <app-donations-table [items]="runningYearGifts()" labelledBy="single-title" />
-      </div>
+      <app-donations-table
+        class="single-gifts"
+        [items]="runningYearGifts()"
+        [inset]="true"
+        labelledBy="single-title"
+      />
     } @else {
-      <p class="yearly-sub">
+      <p class="ui-group-note yearly-sub">
         <span i18n="@@donor.receipts.single.text"
           >Potvrzení ke každému přijatému daru zvlášť stáhnete hned po jeho připsání v části</span
         >&ngsp;<a routerLink="/darce/dary" i18n="@@donor.receipts.single.link">Moje dary</a>.
@@ -159,19 +162,33 @@
   <app-donations-pending />
 }
 
-<section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
-  <h2
-    id="verify-title"
-    class="ui-card__title ui-card__title--large"
-    i18n="@@donor.receipts.verify.title"
-  >
+<section class="receipts-group verify-card" aria-labelledby="verify-title">
+  <h2 id="verify-title" class="visually-hidden" i18n="@@donor.receipts.verify.title">
     Ověřit potvrzení
   </h2>
-  <p class="yearly-sub" i18n="@@donor.receipts.verify.text">
+  <ul class="ui-list ui-list--inset">
+    <li>
+      <a routerLink="/overit" class="ui-list__row verify-link">
+        <span class="ui-list__title" i18n="@@donor.receipts.verify.link">Ověřit potvrzení</span>
+        <svg
+          class="ui-list__chevron"
+          aria-hidden="true"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </a>
+    </li>
+  </ul>
+  <p class="ui-group-note verify-text" i18n="@@donor.receipts.verify.text">
     Ověřte svoje potvrzení nebo potvrzení, které vám někdo ukázal: naskenujete jeho QR kód,
     nahrajete PDF nebo vložíte odkaz z kódu. Ukážeme, jaké údaje v něm fond podepsal.
   </p>
-  <a routerLink="/overit" class="ui-button verify-link" i18n="@@donor.receipts.verify.link"
-    >Ověřit potvrzení</a
-  >
 </section>

@@ -40,6 +40,10 @@ td {
   color: var(--color-text-secondary);
 }
 
+td.date {
+  white-space: nowrap;
+}
+
 td.amount {
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);

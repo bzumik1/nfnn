@@ -100,12 +100,10 @@
         </p>
       }
     } @else {
-      <div class="ui-card ui-card--padded payments-empty-state">
-        <p class="payments-empty" i18n="@@donor.dashboard.payments.empty">
-          Zatím tu není žádná platba.
-        </p>
-        <app-missing-gift />
-      </div>
+      <p class="ui-card ui-card--padded payments-empty" i18n="@@donor.dashboard.payments.empty">
+        Zatím tu není žádná platba.
+      </p>
+      <app-missing-gift [grouped]="true" />
     }
     @if (donor()?.variableSymbol; as symbol) {
       <app-standing-order class="gifts-standing" [grouped]="true" [variableSymbol]="symbol" />

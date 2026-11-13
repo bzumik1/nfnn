@@ -1447,6 +1447,7 @@ describe('Given a signed-in donor in the donor area', () => {
         (node) => (node.tagName === 'H2' ? 'H2' : node.className),
       );
       expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
+      expect(element('.first-gift .missing-gift li')).toBeNull();
     });
 
     it('then a donor with gifts can still open the standing order guide in the card Poslat dar', async () => {
@@ -1904,6 +1905,9 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.payments-card table')).toBeNull();
       expect(text('.payments-empty')).toBe('Zatím tu není žádná platba.');
       expectMissingGiftIn('.payments-card');
+      expect(element('.payments-card .missing-gift li > a')?.getAttribute('href')).toBe(
+        '/darce/ucty?pridat=ucet',
+      );
       expect(text('.payments-card app-standing-order .standing-toggle')).toBe(
         'Jak nastavit trvalý příkaz',
       );
@@ -2462,6 +2466,30 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element('.verify-card a')?.getAttribute('href')).toBe('/overit');
 
       await respond(twoYearSummary(), twoYearDonations());
+    });
+
+    it('then the way to verify a receipt is a row of a list linking to the verification page', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const row = element('.verify-card ul > li > a');
+      expect(normalized(row?.textContent ?? '')).toBe('Ověřit potvrzení');
+      expect(row?.getAttribute('href')).toBe('/overit');
+    });
+
+    it('then the years are the rows of a list named by its heading, each read with spaces between its year, count, total and receipt', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const list = element('ul[aria-labelledby="yearly-title"]');
+      expect(
+        [...(list?.querySelectorAll(':scope > li') ?? [])].map((row) =>
+          normalized(row.textContent ?? ''),
+        ),
+      ).toEqual([
+        '2026 2 dary 1 500 Kč Ke stažení od 1. ledna 2027',
+        '2025 1 dar 250 Kč Stáhnout potvrzení za rok 2025 (PDF)',
+      ]);
     });
 
     it('then every year shows its count, its total and what can be done with its receipt', async () => {
@@ -3351,6 +3379,9 @@ describe('Given a signed-in donor in the donor area', () => {
         'Zatím tu nemáme žádný váš dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.',
       );
       expectMissingGiftIn('.yearly-card');
+      expect(element('.yearly-card .missing-gift li > a')?.getAttribute('href')).toBe(
+        '/darce/ucty?pridat=ucet',
+      );
     });
 
     it('then one plain line says to use either the yearly receipt or those of single gifts, and that a new download after a change of name or address replaces the earlier one', async () => {

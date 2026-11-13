@@ -1,17 +1,57 @@
-<div class="missing-gift">
-  <h3 class="missing-gift-title" i18n="@@donor.dashboard.missingGift.title">
-    Poslali jste dar a nevidíte ho?
-  </h3>
-  <p class="missing-gift-text" i18n="@@donor.dashboard.missingGift.text">
-    Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám
-    zatím přiřadit neumíme. Ověřte účet, ze kterého jste platili, platbou 1&nbsp;Kč a dřívější dary
-    z něj vám obvykle přiřadíme také.
-  </p>
-  <a
-    class="ui-button missing-gift-add"
-    routerLink="/darce/ucty"
-    [queryParams]="addAccountQuery"
-    i18n="@@donor.dashboard.missingGift.add"
-    >Přidat účet, ze kterého jste platili</a
-  >
-</div>
+@if (grouped()) {
+  <div class="missing-gift missing-gift--grouped">
+    <h3 class="ui-group-title missing-gift-title" i18n="@@donor.dashboard.missingGift.title">
+      Poslali jste dar a nevidíte ho?
+    </h3>
+    <p class="ui-group-note missing-gift-text" i18n="@@donor.dashboard.missingGift.text">
+      Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám
+      zatím přiřadit neumíme. Ověřte účet, ze kterého jste platili, platbou 1&nbsp;Kč a dřívější
+      dary z něj vám obvykle přiřadíme také.
+    </p>
+    <ul class="ui-list ui-list--inset">
+      <li>
+        <a
+          class="ui-list__row missing-gift-add"
+          routerLink="/darce/ucty"
+          [queryParams]="addAccountQuery"
+        >
+          <span class="ui-list__title" i18n="@@donor.dashboard.missingGift.add"
+            >Přidat účet, ze kterého jste platili</span
+          >
+          <svg
+            class="ui-list__chevron"
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </a>
+      </li>
+    </ul>
+  </div>
+} @else {
+  <div class="missing-gift">
+    <h3 class="missing-gift-title" i18n="@@donor.dashboard.missingGift.title">
+      Poslali jste dar a nevidíte ho?
+    </h3>
+    <p class="missing-gift-text" i18n="@@donor.dashboard.missingGift.text">
+      Platbu bez vašeho variabilního symbolu, s jiným symbolem nebo z doby před založením účtu vám
+      zatím přiřadit neumíme. Ověřte účet, ze kterého jste platili, platbou 1&nbsp;Kč a dřívější
+      dary z něj vám obvykle přiřadíme také.
+    </p>
+    <a
+      class="ui-button missing-gift-add"
+      routerLink="/darce/ucty"
+      [queryParams]="addAccountQuery"
+      i18n="@@donor.dashboard.missingGift.add"
+      >Přidat účet, ze kterého jste platili</a
+    >
+  </div>
+}
