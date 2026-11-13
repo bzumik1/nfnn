@@ -1,9 +1,9 @@
 package cz.novanadeje.app.donations.application.admin;
 
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.LinkRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.LinkRow;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.bankaccount.DonorBankAccountsService;
 import cz.novanadeje.app.donations.application.overview.DonationOverview;
 import cz.novanadeje.app.donations.application.overview.DonorDonationsService;

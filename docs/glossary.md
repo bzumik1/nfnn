@@ -265,7 +265,7 @@ The site added to a phone's or computer's home screen, opening without the addre
 _Avoid_: „aplikace“ alone where a connected application or the authenticator app is meant
 
 **Device copy**\
-UI „Data v tomto zařízení“ (the donor's), „kopie správy“ (the administration's) · Code: `frontend/src/app/core/device/` (`DeviceVault`), `GET /api/donations/me/sync`, `/api/admin/{donations,donors,content,operations}/sync`; „device copy“ and „administration copy“ in docs.\
+UI „Data v tomto zařízení“ (the donor's), „kopie správy“ (the administration's) · Code: `frontend/src/app/core/device/` (`DeviceVault`), `GET /api/donations/me/sync`, `/api/admin/{donations,donors,content,operations}/sync`, `donations/application/admincopy/` (the rows of the administration copy and their versions); „device copy“ and „administration copy“ in docs.\
 The encrypted copy of a donor's or the whole administration's data that the browser keeps on the device for offline reading.\
 _Avoid_: cache, backup
 

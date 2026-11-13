@@ -1,9 +1,9 @@
 package cz.novanadeje.app.donations.application.admin;
 
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.SymbolClaimRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.SymbolClaimRow;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;

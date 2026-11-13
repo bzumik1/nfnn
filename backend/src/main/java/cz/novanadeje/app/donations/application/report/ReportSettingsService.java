@@ -1,10 +1,11 @@
 package cz.novanadeje.app.donations.application.report;
 
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
+import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportRecipientsInBrowserOnly;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
@@ -101,10 +102,10 @@ public class ReportSettingsService {
         return String.join(", ", names);
     }
 
-    private ReportAdministrationView.NextReport nextReport(ReportSettings current, List<SentReport> sent, LocalDate today) {
+    private NextReport nextReport(ReportSettings current, List<SentReport> sent, LocalDate today) {
         ReportMonth previous = ReportMonth.previousTo(today);
         boolean previousSent = sent.stream().anyMatch(report -> report.month().equals(previous));
         ReportMonth next = previousSent ? new ReportMonth(YearMonth.from(today)) : previous;
-        return new ReportAdministrationView.NextReport(next, current.sendDateFor(next));
+        return new NextReport(next, current.sendDateFor(next));
     }
 }

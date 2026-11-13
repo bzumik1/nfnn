@@ -14,6 +14,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSummary;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
+import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.YearOverview;
@@ -98,7 +99,7 @@ class AdminDonationsSyncServiceTest {
         DonationReceipt erasedOnes = Receipts.yearlyReceiptOf(erased.id(), Year.of(2026));
         BankImportState importState = BankImportState.initial(NOW);
         ReportAdministrationView report = new ReportAdministrationView(ReportSettings.defaults(new EmailAddress("info@nfnn.cz")), Optional.empty(),
-                List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10), "0123456789abcdef");
+                List.of(), new NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 1)), ReportMonth.of(2026, 10), "0123456789abcdef");
         when(administrationHolders.holdsAdministration(ADMIN.value())).thenReturn(true);
         when(records.findAll()).thenReturn(List.of(jana, erased));
         when(payments.findAllNewestFirst()).thenReturn(List.of());

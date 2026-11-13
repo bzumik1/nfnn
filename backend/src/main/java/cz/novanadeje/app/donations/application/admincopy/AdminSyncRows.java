@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.application.sync;
+package cz.novanadeje.app.donations.application.admincopy;
 
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donation.Donation;

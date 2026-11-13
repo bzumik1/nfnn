@@ -1,8 +1,7 @@
-package cz.novanadeje.app.donations.application.sync;
+package cz.novanadeje.app.donations.application.admincopy;
 
-import cz.novanadeje.app.donations.application.report.ReportAdministrationView;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.ReportSettingsRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.PaymentRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.ReportSettingsRow;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
@@ -12,6 +11,7 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
@@ -98,10 +98,10 @@ class AdminDonationsRowsTest {
         StoredReportSettings stored = new StoredReportSettings(new ReportSettings(ReportRecipients.of(new EmailAddress("info@nfnn.cz"),
                 new EmailAddress("pokladni@example.cz")), 3, 7, new ReportSections(true, true, false, true)), Optional.of(Instant.parse("2026-10-01T08:00:00Z")));
 
-        ReportSettingsRow october = rows.reportSettings(stored, List.of(), new ReportAdministrationView.NextReport(ReportMonth.of(2026, 10),
+        ReportSettingsRow october = rows.reportSettings(stored, List.of(), new NextReport(ReportMonth.of(2026, 10),
                 LocalDate.of(2026, 11, 3)), ReportMonth.of(2026, 10));
         ReportSettingsRow november = rows.reportSettings(stored, List.of(new SentReport(ReportMonth.of(2026, 10), Instant.parse("2026-11-03T06:00:00Z"))),
-                new ReportAdministrationView.NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 3)), ReportMonth.of(2026, 11));
+                new NextReport(ReportMonth.of(2026, 11), LocalDate.of(2026, 12, 3)), ReportMonth.of(2026, 11));
 
         assertThat(october.version()).isEqualTo(PINNED_REPORT_SETTINGS_VERSION).isEqualTo(rows.reportSettingsVersion(stored));
         assertThat(november.version()).isEqualTo(PINNED_REPORT_SETTINGS_VERSION);
