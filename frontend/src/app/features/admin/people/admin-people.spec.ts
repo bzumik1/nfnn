@@ -36,6 +36,7 @@ import {
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
 import { person as heldPerson } from '../../content/testing/people-fixtures';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 const PEOPLE_URL = '/api/admin/content/people';
 const NOTE_VERSION = '00000000000000a1';
@@ -656,6 +657,26 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(text(fixture, `.person-row:nth-child(2) .person-badges`)).toContain(
       'Podepisuje potvrzení',
     );
+  });
+
+  it('when they let another person sign, then the card of who signs in Nastavení does not show the earlier choice from memory', async () => {
+    const kept = TestBed.inject(KeptAdministrationAnswers);
+    kept.keep('receipt-signatory', { block: null });
+    await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
+    await check(fixture, 'signsReceipts');
+    await type(fixture, '#person-receipt-role', 'místopředseda správní rady');
+    await submit(fixture, '.receipt-form');
+
+    http.expectOne(SIGNATORY_URL).flush(
+      receiptSignatory({
+        personId: OTHER_PERSON_ID,
+        name: 'Adam Vzor',
+        receiptRole: 'místopředseda správní rady',
+      }).signatory,
+    );
+    await settle(fixture);
+
+    expect(kept.kept('receipt-signatory')).toBeNull();
   });
 
   it('when they look at removing a person, then it says what leaves the site and that issued receipts keep their copies', async () => {

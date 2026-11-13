@@ -33,6 +33,8 @@ import {
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptAdministrationAnswers } from '../../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
@@ -58,6 +60,8 @@ interface WithdrawalOffer {
 })
 export class ReceiptSigningKey {
   private readonly api = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
+  private readonly changes = new ListChanges(() => this.load(true));
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -65,9 +69,10 @@ export class ReceiptSigningKey {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  private readonly refreshMissed = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
-    () => this.state() === 'offline',
-    () => this.load(),
+    () => this.state() === 'offline' || this.refreshMissed(),
+    () => this.load(this.state() === 'ready'),
   );
   protected readonly keys = signal<ReceiptSigningKeysResponse | null>(null);
   protected readonly withdrawal = signal<Withdrawal | null>(null);
@@ -122,32 +127,56 @@ export class ReceiptSigningKey {
   });
 
   constructor() {
-    this.load();
+    const shown = this.onlineAgain.offline() ? null : this.kept.kept('receipt-signing-keys');
+    if (shown !== null) {
+      this.keys.set(shown);
+      this.state.set('ready');
+    }
+    this.load(shown !== null);
   }
 
   protected registeredAt(instant: string): string {
     return formatBankTime(instant);
   }
 
-  protected load(): void {
-    this.state.set('loading');
-    this.api
-      .receiptSigningKeys()
+  protected load(quietly = false): void {
+    if (!quietly) {
+      this.state.set('loading');
+    }
+    this.changes
+      .track(this.api.receiptSigningKeys())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (keys) => {
+          this.refreshMissed.set(false);
           this.stillWithdrawnAfterRestart.set(false);
-          this.keys.set(keys);
+          this.show(keys);
           this.state.set('ready');
         },
-        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
+        error: () => {
+          if (quietly && this.state() === 'ready') {
+            this.refreshMissed.set(this.onlineAgain.offline());
+            return;
+          }
+          this.state.set(this.onlineAgain.offline() ? 'offline' : 'error');
+        },
       });
+  }
+
+  private shownFromServerChange(): void {
+    this.changes.answeredByChange();
+  }
+
+  private show(keys: ReceiptSigningKeysResponse): void {
+    this.keys.set(keys);
+    this.kept.keep('receipt-signing-keys', keys);
   }
 
   private showAfterRestart(keyId: string, keys: ReceiptSigningKeysResponse): void {
     const same = keys.currentKeyId === keyId;
     this.stillWithdrawnAfterRestart.set(same);
-    this.keys.set(keys);
+    this.shownFromServerChange();
+    this.show(keys);
     this.state.set('ready');
     this.notice.set(this.afterRestartNotice(keyId, keys));
   }
@@ -179,7 +208,8 @@ export class ReceiptSigningKey {
   protected withdrawn(response: ReceiptSigningKeyWithdrawalResponse): void {
     const keyId = this.withdrawal()?.keyId ?? '';
     this.withdrawal.set(null);
-    this.keys.set(response);
+    this.shownFromServerChange();
+    this.show(response);
     this.state.set('ready');
     if (response.restarting) {
       this.restartingFor.set(keyId);
