@@ -215,6 +215,21 @@ for (const { width, height } of [
       await expect.poll(() => contentPastTheSides(row)).toEqual([]);
     });
 
+    test('when a signed-in donor opens Můj přehled, then every bank detail of Poslat dar stays whole within its row', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const rows = page.locator('.send-gift .bank-row');
+      await expect(rows.last()).toContainText('IBAN');
+
+      for (const row of await rows.all()) {
+        await expect.poll(() => contentPastTheSides(row)).toEqual([]);
+      }
+    });
+
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
       page,
     }) => {

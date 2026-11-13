@@ -118,30 +118,30 @@
   color: var(--color-danger);
 }
 
-.bank-rows {
+.bank-grid {
   display: grid;
   gap: var(--space-2-5);
 }
 
-.bank-row {
+.bank-line {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-4);
 }
 
-.bank-key {
+.bank-label {
   color: var(--color-text-muted);
   font-size: var(--text-md);
 }
 
-.bank-value {
+.bank-figure {
   font-weight: var(--weight-bold);
   color: var(--color-text);
   font-size: var(--text-md);
 }
 
-.gift-arrival:is(.ui-notice, .ui-group-note) {
+.gift-arrival.ui-notice {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -276,7 +276,7 @@
   }
 }
 
-.bank-value-wrap {
+.bank-values {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -293,17 +293,17 @@
     padding: var(--space-5);
   }
 
-  .bank-row {
+  .bank-line {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-1);
   }
 
-  .bank-value-wrap {
+  .bank-values {
     justify-content: space-between;
   }
 
-  .bank-value {
+  .bank-figure {
     flex: 1 1 0;
   }
 
@@ -468,44 +468,6 @@
     gap: var(--space-2);
   }
 
-  .bank-rows {
-    gap: 0;
-  }
-
-  .bank-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'key key'
-      'value copy';
-    align-items: center;
-    gap: var(--space-0-5) var(--space-3);
-  }
-
-  .bank-key {
-    grid-area: key;
-    font-size: var(--text-sm);
-  }
-
-  .bank-value-wrap {
-    display: contents;
-  }
-
-  .bank-value {
-    grid-area: value;
-    font-weight: var(--weight-list-inset-title);
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .bank-value.ui-figures--groups {
-    overflow-wrap: normal;
-  }
-
-  app-copy-button {
-    grid-area: copy;
-  }
-
   .bank-note {
     margin-top: var(--space-2);
   }
@@ -525,7 +487,7 @@
 
 .amount-label {
   margin-bottom: var(--space-3);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-list-inset-title);
 }
 
 .amount-chip {

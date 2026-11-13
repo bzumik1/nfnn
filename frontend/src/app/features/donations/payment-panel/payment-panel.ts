@@ -51,6 +51,23 @@ import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
+
+const BANK_ROWS_LOOK = {
+  public: {
+    rows: 'bank-grid',
+    row: 'bank-line',
+    key: 'bank-label',
+    values: 'bank-values',
+    value: 'bank-figure',
+  },
+  grouped: {
+    rows: 'ui-list ui-list--inset ui-list--fields',
+    row: 'ui-list__row ui-list__item ui-list__field',
+    key: 'ui-list__field-label',
+    values: 'ui-list__field-body',
+    value: 'ui-list__field-value',
+  },
+} as const;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
@@ -122,6 +139,9 @@ export class PaymentPanel {
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
   readonly grouped = input(false);
+  protected readonly look = computed(() =>
+    this.grouped() ? BANK_ROWS_LOOK.grouped : BANK_ROWS_LOOK.public,
+  );
 
   protected readonly presets: readonly AmountPreset[] = [
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },

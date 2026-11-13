@@ -21,14 +21,32 @@ type OwnAccountState = PaymentAccountState | { readonly kind: 'idle' };
 
 let nextId = 0;
 
+const DETAILS_LOOK = {
+  public: {
+    list: '',
+    row: 'standing-line',
+    term: 'standing-term',
+    description: 'standing-description',
+    value: 'standing-figure',
+  },
+  grouped: {
+    list: 'ui-list--fields',
+    row: 'ui-list__field',
+    term: 'ui-list__field-label',
+    description: 'ui-list__field-body',
+    value: 'ui-list__field-value',
+  },
+} as const;
+
 @Component({
   selector: 'app-standing-order',
   imports: [RouterLink, CopyButton],
   templateUrl: './standing-order.html',
   styleUrl: './standing-order.scss',
   host: {
-    '[class.ui-list]': 'inset()',
-    '[class.ui-list--inset]': 'inset()',
+    '[class.is-grouped]': 'grouped()',
+    '[class.ui-list]': 'grouped()',
+    '[class.ui-list--inset]': 'grouped()',
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -40,7 +58,10 @@ export class StandingOrder {
   readonly variableSymbol = input.required<string>();
   readonly account = input<PaymentAccountState | null>(null);
   readonly amount = input<number | null>(null);
-  readonly inset = input(false);
+  readonly grouped = input(false);
+  protected readonly look = computed(() =>
+    this.grouped() ? DETAILS_LOOK.grouped : DETAILS_LOOK.public,
+  );
   readonly retryRequested = output<void>();
 
   private readonly toggleButton = viewChild.required<ElementRef<HTMLButtonElement>>('toggleButton');

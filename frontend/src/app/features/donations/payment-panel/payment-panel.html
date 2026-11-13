@@ -91,11 +91,13 @@
     >
       Bankovní spojení
     </p>
-    <div class="bank-rows" [class.ui-list]="grouped()" [class.ui-list--inset]="grouped()">
-      <div class="bank-row" [class.ui-list__row]="grouped()" [class.ui-list__item]="grouped()">
-        <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
-        <span class="bank-value-wrap">
-          <span class="bank-value ui-figures">{{ account.number }}</span>
+    <div class="bank-rows" [class]="look().rows">
+      <div class="bank-row" [class]="look().row">
+        <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.account"
+          >Číslo účtu</span
+        >&ngsp;
+        <span class="bank-value-wrap" [class]="look().values">
+          <span class="bank-value ui-figures" [class]="look().value">{{ account.number }}</span>
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
@@ -106,10 +108,11 @@
         </span>
       </div>
       @if (amount(); as chosen) {
-        <div class="bank-row" [class.ui-list__row]="grouped()" [class.ui-list__item]="grouped()">
-          <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
-          <span class="bank-value-wrap">
-            <span class="bank-value ui-figures"
+        <div class="bank-row" [class]="look().row">
+          <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.amount">Částka</span
+          >&ngsp;
+          <span class="bank-value-wrap" [class]="look().values">
+            <span class="bank-value ui-figures" [class]="look().value"
               >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                 >Kč</ng-container
               ></span
@@ -125,10 +128,12 @@
         </div>
       }
       @if (variableSymbol(); as symbol) {
-        <div class="bank-row" [class.ui-list__row]="grouped()" [class.ui-list__item]="grouped()">
-          <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
-          <span class="bank-value-wrap">
-            <span class="bank-value ui-figures">{{ symbol }}</span>
+        <div class="bank-row" [class]="look().row">
+          <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.vs"
+            >Variabilní symbol</span
+          >&ngsp;
+          <span class="bank-value-wrap" [class]="look().values">
+            <span class="bank-value ui-figures" [class]="look().value">{{ symbol }}</span>
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
@@ -139,10 +144,10 @@
           </span>
         </div>
       }
-      <div class="bank-row" [class.ui-list__row]="grouped()" [class.ui-list__item]="grouped()">
-        <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
-        <span class="bank-value-wrap">
-          <span class="bank-value ui-figures ui-figures--groups"
+      <div class="bank-row" [class]="look().row">
+        <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
+        <span class="bank-value-wrap" [class]="look().values">
+          <span class="bank-value ui-figures ui-figures--groups" [class]="look().value"
             ><span class="iban-half">{{ ibanLines()[0] }}</span
             >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
           >
@@ -184,10 +189,8 @@
 
 <div
   class="gift-arrival"
-  [class.ui-notice]="arrivalText() !== null && !grouped()"
-  [class.ui-notice--status]="arrivalText() !== null && !grouped()"
-  [class.ui-group-note]="arrivalText() !== null && grouped()"
-  [class.ui-group-note--status]="arrivalText() !== null && grouped()"
+  [class.ui-notice]="arrivalText() !== null"
+  [class.ui-notice--status]="arrivalText() !== null"
 >
   <p class="gift-arrival-text" role="status">
     @if (arrivalText(); as text) {
@@ -372,7 +375,8 @@
       </span>
     </span>
     <svg
-      class="other-device-chevron"
+      [class.other-device-chevron]="!grouped()"
+      [class.ui-list__chevron]="grouped()"
       [class.ui-list__chevron--open]="qrShown()"
       viewBox="0 0 24 24"
       fill="none"

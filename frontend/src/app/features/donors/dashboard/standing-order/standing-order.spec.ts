@@ -67,7 +67,7 @@ describe('Given the standing order guide of the donor area', () => {
   });
 
   it('when it is a row of a grouped card, then the row keeps the name and the disclosure of the guide', async () => {
-    fixture.componentRef.setInput('inset', true);
+    fixture.componentRef.setInput('grouped', true);
     await settle();
 
     const button = element<HTMLButtonElement>('.standing-toggle')!;

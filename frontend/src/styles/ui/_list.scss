@@ -1,3 +1,4 @@
+@use 'breakpoints' as bp;
 @use 'pressed';
 
 .ui-list {
@@ -118,6 +119,17 @@ div.ui-list__row {
   transform: rotate(180deg);
 }
 
+.ui-list--inset .ui-list__chevron {
+  flex-shrink: 0;
+  width: var(--list-chevron-size);
+  height: var(--list-chevron-size);
+  transition: transform var(--duration-base);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
 .ui-list__state {
   grid-area: state;
   justify-self: end;
@@ -196,6 +208,86 @@ div.ui-list__row {
 .dialog-panel--grouped .ui-list--inset:not(.dialog-panel--grouped dialog .ui-list--inset) {
   border-radius: var(--radius-group);
   box-shadow: var(--shadow-group);
+}
+
+.ui-list--fields {
+  container: list-fields / inline-size;
+}
+
+.ui-list--inset .ui-list__field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'label'
+    'body';
+  gap: var(--space-0-5) var(--space-4);
+  align-items: center;
+}
+
+.ui-list__field .ui-list__field-label {
+  grid-area: label;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.ui-list__field .ui-list__field-body {
+  grid-area: body;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.ui-list__field .ui-list__field-value {
+  flex: 1 1 0;
+  color: var(--color-text);
+  font-variant-numeric: var(--numeric-figures);
+  font-weight: var(--weight-list-inset-title);
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  &.ui-figures--groups {
+    overflow-wrap: normal;
+  }
+}
+
+@include bp.container-up(list-fields, cards) {
+  .ui-list--inset .ui-list__field {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'label body';
+  }
+
+  .ui-list__field .ui-list__field-label {
+    font-size: inherit;
+  }
+
+  .ui-list__field .ui-list__field-body {
+    justify-content: flex-end;
+  }
+
+  .ui-list__field .ui-list__field-value {
+    flex: 0 1 auto;
+    text-align: end;
+  }
+}
+
+@include bp.container-down(list-fields, pair) {
+  .ui-list__field .ui-list__field-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ui-list__field .ui-list__field-value {
+    flex: none;
+    max-width: 100%;
+
+    &.ui-figures--groups > * {
+      white-space: normal;
+    }
+  }
 }
 
 .ui-list--inset .ui-list__row:focus-visible {
