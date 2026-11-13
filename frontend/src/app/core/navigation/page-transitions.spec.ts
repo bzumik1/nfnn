@@ -489,7 +489,7 @@ describe('Given the app on the home screen of a phone opened straight on the don
     document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
     layer.remove();
     delete (window as { matchMedia?: unknown }).matchMedia;
-    delete (window as { innerWidth?: number }).innerWidth;
+    Object.defineProperty(window, 'innerWidth', jsdomWidth!);
   });
 
   it('when a finger takes the page, then the page Zpět leads to is drawn under cover and then lies under the finger', async () => {
