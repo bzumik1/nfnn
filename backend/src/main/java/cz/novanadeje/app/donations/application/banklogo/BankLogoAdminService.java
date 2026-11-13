@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -63,7 +64,7 @@ public class BankLogoAdminService {
         return logos.findAll().stream().map(logo -> row(logo, names)).toList();
     }
 
-    public BankLogoAdminRow set(UUID adminId, BankLogoSource source, BankLogoPrecondition precondition) {
+    public BankLogoAdminRow set(UUID adminId, BankLogoSource source, WritePrecondition precondition) {
         reads.executeWithoutResult(status -> admit(logos.find(source.bank()), precondition));
         FetchedBankLogo fetched = images.fetch(source);
         return inTransaction(() -> {
@@ -104,7 +105,7 @@ public class BankLogoAdminService {
         audit(adminId, REMOVE_ACTION, "Logo banky " + code.value() + " odebráno", clock.instant());
     }
 
-    private BankLogo createAndLock(BankLogoSource source, BankLogoPrecondition precondition) {
+    private BankLogo createAndLock(BankLogoSource source, WritePrecondition precondition) {
         boolean inserted = logos.insertIfAbsent(source);
         BankLogo locked = logos.lockForChange(source.bank()).orElseThrow(ChangedMeanwhile::andRemovedSince);
         if (!inserted) {
@@ -113,14 +114,14 @@ public class BankLogoAdminService {
         return locked;
     }
 
-    private void admit(Optional<BankLogo> current, BankLogoPrecondition precondition) {
+    private void admit(Optional<BankLogo> current, WritePrecondition precondition) {
         switch (precondition) {
-            case BankLogoPrecondition.Anything ignored -> {
+            case WritePrecondition.Anything ignored -> {
             }
-            case BankLogoPrecondition.Absent ignored -> current.ifPresent(existing -> {
+            case WritePrecondition.Absent ignored -> current.ifPresent(existing -> {
                 throw changedMeanwhile(existing);
             });
-            case BankLogoPrecondition.Matching matching -> requireVersion(current.orElseThrow(BankLogoNotFound::new), matching.expected());
+            case WritePrecondition.Matching matching -> requireVersion(current.orElseThrow(BankLogoNotFound::new), matching.expected());
         }
     }
 

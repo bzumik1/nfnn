@@ -12,6 +12,7 @@ class ArgumentResolverConfiguration implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new ExpectedVersionArgumentResolver());
+        resolvers.add(new WritePreconditionArgumentResolver());
         resolvers.add(new AdministrationChannelArgumentResolver());
     }
 }
