@@ -41,6 +41,7 @@ const CHECK_SCRIPTS = new Set([
   'frontend/scripts/dev-port.mjs',
   'frontend/eslint-confinement.js',
   'scripts/agent-context-budget.mjs',
+  'scripts/readme-links.mjs',
   'mcp/src/tool-list.ts',
 ]);
 const TOKEN_WRITING_SCRIPTS = new Set(['scripts/pr-labels.mjs']);
