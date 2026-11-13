@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyNotFound;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyStatus;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyWithdrawalPaused;
+import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
@@ -168,7 +169,7 @@ class ReceiptSigningKeyWithdrawalTest {
     @Test
     @DisplayName("Given a refused second factor, when an administrator withdraws a key, then only the refusal is recorded and nothing is stored or announced")
     void should_record_only_the_refusal_when_withdrawn_given_a_refused_second_factor() {
-        RuleViolation refused = new RuleViolation("donors/second-factor-code-rejected", "refused");
+        RuleViolation refused = new SecondFactorCodeRejected();
         doThrow(refused).when(freshSecondFactor).require(ADMIN, CODE);
 
         assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isSameAs(refused);
@@ -181,7 +182,7 @@ class ReceiptSigningKeyWithdrawalTest {
     @Test
     @DisplayName("Given a refused second factor, when an administrator withdraws a key, then the refusal is recorded without the row ever being locked, so a refused code never holds the row while it is audited")
     void should_record_the_refusal_without_locking_when_withdrawn_given_a_refused_second_factor() {
-        doThrow(new RuleViolation("donors/second-factor-code-rejected", "refused")).when(freshSecondFactor).require(ADMIN, CODE);
+        doThrow(new SecondFactorCodeRejected()).when(freshSecondFactor).require(ADMIN, CODE);
 
         assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(RuleViolation.class);
 
@@ -306,7 +307,7 @@ class ReceiptSigningKeyWithdrawalTest {
     @Test
     @DisplayName("Given a refused second factor, when an administrator withdraws a key, then the transaction that checked it has ended before the refusal is recorded, so a refusal never holds two connections")
     void should_record_the_refusal_after_the_transaction_ended_when_withdrawn_given_a_refused_second_factor() {
-        RuleViolation refused = new RuleViolation("donors/second-factor-code-rejected", "refused");
+        RuleViolation refused = new SecondFactorCodeRejected();
         doThrow(refused).when(freshSecondFactor).require(ADMIN, CODE);
         List<Boolean> recordedInTransaction = new ArrayList<>();
         doAnswer(invocation -> {
@@ -327,7 +328,7 @@ class ReceiptSigningKeyWithdrawalTest {
     void should_refuse_as_already_withdrawn_without_recording_when_withdrawn_given_a_withdrawal_committed_during_the_refused_check() {
         doAnswer(invocation -> {
             stored.rows.replaceAll(key -> key.id().equals(OWN) ? key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)) : key);
-            throw new RuleViolation("donors/second-factor-code-rejected", "refused");
+            throw new SecondFactorCodeRejected();
         }).when(freshSecondFactor).require(ADMIN, CODE);
 
         assertThatThrownBy(() -> withdrawal.withdraw(ADMIN, OWN, CODE)).isInstanceOf(ReceiptSigningKeyAlreadyWithdrawn.class);

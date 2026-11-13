@@ -42,6 +42,13 @@ class DomainFailureRulesTest {
             .because(FAILURES);
 
     @ArchTest
+    static final ArchRule domain_failures_are_named_classes = classes()
+            .that().areAssignableTo(DomainException.class)
+            .should().notBeAnonymousClasses()
+            .andShould().notBeLocalClasses()
+            .because(FAILURES + ": a failure is a named class of its own, so its code and texts are found by its name, never thrown as a kind made up on the spot");
+
+    @ArchTest
     static final ArchRule no_class_extends_the_argument_or_state_exceptions = noClasses()
             .should().beAssignableTo(IllegalArgumentException.class)
             .orShould().beAssignableTo(IllegalStateException.class)
@@ -71,6 +78,13 @@ class DomainFailureRulesTest {
                 planted("nested placement", domain_failures_live_in_the_domain, "donors.interfaces.rest.PlantedController",
                         "public class PlantedController { static final class Ended extends cz.novanadeje.app.shared.domain.error.AuthenticationFailure { "
                                 + "Ended() { super(\"auth/planted\", \"planted\"); } } }", "cz.novanadeje.app.donors.interfaces.rest.PlantedController$Ended"),
+                planted("anonymous", domain_failures_are_named_classes, "donors.domain.PlantedAggregate",
+                        "public class PlantedAggregate { RuntimeException refusal() { return new cz.novanadeje.app.shared.domain.error.Conflict("
+                                + "\"donors/planted\", \"planted\") { }; } }", "cz.novanadeje.app.donors.domain.PlantedAggregate$1"),
+                planted("local", domain_failures_are_named_classes, "donors.domain.PlantedPolicy",
+                        "public class PlantedPolicy { RuntimeException refusal() { class Refused extends cz.novanadeje.app.shared.domain.error.RuleViolation { "
+                                + "Refused() { super(\"donors/planted\", \"planted\"); } } return new Refused(); } }",
+                        "cz.novanadeje.app.donors.domain.PlantedPolicy$1Refused"),
                 planted("argument", no_class_extends_the_argument_or_state_exceptions, "donations.domain.PlantedArgumentFailure",
                         "public class PlantedArgumentFailure extends IllegalArgumentException {}"),
                 planted("state", no_class_extends_the_argument_or_state_exceptions, "donations.application.PlantedStateFailure",

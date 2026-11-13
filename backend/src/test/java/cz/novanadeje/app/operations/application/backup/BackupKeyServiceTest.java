@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.backup;
 
+import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
@@ -111,7 +112,7 @@ class BackupKeyServiceTest {
     @Test
     @DisplayName("Given the second factor refuses, when the key is revealed, then nothing is shown, the refusal is recorded and nobody is told of a view")
     void should_refuse_reveal_when_revealed_given_refused_second_factor() {
-        doThrow(new RuleViolation("donors/second-factor-code-rejected", "rejected")).when(freshSecondFactor).require(eq(ADMIN), any());
+        doThrow(new SecondFactorCodeRejected()).when(freshSecondFactor).require(eq(ADMIN), any());
 
         assertThatThrownBy(() -> service(Optional.of(KEY)).reveal(ADMIN, CODE)).isInstanceOf(RuleViolation.class);
 

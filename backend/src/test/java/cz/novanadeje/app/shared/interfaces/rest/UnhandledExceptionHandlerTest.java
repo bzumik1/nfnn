@@ -111,12 +111,12 @@ class UnhandledExceptionHandlerTest {
 
         @GetMapping("/probe/domain")
         String domain() {
-            throw new NotFound("donors/donor-not-found", EXCEPTION_TEXT);
+            throw new ProbeDonorNotFound();
         }
 
         @GetMapping("/probe/wrapped-domain")
         String wrappedDomain() {
-            throw new IllegalStateException(EXCEPTION_TEXT, new NotFound("donors/donor-not-found", EXCEPTION_TEXT));
+            throw new IllegalStateException(EXCEPTION_TEXT, new ProbeDonorNotFound());
         }
 
         @GetMapping("/probe/access-denied")
@@ -405,5 +405,12 @@ class UnhandledExceptionHandlerTest {
 
     private static String bodyOf(MvcResult result) throws Exception {
         return result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    static final class ProbeDonorNotFound extends NotFound {
+
+        ProbeDonorNotFound() {
+            super("donors/donor-not-found", EXCEPTION_TEXT);
+        }
     }
 }
