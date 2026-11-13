@@ -21,21 +21,23 @@ Feature: A donor's devices hear that a gift arrived, only when a regular import 
     And the device "notebook" of "Jana" received no push alert
     And no push alert retry is due
 
-  Scenario: Gifts found among older payments and a gift paired by hand tell nobody
+  Scenario: A gift booked more than a week ago, gifts found among older payments and a gift paired by hand tell nobody
     Given "Jana" turned push notifications on for the device "telefon" at "https://web.push.apple.com/jana-telefon"
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | variableSymbol | name          |
       | 2001 | 2026-02-10 | 300.00 | 2900233333 | 2010     | {Jana}         | Nováková Jana |
+      | 1004 | 2026-11-04 | 400.00 | 2900233333 | 2010     | {Jana}         | Nováková Jana |
       | 1003 | 2026-11-12 | 200.00 | 2900299999 | 0800     |                | Nováková Jana |
-    And the application starts the import
-    And 60 seconds pass
+    When the application starts the import
+    Then "Jana" has 1 donation
+    Given 60 seconds pass
     And the bank history is unlocked
     When "Petr" asks for older bank payments from 2026-01-01
     Then the response status is 202
-    And "Jana" has 1 donation
+    And "Jana" has 2 donations
     When "Petr" pairs payment 1003 with "Jana"
     Then the response status is 200
-    And "Jana" has 2 donations
+    And "Jana" has 3 donations
     And the device "telefon" of "Jana" received no push alert
 
   Scenario: A device signed out while an older version of the site ran loses its leftover subscription instead of hearing of the gift

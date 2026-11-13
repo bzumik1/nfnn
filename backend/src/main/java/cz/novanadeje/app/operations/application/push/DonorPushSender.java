@@ -17,6 +17,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,6 +39,7 @@ public class DonorPushSender {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final Duration gap;
+    private final Semaphore slots = new Semaphore(SENDS_AT_ONCE);
 
     @Autowired
     public DonorPushSender(PushDelivery delivery, PushKeyService keys, DonorPushSubscriptionRepository subscriptions, TransactionTemplate transactions,
@@ -60,14 +62,15 @@ public class DonorPushSender {
             return PushAttempt.NONE;
         }
         VapidKeys vapid = keys.current();
-        Semaphore slots = new Semaphore(SENDS_AT_ONCE);
         try (ExecutorService sends = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Future<PushOutcome>> outcomes = new ArrayList<>();
             for (DonorPushSubscription recipient : recipients) {
                 if (!outcomes.isEmpty()) {
                     LockSupport.parkNanos(gap.toNanos());
                 }
-                slots.acquireUninterruptibly();
+                if (Thread.currentThread().isInterrupted() || !takeSlot()) {
+                    break;
+                }
                 outcomes.add(sends.submit(() -> {
                     try {
                         return recorded(recipient, deliver(recipient, message, vapid));
@@ -78,10 +81,13 @@ public class DonorPushSender {
             }
             PushDeliveryReport report = PushDeliveryReport.NONE;
             List<PushSubscriptionId> failed = new ArrayList<>();
-            for (int index = 0; index < recipients.size(); index++) {
-                PushOutcome outcome = outcomeOf(outcomes.get(index));
-                report = report.with(reportOf(outcome));
-                if (outcome == PushOutcome.FAILED) {
+            for (int index = 0; index < outcomes.size(); index++) {
+                Optional<PushOutcome> outcome = outcomeOf(outcomes.get(index));
+                if (outcome.isEmpty()) {
+                    continue;
+                }
+                report = report.with(reportOf(outcome.get()));
+                if (outcome.get() == PushOutcome.FAILED) {
                     failed.add(recipients.get(index).id());
                 }
             }
@@ -116,14 +122,24 @@ public class DonorPushSender {
         return outcome;
     }
 
-    private static PushOutcome outcomeOf(Future<PushOutcome> outcome) {
+    private boolean takeSlot() {
         try {
-            return outcome.get();
+            slots.acquire();
+            return true;
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
-            return PushOutcome.FAILED;
+            return false;
+        }
+    }
+
+    private static Optional<PushOutcome> outcomeOf(Future<PushOutcome> outcome) {
+        try {
+            return Optional.of(outcome.get());
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
         } catch (ExecutionException failure) {
-            return PushOutcome.FAILED;
+            return Optional.of(PushOutcome.FAILED);
         }
     }
 

@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.importing.BankCalendar;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.CoverageChange;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +37,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class BankStatementRecorder {
+
+    static final int NEW_GIFT_BOOKING_DAYS = 7;
 
     private static final Logger log = LoggerFactory.getLogger(BankStatementRecorder.class);
 
@@ -85,10 +89,12 @@ public class BankStatementRecorder {
     }
 
     private void announceArrivals(List<BankPayment> fresh, ImportTrigger trigger, Instant now) {
-        if (trigger == ImportTrigger.HISTORY || fresh.isEmpty()) {
+        LocalDate bookedSince = LocalDate.ofInstant(now, BankCalendar.ZONE).minusDays(NEW_GIFT_BOOKING_DAYS);
+        List<BankPaymentId> recent = fresh.stream().filter(payment -> !payment.bookedOn().isBefore(bookedSince)).map(BankPayment::id).toList();
+        if (trigger == ImportTrigger.HISTORY || recent.isEmpty()) {
             return;
         }
-        Set<UUID> donors = donations.donorsOfBankPayments(fresh.stream().map(BankPayment::id).toList()).stream()
+        Set<UUID> donors = donations.donorsOfBankPayments(recent).stream()
                 .map(DonorReference::value).collect(Collectors.toUnmodifiableSet());
         if (!donors.isEmpty()) {
             events.publishEvent(new DonationsArrived(donors, now));

@@ -9,6 +9,7 @@ import cz.novanadeje.app.shared.application.event.DonationsArrived;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 
 @Component
 public class DonorPushDispatcher {
@@ -32,15 +34,17 @@ public class DonorPushDispatcher {
     private final DonorPushSender sender;
     private final SignedInDevices devices;
     private final PushRetryTimer timer;
+    private final Executor rounds;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
     public DonorPushDispatcher(DonorPushSubscriptionRepository subscriptions, DonorPushSender sender, SignedInDevices devices, PushRetryTimer timer,
-                               TransactionTemplate transactions, Clock clock) {
+                               @Qualifier("applicationTaskExecutor") Executor rounds, TransactionTemplate transactions, Clock clock) {
         this.subscriptions = subscriptions;
         this.sender = sender;
         this.devices = devices;
         this.timer = timer;
+        this.rounds = rounds;
         this.transactions = transactions;
         this.clock = clock;
     }
@@ -59,10 +63,16 @@ public class DonorPushDispatcher {
                 return;
             }
             PushAttempt sent = sender.send(recipients, GIFT_ARRIVED);
-            if (!sent.failed().isEmpty() && attempt <= PushAlertDispatcher.RETRY_DELAYS.size()) {
-                Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-                timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)), () -> attempt(donors, attempt + 1, Optional.of(failed)));
+            if (sent.failed().isEmpty()) {
+                return;
             }
+            if (attempt > PushAlertDispatcher.RETRY_DELAYS.size()) {
+                log.warn("Push notification {} gave up on {} devices after {} attempts", PushMessageKind.GIFT_ARRIVED, sent.failed().size(), attempt);
+                return;
+            }
+            Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
+            timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)),
+                    () -> rounds.execute(() -> attempt(donors, attempt + 1, Optional.of(failed))));
         } catch (RuntimeException failure) {
             log.warn("Push notification {} attempt {} could not be sent: {}", PushMessageKind.GIFT_ARRIVED, attempt, failure.getClass().getSimpleName());
         }

@@ -117,6 +117,27 @@ class DonorPushSenderTest {
         assertThat(mostAtOnce.get()).isBetween(2, DonorPushSender.SENDS_AT_ONCE);
     }
 
+    @Test
+    @DisplayName("Given three devices, when they are sent a notification with a gap between starts, then each send starts at least the gap after the one before")
+    void should_keep_the_gap_between_starts_when_sent_given_three_devices() {
+        List<DonorPushSubscription> devices = List.of(subscribed(UUID.randomUUID(), "jana-1"), subscribed(UUID.randomUUID(), "jana-2"),
+                subscribed(UUID.randomUUID(), "jana-3"));
+        List<Long> starts = new ArrayList<>();
+        Duration gap = Duration.ofMillis(30);
+        DonorPushSender sender = new DonorPushSender((recipient, message, vapid) -> {
+            synchronized (starts) {
+                starts.add(System.nanoTime());
+            }
+            return PushOutcome.DELIVERED;
+        }, keys, subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC), gap);
+
+        sender.send(devices, TEST);
+
+        assertThat(starts).hasSize(3);
+        assertThat(starts.get(1) - starts.get(0)).isGreaterThanOrEqualTo(gap.toNanos());
+        assertThat(starts.get(2) - starts.get(1)).isGreaterThanOrEqualTo(gap.toNanos());
+    }
+
     private DonorPushSender sender(InMemoryDonorPushSubscriptions stored, PushDelivery delivery) {
         return new DonorPushSender(delivery, keys, stored, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC),
                 Duration.ZERO);

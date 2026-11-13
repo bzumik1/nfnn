@@ -1,5 +1,8 @@
 package cz.novanadeje.app.operations.application.push;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.operations.domain.push.DonorNotifications;
 import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
@@ -9,8 +12,11 @@ import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import cz.novanadeje.app.shared.application.event.DonationsArrived;
 import cz.novanadeje.app.shared.application.session.SignedInDevice;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -44,6 +50,18 @@ class DonorPushDispatcherTest {
     private final List<String> sent = new ArrayList<>();
     private final RecordingRetryTimer timer = new RecordingRetryTimer();
     private final DonorPushDispatcher dispatcher = dispatcher();
+    private final ListAppender<ILoggingEvent> log = new ListAppender<>();
+
+    @BeforeEach
+    void captureLog() {
+        log.start();
+        logger().addAppender(log);
+    }
+
+    @AfterEach
+    void releaseLog() {
+        logger().detachAppender(log);
+    }
 
     @Test
     @DisplayName("Given the donors of new gifts with devices that want them, one that does not and another donor's, when the gifts arrive, then only the wanting devices of those donors get one gift-arrived message each")
@@ -73,7 +91,7 @@ class DonorPushDispatcherTest {
     }
 
     @Test
-    @DisplayName("Given a device whose push service keeps failing beside one that works, when gifts arrive, then only the failing one is tried again after 1, 5 and 15 minutes and then no more")
+    @DisplayName("Given a device whose push service keeps failing beside one that works, when gifts arrive, then only the failing one is tried again after 1, 5 and 15 minutes, then no more, and one warning says how many devices were given up")
     void should_retry_only_failing_device_three_times_when_gifts_arrive() {
         subscribed(JANA, "jana-telefon", true);
         subscribed(JANA, "jana-notebook", true);
@@ -87,6 +105,10 @@ class DonorPushDispatcherTest {
         }
 
         assertThat(delays).containsExactly(Duration.ofMinutes(1), Duration.ofMinutes(5), Duration.ofMinutes(15));
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel().toString()).isEqualTo("WARN");
+            assertThat(event.getFormattedMessage()).isEqualTo("Push notification GIFT_ARRIVED gave up on 1 devices after 4 attempts");
+        });
         assertThat(sent).containsExactlyInAnyOrder("jana-telefon gift-arrived", "jana-notebook gift-arrived", "jana-notebook gift-arrived",
                 "jana-notebook gift-arrived", "jana-notebook gift-arrived");
     }
@@ -102,7 +124,7 @@ class DonorPushDispatcherTest {
             }
             return failing.contains(recipient.endpoint()) ? PushOutcome.FAILED : PushOutcome.DELIVERED;
         }, keys, subscriptions, transactions, clock, Duration.ZERO);
-        return new DonorPushDispatcher(subscriptions, sender, new SignedInDevicesOf(signedIn), timer, transactions, clock);
+        return new DonorPushDispatcher(subscriptions, sender, new SignedInDevicesOf(signedIn), timer, Runnable::run, transactions, clock);
     }
 
     private DonorPushSubscription subscribed(UUID donor, String name, boolean gifts) {
@@ -111,6 +133,10 @@ class DonorPushDispatcherTest {
         subscriptions.save(subscription);
         signedIn.add(subscription.deviceId());
         return subscription;
+    }
+
+    private static Logger logger() {
+        return (Logger) LoggerFactory.getLogger(DonorPushDispatcher.class);
     }
 
     private record SignedInDevicesOf(Set<UUID> signedIn) implements SignedInDevices {

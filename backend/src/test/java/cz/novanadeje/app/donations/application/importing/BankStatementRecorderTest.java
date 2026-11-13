@@ -383,6 +383,23 @@ class BankStatementRecorderTest {
     }
 
     @Test
+    @DisplayName("Given a startup import that reaches far back, when it pairs a gift booked more than seven days ago, then nobody is told, while a gift booked seven days ago still counts as new")
+    void should_announce_only_recent_gifts_when_recorded_given_deep_startup_import() {
+        stateCovering("2026-07-18", "2026-10-15");
+        when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(2, 0, 0, 0, 0));
+        when(donations.donorsOfBankPayments(anyCollection())).thenReturn(Set.of(JANA));
+
+        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(movement(1001, LocalDate.of(2026, 10, 10)),
+                movement(1002, LocalDate.of(2026, 10, 11))), 2, Optional.empty()), new ImportPlan(DEEP_REQUEST, true), ImportTrigger.STARTUP, NOW);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
+        verify(payments).saveAll(saved.capture());
+        verify(donations).donorsOfBankPayments(List.of(saved.getValue().get(1).id()));
+    }
+
+    @Test
     @DisplayName("Given new movements nobody's gift, when they are recorded, then nobody is told that a gift arrived")
     void should_announce_nothing_when_recorded_given_no_new_gift() {
         stateCovering("2026-07-18", "2026-10-15");
@@ -397,7 +414,11 @@ class BankStatementRecorderTest {
     }
 
     private static IncomingMovement movement(long id) {
-        return IncomingMovement.of(new BankTransactionId(id), LocalDate.of(2026, 10, 15), Money.czk(50000),
+        return movement(id, LocalDate.of(2026, 10, 15));
+    }
+
+    private static IncomingMovement movement(long id, LocalDate bookedOn) {
+        return IncomingMovement.of(new BankTransactionId(id), bookedOn, Money.czk(50000),
                 SenderAccount.parse("2900233333", "2010"), Optional.of("2900233333"), Optional.of("2010"), Optional.of("Nováková Jana"),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem");
     }

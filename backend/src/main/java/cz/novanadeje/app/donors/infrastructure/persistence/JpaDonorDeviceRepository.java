@@ -10,13 +10,16 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Repository
 class JpaDonorDeviceRepository implements DonorDeviceRepository {
+
+    static final int DEVICES_PER_QUERY = 500;
 
     private final DonorDeviceJpaRepository jpa;
 
@@ -76,11 +79,12 @@ class JpaDonorDeviceRepository implements DonorDeviceRepository {
 
     @Override
     public Set<DeviceId> signedInAmong(Collection<DeviceId> ids, Instant now) {
-        if (ids.isEmpty()) {
-            return Set.of();
+        List<UUID> all = ids.stream().map(DeviceId::value).toList();
+        Set<DeviceId> signedIn = new HashSet<>();
+        for (int from = 0; from < all.size(); from += DEVICES_PER_QUERY) {
+            jpa.findSignedInAmong(all.subList(from, Math.min(from + DEVICES_PER_QUERY, all.size())), now).forEach(id -> signedIn.add(new DeviceId(id)));
         }
-        return jpa.findSignedInAmong(ids.stream().map(DeviceId::value).toList(), now).stream().map(DeviceId::new)
-                .collect(Collectors.toUnmodifiableSet());
+        return Set.copyOf(signedIn);
     }
 
     @Override
