@@ -48,12 +48,12 @@
     "keys": ["name", "street", "city", "postalCode", "preferredLocale"]
   },
   "symbolClaim": {
-    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/sync/AdminSyncRows.java",
+    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/admincopy/AdminSyncRows.java",
     "record": "SymbolClaimRow",
     "keys": ["id", "donorId", "accountNumber", "variableSymbol", "answer", "answeredAt", "version"]
   },
   "reportSettings": {
-    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/sync/AdminSyncRows.java",
+    "source": "backend/src/main/java/cz/novanadeje/app/donations/application/admincopy/AdminSyncRows.java",
     "record": "ReportSettingsRow",
     "keys": [
       "recipients",

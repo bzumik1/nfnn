@@ -43,7 +43,7 @@ async function lowestContentEdge(page: Page): Promise<number> {
         (child) => child.nodeType === Node.TEXT_NODE && child.textContent!.trim() !== '',
       );
     let lowest = 0;
-    for (const element of document.querySelectorAll('main *, app-site-footer *')) {
+    for (const element of document.querySelectorAll('main *')) {
       const box = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       if (

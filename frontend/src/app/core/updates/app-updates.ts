@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, effect, inject, Injectable, Injector, signal } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router } from '@angular/router';
+import { NavigationPreview } from '../navigation/navigation-preview';
 
 import { APP_REVISION } from '../errors/app-revision';
 import { ErrorReporter } from '../errors/error-reporter';
@@ -22,6 +23,7 @@ export class AppUpdates {
   private readonly dirtyForms = inject(DirtyForms);
   private readonly guard = inject(ReloadGuard);
   private readonly navigation = inject(ExternalNavigation);
+  private readonly preview = inject(NavigationPreview);
   private readonly reporter = inject(ErrorReporter);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
@@ -49,6 +51,9 @@ export class AppUpdates {
     const versions = this.serviceWorker.versionEvents.subscribe((event) => this.onVersion(event));
     const unrecoverable = this.serviceWorker.unrecoverable.subscribe(() => this.onUnrecoverable());
     const navigations = this.router.events.subscribe((event) => {
+      if (this.preview.drives()) {
+        return;
+      }
       if (event instanceof NavigationStart) {
         this.onNavigationStart(event.url);
       } else if (event instanceof NavigationEnd) {

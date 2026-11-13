@@ -46,7 +46,7 @@ public class ImportBankPaymentsService {
         ImportPlan plan = ImportPlanner.plan(state.coverage(), BankCalendar.today(clock), settings, trigger);
         try {
             BankStatement statement = source.fetch(plan.period());
-            ImportCounts counts = recorder.record(statement, plan, clock.instant());
+            ImportCounts counts = recorder.record(statement, plan, trigger, clock.instant());
             return completed(trigger, plan, statement, counts);
         } catch (BankStatementUnavailable unavailable) {
             recorder.recordFailure(unavailable.kind(), unavailable.getMessage(), clock.instant());

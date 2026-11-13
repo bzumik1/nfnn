@@ -210,7 +210,7 @@ tr.is-verification td.amount {
   @include table-as-cards;
 }
 
-.donation-rows {
+.donation-rows:not(.ui-list--inset) {
   border-top: 1px solid var(--color-divider);
 
   .ui-list__row {
@@ -225,6 +225,11 @@ tr.is-verification td.amount {
   .is-verification .donation-amount {
     font-size: var(--text-md);
     font-weight: var(--weight-medium);
+  }
+}
+
+.donation-rows {
+  .is-verification .donation-amount {
     color: var(--color-text-muted);
   }
 

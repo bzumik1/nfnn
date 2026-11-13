@@ -24,7 +24,8 @@ import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
-import { KEPT_PAGES_OWNER, KeptTabPages } from './core/navigation/kept-tab-pages';
+import { KEPT_PAGES_OWNER } from './core/navigation/kept-tab-pages';
+import { PreviewingReuse } from './core/navigation/previewing-reuse';
 import { AuthStore } from './core/auth/auth-store';
 import { LOADED_AHEAD } from './core/navigation/tab-preloading';
 import { TabMemory } from './core/navigation/tab-memory';
@@ -160,14 +161,14 @@ describe('Given the transitions between pages', () => {
   });
 });
 
-describe('Given the pages of the tabs', () => {
-  it('when the app starts, then the router keeps them while another tab is shown, for the donor signed in when they were shown', () => {
+describe('Given the pages of the tabs and the page a back swipe previews', () => {
+  it('when the app starts, then the router keeps them while another tab is shown, for the donor signed in when they were shown, and keeps the live page through a preview', () => {
     const donor = signal<{ id: string } | null>({ id: 'jana' });
     TestBed.configureTestingModule({
       providers: [keptTabPages, { provide: AuthStore, useValue: { donor } }],
     });
 
-    expect(TestBed.inject(RouteReuseStrategy)).toBe(TestBed.inject(KeptTabPages));
+    expect(TestBed.inject(RouteReuseStrategy)).toBe(TestBed.inject(PreviewingReuse));
     const owner = TestBed.inject(KEPT_PAGES_OWNER);
     expect(owner()).toBe('jana');
     donor.set(null);

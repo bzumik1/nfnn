@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { REFRESH_AFTER_KEPT_COPY } from '../../core/connectivity/kept-answer-refresh';
 import { heldRecordOf } from '../../core/version/row-version';
 import {
   NewsApi,
@@ -24,6 +25,19 @@ describe('Given the news API', () => {
   });
 
   afterEach(() => http.verify());
+
+  it("when a page of published news is read, then only the Aktuality list asks for the server's answer after a kept copy, and an article always does", () => {
+    api.published(0, 50).subscribe();
+    api.publishedWithLatest(0, 10).subscribe();
+    api.publishedBySlug('zahrada').subscribe();
+
+    const [plain, latest] = http.match((r) => r.url === '/api/content/news');
+    const article = http.expectOne('/api/content/news/zahrada');
+    expect(plain.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(false);
+    expect(latest.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(true);
+    expect(article.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(true);
+    [plain, latest, article].forEach((request) => request.flush({}));
+  });
 
   it('when an article is published, then it posts the date with the version read to the publish endpoint and hands the article on', () => {
     let received: NewsArticleResponse | undefined;

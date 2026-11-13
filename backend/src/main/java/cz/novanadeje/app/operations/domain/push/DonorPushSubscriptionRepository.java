@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.push;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,6 +11,8 @@ public interface DonorPushSubscriptionRepository {
     Optional<DonorPushSubscription> findOfDevice(UUID donorId, UUID deviceId);
 
     List<DonorPushSubscription> findAllOf(UUID donorId);
+
+    List<DonorPushSubscription> findWithGiftNotificationsOf(Collection<UUID> donorIds);
 
     void lockWrites();
 

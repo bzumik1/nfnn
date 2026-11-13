@@ -265,7 +265,7 @@ The site added to a phone's or computer's home screen, opening without the addre
 _Avoid_: „aplikace“ alone where a connected application or the authenticator app is meant
 
 **Device copy**\
-UI „Data v tomto zařízení“ (the donor's), „kopie správy“ (the administration's) · Code: `frontend/src/app/core/device/` (`DeviceVault`), `GET /api/donations/me/sync`, `/api/admin/{donations,donors,content,operations}/sync`; „device copy“ and „administration copy“ in docs.\
+UI „Data v tomto zařízení“ (the donor's), „kopie správy“ (the administration's) · Code: `frontend/src/app/core/device/` (`DeviceVault`), `GET /api/donations/me/sync`, `/api/admin/{donations,donors,content,operations}/sync`, `donations/application/admincopy/` (the rows of the administration copy and their versions); „device copy“ and „administration copy“ in docs.\
 The encrypted copy of a donor's or the whole administration's data that the browser keeps on the device for offline reading.\
 _Avoid_: cache, backup
 
@@ -307,7 +307,7 @@ A message to the administrators that an import, backups or mail stopped working 
 _Avoid_: notification for these (security e-mails to a donor are not alerts)
 
 **Donor notification**\
-UI „upozornění“ (on the donor's device, card „Upozornění“ in „Údaje a zabezpečení“; Jakub 2026-11-12) · Code: `DonorPushSubscription`, `DonorNotifications` (`gifts`, `yearlyReceipts`), `PushMessageKind.DONOR_TEST`, `operations_donor_push_subscription`, `/api/operations/push`.\
+UI „upozornění“ (on the donor's device, card „Upozornění“ in „Údaje a zabezpečení“; Jakub 2026-11-12) · Code: `DonorPushSubscription`, `DonorNotifications` (`gifts`, `yearlyReceipts`), `PushMessageKind.DONOR_TEST`, `GIFT_ARRIVED`, `DonationsArrived`, `DonorPushDispatcher`, `operations_donor_push_subscription`, `/api/operations/push`.\
 A push message to a donor's device that a gift arrived or a yearly receipt is ready, a fixed sentence of its kind; never an alert, which goes only to administrators.\
 _Avoid_: alert for these
 

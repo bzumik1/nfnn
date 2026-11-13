@@ -1,9 +1,9 @@
 package cz.novanadeje.app.donations.application.signing;
 
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProof;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofBody;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofMessage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofReader;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptTooLong;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;

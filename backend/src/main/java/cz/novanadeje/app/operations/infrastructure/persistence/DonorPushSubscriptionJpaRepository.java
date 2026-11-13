@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,6 +16,8 @@ interface DonorPushSubscriptionJpaRepository extends JpaRepository<DonorPushSubs
     List<DonorPushSubscriptionJpaEntity> findByDonorIdOrderByCreatedAtAscIdAsc(UUID donorId);
 
     Optional<DonorPushSubscriptionJpaEntity> findByDonorIdAndDeviceId(UUID donorId, UUID deviceId);
+
+    List<DonorPushSubscriptionJpaEntity> findByDonorIdInAndGiftNotificationsTrueOrderByCreatedAtAscIdAsc(Collection<UUID> donorIds);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update DonorPushSubscriptionJpaEntity s set s.giftNotifications = :gifts, s.yearlyReceiptNotifications = :yearlyReceipts "

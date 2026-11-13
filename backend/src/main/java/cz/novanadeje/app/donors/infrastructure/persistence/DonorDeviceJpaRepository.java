@@ -8,8 +8,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, UUID> {
@@ -25,6 +27,9 @@ interface DonorDeviceJpaRepository extends JpaRepository<DonorDeviceJpaEntity, U
 
     @Query("select count(d) > 0 from DonorDeviceJpaEntity d where d.id = :id and d.endedAt is null and " + HAS_USABLE_TOKEN)
     boolean isSignedIn(@Param("id") UUID id, @Param("now") Instant now);
+
+    @Query("select d.id from DonorDeviceJpaEntity d where d.id in :ids and d.endedAt is null and " + HAS_USABLE_TOKEN)
+    Set<UUID> findSignedInAmong(@Param("ids") Collection<UUID> ids, @Param("now") Instant now);
 
     @Query("select d from DonorDeviceJpaEntity d where d.endedAt is null and not " + HAS_USABLE_TOKEN + " order by d.id")
     List<DonorDeviceJpaEntity> findActiveWithoutUsableTokenAt(@Param("now") Instant now);

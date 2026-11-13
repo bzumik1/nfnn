@@ -182,10 +182,9 @@ test.describe('Given a visitor on the Přispět page', () => {
     await page.getByLabel('Vlastní částka v korunách').fill('300');
     await expect(page.locator('#prispet .bank')).toContainText('300 Kč');
 
-    await openSection(page, 'O nás');
     await page
-      .locator('footer')
-      .getByRole('link', { name: 'Zásady ochrany osobních údajů' })
+      .locator('#prispet .donate-privacy')
+      .getByRole('link', { name: 'zásady ochrany osobních údajů' })
       .click();
     await expect(page).toHaveURL(/zasady-ochrany-osobnich-udaju/);
     await openSection(page, 'Přispět');

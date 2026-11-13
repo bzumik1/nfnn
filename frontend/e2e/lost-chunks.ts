@@ -63,7 +63,7 @@ export class LostChunks {
   async open(path: string): Promise<void> {
     await this.page.goto(path);
     await expect(this.page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-    await expect(this.page.getByRole('contentinfo')).toBeVisible();
+    await expect(privacyLinkOfContact(this.page)).toBeVisible();
   }
 
   loseEveryChunkNotLoadedYet(): void {
@@ -101,11 +101,14 @@ export async function openAboutThenLoseNewChunks(page: Page): Promise<LostChunks
   return chunks;
 }
 
-export async function openPolicyFromFooter(page: Page): Promise<void> {
-  await page
-    .getByRole('contentinfo')
-    .getByRole('link', { name: 'Zásady ochrany osobních údajů' })
-    .click();
+function privacyLinkOfContact(page: Page) {
+  return page
+    .locator('#kontakt .contact-legal')
+    .getByRole('link', { name: 'zásady ochrany osobních údajů' });
+}
+
+export async function openPolicyFromContact(page: Page): Promise<void> {
+  await privacyLinkOfContact(page).click();
 }
 
 export function chunkLoadNotice(page: Page) {

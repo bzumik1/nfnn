@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { REFRESH_AFTER_KEPT_COPY } from '../../core/connectivity/kept-answer-refresh';
 import { heldRecordOf } from '../../core/version/row-version';
 import {
   ProjectOrderResponse,
@@ -25,6 +26,17 @@ describe('Given the projects API', () => {
   });
 
   afterEach(() => http.verify());
+
+  it("when published projects are read, then a page of them is one answer that ends and a project asks for the server's answer after a kept copy", () => {
+    api.published(0, 50).subscribe();
+    api.publishedBySlug('dominik').subscribe();
+
+    const page = http.expectOne((r) => r.url === '/api/content/projects');
+    const project = http.expectOne('/api/content/projects/dominik');
+    expect(page.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(false);
+    expect(project.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(true);
+    [page, project].forEach((request) => request.flush({}));
+  });
 
   it('when a project is published, then it posts the date with the version read to the publish endpoint and hands the project on', () => {
     let received: ProjectResponse | undefined;

@@ -25,6 +25,7 @@ import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
+import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -108,7 +109,7 @@ class SymbolClaimPairingConcurrencyTest {
         };
         Callable<ImportCounts> importing = () -> {
             start.await();
-            return recorder.record(statementWith(movement(9107, LocalDate.of(2026, 10, 20))), new ImportPlan(REQUESTED, false), now);
+            return recorder.record(statementWith(movement(9107, LocalDate.of(2026, 10, 20))), new ImportPlan(REQUESTED, false), ImportTrigger.HOURLY, now);
         };
 
         ExecutorService callers = Executors.newFixedThreadPool(2);
@@ -151,7 +152,7 @@ class SymbolClaimPairingConcurrencyTest {
             }));
             assertThat(paired.await(30, TimeUnit.SECONDS)).isTrue();
             Future<ImportCounts> importRun = threads.submit(() -> recorder.record(statementWith(movement(9107, LocalDate.of(2026, 10, 20))),
-                    new ImportPlan(REQUESTED, false), now));
+                    new ImportPlan(REQUESTED, false), ImportTrigger.HOURLY, now));
             await().atMost(Duration.ofSeconds(30)).until(() -> sessionsWaitingForAdvisoryLock() > 0);
             assertThat(importRun).isNotDone();
             commit.countDown();

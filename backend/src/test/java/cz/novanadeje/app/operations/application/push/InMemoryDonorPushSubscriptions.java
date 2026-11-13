@@ -7,6 +7,7 @@ import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,11 @@ class InMemoryDonorPushSubscriptions implements DonorPushSubscriptionRepository 
     @Override
     public synchronized List<DonorPushSubscription> findAllOf(UUID donorId) {
         return rows.values().stream().filter(row -> row.belongsTo(donorId)).toList();
+    }
+
+    @Override
+    public synchronized List<DonorPushSubscription> findWithGiftNotificationsOf(Collection<UUID> donorIds) {
+        return rows.values().stream().filter(row -> donorIds.contains(row.donorId()) && row.notifications().gifts()).toList();
     }
 
     @Override

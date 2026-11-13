@@ -1,4 +1,10 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpContext,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -6,7 +12,12 @@ import { provideRouter } from '@angular/router';
 import { serviceWorkerBypassInterceptor } from '../updates/service-worker-bypass';
 import { Connectivity, PROBE_PATH } from './connectivity';
 import { connectivityInterceptor } from './connectivity-interceptor';
-import { keptAnswerRefreshInterceptor } from './kept-answer-refresh';
+import {
+  keptAnswerRefreshInterceptor,
+  OFFLINE_ANSWER_WAIT_MS,
+  REFRESH_AFTER_KEPT_COPY,
+  REFRESH_WAIT_MS,
+} from './kept-answer-refresh';
 
 const NEWS = '/api/content/news?page=0&size=10';
 const NOW = Date.UTC(2026, 10, 6, 17, 30);
@@ -16,6 +27,7 @@ const JUST_NOW = new Date(NOW - 2_000).toUTCString();
 interface Received {
   readonly answers: unknown[];
   failed: boolean;
+  failure: unknown;
   completed: boolean;
 }
 
@@ -43,16 +55,23 @@ describe('Given the refresh of answers the service worker kept', () => {
   });
 
   afterEach(() => {
-    http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+    http
+      .match(PROBE_PATH)
+      .filter((probe) => !probe.cancelled)
+      .forEach((probe) => probe.flush({}));
     http.verify();
     vi.useRealTimers();
   });
 
-  function ask(url: string): Received {
-    const received: Received = { answers: [], failed: false, completed: false };
-    client.get(url).subscribe({
+  function ask(url: string, refreshed = true): Received {
+    const received: Received = { answers: [], failed: false, failure: null, completed: false };
+    const context = new HttpContext().set(REFRESH_AFTER_KEPT_COPY, refreshed);
+    client.get(url, { context }).subscribe({
       next: (answer) => received.answers.push(answer),
-      error: () => (received.failed = true),
+      error: (failure: unknown) => {
+        received.failed = true;
+        received.failure = failure;
+      },
       complete: () => (received.completed = true),
     });
     return received;
@@ -120,6 +139,76 @@ describe('Given the refresh of answers the service worker kept', () => {
 
       expect(received.answers).toEqual([{ items: ['old'] }]);
       expect(received.failed).toBe(false);
+    });
+  });
+
+  it('when a page did not ask for the refresh, then it gets the copy once and done, and nothing is asked past the worker', () => {
+    const received = ask(NEWS, false);
+    workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
+
+    expect(received.answers).toEqual([{ items: ['old'] }]);
+    expect(received.completed).toBe(true);
+    http.expectNone((asked) => asked.url !== PROBE_PATH && asked.headers.has('ngsw-bypass'));
+  });
+
+  it('when the server does not answer the refresh (a phone in airplane mode leaves it hanging), then the page keeps the copy and is done once the refresh gives up', () => {
+    const received = ask(NEWS);
+    workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
+    const refresh = serverRefresh(NEWS);
+
+    vi.advanceTimersByTime(REFRESH_WAIT_MS - 1);
+    expect(received.completed).toBe(false);
+    vi.advanceTimersByTime(1);
+
+    expect(refresh.cancelled).toBe(true);
+    expect(received.answers).toEqual([{ items: ['old'] }]);
+    expect(received.failed).toBe(false);
+    expect(received.completed).toBe(true);
+  });
+
+  describe('when the app knows it is offline', () => {
+    beforeEach(() => {
+      TestBed.inject(Connectivity);
+      window.dispatchEvent(new Event('offline'));
+      http.expectOne(PROBE_PATH);
+    });
+
+    it('and a service worker controls the page, then the app leaves the wait to the worker, which answers from its copy or gives up itself, so a slow start of the worker on an old phone fails nothing it kept', () => {
+      Object.defineProperty(navigator, 'serviceWorker', {
+        configurable: true,
+        value: { controller: {} },
+      });
+      try {
+        const received = ask(NEWS);
+        vi.advanceTimersByTime(OFFLINE_ANSWER_WAIT_MS * 2);
+        expect(received.failed).toBe(false);
+
+        workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
+        expect(received.answers).toEqual([{ items: ['old'] }]);
+      } finally {
+        delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+      }
+    });
+
+    it('and the worker has the page, then the page gets its copy at once', () => {
+      const received = ask(NEWS);
+      workerAnswers(NEWS, { items: ['old'] }, MINUTES_AGO);
+
+      expect(received.answers).toEqual([{ items: ['old'] }]);
+      expect(received.completed).toBe(true);
+    });
+
+    it('and no service worker controls the page, so nothing can answer, then the page is told it is offline instead of waiting on', () => {
+      const received = ask(NEWS);
+      const waiting = http.expectOne((asked) => asked.urlWithParams === NEWS);
+
+      vi.advanceTimersByTime(OFFLINE_ANSWER_WAIT_MS - 1);
+      expect(received.failed).toBe(false);
+      vi.advanceTimersByTime(1);
+
+      expect(waiting.cancelled).toBe(true);
+      expect(received.failed).toBe(true);
+      expect((received.failure as HttpErrorResponse).status).toBe(0);
     });
   });
 

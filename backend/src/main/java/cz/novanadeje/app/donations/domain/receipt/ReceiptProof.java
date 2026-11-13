@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donations.domain.receipt.proof;
+package cz.novanadeje.app.donations.domain.receipt;
 
 import java.util.Arrays;
 

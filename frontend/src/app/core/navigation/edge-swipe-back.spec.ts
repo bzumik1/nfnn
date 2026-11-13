@@ -41,7 +41,6 @@ function chromeWith(parent: string | null): Chrome {
     head: 'dark',
     tabBar: true,
     landing: false,
-    phoneFooter: false,
     backOnWide: true,
   };
 }

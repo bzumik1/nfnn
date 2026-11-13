@@ -8,11 +8,15 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 interface DonationJpaRepository extends JpaRepository<DonationJpaEntity, UUID> {
 
     boolean existsByBankPaymentId(UUID bankPaymentId);
+
+    @Query("select distinct d.donorId from DonationJpaEntity d where d.bankPaymentId in :bankPaymentIds")
+    Set<UUID> findDonorIdsByBankPaymentIds(@Param("bankPaymentIds") Collection<UUID> bankPaymentIds);
 
     Optional<DonationJpaEntity> findByBankPaymentId(UUID bankPaymentId);
 

@@ -264,9 +264,9 @@ for (const [screen, viewport] of [
       await band.getByRole('link', { name: 'Přispět', exact: true }).click();
       await expect(page).toHaveURL('/prispet');
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      expect(
-        await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
-      ).toBeGreaterThan(300);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight))
+        .toBeGreaterThan(300);
       await expect
         .poll(() =>
           page.evaluate(() => window.nfnnSeenTops.filter(([path]) => path === '/prispet').length),

@@ -4,7 +4,7 @@ import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './dono
 import {
   chunkLoadNotice,
   openAboutThenLoseNewChunks,
-  openPolicyFromFooter,
+  openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
 
@@ -68,22 +68,25 @@ test.describe('Given a visitor who uses only the keyboard or a screen reader', (
     await mockDonorApi(page);
   });
 
-  test('when they follow the footer link to the contact section, then the section takes the focus and Tab continues inside it', async ({
+  test('when they follow the link from the privacy policy to the contact form, then the contact section of O nás takes the focus and Tab continues inside it', async ({
     page,
   }) => {
-    await page.goto('/o-nas');
-    await page.getByRole('contentinfo').getByRole('link', { name: 'Kontakt' }).click();
+    await page.goto('/zasady-ochrany-osobnich-udaju');
+    await page.getByRole('link', { name: 'kontaktní formulář' }).click();
 
     await expect(page.locator('#kontakt')).toBeFocused();
     await page.keyboard.press('Tab');
     expect(await page.evaluate(() => !!document.activeElement?.closest('#kontakt'))).toBe(true);
   });
 
-  test('when they open another page from the footer, then its heading takes the focus', async ({
+  test('when they open the privacy policy from the note under the contact section, then its heading takes the focus', async ({
     page,
   }) => {
     await page.goto('/o-nas');
-    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů' }).last().click();
+    await page
+      .locator('#kontakt .contact-legal')
+      .getByRole('link', { name: 'zásady ochrany osobních údajů' })
+      .click();
 
     await expect(
       page.getByRole('heading', { level: 1, name: 'Zásady ochrany osobních údajů' }),
@@ -423,8 +426,7 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
     page,
   }) => {
     await page.goto('/o-nas');
-    const footerLinks = page.getByRole('contentinfo').getByRole('link');
-    await footerLinks.last().focus();
+    await page.locator('#kontakt').getByRole('link').last().focus();
 
     const covered = await page.evaluate(() => {
       const focused = document.activeElement!.getBoundingClientRect();
@@ -443,7 +445,7 @@ for (const width of [320, 390, 1280]) {
       await mockDonorApi(page);
       await withoutSessionStorage(page);
       await openAboutThenLoseNewChunks(page);
-      await openPolicyFromFooter(page);
+      await openPolicyFromContact(page);
       await expect(chunkLoadNotice(page)).toBeVisible();
     });
 
@@ -456,22 +458,32 @@ for (const width of [320, 390, 1280]) {
       const pageEndCovered = await page.evaluate(() => {
         const bar = document.querySelector('app-chunk-load-notice .chunk-load-bar')!;
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
-        const lastText = document.querySelector('footer .ui-container')!.getBoundingClientRect();
+        const lastText = document.querySelector('#kontakt .contact-legal')!.getBoundingClientRect();
         return lastText.bottom > bar.getBoundingClientRect().top;
       });
       expect(pageEndCovered).toBe(false);
     });
 
-    test('when they scroll to the end of the page, then the footer reaches down to the bar with its own colour', async ({
+    test('when they scroll to the end of the page, then the contact section and the room kept under it reach down to the bar in the colour of the section', async ({
       page,
     }) => {
-      const gapUnderFooter = await page.evaluate(() => {
+      const gapUnderRoom = await page.evaluate(() => {
         window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
-        const footer = document.querySelector('footer')!.getBoundingClientRect();
-        return Math.round(document.documentElement.clientHeight - footer.bottom);
+        const contact = document.querySelector('#kontakt')!.getBoundingClientRect();
+        const room = parseFloat(getComputedStyle(document.body).paddingBottom);
+        return Math.round(document.documentElement.clientHeight - contact.bottom - room);
       });
 
-      expect(gapUnderFooter).toBeLessThanOrEqual(0);
+      expect(gapUnderRoom).toBeLessThanOrEqual(0);
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () =>
+              getComputedStyle(document.body).backgroundColor ===
+              getComputedStyle(document.querySelector('#kontakt')!).backgroundColor,
+          ),
+        )
+        .toBe(true);
     });
 
     test('when they Tab through the contact form and leave its fields empty, then the bar never hides the focused control', async ({

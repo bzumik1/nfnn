@@ -13,6 +13,8 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -111,6 +113,34 @@ class JpaDonorPushSubscriptionRepositoryTest {
         assertThat(subscriptions.deleteAllOf(JANA)).isEqualTo(1);
         assertThat(subscriptions.deleteAll()).isEqualTo(1);
         assertThat(subscriptions.findAllOf(PETR)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given devices of three donors with the gift switch on and off, when the devices that want gifts of two donors are read, then only those of the two with the switch on come")
+    void should_read_only_wanting_devices_of_named_donors_when_read_given_switches() {
+        DonorPushSubscription janaTelefon = stored(JANA, "jana-telefon", NOW);
+        DonorPushSubscription janaNotebook = stored(JANA, "jana-notebook", NOW);
+        subscriptions.changeNotifications(JANA, janaNotebook.deviceId(), new DonorNotifications(false, true));
+        DonorPushSubscription petrTelefon = stored(PETR, "petr-telefon", NOW);
+        stored(UUID.fromString("019a0000-0000-7000-8000-00000000000c"), "eva-telefon", NOW);
+
+        assertThat(subscriptions.findWithGiftNotificationsOf(List.of(JANA, PETR))).extracting(DonorPushSubscription::id)
+                .containsExactlyInAnyOrder(janaTelefon.id(), petrTelefon.id());
+        assertThat(subscriptions.findWithGiftNotificationsOf(List.of())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given more donors than one query takes, when their devices that want gifts are read, then the devices of the first and the last donor both come")
+    void should_read_across_queries_when_read_given_more_donors_than_one_query_takes() {
+        List<UUID> donors = new ArrayList<>();
+        for (int index = 0; index <= JpaDonorPushSubscriptionRepository.DONORS_PER_QUERY; index++) {
+            donors.add(UUID.nameUUIDFromBytes(("darce-" + index).getBytes()));
+        }
+        DonorPushSubscription first = stored(donors.getFirst(), "prvni", NOW);
+        DonorPushSubscription last = stored(donors.getLast(), "posledni", NOW);
+
+        assertThat(subscriptions.findWithGiftNotificationsOf(donors)).extracting(DonorPushSubscription::id)
+                .containsExactlyInAnyOrder(first.id(), last.id());
     }
 
     @Test

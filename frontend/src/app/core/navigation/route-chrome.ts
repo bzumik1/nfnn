@@ -8,7 +8,6 @@ export interface RouteChromeData {
   readonly head?: PageHead;
   readonly tabBar?: boolean;
   readonly landing?: boolean;
-  readonly phoneFooter?: boolean;
   readonly backOnWide?: boolean;
 }
 
@@ -17,7 +16,6 @@ export interface Chrome {
   readonly head: PageHead;
   readonly tabBar: boolean;
   readonly landing: boolean;
-  readonly phoneFooter: boolean;
   readonly backOnWide: boolean;
 }
 
@@ -26,7 +24,6 @@ const PLAIN: Chrome = {
   head: 'dark',
   tabBar: true,
   landing: false,
-  phoneFooter: false,
   backOnWide: true,
 };
 
@@ -60,7 +57,6 @@ export function chromeOf(root: ActivatedRouteSnapshot): Chrome {
       head: data.head ?? chrome.head,
       tabBar: data.tabBar ?? chrome.tabBar,
       landing: data.landing ?? false,
-      phoneFooter: data.phoneFooter ?? false,
       backOnWide: data.backOnWide ?? chrome.backOnWide,
     };
   }

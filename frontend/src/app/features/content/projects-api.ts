@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { refreshedAfterKeptCopy } from '../../core/connectivity/kept-answer-refresh';
 import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -225,6 +226,8 @@ export class ProjectsApi {
   }
 
   publishedBySlug(slug: string): Observable<ProjectResponse> {
-    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${slug}`);
+    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${slug}`, {
+      context: refreshedAfterKeptCopy(),
+    });
   }
 }

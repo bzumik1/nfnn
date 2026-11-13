@@ -4,7 +4,7 @@ import { mockDonorApi } from './donor-session';
 import { expect, test } from './fixtures';
 import {
   openAboutThenLoseNewChunks,
-  openPolicyFromFooter,
+  openPolicyFromContact,
   chunkLoadPageHeading,
 } from './lost-chunks';
 import {
@@ -69,7 +69,7 @@ test.describe('Given a visitor whose open tab is older than the deployed version
       return route.fulfill({ status: 204 });
     });
 
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
 
     await expect(page.getByRole('main').getByRole('heading', chunkLoadPageHeading)).toBeFocused();
     await page.waitForLoadState('networkidle');

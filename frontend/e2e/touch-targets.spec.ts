@@ -95,15 +95,4 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     await expectFingerSized(dialog.getByRole('button', { name: 'Registrace', exact: true }));
     await expectFingerSized(dialog.getByRole('button', { name: 'Zapomněli jste heslo?' }));
   });
-
-  test('when they tap near the edges of the footer links, then a finger-sized area around each still reaches it, or the control beside it, never empty space', async ({
-    page,
-  }) => {
-    await page.goto('/o-nas');
-    const footer = page.getByRole('contentinfo');
-
-    await expectFingerSized(footer.getByRole('link', { name: 'info@nfnn.cz' }));
-    await expectFingerSized(footer.getByRole('link', { name: 'Kontakt' }));
-    await expectFingerSized(footer.getByRole('link', { name: 'Zásady ochrany osobních údajů' }));
-  });
 });

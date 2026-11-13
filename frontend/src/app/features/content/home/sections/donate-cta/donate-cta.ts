@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject, input, viewChild } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { DONATE_SECTION } from '../../../../../core/auth/confirmation-return';
 import { LoginDialogService } from '../../../../../core/auth/login-dialog.service';
 import { PaymentPanel } from '../../../../donations/payment-panel/payment-panel';
 
 @Component({
   selector: 'app-donate-cta',
-  imports: [PaymentPanel],
+  imports: [PaymentPanel, RouterLink],
   templateUrl: './donate-cta.html',
   styleUrl: './donate-cta.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

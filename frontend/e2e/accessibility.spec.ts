@@ -46,7 +46,7 @@ import {
   chunkLoadNotice,
   chunkLoadPageHeading,
   openAboutThenLoseNewChunks,
-  openPolicyFromFooter,
+  openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
 import { serveNewerApiGeneration, updateNotice } from './app-update';
@@ -485,7 +485,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
   }) => {
     await withoutSessionStorage(page);
     await openAboutThenLoseNewChunks(page);
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -505,7 +505,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await openAboutThenLoseNewChunks(page);
-    await openPolicyFromFooter(page);
+    await openPolicyFromContact(page);
     await expect(page.getByRole('heading', chunkLoadPageHeading)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);

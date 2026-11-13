@@ -1,10 +1,10 @@
 package cz.novanadeje.app.donations.application.pairing;
 
+import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.DonationRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.PaymentRow;
+import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.PaymentWithGift;
 import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
-import cz.novanadeje.app.donations.application.sync.AdminDonationsRows;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.DonationRow;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentRow;
-import cz.novanadeje.app.donations.application.sync.AdminSyncRows.PaymentWithGift;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
