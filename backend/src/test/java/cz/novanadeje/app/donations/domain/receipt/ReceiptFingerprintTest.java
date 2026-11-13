@@ -1,6 +1,8 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.Donation;
+import cz.novanadeje.app.donations.domain.donation.DonationId;
+import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -14,6 +16,7 @@ import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA_ADDRESS;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
@@ -145,5 +148,21 @@ class ReceiptFingerprintTest {
         english.changeProfile(english.name(), english.address(), LocaleCode.EN, NOW);
 
         assertThat(ReceiptDocumentFactory.fingerprintForDonation(english, MARCH)).isEqualTo(ReceiptDocumentFactory.fingerprintForDonation(jana(), MARCH));
+    }
+
+    @Test
+    @DisplayName("Given a yearly receipt's certified data, when fingerprinted, then the hash is the SHA-256 of their canonical text")
+    void should_be_sha256_of_canonical_text_when_fingerprinted_given_yearly_data() {
+        ReceiptParty donor = new ReceiptParty(DonorType.PERSON, "Jana Nováková", JANA_ADDRESS, Optional.empty(), new VariableSymbol("4821937560"));
+        List<ReceiptLine> lines = List.of(
+                new ReceiptLine(new DonationId(UUID.fromString("0190f1b2-0000-7000-8000-000000000002")), LocalDate.of(2026, 6, 1), Money.czk(125050),
+                        DonationSource.BANK_TRANSFER),
+                new ReceiptLine(new DonationId(UUID.fromString("0190f1b2-0000-7000-8000-000000000001")), LocalDate.of(2026, 3, 15), Money.czk(50000),
+                        DonationSource.BANK_TRANSFER));
+
+        ReceiptFingerprint fingerprint = ReceiptFingerprint.of(ReceiptKind.YEARLY, Optional.empty(), Optional.of(Year.of(2026)), donor, lines,
+                Money.czk(175050));
+
+        assertThat(fingerprint.value()).isEqualTo("77e31b769f6c69422faedd0acbf331e44e7120bc404bb6872b83674d05462fda");
     }
 }

@@ -88,4 +88,12 @@ class BCryptPasswordHasherTest {
         }
         assertThat(bounded.matches(new RawPassword("correct horse battery"), hash)).isTrue();
     }
+
+    @Test
+    @DisplayName("Given a hash stored before, when the password it was made from is checked, then it still matches")
+    void should_match_when_checked_given_a_hash_stored_before() {
+        PasswordHash stored = new PasswordHash("$2y$12$njDd/9MH47xzt6tt4Mx2suejHnTE4GlbmySgdHEsgQCAbZSxsjfhK");
+
+        assertThat(hasher.matches(new RawPassword("correct horse battery"), stored)).isTrue();
+    }
 }

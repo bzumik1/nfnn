@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -117,5 +118,12 @@ class BackupKeyTest {
     @DisplayName("Given a key, when it is printed, then the key itself is masked")
     void should_mask_key_when_printed() {
         assertThat(new BackupKey(AGE_KEYGEN_KEY).toString()).doesNotContain("R45A").doesNotContain("6GWH");
+    }
+
+    @Test
+    @DisplayName("Given a key, when its fingerprint is taken, then it is the hex SHA-256 of the key in capitals")
+    void should_be_sha256_of_key_when_fingerprint_taken() {
+        assertThat(new BackupKey(AGE_KEYGEN_KEY.toLowerCase(Locale.ROOT)).fingerprint())
+                .isEqualTo("ecace5985ec2f9941468e53a87f780f420efc70002aaf7cf985ec044f30e421d");
     }
 }
