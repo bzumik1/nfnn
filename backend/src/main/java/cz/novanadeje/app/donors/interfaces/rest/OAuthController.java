@@ -72,7 +72,7 @@ class OAuthController {
     }
 
     @PostMapping(path = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    ResponseEntity<?> token(@RequestParam MultiValueMap<String, String> form, HttpServletRequest http) {
+    ResponseEntity<TokenEndpointAnswer> token(@RequestParam MultiValueMap<String, String> form, HttpServletRequest http) {
         rateLimiter.check(http.getRemoteAddr());
         String grantType = first(form, "grant_type");
         try {
