@@ -95,7 +95,8 @@ public class DonorPushDispatcher {
         return switch (kind) {
             case GIFT_ARRIVED -> subscriptions.findWithGiftNotificationsOf(donors);
             case YEARLY_RECEIPT_READY -> subscriptions.findWithYearlyReceiptNotificationsOf(donors);
-            default -> throw new IllegalArgumentException("Push message kind " + kind + " is no donor notification of an event");
+            case TEST, BANK_IMPORT_OUTAGE, BANK_IMPORT_RECOVERED, BACKUPS_OUTAGE, BACKUPS_RECOVERED, MAIL_OUTAGE, MAIL_RECOVERED, DONOR_TEST ->
+                    throw new IllegalArgumentException("Push message kind " + kind + " is no donor notification of an event");
         };
     }
 

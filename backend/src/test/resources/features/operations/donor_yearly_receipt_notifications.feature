@@ -3,6 +3,7 @@ Feature: Donors who gave in a year hear once, in January, that their yearly rece
 
   Background:
     Given the time is "2026-12-28T09:00:00Z"
+    And a person of the foundation signs the receipts
     And a person "Jana" is registered
     And a person "Petr" is registered
     And the bank account has these movements:
