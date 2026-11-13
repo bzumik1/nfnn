@@ -1,0 +1,74 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given pairing that completes, when the donor's payments are paired, then its outcome is returned unchanged",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a donor registered event, when the registration has committed, then donations pairs the donor's payments",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given a donor unknown to donations, when the donor's payments are paired, then nothing is returned",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a donor unknown to donations, when the registration has committed, then a warning names the donor and nothing is paired",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given the import paired the same bank payment first, when the donor's payments are paired, then the integrity violation becomes a lost race",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given the import paired the same bank payment first, when the registration has committed, then the integrity violation is logged as a lost race and does not propagate",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given a deadlock with the import, when the donor's payments are paired, then the lock failure becomes a lost race",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a deadlock with the import, when the registration has committed, then the lock failure is logged as a lost race and does not propagate",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given a pairing lock wait that runs out, when the donor's payments are paired, then the pessimistic locking failure becomes a lost race",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a pairing lock wait that runs out, when the registration has committed, then the pessimistic locking failure is logged as a lost race and does not propagate",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.pairing.RaceAwareDonorPaymentsPairingTest > Given any other failure, when the donor's payments are paired, then it is passed on unchanged",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given pairing fails after the registration committed, when the listener runs, then the failure is logged as a warning and does not propagate",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.donor.DonorRecordServiceTest > Given a known donor, when payments are paired after the registration, then the loaded record is paired at the clock's time and nothing is written",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a donor registered event, when the registration has committed, then donations pairs the donor's payments",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.donor.DonorRecordServiceTest > Given a donor unknown to donations, when payments are paired after the registration, then a warning names the donor and nothing is paired",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given a donor unknown to donations, when the registration has committed, then a warning names the donor and nothing is paired",
+    "contract": "docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.donor.DonorRecordServiceTest > Given pairing that loses a race with the import, when payments are paired after the registration, then the lost race is logged and swallowed",
+    "reason": "Architecture audit #621, R2-9 (#751): the driven adapter RaceAwareDonorPaymentsPairing called the use case PaymentPairingService back; the driving listener DonorRecordSynchronizer now calls it and catches the lost race itself, so the port, the adapter and DonorRecordService.pairPaymentsOf are gone and their tests moved to the listener",
+    "replacement": "donations.infrastructure.events.DonorRecordSynchronizerTest > Given the import paired the same bank payment first, when the registration has committed, then the integrity violation is logged as a lost race and does not propagate",
+    "contract": "docs/system-overview.md, donations"
+  }
+]
