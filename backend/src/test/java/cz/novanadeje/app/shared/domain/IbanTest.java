@@ -47,4 +47,15 @@ class IbanTest {
     void should_reject_when_created_given_no_value() {
         assertThatIllegalArgumentException().isThrownBy(() -> new Iban(null));
     }
+
+    @Test
+    @DisplayName("Given an IBAN that is malformed or fails its check digits, when it is created, then the message names the rule without the IBAN")
+    void should_name_the_rule_without_the_iban_when_created_given_a_refused_iban() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new Iban("CZ65-0800-0000-1920-0014-5399"))
+                .withMessage("IBAN is not well formed")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("CZ65", "0800", "5399"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new Iban("CZ6508000000192000145398"))
+                .withMessage("IBAN check digits do not match")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("CZ65", "0800", "5398"));
+    }
 }

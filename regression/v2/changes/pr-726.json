@@ -1,0 +1,10 @@
+[
+  {
+    "path": "GET /api/admin/donations/import-state",
+    "scenario": "donations/admin_history_import: Locked history ends the run as locked and leaves the covered period as it was #*",
+    "kind": "body",
+    "field": "$.lastFailure.message",
+    "reason": "#726: the import state keeps a closed description of a failed Fio call instead of the library's text, which can quote the bank's answer or an account",
+    "contract": "docs/api-contract.md, import state (lastFailure.message)"
+  }
+]

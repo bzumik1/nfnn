@@ -119,4 +119,13 @@ class PaymentDetailsTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(FOUNDATION, Currency.CZK, details.recipientName(),
                 null, details.accountVerificationMessage(), details.accountVerificationAmount()));
     }
+
+    @Test
+    @DisplayName("Given an amount the SPAYD field cannot hold, when the payment text is made, then the message names the rule without the amount")
+    void should_name_the_rule_without_the_amount_when_made_given_an_amount_spayd_cannot_hold() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> details.spaydWithoutVariableSymbol(Money.czk(98_765_432_109L), SpaydText.message("OBNOVA")))
+                .withMessage("A SPAYD text needs a positive amount that fits AM and a message")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("98765", "98 765"));
+    }
 }

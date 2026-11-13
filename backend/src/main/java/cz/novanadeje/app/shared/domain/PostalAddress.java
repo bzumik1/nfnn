@@ -11,7 +11,7 @@ public record PostalAddress(String street, String city, String postalCode) {
         city = requireText(city, "City", MAX_CITY_LENGTH);
         postalCode = requireText(postalCode, "Postal code", MAX_POSTAL_CODE_LENGTH);
         if (!postalCode.matches("[0-9][0-9 ]*[0-9]")) {
-            throw new IllegalArgumentException("Postal code must consist of digits: " + postalCode);
+            throw new IllegalArgumentException("Postal code must consist of digits");
         }
     }
 

@@ -45,4 +45,12 @@ class CompanyIdentifierTest {
         assertThat(CompanyIdentifier.isValid("12345678")).isFalse();
         assertThat(CompanyIdentifier.isValid(null)).isFalse();
     }
+
+    @Test
+    @DisplayName("Given an identifier with a wrong check digit, when it is created, then the message names the rule without the identifier")
+    void should_name_the_rule_without_the_identifier_when_created_given_a_wrong_check_digit() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new CompanyIdentifier("12345678"))
+                .withMessage("Company identifier is not valid")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("1234"));
+    }
 }

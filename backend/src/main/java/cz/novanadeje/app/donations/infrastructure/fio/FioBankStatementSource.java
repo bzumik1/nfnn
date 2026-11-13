@@ -17,6 +17,7 @@ import io.github.bzumik1.fio.FioClient;
 import io.github.bzumik1.fio.FioException;
 import io.github.bzumik1.fio.FioHistoryLockedException;
 import io.github.bzumik1.fio.FioRateLimitException;
+import io.github.bzumik1.fio.FioResponseTooLargeException;
 import io.github.bzumik1.fio.FioTransportException;
 import io.github.bzumik1.fio.Transaction;
 import io.github.bzumik1.fio.TransactionColumn;
@@ -162,6 +163,28 @@ class FioBankStatementSource implements BankStatementSource {
     }
 
     private static BankStatementUnavailable unavailable(ImportFailureKind kind, Optional<Instant> retryAfter, FioException cause) {
-        return new BankStatementUnavailable(kind, retryAfter, cause.getMessage(), cause);
+        return new BankStatementUnavailable(kind, retryAfter, description(cause), cause);
+    }
+
+    private static String description(FioException failure) {
+        return switch (failure) {
+            case FioTransportException unreachable -> "Fio API request failed: " + causeName(unreachable);
+            case FioResponseTooLargeException ignored -> "Fio API answered with more than this client reads";
+            case FioException answered when answered.statusCode().isPresent() -> statusDescription(answered.statusCode().getAsInt());
+            case FioRateLimitException ignored -> "Fio API request was not sent: the token was used too recently";
+            case FioException other -> "Fio API request failed: " + other.getClass().getSimpleName();
+        };
+    }
+
+    private static String statusDescription(int status) {
+        if (status / 100 == 2) {
+            return "Fio API answered with HTTP " + status + " and a body this client does not understand";
+        }
+        return "Fio API request was refused with HTTP " + status;
+    }
+
+    private static String causeName(FioTransportException unreachable) {
+        Throwable cause = unreachable.getCause();
+        return (cause == null ? unreachable : cause).getClass().getSimpleName();
     }
 }

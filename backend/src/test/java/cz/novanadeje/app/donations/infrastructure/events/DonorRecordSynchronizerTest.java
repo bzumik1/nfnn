@@ -88,13 +88,15 @@ class DonorRecordSynchronizerTest {
     @Test
     @DisplayName("Given pairing fails after the registration committed, when the listener runs, then the failure is logged as a warning and does not propagate")
     void should_swallow_and_warn_when_pairing_fails_given_committed_registration() {
-        doThrow(new IllegalStateException("database unavailable")).when(donorRecordService).pairPaymentsOf(DONOR_ID);
+        doThrow(new IllegalStateException("payment from 2000145399/0800 could not be paired")).when(donorRecordService).pairPaymentsOf(DONOR_ID);
 
         assertThatCode(() -> synchronizer.pairAfterRegistration(registered())).doesNotThrowAnyException();
 
-        assertThat(logs.list).anySatisfy(event -> {
+        assertThat(logs.list).singleElement().satisfies(event -> {
             assertThat(event.getLevel()).isEqualTo(Level.WARN);
-            assertThat(event.getFormattedMessage()).contains(DONOR_ID.toString());
+            assertThat(event.getFormattedMessage()).isEqualTo("Pairing the payments of donor " + DONOR_ID
+                    + " after the registration failed (java.lang.IllegalStateException); the hourly import pairs them");
+            assertThat(event.getThrowableProxy()).isNull();
         });
     }
 

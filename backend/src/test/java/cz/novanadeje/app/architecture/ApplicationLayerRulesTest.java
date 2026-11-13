@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +36,8 @@ class ApplicationLayerRulesTest {
     private static final Set<String> HELPER_USERS_UNTIL_PR_612 = Set.of(
             "cz.novanadeje.app.donations.application.receipt.ReceiptSignatoryService",
             "cz.novanadeje.app.donations.application.receipt.ReceiptSignatureService");
+
+    private static final Set<String> EXCEPTION_MESSAGES = Set.of("getMessage", "getLocalizedMessage");
 
     private static JavaClasses planted;
 
@@ -57,6 +60,13 @@ class ApplicationLayerRulesTest {
             .should().onlyHaveDependentClassesThat(DescribedPredicate.describe("are the helper itself or the receipt signatory and signature services",
                     type -> type.getName().startsWith(AFTER_COMMIT_HELPER_UNTIL_PR_612) || HELPER_USERS_UNTIL_PR_612.contains(type.getName())))
             .because("new work after commit goes through the AfterCommitWork port; this rule fails once the helper is gone, so its exception goes with it");
+
+    @ArchTest
+    static final ArchRule application_must_not_read_exception_messages = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().accessTargetWhere(callsOrReferences("a read of an exception's message", Throwable.class, EXCEPTION_MESSAGES::contains))
+            .because("security.md, Logs: an exception's message may quote a refused value, a bank's answer or SQL; the application logs and stores "
+                    + "only closed values (an id, a kind, an outcome its port names), and adapters translate their failures into those");
 
     @BeforeAll
     static void plantApplicationClassesOnAdapterTechnology(@TempDir Path folder) throws IOException {
@@ -106,7 +116,14 @@ class ApplicationLayerRulesTest {
                         "public class PlantedSynchronization { boolean active() { "
                                 + "return org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive(); } }"),
                 planted(rule, "donations.application.PlantedSynchronizationCallback",
-                        "public class PlantedSynchronizationCallback implements org.springframework.transaction.support.TransactionSynchronization { }"));
+                        "public class PlantedSynchronizationCallback implements org.springframework.transaction.support.TransactionSynchronization { }"),
+                planted("application_must_not_read_exception_messages", "donations.application.PlantedMessageRead",
+                        "public class PlantedMessageRead { String outcome(IllegalStateException failure) { return failure.getMessage(); } }"),
+                planted("application_must_not_read_exception_messages", "donors.application.PlantedLocalizedMessageRead",
+                        "public class PlantedLocalizedMessageRead { String outcome(Exception failure) { return failure.getLocalizedMessage(); } }"),
+                planted("application_must_not_read_exception_messages", "shared.application.PlantedMessageReference",
+                        "public class PlantedMessageReference { java.util.function.Function<RuntimeException, String> outcome() { "
+                                + "return RuntimeException::getMessage; } }"));
     }
 
     private static PlantedClass planted(String rule, String relativeName, String body) {

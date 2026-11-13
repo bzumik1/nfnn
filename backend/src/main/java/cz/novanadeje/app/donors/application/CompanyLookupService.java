@@ -39,7 +39,7 @@ public class CompanyLookupService {
             recordAnswer();
             return company;
         } catch (CompanyRegistryUnavailable unavailable) {
-            recordFailure(unavailable.getMessage());
+            recordFailure(unavailable.outcome());
         } catch (RuntimeException unexpected) {
             recordFailure(unexpected.getClass().getSimpleName());
         }

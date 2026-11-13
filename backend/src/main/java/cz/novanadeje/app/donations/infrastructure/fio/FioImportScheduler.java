@@ -178,7 +178,7 @@ class FioImportScheduler implements BankImportRequests {
                 }
             });
         } catch (RuntimeException unexpected) {
-            log.error("Fio import {} failed unexpectedly", trigger, unexpected);
+            log.error("Fio import {} failed unexpectedly: {}", trigger, unexpected.getClass().getName());
         } finally {
             running.set(false);
         }

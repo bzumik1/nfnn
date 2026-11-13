@@ -56,8 +56,8 @@ class BankAccountTest {
     void should_reject_when_created_given_an_iban_of_another_account() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BankAccount("5544332217/2010", IBAN, "Nadační fond Nová naděje"))
-                .withMessageContaining("5544332217/2010")
-                .withMessageContaining(IBAN.value());
+                .withMessage("IBAN is not the IBAN of the account number")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("5544332217", "2010", "CZ65", "2000145399"));
     }
 
     @Test

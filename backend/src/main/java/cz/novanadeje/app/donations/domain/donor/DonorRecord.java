@@ -271,7 +271,7 @@ public final class DonorRecord {
             return null;
         }
         if (companyIdentifier == null || !COMPANY_IDENTIFIER.matcher(companyIdentifier.trim()).matches()) {
-            throw new IllegalArgumentException("A company identification number is eight digits: " + companyIdentifier);
+            throw new IllegalArgumentException("A company identification number is eight digits");
         }
         return companyIdentifier.trim();
     }
