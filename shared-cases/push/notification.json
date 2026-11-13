@@ -81,6 +81,16 @@
         "tag": "nfnn-donor-test",
         "url": "/darce/udaje"
       }
+    },
+    {
+      "name": "the gift-arrived notification",
+      "input": {
+        "kind": "gift-arrived"
+      },
+      "expected": {
+        "tag": "nfnn-gifts",
+        "url": "/darce/dary"
+      }
     }
   ]
 }
