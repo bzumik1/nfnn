@@ -22,11 +22,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
@@ -37,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ExpectedVersionRulesTest {
 
     private static final String SHARED_RESOLVERS = "cz.novanadeje.app.shared.interfaces.rest";
+    private static final Pattern PRECONDITION_READS = Pattern.compile("(?i)if[_-](none[_-])?match|getIf(None)?Match|checkNotModified");
     private static final Set<String> PRECONDITION_HEADERS = Set.of(HttpHeaders.IF_MATCH.toLowerCase(Locale.ROOT), HttpHeaders.IF_NONE_MATCH.toLowerCase(Locale.ROOT));
 
     @ArchTest
@@ -164,6 +168,42 @@ import java.nio.file.Path;
                 .hasSize(2)
                 .anySatisfy(detail -> assertThat(detail).contains("ifMatchByConstant"))
                 .anySatisfy(detail -> assertThat(detail).contains("ifNoneMatchByName"));
+    }
+
+    @Test
+    @DisplayName("Given the main sources, when they are searched for precondition headers, then only the shared resolvers read one, whatever the way")
+    void should_read_precondition_headers_only_in_the_shared_resolvers_when_searched_given_the_main_sources() throws IOException {
+        Path main = Path.of("src", "main", "java");
+
+        assertThat(filesReadingPreconditionHeaders(main))
+                .allSatisfy(file -> assertThat(file.toString().replace('\\', '/')).contains("cz/novanadeje/app/shared/interfaces/rest/"));
+    }
+
+    @Test
+    @DisplayName("Given planted sources that read If-Match from the request, through HttpHeaders or by checkNotModified, when the sources are searched, then each is reported and an unrelated one is not")
+    void should_report_every_way_to_read_a_precondition_when_searched_given_planted_sources(@TempDir Path sources) throws IOException {
+        Files.writeString(sources.resolve("PlantedRequestHeader.java"), "class PlantedRequestHeader { String v(jakarta.servlet.http.HttpServletRequest r) { return r.getHeader(org.springframework.http.HttpHeaders.IF_MATCH); } }");
+        Files.writeString(sources.resolve("PlantedLiteral.java"), "class PlantedLiteral { String n = \"If-None-Match\"; }");
+        Files.writeString(sources.resolve("PlantedHeaders.java"), "class PlantedHeaders { Object v(org.springframework.http.HttpHeaders h) { return h.getIfMatch(); } }");
+        Files.writeString(sources.resolve("PlantedNotModified.java"), "class PlantedNotModified { boolean v(org.springframework.web.context.request.WebRequest r) { return r.checkNotModified(\"x\"); } }");
+        Files.writeString(sources.resolve("Unrelated.java"), "class Unrelated { String n = \"Content-Type\"; }");
+
+        assertThat(filesReadingPreconditionHeaders(sources)).containsExactlyInAnyOrder(sources.resolve("PlantedRequestHeader.java"),
+                sources.resolve("PlantedLiteral.java"), sources.resolve("PlantedHeaders.java"), sources.resolve("PlantedNotModified.java"));
+    }
+
+    private static List<Path> filesReadingPreconditionHeaders(Path root) throws IOException {
+        try (Stream<Path> files = Files.walk(root)) {
+            return files.filter(Files::isRegularFile).filter(ExpectedVersionRulesTest::readsAPrecondition).toList();
+        }
+    }
+
+    private static boolean readsAPrecondition(Path file) {
+        try {
+            return PRECONDITION_READS.matcher(Files.readString(file)).find();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private static boolean isExpectedVersion(JavaParameter parameter) {
