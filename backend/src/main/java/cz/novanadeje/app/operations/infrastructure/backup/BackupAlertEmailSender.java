@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static cz.novanadeje.app.operations.infrastructure.backup.BackupFormats.CZECH;
 
@@ -50,7 +49,7 @@ class BackupAlertEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendProblems(BackupProblemsDetected event) {
         String intro = text("problem.intro", BackupFormats.time(event.detectedAt()));
-        List<String> problems = describe(event.problems(), event.lastBackup(), event.lastTestRestore());
+        List<String> problems = describe(event);
         String consequence = text("problem.consequence");
         String action = text("problem.action");
         String next = text("problem.next");
@@ -82,11 +81,13 @@ class BackupAlertEmailSender {
                 paragraphs(List.of(text("greeting"), intro, resolved, lastBackup, lastTest, text("signature"), footer)), footer));
     }
 
-    private List<String> describe(Set<BackupProblem> problems, Optional<BackupRun> backup, Optional<BackupRun> test) {
-        return problems.stream().sorted().map(problem -> describe(problem, backup, test)).toList();
+    private List<String> describe(BackupProblemsDetected event) {
+        return event.problems().stream().sorted().map(problem -> describe(problem, event)).toList();
     }
 
-    private String describe(BackupProblem problem, Optional<BackupRun> backup, Optional<BackupRun> test) {
+    private String describe(BackupProblem problem, BackupProblemsDetected event) {
+        Optional<BackupRun> backup = event.lastBackup();
+        Optional<BackupRun> test = event.lastTestRestore();
         return switch (problem) {
             case BACKUPS_UNAVAILABLE, BACKUP_MISSING, TEST_RESTORE_MISSING -> text("problem." + problem.name());
             case BACKUP_FAILED -> text("problem.BACKUP_FAILED", BackupFormats.time(finishedAt(backup)), error(backup));
