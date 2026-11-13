@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.MessageSource;
 import org.springframework.data.repository.Repository;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +31,9 @@ import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
@@ -60,6 +65,15 @@ class DddLayeringRulesTest {
     private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_IMPLEMENTS = DescribedPredicate.describe(
             "a port that persistence implements",
             type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAPackage("..infrastructure.persistence..")::test));
+    private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
+    private static final DescribedPredicate<JavaClass> DRIVEN_ADAPTERS = DescribedPredicate.describe(
+            "implement a port of their own context's application or domain and run no scheduled work",
+            type -> layerOf(type).filter("infrastructure"::equals).isPresent()
+                    && type.getMethods().stream().noneMatch(method -> method.isAnnotatedWith(Scheduled.class))
+                    && type.getAllRawInterfaces().stream().anyMatch(port -> isPortOfTheContextOf(port, type)));
+    private static final DescribedPredicate<JavaClass> APPLICATION_SERVICES = DescribedPredicate.describe(
+            "are application services (Spring beans of an application package)",
+            type -> !type.isInterface() && layerOf(type).filter("application"::equals).isPresent() && type.isMetaAnnotatedWith(Component.class));
 
     @ArchTest
     static final ArchRule layers_must_respect_ddd_dependency_rule = layeredArchitecture()
@@ -123,6 +137,13 @@ class DddLayeringRulesTest {
             .because(LAYERS);
 
     @ArchTest
+    static final ArchRule driven_adapters_must_not_drive_a_use_case = noClasses()
+            .that(DRIVEN_ADAPTERS)
+            .should().dependOnClassesThat(APPLICATION_SERVICES)
+            .because("backend.md, Application: a driven adapter implements its port on the domain and its technology; a use case is driven "
+                    + "only from the driving side (a scheduler, a listener, a controller, or another context through a shared port)");
+
+    @ArchTest
     static final ArchRule jpa_entities_and_spring_data_repositories_are_package_private_adapter_details = classes()
             .that().areAnnotatedWith(Entity.class)
             .or().areAnnotatedWith(Embeddable.class)
@@ -149,6 +170,40 @@ class DddLayeringRulesTest {
                     planted("planteda.domain.ReflectiveGift", "public class ReflectiveGift { java.lang.reflect.Method method; }"),
                     planted("planteda.domain.NetworkGift", "public class NetworkGift { java.net.Socket socket; }"),
                     planted("planteda.application.GiftService", "public class GiftService {}"),
+                    planted("planteda.application.GiftPairing", "public interface GiftPairing { void pair(); }"),
+                    planted("planteda.application.PairingService", "@org.springframework.stereotype.Service public class PairingService { public void pair() {} }"),
+                    planted("planteda.application.GiftComponent", "@org.springframework.stereotype.Component public class GiftComponent { public void read() {} }"),
+                    planted("planteda.infrastructure.pairing.ServicePairing", """
+                            public class ServicePairing implements cz.novanadeje.app.planteda.application.GiftPairing {
+                                cz.novanadeje.app.planteda.application.PairingService service;
+                                public void pair() { service.pair(); }
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.ComponentGifts", """
+                            public class ComponentGifts implements cz.novanadeje.app.planteda.domain.Gifts {
+                                cz.novanadeje.app.planteda.application.GiftComponent component;
+                            }
+                            """),
+                    planted("planteda.infrastructure.events.PairingListener", """
+                            public class PairingListener {
+                                cz.novanadeje.app.planteda.application.PairingService service;
+                                void onRegistered() { service.pair(); }
+                            }
+                            """),
+                    planted("planteda.infrastructure.schedule.PairingScheduler", """
+                            public class PairingScheduler implements cz.novanadeje.app.planteda.application.GiftPairing {
+                                cz.novanadeje.app.planteda.application.PairingService service;
+                                @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 1000) void tick() { service.pair(); }
+                                public void pair() { }
+                            }
+                            """),
+                    planted("planteda.infrastructure.account.KernelPortAdapter", """
+                            public class KernelPortAdapter implements cz.novanadeje.app.shared.application.account.KernelPort {
+                                cz.novanadeje.app.planteda.application.PairingService service;
+                                public void pair() { service.pair(); }
+                            }
+                            """),
+                    planted("shared.application.account.KernelPort", "public interface KernelPort { void pair(); }"),
                     planted("planteda.application.WebGiftService", "public class WebGiftService { org.springframework.http.HttpStatus status; }"),
                     planted("planteda.application.TextGiftService", "public class TextGiftService { org.springframework.context.MessageSource texts; }"),
                     planted("planteda.infrastructure.mail.GiftMailer", "public class GiftMailer {}"),
@@ -246,6 +301,17 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("infrastructure.mail.GiftRow"));
         }
 
+        @Test
+        @DisplayName("when the driven adapter rule checks adapters of the context's own ports on an application service, then they are reported and the driving side is not")
+        void should_report_adapters_of_own_ports_on_a_service_when_checked_given_planted_driven_and_driving_adapters() {
+            assertThat(reportOf(driven_adapters_must_not_drive_a_use_case))
+                    .anySatisfy(detail -> assertThat(detail).contains("ServicePairing").contains("PairingService"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ComponentGifts").contains("GiftComponent"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("PairingListener"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("PairingScheduler"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("KernelPortAdapter"));
+        }
+
         private static Map.Entry<String, String> planted(String relativeName, String body) {
             String className = "cz.novanadeje.app." + relativeName;
             return Map.entry(className, "package " + className.substring(0, className.lastIndexOf('.')) + ";\n" + body);
@@ -254,5 +320,17 @@ class DddLayeringRulesTest {
         private static List<String> reportOf(ArchRule rule) {
             return rule.evaluate(planted).getFailureReport().getDetails();
         }
+    }
+
+    private static Optional<String> layerOf(JavaClass type) {
+        Matcher matcher = CONTEXT_OF_PACKAGE.matcher(type.getPackageName());
+        return matcher.matches() ? Optional.of(matcher.group(2)) : Optional.empty();
+    }
+
+    private static boolean isPortOfTheContextOf(JavaClass port, JavaClass adapter) {
+        Matcher portPackage = CONTEXT_OF_PACKAGE.matcher(port.getPackageName());
+        Matcher adapterPackage = CONTEXT_OF_PACKAGE.matcher(adapter.getPackageName());
+        return portPackage.matches() && adapterPackage.matches() && !"infrastructure".equals(portPackage.group(2))
+                && portPackage.group(1).equals(adapterPackage.group(1));
     }
 }
