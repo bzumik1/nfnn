@@ -82,7 +82,9 @@ class DonorTest {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
         donor.verifyEmail(NOW.plusSeconds(90));
 
-        assertThatThrownBy(() -> donor.verifyEmail(NOW.plusSeconds(120))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> donor.verifyEmail(NOW.plusSeconds(120)))
+                .isInstanceOf(EmailAlreadyConfirmed.class)
+                .hasFieldOrPropertyWithValue("code", "donors/email-already-confirmed");
         assertThat(donor.emailVerifiedAt()).contains(NOW.plusSeconds(90));
     }
 
@@ -167,7 +169,10 @@ class DonorTest {
     void should_refuse_when_email_changed_given_unverified_donor() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
-        assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("jana.nova@example.cz"))).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> donor.changeEmail(new EmailAddress("jana.nova@example.cz")))
+                .isInstanceOf(EmailNotConfirmed.class)
+                .hasFieldOrPropertyWithValue("code", "donors/email-not-confirmed");
+        assertThat(donor.email()).isEqualTo(EMAIL);
     }
 
     @Test
