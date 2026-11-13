@@ -104,7 +104,7 @@ function isPublic(path) {
 }
 
 describe('Given the service worker configuration', () => {
-  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details and the bank logo list wait a second for the network and are kept for at most a day, and the bank logos, at most 60, and the photos, at most 300, are kept', async () => {
+  it('when its data groups are read, then the public content is shown from its copy and refreshed behind it, the payment details and the bank logo list wait a second for the network and are kept for at most a day, and the bank logos, at most 60, and the photos, at most 300, are kept and given up on after 10 s when never kept and the network hangs', async () => {
     const manifest = await generatedManifest();
 
     assert.deepEqual(
@@ -138,7 +138,7 @@ describe('Given the service worker configuration', () => {
           strategy: 'performance',
           maxSize: 60,
           maxAge: 365 * DAY,
-          timeoutMs: undefined,
+          timeoutMs: 10_000,
           refreshAheadMs: undefined,
         },
         {
@@ -154,7 +154,7 @@ describe('Given the service worker configuration', () => {
           strategy: 'performance',
           maxSize: 300,
           maxAge: 365 * DAY,
-          timeoutMs: undefined,
+          timeoutMs: 10_000,
           refreshAheadMs: undefined,
         },
       ],

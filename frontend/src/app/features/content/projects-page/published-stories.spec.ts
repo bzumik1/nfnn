@@ -1,4 +1,9 @@
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
+import { PROBE_PATH } from '../../../core/connectivity/connectivity';
+import { connectivityInterceptor } from '../../../core/connectivity/connectivity-interceptor';
+import { keptAnswerRefreshInterceptor } from '../../../core/connectivity/kept-answer-refresh';
+import { serviceWorkerBypassInterceptor } from '../../../core/updates/service-worker-bypass';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { newsArticle } from '../testing/news-fixtures';
@@ -113,5 +118,58 @@ describe('Given the published stories of the foundation', () => {
 
     expect(failed).toBe(true);
     expect(store.stories()).toBeNull();
+  });
+});
+
+describe('Given the published stories the service worker kept from an earlier visit', () => {
+  let store: PublishedStoriesStore;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(
+          withInterceptors([
+            keptAnswerRefreshInterceptor,
+            serviceWorkerBypassInterceptor,
+            connectivityInterceptor,
+          ]),
+        ),
+        provideHttpClientTesting(),
+      ],
+    });
+    store = TestBed.inject(PublishedStoriesStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.match(PROBE_PATH).forEach((probe) => probe.flush({}));
+    http.verify();
+  });
+
+  it('when the worker answers from its copies and the network past it would hang (a phone in airplane mode), then the stories come from the copies at once and nothing waits on the network', () => {
+    const kept = { headers: { Date: new Date(Date.now() - 600_000).toUTCString() } };
+    let received: PublishedStories | undefined;
+    store.load().subscribe((stories) => (received = stories));
+
+    http
+      .expectOne((r) => r.url === NEWS && !r.headers.has('ngsw-bypass'))
+      .flush({ items: [], page: 0, size: 50, total: 0, hasMore: false }, kept);
+    http
+      .expectOne((r) => r.url === PROJECTS && !r.headers.has('ngsw-bypass'))
+      .flush(
+        {
+          items: [project({ id: 'prvni', slug: 'prvni' })],
+          page: 0,
+          size: 50,
+          total: 1,
+          hasMore: false,
+        },
+        kept,
+      );
+
+    expect(received?.projects.map((item) => item.slug)).toEqual(['prvni']);
+    http.expectNone((r) => r.url !== PROBE_PATH && r.headers.has('ngsw-bypass'));
   });
 });

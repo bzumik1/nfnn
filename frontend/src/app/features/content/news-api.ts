@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { refreshedAfterKeptCopy } from '../../core/connectivity/kept-answer-refresh';
 import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -214,7 +215,16 @@ export class NewsApi {
     return this.http.get<NewsPageResponse>(PUBLIC_NEWS, { params: { page, size } });
   }
 
+  publishedWithLatest(page: number, size: number): Observable<NewsPageResponse> {
+    return this.http.get<NewsPageResponse>(PUBLIC_NEWS, {
+      params: { page, size },
+      context: refreshedAfterKeptCopy(),
+    });
+  }
+
   publishedBySlug(slug: string): Observable<NewsArticleResponse> {
-    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${slug}`);
+    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${slug}`, {
+      context: refreshedAfterKeptCopy(),
+    });
   }
 }

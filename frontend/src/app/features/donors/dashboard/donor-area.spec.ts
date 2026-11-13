@@ -129,6 +129,7 @@ describe('Given a signed-in donor in the donor area', () => {
     vi.useRealTimers();
     http
       .match(PAYMENT_DETAILS_URL_MATCH)
+      .filter((request) => !request.cancelled)
       .forEach((request) => request.flush(foundationPaymentDetails()));
     http.verify();
     vi.restoreAllMocks();

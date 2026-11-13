@@ -1,6 +1,6 @@
-import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, throwError, timeout } from 'rxjs';
 import { WITHOUT_ACCESS_TOKEN } from '../../core/auth/auth-interceptor';
 import { accountMatchesIban } from './czech-account';
 
@@ -25,6 +25,9 @@ export interface WrittenPaymentDetails {
   readonly writtenAt: number | null;
 }
 
+export const PAYMENT_DETAILS_WAIT_MS = 5_000;
+
+const PAYMENT_DETAILS = '/api/donations/payment-details';
 const PAST_BROWSER_CACHE = new HttpHeaders({ 'Cache-Control': 'no-cache' });
 const NO_HEADERS = new HttpHeaders();
 
@@ -34,13 +37,17 @@ export class PaymentDetailsApi {
 
   details({ pastBrowserCache = false } = {}): Observable<WrittenPaymentDetails> {
     return this.http
-      .get<unknown>('/api/donations/payment-details', {
+      .get<unknown>(PAYMENT_DETAILS, {
         context: new HttpContext().set(WITHOUT_ACCESS_TOKEN, true),
         headers: pastBrowserCache ? PAST_BROWSER_CACHE : NO_HEADERS,
         cache: pastBrowserCache ? 'no-cache' : 'default',
         observe: 'response',
       })
       .pipe(
+        timeout({
+          first: PAYMENT_DETAILS_WAIT_MS,
+          with: () => throwError(() => new HttpErrorResponse({ status: 0, url: PAYMENT_DETAILS })),
+        }),
         map((response) => {
           const written = Date.parse(response.headers.get('Date') ?? '');
           return {
