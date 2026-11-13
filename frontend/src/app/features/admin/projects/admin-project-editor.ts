@@ -251,6 +251,7 @@ export class AdminProjectEditor implements GuardsUnsavedChanges {
   private publishDateMoved = false;
 
   protected readonly isNew = computed(() => this.project() === null);
+  protected readonly writesNew = computed(() => this.routeId === null && this.isNew());
   protected readonly isPublished = computed(() => this.project()?.publishedOn != null);
   protected readonly previewing = computed(() => this.mode() === 'preview');
   protected readonly busy = computed(() => this.saving() !== null || this.unpublishing());

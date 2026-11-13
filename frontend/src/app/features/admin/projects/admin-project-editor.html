@@ -5,7 +5,7 @@
     </p>
   }
   <h1 #title class="ui-page-title" tabindex="-1">
-    @if (isNew()) {
+    @if (writesNew()) {
       <ng-container i18n="@@admin.projectEditor.heading.new">Nový příběh</ng-container>
     } @else {
       <ng-container i18n="@@admin.projectEditor.heading.edit">Úprava příběhu</ng-container>

@@ -243,6 +243,7 @@ export class AdminNewsEditor implements GuardsUnsavedChanges {
   });
 
   protected readonly isNew = computed(() => this.article() === null);
+  protected readonly writesNew = computed(() => this.routeId === null && this.isNew());
   protected readonly isPublished = computed(() => this.article()?.publishedOn != null);
   protected readonly previewing = computed(() => this.mode() === 'preview');
   protected readonly busy = computed(() => this.saving() !== null || this.unpublishing());
