@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
@@ -154,6 +155,20 @@ class DonorRecordSynchronizerTest {
             assertThat(event.getFormattedMessage()).isEqualTo("Pairing the payments of donor " + DONOR_ID
                     + " after the registration failed (java.lang.IllegalStateException); the hourly import pairs them");
             assertThat(event.getThrowableProxy()).isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a statement that runs out of time while pairing, when the registration has committed, then it is logged as a failure, not as a lost race, and does not propagate")
+    void should_warn_failure_when_registration_committed_given_statement_timeout() {
+        doThrow(new QueryTimeoutException("canceling statement due to statement timeout")).when(pairing).pairPaymentsOf(DONOR, NOW);
+
+        assertThatCode(() -> synchronizer.pairAfterRegistration(registered())).doesNotThrowAnyException();
+
+        assertThat(logs.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getFormattedMessage()).isEqualTo("Pairing the payments of donor " + DONOR_ID
+                    + " after the registration failed (org.springframework.dao.QueryTimeoutException); the hourly import pairs them");
         });
     }
 
