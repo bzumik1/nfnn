@@ -19,6 +19,9 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -28,6 +31,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -48,12 +52,14 @@ class ImportAlertDeliveryTest {
     @Mock
     private ImportAlertSender sender;
 
+    private RecordingTransactions transactions;
     private ImportAlertDelivery delivery;
     private ListAppender<ILoggingEvent> logged;
 
     @BeforeEach
     void setUp() {
-        delivery = new ImportAlertDelivery(alerts, sender, new MutableClock(NOW, ZoneId.of("UTC")));
+        transactions = new RecordingTransactions();
+        delivery = new ImportAlertDelivery(alerts, sender, transactions, new MutableClock(NOW, ZoneId.of("UTC")));
         logged = new ListAppender<>();
         logged.start();
         logger().addAppender(logged);
@@ -91,6 +97,21 @@ class ImportAlertDeliveryTest {
     }
 
     @Test
+    @DisplayName("Given a waiting alert, when it is delivered, then it is sent outside any transaction and marked sent inside one")
+    void should_send_outside_and_mark_inside_a_transaction_when_delivered_given_a_waiting_alert() {
+        when(alerts.waiting()).thenReturn(List.of(OUTAGE));
+        when(sender.send(OUTAGE.alert())).thenAnswer(sending -> !transactions.open());
+        doAnswer(marking -> {
+            assertThat(transactions.open()).as("marked inside a transaction").isTrue();
+            return null;
+        }).when(alerts).markSent(OUTAGE.id(), NOW);
+
+        delivery.deliverWaiting();
+
+        verify(alerts).markSent(OUTAGE.id(), NOW);
+    }
+
+    @Test
     @DisplayName("Given a mail server that refuses the first alert, when the alerts are delivered, then nothing is marked, the later alert waits too and a warning says it is retried")
     void should_keep_every_alert_waiting_when_delivered_given_mail_server_refuses() {
         when(alerts.waiting()).thenReturn(List.of(OUTAGE, RECOVERY));
@@ -104,6 +125,25 @@ class ImportAlertDeliveryTest {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("Fio import alert " + OUTAGE.id() + " was not delivered; it is sent again after the next import");
         });
+    }
+
+    private static final class RecordingTransactions implements TransactionOperations {
+
+        private boolean open;
+
+        @Override
+        public <T> T execute(TransactionCallback<T> action) {
+            open = true;
+            try {
+                return action.doInTransaction(new SimpleTransactionStatus());
+            } finally {
+                open = false;
+            }
+        }
+
+        boolean open() {
+            return open;
+        }
     }
 
     private static Logger logger() {

@@ -18,6 +18,7 @@ import cz.novanadeje.app.shared.domain.Money;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -35,15 +36,17 @@ public class PaymentPairingStepDefinitions {
     private final DonorRecordRepository donorRecords;
     private final BankPaymentRepository payments;
     private final JdbcClient jdbc;
+    private final TransactionTemplate transaction;
     private final Clock clock;
 
     public PaymentPairingStepDefinitions(ScenarioDonors scenarioDonors, DonationRepository donations, DonorRecordRepository donorRecords,
-                                         BankPaymentRepository payments, JdbcClient jdbc, Clock clock) {
+                                         BankPaymentRepository payments, JdbcClient jdbc, TransactionTemplate transaction, Clock clock) {
         this.scenarioDonors = scenarioDonors;
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.payments = payments;
         this.jdbc = jdbc;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
@@ -54,7 +57,8 @@ public class PaymentPairingStepDefinitions {
                 .param(transactionId).query(UUID.class).single())).orElseThrow();
         SenderAccountLink link = record.learnSenderAccountFrom(payment, Optional.empty(), ExcludedSenderAccounts.none(), clock.instant())
                 .orElseThrow(() -> new AssertionError("Bank payment " + transactionId + " teaches \"" + alias + "\" no sender account"));
-        assertThat(donorRecords.saveSenderAccountLink(record.id(), link)).isTrue();
+        Boolean saved = transaction.execute(status -> donorRecords.saveSenderAccountLink(record.id(), link));
+        assertThat(saved).isTrue();
     }
 
     @Then("{string} has {int} donation(s)")

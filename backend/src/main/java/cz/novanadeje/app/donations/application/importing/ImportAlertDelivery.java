@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.domain.importing.WaitingImportAlert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
 
@@ -15,11 +16,13 @@ public class ImportAlertDelivery {
 
     private final ImportAlertRepository alerts;
     private final ImportAlertSender sender;
+    private final TransactionOperations transactions;
     private final Clock clock;
 
-    public ImportAlertDelivery(ImportAlertRepository alerts, ImportAlertSender sender, Clock clock) {
+    public ImportAlertDelivery(ImportAlertRepository alerts, ImportAlertSender sender, TransactionOperations transactions, Clock clock) {
         this.alerts = alerts;
         this.sender = sender;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
@@ -29,7 +32,7 @@ public class ImportAlertDelivery {
                 log.warn("Fio import alert {} was not delivered; it is sent again after the next import", waiting.id());
                 return;
             }
-            alerts.markSent(waiting.id(), clock.instant());
+            transactions.executeWithoutResult(status -> alerts.markSent(waiting.id(), clock.instant()));
         }
     }
 }

@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -19,7 +20,7 @@ interface RegistrationReminderJpaRepository extends JpaRepository<RegistrationRe
             + " order by d.registered_at limit :limit")
     List<UUID> findDue(@Param("after") Instant after, @Param("until") Instant until, @Param("limit") int limit);
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true)
     @Query(nativeQuery = true, value = "insert into donor_registration_reminder (donor_id, sent_at) values (:donorId, :sentAt)"
             + " on conflict (donor_id) do nothing")

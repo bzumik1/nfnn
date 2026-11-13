@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -15,12 +16,12 @@ interface ImportAlertJpaRepository extends JpaRepository<ImportAlertJpaEntity, U
     @Query("select a from ImportAlertJpaEntity a where a.outcome is null order by a.createdAt, a.id")
     List<ImportAlertJpaEntity> findWaiting();
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update ImportAlertJpaEntity a set a.outcome = 'SENT', a.settledAt = :at where a.id = :id and a.outcome is null")
     int markSent(@Param("id") UUID id, @Param("at") Instant at);
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update ImportAlertJpaEntity a set a.outcome = 'DROPPED', a.settledAt = :at where a.kind = :kind and a.outcome is null")
     int dropWaiting(@Param("kind") ImportAlertJpaEntity.Kind kind, @Param("at") Instant at);

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -21,7 +22,7 @@ interface SymbolClaimJpaRepository extends JpaRepository<SymbolClaimJpaEntity, U
 
     List<SymbolClaimJpaEntity> findAllByOrderByAnsweredAtDescIdDesc();
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Modifying(flushAutomatically = true)
     @Query(nativeQuery = true, value = "insert into donor_symbol_claim (id, donor_id, account_number, bank_code, variable_symbol, answer,"
             + " answered_at) values (:id, :donorId, :number, :code, :symbol, :answer, :answeredAt)"
