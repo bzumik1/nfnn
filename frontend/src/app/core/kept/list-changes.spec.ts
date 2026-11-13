@@ -97,4 +97,28 @@ describe('Given the changes a card makes to a list it loads', () => {
     expect(second.seen).toEqual([]);
     expect(reloads).toBe(1);
   });
+
+  it('when a load started after the change already asks for the list, then an older answer is set aside without asking again', () => {
+    const before = load();
+    changes.changing();
+    changes.changed(false);
+    const after = load();
+
+    before.server.next('before the change');
+    after.server.next('after the change');
+
+    expect(before.seen).toEqual([]);
+    expect(after.seen).toEqual(['after the change']);
+    expect(reloads).toBe(0);
+  });
+
+  it('when a change answers with the fresh list itself, then an older answer is set aside without asking again', () => {
+    const before = load();
+    changes.answeredByChange();
+
+    before.server.next('before the change');
+
+    expect(before.seen).toEqual([]);
+    expect(reloads).toBe(0);
+  });
 });

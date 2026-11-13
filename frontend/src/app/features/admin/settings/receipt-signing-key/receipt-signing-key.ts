@@ -5,6 +5,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   DestroyRef,
   ElementRef,
   inject,
@@ -33,6 +34,8 @@ import {
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptAdministrationAnswers } from '../../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
@@ -58,6 +61,8 @@ interface WithdrawalOffer {
 })
 export class ReceiptSigningKey {
   private readonly api = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
+  private readonly changes = new ListChanges(() => this.load(true));
   private readonly auth = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -122,17 +127,30 @@ export class ReceiptSigningKey {
   });
 
   constructor() {
-    this.load();
+    const shown = this.kept.kept('receipt-signing-keys');
+    if (shown !== null) {
+      this.keys.set(shown);
+      this.state.set('ready');
+    }
+    this.load(shown !== null);
+    effect(() => {
+      const keys = this.keys();
+      if (keys !== null) {
+        this.kept.keep('receipt-signing-keys', keys);
+      }
+    });
   }
 
   protected registeredAt(instant: string): string {
     return formatBankTime(instant);
   }
 
-  protected load(): void {
-    this.state.set('loading');
-    this.api
-      .receiptSigningKeys()
+  protected load(quietly = false): void {
+    if (!quietly) {
+      this.state.set('loading');
+    }
+    this.changes
+      .track(this.api.receiptSigningKeys())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (keys) => {
@@ -140,13 +158,23 @@ export class ReceiptSigningKey {
           this.keys.set(keys);
           this.state.set('ready');
         },
-        error: () => this.state.set(this.onlineAgain.offline() ? 'offline' : 'error'),
+        error: () => {
+          if (quietly && this.state() === 'ready') {
+            return;
+          }
+          this.state.set(this.onlineAgain.offline() ? 'offline' : 'error');
+        },
       });
+  }
+
+  private shownFromServerChange(): void {
+    this.changes.answeredByChange();
   }
 
   private showAfterRestart(keyId: string, keys: ReceiptSigningKeysResponse): void {
     const same = keys.currentKeyId === keyId;
     this.stillWithdrawnAfterRestart.set(same);
+    this.shownFromServerChange();
     this.keys.set(keys);
     this.state.set('ready');
     this.notice.set(this.afterRestartNotice(keyId, keys));
@@ -179,6 +207,7 @@ export class ReceiptSigningKey {
   protected withdrawn(response: ReceiptSigningKeyWithdrawalResponse): void {
     const keyId = this.withdrawal()?.keyId ?? '';
     this.withdrawal.set(null);
+    this.shownFromServerChange();
     this.keys.set(response);
     this.state.set('ready');
     if (response.restarting) {

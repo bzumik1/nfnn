@@ -551,6 +551,51 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     });
   });
 
+  describe('when the section was shown once and is opened again', () => {
+    beforeEach(async () => {
+      await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
+      fixture.destroy();
+      fixture = TestBed.createComponent(ReceiptSigningKey);
+      fixture.detectChanges();
+    });
+
+    it('then the keys show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(root().textContent).not.toContain('Načítáme');
+      expect(rows()['Klíč serveru']).toBe('21fe31df');
+
+      await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
+
+      expect(rows()['Klíč serveru']).toBe('21fe31df');
+    });
+
+    it('then a key withdrawn while the refresh is on its way is not shown as valid again by its answer', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: SIGNING_KEYS_URL });
+      await openWithdrawal('Zneplatnit klíč 39f713d0…', [samplePasskey()]);
+      await submit();
+      http
+        .expectOne({ method: 'POST', url: '/api/donors/auth/passkey/options' })
+        .flush(passkeySignInOptions());
+      await settle();
+      http
+        .expectOne(WITHDRAW_EARLIER_URL)
+        .flush(
+          withdrawn(
+            receiptSigningKeys([
+              receiptSigningKey({ ...earlierKey(), status: 'revoked' }),
+              receiptSigningKey(),
+            ]),
+            false,
+          ),
+        );
+      await settle();
+
+      refresh.flush(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
+      await settle();
+
+      expect(text('.signing-key-earlier')).toContain('zneplatněný');
+    });
+  });
+
   describe('when the administrator withdraws an earlier key with a passkey', () => {
     beforeEach(async () => {
       await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));
