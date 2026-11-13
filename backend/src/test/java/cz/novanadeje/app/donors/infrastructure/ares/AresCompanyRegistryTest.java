@@ -231,7 +231,7 @@ class AresCompanyRegistryTest {
 
     @Test
     @DisplayName("Given the production register, when its address is read, then it is the fixed https address of ARES")
-    void should_use_fixed_https_address_given_production_register() {
+    void should_be_the_fixed_https_address_of_ares_when_read_given_the_production_register() {
         assertThat(AresCompanyRegistry.ARES).hasToString("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/");
     }
 
