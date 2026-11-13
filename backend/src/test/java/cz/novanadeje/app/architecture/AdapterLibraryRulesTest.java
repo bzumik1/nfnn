@@ -26,9 +26,14 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
@@ -79,6 +84,12 @@ class AdapterLibraryRulesTest {
     private static final DescribedPredicate<JavaClass> PERSISTENCE_LIBRARIES = resideInAnyPackage("jakarta.persistence..", "org.springframework.data..",
             "org.springframework.orm..", "org.springframework.jdbc..", "org.hibernate..").and(not(resideInAPackage("org.hibernate.validator..")))
             .as("JPA, Spring Data, Spring ORM, Spring JDBC or Hibernate");
+
+    private static final DescribedPredicate<JavaClass> CRYPTOGRAPHY = resideInAnyPackage("java.security..", "javax.crypto..")
+            .and(not(belongToAnyOf(MessageDigest.class, SecureRandom.class, Mac.class, SecretKeySpec.class)))
+            .and(not(assignableTo(GeneralSecurityException.class)))
+            .as("a cipher, signature, key agreement, key derivation, key or key generator of the JCA (anything but MessageDigest, SecureRandom, "
+                    + "the Mac and SecretKeySpec of a TOTP code and the security exceptions)");
 
     private static JavaClasses planted;
 
@@ -163,6 +174,13 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAnyPackage("jakarta.mail..", "org.springframework.mail..");
 
     @ArchTest
+    static final ArchRule cryptography_is_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat(CRYPTOGRAPHY)
+            .because("security.md: JCA signing stays in donations/infrastructure/signing, and every cipher, key and signature is a technology "
+                    + "behind a port (RecordSeals, ReceiptSigner, the push adapters); the domain keeps only digests, random values and a TOTP code's HMAC");
+
+    @ArchTest
     static final ArchRule json_and_security_libraries_stay_out_of_the_domain_and_the_use_cases = noClasses()
             .that().resideInAnyPackage("..domain..", "..application..")
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..", "org.springframework.security..");
@@ -203,6 +221,11 @@ class AdapterLibraryRulesTest {
                         "com.fasterxml.jackson.annotation.JsonProperty"),
                 planted("json_and_security_libraries_stay_out_of_the_domain_and_the_use_cases", "donors.application.PlantedAuthentication",
                         "org.springframework.security.core.Authentication"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donors.domain.PlantedCipher", "javax.crypto.Cipher"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donations.application.PlantedSignature", "java.security.Signature"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "operations.interfaces.rest.PlantedKeyPairs", "java.security.KeyPairGenerator"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "shared.domain.PlantedKeyAgreement", "javax.crypto.KeyAgreement"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donors.application.PlantedPrivateKey", "java.security.PrivateKey"),
                 planted("template_library_is_used_only_by_the_shared_mail_adapter", "donors.infrastructure.mail.PlantedTemplates", "org.thymeleaf.TemplateEngine"),
                 planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "content.infrastructure.persistence.PlantedDrawing",
                         "java.awt.Graphics2D"),
