@@ -54,13 +54,7 @@ class ExpectedVersionRulesTest {
                 package cz.novanadeje.app.planteda.interfaces.rest;
 
                 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
-                import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import java.io.IOException;
-import java.nio.file.Path;
+                import org.springframework.web.bind.annotation.RequestBody;
 
                 class PlantedVersionedController {
 

@@ -20,12 +20,12 @@ import cz.novanadeje.app.AppApplication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionOperations;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -90,10 +90,9 @@ class TransactionRulesTest {
     @ArchTest
     static final ArchRule programmatic_transactions_belong_to_the_application = noClasses()
             .that().resideOutsideOfPackage("..application..")
-            .should().dependOnClassesThat().haveFullyQualifiedName(TransactionOperations.class.getName())
-            .orShould().dependOnClassesThat().haveFullyQualifiedName(TransactionTemplate.class.getName())
-            .orShould().dependOnClassesThat().haveFullyQualifiedName(PlatformTransactionManager.class.getName())
-            .orShould().dependOnClassesThat().haveFullyQualifiedName(DefaultTransactionDefinition.class.getName())
+            .should().dependOnClassesThat().areAssignableTo(TransactionOperations.class)
+            .orShould().dependOnClassesThat().areAssignableTo(TransactionManager.class)
+            .orShould().dependOnClassesThat().areAssignableTo(TransactionDefinition.class)
             .because(BOUNDARY + ", so an adapter or a controller never opens a transaction the MANDATORY rule cannot see");
 
     @Test
@@ -151,6 +150,18 @@ class TransactionRulesTest {
                         });
                     }
                 }
+                """, "cz.novanadeje.app.planteda.infrastructure.persistence.PlantedManagerRows", """
+                package cz.novanadeje.app.planteda.infrastructure.persistence;
+
+                import org.springframework.orm.jpa.JpaTransactionManager;
+                import org.springframework.transaction.TransactionDefinition;
+
+                class PlantedManagerRows {
+
+                    Object open(JpaTransactionManager transactions) {
+                        return transactions.getTransaction(TransactionDefinition.withDefaults());
+                    }
+                }
                 """));
 
         assertThat(new_transactions_are_opened_only_where_backend_md_names_them.evaluate(planted).getFailureReport().getDetails())
@@ -161,7 +172,9 @@ class TransactionRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("byDefinition"));
         assertThat(programmatic_transactions_belong_to_the_application.evaluate(planted).getFailureReport().getDetails())
                 .isNotEmpty()
-                .allSatisfy(detail -> assertThat(detail).contains("PlantedTemplateRows"));
+                .allSatisfy(detail -> assertThat(detail).containsAnyOf("PlantedTemplateRows", "PlantedManagerRows"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedTemplateRows"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedManagerRows"));
     }
 
     @Test
