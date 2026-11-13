@@ -102,6 +102,18 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         api.post(KEYS + keyId + "/withdrawal", Map.of("passkey", answer));
     }
 
+    @When("{string} withdraws the receipt signing key {string} with the passkey {string} of {string}")
+    public void withdrawsWithThePasskeyOf(String alias, String keyId, String name, String owner) {
+        sessions.actAs(alias);
+        api.post(KEYS + keyId + "/withdrawal", Map.of("passkey", passkeys.passkeyConfirmation(owner, name)));
+    }
+
+    @When("{string} withdraws the receipt signing key {string} with the passkey {string} answering the challenge refused before")
+    public void withdrawsAnsweringTheChallengeRefusedBefore(String alias, String keyId, String name) {
+        sessions.actAs(alias);
+        api.post(KEYS + keyId + "/withdrawal", Map.of("passkey", passkeys.passkeyAnswerToTheLastChallenge(alias, name)));
+    }
+
     @When("someone without a token withdraws the receipt signing key {string}")
     public void someoneWithoutATokenWithdraws(String keyId) {
         api.forgetCredentials();

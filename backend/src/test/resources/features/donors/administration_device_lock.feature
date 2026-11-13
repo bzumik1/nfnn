@@ -54,6 +54,9 @@ Feature: An administrator unlocks the administration's copy on a device with the
     When "Jana" unlocks the administration on this device with the passkey "Klíč" of "Petr"
     Then the response status is 400
     And the problem type ends with "donors/passkey-confirmation-rejected"
+    When "Jana" unlocks the administration on this device with the passkey "iPhone" answering the challenge refused before
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
 
   Scenario: An administrator who signs in with a passkey and has no authenticator app unlocks with that passkey
     Given a person "Petr" is registered

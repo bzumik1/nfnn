@@ -72,6 +72,7 @@ public class DonorPasskeyStepDefinitions {
     private final Map<String, Map<String, CreatedPasskey>> passkeys = new HashMap<>();
     private final Map<String, String> registrationChallenges = new HashMap<>();
     private JsonNode creationOptions;
+    private String lastChallenge;
     private String creationOptionsAlias;
     private String signInChallenge;
     private String recoveryChallenge;
@@ -147,6 +148,11 @@ public class DonorPasskeyStepDefinitions {
     @When("{string} unlocks the administration on this device with the passkey {string} of {string}")
     public void unlocksTheAdministrationWithThePasskeyOf(String alias, String name, String owner) {
         unlocksTheAdministrationWith(alias, passkeyConfirmation(owner, name));
+    }
+
+    @When("{string} unlocks the administration on this device with the passkey {string} answering the challenge refused before")
+    public void unlocksTheAdministrationAnsweringTheChallengeRefusedBefore(String alias, String name) {
+        unlocksTheAdministrationWith(alias, passkeyAnswerToTheLastChallenge(alias, name));
     }
 
     @When("{string} unlocks the administration on this device with the passkey {string} answering a spent challenge")
@@ -545,7 +551,16 @@ public class DonorPasskeyStepDefinitions {
     public Map<String, Object> passkeyConfirmation(String alias, String name) {
         ResponseEntity<String> response = api.post(SIGN_IN_OPTIONS_PATH, Map.of());
         assertThat(response.getStatusCode().value()).withFailMessage("Sign-in options answered %s", response.getBody()).isEqualTo(200);
-        String challenge = api.lastResponseJson().get("challenge").asString();
+        lastChallenge = api.lastResponseJson().get("challenge").asString();
+        return passkeyAnswer(alias, name, lastChallenge);
+    }
+
+    public Map<String, Object> passkeyAnswerToTheLastChallenge(String alias, String name) {
+        assertThat(lastChallenge).withFailMessage("No passkey challenge was asked for in this scenario").isNotNull();
+        return passkeyAnswer(alias, name, lastChallenge);
+    }
+
+    private Map<String, Object> passkeyAnswer(String alias, String name, String challenge) {
         return Map.of("challenge", challenge, "credential", passkey(alias, name).key().assertion(challenge));
     }
 
