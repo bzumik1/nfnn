@@ -11,14 +11,17 @@
   --color-surface-alt: var(--color-surface-muted);
 }
 
-.ui-grouped .ui-card:not(dialog .ui-card) {
+.ui-grouped .ui-card:not(dialog .ui-card),
+.dialog-panel--grouped .ui-card:not(.dialog-panel--grouped dialog .ui-card) {
   border-radius: var(--radius-group);
   box-shadow: var(--shadow-group);
   border-color: transparent;
+  background: var(--color-group-cell);
 }
 
 .ui-card--danger,
-.ui-grouped .ui-card--danger:not(dialog .ui-card) {
+.ui-grouped .ui-card--danger:not(dialog .ui-card),
+.dialog-panel--grouped .ui-card--danger:not(.dialog-panel--grouped dialog .ui-card) {
   border-color: var(--color-danger-border);
 }
 

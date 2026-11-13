@@ -273,35 +273,6 @@
   container: attention / inline-size;
 }
 
-.attention-tile {
-  justify-content: center;
-  width: var(--space-7);
-  height: var(--space-7);
-  border-radius: var(--radius-sm);
-  color: var(--color-on-tile);
-}
-
-.attention-tile--danger {
-  background: var(--color-danger-fill);
-  color: var(--color-on-danger);
-}
-
-.attention-tile--warning {
-  background: var(--color-tile-warning);
-}
-
-.attention-tile--task {
-  background: var(--color-tile-accent);
-}
-
-.attention-tile--unknown {
-  background: var(--color-tile-neutral);
-}
-
-.attention-tile--success {
-  background: var(--color-tile-success);
-}
-
 .attention-quiet {
   color: var(--color-text-muted);
   font-weight: var(--weight-regular);
