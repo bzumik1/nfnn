@@ -37,7 +37,7 @@ public class FreshSecondFactorCheck {
         Optional<PasskeyProof> passkey = proof.givenPasskey();
         if (passkey.isPresent()) {
             Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
-            confirmations.confirm(donor, Confirmation.withPasskey(passkey.get()));
+            confirmations.confirmPasskey(donor, Confirmation.withPasskey(passkey.get()));
             return;
         }
         String code = proof.givenCode().orElseThrow(FreshSecondFactorRequired::new);

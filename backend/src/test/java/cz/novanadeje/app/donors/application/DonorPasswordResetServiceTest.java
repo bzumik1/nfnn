@@ -73,12 +73,13 @@ class DonorPasswordResetServiceTest {
     @Mock
     private PasskeyRepository passkeys;
 
+    private final OpenTransactions transactions = new OpenTransactions();
     private DonorPasswordResetService service;
 
     @BeforeEach
     void setUp() {
         service = new DonorPasswordResetService(donors, tokens, passwordHasher, new DonorPasswordResetProperties(TTL, 3),
-                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts, new SecondFactorHoldings(secondFactors, passkeys));
+                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts, new SecondFactorHoldings(secondFactors, passkeys), transactions);
     }
 
     @Test
@@ -229,6 +230,7 @@ class DonorPasswordResetServiceTest {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
         when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(false);
 
@@ -239,7 +241,7 @@ class DonorPasswordResetServiceTest {
         order.verify(tokens).markUsed(token.id(), NOW);
         verify(tokens, never()).deleteOthersOf(any(), any());
         verify(donors, never()).save(any());
-        verifyNoInteractions(signOuts, passwordHasher);
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test
@@ -248,10 +250,11 @@ class DonorPasswordResetServiceTest {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
-        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.empty());
+        when(donors.findById(DONOR)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
+        verify(tokens, never()).markUsed(any(), any());
         verifyNoInteractions(signOuts, passwordHasher);
     }
 
@@ -261,14 +264,14 @@ class DonorPasswordResetServiceTest {
         LinkSecret secret = LinkSecret.generate();
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
-        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
-        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(administrator()));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
         when(passkeys.countByDonor(DONOR)).thenReturn(0);
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
 
         verify(donors, never()).save(any());
+        verify(tokens, never()).markUsed(any(), any());
         verifyNoInteractions(signOuts, passwordHasher, events);
     }
 
@@ -279,6 +282,7 @@ class DonorPasswordResetServiceTest {
         PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
         Donor donor = donor(LocaleCode.CS);
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
         when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor));
         when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
         when(passwordHasher.hash(new RawPassword(NEW_PASSWORD))).thenReturn(NEW_HASH);
@@ -291,6 +295,44 @@ class DonorPasswordResetServiceTest {
         verify(tokens).deleteOthersOf(DONOR, token.id());
         verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         verify(events).publishEvent(new DonorPasswordChanged(DONOR.value(), donor.email(), LocaleCode.CS));
+    }
+
+    @Test
+    @DisplayName("Given a live token, when a reset is confirmed, then the new password is hashed with no transaction open, between the check of the link and the write")
+    void should_hash_outside_transaction_when_confirmed_given_live_token() {
+        LinkSecret secret = LinkSecret.generate();
+        PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
+        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
+        when(passwordHasher.hash(new RawPassword(NEW_PASSWORD))).thenAnswer(invocation -> transactions.recordingHashing(NEW_HASH));
+
+        service.confirmReset(secret.value(), NEW_PASSWORD);
+
+        assertThat(transactions.openWhenHashing()).containsExactly(0);
+        assertThat(transactions.committed()).isEqualTo(2);
+        assertThat(transactions.open()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a donor who became an administrator without a second factor after the link was checked, when a reset is confirmed, then it is invalid and the password stays")
+    void should_be_invalid_and_keep_password_when_confirmed_given_administrator_since_check() {
+        LinkSecret secret = LinkSecret.generate();
+        PasswordResetToken token = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
+        when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor(LocaleCode.CS)));
+        when(donors.findByIdForUpdate(DONOR)).thenReturn(Optional.of(administrator()));
+        when(tokens.markUsed(token.id(), NOW)).thenReturn(true);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        when(passkeys.countByDonor(DONOR)).thenReturn(0);
+        when(passwordHasher.hash(new RawPassword(NEW_PASSWORD))).thenReturn(NEW_HASH);
+
+        assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);
+
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, events);
+        assertThat(transactions.rolledBack()).isEqualTo(1);
     }
 
     private static Donor donor(LocaleCode locale) {
