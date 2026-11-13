@@ -17,6 +17,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.UuidV7;
+import cz.novanadeje.app.shared.application.version.RowVersions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,9 @@ import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.jana;
@@ -56,8 +60,80 @@ class AdminPaymentsServiceTest {
     private final DonationRepository donations = mock(DonationRepository.class);
     private final DonorRecordRepository donorRecords = mock(DonorRecordRepository.class);
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
-    private final AdminPaymentsService service = new AdminPaymentsService(payments, donations, donorRecords, receipts,
-            new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords));
+    private final CountingRowVersions versions = new CountingRowVersions(RowVersionsFixture.canonical());
+    private final AdminDonationsRows rows = new AdminDonationsRows(versions, donations, donorRecords);
+    private final AdminPaymentsService service = new AdminPaymentsService(payments, donations, donorRecords, receipts, rows);
+
+    @Test
+    @DisplayName("Given many unpaired payments, when one page of them is listed, then only the payments of the page are versioned and each carries its row's version")
+    void should_version_only_the_page_when_unpaired_listed_given_many_payments() {
+        List<BankPayment> backlog = IntStream.range(0, 200)
+                .mapToObj(index -> payment(5000 - index, LocalDate.of(2026, 10, 5).minusDays(index), czk(10000 + index), ACCOUNT, null))
+                .toList();
+        when(payments.findUnpairedNewestFirst()).thenReturn(backlog);
+        versions.reset();
+
+        AdminPaymentList list = service.listUnpaired(new PaymentFilter(null, null, null, null, 40, 20));
+
+        assertThat(list.total()).isEqualTo(200);
+        assertThat(list.items()).extracting(AdminPaymentView::payment).containsExactlyElementsOf(backlog.subList(40, 60));
+        assertThat(versions.calls()).isEqualTo(20);
+        assertThat(list.items()).allSatisfy(item -> assertThat(item.version()).isEqualTo(rowsWithoutCounting().unpaidPayment(item.payment()).version()));
+    }
+
+    @Test
+    @DisplayName("Given many paired donations, when one page of them is listed, then only the payments of the page are versioned and each carries its row's version")
+    void should_version_only_the_page_when_paired_listed_given_many_donations() {
+        List<BankPayment> paid = IntStream.range(0, 100)
+                .mapToObj(index -> payment(7000 + index, LocalDate.of(2026, 1, 1).plusDays(index), czk(20000 + index), ACCOUNT, null))
+                .toList();
+        List<Donation> gifts = paid.stream()
+                .map(payment -> Donation.fromBankPayment(DonationId.newId(NOW), janaRecord.id(), payment, PairingMethod.MANUAL, NOW))
+                .toList();
+        when(donations.findReceivedYearsNewestFirst()).thenReturn(List.of(Year.of(2026)));
+        when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(gifts);
+        when(payments.findByIds(anyCollection())).thenReturn(paid);
+        when(donorRecords.findByIds(anyCollection())).thenReturn(List.of(janaRecord));
+        when(receipts.findDonationsWithReceipt(anyCollection())).thenReturn(Set.of());
+        versions.reset();
+
+        AdminPaymentList list = service.listPaired(Optional.of(Year.of(2026)), new PaymentFilter(null, null, null, null, 10, 15));
+
+        assertThat(list.total()).isEqualTo(100);
+        assertThat(list.items()).extracting(item -> item.payment().transactionId().value())
+                .containsExactlyElementsOf(LongStream.rangeClosed(7075, 7089).map(id -> 7075 + 7089 - id).boxed().toList());
+        assertThat(versions.calls()).isEqualTo(15);
+        assertThat(list.items()).allSatisfy(item -> assertThat(item.version())
+                .isEqualTo(rowsWithoutCounting().paidPayment(item.payment(), item.donation().orElseThrow().donation(), janaRecord).version()));
+    }
+
+    private AdminDonationsRows rowsWithoutCounting() {
+        return new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords);
+    }
+
+    private static final class CountingRowVersions implements RowVersions {
+
+        private final RowVersions delegate;
+        private final AtomicInteger calls = new AtomicInteger();
+
+        private CountingRowVersions(RowVersions delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public String versionOf(List<?> rows) {
+            calls.incrementAndGet();
+            return delegate.versionOf(rows);
+        }
+
+        int calls() {
+            return calls.get();
+        }
+
+        void reset() {
+            calls.set(0);
+        }
+    }
 
     @Test
     @DisplayName("Given unpaired payments, when listed, then they come in the repository's order without donations and without years")
