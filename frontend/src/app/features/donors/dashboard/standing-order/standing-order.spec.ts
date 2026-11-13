@@ -66,6 +66,21 @@ describe('Given the standing order guide of the donor area', () => {
     http.expectNone(PAYMENT_DETAILS_URL);
   });
 
+  it('when it is a row of a grouped card, then the row keeps the name and the disclosure of the guide', async () => {
+    fixture.componentRef.setInput('grouped', true);
+    await settle();
+
+    const button = element<HTMLButtonElement>('.standing-toggle')!;
+    expect(normalized(button.textContent ?? '')).toBe('Jak nastavit trvalý příkaz');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(document.getElementById(button.getAttribute('aria-controls') ?? '')?.hidden).toBe(true);
+
+    await toggle();
+
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    http.expectOne((request) => request.url === PAYMENT_DETAILS_URL);
+  });
+
   describe('when the donor opens it', () => {
     beforeEach(async () => {
       await toggle();

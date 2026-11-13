@@ -43,6 +43,27 @@ async function wordsSplitAcrossLines(element: Locator): Promise<string[]> {
   });
 }
 
+async function linesOfTheBankCode(value: Locator): Promise<number> {
+  await value.evaluate(() => document.fonts.ready);
+  return value.evaluate((element) => {
+    const tops: number[] = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const rect = range.getClientRects()[0];
+        if (rect && text[index].trim() !== '') {
+          tops.push(Math.round(rect.top));
+        }
+      }
+    }
+    return new Set(tops.slice(-4)).size;
+  });
+}
+
 async function headingsOffScreen(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     Array.from(document.querySelectorAll<HTMLElement>('main h1, main h2'))
@@ -213,6 +234,36 @@ for (const { width, height } of [
       await expect(row).toContainText('Odpovědět');
 
       await expect.poll(() => contentPastTheSides(row)).toEqual([]);
+    });
+
+    test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const card = page.locator('.send-gift');
+      const rows = card.locator('.bank-row');
+      await expect(rows.last()).toContainText('IBAN');
+      await card.getByRole('button', { name: 'Jak nastavit trvalý příkaz' }).click();
+      const guideRows = card.locator('.standing-row');
+      await expect(guideRows.first()).toContainText('5544332217/2010');
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        for (const row of [...(await rows.all()), ...(await guideRows.all())]) {
+          await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
+        }
+        for (const value of [
+          rows.first().locator('.bank-value'),
+          guideRows.first().locator('.standing-value'),
+        ]) {
+          await expect.poll(() => linesOfTheBankCode(value), textSize).toBe(1);
+        }
+      }
     });
 
     test('when they open the sign-in dialog, then Přihlášení, Registrace and the close button stay whole on screen and the dialog never pans sideways', async ({
