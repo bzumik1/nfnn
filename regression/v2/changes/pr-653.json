@@ -1,0 +1,44 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the window narrows to a phone or a tablet > then the site tabs stay at the bottom, as everywhere in the app",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the window narrows to a phone or a tablet > then no site tabs stand at the bottom, since the administration is no tab of the site",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the window narrows to a phone or a tablet > and a full-screen editor opens, then the site tabs give way to it",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the window narrows to a phone or a tablet > then no site tabs stand at the bottom, since the administration is no tab of the site",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > and the window is a phone, then the header and the tabs stay, so the administrator can still leave",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > and the window is a phone, then the header stays, so the administrator can still leave",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/tab-bar-room.spec.ts > Given a signed-in donor > when they scroll their overview to its end on a phone, then its last line stands above the tab bar",
+    "replacement": "e2e/tab-bar-room.spec.ts > Given a signed-in donor > when they scroll their overview to its end on a phone, then no tab bar shows and its last line stands on screen",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/tab-bar-room.spec.ts > Given a signed-in donor > when they scroll their overview to its end on a computer, then its last line stands above the tab bar",
+    "replacement": "e2e/tab-bar-room.spec.ts > Given a signed-in donor > when they scroll their overview to its end on a computer, then no tab bar shows and its last line stands on screen",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/tab-bar-room.spec.ts > Given an administrator > when they scroll the administration to its end on a phone, then its last line stands above the tab bar",
+    "replacement": "e2e/tab-bar-room.spec.ts > Given an administrator > when they scroll the administration to its end on a phone, then no tab bar shows and its last line stands on screen",
+    "reason": "PR #653 (Jakub 2026-11-11, issue #650): the donor area and the administration show no tab bar at any width, so the tests that kept the bar there now prove it is gone"
+  }
+]
