@@ -14,6 +14,7 @@ import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import cz.novanadeje.app.support.MailContents;
+import cz.novanadeje.app.support.MailFixtures;
 import cz.novanadeje.app.support.MailPreviews;
 import cz.novanadeje.app.support.ObservedMailSenders;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -115,6 +116,18 @@ class BackupKeyRevealedEmailSenderTest {
             assertThat(MailContents.html(english)).contains("lang=\"en\"");
             assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
             MailPreviews.save("backup-key-revealed", czech);
+        });
+    }
+
+    @Test
+    @DisplayName("Given two administrators, when the key is shown, then each sees the subject, text and HTML recorded for their language")
+    void should_send_the_recorded_messages_when_key_shown_given_two_administrators() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA.value(), REVEALED_AT));
+
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().getFirst()), "backup-key-revealed.cs");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(1)), "backup-key-revealed.en");
         });
     }
 

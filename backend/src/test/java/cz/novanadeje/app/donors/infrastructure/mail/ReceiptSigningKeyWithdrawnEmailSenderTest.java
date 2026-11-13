@@ -15,6 +15,7 @@ import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import cz.novanadeje.app.support.MailContents;
+import cz.novanadeje.app.support.MailFixtures;
 import cz.novanadeje.app.support.MailPreviews;
 import cz.novanadeje.app.support.ObservedMailSenders;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -126,6 +127,21 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             assertThat(MailContents.html(english)).contains("lang=\"en\"");
             assertThat(logged.list).noneMatch(line -> line.getLevel() == Level.ERROR);
             MailPreviews.save("receipt-signing-key-withdrawn", czech);
+        });
+    }
+
+    @Test
+    @DisplayName("Given two administrators, when a key is withdrawn, then each sees the subject, text and HTML recorded for their language and for the server's own or an earlier key")
+    void should_send_the_recorded_messages_when_withdrawn_given_two_administrators() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "39f713d0", false, WITHDRAWN_AT));
+
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().getFirst()), "receipt-signing-key-withdrawn.current.cs");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(1)), "receipt-signing-key-withdrawn.current.en");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(2)), "receipt-signing-key-withdrawn.earlier.cs");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(3)), "receipt-signing-key-withdrawn.earlier.en");
         });
     }
 
