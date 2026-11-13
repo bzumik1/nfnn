@@ -26,6 +26,7 @@ interface SeenTransition {
 declare global {
   interface Window {
     nfnnSeenTransitions: SeenTransition[];
+    nfnnSeenTops: [string, number][];
   }
 }
 
@@ -235,3 +236,47 @@ test.describe('Given a visitor reading the news on a wide screen', () => {
     expect(await seenTransitions(page)).toEqual([]);
   });
 });
+
+for (const [screen, viewport] of [
+  ['a phone', { width: 390, height: 844 }],
+  ['a wide screen', { width: 1280, height: 800 }],
+] as const) {
+  test.describe(`Given a visitor far down a long page on ${screen}`, () => {
+    test.use({ viewport, reducedMotion: 'no-preference' });
+
+    test('when they follow a link to a page not seen before, then that page shows from its top in its first frame and never slides up', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      const band = page.locator('app-donate-band');
+      await band.scrollIntoViewIfNeeded();
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+      await page.evaluate(() => {
+        window.nfnnSeenTops = [];
+        const sample = () => {
+          window.nfnnSeenTops.push([location.pathname, window.scrollY]);
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+
+      await band.getByRole('link', { name: 'Přispět', exact: true }).click();
+      await expect(page).toHaveURL('/prispet');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      expect(
+        await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+      ).toBeGreaterThan(300);
+      await expect
+        .poll(() =>
+          page.evaluate(() => window.nfnnSeenTops.filter(([path]) => path === '/prispet').length),
+        )
+        .toBeGreaterThan(20);
+
+      const tops = await page.evaluate(() =>
+        window.nfnnSeenTops.filter(([path]) => path === '/prispet').map(([, top]) => top),
+      );
+      expect(tops.filter((top) => top !== 0)).toEqual([]);
+    });
+  });
+}

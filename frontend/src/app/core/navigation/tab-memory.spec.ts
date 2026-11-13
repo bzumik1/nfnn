@@ -1,6 +1,14 @@
+import { Location } from '@angular/common';
+import { provideLocationMocks, SpyLocation } from '@angular/common/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, RouteReuseStrategy, withInMemoryScrolling } from '@angular/router';
+import {
+  NavigationEnd,
+  provideRouter,
+  Router,
+  RouteReuseStrategy,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
@@ -158,6 +166,37 @@ describe('Given pages of the tabs kept while the visitor is away', () => {
     expect(scrolledTo.at(-1)).toEqual({ top: 420, behavior: 'instant' });
   });
 
+  it('when a link opens a page that is not kept, then it starts at its top in its first frame, without sliding there through the smooth scrolling of the page', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    scrolledTo = [];
+
+    await navigateAndRender('/projekty');
+
+    expect(scrolledTo).toEqual([{ top: 0, behavior: 'instant' }]);
+  });
+
+  it('when only the query of a page changes, such as the next page of a list, then it starts at its top at once too', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    scrolledTo = [];
+
+    await navigateAndRender('/aktuality?strana=2');
+
+    expect(scrolledTo).toEqual([{ top: 0, behavior: 'instant' }]);
+  });
+
+  it('when a navigation asks to keep its place, as a filter of a list does, then the page is not moved', async () => {
+    await harness.navigateByUrl('/projekty');
+    scrolledBy(420);
+    scrolledTo = [];
+
+    await TestBed.inject(Router).navigateByUrl('/projekty?rok=2024', { scroll: 'manual' });
+    TestBed.tick();
+
+    expect(scrolledTo).toEqual([]);
+  });
+
   it('when a link leads to a section of a kept page, then the page is left to the section rather than put back where it was', async () => {
     await harness.navigateByUrl('/o-nas');
     scrolledBy(420);
@@ -180,5 +219,52 @@ describe('Given pages of the tabs kept while the visitor is away', () => {
     TestBed.tick();
 
     expect(scrolledTo.at(-1)).toEqual({ top: 0, behavior: 'instant' });
+  });
+});
+
+describe('Given a visitor who goes back through the history of the browser', () => {
+  let harness: RouterTestingHarness;
+  let scrolledTo: ScrollToOptions[];
+
+  beforeEach(async () => {
+    scrolledTo = [];
+    vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+      if (typeof options === 'object') {
+        scrolledTo.push(options);
+      }
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          APP_TABS.map((tab) => ({ path: tab.path.slice(1), component: Blank })),
+          withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+        ),
+        provideLocationMocks(),
+      ],
+    });
+    TestBed.inject(TabMemory);
+    harness = await RouterTestingHarness.create();
+    TestBed.inject(Router).setUpLocationChangeListener();
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('when the page comes back, then it is not sent to its top when it opens, so the router can put it back where it was', async () => {
+    await harness.navigateByUrl('/o-nas');
+    await harness.navigateByUrl('/projekty');
+    scrolledTo = [];
+    const ended = new Promise<void>((done) =>
+      TestBed.inject(Router).events.subscribe((event) => {
+        if (event instanceof NavigationEnd) {
+          done();
+        }
+      }),
+    );
+
+    (TestBed.inject(Location) as SpyLocation).simulateUrlPop('/o-nas');
+    await ended;
+    TestBed.tick();
+
+    expect(scrolledTo).toEqual([]);
   });
 });
