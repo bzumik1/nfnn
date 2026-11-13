@@ -8,7 +8,8 @@ import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
