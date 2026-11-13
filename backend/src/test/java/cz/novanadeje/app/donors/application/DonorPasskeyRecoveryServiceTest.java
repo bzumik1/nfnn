@@ -154,7 +154,7 @@ class DonorPasskeyRecoveryServiceTest {
     @DisplayName("Given an administrator's live link, when a new passkey is asked for or added, then it is refused and the link stays unused")
     void should_refuse_when_passkey_recovered_given_administrator() {
         Donor administrator = donor();
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         LinkSecret link = liveLinkOf(administrator);
 
         assertThatThrownBy(() -> service.options(link.value(), null)).isInstanceOf(AdministratorRecoveryRefused.class);

@@ -94,7 +94,7 @@ class AdministratorRevokeConcurrencyTest {
         Donor donor = Donor.register(DonorId.newId(at), DonorType.PERSON, name, null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(variableSymbol), LocaleCode.CS, at);
         donor.verifyEmail(at);
-        donor.grantAdministration();
+        donor.grantAdministration(true);
         return donor;
     }
 

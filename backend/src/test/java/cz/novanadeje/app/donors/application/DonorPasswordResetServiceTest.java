@@ -343,7 +343,7 @@ class DonorPasswordResetServiceTest {
 
     private static Donor administrator() {
         Donor administrator = donor(LocaleCode.CS);
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         return administrator;
     }
 

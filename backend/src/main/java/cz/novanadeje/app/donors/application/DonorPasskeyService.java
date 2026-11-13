@@ -6,18 +6,17 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
-import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.Passkey;
 import cz.novanadeje.app.donors.domain.PasskeyChallenge;
 import cz.novanadeje.app.donors.domain.PasskeyChallengeRepository;
 import cz.novanadeje.app.donors.domain.ConfirmationRequired;
 import cz.novanadeje.app.donors.domain.PasskeyId;
-import cz.novanadeje.app.donors.domain.PasskeyLimitReached;
 import cz.novanadeje.app.donors.domain.PasskeyNotFound;
 import cz.novanadeje.app.donors.domain.PasskeyRejected;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasskeyUserHandle;
+import cz.novanadeje.app.donors.domain.SignInMethods;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -117,9 +116,7 @@ public class DonorPasskeyService {
         if (!challenges.markUsed(issued.id(), now)) {
             throw new PasskeyRejected();
         }
-        if (passkeys.countByDonor(donorId) >= properties.maxPerDonor()) {
-            throw new PasskeyLimitReached(properties.maxPerDonor());
-        }
+        SignInMethods.of(donor, passkeys.countByDonor(donorId)).withPasskey(properties.maxPerDonor());
         VerifiedPasskey verified = ceremonies.verifyRegistration(attestation, secret);
         if (passkeys.findByCredentialId(verified.credentialId()).isPresent()) {
             throw new PasskeyRejected();
@@ -155,9 +152,7 @@ public class DonorPasskeyService {
                 .filter(found -> found.belongsTo(donorId))
                 .orElseThrow(() -> new PasskeyNotFound(passkeyId));
         sessionGuard.requireForFactorChange(donor, secondFactorVerified);
-        if (!donor.hasPassword() && passkeys.countByDonor(donorId) <= 1) {
-            throw new LastSignInMethod(donorId);
-        }
+        SignInMethods.of(donor, passkeys.countByDonor(donorId)).withoutPasskey();
         passkeys.delete(passkey.id());
         events.publishEvent(new DonorPasskeyRemoved(donorId.value(), donor.email(), donor.preferredLocale(), passkey.name()));
         log.info("Passkey {} removed by donor {}", passkeyId, donorId);

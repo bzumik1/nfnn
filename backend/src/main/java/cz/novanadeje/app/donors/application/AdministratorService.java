@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.AdministratorWithoutSecondFactor;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -80,10 +79,7 @@ public class AdministratorService {
     @Transactional
     public AdministratorView grant(DonorId adminId, EmailAddress email) {
         Donor donor = donors.findByEmailForUpdate(email).orElseThrow(EmailNotRegistered::new);
-        donor.grantAdministration();
-        if (!holdings.holdsAny(donor.id())) {
-            throw new AdministratorWithoutSecondFactor(donor.id());
-        }
+        donor.grantAdministration(holdings.holdsAny(donor.id()));
         donors.save(donor);
         events.publishEvent(new AdminActionPerformed(adminId.value(), GRANT_ACTION, Optional.of(donor.id().value()),
                 "Role správce udělena dárci " + donor.id(), clock.instant()));
@@ -158,7 +154,7 @@ public class AdministratorService {
         if (!donor.isEmailVerified()) {
             return StartupGrant.NOT_CONFIRMED;
         }
-        donor.grantAdministration();
+        donor.grantFirstAdministration();
         donors.save(donor);
         log.info("Administrator role granted at startup to donor {}", donor.id());
         return StartupGrant.GRANTED;

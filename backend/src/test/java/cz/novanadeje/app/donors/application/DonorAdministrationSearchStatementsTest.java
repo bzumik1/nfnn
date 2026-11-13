@@ -63,7 +63,7 @@ class DonorAdministrationSearchStatementsTest {
                     new PasswordHash("$hash"), new VariableSymbol(Long.toString(6_100_000_000L + index)), LocaleCode.CS, NOW);
             if (index % 3 == 0) {
                 donor.verifyEmail(NOW);
-                donor.grantAdministration();
+                donor.grantAdministration(true);
             }
             donors.save(donor);
             if (index % 2 == 0) {

@@ -36,7 +36,7 @@ class AdministrationHoldersAdapterTest {
     void should_hold_the_administration_when_asked_given_an_account_with_the_role() {
         Donor donor = donor();
         donor.verifyEmail(NOW);
-        donor.grantAdministration();
+        donor.grantAdministration(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
 
         assertThat(new AdministrationHoldersAdapter(donors).holdsAdministration(DONOR.value())).isTrue();
@@ -47,7 +47,7 @@ class AdministrationHoldersAdapterTest {
     void should_not_hold_the_administration_when_asked_given_the_role_taken_away() {
         Donor donor = donor();
         donor.verifyEmail(NOW);
-        donor.grantAdministration();
+        donor.grantAdministration(true);
         donor.revokeAdministration();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
 

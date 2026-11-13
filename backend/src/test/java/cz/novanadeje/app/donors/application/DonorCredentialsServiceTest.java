@@ -166,9 +166,9 @@ class DonorCredentialsServiceTest {
         doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
 
         assertThatThrownBy(() -> service.changePassword(DONOR, false, Confirmation.withPassword(CURRENT), NEXT, DEVICE)).isInstanceOf(SessionEnded.class);
+        assertThat(donor.passwordHash()).contains(OLD_HASH);
         assertThatThrownBy(() -> service.removePassword(DONOR, false, Confirmation.withPassword(CURRENT), DEVICE)).isInstanceOf(SessionEnded.class);
 
-        assertThat(donor.passwordHash()).contains(OLD_HASH);
         verify(donors, never()).save(any());
         verify(sessions, never()).continueOn(any(), anyBoolean(), any());
         verifyNoInteractions(signOuts, events);

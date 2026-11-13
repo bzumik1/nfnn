@@ -58,11 +58,33 @@ class DonorTest {
     void should_follow_when_password_removed_and_set_again_given_donor_with_password() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
-        donor.removePassword();
+        donor.removePassword(1);
 
         assertThat(donor.hasPassword()).isFalse();
         donor.changePassword(new PasswordHash("$2a$12$other"));
         assertThat(donor.passwordHash()).contains(new PasswordHash("$2a$12$other"));
+    }
+
+    @Test
+    @DisplayName("Given a donor with a password and no passkey, when the password is removed, then it is refused as the last way to sign in and the password stays")
+    void should_refuse_when_password_removed_given_no_passkey() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(() -> donor.removePassword(0))
+                .isInstanceOf(LastSignInMethod.class)
+                .hasFieldOrPropertyWithValue("code", "donors/last-sign-in-method");
+        assertThat(donor.passwordHash()).contains(HASH);
+    }
+
+    @Test
+    @DisplayName("Given an erased donor with a passkey, when the password is removed, then it is refused as already erased")
+    void should_refuse_when_password_removed_given_erased_donor() {
+        DonorId id = DonorId.newId(NOW);
+        Donor donor = Donor.reconstitute(id, DonorType.PERSON, ErasedPersonalData.NAME, null, ErasedPersonalData.ADDRESS,
+                ErasedPersonalData.emailFor(id.value()), HASH, SYMBOL, LocaleCode.CS, Set.of(), NOW, null, NOW.plusSeconds(5));
+
+        assertThatThrownBy(() -> donor.removePassword(1)).isInstanceOf(DonorAlreadyErased.class);
+        assertThat(donor.passwordHash()).contains(HASH);
     }
 
     @Test
@@ -198,10 +220,53 @@ class DonorTest {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
         donor.verifyEmail(NOW);
 
-        donor.grantAdministration();
+        donor.grantAdministration(true);
 
         assertThat(donor.isAdministrator()).isTrue();
         assertThat(donor.roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given a confirmed donor who holds no second factor, when administration is granted, then the donor refuses and stays a plain donor")
+    void should_refuse_when_administration_granted_given_no_second_factor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
+
+        assertThatThrownBy(() -> donor.grantAdministration(false))
+                .isInstanceOf(AdministratorWithoutSecondFactor.class)
+                .hasFieldOrPropertyWithValue("code", "donors/administrator-without-second-factor");
+
+        assertThat(donor.isAdministrator()).isFalse();
+        assertThat(donor.roles()).containsExactly(Role.DONOR);
+    }
+
+    @Test
+    @DisplayName("Given a donor who has confirmed neither the e-mail nor a second factor, when administration is granted, then the unconfirmed e-mail is named first")
+    void should_name_unconfirmed_email_when_administration_granted_given_neither_email_nor_second_factor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(() -> donor.grantAdministration(false)).isInstanceOf(AdministratorEmailNotConfirmed.class);
+    }
+
+    @Test
+    @DisplayName("Given a confirmed donor who holds no second factor, when the first administration is granted, then the donor becomes an administrator")
+    void should_become_administrator_when_first_administration_granted_given_no_second_factor() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        donor.verifyEmail(NOW);
+
+        donor.grantFirstAdministration();
+
+        assertThat(donor.isAdministrator()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a donor who has not confirmed the e-mail, when the first administration is granted, then the donor refuses and stays a plain donor")
+    void should_refuse_when_first_administration_granted_given_unconfirmed_email() {
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+        assertThatThrownBy(donor::grantFirstAdministration).isInstanceOf(AdministratorEmailNotConfirmed.class);
+
+        assertThat(donor.isAdministrator()).isFalse();
     }
 
     @Test
@@ -209,7 +274,7 @@ class DonorTest {
     void should_refuse_when_administration_granted_given_unconfirmed_email() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
-        assertThatThrownBy(donor::grantAdministration).isInstanceOf(AdministratorEmailNotConfirmed.class);
+        assertThatThrownBy(() -> donor.grantAdministration(true)).isInstanceOf(AdministratorEmailNotConfirmed.class);
 
         assertThat(donor.isAdministrator()).isFalse();
     }
@@ -220,7 +285,7 @@ class DonorTest {
         Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
                 Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
 
-        assertThatThrownBy(admin::grantAdministration).isInstanceOf(AlreadyAdministrator.class);
+        assertThatThrownBy(() -> admin.grantAdministration(true)).isInstanceOf(AlreadyAdministrator.class);
     }
 
     @Test
@@ -334,7 +399,7 @@ class DonorTest {
     void should_refuse_when_erased_given_administrator() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
         donor.verifyEmail(NOW);
-        donor.grantAdministration();
+        donor.grantAdministration(true);
 
         assertThatThrownBy(() -> donor.erase(NOW.plusSeconds(10)))
                 .isInstanceOf(AdministratorNotErasable.class)

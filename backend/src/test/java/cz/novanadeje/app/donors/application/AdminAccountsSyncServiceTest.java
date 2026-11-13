@@ -57,7 +57,7 @@ class AdminAccountsSyncServiceTest {
     void should_hold_no_rows_when_snapshot_taken_given_revoked_administration() {
         Donor former = donor("andrea@example.cz", "4821937560");
         former.verifyEmail(NOW);
-        former.grantAdministration();
+        former.grantAdministration(true);
         former.revokeAdministration();
         when(donors.findById(former.id())).thenReturn(Optional.of(former));
 
@@ -84,7 +84,7 @@ class AdminAccountsSyncServiceTest {
     void should_list_every_account_with_factor_and_passkeys_when_snapshot_taken_given_administrator() {
         Donor admin = donor("andrea@example.cz", "4821937560");
         admin.verifyEmail(NOW);
-        admin.grantAdministration();
+        admin.grantAdministration(true);
         Donor jana = donor("jana@example.cz", "4821937561");
         AdminActionEntry granted = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "GRANT_ADMINISTRATION", Optional.of(jana.id().value()),
                 "Role správce udělena dárci " + jana.id().value(), NOW, Optional.empty());
