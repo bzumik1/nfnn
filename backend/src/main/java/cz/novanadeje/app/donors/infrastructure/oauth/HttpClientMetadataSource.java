@@ -21,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,7 +89,7 @@ class HttpClientMetadataSource implements ClientMetadataSource {
             throw new InvalidClient("the client metadata document answered " + response.statusCode());
         }
         String contentType = response.headers().firstValue("Content-Type").orElse("");
-        if (!contentType.toLowerCase().startsWith("application/json")) {
+        if (!contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
             throw new InvalidClient("the client metadata document is not JSON");
         }
         byte[] body = readBounded(response.body(), deadline);

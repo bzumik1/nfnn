@@ -21,6 +21,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -87,7 +88,7 @@ class AresCompanyRegistry implements CompanyRegistry {
                 throw new CompanyRegistryUnavailable("status " + response.statusCode());
             }
             String contentType = response.headers().firstValue("Content-Type").orElse("");
-            if (!contentType.toLowerCase().startsWith("application/json")) {
+            if (!contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
                 throw new CompanyRegistryUnavailable(AresAnswers.UNEXPECTED);
             }
             return Optional.of(answers.parse(readBounded(body, deadline), identifier));
