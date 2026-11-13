@@ -111,6 +111,28 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
   });
 
+  it('when it opens, then each passkey is an item of one list, read as its name and then its dates, with its own actions, and adding a key is the last item', async () => {
+    await render();
+
+    const items = Array.from(root().querySelectorAll('ul > li'));
+    expect(items).toHaveLength(3);
+    expect(items[0].parentElement).toBe(items[2].parentElement);
+    expect(items[0].textContent?.replace(/\s+/g, ' ').trim()).toMatch(
+      /^iPhone přidáno 17\. 10\. 2026 · naposledy použito 22\. 10\. 2026 Přejmenovat Odebrat$/,
+    );
+    expect(items[1].querySelector('.passkey-name')?.textContent?.trim()).toBe('Windows');
+    expect(items[2].querySelector('button')?.textContent?.trim()).toBe('Přidat přístupový klíč');
+  });
+
+  it('when a new key is being added, then its form opens in the last item of the list in place of the button', async () => {
+    await render();
+    await clickButton('Přidat přístupový klíč');
+
+    const items = Array.from(root().querySelectorAll('ul > li'));
+    expect(items[2].querySelector('form #passkey-name')).not.toBeNull();
+    expect(texts('button')).not.toContain('Přidat přístupový klíč');
+  });
+
   it('when the card is opened again, then the passkeys show at once without the loading line and are refreshed behind them', async () => {
     await render([IPHONE, WINDOWS]);
     fixture.destroy();
@@ -150,7 +172,11 @@ describe('Given the passkeys panel of the sign-in card', () => {
 
     expect(element('.passkeys-empty').textContent).toContain('Zatím nemáte žádný přístupový klíč');
     expect(texts('button')).toContain('Přidat přístupový klíč');
-    expect(element('.passkeys-action').classList).not.toContain('ui-button--primary');
+    const add = element('.passkeys-action');
+    expect(add.closest('ul > li')).not.toBeNull();
+    expect(
+      element('.passkeys-empty').compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('when the donor adds the first passkey, then the status says the password can now be removed', async () => {
@@ -566,7 +592,11 @@ describe('Given the passkeys panel of a donor without a password', () => {
     expect(element('.passkeys-warning').textContent).toContain(
       'Účet nemá heslo ani přístupový klíč',
     );
-    expect(element('.passkeys-action').classList).toContain('ui-button--primary');
+    const add = element('.passkeys-action');
+    expect(add.textContent?.trim()).toBe('Přidat přístupový klíč');
+    expect(
+      element('.passkeys-warning').compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await clickButton('Přidat přístupový klíč');
     expect(element('#passkey-password')).toBeNull();
     await fillIn('#passkey-name', 'iPhone');

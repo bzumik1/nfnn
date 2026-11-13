@@ -94,6 +94,37 @@ describe('Given the donor data card in the overview', () => {
       expect(shown()).toEqual(['Jana Nováková', 'Dlouhá 12, 400 01 Ústí nad Labem', 'čeština']);
     });
 
+    it('then the data are label and value rows and editing them is the row that follows them', () => {
+      const list = element('dl');
+      const rows = Array.from(list.children);
+      expect(rows.map((row) => row.tagName)).toEqual(['DIV', 'DIV', 'DIV']);
+      expect(rows.map((row) => row.querySelector('dt')?.textContent?.trim())).toEqual([
+        'Jméno a příjmení',
+        'Adresa',
+        'Jazyk potvrzení',
+      ]);
+      const edit = element('.profile-edit');
+      expect(edit.parentElement).toBe(list.parentElement);
+      expect(list.nextElementSibling).toBe(edit);
+      expect(edit.closest('section')?.querySelector('h2')?.parentElement).toBe(
+        edit.closest('section'),
+      );
+      expect(element('h2').nextElementSibling).toBe(list.parentElement);
+    });
+
+    it('and edits the data, then the form takes the place of the rows and the edit row is gone until it closes', async () => {
+      await click('.profile-edit');
+
+      expect(element('dl')).toBeNull();
+      expect(element('.profile-edit')).toBeNull();
+      expect(element('h2').nextElementSibling?.contains(element('.profile-form'))).toBe(true);
+
+      await click('.profile-cancel');
+
+      expect(element('dl')).not.toBeNull();
+      expect(document.activeElement).toBe(element('.profile-edit'));
+    });
+
     it('and edits the address, then only the form is sent and the card shows the saved data', async () => {
       await click('.profile-edit');
       expect(document.activeElement).toBe(element('#profile-name'));

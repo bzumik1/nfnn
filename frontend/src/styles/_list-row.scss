@@ -1,0 +1,14 @@
+@mixin value-below-title {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'lead title chevron'
+    'lead meta chevron'
+    'lead value chevron';
+
+  > .ui-list__value {
+    justify-self: start;
+    justify-content: flex-start;
+    margin-inline-start: 0;
+    margin-top: var(--space-1);
+  }
+}

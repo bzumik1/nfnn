@@ -190,6 +190,14 @@ describe('Given the sign-in and security card of the details page', () => {
       },
     );
 
+    it('then the rows form one group under the title and the status line follows that group', () => {
+      const title = card.element('h2');
+      const group = title.nextElementSibling!;
+      expect(group.querySelector('dl')).toBe(card.element('.account-data'));
+      expect(group.nextElementSibling).toBe(card.element('.account-status'));
+      expect(card.element('.account-status').getAttribute('role')).toBe('status');
+    });
+
     it('then every action is a closed disclosure of the panel under its own row', () => {
       for (const action of Array.from(card.root().querySelectorAll('.account-action'))) {
         expect(action.getAttribute('aria-expanded')).toBe('false');
@@ -244,7 +252,7 @@ describe('Given the sign-in and security card of the details page', () => {
     await render([IPHONE, WINDOWS]);
 
     expect(card.values()[3]).toBe('2 klíče');
-    expect(card.values()[2]).toBe('VypnutéPřihlášení přístupovým klíčem je chráněné i bez kódu.');
+    expect(card.values()[2]).toBe('Vypnuté Přihlášení přístupovým klíčem je chráněné i bez kódu.');
   });
 
   describe('when the donor turns the second factor on', () => {
@@ -780,7 +788,7 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.values()).toEqual([
         'jana@example.cz',
         'Bez hesla, jen přístupové klíče',
-        'VypnutéPřihlášení přístupovým klíčem je chráněné i bez kódu.',
+        'Vypnuté Přihlášení přístupovým klíčem je chráněné i bez kódu.',
         '1 klíč',
       ]);
       expect(card.actions()).toEqual([
@@ -923,7 +931,7 @@ describe('Given the sign-in and security card of a donor without a password', ()
     expect(card.values()).toEqual([
       'jana@example.cz',
       'Bez hesla, jen přístupové klíče',
-      'VypnutéPřihlášení přístupovým klíčem je chráněné i bez kódu.',
+      'Vypnuté Přihlášení přístupovým klíčem je chráněné i bez kódu.',
       '1 klíč',
     ]);
     expect(card.actions()).toEqual([
@@ -943,6 +951,15 @@ describe('Given the sign-in and security card of a donor without a password', ()
       expect(card.element('.account-no-method').textContent).toContain(
         'Nejdřív si vytvořte přístupový klíč',
       );
+    });
+
+    it('then the warning is the first row of the group the title heads, before the rows of the sign-in items', () => {
+      const group = card.element('h2').nextElementSibling!;
+      const warning = card.element('.account-no-method');
+      expect(warning.parentElement).toBe(group);
+      expect(group.firstElementChild).toBe(warning);
+      expect(warning.nextElementSibling?.tagName).toBe('DL');
+      expect(warning.contains(card.button('Vytvořit přístupový klíč')!)).toBe(true);
     });
 
     it('and the donor presses the button, then the passkeys row opens with the form for a new key', async () => {

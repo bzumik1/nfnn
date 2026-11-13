@@ -1,10 +1,13 @@
+@use 'breakpoints' as bp;
+@use 'list-row';
+
 :host {
   display: block;
 }
 
 .passkeys {
-  max-width: 640px;
   padding-top: var(--space-2);
+  container: passkey-rows / inline-size;
 }
 
 .passkeys-intro,
@@ -16,10 +19,6 @@
   line-height: var(--leading-normal);
   color: var(--color-text-muted);
   margin-bottom: var(--space-3-5);
-}
-
-.passkeys-hint {
-  flex: 1 1 220px;
 }
 
 .passkeys-warning {
@@ -34,67 +33,40 @@
 }
 
 .passkey-list {
-  list-style: none;
-  margin: 0 0 var(--space-4);
-  padding: 0;
-}
+  margin-bottom: var(--space-3);
+  border-top: 1px solid var(--color-separator);
 
-.passkey {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2-5) var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--color-border-soft);
-}
+  > li + li {
+    border-top-color: var(--color-separator);
+  }
 
-.passkey-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-  flex: 1 1 220px;
-}
-
-.passkey-name {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-  overflow-wrap: anywhere;
+  .ui-list__row {
+    padding-inline: 0;
+  }
 }
 
 .passkey-dates {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
 }
 
 .passkey-date {
   white-space: nowrap;
 }
 
-.passkey-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
 .passkey .passkeys-hint {
-  flex: 1 1 100%;
-  margin-bottom: 0;
+  margin: var(--space-1) 0 0;
 }
 
-.passkey-rename {
-  flex: 1 1 100%;
+.passkey-panel {
+  padding-block: var(--space-2) var(--space-3);
+}
 
-  app-form-field {
-    display: block;
-    max-width: 560px;
-  }
+.passkey-rename app-form-field {
+  display: block;
+  max-width: 560px;
 }
 
 .passkey-confirm {
-  flex: 1 1 100%;
   font-size: var(--text-sm);
   color: var(--color-text);
 
@@ -112,4 +84,10 @@
 
 .passkeys-form {
   max-width: 560px;
+}
+
+@include bp.container-down(passkey-rows, tiny) {
+  .passkey-row {
+    @include list-row.value-below-title;
+  }
 }

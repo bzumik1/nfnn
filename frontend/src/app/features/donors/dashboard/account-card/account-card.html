@@ -1,720 +1,409 @@
-<section class="ui-card ui-card--padded" aria-labelledby="account-title">
-  <h2 id="account-title" class="ui-card__title" i18n="@@donor.account.title">
+<section class="account-card" aria-labelledby="account-title">
+  <h2 id="account-title" class="ui-group-title" i18n="@@donor.account.title">
     Přihlášení a zabezpečení
   </h2>
 
-  @if (withoutSignInMethod() && panel() !== 'passkeys') {
-    <div class="ui-callout ui-callout--warning account-no-method">
-      <p i18n="@@donor.account.noSignInMethod">
-        Účet zatím nemá heslo ani přístupový klíč. Nejdřív si vytvořte přístupový klíč, pak tu
-        můžete nastavit heslo, změnit e-mail nebo zapnout kód z aplikace.
-      </p>
-      @if (passkeysSupported) {
-        <button
-          type="button"
-          class="ui-button ui-button--primary account-create-passkey"
-          (click)="createPasskey()"
-          i18n="@@donor.account.createPasskey"
-        >
-          Vytvořit přístupový klíč
-        </button>
-      }
-    </div>
-  }
+  <div class="ui-list ui-list--inset account-list">
+    @if (withoutSignInMethod() && panel() !== 'passkeys') {
+      <div class="ui-list__row ui-list__item account-no-method">
+        <span class="ui-list__lead ui-list__tile ui-list__tile--warning" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3 2 20h20z" />
+            <path d="M12 10v4" />
+            <path d="M12 17h.01" />
+          </svg>
+        </span>
+        <p class="ui-list__title" i18n="@@donor.account.noSignInMethod">
+          Účet zatím nemá heslo ani přístupový klíč. Nejdřív si vytvořte přístupový klíč, pak tu
+          můžete nastavit heslo, změnit e-mail nebo zapnout kód z aplikace.
+        </p>
+        @if (passkeysSupported) {
+          <div class="ui-list__extra account-no-method-action">
+            <button
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-create-passkey"
+              (click)="createPasskey()"
+              i18n="@@donor.account.createPasskey"
+            >
+              Vytvořit přístupový klíč
+            </button>
+          </div>
+        }
+      </div>
+    }
 
-  <dl class="account-data">
-    <div class="account-row">
-      <dt id="account-email-label" i18n="@@donor.login.email">E-mail</dt>
-      <dd class="account-value">
-        <span class="account-email">{{ donor()?.email }}</span>
-        @if (pendingEmailChange(); as pending) {
-          <span class="account-pending">
-            <span class="account-pending-address" i18n="@@donor.account.email.pending"
-              >Čeká na potvrzení: {{ pending.newEmail }}</span
-            >
-            <span class="account-row-note" i18n="@@donor.account.email.pendingExpiry"
-              >Potvrzovací odkaz platí do {{ formatTime(pending.expiresAt) }}.</span
-            >
-            <span class="account-pending-actions">
-              <button
-                appNeedsConnection
-                #resendButton
-                type="button"
-                class="ui-button account-resend"
-                [disabled]="pendingAction() !== null"
-                (click)="resendEmailChange()"
-              >
-                @if (pendingAction() === 'resend') {
-                  <span i18n="@@donor.account.email.resending">Posíláme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.resend"
-                    >Poslat znovu<span class="visually-hidden"> potvrzovací odkaz</span></span
-                  >
-                }
-              </button>
-              <button
-                appNeedsConnection
-                type="button"
-                class="ui-button ui-button--quiet account-cancel-change"
-                [disabled]="pendingAction() !== null"
-                (click)="cancelEmailChange()"
-              >
-                @if (pendingAction() === 'cancel') {
-                  <span i18n="@@donor.account.email.cancelling">Rušíme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.cancelChange"
-                    >Zrušit<span class="visually-hidden"> změnu e-mailu</span></span
-                  >
-                }
-              </button>
+    <dl class="account-data">
+      <div class="ui-list__row ui-list__item account-row">
+        <dt id="account-email-label" class="ui-list__title" i18n="@@donor.login.email">E-mail</dt>
+        <dd class="ui-list__meta account-value">
+          <span class="account-email">{{ donor()?.email }}</span>
+          @if (pendingEmailChange(); as pending) {
+            &ngsp;<span class="account-pending">
+              <span class="account-pending-address" i18n="@@donor.account.email.pending"
+                >Čeká na potvrzení: {{ pending.newEmail }}</span
+              >&ngsp;<span class="account-row-note" i18n="@@donor.account.email.pendingExpiry"
+                >Potvrzovací odkaz platí do {{ formatTime(pending.expiresAt) }}.</span
+              >&ngsp;<span class="ui-list__actions account-pending-actions">
+                <button
+                  appNeedsConnection
+                  #resendButton
+                  type="button"
+                  class="ui-pill-button ui-pill-button--tinted account-resend"
+                  [disabled]="pendingAction() !== null"
+                  (click)="resendEmailChange()"
+                >
+                  @if (pendingAction() === 'resend') {
+                    <span i18n="@@donor.account.email.resending">Posíláme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.email.resend"
+                      >Poslat znovu<span class="visually-hidden"> potvrzovací odkaz</span></span
+                    >
+                  }
+                </button>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-pill-button ui-pill-button--tinted account-cancel-change"
+                  [disabled]="pendingAction() !== null"
+                  (click)="cancelEmailChange()"
+                >
+                  @if (pendingAction() === 'cancel') {
+                    <span i18n="@@donor.account.email.cancelling">Rušíme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.email.cancelChange"
+                      >Zrušit<span class="visually-hidden"> změnu e-mailu</span></span
+                    >
+                  }
+                </button>
+              </span>
+              @if (pendingError()) {
+                <span class="ui-field-error account-pending-error" role="alert">{{
+                  pendingError()
+                }}</span>
+              }
             </span>
-            @if (pendingError()) {
-              <span class="ui-field-error account-pending-error" role="alert">{{
-                pendingError()
-              }}</span>
-            }
-          </span>
-        }
-      </dd>
-      <dd class="account-actions">
-        @if (!withoutSignInMethod()) {
-          <button
-            #emailButton
-            type="button"
-            class="ui-button account-action"
-            aria-controls="account-email-panel"
-            [attr.aria-expanded]="panel() === 'email'"
-            (click)="toggle('email')"
-          >
-            <span i18n="@@donor.account.changeEmail"
-              >Změnit<span class="visually-hidden"> e-mail</span></span
+          }
+        </dd>
+        <dd class="ui-list__value ui-list__actions account-actions">
+          @if (!withoutSignInMethod()) {
+            <button
+              #emailButton
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-action"
+              aria-controls="account-email-panel"
+              [attr.aria-expanded]="panel() === 'email'"
+              (click)="toggle('email')"
             >
-          </button>
-        }
-      </dd>
-      <dd id="account-email-panel" class="account-panel" [hidden]="panel() !== 'email'">
-        @if (panel() === 'email') {
-          <form
-            #emailForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="requestEmailChange(emailForm)"
-            novalidate
-          >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.email.title">Změna e-mailu</h3>
-            <p class="ui-card__intro account-form-intro" i18n="@@donor.account.email.intro">
-              Na novou adresu pošleme odkaz. Účet se na ni přepne, až ho otevřete; do té doby platí
-              současná adresa.
-            </p>
-            <app-account-username [email]="accountEmail()" />
-            <app-form-field
-              label="Nový e-mail"
-              i18n-label="@@donor.account.newEmail"
-              [messages]="newEmailMessages"
+              <span i18n="@@donor.account.changeEmail"
+                >Změnit<span class="visually-hidden"> e-mail</span></span
+              >
+            </button>
+          }
+        </dd>
+        <dd
+          id="account-email-panel"
+          class="ui-list__extra account-panel"
+          [hidden]="panel() !== 'email'"
+        >
+          @if (panel() === 'email') {
+            <form
+              #emailForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="requestEmailChange(emailForm)"
+              novalidate
             >
-              <input
-                #firstField
-                appFormControl
-                id="account-new-email"
-                name="newEmail"
-                type="email"
-                autocomplete="email"
-                [(ngModel)]="newEmail"
-                required
-                email
-                maxlength="254"
-              />
-            </app-form-field>
-            @if (hasPassword()) {
-              <app-form-field
-                label="Současné heslo"
-                i18n-label="@@donor.account.currentPassword"
-                [messages]="currentPasswordMessages"
-              >
-                <app-password-reveal>
-                  <input
-                    appFormControl
-                    id="account-email-password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    [(ngModel)]="password"
-                    required
-                    maxlength="128"
-                  />
-                </app-password-reveal>
-              </app-form-field>
-            } @else {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.confirmWithPasskey"
-              >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+              <h3 class="ui-card__subtitle" i18n="@@donor.account.email.title">Změna e-mailu</h3>
+              <p class="ui-card__intro account-form-intro" i18n="@@donor.account.email.intro">
+                Na novou adresu pošleme odkaz. Účet se na ni přepne, až ho otevřete; do té doby
+                platí současná adresa.
               </p>
-            }
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
-              >
-                @if (saving()) {
-                  <span i18n="@@donor.account.email.sending">Odesíláme…</span>
-                } @else {
-                  <span i18n="@@donor.account.email.submit">Poslat potvrzovací odkaz</span>
-                }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
-              >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        }
-      </dd>
-    </div>
-
-    <div class="account-row">
-      <dt id="account-password-label" i18n="@@donor.account.password">Heslo</dt>
-      <dd class="account-value">
-        @if (hasPassword()) {
-          <span i18n="@@donor.account.password.set">Nastavené</span>
-        } @else if (withoutSignInMethod()) {
-          <span i18n="@@donor.account.password.noneAtAll">Bez hesla</span>
-        } @else {
-          <span i18n="@@donor.account.password.none">Bez hesla, jen přístupové klíče</span>
-        }
-      </dd>
-      <dd class="account-actions">
-        @if (!withoutSignInMethod()) {
-          <button
-            #passwordButton
-            type="button"
-            class="ui-button account-action"
-            aria-controls="account-password-panel"
-            [attr.aria-expanded]="panel() === 'password'"
-            (click)="toggle('password')"
-          >
-            @if (hasPassword()) {
-              <span i18n="@@donor.account.changePassword"
-                >Změnit<span class="visually-hidden"> heslo</span></span
-              >
-            } @else {
-              <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
-            }
-          </button>
-        }
-        @if (canRemovePassword()) {
-          <button
-            #removePasswordButton
-            type="button"
-            class="ui-button ui-button--quiet account-action"
-            aria-controls="account-password-panel"
-            [attr.aria-expanded]="panel() === 'password-remove'"
-            (click)="toggle('password-remove')"
-          >
-            <span i18n="@@donor.account.password.remove"
-              >Odebrat<span class="visually-hidden"> heslo</span></span
-            >
-          </button>
-        }
-      </dd>
-      <dd
-        id="account-password-panel"
-        class="account-panel"
-        [hidden]="panel() !== 'password' && panel() !== 'password-remove'"
-      >
-        @if (panel() === 'password') {
-          <form
-            #passwordForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="changePassword(passwordForm)"
-            novalidate
-          >
-            @if (hasPassword()) {
-              <h3 class="ui-card__subtitle" i18n="@@donor.account.password.title">Změna hesla</h3>
-              <p class="ui-card__intro account-form-intro" i18n="@@donor.account.password.intro">
-                Po změně zůstanete přihlášeni jen tady; ostatní přihlášení ukončíme.
-              </p>
-            } @else {
-              <h3 class="ui-card__subtitle" i18n="@@donor.account.setPassword.title">
-                Nastavení hesla
-              </h3>
-              <p class="ui-card__intro account-form-intro" i18n="@@donor.account.setPassword.intro">
-                Heslo bude další způsob přihlášení vedle přístupových klíčů. Po nastavení zůstanete
-                přihlášeni jen tady; ostatní přihlášení ukončíme.
-              </p>
-            }
-            @if (hasPassword()) {
               <app-account-username [email]="accountEmail()" />
               <app-form-field
-                label="Současné heslo"
-                i18n-label="@@donor.account.currentPassword"
-                [messages]="currentPasswordMessages"
+                label="Nový e-mail"
+                i18n-label="@@donor.account.newEmail"
+                [messages]="newEmailMessages"
               >
-                <app-password-reveal>
-                  <input
-                    #firstField
-                    appFormControl
-                    id="account-current-password"
-                    name="currentPassword"
-                    type="password"
-                    autocomplete="current-password"
-                    [(ngModel)]="currentPassword"
-                    required
-                    maxlength="128"
-                  />
-                </app-password-reveal>
-              </app-form-field>
-            } @else {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.confirmWithPasskey"
-              >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
-              </p>
-            }
-            <app-form-field
-              label="Nové heslo"
-              i18n-label="@@donor.account.newPassword"
-              [hint]="newPasswordHint"
-              [messages]="newPasswordMessages"
-            >
-              <app-password-reveal>
-                <input
-                  appFormControl
-                  id="account-new-password"
-                  name="newPassword"
-                  type="password"
-                  autocomplete="new-password"
-                  [(ngModel)]="newPassword"
-                  required
-                  [minlength]="passwordMinLength"
-                  maxlength="128"
-                />
-              </app-password-reveal>
-            </app-form-field>
-            <app-form-field
-              label="Nové heslo znovu"
-              i18n-label="@@donor.account.newPasswordConfirm"
-              [messages]="confirmationMessages"
-            >
-              <app-password-reveal>
-                <input
-                  appFormControl
-                  id="account-new-password-confirm"
-                  name="newPasswordConfirmation"
-                  type="password"
-                  autocomplete="new-password"
-                  [(ngModel)]="newPasswordConfirmation"
-                  required
-                  maxlength="128"
-                />
-              </app-password-reveal>
-            </app-form-field>
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
-              >
-                @if (saving()) {
-                  <span i18n="@@donor.account.password.saving">Ukládáme…</span>
-                } @else if (hasPassword()) {
-                  <span i18n="@@donor.account.password.submit">Změnit heslo</span>
-                } @else {
-                  <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
-                }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
-              >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        } @else if (panel() === 'password-remove') {
-          <form
-            #removePasswordForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="removePassword(removePasswordForm)"
-            novalidate
-          >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.removePassword.title">
-              Odebrání hesla
-            </h3>
-            <p
-              class="ui-card__intro account-form-intro"
-              i18n="@@donor.account.removePassword.intro"
-            >
-              Přihlásíte se pak jen přístupovým klíčem. Mějte klíč aspoň ve dvou zařízeních; když o
-              všechny přijdete, přístup obnovíte odkazem z e-mailu přes „Zapomenuté heslo“. Ostatní
-              přihlášení ukončíme, tohle zůstane.
-            </p>
-            @if (isAdmin()) {
-              <p class="account-hint" i18n="@@donor.account.removePassword.admin">
-                Jako správce si přístup odkazem z e-mailu neobnovíte. Když o klíče přijdete, pomůže
-                vám jiný správce.
-              </p>
-            }
-            <app-account-username [email]="accountEmail()" />
-            <app-form-field
-              label="Současné heslo"
-              i18n-label="@@donor.account.currentPassword"
-              [messages]="currentPasswordMessages"
-            >
-              <app-password-reveal>
                 <input
                   #firstField
                   appFormControl
-                  id="account-remove-password"
-                  name="password"
-                  type="password"
-                  autocomplete="current-password"
-                  [(ngModel)]="password"
+                  id="account-new-email"
+                  name="newEmail"
+                  type="email"
+                  autocomplete="email"
+                  [(ngModel)]="newEmail"
                   required
-                  maxlength="128"
+                  email
+                  maxlength="254"
                 />
-              </app-password-reveal>
-            </app-form-field>
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
-              >
-                @if (saving()) {
-                  <span i18n="@@donor.account.removePassword.saving">Odebíráme…</span>
-                } @else {
-                  <span i18n="@@donor.account.removePassword">Odebrat heslo</span>
-                }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
-              >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        }
-      </dd>
-    </div>
-
-    <div class="account-row">
-      <dt id="account-second-factor-label" i18n="@@donor.account.secondFactor">
-        Dvoufaktorové ověření
-      </dt>
-      <dd class="account-value">
-        @if (secondFactor().enabled) {
-          <span i18n="@@donor.account.secondFactor.on">Zapnuté, kód z ověřovací aplikace</span>
-        } @else {
-          <span i18n="@@donor.account.secondFactor.off">Vypnuté</span>
-          @if ((passkeyCount() ?? 0) > 0) {
-            <span class="account-row-note" i18n="@@donor.account.secondFactor.passkeyProtects"
-              >Přihlášení přístupovým klíčem je chráněné i bez kódu.</span
-            >
-          }
-        }
-        @if (secondFactor().neededForAdministration) {
-          <span class="account-hint" i18n="@@donor.account.secondFactor.neededForAdministration">
-            Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace a
-            přihlásíte se s ním.
-          </span>
-        }
-      </dd>
-      <dd class="account-actions">
-        @if (!withoutSignInMethod() && secondFactor().enabled) {
-          <button
-            #secondFactorButton
-            type="button"
-            class="ui-button account-action"
-            aria-controls="account-second-factor-panel"
-            [attr.aria-expanded]="panel() === 'second-factor-off'"
-            (click)="toggle('second-factor-off')"
-          >
-            <span i18n="@@donor.account.secondFactor.rowTurnOff"
-              >Vypnout<span class="visually-hidden"> dvoufaktorové ověření</span></span
-            >
-          </button>
-        } @else if (!withoutSignInMethod()) {
-          <button
-            #secondFactorButton
-            type="button"
-            class="ui-button account-action"
-            aria-controls="account-second-factor-panel"
-            [attr.aria-expanded]="panel() === 'second-factor-on'"
-            (click)="toggle('second-factor-on')"
-          >
-            <span i18n="@@donor.account.secondFactor.rowTurnOn"
-              >Zapnout<span class="visually-hidden"> dvoufaktorové ověření</span></span
-            >
-          </button>
-        }
-      </dd>
-      <dd
-        id="account-second-factor-panel"
-        class="account-panel"
-        [hidden]="panel() !== 'second-factor-on' && panel() !== 'second-factor-off'"
-      >
-        @if (panel() === 'second-factor-on' && enrolment() === null) {
-          <form
-            #setupForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="startSecondFactor(setupForm)"
-            novalidate
-          >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.on.title">
-              Zapnutí kódu z aplikace (dvoufaktorové ověření)
-            </h3>
-            @if (hasPassword()) {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.secondFactor.on.intro"
-              >
-                Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu nebo
-                tabletu (například Google Authenticator, Microsoft Authenticator nebo Aegis).
-                Nejdřív potvrďte heslem.
-              </p>
-            } @else {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.secondFactor.on.introPasswordless"
-              >
-                Kód z ověřovací aplikace v telefonu nebo tabletu (například Google Authenticator,
-                Microsoft Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat
-                přístup odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem
-                zůstává stejné.
-              </p>
-            }
-            <p
-              class="ui-card__intro account-form-intro account-lost-phone"
-              i18n="@@donor.account.secondFactor.on.lostPhone"
-            >
-              Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z
-              bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám
-              napište a kód z aplikace vám vypneme.
-            </p>
-            @if (hasPassword()) {
-              <app-account-username [email]="accountEmail()" />
-              <app-form-field
-                label="Současné heslo"
-                i18n-label="@@donor.account.currentPassword"
-                [messages]="currentPasswordMessages"
-              >
-                <app-password-reveal>
-                  <input
-                    #firstField
-                    appFormControl
-                    id="account-second-factor-password"
-                    name="password"
-                    type="password"
-                    autocomplete="current-password"
-                    [(ngModel)]="password"
-                    required
-                    maxlength="128"
-                  />
-                </app-password-reveal>
               </app-form-field>
-            } @else {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.confirmWithPasskey"
-              >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
-              </p>
-            }
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
-              >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.preparing">Připravujeme…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
-                }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
-              >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        } @else if (panel() === 'second-factor-on') {
-          <form
-            #confirmForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="confirmSecondFactor(confirmForm)"
-            novalidate
-          >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.scan.title">
-              Přidejte účet do ověřovací aplikace
-            </h3>
-            <p
-              class="ui-card__intro account-form-intro"
-              i18n="@@donor.account.secondFactor.scan.intro"
-            >
-              Naskenujte QR kód v aplikaci, nebo do ní opište klíč. Pak sem zadejte kód, který
-              aplikace ukáže.
-            </p>
-            <div class="account-enrolment">
-              @if (enrolmentQr(); as qr) {
-                <app-qr-code
-                  class="account-qr"
-                  variant="plain"
-                  [matrix]="qr"
-                  label="QR kód s nastavením pro ověřovací aplikaci"
-                  i18n-label="@@donor.account.secondFactor.qrAlt"
-                />
-              } @else if (enrolment()) {
-                <p
-                  class="ui-field-error account-qr-failed"
-                  role="alert"
-                  i18n="@@donor.account.secondFactor.qrFailed"
+              @if (hasPassword()) {
+                <app-form-field
+                  label="Současné heslo"
+                  i18n-label="@@donor.account.currentPassword"
+                  [messages]="currentPasswordMessages"
                 >
-                  QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.
+                  <app-password-reveal>
+                    <input
+                      appFormControl
+                      id="account-email-password"
+                      name="password"
+                      type="password"
+                      autocomplete="current-password"
+                      [(ngModel)]="password"
+                      required
+                      maxlength="128"
+                    />
+                  </app-password-reveal>
+                </app-form-field>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.confirmWithPasskey"
+                >
+                  Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
                 </p>
               }
-              @if (enrolment(); as current) {
-                <a
-                  class="account-otpauth"
-                  [href]="current.otpauthUri"
-                  i18n="@@donor.account.secondFactor.openApp"
-                  >Přidat do ověřovací aplikace v tomto telefonu nebo tabletu</a
-                >
+
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
               }
-              <div class="account-secret">
-                <span class="account-secret-label" i18n="@@donor.account.secondFactor.secret"
-                  >Klíč</span
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
                 >
-                <span class="account-secret-value">{{ groupedSecret() }}</span>
-                <app-copy-button
-                  [value]="enrolment()?.secret ?? ''"
-                  what="klíč"
-                  i18n-what="@@donor.account.secondFactor.copySecret"
-                />
+                  @if (saving()) {
+                    <span i18n="@@donor.account.email.sending">Odesíláme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.email.submit">Poslat potvrzovací odkaz</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
               </div>
-            </div>
-            <app-form-field
-              label="Kód z aplikace"
-              i18n-label="@@donor.login.secondFactor.code"
-              [hint]="codeHint"
-              [messages]="codeMessages"
+            </form>
+          }
+        </dd>
+      </div>
+
+      <div class="ui-list__row ui-list__item account-row">
+        <dt id="account-password-label" class="ui-list__title" i18n="@@donor.account.password">
+          Heslo
+        </dt>
+        <dd class="ui-list__meta account-value">
+          @if (hasPassword()) {
+            <span i18n="@@donor.account.password.set">Nastavené</span>
+          } @else if (withoutSignInMethod()) {
+            <span i18n="@@donor.account.password.noneAtAll">Bez hesla</span>
+          } @else {
+            <span i18n="@@donor.account.password.none">Bez hesla, jen přístupové klíče</span>
+          }
+        </dd>
+        <dd class="ui-list__value ui-list__actions account-actions">
+          @if (!withoutSignInMethod()) {
+            <button
+              #passwordButton
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-action"
+              aria-controls="account-password-panel"
+              [attr.aria-expanded]="panel() === 'password'"
+              (click)="toggle('password')"
             >
-              <input
-                #codeField
-                appFormControl
-                id="account-second-factor-code"
-                name="code"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                [(ngModel)]="code"
-                (ngModelChange)="codeChanged()"
-                required
-                pattern="\s*\d{6}\s*"
-                maxlength="8"
-              />
-            </app-form-field>
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
+              @if (hasPassword()) {
+                <span i18n="@@donor.account.changePassword"
+                  >Změnit<span class="visually-hidden"> heslo</span></span
+                >
+              } @else {
+                <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
+              }
+            </button>
+          }
+          @if (canRemovePassword()) {
+            <button
+              #removePasswordButton
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-action"
+              aria-controls="account-password-panel"
+              [attr.aria-expanded]="panel() === 'password-remove'"
+              (click)="toggle('password-remove')"
+            >
+              <span i18n="@@donor.account.password.remove"
+                >Odebrat<span class="visually-hidden"> heslo</span></span
               >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.verifying">Ověřujeme kód…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.turnOn">Zapnout kód z aplikace</span>
-                }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
+            </button>
+          }
+        </dd>
+        <dd
+          id="account-password-panel"
+          class="ui-list__extra account-panel"
+          [hidden]="panel() !== 'password' && panel() !== 'password-remove'"
+        >
+          @if (panel() === 'password') {
+            <form
+              #passwordForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="changePassword(passwordForm)"
+              novalidate
+            >
+              @if (hasPassword()) {
+                <h3 class="ui-card__subtitle" i18n="@@donor.account.password.title">Změna hesla</h3>
+                <p class="ui-card__intro account-form-intro" i18n="@@donor.account.password.intro">
+                  Po změně zůstanete přihlášeni jen tady; ostatní přihlášení ukončíme.
+                </p>
+              } @else {
+                <h3 class="ui-card__subtitle" i18n="@@donor.account.setPassword.title">
+                  Nastavení hesla
+                </h3>
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.setPassword.intro"
+                >
+                  Heslo bude další způsob přihlášení vedle přístupových klíčů. Po nastavení
+                  zůstanete přihlášeni jen tady; ostatní přihlášení ukončíme.
+                </p>
+              }
+              @if (hasPassword()) {
+                <app-account-username [email]="accountEmail()" />
+                <app-form-field
+                  label="Současné heslo"
+                  i18n-label="@@donor.account.currentPassword"
+                  [messages]="currentPasswordMessages"
+                >
+                  <app-password-reveal>
+                    <input
+                      #firstField
+                      appFormControl
+                      id="account-current-password"
+                      name="currentPassword"
+                      type="password"
+                      autocomplete="current-password"
+                      [(ngModel)]="currentPassword"
+                      required
+                      maxlength="128"
+                    />
+                  </app-password-reveal>
+                </app-form-field>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.confirmWithPasskey"
+                >
+                  Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                </p>
+              }
+              <app-form-field
+                label="Nové heslo"
+                i18n-label="@@donor.account.newPassword"
+                [hint]="newPasswordHint"
+                [messages]="newPasswordMessages"
               >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        } @else if (panel() === 'second-factor-off') {
-          <form
-            #disableForm="ngForm"
-            class="account-form"
-            appFocusFirstInvalid
-            (ngSubmit)="disableSecondFactor(disableForm)"
-            novalidate
-          >
-            <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.off.title">
-              Vypnutí kódu z aplikace
-            </h3>
-            @if (hasPassword()) {
+                <app-password-reveal>
+                  <input
+                    appFormControl
+                    id="account-new-password"
+                    name="newPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    [(ngModel)]="newPassword"
+                    required
+                    [minlength]="passwordMinLength"
+                    maxlength="128"
+                  />
+                </app-password-reveal>
+              </app-form-field>
+              <app-form-field
+                label="Nové heslo znovu"
+                i18n-label="@@donor.account.newPasswordConfirm"
+                [messages]="confirmationMessages"
+              >
+                <app-password-reveal>
+                  <input
+                    appFormControl
+                    id="account-new-password-confirm"
+                    name="newPasswordConfirmation"
+                    type="password"
+                    autocomplete="new-password"
+                    [(ngModel)]="newPasswordConfirmation"
+                    required
+                    maxlength="128"
+                  />
+                </app-password-reveal>
+              </app-form-field>
+
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
+              }
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
+                >
+                  @if (saving()) {
+                    <span i18n="@@donor.account.password.saving">Ukládáme…</span>
+                  } @else if (hasPassword()) {
+                    <span i18n="@@donor.account.password.submit">Změnit heslo</span>
+                  } @else {
+                    <span i18n="@@donor.account.setPassword">Nastavit heslo</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          } @else if (panel() === 'password-remove') {
+            <form
+              #removePasswordForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="removePassword(removePasswordForm)"
+              novalidate
+            >
+              <h3 class="ui-card__subtitle" i18n="@@donor.account.removePassword.title">
+                Odebrání hesla
+              </h3>
               <p
                 class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.secondFactor.off.intro"
+                i18n="@@donor.account.removePassword.intro"
               >
-                K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
+                Přihlásíte se pak jen přístupovým klíčem. Mějte klíč aspoň ve dvou zařízeních; když
+                o všechny přijdete, přístup obnovíte odkazem z e-mailu přes „Zapomenuté heslo“.
+                Ostatní přihlášení ukončíme, tohle zůstane.
               </p>
-            } @else {
-              <p
-                class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.secondFactor.off.introPasswordless"
-              >
-                Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme. Ostatní
-                přihlášení ukončíme, tohle zůstane.
-              </p>
-            }
-            @if (hasPassword()) {
+              @if (isAdmin()) {
+                <p class="account-hint" i18n="@@donor.account.removePassword.admin">
+                  Jako správce si přístup odkazem z e-mailu neobnovíte. Když o klíče přijdete,
+                  pomůže vám jiný správce.
+                </p>
+              }
               <app-account-username [email]="accountEmail()" />
               <app-form-field
                 label="Současné heslo"
@@ -725,7 +414,7 @@
                   <input
                     #firstField
                     appFormControl
-                    id="account-second-factor-off-password"
+                    id="account-remove-password"
                     name="password"
                     type="password"
                     autocomplete="current-password"
@@ -735,110 +424,463 @@
                   />
                 </app-password-reveal>
               </app-form-field>
-            } @else {
+
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
+              }
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
+                >
+                  @if (saving()) {
+                    <span i18n="@@donor.account.removePassword.saving">Odebíráme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.removePassword">Odebrat heslo</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          }
+        </dd>
+      </div>
+
+      <div class="ui-list__row ui-list__item account-row">
+        <dt
+          id="account-second-factor-label"
+          class="ui-list__title"
+          i18n="@@donor.account.secondFactor"
+        >
+          Dvoufaktorové ověření
+        </dt>
+        <dd class="ui-list__meta account-value">
+          @if (secondFactor().enabled) {
+            <span i18n="@@donor.account.secondFactor.on">Zapnuté, kód z ověřovací aplikace</span>
+          } @else {
+            <span i18n="@@donor.account.secondFactor.off">Vypnuté</span>
+            @if ((passkeyCount() ?? 0) > 0) {
+              &ngsp;<span
+                class="account-row-note"
+                i18n="@@donor.account.secondFactor.passkeyProtects"
+                >Přihlášení přístupovým klíčem je chráněné i bez kódu.</span
+              >
+            }
+          }
+          @if (secondFactor().neededForAdministration) {
+            &ngsp;<span
+              class="account-hint"
+              i18n="@@donor.account.secondFactor.neededForAdministration"
+            >
+              Správa se vám otevře, až se přihlásíte přístupovým klíčem nebo zapnete kód z aplikace
+              a přihlásíte se s ním.
+            </span>
+          }
+        </dd>
+        <dd class="ui-list__value ui-list__actions account-actions">
+          @if (!withoutSignInMethod() && secondFactor().enabled) {
+            <button
+              #secondFactorButton
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-action"
+              aria-controls="account-second-factor-panel"
+              [attr.aria-expanded]="panel() === 'second-factor-off'"
+              (click)="toggle('second-factor-off')"
+            >
+              <span i18n="@@donor.account.secondFactor.rowTurnOff"
+                >Vypnout<span class="visually-hidden"> dvoufaktorové ověření</span></span
+              >
+            </button>
+          } @else if (!withoutSignInMethod()) {
+            <button
+              #secondFactorButton
+              type="button"
+              class="ui-pill-button ui-pill-button--tinted account-action"
+              aria-controls="account-second-factor-panel"
+              [attr.aria-expanded]="panel() === 'second-factor-on'"
+              (click)="toggle('second-factor-on')"
+            >
+              <span i18n="@@donor.account.secondFactor.rowTurnOn"
+                >Zapnout<span class="visually-hidden"> dvoufaktorové ověření</span></span
+              >
+            </button>
+          }
+        </dd>
+        <dd
+          id="account-second-factor-panel"
+          class="ui-list__extra account-panel"
+          [hidden]="panel() !== 'second-factor-on' && panel() !== 'second-factor-off'"
+        >
+          @if (panel() === 'second-factor-on' && enrolment() === null) {
+            <form
+              #setupForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="startSecondFactor(setupForm)"
+              novalidate
+            >
+              <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.on.title">
+                Zapnutí kódu z aplikace (dvoufaktorové ověření)
+              </h3>
+              @if (hasPassword()) {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.secondFactor.on.intro"
+                >
+                  Při každém přihlášení pak k heslu zadáte kód z ověřovací aplikace v telefonu nebo
+                  tabletu (například Google Authenticator, Microsoft Authenticator nebo Aegis).
+                  Nejdřív potvrďte heslem.
+                </p>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.secondFactor.on.introPasswordless"
+                >
+                  Kód z ověřovací aplikace v telefonu nebo tabletu (například Google Authenticator,
+                  Microsoft Authenticator nebo Aegis) pak budete potřebovat, když budete obnovovat
+                  přístup odkazem z e-mailu; samotný e-mail tak k účtu nestačí. Přihlášení klíčem
+                  zůstává stejné.
+                </p>
+              }
+              <p
+                class="ui-card__intro account-form-intro account-lost-phone"
+                i18n="@@donor.account.secondFactor.on.lostPhone"
+              >
+                Když telefon nebo tablet s aplikací ztratíte, přístup obnovíte platbou 1&nbsp;Kč z
+                bankovního účtu, který u nás máte ověřený aspoň týden. Dřív to nejde; do té doby nám
+                napište a kód z aplikace vám vypneme.
+              </p>
+              @if (hasPassword()) {
+                <app-account-username [email]="accountEmail()" />
+                <app-form-field
+                  label="Současné heslo"
+                  i18n-label="@@donor.account.currentPassword"
+                  [messages]="currentPasswordMessages"
+                >
+                  <app-password-reveal>
+                    <input
+                      #firstField
+                      appFormControl
+                      id="account-second-factor-password"
+                      name="password"
+                      type="password"
+                      autocomplete="current-password"
+                      [(ngModel)]="password"
+                      required
+                      maxlength="128"
+                    />
+                  </app-password-reveal>
+                </app-form-field>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.confirmWithPasskey"
+                >
+                  Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                </p>
+              }
+
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
+              }
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
+                >
+                  @if (saving()) {
+                    <span i18n="@@donor.account.secondFactor.preparing">Připravujeme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.secondFactor.continue">Pokračovat</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          } @else if (panel() === 'second-factor-on') {
+            <form
+              #confirmForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="confirmSecondFactor(confirmForm)"
+              novalidate
+            >
+              <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.scan.title">
+                Přidejte účet do ověřovací aplikace
+              </h3>
               <p
                 class="ui-card__intro account-form-intro"
-                i18n="@@donor.account.confirmWithPasskey"
+                i18n="@@donor.account.secondFactor.scan.intro"
               >
-                Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                Naskenujte QR kód v aplikaci, nebo do ní opište klíč. Pak sem zadejte kód, který
+                aplikace ukáže.
               </p>
-            }
-            <app-form-field
-              label="Kód z aplikace"
-              i18n-label="@@donor.login.secondFactor.code"
-              [hint]="codeHint"
-              [messages]="codeMessages"
-            >
-              <input
-                appFormControl
-                id="account-second-factor-off-code"
-                name="code"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                [(ngModel)]="code"
-                required
-                pattern="\s*\d{6}\s*"
-                maxlength="8"
-              />
-            </app-form-field>
-
-            @if (error()) {
-              <p class="ui-field-error" role="alert">{{ error() }}</p>
-            }
-
-            <div class="account-form-actions">
-              <button
-                appNeedsConnection
-                type="submit"
-                class="ui-button ui-button--primary account-save"
-                [disabled]="saving()"
-              >
-                @if (saving()) {
-                  <span i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
-                } @else {
-                  <span i18n="@@donor.account.secondFactor.turnOff">Vypnout kód z aplikace</span>
+              <div class="account-enrolment">
+                @if (enrolmentQr(); as qr) {
+                  <app-qr-code
+                    class="account-qr"
+                    variant="plain"
+                    [matrix]="qr"
+                    label="QR kód s nastavením pro ověřovací aplikaci"
+                    i18n-label="@@donor.account.secondFactor.qrAlt"
+                  />
+                } @else if (enrolment()) {
+                  <p
+                    class="ui-field-error account-qr-failed"
+                    role="alert"
+                    i18n="@@donor.account.secondFactor.qrFailed"
+                  >
+                    QR kód se nepodařilo vykreslit. Opište prosím klíč níže do ověřovací aplikace.
+                  </p>
                 }
-              </button>
-              <button
-                type="button"
-                class="ui-button ui-button--large account-cancel"
-                (click)="cancel()"
-                i18n="@@donor.account.cancel"
+                @if (enrolment(); as current) {
+                  <a
+                    class="account-otpauth"
+                    [href]="current.otpauthUri"
+                    i18n="@@donor.account.secondFactor.openApp"
+                    >Přidat do ověřovací aplikace v tomto telefonu nebo tabletu</a
+                  >
+                }
+                <div class="account-secret">
+                  <span class="account-secret-label" i18n="@@donor.account.secondFactor.secret"
+                    >Klíč</span
+                  >
+                  <span class="account-secret-value">{{ groupedSecret() }}</span>
+                  <app-copy-button
+                    [value]="enrolment()?.secret ?? ''"
+                    what="klíč"
+                    i18n-what="@@donor.account.secondFactor.copySecret"
+                  />
+                </div>
+              </div>
+              <app-form-field
+                label="Kód z aplikace"
+                i18n-label="@@donor.login.secondFactor.code"
+                [hint]="codeHint"
+                [messages]="codeMessages"
               >
-                Zrušit
-              </button>
-            </div>
-          </form>
-        }
-      </dd>
-    </div>
+                <input
+                  #codeField
+                  appFormControl
+                  id="account-second-factor-code"
+                  name="code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  [(ngModel)]="code"
+                  (ngModelChange)="codeChanged()"
+                  required
+                  pattern="\s*\d{6}\s*"
+                  maxlength="8"
+                />
+              </app-form-field>
 
-    <div class="account-row">
-      <dt id="account-passkeys-label" i18n="@@donor.account.passkeys">Přístupové klíče</dt>
-      <dd class="account-value">
-        @switch (passkeyCount()) {
-          @case (null) {
-            <span i18n="@@donor.account.passkeys.loading">Načítáme…</span>
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
+              }
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
+                >
+                  @if (saving()) {
+                    <span i18n="@@donor.account.secondFactor.verifying">Ověřujeme kód…</span>
+                  } @else {
+                    <span i18n="@@donor.account.secondFactor.turnOn">Zapnout kód z aplikace</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          } @else if (panel() === 'second-factor-off') {
+            <form
+              #disableForm="ngForm"
+              class="account-form"
+              appFocusFirstInvalid
+              (ngSubmit)="disableSecondFactor(disableForm)"
+              novalidate
+            >
+              <h3 class="ui-card__subtitle" i18n="@@donor.account.secondFactor.off.title">
+                Vypnutí kódu z aplikace
+              </h3>
+              @if (hasPassword()) {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.secondFactor.off.intro"
+                >
+                  K přihlášení pak bude stačit heslo. Ostatní přihlášení ukončíme, tohle zůstane.
+                </p>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.secondFactor.off.introPasswordless"
+                >
+                  Při obnově přístupu odkazem z e-mailu pak kód z aplikace chtít nebudeme. Ostatní
+                  přihlášení ukončíme, tohle zůstane.
+                </p>
+              }
+              @if (hasPassword()) {
+                <app-account-username [email]="accountEmail()" />
+                <app-form-field
+                  label="Současné heslo"
+                  i18n-label="@@donor.account.currentPassword"
+                  [messages]="currentPasswordMessages"
+                >
+                  <app-password-reveal>
+                    <input
+                      #firstField
+                      appFormControl
+                      id="account-second-factor-off-password"
+                      name="password"
+                      type="password"
+                      autocomplete="current-password"
+                      [(ngModel)]="password"
+                      required
+                      maxlength="128"
+                    />
+                  </app-password-reveal>
+                </app-form-field>
+              } @else {
+                <p
+                  class="ui-card__intro account-form-intro"
+                  i18n="@@donor.account.confirmWithPasskey"
+                >
+                  Po odeslání vás zařízení požádá o potvrzení jedním z vašich přístupových klíčů.
+                </p>
+              }
+              <app-form-field
+                label="Kód z aplikace"
+                i18n-label="@@donor.login.secondFactor.code"
+                [hint]="codeHint"
+                [messages]="codeMessages"
+              >
+                <input
+                  appFormControl
+                  id="account-second-factor-off-code"
+                  name="code"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  [(ngModel)]="code"
+                  required
+                  pattern="\s*\d{6}\s*"
+                  maxlength="8"
+                />
+              </app-form-field>
+
+              @if (error()) {
+                <p class="ui-field-error" role="alert">{{ error() }}</p>
+              }
+
+              <div class="account-form-actions">
+                <button
+                  appNeedsConnection
+                  type="submit"
+                  class="ui-button ui-button--primary account-save"
+                  [disabled]="saving()"
+                >
+                  @if (saving()) {
+                    <span i18n="@@donor.account.secondFactor.turningOff">Vypínáme…</span>
+                  } @else {
+                    <span i18n="@@donor.account.secondFactor.turnOff">Vypnout kód z aplikace</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="ui-button ui-button--large account-cancel"
+                  (click)="cancel()"
+                  i18n="@@donor.account.cancel"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
           }
-          @case (0) {
-            <span i18n="@@donor.account.passkeys.none">Žádný</span>
+        </dd>
+      </div>
+
+      <div class="ui-list__row ui-list__item account-row">
+        <dt id="account-passkeys-label" class="ui-list__title" i18n="@@donor.account.passkeys">
+          Přístupové klíče
+        </dt>
+        <dd class="ui-list__meta account-value">
+          @switch (passkeyCount()) {
+            @case (null) {
+              <span i18n="@@donor.account.passkeys.loading">Načítáme…</span>
+            }
+            @case (0) {
+              <span i18n="@@donor.account.passkeys.none">Žádný</span>
+            }
+            @default {
+              <span i18n="@@donor.account.passkeys.count">{passkeyCount(), plural,
+                one {{{ passkeyCount() }} klíč}
+                few {{{ passkeyCount() }} klíče}
+                other {{{ passkeyCount() }} klíčů}
+              }</span>
+            }
           }
-          @default {
-            <span i18n="@@donor.account.passkeys.count">{passkeyCount(), plural,
-              one {{{ passkeyCount() }} klíč}
-              few {{{ passkeyCount() }} klíče}
-              other {{{ passkeyCount() }} klíčů}
-            }</span>
-          }
-        }
-      </dd>
-      <dd class="account-actions">
-        <button
-          #passkeysButton
-          type="button"
-          class="ui-button account-action"
-          aria-controls="account-passkeys-panel"
-          [attr.aria-expanded]="panel() === 'passkeys'"
-          (click)="toggle('passkeys')"
-        >
-          <span i18n="@@donor.account.passkeys.manage"
-            >Spravovat<span class="visually-hidden"> přístupové klíče</span></span
+        </dd>
+        <dd class="ui-list__value ui-list__actions account-actions">
+          <button
+            #passkeysButton
+            type="button"
+            class="ui-pill-button ui-pill-button--tinted account-action"
+            aria-controls="account-passkeys-panel"
+            [attr.aria-expanded]="panel() === 'passkeys'"
+            (click)="toggle('passkeys')"
           >
-        </button>
-      </dd>
-      <dd id="account-passkeys-panel" class="account-panel" [hidden]="panel() !== 'passkeys'">
-        <app-passkeys-panel
-          #passkeys
-          labelledBy="account-passkeys-label"
-          (sessionEnded)="sessionEnded.emit()"
-          (countChanged)="passkeyCount.set($event)"
-        />
-      </dd>
-    </div>
-  </dl>
+            <span i18n="@@donor.account.passkeys.manage"
+              >Spravovat<span class="visually-hidden"> přístupové klíče</span></span
+            >
+          </button>
+        </dd>
+        <dd
+          id="account-passkeys-panel"
+          class="ui-list__extra account-panel"
+          [hidden]="panel() !== 'passkeys'"
+        >
+          <app-passkeys-panel
+            #passkeys
+            labelledBy="account-passkeys-label"
+            (sessionEnded)="sessionEnded.emit()"
+            (countChanged)="passkeyCount.set($event)"
+          />
+        </dd>
+      </div>
+    </dl>
+  </div>
 
-  <p class="ui-form-status account-status" role="status">
+  <p class="ui-group-note ui-group-note--status account-status" role="status">
     @if (linkSentTo(); as address) {
       <span i18n="@@donor.account.email.sent">
         Odkaz jsme poslali na {{ address }}. Platí 24 hodin; po jeho otevření se účet přepne na

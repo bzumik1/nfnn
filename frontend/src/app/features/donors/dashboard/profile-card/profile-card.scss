@@ -2,20 +2,11 @@
 
 :host {
   display: block;
+  margin-bottom: var(--space-5);
 }
 
-.profile-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.profile-data {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4) var(--space-6);
+.profile-panel {
+  margin-bottom: 0;
 }
 
 .profile-form {

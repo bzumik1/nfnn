@@ -1,20 +1,7 @@
-<section class="ui-card ui-card--padded profile-card" aria-labelledby="profile-title">
-  <div class="profile-head">
-    <h2 id="profile-title" class="ui-card__title" i18n="@@donor.profile.title">
-      Údaje na potvrzení o daru
-    </h2>
-    @if (!editing() && draft.offer() === null) {
-      <button
-        #editButton
-        type="button"
-        class="ui-button profile-edit"
-        (click)="edit()"
-        i18n="@@donor.profile.edit"
-      >
-        Upravit údaje
-      </button>
-    }
-  </div>
+<section class="profile-card" aria-labelledby="profile-title">
+  <h2 id="profile-title" class="ui-group-title" i18n="@@donor.profile.title">
+    Údaje na potvrzení o daru
+  </h2>
 
   @if (draft.offer(); as offer) {
     <app-draft-offer
@@ -27,263 +14,289 @@
   }
 
   @if (editing()) {
-    <form
-      #profile="ngForm"
-      class="profile-form"
-      [inert]="draft.offer() !== null"
-      appFocusFirstInvalid
-      (ngSubmit)="save(profile)"
-      novalidate
-    >
-      @if (company()) {
-        <app-form-field
-          label="Název firmy"
-          i18n-label="@@donor.register.companyName"
-          [messages]="nameMessages()"
-        >
-          <input
-            #nameInput
-            appFormControl
-            id="profile-name"
-            name="name"
-            type="text"
-            autocomplete="organization"
-            [(ngModel)]="fields.name"
-            appPrintableOnReceipt
-            required
-            maxlength="160"
-          />
-        </app-form-field>
-        <app-form-field
-          label="Sídlo – ulice a číslo"
-          i18n-label="@@donor.register.companyStreet"
-          [messages]="streetMessages"
-        >
-          <input
-            appFormControl
-            id="profile-street"
-            name="street"
-            type="text"
-            autocomplete="street-address"
-            [(ngModel)]="fields.street"
-            appPrintableOnReceipt
-            required
-            maxlength="200"
-          />
-        </app-form-field>
-      } @else {
-        <app-form-field
-          label="Jméno a příjmení"
-          i18n-label="@@donor.login.name"
-          [messages]="nameMessages()"
-        >
-          <input
-            #nameInput
-            appFormControl
-            id="profile-name"
-            name="name"
-            type="text"
-            autocomplete="name"
-            [(ngModel)]="fields.name"
-            appPrintableOnReceipt
-            required
-            maxlength="160"
-          />
-        </app-form-field>
-        <app-form-field
-          label="Ulice a číslo"
-          i18n-label="@@donor.register.street"
-          [messages]="streetMessages"
-        >
-          <input
-            appFormControl
-            id="profile-street"
-            name="street"
-            type="text"
-            autocomplete="street-address"
-            [(ngModel)]="fields.street"
-            appPrintableOnReceipt
-            required
-            maxlength="200"
-          />
-        </app-form-field>
-      }
-
-      <div class="field-row">
-        <app-form-field
-          label="PSČ"
-          i18n-label="@@donor.register.postalCode"
-          [messages]="postalCodeMessages"
-        >
-          <input
-            appFormControl
-            id="profile-postal-code"
-            name="postalCode"
-            type="text"
-            inputmode="numeric"
-            autocomplete="postal-code"
-            [(ngModel)]="fields.postalCode"
-            required
-            pattern="\s*\d{3}\s*\d{2}\s*"
-          />
-        </app-form-field>
-        <app-form-field label="Město" i18n-label="@@donor.register.city" [messages]="cityMessages">
-          <input
-            appFormControl
-            id="profile-city"
-            name="city"
-            type="text"
-            autocomplete="address-level2"
-            [(ngModel)]="fields.city"
-            appPrintableOnReceipt
-            required
-            maxlength="120"
-          />
-        </app-form-field>
-      </div>
-
-      <app-form-field
-        label="Jazyk potvrzení"
-        i18n-label="@@donor.profile.locale"
-        hint="Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce."
-        i18n-hint="@@donor.profile.localeHint.firstDownload"
+    <div class="ui-card ui-card--padded profile-panel">
+      <form
+        #profile="ngForm"
+        class="profile-form"
+        [inert]="draft.offer() !== null"
+        appFocusFirstInvalid
+        (ngSubmit)="save(profile)"
+        novalidate
       >
-        <select
-          appFormControl
-          id="profile-locale"
-          name="preferredLocale"
-          [(ngModel)]="fields.preferredLocale"
-        >
-          <option value="cs">{{ localeLabels.cs }}</option>
-          <option value="en">{{ localeLabels.en }}</option>
-        </select>
-      </app-form-field>
+        @if (company()) {
+          <app-form-field
+            label="Název firmy"
+            i18n-label="@@donor.register.companyName"
+            [messages]="nameMessages()"
+          >
+            <input
+              #nameInput
+              appFormControl
+              id="profile-name"
+              name="name"
+              type="text"
+              autocomplete="organization"
+              [(ngModel)]="fields.name"
+              appPrintableOnReceipt
+              required
+              maxlength="160"
+            />
+          </app-form-field>
+          <app-form-field
+            label="Sídlo – ulice a číslo"
+            i18n-label="@@donor.register.companyStreet"
+            [messages]="streetMessages"
+          >
+            <input
+              appFormControl
+              id="profile-street"
+              name="street"
+              type="text"
+              autocomplete="street-address"
+              [(ngModel)]="fields.street"
+              appPrintableOnReceipt
+              required
+              maxlength="200"
+            />
+          </app-form-field>
+        } @else {
+          <app-form-field
+            label="Jméno a příjmení"
+            i18n-label="@@donor.login.name"
+            [messages]="nameMessages()"
+          >
+            <input
+              #nameInput
+              appFormControl
+              id="profile-name"
+              name="name"
+              type="text"
+              autocomplete="name"
+              [(ngModel)]="fields.name"
+              appPrintableOnReceipt
+              required
+              maxlength="160"
+            />
+          </app-form-field>
+          <app-form-field
+            label="Ulice a číslo"
+            i18n-label="@@donor.register.street"
+            [messages]="streetMessages"
+          >
+            <input
+              appFormControl
+              id="profile-street"
+              name="street"
+              type="text"
+              autocomplete="street-address"
+              [(ngModel)]="fields.street"
+              appPrintableOnReceipt
+              required
+              maxlength="200"
+            />
+          </app-form-field>
+        }
 
-      @if (error()) {
-        <p class="ui-field-error profile-error" role="alert">{{ error() }}</p>
-      }
-
-      @if (confirmingStale()) {
-        <div class="ui-callout ui-callout--warning profile-stale" role="alert">
-          <p i18n="@@donor.profile.stale.text">
-            Od chvíle, kdy jste údaje na tomto zařízení rozepsali, se uložené údaje změnily, třeba
-            na jiném zařízení. Vaše úpravy jsme zatím neuložili.
-          </p>
-          <div class="profile-actions">
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--primary profile-stale-keep"
-              (click)="keepEdits(profile)"
-              i18n="@@donor.profile.stale.keep"
-            >
-              Uložit své úpravy místo nich
-            </button>
-            <button
-              type="button"
-              class="ui-button ui-button--large profile-stale-drop"
-              (click)="dropEdits()"
-              i18n="@@donor.profile.stale.drop"
-            >
-              Zahodit své úpravy
-            </button>
-          </div>
+        <div class="field-row">
+          <app-form-field
+            label="PSČ"
+            i18n-label="@@donor.register.postalCode"
+            [messages]="postalCodeMessages"
+          >
+            <input
+              appFormControl
+              id="profile-postal-code"
+              name="postalCode"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              [(ngModel)]="fields.postalCode"
+              required
+              pattern="\s*\d{3}\s*\d{2}\s*"
+            />
+          </app-form-field>
+          <app-form-field
+            label="Město"
+            i18n-label="@@donor.register.city"
+            [messages]="cityMessages"
+          >
+            <input
+              appFormControl
+              id="profile-city"
+              name="city"
+              type="text"
+              autocomplete="address-level2"
+              [(ngModel)]="fields.city"
+              appPrintableOnReceipt
+              required
+              maxlength="120"
+            />
+          </app-form-field>
         </div>
-      }
 
-      @if (newerVersion()) {
-        <div class="ui-callout ui-callout--warning profile-changed" role="alert">
-          <p i18n="@@donor.profile.changed.text">
-            Mezitím se uložené údaje změnily, třeba v jiném okně nebo na jiném zařízení. Vaše úpravy
-            jsme zatím neuložili, zůstávají ve formuláři.
-          </p>
-          @if (newerNotice(); as notice) {
-            <p>{{ notice }}</p>
-          }
-          <div class="profile-actions">
+        <app-form-field
+          label="Jazyk potvrzení"
+          i18n-label="@@donor.profile.locale"
+          hint="Platí pro potvrzení, která si stáhnete poprvé. Ta, která jste si už stáhli, zůstanou v původním jazyce."
+          i18n-hint="@@donor.profile.localeHint.firstDownload"
+        >
+          <select
+            appFormControl
+            id="profile-locale"
+            name="preferredLocale"
+            [(ngModel)]="fields.preferredLocale"
+          >
+            <option value="cs">{{ localeLabels.cs }}</option>
+            <option value="en">{{ localeLabels.en }}</option>
+          </select>
+        </app-form-field>
+
+        @if (error()) {
+          <p class="ui-field-error profile-error" role="alert">{{ error() }}</p>
+        }
+
+        @if (confirmingStale()) {
+          <div class="ui-callout ui-callout--warning profile-stale" role="alert">
+            <p i18n="@@donor.profile.stale.text">
+              Od chvíle, kdy jste údaje na tomto zařízení rozepsali, se uložené údaje změnily, třeba
+              na jiném zařízení. Vaše úpravy jsme zatím neuložili.
+            </p>
+            <div class="profile-actions">
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--primary profile-stale-keep"
+                (click)="keepEdits(profile)"
+                i18n="@@donor.profile.stale.keep"
+              >
+                Uložit své úpravy místo nich
+              </button>
+              <button
+                type="button"
+                class="ui-button ui-button--large profile-stale-drop"
+                (click)="dropEdits()"
+                i18n="@@donor.profile.stale.drop"
+              >
+                Zahodit své úpravy
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (newerVersion()) {
+          <div class="ui-callout ui-callout--warning profile-changed" role="alert">
+            <p i18n="@@donor.profile.changed.text">
+              Mezitím se uložené údaje změnily, třeba v jiném okně nebo na jiném zařízení. Vaše
+              úpravy jsme zatím neuložili, zůstávají ve formuláři.
+            </p>
+            @if (newerNotice(); as notice) {
+              <p>{{ notice }}</p>
+            }
+            <div class="profile-actions">
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--primary profile-changed-keep"
+                [disabled]="saving() || loadingStored()"
+                (click)="saveOverNewer(profile)"
+                i18n="@@donor.profile.changed.keep"
+              >
+                Uložit své úpravy
+              </button>
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--danger-outline profile-changed-load"
+                [disabled]="saving() || loadingStored()"
+                (click)="loadStored()"
+              >
+                @if (loadingStored()) {
+                  <span i18n="@@donor.profile.changed.loading">Načítáme…</span>
+                } @else {
+                  <span i18n="@@donor.profile.changed.load"
+                    >Zahodit své úpravy a načíst uložené údaje</span
+                  >
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+        <div class="profile-actions">
+          @if (!newerVersion()) {
             <button
               appNeedsConnection
-              type="button"
-              class="ui-button ui-button--primary profile-changed-keep"
-              [disabled]="saving() || loadingStored()"
-              (click)="saveOverNewer(profile)"
-              i18n="@@donor.profile.changed.keep"
+              type="submit"
+              class="ui-button ui-button--primary profile-save"
+              [attr.aria-disabled]="saving() ? 'true' : null"
             >
-              Uložit své úpravy
-            </button>
-            <button
-              appNeedsConnection
-              type="button"
-              class="ui-button ui-button--danger-outline profile-changed-load"
-              [disabled]="saving() || loadingStored()"
-              (click)="loadStored()"
-            >
-              @if (loadingStored()) {
-                <span i18n="@@donor.profile.changed.loading">Načítáme…</span>
+              @if (saving()) {
+                <span i18n="@@donor.profile.saving">Ukládáme…</span>
               } @else {
-                <span i18n="@@donor.profile.changed.load"
-                  >Zahodit své úpravy a načíst uložené údaje</span
-                >
+                <span i18n="@@donor.profile.save">Uložit údaje</span>
               }
             </button>
-          </div>
-        </div>
-      }
-
-      <div class="profile-actions">
-        @if (!newerVersion()) {
+          }
           <button
-            appNeedsConnection
-            type="submit"
-            class="ui-button ui-button--primary profile-save"
-            [attr.aria-disabled]="saving() ? 'true' : null"
+            type="button"
+            class="ui-button ui-button--large profile-cancel"
+            [disabled]="loadingStored()"
+            (click)="cancel()"
+            i18n="@@donor.profile.cancel"
           >
-            @if (saving()) {
-              <span i18n="@@donor.profile.saving">Ukládáme…</span>
-            } @else {
-              <span i18n="@@donor.profile.save">Uložit údaje</span>
-            }
+            Zrušit
           </button>
-        }
-        <button
-          type="button"
-          class="ui-button ui-button--large profile-cancel"
-          [disabled]="loadingStored()"
-          (click)="cancel()"
-          i18n="@@donor.profile.cancel"
-        >
-          Zrušit
-        </button>
-      </div>
-    </form>
-  } @else if (donor(); as donor) {
-    <dl class="ui-data-list profile-data">
-      <div class="profile-row">
-        @if (company()) {
-          <dt i18n="@@donor.register.companyName">Název firmy</dt>
-        } @else {
-          <dt i18n="@@donor.login.name">Jméno a příjmení</dt>
-        }
-        <dd>{{ donor.name }}</dd>
-      </div>
-      @if (company()) {
-        <div class="profile-row">
-          <dt i18n="@@donor.register.companyIdentifier">IČO</dt>
-          <dd>{{ donor.companyIdentifier }}</dd>
         </div>
+      </form>
+    </div>
+  } @else if (donor(); as donor) {
+    <div class="ui-list ui-list--inset profile-list">
+      <dl class="ui-list--fields profile-data">
+        <div class="ui-list__row ui-list__item ui-list__field profile-row">
+          @if (company()) {
+            <dt class="ui-list__field-label" i18n="@@donor.register.companyName">Název firmy</dt>
+          } @else {
+            <dt class="ui-list__field-label" i18n="@@donor.login.name">Jméno a příjmení</dt>
+          }
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ donor.name }}</span>
+          </dd>
+        </div>
+        @if (company()) {
+          <div class="ui-list__row ui-list__item ui-list__field profile-row">
+            <dt class="ui-list__field-label" i18n="@@donor.register.companyIdentifier">IČO</dt>
+            <dd class="ui-list__field-body">
+              <span class="ui-list__field-value ui-figures">{{ donor.companyIdentifier }}</span>
+            </dd>
+          </div>
+        }
+        <div class="ui-list__row ui-list__item ui-list__field profile-row">
+          <dt class="ui-list__field-label" i18n="@@donor.profile.address">Adresa</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ address(donor) }}</span>
+          </dd>
+        </div>
+        <div class="ui-list__row ui-list__item ui-list__field profile-row">
+          <dt class="ui-list__field-label" i18n="@@donor.profile.locale">Jazyk potvrzení</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ localeLabels[donor.preferredLocale] }}</span>
+          </dd>
+        </div>
+      </dl>
+      @if (draft.offer() === null) {
+        <button
+          #editButton
+          type="button"
+          class="ui-list__row ui-list__row--action ui-list__item profile-edit"
+          (click)="edit()"
+        >
+          <span class="ui-list__title" i18n="@@donor.profile.edit">Upravit údaje</span>
+        </button>
       }
-      <div class="profile-row">
-        <dt i18n="@@donor.profile.address">Adresa</dt>
-        <dd>{{ address(donor) }}</dd>
-      </div>
-      <div class="profile-row">
-        <dt i18n="@@donor.profile.locale">Jazyk potvrzení</dt>
-        <dd>{{ localeLabels[donor.preferredLocale] }}</dd>
-      </div>
-    </dl>
+    </div>
   }
 
-  <p class="ui-form-status profile-status" role="status">
+  <p class="ui-group-note ui-group-note--status profile-status" role="status">
     @if (draftStatus(); as status) {
       <span>{{ status }}</span>
     } @else if (saved()) {

@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'pressed';
+@use 'touch-target';
 
 .ui-list {
   list-style: none;
@@ -165,7 +166,10 @@ div.ui-list__row {
   overflow: clip;
 
   > li + li,
-  > .ui-list__item + .ui-list__item {
+  > .ui-list__item + .ui-list__item,
+  > dl > .ui-list__item + .ui-list__item,
+  > dl + .ui-list__item,
+  > .ui-list__item + dl > .ui-list__item:first-child {
     position: relative;
     border-top: 0;
 
@@ -414,4 +418,19 @@ button.ui-list__row {
   button.ui-list__row:hover {
     outline: 1px solid CanvasText;
   }
+}
+
+.ui-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+
+  > .ui-pill-button {
+    @include touch-target.reaches-finger-size;
+  }
+}
+
+.ui-list__value.ui-list__actions {
+  justify-content: flex-end;
 }
