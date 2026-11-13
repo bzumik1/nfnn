@@ -1,8 +1,8 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
+import cz.novanadeje.app.operations.application.event.BackupKeyRevealed;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
@@ -28,17 +28,17 @@ import java.util.Optional;
 class BackupKeyRevealedEmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(BackupKeyRevealedEmailSender.class);
-    private static final String KEYS = "donors.backupKeyRevealed.email.";
-    private static final String TEMPLATE = "email/donors/backup-key-revealed";
+    private static final String KEYS = "operations.backupKeyRevealed.email.";
+    private static final String TEMPLATE = "email/operations/backup-key-revealed";
 
     private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final MailSenderProperties sender;
-    private final AdministratorService administrators;
+    private final AdministratorContacts administrators;
 
     BackupKeyRevealedEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender,
-                                 AdministratorService administrators) {
+                                 AdministratorContacts administrators) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
@@ -50,9 +50,9 @@ class BackupKeyRevealedEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendRevealedNotice(BackupKeyRevealed event) {
         try {
-            List<AdministratorContact> recipients = administrators.contacts();
+            List<AdministratorContact> recipients = administrators.all();
             Optional<String> revealedBy = recipients.stream()
-                    .filter(contact -> contact.id().value().equals(event.adminId()))
+                    .filter(contact -> contact.accountId().equals(event.adminId()))
                     .map(contact -> contact.email().value())
                     .findFirst();
             recipients.forEach(recipient -> send(recipient, revealedBy, event.revealedAt()));
@@ -78,7 +78,7 @@ class BackupKeyRevealedEmailSender {
         try {
             mailSender.send(emails.compose(draft));
         } catch (MailException e) {
-            log.error("The backup key notice for admin {} could not be sent: {}", recipient.id(), e.getClass().getSimpleName());
+            log.error("The backup key notice for admin {} could not be sent: {}", recipient.accountId(), e.getClass().getSimpleName());
         }
     }
 

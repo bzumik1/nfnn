@@ -1,20 +1,21 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.donations.infrastructure.signing;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import cz.novanadeje.app.support.MailContents;
+import cz.novanadeje.app.support.MailFixtures;
 import cz.novanadeje.app.support.MailPreviews;
 import cz.novanadeje.app.support.ObservedMailSenders;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -42,6 +43,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,8 +56,8 @@ import static org.mockito.Mockito.when;
 class ReceiptSigningKeyWithdrawnEmailSenderTest {
 
     private static final Instant WITHDRAWN_AT = Instant.parse("2026-11-06T07:30:00Z");
-    private static final DonorId JANA = DonorId.newId(WITHDRAWN_AT.minusSeconds(3000));
-    private static final DonorId PETR = DonorId.newId(WITHDRAWN_AT.minusSeconds(2000));
+    private static final UUID JANA = UuidV7.generate(WITHDRAWN_AT.minusSeconds(3000));
+    private static final UUID PETR = UuidV7.generate(WITHDRAWN_AT.minusSeconds(2000));
     private static final AdministratorContact JANA_CONTACT = new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS);
     private static final AdministratorContact PETR_CONTACT = new AdministratorContact(PETR, new EmailAddress("petr@example.cz"), LocaleCode.EN);
     private static final String SENDER = "info@nfnn.cz";
@@ -63,7 +65,7 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration.class, ThymeleafAutoConfiguration.class));
-    private final AdministratorService administrators = mock(AdministratorService.class);
+    private final AdministratorContacts administrators = mock(AdministratorContacts.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
 
     private ListAppender<ILoggingEvent> logged;
@@ -75,7 +77,7 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
         logged = new ListAppender<>();
         logged.start();
         senderLog.addAppender(logged);
-        when(administrators.contacts()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
     }
 
     @AfterEach
@@ -88,7 +90,7 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     void should_tell_every_administrator_when_withdrawn_given_two_administrators_and_the_current_key() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
 
             assertThat(recording.sent()).hasSize(2);
             MimeMessage czech = MailContents.asReceived(recording.sent().getFirst());
@@ -130,11 +132,26 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     }
 
     @Test
+    @DisplayName("Given two administrators, when a key is withdrawn, then each sees the subject, text and HTML recorded for their language and for the server's own or an earlier key")
+    void should_send_the_recorded_messages_when_withdrawn_given_two_administrators() {
+        RecordingMailSender recording = new RecordingMailSender();
+        contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "39f713d0", false, WITHDRAWN_AT));
+
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().getFirst()), "receipt-signing-key-withdrawn.current.cs");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(1)), "receipt-signing-key-withdrawn.current.en");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(2)), "receipt-signing-key-withdrawn.earlier.cs");
+            MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(3)), "receipt-signing-key-withdrawn.earlier.en");
+        });
+    }
+
+    @Test
     @DisplayName("Given an earlier key withdrawn, when the notice goes out, then it says nothing of a new key")
     void should_say_nothing_of_a_new_key_when_withdrawn_given_an_earlier_key() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "39f713d0", false, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "39f713d0", false, WITHDRAWN_AT));
 
             MimeMessage czech = MailContents.asReceived(recording.sent().getFirst());
             assertThat(MailContents.plainText(czech)).contains("klíč 39f713d0").doesNotContain("nový klíč");
@@ -145,10 +162,10 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     @Test
     @DisplayName("Given the administrator who withdrew the key is no longer one, when the notice goes out, then it names no address")
     void should_name_no_address_when_withdrawn_given_withdrawing_administrator_gone() {
-        when(administrators.contacts()).thenReturn(List.of(PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(PETR_CONTACT));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
 
             MimeMessage english = MailContents.asReceived(recording.sent().getFirst());
             assertThat(MailContents.plainText(english)).contains("an administrator withdrew the key 21fe31df").doesNotContain("jana@example.cz");
@@ -163,7 +180,7 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
         doThrow(new MailSendException("Failed messages: 550 jana@example.cz rejected")).when(failing).send(any(MimeMessage.class));
 
         contexts.withBean(JavaMailSender.class, () -> failing).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
 
             assertThat(logged.list).hasSize(2).allSatisfy(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
@@ -171,8 +188,8 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
                 assertThat(line.getThrowableProxy()).isNull();
             });
             assertThat(logged.list.getFirst().getFormattedMessage())
-                    .isEqualTo("The notice of the withdrawn receipt signing key for admin " + JANA.value() + " could not be sent: MailSendException");
-            assertThat(logged.list.get(1).getFormattedMessage()).contains(PETR.value().toString());
+                    .isEqualTo("The notice of the withdrawn receipt signing key for admin " + JANA + " could not be sent: MailSendException");
+            assertThat(logged.list.get(1).getFormattedMessage()).contains(PETR.toString());
         });
     }
 
@@ -194,7 +211,7 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
                 .when(events).publishEvent(any(Object.class));
 
         contexts.withBean(JavaMailSender.class, () -> refusingJana).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "21fe31df", true, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
 
             assertThat(steps).containsExactly("send jana@example.cz", "send petr@example.cz",
                     "announce " + new ReceiptSigningKeyWithdrawalAnnounced("21fe31df", true) + " after 1 log line(s)");
@@ -204,14 +221,14 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     @Test
     @DisplayName("Given the administrators cannot be read, when the notices are prepared, then the failure is logged and the withdrawal is announced anyway, so the seed is still renewed")
     void should_announce_anyway_when_prepared_given_unreadable_administrators() {
-        when(administrators.contacts()).thenThrow(new IllegalStateException("database gone"));
+        when(administrators.all()).thenThrow(new IllegalStateException("database gone"));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA.value(), "39f713d0", false, WITHDRAWN_AT));
+            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "39f713d0", false, WITHDRAWN_AT));
 
             assertThat(recording.sent()).isEmpty();
             assertThat(logged.list).singleElement().satisfies(line -> assertThat(line.getFormattedMessage())
-                    .isEqualTo("The notices that admin " + JANA.value() + " withdrew a receipt signing key could not be prepared: IllegalStateException"));
+                    .isEqualTo("The notices that admin " + JANA + " withdrew a receipt signing key could not be prepared: IllegalStateException"));
             verify(events).publishEvent(new ReceiptSigningKeyWithdrawalAnnounced("39f713d0", false));
         });
     }

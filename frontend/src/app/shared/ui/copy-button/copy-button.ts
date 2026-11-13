@@ -33,7 +33,7 @@ export class CopyButton {
   readonly copiedStatus = input<string | null>(null);
   readonly failedStatus = input<string | null>(null);
   readonly align = input<'start' | 'end'>('end');
-  readonly tone = input<'light' | 'dark'>('light');
+  readonly tone = input<'light' | 'dark' | 'tinted'>('light');
   readonly copied = output<void>();
 
   protected readonly state = signal<CopyState>('idle');

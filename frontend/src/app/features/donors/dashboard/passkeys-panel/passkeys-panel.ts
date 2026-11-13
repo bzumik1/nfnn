@@ -35,7 +35,8 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;

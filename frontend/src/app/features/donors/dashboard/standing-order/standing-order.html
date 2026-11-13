@@ -1,18 +1,40 @@
 <button
   #toggleButton
   type="button"
-  class="ui-link-button standing-toggle"
+  class="standing-toggle"
+  [class.ui-link-button]="!grouped()"
+  [class.standing-link]="!grouped()"
+  [class.ui-list__row]="grouped()"
   [id]="toggleId"
   [attr.aria-controls]="panelId"
   [attr.aria-expanded]="open()"
   (click)="toggle()"
-  i18n="@@donor.standingOrder.toggle"
 >
-  Jak nastavit trvalý příkaz
+  <span [class.ui-list__title]="grouped()" i18n="@@donor.standingOrder.toggle"
+    >Jak nastavit trvalý příkaz</span
+  >
+  @if (grouped()) {
+    <svg
+      class="ui-list__chevron"
+      [class.ui-list__chevron--open]="open()"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  }
 </button>
 
 <div
   class="standing-panel"
+  [class.standing-box]="!grouped()"
   role="region"
   [id]="panelId"
   [attr.aria-labelledby]="toggleId"
@@ -44,51 +66,60 @@
       </div>
     }
   }
-  <dl class="standing-details">
+  <dl class="standing-details" [class]="look().list">
     @if (shownAccount(); as state) {
       @if (state.kind === 'ready') {
-        <div class="standing-row">
-          <dt i18n="@@home.donate.bank.account">Číslo účtu</dt>
-          <dd>
-            <span class="standing-value ui-figures">{{ state.account.number }}</span>
+        <div class="standing-row" [class]="look().row">
+          <dt [class]="look().term" i18n="@@home.donate.bank.account">Číslo účtu</dt>
+          <dd [class]="look().description">
+            <span class="standing-value ui-figures" [class]="look().value"
+              >{{ accountParts(state.account.number).head }}<wbr />{{
+                accountParts(state.account.number).bankCode
+              }}</span
+            >
             <app-copy-button
               [value]="state.account.number"
               what="číslo účtu"
+              [tone]="grouped() ? 'tinted' : 'light'"
               i18n-what="@@home.donate.bank.copyAccount"
             />
           </dd>
         </div>
       }
     }
-    <div class="standing-row">
-      <dt i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
-      <dd>
-        <span class="standing-value ui-figures">{{ variableSymbol() }}</span>
+    <div class="standing-row" [class]="look().row">
+      <dt [class]="look().term" i18n="@@home.donate.bank.vs">Variabilní symbol</dt>
+      <dd [class]="look().description">
+        <span class="standing-value ui-figures" [class]="look().value">{{ variableSymbol() }}</span>
         <app-copy-button
           [value]="variableSymbol()"
           what="variabilní symbol"
+          [tone]="grouped() ? 'tinted' : 'light'"
           i18n-what="@@home.donate.bank.copyVs"
         />
       </dd>
     </div>
-    <div class="standing-row">
-      <dt i18n="@@home.donate.bank.amount">Částka</dt>
-      <dd>
+    <div class="standing-row" [class]="look().row">
+      <dt [class]="look().term" i18n="@@home.donate.bank.amount">Částka</dt>
+      <dd [class]="look().description">
         @if (chosenAmount(); as chosen) {
-          <span class="standing-value" i18n="@@donor.standingOrder.chosenAmount"
+          <span
+            class="standing-value"
+            [class]="look().value"
+            i18n="@@donor.standingOrder.chosenAmount"
             >{{ chosen }}&nbsp;Kč, nebo jiná, kterou chcete posílat</span
           >
         } @else {
-          <span class="standing-value" i18n="@@donor.standingOrder.amount"
+          <span class="standing-value" [class]="look().value" i18n="@@donor.standingOrder.amount"
             >Jakákoli, kterou chcete posílat</span
           >
         }
       </dd>
     </div>
-    <div class="standing-row">
-      <dt i18n="@@donor.standingOrder.frequency">Opakování</dt>
-      <dd>
-        <span class="standing-value" i18n="@@donor.standingOrder.monthly"
+    <div class="standing-row" [class]="look().row">
+      <dt [class]="look().term" i18n="@@donor.standingOrder.frequency">Opakování</dt>
+      <dd [class]="look().description">
+        <span class="standing-value" [class]="look().value" i18n="@@donor.standingOrder.monthly"
           >Každý měsíc, nebo jak často chcete</span
         >
       </dd>

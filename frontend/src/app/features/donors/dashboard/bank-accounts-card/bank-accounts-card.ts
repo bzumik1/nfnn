@@ -63,7 +63,8 @@ import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 
 type ListState = 'loading' | 'ready' | 'error';
 

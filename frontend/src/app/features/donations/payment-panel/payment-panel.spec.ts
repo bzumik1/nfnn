@@ -207,6 +207,33 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(qrRegion().classList.contains('qr')).toBe(true);
   });
 
+  it('when it stands on a grouped page, then Platíte z jiného zařízení? leaves the bank app buttons and heads the QR it unfolds', async () => {
+    panel().componentRef.setInput('grouped', true);
+    await openWithQr();
+
+    expect(otherDevice().closest('.bank-app')).toBeNull();
+    expect(otherDevice().nextElementSibling).toBe(qrRegion());
+    expect(otherDevice().getAttribute('aria-expanded')).toBe('false');
+    expect(qrRegion().hidden).toBe(true);
+  });
+
+  it('when it stands on a grouped page, then Bankovní spojení heads the bank details and still takes the focus', async () => {
+    panel().componentRef.setInput('grouped', true);
+    await openWithQr();
+
+    const label = Array.from(
+      panel().nativeElement.querySelectorAll('.bank p') as NodeListOf<HTMLElement>,
+    ).find((candidate) => candidate.textContent?.trim() === 'Bankovní spojení');
+    expect(label?.getAttribute('tabindex')).toBe('-1');
+    expect(label?.nextElementSibling?.textContent).toContain('Číslo účtu');
+  });
+
+  it('when it stands outside a grouped page, then Platíte z jiného zařízení? stays with the bank app buttons', async () => {
+    await openWithQr();
+
+    expect(otherDevice().closest('.bank-app')).not.toBeNull();
+  });
+
   it('when the phone shares payment files too, then the second button offers the payment as a file', async () => {
     await openWithQr();
 

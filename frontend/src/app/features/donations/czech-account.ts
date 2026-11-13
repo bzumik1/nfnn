@@ -32,6 +32,16 @@ export function bankCodeOf(accountNumber: string): string | null {
   return ACCOUNT_NUMBER.exec(accountNumber)?.[3] ?? null;
 }
 
+export function splitBeforeBankCode(accountNumber: string): {
+  readonly head: string;
+  readonly bankCode: string;
+} {
+  const bankCode = bankCodeOf(accountNumber);
+  return bankCode === null
+    ? { head: accountNumber, bankCode: '' }
+    : { head: accountNumber.slice(0, -bankCode.length), bankCode };
+}
+
 export function accountMatchesIban(accountNumber: string, iban: string): boolean {
   const expected = ibanOfAccountNumber(accountNumber);
   return expected !== null && expected === iban;
