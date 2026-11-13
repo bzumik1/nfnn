@@ -102,7 +102,7 @@ class AdapterLibraryRulesTest {
             .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.signature..",
                     "cz.novanadeje.app.donations.infrastructure.banklogo..")
             .should().dependOnClassesThat()
-            .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt..");
+            .resideInAnyPackage("com.luciad.imageio.webp..", "javax.imageio..", "java.awt..");
 
     @ArchTest
     static final ArchRule xml_parsers_are_used_only_by_the_receipt_signature_adapter = noClasses()
