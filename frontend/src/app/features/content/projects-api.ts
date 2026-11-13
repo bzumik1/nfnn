@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { refreshedAfterKeptCopy } from '../../core/connectivity/kept-answer-refresh';
 import { ifMatch } from '../../core/version/row-version';
 import { inject, Injectable } from '@angular/core';
@@ -221,13 +221,14 @@ export class ProjectsApi {
     return this.http.post<UploadedImageResponse>(ADMIN_MEDIA, form);
   }
 
-  published(page: number, size: number): Observable<ProjectPageResponse> {
-    return this.http.get<ProjectPageResponse>(PUBLIC_PROJECTS, { params: { page, size } });
+  published(page: number, size: number, context?: HttpContext): Observable<ProjectPageResponse> {
+    return this.http.get<ProjectPageResponse>(PUBLIC_PROJECTS, { params: { page, size }, context });
   }
 
-  publishedBySlug(slug: string): Observable<ProjectResponse> {
-    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${slug}`, {
-      context: refreshedAfterKeptCopy(),
-    });
+  publishedBySlug(
+    slug: string,
+    context: HttpContext = refreshedAfterKeptCopy(),
+  ): Observable<ProjectResponse> {
+    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${slug}`, { context });
   }
 }

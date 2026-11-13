@@ -2,10 +2,11 @@ import { inject, Injectable, signal } from '@angular/core';
 import { catchError, EMPTY, expand, forkJoin, Observable, of, reduce, tap } from 'rxjs';
 import { NewsApi, NewsPageResponse } from '../news-api';
 import { ProjectPageResponse, ProjectResponse, ProjectsApi } from '../projects-api';
+import { LOOK_BACK_PAGE_SIZE } from '../content-page-sizes';
 
 export const STORIES_PAGE_SIZE = 50;
 export const MAX_STORY_PAGES = 20;
-export const LOOK_BACK_PAGE_SIZE = 50;
+export { LOOK_BACK_PAGE_SIZE };
 
 export interface LookBack {
   readonly year: number;

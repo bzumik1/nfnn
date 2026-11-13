@@ -88,7 +88,7 @@ export class ContentDetail {
       .subscribe({
         next: (page) => {
           this.page.set(page);
-          this.nameTabAfterPage();
+          queueMicrotask(() => this.nameTabAfterPage());
           this.state.set('ready');
           if (page.slug !== slug) {
             void this.router.navigate([page.backPath, page.slug], { replaceUrl: true });
