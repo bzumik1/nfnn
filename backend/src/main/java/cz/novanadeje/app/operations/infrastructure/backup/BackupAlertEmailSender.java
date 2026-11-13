@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.operations.application.backup.BackupAdministrationView;
 import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
@@ -51,7 +50,7 @@ class BackupAlertEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendProblems(BackupProblemsDetected event) {
         String intro = text("problem.intro", BackupFormats.time(event.detectedAt()));
-        List<String> problems = describe(event.problems(), event.view());
+        List<String> problems = describe(event.problems(), event.lastBackup(), event.lastTestRestore());
         String consequence = text("problem.consequence");
         String action = text("problem.action");
         String next = text("problem.next");
@@ -69,11 +68,11 @@ class BackupAlertEmailSender {
     public void sendRecovery(BackupRecovered event) {
         String intro = text("recovery.intro", BackupFormats.time(event.recoveredAt()));
         String resolved = text("recovery.resolved", String.join(", ", event.resolvedProblems().stream().sorted().map(this::label).toList()));
-        String lastBackup = event.view().lastBackup()
+        String lastBackup = event.lastBackup()
                 .map(run -> text("recovery.lastBackup", run.fileName().orElse("?"), BackupFormats.time(run.finishedAt()),
                         BackupFormats.size(run.sizeBytes().orElse(0L))))
                 .orElseGet(() -> text("recovery.noBackup"));
-        String lastTest = event.view().lastTestRestore()
+        String lastTest = event.lastTestRestore()
                 .map(run -> text("recovery.lastTestRestore", BackupFormats.time(run.finishedAt()), run.tables().orElse(0)))
                 .orElseGet(() -> text("recovery.noTestRestore"));
         String footer = text("footer");
@@ -83,13 +82,11 @@ class BackupAlertEmailSender {
                 paragraphs(List.of(text("greeting"), intro, resolved, lastBackup, lastTest, text("signature"), footer)), footer));
     }
 
-    private List<String> describe(Set<BackupProblem> problems, BackupAdministrationView view) {
-        return problems.stream().sorted().map(problem -> describe(problem, view)).toList();
+    private List<String> describe(Set<BackupProblem> problems, Optional<BackupRun> backup, Optional<BackupRun> test) {
+        return problems.stream().sorted().map(problem -> describe(problem, backup, test)).toList();
     }
 
-    private String describe(BackupProblem problem, BackupAdministrationView view) {
-        Optional<BackupRun> backup = view.lastBackup();
-        Optional<BackupRun> test = view.lastTestRestore();
+    private String describe(BackupProblem problem, Optional<BackupRun> backup, Optional<BackupRun> test) {
         return switch (problem) {
             case BACKUPS_UNAVAILABLE, BACKUP_MISSING, TEST_RESTORE_MISSING -> text("problem." + problem.name());
             case BACKUP_FAILED -> text("problem.BACKUP_FAILED", BackupFormats.time(finishedAt(backup)), error(backup));

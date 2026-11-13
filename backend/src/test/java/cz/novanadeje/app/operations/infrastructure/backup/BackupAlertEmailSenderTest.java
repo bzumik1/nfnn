@@ -1,9 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.operations.application.backup.BackupAdministrationView;
 import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
-import cz.novanadeje.app.operations.domain.backup.BackupHealth;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
@@ -58,7 +56,7 @@ class BackupAlertEmailSenderTest {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
             sender(context).sendProblems(new BackupProblemsDetected(Set.of(BackupProblem.TEST_RESTORE_FAILED, BackupProblem.BACKUP_FAILED),
-                    view(FAILED_BACKUP, FAILED_TEST_RESTORE), CHECKED_AT));
+                    Optional.of(FAILED_BACKUP), Optional.of(FAILED_TEST_RESTORE), CHECKED_AT));
 
             MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
             assertThat(email.getRecipients(Message.RecipientType.TO)).extracting(Object::toString).containsExactly("info@nfnn.cz");
@@ -92,7 +90,7 @@ class BackupAlertEmailSenderTest {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
             sender(context).sendRecovery(new BackupRecovered(Set.of(BackupProblem.TEST_RESTORE_STALE, BackupProblem.BACKUP_FAILED),
-                    view(BACKUP, TEST_RESTORE), CHECKED_AT));
+                    Optional.of(BACKUP), Optional.of(TEST_RESTORE), CHECKED_AT));
 
             MimeMessage email = MailContents.asReceived(recording.sent().getFirst());
             assertThat(email.getSubject()).isEqualTo("Zálohování databáze zase funguje – Nová naděje");
@@ -113,11 +111,6 @@ class BackupAlertEmailSenderTest {
                     """);
             assertThat(MailContents.html(email)).contains("Poslední zkušební obnova: 23. 10. 2026 8:00, 42 tabulek.");
         });
-    }
-
-    private static BackupAdministrationView view(BackupRun lastBackup, BackupRun lastTestRestore) {
-        return new BackupAdministrationView(true, List.of(), Optional.of(lastBackup), Optional.of(lastTestRestore), Optional.empty(), List.of(), 0, false,
-                BackupHealth.unavailable());
     }
 
     private static BackupRun run(RunOutcome outcome, Instant finishedAt, Optional<String> fileName, Optional<Long> sizeBytes, Optional<Integer> tables,
