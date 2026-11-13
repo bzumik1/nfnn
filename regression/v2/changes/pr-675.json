@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.sync.AdminDonationsRowsTest > Given a gift of an erased donor, when its payment's row is made from the gift's donor record or read as the stored payment, then both leave out the payer and carry one version",
+    "reason": "#621 (architecture audit, Jakub 2026-11-13): the administration copy's rows moved from donations.application.sync to donations.application.admincopy to break a package cycle, so the unchanged test moved with them",
+    "replacement": "donations.application.admincopy.AdminDonationsRowsTest > Given a gift of an erased donor, when its payment's row is made from the gift's donor record or read as the stored payment, then both leave out the payer and carry one version",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.sync.AdminDonationsRowsTest > Given a payment without a gift, when its row is made or read as the stored payment, then both keep the payer and carry one version",
+    "reason": "#621 (architecture audit, Jakub 2026-11-13): the administration copy's rows moved from donations.application.sync to donations.application.admincopy to break a package cycle, so the unchanged test moved with them",
+    "replacement": "donations.application.admincopy.AdminDonationsRowsTest > Given a payment without a gift, when its row is made or read as the stored payment, then both keep the payer and carry one version",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.sync.AdminDonationsRowsTest > Given a gift, when its payment's row is made from another donor's record, then it is refused",
+    "reason": "#621 (architecture audit, Jakub 2026-11-13): the administration copy's rows moved from donations.application.sync to donations.application.admincopy to break a package cycle, so the unchanged test moved with them",
+    "replacement": "donations.application.admincopy.AdminDonationsRowsTest > Given a gift, when its payment's row is made from another donor's record, then it is refused",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.sync.AdminDonationsRowsTest > Given stored report settings, when their row is made for two months with different next reports and sent reports, then both rows carry the version these settings had before the row named its next report",
+    "reason": "#621 (architecture audit, Jakub 2026-11-13): the administration copy's rows moved from donations.application.sync to donations.application.admincopy to break a package cycle, so the unchanged test moved with them",
+    "replacement": "donations.application.admincopy.AdminDonationsRowsTest > Given stored report settings, when their row is made for two months with different next reports and sent reports, then both rows carry the version these settings had before the row named its next report",
+    "contract": "docs/system-overview.md, donations (the administration's device sync)"
+  }
+]
