@@ -36,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -81,6 +82,8 @@ class BankStatementRecorderTest {
     private ApplicationEventPublisher events;
     @Mock
     private DonationRepository donations;
+    @Captor
+    private ArgumentCaptor<List<BankPayment>> fresh;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
@@ -359,12 +362,10 @@ class BankStatementRecorderTest {
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 2, Optional.empty()),
                 new ImportPlan(HOURLY_REQUEST, false), trigger, NOW);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
         InOrder order = inOrder(payments, pairing, donations, events);
-        order.verify(payments).saveAll(saved.capture());
+        order.verify(payments).saveAll(fresh.capture());
         order.verify(pairing).pairUnpaired(NOW);
-        order.verify(donations).donorsOfBankPayments(List.of(saved.getValue().getFirst().id()));
+        order.verify(donations).donorsOfBankPayments(List.of(fresh.getValue().getFirst().id()));
         order.verify(events).publishEvent(new DonationsArrived(Set.of(JANA.value()), NOW));
     }
 
@@ -393,10 +394,8 @@ class BankStatementRecorderTest {
         recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(movement(1001, LocalDate.of(2026, 10, 10)),
                 movement(1002, LocalDate.of(2026, 10, 11))), 2, Optional.empty()), new ImportPlan(DEEP_REQUEST, true), ImportTrigger.STARTUP, NOW);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
-        verify(payments).saveAll(saved.capture());
-        verify(donations).donorsOfBankPayments(List.of(saved.getValue().get(1).id()));
+        verify(payments).saveAll(fresh.capture());
+        verify(donations).donorsOfBankPayments(List.of(fresh.getValue().get(1).id()));
     }
 
     @Test
@@ -412,10 +411,8 @@ class BankStatementRecorderTest {
                 movement(1002, LocalDate.of(2026, 10, 12))), 2, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY,
                 afterPragueMidnight);
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
-        verify(payments).saveAll(saved.capture());
-        verify(donations).donorsOfBankPayments(List.of(saved.getValue().get(1).id()));
+        verify(payments).saveAll(fresh.capture());
+        verify(donations).donorsOfBankPayments(List.of(fresh.getValue().get(1).id()));
     }
 
     @Test
