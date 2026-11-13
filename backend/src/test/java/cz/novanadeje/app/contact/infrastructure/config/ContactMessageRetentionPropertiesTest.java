@@ -47,6 +47,15 @@ class ContactMessageRetentionPropertiesTest {
     }
 
     @Test
+    @DisplayName("Given no configuration at all, when the context starts, then the missing group still fails naming the property")
+    void should_fail_naming_property_when_started_given_no_configuration() {
+        new ApplicationContextRunner().withUserConfiguration(ContactApplicationConfiguration.class).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("app.contact.retention.max-age");
+        });
+    }
+
+    @Test
     @DisplayName("Given an empty retention, when the context starts, then it fails naming the property")
     void should_fail_naming_property_when_started_given_empty_retention() {
         contexts.withPropertyValues("app.contact.retention.max-age=").run(context -> {

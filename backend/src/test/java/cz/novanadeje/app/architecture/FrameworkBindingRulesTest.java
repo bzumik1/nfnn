@@ -13,6 +13,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.context.Lifecycle;
 import org.springframework.context.event.ApplicationContextEvent;
 
@@ -23,6 +26,7 @@ import java.util.stream.Stream;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @AnalyzeClasses(
@@ -47,6 +51,21 @@ class FrameworkBindingRulesTest {
             .that().resideInAnyPackage("..application..", "..domain..")
             .should().dependOnClassesThat(assignableTo(ApplicationContextEvent.class).or(assignableTo(Lifecycle.class))
                     .as("framework lifecycle events or callbacks"))
+            .because(DRIVING_ADAPTERS);
+
+    @ArchTest
+    static final ArchRule the_application_and_the_domain_implement_no_bean_callbacks = noClasses()
+            .that().resideInAnyPackage("..application..", "..domain..")
+            .should().beAssignableTo(InitializingBean.class)
+            .orShould().beAssignableTo(DisposableBean.class)
+            .orShould().beAssignableTo(SmartInitializingSingleton.class)
+            .because(DRIVING_ADAPTERS);
+
+    @ArchTest
+    static final ArchRule the_application_and_the_domain_have_no_bean_callback_methods = noMethods()
+            .that().areDeclaredInClassesThat().resideInAnyPackage("..application..", "..domain..")
+            .should().beAnnotatedWith("jakarta.annotation.PostConstruct")
+            .orShould().beAnnotatedWith("jakarta.annotation.PreDestroy")
             .because(DRIVING_ADAPTERS);
 
     @BeforeAll
@@ -95,7 +114,15 @@ class FrameworkBindingRulesTest {
                                 + "void stop(org.springframework.context.event.ContextClosedEvent closed) {} }"),
                 planted("the_application_and_the_domain_do_not_react_to_the_framework_lifecycle", "operations.application.PlantedLifecycle",
                         "public class PlantedLifecycle implements org.springframework.context.SmartLifecycle { "
-                                + "public void start() {} public void stop() {} public boolean isRunning() { return false; } }"));
+                                + "public void start() {} public void stop() {} public boolean isRunning() { return false; } }"),
+                planted("the_application_and_the_domain_implement_no_bean_callbacks", "donors.application.PlantedInitializingBean",
+                        "public class PlantedInitializingBean implements org.springframework.beans.factory.InitializingBean { "
+                                + "public void afterPropertiesSet() {} }"),
+                planted("the_application_and_the_domain_have_no_bean_callback_methods", "donors.domain.PlantedPostConstruct",
+                        "public class PlantedPostConstruct { @jakarta.annotation.PostConstruct void start() {} }"),
+                planted("the_application_and_the_domain_implement_no_bean_callbacks", "contact.application.PlantedSingletonsReady",
+                        "public class PlantedSingletonsReady implements org.springframework.beans.factory.SmartInitializingSingleton { "
+                                + "public void afterSingletonsInstantiated() {} }"));
     }
 
     static Stream<PlantedClass> allowedClasses() {

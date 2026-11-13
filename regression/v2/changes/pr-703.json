@@ -1,0 +1,306 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "contact.application.ContactMessageRetentionPropertiesTest > Given a configured retention, when the context starts, then it is used",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "contact.infrastructure.config.ContactMessageRetentionPropertiesTest > Given a configured retention, when the context starts, then it is used",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "contact.application.ContactMessageRetentionPropertiesTest > Given an empty retention, when the context starts, then it fails naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "contact.infrastructure.config.ContactMessageRetentionPropertiesTest > Given an empty retention, when the context starts, then it fails naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "contact.application.ContactMessageRetentionPropertiesTest > Given only application.yml, when the context starts, then contact messages are kept for 365 days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "contact.infrastructure.config.ContactMessageRetentionPropertiesTest > Given only application.yml, when the context starts, then contact messages are kept for 365 days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "contact.application.ContactMessageRetentionPropertiesTest > [1] maxAge = \"PT0S\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "contact.infrastructure.config.ContactMessageRetentionPropertiesTest > [1] maxAge = \"PT0S\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "contact.application.ContactMessageRetentionPropertiesTest > [2] maxAge = \"-P1D\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "contact.infrastructure.config.ContactMessageRetentionPropertiesTest > [2] maxAge = \"-P1D\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.media.UnusedMediaCleanupPropertiesTest > Given a configured grace, when the context starts, then it is used",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "content.infrastructure.config.UnusedMediaCleanupPropertiesTest > Given a configured grace, when the context starts, then it is used",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.media.UnusedMediaCleanupPropertiesTest > Given an empty grace, when the context starts, then it fails naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "content.infrastructure.config.UnusedMediaCleanupPropertiesTest > Given an empty grace, when the context starts, then it fails naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.media.UnusedMediaCleanupPropertiesTest > Given only application.yml, when the context starts, then unused photos are kept for 7 days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "content.infrastructure.config.UnusedMediaCleanupPropertiesTest > Given only application.yml, when the context starts, then unused photos are kept for 7 days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.media.UnusedMediaCleanupPropertiesTest > [1] maxAge = \"PT0S\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "content.infrastructure.config.UnusedMediaCleanupPropertiesTest > [1] maxAge = \"PT0S\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.media.UnusedMediaCleanupPropertiesTest > [2] maxAge = \"-P1D\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "content.infrastructure.config.UnusedMediaCleanupPropertiesTest > [2] maxAge = \"-P1D\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorPropertiesTest > Given ADMIN_EMAILS with two addresses and spaces, when the context starts, then both addresses are configured",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.AdministratorPropertiesTest > Given ADMIN_EMAILS with two addresses and spaces, when the context starts, then both addresses are configured",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorPropertiesTest > Given a null list, when the properties are made, then no administrator is configured",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.AdministratorPropertiesTest > Given a null list, when the properties are made, then no administrator is configured",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorPropertiesTest > Given a value that is not an e-mail address, when the properties are made, then the startup fails",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.AdministratorPropertiesTest > Given a value that is not an e-mail address, when the properties are made, then the startup fails",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorPropertiesTest > Given only application.yml without ADMIN_EMAILS, when the context starts, then no administrator is configured",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.AdministratorPropertiesTest > Given only application.yml without ADMIN_EMAILS, when the context starts, then no administrator is configured",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > Given a positive lifetime and one link, when the properties are made, then they keep the values",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > Given a positive lifetime and one link, when the properties are made, then they keep the values",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > Given no lifetime, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > Given no lifetime, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > Given only application.yml, when the context starts, then a link lives a day and a donor holds at most three",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > Given only application.yml, when the context starts, then a link lives a day and a donor holds at most three",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > Given zero live links, when the context starts, then it fails naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > Given zero live links, when the context starts, then it fails naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > [1] lifetime = \"PT0S\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > [1] lifetime = \"PT0S\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorEmailVerificationPropertiesTest > [2] lifetime = \"-PT1H\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorEmailVerificationPropertiesTest > [2] lifetime = \"-PT1H\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > Given a positive lifetime and one link, when the properties are made, then they keep the values",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > Given a positive lifetime and one link, when the properties are made, then they keep the values",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > Given no lifetime, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > Given no lifetime, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > Given only application.yml, when the context starts, then a link lives one hour and a donor holds at most three",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > Given only application.yml, when the context starts, then a link lives one hour and a donor holds at most three",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > Given zero live links, when the context starts, then it fails naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > Given zero live links, when the context starts, then it fails naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > [1] lifetime = \"PT0S\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > [1] lifetime = \"PT0S\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorPasswordResetPropertiesTest > [2] lifetime = \"-PT1H\"",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorPasswordResetPropertiesTest > [2] lifetime = \"-PT1H\"",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSecondFactorPropertiesTest > Given a recovery lifetime that is not positive, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSecondFactorPropertiesTest > Given a recovery lifetime that is not positive, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSecondFactorPropertiesTest > Given only application.yml, when the context starts, then a sign-in code waits five minutes for five attempts and a recovery by payment stays open fourteen days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSecondFactorPropertiesTest > Given only application.yml, when the context starts, then a sign-in code waits five minutes for five attempts and a recovery by payment stays open fourteen days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionPropertiesTest > Given SESSION_REMEMBER_DAYS of 30, when the context starts, then a remembered sign-in lasts 30 days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSessionPropertiesTest > Given SESSION_REMEMBER_DAYS of 30, when the context starts, then a remembered sign-in lasts 30 days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionPropertiesTest > Given no remembered length, when the properties are made, then a remembered sign-in lasts 14 days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSessionPropertiesTest > Given no remembered length, when the properties are made, then a remembered sign-in lasts 14 days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionPropertiesTest > Given only application.yml, when the context starts, then a remembered sign-in lasts 14 days",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSessionPropertiesTest > Given only application.yml, when the context starts, then a remembered sign-in lasts 14 days",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionPropertiesTest > [1] days = 0",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSessionPropertiesTest > [1] days = 0",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorSessionPropertiesTest > [2] days = 31",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.DonorSessionPropertiesTest > [2] days = 31",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.RegistrationReminderPropertiesTest > Given a blank cron, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.RegistrationReminderPropertiesTest > Given a blank cron, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.RegistrationReminderPropertiesTest > Given a delay that is not positive, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.RegistrationReminderPropertiesTest > Given a delay that is not positive, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.RegistrationReminderPropertiesTest > Given a window no longer than the delay, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.RegistrationReminderPropertiesTest > Given a window no longer than the delay, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.RegistrationReminderPropertiesTest > Given a window that reaches the deletion of unconfirmed registrations, when the properties are made, then they fail naming the property",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.RegistrationReminderPropertiesTest > Given a window that reaches the deletion of unconfirmed registrations, when the properties are made, then they fail naming the property",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.RegistrationReminderPropertiesTest > Given only application.yml, when the context starts, then the reminder runs hourly for registrations one to seven days old",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the configuration binding moved from the application layer to infrastructure/config, and its unchanged test moved with it",
+    "replacement": "donors.infrastructure.config.RegistrationReminderPropertiesTest > Given only application.yml, when the context starts, then the reminder runs hourly for registrations one to seven days old",
+    "contract": ".claude/rules/backend.md, Configuration and operations"
+  }
+]
