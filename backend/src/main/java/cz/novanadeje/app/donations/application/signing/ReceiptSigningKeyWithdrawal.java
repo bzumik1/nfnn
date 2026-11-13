@@ -58,25 +58,33 @@ public class ReceiptSigningKeyWithdrawal {
             log.warn("Admin {} asked to withdraw a receipt signing key while it is paused after refused second factors", adminId);
             throw new ReceiptSigningKeyWithdrawalPaused();
         }
-        try {
-            WithdrawnReceiptSigningKey withdrawn = transactions.execute(status -> withdrawLocked(adminId, keyId, proof, now));
-            log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
-            return withdrawn;
-        } catch (RefusedSecondFactor refusal) {
-            if (withdrawnByNow(keyId)) {
-                throw new ReceiptSigningKeyAlreadyWithdrawn(keyId);
+        return switch (transactions.execute(status -> attempt(adminId, keyId, proof, now))) {
+            case Attempt.Withdrawn(WithdrawnReceiptSigningKey withdrawn) -> {
+                log.warn("Admin {} withdrew the receipt signing key {}", adminId, keyId);
+                yield withdrawn;
             }
-            refusals.record(adminId, keyId, now);
-            throw refusal.refused;
-        }
+            case Attempt.Refused(DomainException refused) -> throw recordedRefusal(adminId, keyId, refused, now);
+        };
     }
 
-    private WithdrawnReceiptSigningKey withdrawLocked(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof, Instant now) {
+    private Attempt attempt(UUID adminId, ReceiptSigningKeyId keyId, FreshSecondFactorProof proof, Instant now) {
         try {
             freshSecondFactor.require(adminId, proof);
         } catch (DomainException refused) {
-            throw new RefusedSecondFactor(refused);
+            return new Attempt.Refused(refused);
         }
+        return new Attempt.Withdrawn(withdrawLocked(adminId, keyId, now));
+    }
+
+    private DomainException recordedRefusal(UUID adminId, ReceiptSigningKeyId keyId, DomainException refused, Instant now) {
+        if (withdrawnByNow(keyId)) {
+            return new ReceiptSigningKeyAlreadyWithdrawn(keyId);
+        }
+        refusals.record(adminId, keyId, now);
+        return refused;
+    }
+
+    private WithdrawnReceiptSigningKey withdrawLocked(UUID adminId, ReceiptSigningKeyId keyId, Instant now) {
         ReceiptSigningKey key = refuseUnlessWithdrawable(published(keyId, keys.lockForWithdrawal(keyId)));
         boolean current = published.isCurrent(keyId);
         keys.save(key.withdrawn(content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
@@ -104,13 +112,12 @@ public class ReceiptSigningKeyWithdrawal {
         return key;
     }
 
-    private static final class RefusedSecondFactor extends RuntimeException {
+    private sealed interface Attempt {
 
-        private final DomainException refused;
+        record Withdrawn(WithdrawnReceiptSigningKey key) implements Attempt {
+        }
 
-        private RefusedSecondFactor(DomainException refused) {
-            super(refused.code(), refused, false, false);
-            this.refused = refused;
+        record Refused(DomainException refusal) implements Attempt {
         }
     }
 }
