@@ -21,6 +21,33 @@ public final class ReceiptProofReader {
     }
 
     public record KnownKey(ReceiptSigningKeyId id, byte[] publicKey, boolean revoked) {
+
+        public KnownKey {
+            if (id == null || publicKey == null || publicKey.length != ReceiptSigningKeyId.PUBLIC_KEY_BYTES) {
+                throw new IllegalArgumentException("A known key has its id and its " + ReceiptSigningKeyId.PUBLIC_KEY_BYTES + "-byte public key");
+            }
+            publicKey = publicKey.clone();
+        }
+
+        @Override
+        public byte[] publicKey() {
+            return publicKey.clone();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof KnownKey key && id.equals(key.id) && Arrays.equals(publicKey, key.publicKey) && revoked == key.revoked;
+        }
+
+        @Override
+        public int hashCode() {
+            return id.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "KnownKey[" + id + ", revoked " + revoked + "]";
+        }
     }
 
     public record ReadProof(ReceiptSigningKeyId keyId, SignedReceipt receipt) {
