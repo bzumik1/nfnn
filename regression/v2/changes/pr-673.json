@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.news.NewsAdminServiceTest > Given an address a project had before, when an article is created there, then the project's redirect is kept",
+    "reason": "PR #673 (architecture audit #621, Jakub 2026-11-13): the former slugs port is split per aggregate, so a service holds only the port of its own kind and cannot release the other kind's former slug by type; the adapter test proves that one kind's former slug survives the other's being forgotten",
+    "replacement": "content.infrastructure.persistence.JpaFormerSlugsTest > Given one former address of an article and of a project, when the project's is forgotten, then it still leads to the article",
+    "contract": "docs/api-contract.md, Content (FormerNewsSlugs, FormerProjectSlugs)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "content.application.project.ProjectAdminServiceTest > Given an address an article had before, when a project is created there, then the article's redirect is kept",
+    "reason": "PR #673 (architecture audit #621, Jakub 2026-11-13): the former slugs port is split per aggregate, so a service holds only the port of its own kind and cannot release the other kind's former slug by type; the adapter test proves that one kind's former slug survives the other's being forgotten",
+    "replacement": "content.infrastructure.persistence.JpaFormerSlugsTest > Given one former address of an article and of a project, when the project's is forgotten, then it still leads to the article",
+    "contract": "docs/api-contract.md, Content (FormerNewsSlugs, FormerProjectSlugs)"
+  }
+]
