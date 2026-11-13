@@ -82,7 +82,7 @@ class ImportBankPaymentsServiceTest {
             clock.advance(Duration.ofSeconds(2));
             return statement;
         });
-        when(recorder.record(statement, new ImportPlan(DEEP, true), NOW.plusSeconds(2))).thenReturn(new ImportCounts(4, 3, 1, 0, 0, 0, 0, 3));
+        when(recorder.record(statement, new ImportPlan(DEEP, true), ImportTrigger.HISTORY, NOW.plusSeconds(2))).thenReturn(new ImportCounts(4, 3, 1, 0, 0, 0, 0, 3));
 
         ImportReport report = service.importHistory(run, ImportSettings.defaults());
 
@@ -160,7 +160,7 @@ class ImportBankPaymentsServiceTest {
             newer.set(historyImports.queue(new ImportPeriod(LocalDate.of(2024, 1, 1), LocalDate.of(2026, 10, 17)), true, NOW, NOW));
             return statement;
         });
-        when(recorder.record(any(), any(), any())).thenReturn(ImportCounts.none());
+        when(recorder.record(any(), any(), any(), any())).thenReturn(ImportCounts.none());
 
         service.importHistory(run, ImportSettings.defaults());
 
@@ -180,14 +180,14 @@ class ImportBankPaymentsServiceTest {
             assertThat(mockingDetails(recorder).getInvocations()).isEmpty();
             return statement;
         });
-        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(counts);
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW)).thenReturn(counts);
 
         ImportReport report = service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
 
         InOrder order = inOrder(states, source, recorder);
         order.verify(states).current();
         order.verify(source).fetch(SERVABLE);
-        order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), NOW);
+        order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW);
         assertThat(report).isEqualTo(new ImportReport(ImportTrigger.HOURLY, SERVABLE, false, Optional.of(SERVABLE),
                 ImportCoverage.of(SERVABLE), counts, Optional.empty(), Optional.empty(), Optional.empty()));
         assertThat(report.completed()).isTrue();
@@ -201,7 +201,7 @@ class ImportBankPaymentsServiceTest {
         covered.succeeded(ImportCoverage.of(SERVABLE), NOW);
         when(states.current()).thenReturn(BankImportState.initial(NOW), covered);
         when(source.fetch(SERVABLE)).thenReturn(statement);
-        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(new ImportCounts(9, 8, 1, 2, 3, 4, 1, 5));
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW)).thenReturn(new ImportCounts(9, 8, 1, 2, 3, 4, 1, 5));
         Logger logger = (Logger) LoggerFactory.getLogger(ImportBankPaymentsService.class);
         ListAppender<ILoggingEvent> logs = new ListAppender<>();
         logs.start();
@@ -290,7 +290,7 @@ class ImportBankPaymentsServiceTest {
         ImportReport report = service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
 
         verify(recorder).recordFailure(kind, "refused", NOW);
-        verify(recorder, never()).record(any(), any(), any());
+        verify(recorder, never()).record(any(), any(), any(), any());
         assertThat(report.failure()).contains(kind);
         assertThat(report.failureMessage()).contains("refused");
         assertThat(report.followUp()).isEmpty();
@@ -316,7 +316,7 @@ class ImportBankPaymentsServiceTest {
         IllegalStateException failure = new IllegalStateException("pairing failed for payment 1001");
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
-        when(recorder.record(any(), any(), any())).thenThrow(failure);
+        when(recorder.record(any(), any(), any(), any())).thenThrow(failure);
 
         assertThatThrownBy(() -> service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults())).isSameAs(failure);
 
@@ -342,12 +342,12 @@ class ImportBankPaymentsServiceTest {
         BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
-        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW)).thenReturn(ImportCounts.none());
 
         service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
 
         InOrder order = inOrder(recorder, alertDelivery);
-        order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), NOW);
+        order.verify(recorder).record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW);
         order.verify(alertDelivery).deliverWaiting();
     }
 
@@ -382,7 +382,7 @@ class ImportBankPaymentsServiceTest {
         BankStatement statement = new BankStatement(SERVABLE, Optional.of(SERVABLE), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
-        when(recorder.record(statement, new ImportPlan(SERVABLE, false), NOW)).thenReturn(ImportCounts.none());
+        when(recorder.record(statement, new ImportPlan(SERVABLE, false), ImportTrigger.HOURLY, NOW)).thenReturn(ImportCounts.none());
         doThrow(new IllegalStateException("database gone")).when(alertDelivery).deliverWaiting();
 
         ImportReport report = service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults());
@@ -416,7 +416,7 @@ class ImportBankPaymentsServiceTest {
         BankStatement statement = new BankStatement(recent, Optional.of(recent), List.of(), 0, Optional.empty());
         when(states.current()).thenReturn(attempted);
         when(source.fetch(recent)).thenReturn(statement);
-        when(recorder.record(statement, new ImportPlan(recent, false), NOW)).thenReturn(ImportCounts.none());
+        when(recorder.record(statement, new ImportPlan(recent, false), ImportTrigger.ON_DEMAND, NOW)).thenReturn(ImportCounts.none());
 
         Optional<ImportReport> report = service.importOnDemand(DEEP_SETTINGS, COOLDOWN);
 

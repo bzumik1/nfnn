@@ -11,12 +11,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface DonationRepository {
 
     void save(Donation donation);
 
     boolean existsForBankPayment(BankPaymentId bankPayment);
+
+    Set<DonorReference> donorsOfBankPayments(Collection<BankPaymentId> bankPayments);
 
     Optional<Donation> findByBankPayment(BankPaymentId bankPayment);
 

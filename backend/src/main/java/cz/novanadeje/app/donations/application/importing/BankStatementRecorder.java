@@ -8,6 +8,8 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
+import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.CoverageChange;
@@ -15,6 +17,8 @@ import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
+import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
+import cz.novanadeje.app.shared.application.event.DonationsArrived;
 import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +30,8 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class BankStatementRecorder {
@@ -34,15 +40,18 @@ public class BankStatementRecorder {
 
     private final BankPaymentRepository payments;
     private final PaymentPairingService pairing;
+    private final DonationRepository donations;
     private final BankImportStateRepository states;
     private final ImportAlertRepository alerts;
     private final SecondFactorRecoveryPayments recoveries;
     private final ApplicationEventPublisher events;
 
-    public BankStatementRecorder(BankPaymentRepository payments, PaymentPairingService pairing, BankImportStateRepository states,
-                                 ImportAlertRepository alerts, SecondFactorRecoveryPayments recoveries, ApplicationEventPublisher events) {
+    public BankStatementRecorder(BankPaymentRepository payments, PaymentPairingService pairing, DonationRepository donations,
+                                 BankImportStateRepository states, ImportAlertRepository alerts, SecondFactorRecoveryPayments recoveries,
+                                 ApplicationEventPublisher events) {
         this.payments = payments;
         this.pairing = pairing;
+        this.donations = donations;
         this.states = states;
         this.alerts = alerts;
         this.recoveries = recoveries;
@@ -50,11 +59,12 @@ public class BankStatementRecorder {
     }
 
     @Transactional
-    public ImportCounts record(BankStatement statement, ImportPlan plan, Instant now) {
+    public ImportCounts record(BankStatement statement, ImportPlan plan, ImportTrigger trigger, Instant now) {
         List<BankPayment> fresh = freshPayments(statement.incoming(), now);
         payments.saveAll(fresh);
         recoveries.inspect(fresh, now);
         PairingOutcome outcome = pairing.pairUnpaired(now);
+        announceArrivals(fresh, trigger, now);
         extendCoverage(statement, plan, now);
         return new ImportCounts(statement.movementsReceived(), fresh.size(), statement.incoming().size() - fresh.size(),
                 outcome.pairedBySymbol(), outcome.pairedByAccount(), outcome.pairedByConfirmedSymbol(), outcome.accountsLearned(),
@@ -72,6 +82,17 @@ public class BankStatementRecorder {
             events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, at));
         }
         states.save(state);
+    }
+
+    private void announceArrivals(List<BankPayment> fresh, ImportTrigger trigger, Instant now) {
+        if (trigger == ImportTrigger.HISTORY || fresh.isEmpty()) {
+            return;
+        }
+        Set<UUID> donors = donations.donorsOfBankPayments(fresh.stream().map(BankPayment::id).toList()).stream()
+                .map(DonorReference::value).collect(Collectors.toUnmodifiableSet());
+        if (!donors.isEmpty()) {
+            events.publishEvent(new DonationsArrived(donors, now));
+        }
     }
 
     private List<BankPayment> freshPayments(List<IncomingMovement> incoming, Instant now) {

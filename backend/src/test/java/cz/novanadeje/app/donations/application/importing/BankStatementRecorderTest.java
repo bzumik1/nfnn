@@ -12,6 +12,8 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.domain.donation.DonationRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.importing.AccountBalance;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
@@ -22,6 +24,8 @@ import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
+import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
+import cz.novanadeje.app.shared.application.event.DonationsArrived;
 import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.AfterEach;
@@ -29,6 +33,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -41,6 +47,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,6 +65,7 @@ class BankStatementRecorderTest {
     private static final Instant NOW = Instant.parse("2026-10-18T10:00:00Z");
     private static final ImportPeriod HOURLY_REQUEST = period("2026-10-12", "2026-10-18");
     private static final ImportPeriod DEEP_REQUEST = period("2025-01-01", "2026-10-18");
+    private static final DonorReference JANA = new DonorReference(UUID.fromString("019a0000-0000-7000-8000-00000000000a"));
 
     @Mock
     private BankPaymentRepository payments;
@@ -71,13 +79,15 @@ class BankStatementRecorderTest {
     private SecondFactorRecoveryPayments recoveries;
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private DonationRepository donations;
 
     private BankStatementRecorder recorder;
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void setUp() {
-        recorder = new BankStatementRecorder(payments, pairing, states, alerts, recoveries, events);
+        recorder = new BankStatementRecorder(payments, pairing, donations, states, alerts, recoveries, events);
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -96,7 +106,7 @@ class BankStatementRecorderTest {
         when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 2, 5, 3, 4));
         BankStatement statement = new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 5, Optional.empty());
 
-        ImportCounts counts = recorder.record(statement, new ImportPlan(HOURLY_REQUEST, false), NOW);
+        ImportCounts counts = recorder.record(statement, new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
@@ -121,7 +131,7 @@ class BankStatementRecorderTest {
         when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0, 0));
 
         ImportCounts counts = recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1001)), 2, Optional.empty()),
-                new ImportPlan(HOURLY_REQUEST, false), NOW);
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
@@ -138,7 +148,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-18", "2026-10-18")), List.of(), 0, Optional.empty()),
-                new ImportPlan(HOURLY_REQUEST, false), NOW);
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         verify(states).save(state);
         assertThat(state.coverage()).isEqualTo(coverage("2026-07-18", "2026-10-18"));
@@ -153,7 +163,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.of(Money.czk(12_345_678))),
-                new ImportPlan(HOURLY_REQUEST, false), NOW);
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         verify(states).save(state);
         assertThat(state.balance()).contains(new AccountBalance(Money.czk(12_345_678), NOW));
@@ -168,7 +178,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()),
-                new ImportPlan(HOURLY_REQUEST, false), NOW);
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         assertThat(state.balance()).contains(new AccountBalance(Money.czk(50_000), earlier));
     }
@@ -180,7 +190,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(DEEP_REQUEST, Optional.of(period("2025-02-03", "2026-10-18")), List.of(), 0, Optional.empty()),
-                new ImportPlan(DEEP_REQUEST, true), NOW);
+                new ImportPlan(DEEP_REQUEST, true), ImportTrigger.HOURLY, NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2025-02-03", "2026-10-18"));
     }
@@ -191,7 +201,7 @@ class BankStatementRecorderTest {
         BankImportState state = stateCovering("2026-07-21", "2026-10-18");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(DEEP_REQUEST, true), NOW);
+        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(DEEP_REQUEST, true), ImportTrigger.HOURLY, NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2025-01-01", "2026-10-18"));
     }
@@ -203,7 +213,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
         ImportPeriod clamped = period("2026-07-21", "2026-10-18");
 
-        recorder.record(new BankStatement(clamped, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(clamped, false), NOW);
+        recorder.record(new BankStatement(clamped, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(clamped, false), ImportTrigger.HOURLY, NOW);
 
         assertThat(state.coverage()).isEqualTo(coverage("2026-07-21", "2026-10-18"));
         assertThat(warnings()).containsExactly("Fio movements between 2026-04-01 and 2026-07-20 were not downloaded; "
@@ -217,7 +227,7 @@ class BankStatementRecorderTest {
         noMovementsKnownAndNothingPaired();
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.of(period("2026-10-01", "2026-10-18")), List.of(), 0, Optional.empty()),
-                new ImportPlan(HOURLY_REQUEST, false), NOW);
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         assertThat(warnings()).containsExactly("Fio reported 2026-10-01/2026-10-18 for a request of 2026-10-12/2026-10-18");
     }
@@ -259,7 +269,7 @@ class BankStatementRecorderTest {
         state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         InOrder order = inOrder(alerts, states);
         order.verify(alerts).dropWaitingOutages(NOW);
@@ -274,7 +284,7 @@ class BankStatementRecorderTest {
         stateCovering("2026-07-18", "2026-10-15");
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         verifyNoInteractions(alerts);
         verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
@@ -303,7 +313,7 @@ class BankStatementRecorderTest {
         state.failed(ImportFailureKind.UNAUTHORIZED, "refused with HTTP 401", NOW.minusSeconds(3600));
         noMovementsKnownAndNothingPaired();
 
-        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), NOW);
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
         verifyNoMoreInteractions(events);
@@ -335,6 +345,55 @@ class BankStatementRecorderTest {
 
     private static Logger logger() {
         return (Logger) LoggerFactory.getLogger(BankStatementRecorder.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ImportTrigger.class, names = {"HOURLY", "STARTUP", "ON_DEMAND"})
+    @DisplayName("Given a new movement the import pairs to a donor and a known one, when an hourly, startup or on-demand import records them, then one announcement names the donor of the new gift only")
+    void should_announce_donor_of_new_gift_when_recorded_given_regular_import(ImportTrigger trigger) {
+        stateCovering("2026-07-18", "2026-10-15");
+        when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of(new BankTransactionId(1001)));
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 0, 0, 0, 0));
+        when(donations.donorsOfBankPayments(anyCollection())).thenReturn(Set.of(JANA));
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001), movement(1002)), 2, Optional.empty()),
+                new ImportPlan(HOURLY_REQUEST, false), trigger, NOW);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
+        InOrder order = inOrder(payments, pairing, donations, events);
+        order.verify(payments).saveAll(saved.capture());
+        order.verify(pairing).pairUnpaired(NOW);
+        order.verify(donations).donorsOfBankPayments(List.of(saved.getValue().getFirst().id()));
+        order.verify(events).publishEvent(new DonationsArrived(Set.of(JANA.value()), NOW));
+    }
+
+    @Test
+    @DisplayName("Given an import of older payments, when it pairs gifts, then nobody is told that a gift arrived")
+    void should_announce_nothing_when_recorded_given_history_import() {
+        stateCovering("2026-07-18", "2026-10-15");
+        when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(1, 0, 0, 0, 0));
+
+        recorder.record(new BankStatement(DEEP_REQUEST, Optional.empty(), List.of(movement(1001)), 1, Optional.empty()),
+                new ImportPlan(DEEP_REQUEST, true), ImportTrigger.HISTORY, NOW);
+
+        verifyNoInteractions(donations);
+        verify(events, never()).publishEvent(any(DonationsArrived.class));
+    }
+
+    @Test
+    @DisplayName("Given new movements nobody's gift, when they are recorded, then nobody is told that a gift arrived")
+    void should_announce_nothing_when_recorded_given_no_new_gift() {
+        stateCovering("2026-07-18", "2026-10-15");
+        when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
+        when(pairing.pairUnpaired(NOW)).thenReturn(new PairingOutcome(0, 0, 0, 0, 1));
+        when(donations.donorsOfBankPayments(anyCollection())).thenReturn(Set.of());
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001)), 1, Optional.empty()),
+                new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
+
+        verify(events, never()).publishEvent(any(DonationsArrived.class));
     }
 
     private static IncomingMovement movement(long id) {
