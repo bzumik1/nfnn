@@ -43,17 +43,25 @@ class SecondFactorCodeRulesTest {
             .or(callsOrReferences("", TotpSecret.class, "bytes"::equals))
             .as("a read of the factor's secret or of its bytes");
 
-    private static final DescribedPredicate<JavaAccess<?>> A_CODE_CHECK_OF_THE_FACTOR = callsOrReferences("", SecondFactor.class, CODE_CHECKS::contains)
-            .or(callsOrReferences("", Totp.class, CODE_COMPUTATIONS::contains))
-            .as("a check of a code from the authenticator app in " + SecondFactor.class.getSimpleName() + " or " + Totp.class.getSimpleName());
+    private static final DescribedPredicate<JavaAccess<?>> A_CODE_CHECK_OF_THE_FACTOR = callsOrReferences(
+            "a check of a code from the authenticator app in " + SecondFactor.class.getSimpleName(), SecondFactor.class, CODE_CHECKS::contains);
+
+    private static final DescribedPredicate<JavaAccess<?>> A_CODE_COMPUTATION = callsOrReferences(
+            "a computation of a code in " + Totp.class.getSimpleName(), Totp.class, CODE_COMPUTATIONS::contains);
 
     @ArchTest
     static final ArchRule every_code_from_the_app_is_checked_through_the_count_of_wrong_codes = noClasses()
             .that().doNotHaveFullyQualifiedName(SecondFactorCodes.class.getName())
             .and().doNotHaveFullyQualifiedName(SecondFactor.class.getName())
-            .and().doNotHaveFullyQualifiedName(Totp.class.getName())
             .should().accessTargetWhere(A_CODE_CHECK_OF_THE_FACTOR)
             .because("every code check counts against the donor's wrong codes and spends a right code atomically (security.md, Abuse)");
+
+    @ArchTest
+    static final ArchRule codes_are_computed_only_inside_the_factor = noClasses()
+            .that().doNotHaveFullyQualifiedName(SecondFactor.class.getName())
+            .and().doNotHaveFullyQualifiedName(Totp.class.getName())
+            .should().accessTargetWhere(A_CODE_COMPUTATION)
+            .because("a code computed outside SecondFactor would skip the count of wrong codes (security.md, Abuse)");
 
     @ArchTest
     static final ArchRule the_secret_of_a_factor_is_read_only_to_store_it_and_compute_its_codes = noClasses()
@@ -84,11 +92,12 @@ class SecondFactorCodeRulesTest {
     @Test
     @DisplayName("Given a class that checks a code through a method reference or through Totp, when the code rule checks it, then each is reported")
     void should_report_reference_and_totp_check_when_rule_checks_given_classes_bypassing_the_count() {
-        var result = every_code_from_the_app_is_checked_through_the_count_of_wrong_codes.evaluate(new ClassFileImporter().importClasses(PlantedBypasses.class));
+        var planted = new ClassFileImporter().importClasses(PlantedBypasses.class);
 
-        assertThat(result.getFailureReport().getDetails()).hasSize(2)
-                .anySatisfy(detail -> assertThat(detail).contains("SecondFactor.check"))
-                .anySatisfy(detail -> assertThat(detail).contains("Totp.matchingStep"));
+        assertThat(every_code_from_the_app_is_checked_through_the_count_of_wrong_codes.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().asString().contains("SecondFactor.check");
+        assertThat(codes_are_computed_only_inside_the_factor.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().asString().contains("Totp.matchingStep");
     }
 
     @Test

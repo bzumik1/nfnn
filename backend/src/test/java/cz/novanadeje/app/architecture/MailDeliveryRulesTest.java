@@ -19,6 +19,8 @@ import org.springframework.mail.MailSender;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -60,6 +62,14 @@ class MailDeliveryRulesTest {
         var result = mail_is_sent_only_through_the_observed_sender.evaluate(new ClassFileImporter().importClasses(PlantedReferenceSender.class));
 
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedReferenceSender.class.getSimpleName());
+    }
+
+    @Test
+    @DisplayName("Given the names the mail rule watches, when the mail classes are read, then each exists, so no part of the rule watches a name that is gone")
+    void should_find_every_watched_name_when_read_given_the_mail_classes() {
+        assertThat(Arrays.stream(MailSender.class.getMethods()).map(Method::getName)).contains("send");
+        assertThat(Arrays.stream(JavaMailSenderImpl.class.getDeclaredMethods()).map(Method::getName)).contains("doSend");
+        assertThat(Arrays.stream(Transport.class.getMethods()).map(Method::getName)).contains("send", "sendMessage");
     }
 
     @Test

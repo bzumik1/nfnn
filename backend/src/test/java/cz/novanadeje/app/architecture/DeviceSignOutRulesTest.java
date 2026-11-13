@@ -30,6 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +66,9 @@ class DeviceSignOutRulesTest {
             .or(callsOrReferences("", DEVICE_ROWS, DEVICE_ENDINGS::contains))
             .as("a revocation, lock or end of the token and device rows through Spring Data");
 
+    private static final DescribedPredicate<JavaAccess<?>> FROM_THE_MATCHING_ADAPTER_METHOD = DescribedPredicate.describe(
+            "from the adapter method of the same name", access -> fromTheTokenAdapter(access) || fromTheDeviceAdapter(access));
+
     @ArchTest
     static final ArchRule every_session_of_a_donor_or_a_device_ends_only_through_the_device_sign_outs = noClasses()
             .that().doNotHaveFullyQualifiedName(DeviceSignOuts.class.getName())
@@ -85,10 +89,8 @@ class DeviceSignOutRulesTest {
 
     @ArchTest
     static final ArchRule the_rows_of_tokens_and_devices_are_signed_out_only_by_their_adapters = noClasses()
-            .that().doNotHaveFullyQualifiedName(TOKEN_ADAPTER)
-            .and().doNotHaveFullyQualifiedName(DEVICE_ADAPTER)
-            .should().accessTargetWhere(A_SIGN_OUT_LOCK_OR_END_OF_THE_ROWS)
-            .because("the adapters are reached only from the device sign-outs, so a class beside them must not reach the same rows through Spring Data");
+            .should().accessTargetWhere(A_SIGN_OUT_LOCK_OR_END_OF_THE_ROWS.and(not(FROM_THE_MATCHING_ADAPTER_METHOD)))
+            .because("the adapters' sign-outs are reached only from the device sign-outs, so no other method may reach the same rows through Spring Data");
 
     @Test
     @DisplayName("Given the guarded names, when the repositories, the adapters and the Spring Data repositories are read, then each exists, so no rule watches a name that is gone")
@@ -99,6 +101,15 @@ class DeviceSignOutRulesTest {
         assertThat(methodNamesOf(Class.forName(DEVICE_ROWS))).containsAll(DEVICE_ENDINGS);
         assertThat(Class.forName(TOKEN_ADAPTER)).isAssignableTo(RefreshTokenRepository.class);
         assertThat(Class.forName(DEVICE_ADAPTER)).isAssignableTo(DonorDeviceRepository.class);
+    }
+
+    private static boolean fromTheTokenAdapter(JavaAccess<?> access) {
+        String method = access.getOrigin().getName();
+        return access.getOriginOwner().getName().equals(TOKEN_ADAPTER) && (SIGN_OUTS.contains(method) || LOCK_ALL.equals(method));
+    }
+
+    private static boolean fromTheDeviceAdapter(JavaAccess<?> access) {
+        return access.getOriginOwner().getName().equals(DEVICE_ADAPTER) && DEVICE_ENDINGS.contains(access.getOrigin().getName());
     }
 
     private static Set<String> methodNamesOf(Class<?> type) {
