@@ -22,9 +22,11 @@ import {
   map,
   Observable,
   of,
+  race,
   startWith,
   Subject,
   switchMap,
+  take,
   timer,
 } from 'rxjs';
 import { describeProblem, problemTypeEndsWith } from '../../../core/auth/api-problem';
@@ -57,6 +59,11 @@ import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-d
 import { AdministrationReads } from '../device-copy/administration-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+interface PairingAsked {
+  readonly payment: AdminPaymentResponse;
+  readonly waitsForSearch: boolean;
+}
 
 interface MonthGroup {
   readonly key: string;
@@ -93,7 +100,7 @@ interface DonorSearch {
 
 interface DonorSearchOutcome {
   readonly found: AdminDonorSearchResponse | null;
-  readonly emails: ReadonlyMap<string, string>;
+  readonly emails: ReadonlyMap<string, string> | null;
 }
 
 interface ChangedDonor {
@@ -104,6 +111,7 @@ interface ChangedDonor {
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const FORBIDDEN = 'auth/forbidden';
 const SEARCH_DEBOUNCE_MS = 300;
+export const PAIRING_WAIT_MS = 300;
 const EMAIL_LOOKUP_LIMIT = 100;
 const NO_EMAILS: ReadonlyMap<string, string> = new Map();
 const PAGE_SIZE = 50;
@@ -167,6 +175,9 @@ export class AdminPayments {
   protected readonly incomingLabel = computed(() => incomingText(this.incoming()?.added ?? 0));
 
   protected readonly pairing = signal<AdminPaymentResponse | null>(null);
+  private readonly pairingAsked = new Subject<PairingAsked | null>();
+  private pairingWaitsFor: string | null = null;
+  private readonly searchAnswered = new Subject<void>();
   protected readonly query = signal('');
   protected readonly results = signal<AdminDonorResponse[] | null>(null);
   protected readonly searchFailed = signal(false);
@@ -221,6 +232,7 @@ export class AdminPayments {
         this.searchText.set(filters.text);
       }
       this.unpairing.set(null);
+      this.stopWaitingForPairing();
       this.load();
     });
     this.typed
@@ -238,8 +250,21 @@ export class AdminPayments {
       .subscribe(({ found, emails }) => {
         this.searchFailed.set(found === null);
         this.results.set(found?.items ?? []);
-        this.emails.set(emails);
+        this.emails.set(emails ?? NO_EMAILS);
+        if (found === null || emails !== null) {
+          this.searchAnswered.next();
+        }
       });
+    this.pairingAsked
+      .pipe(
+        switchMap((asked) =>
+          asked === null
+            ? EMPTY
+            : this.pairingReady(asked.waitsForSearch).pipe(map(() => asked.payment)),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((payment) => this.showPairing(payment));
   }
 
   private searchAfterPause(search: DonorSearch): Observable<DonorSearchOutcome> {
@@ -248,7 +273,7 @@ export class AdminPayments {
       emails: this.reads.accountList(search.query, EMAIL_LOOKUP_LIMIT).pipe(
         map(emailsById),
         catchError(() => of(NO_EMAILS)),
-        startWith(NO_EMAILS),
+        startWith(null),
       ),
     });
     return search.immediate ? lookUp : timer(SEARCH_DEBOUNCE_MS).pipe(switchMap(() => lookUp));
@@ -298,6 +323,7 @@ export class AdminPayments {
     if (
       this.state() !== 'ready' ||
       this.pairing() !== null ||
+      this.pairingWaitsFor !== null ||
       this.opened() !== null ||
       this.unpairing() !== null ||
       this.busy() ||
@@ -439,8 +465,10 @@ export class AdminPayments {
   }
 
   protected openPairing(payment: AdminPaymentResponse): void {
+    if (this.pairingWaitsFor === payment.id) {
+      return;
+    }
     const prefill = senderSurname(payment);
-    this.pairing.set(payment);
     this.query.set(prefill);
     this.results.set(null);
     this.emails.set(NO_EMAILS);
@@ -449,7 +477,28 @@ export class AdminPayments {
     this.pairError.set(null);
     this.notice.set(null);
     this.changedDonor.set(null);
+    this.pairingWaitsFor = payment.id;
+    this.pairingAsked.next({ payment, waitsForSearch: prefill !== '' });
     this.searches.next(prefill === '' ? null : { query: prefill, immediate: true });
+  }
+
+  private pairingReady(waitsForSearch: boolean): Observable<unknown> {
+    return waitsForSearch
+      ? race(this.searchAnswered.pipe(take(1)), timer(PAIRING_WAIT_MS))
+      : of(null);
+  }
+
+  private stopWaitingForPairing(): void {
+    if (this.pairingWaitsFor !== null) {
+      this.pairingWaitsFor = null;
+      this.pairingAsked.next(null);
+      this.searches.next(null);
+    }
+  }
+
+  private showPairing(payment: AdminPaymentResponse): void {
+    this.pairingWaitsFor = null;
+    this.pairing.set(payment);
     afterNextRender(
       () => {
         const input = this.pairSearch()?.nativeElement;
