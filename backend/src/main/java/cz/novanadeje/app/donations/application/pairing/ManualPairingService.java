@@ -83,6 +83,7 @@ public class ManualPairingService {
             throw new BankPaymentAlreadyPaired(paymentId);
         }
         DonorRecord donor = donorRecords.findById(donorId).orElseThrow(() -> new DonorRecordNotFound(donorId));
+        donor.requireOpenToPairing();
         receipts.lockDonor(donor.id());
         Donation donation = Donation.fromBankPayment(DonationId.newId(now), donor.id(), payment, PairingMethod.MANUAL, now);
         donations.save(donation);
