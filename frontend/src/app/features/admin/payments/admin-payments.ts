@@ -100,7 +100,7 @@ interface DonorSearch {
 
 interface DonorSearchOutcome {
   readonly found: AdminDonorSearchResponse | null;
-  readonly emails: ReadonlyMap<string, string>;
+  readonly emails: ReadonlyMap<string, string> | null;
 }
 
 interface ChangedDonor {
@@ -175,7 +175,8 @@ export class AdminPayments {
   protected readonly incomingLabel = computed(() => incomingText(this.incoming()?.added ?? 0));
 
   protected readonly pairing = signal<AdminPaymentResponse | null>(null);
-  private readonly pairingAsked = new Subject<PairingAsked>();
+  private readonly pairingAsked = new Subject<PairingAsked | null>();
+  private pairingWaitsFor: string | null = null;
   private readonly searchAnswered = new Subject<void>();
   protected readonly query = signal('');
   protected readonly results = signal<AdminDonorResponse[] | null>(null);
@@ -231,6 +232,7 @@ export class AdminPayments {
         this.searchText.set(filters.text);
       }
       this.unpairing.set(null);
+      this.stopWaitingForPairing();
       this.load();
     });
     this.typed
@@ -248,13 +250,17 @@ export class AdminPayments {
       .subscribe(({ found, emails }) => {
         this.searchFailed.set(found === null);
         this.results.set(found?.items ?? []);
-        this.emails.set(emails);
-        this.searchAnswered.next();
+        this.emails.set(emails ?? NO_EMAILS);
+        if (found === null || emails !== null) {
+          this.searchAnswered.next();
+        }
       });
     this.pairingAsked
       .pipe(
-        switchMap(({ payment, waitsForSearch }) =>
-          this.pairingReady(waitsForSearch).pipe(map(() => payment)),
+        switchMap((asked) =>
+          asked === null
+            ? EMPTY
+            : this.pairingReady(asked.waitsForSearch).pipe(map(() => asked.payment)),
         ),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -267,7 +273,7 @@ export class AdminPayments {
       emails: this.reads.accountList(search.query, EMAIL_LOOKUP_LIMIT).pipe(
         map(emailsById),
         catchError(() => of(NO_EMAILS)),
-        startWith(NO_EMAILS),
+        startWith(null),
       ),
     });
     return search.immediate ? lookUp : timer(SEARCH_DEBOUNCE_MS).pipe(switchMap(() => lookUp));
@@ -317,6 +323,7 @@ export class AdminPayments {
     if (
       this.state() !== 'ready' ||
       this.pairing() !== null ||
+      this.pairingWaitsFor !== null ||
       this.opened() !== null ||
       this.unpairing() !== null ||
       this.busy() ||
@@ -458,6 +465,9 @@ export class AdminPayments {
   }
 
   protected openPairing(payment: AdminPaymentResponse): void {
+    if (this.pairingWaitsFor === payment.id) {
+      return;
+    }
     const prefill = senderSurname(payment);
     this.query.set(prefill);
     this.results.set(null);
@@ -467,6 +477,7 @@ export class AdminPayments {
     this.pairError.set(null);
     this.notice.set(null);
     this.changedDonor.set(null);
+    this.pairingWaitsFor = payment.id;
     this.pairingAsked.next({ payment, waitsForSearch: prefill !== '' });
     this.searches.next(prefill === '' ? null : { query: prefill, immediate: true });
   }
@@ -477,7 +488,16 @@ export class AdminPayments {
       : of(null);
   }
 
+  private stopWaitingForPairing(): void {
+    if (this.pairingWaitsFor !== null) {
+      this.pairingWaitsFor = null;
+      this.pairingAsked.next(null);
+      this.searches.next(null);
+    }
+  }
+
   private showPairing(payment: AdminPaymentResponse): void {
+    this.pairingWaitsFor = null;
     this.pairing.set(payment);
     afterNextRender(
       () => {

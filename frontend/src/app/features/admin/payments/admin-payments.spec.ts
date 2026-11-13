@@ -484,33 +484,67 @@ describe('Given an administrator on the bank payments page', () => {
   });
 
   describe('when the administrator presses the pairing button', () => {
-    beforeEach(async () => {
-      await open();
-      await listResponds(paymentList([unpairedPayment()]));
+    const svoboda = unpairedPayment({
+      id: '019a1c00-0000-7000-8000-000000001002',
+      bankTransactionId: 1002,
+      counterpartyName: 'Svoboda Petr',
+    });
+    const withoutName = unpairedPayment({
+      id: '019a1c00-0000-7000-8000-000000001003',
+      bankTransactionId: 1003,
+      counterpartyName: null,
     });
 
-    function press(): void {
-      button('Přiřadit dárci').click();
+    beforeEach(async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment(), svoboda, withoutName]));
+    });
+
+    function press(row = 0): void {
+      Array.from(document.querySelectorAll('button'))
+        .filter((candidate) => candidate.textContent?.trim() === 'Přiřadit dárci')
+        [row].click();
       fixture.detectChanges();
     }
 
-    it('then the sheet waits for the donors found and opens with them in it', async () => {
+    function donorsAnswer(query: string, donors: object[]): void {
+      http.expectOne(`${DONORS_URL}?query=${encodeURIComponent(query)}`).flush({ items: donors });
+    }
+
+    function accountsAnswer(query: string, accounts: object[]): void {
+      http
+        .expectOne(`${ACCOUNTS_URL}?query=${encodeURIComponent(query)}&limit=100`)
+        .flush({ items: accounts, hasMore: false });
+    }
+
+    function lateAnswers(query: string): void {
+      http
+        .match((request) => request.params.get('query') === query)
+        .filter((request) => !request.cancelled)
+        .forEach((request) =>
+          request.flush(
+            request.request.url === DONORS_URL
+              ? { items: [foundDonor()] }
+              : { items: [donorAccount()], hasMore: false },
+          ),
+        );
+    }
+
+    it('then the dialog waits for the donors found and their e-mails and opens with both in it', async () => {
       press();
+      donorsAnswer('Nováková', [foundDonor()]);
+      await settle();
       expect(document.querySelector('dialog')).toBeNull();
 
-      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
+      accountsAnswer('Nováková', [donorAccount()]);
       await settle();
 
       expect(Array.from(document.querySelectorAll('dialog .pair-result')).map(rowText)).toEqual([
-        'Jana Nováková VS 4821937560',
+        'Jana Nováková VS 4821937560 · jana@example.cz',
       ]);
-      http
-        .expectOne(`${ACCOUNTS_URL}?query=Nov%C3%A1kov%C3%A1&limit=100`)
-        .flush({ items: [], hasMore: false });
-      await settle();
     });
 
-    it('then a slow search opens the sheet after the longest wait and its donors follow', async () => {
+    it('then a slow search opens the dialog after the longest wait and its donors follow', async () => {
       vi.useFakeTimers();
       press();
       vi.advanceTimersByTime(PAIRING_WAIT_MS - 1);
@@ -523,13 +557,51 @@ describe('Given an administrator on the bank payments page', () => {
       await settle();
 
       expect(document.querySelector('dialog')).not.toBeNull();
-      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
-      await settle();
-      http
-        .expectOne(`${ACCOUNTS_URL}?query=Nov%C3%A1kov%C3%A1&limit=100`)
-        .flush({ items: [], hasMore: false });
+      donorsAnswer('Nováková', [foundDonor()]);
+      accountsAnswer('Nováková', []);
       await settle();
       expect(document.querySelectorAll('dialog .pair-result')).toHaveLength(1);
+    });
+
+    it('then a payment without a sender to search for opens the dialog at once and searches nothing', async () => {
+      press(2);
+
+      expect(document.querySelector('dialog')).not.toBeNull();
+      http.expectNone((request) => request.url === DONORS_URL);
+    });
+
+    it("then pressing another payment while the first waits opens the dialog for the second, without the first one's donors", async () => {
+      press(0);
+      press(1);
+      donorsAnswer('Svoboda', []);
+      accountsAnswer('Svoboda', []);
+      await settle();
+      lateAnswers('Nováková');
+      await settle();
+
+      expect(document.querySelector('dialog')?.textContent).toContain('Svoboda Petr');
+      expect(document.querySelectorAll('dialog .pair-result')).toHaveLength(0);
+    });
+
+    it('then pressing the same payment again while it waits searches once', async () => {
+      press();
+      press();
+      donorsAnswer('Nováková', [foundDonor()]);
+      accountsAnswer('Nováková', []);
+      await settle();
+
+      expect(document.querySelectorAll('dialog .pair-result')).toHaveLength(1);
+    });
+
+    it('then switching to the paired payments while it waits keeps the dialog closed', async () => {
+      press();
+      button('Přiřazené').click();
+      await settle();
+      await listResponds(paymentList([]), PAIRED_PAGE);
+      lateAnswers('Nováková');
+      await settle();
+
+      expect(document.querySelector('dialog')).toBeNull();
     });
   });
 
