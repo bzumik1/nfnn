@@ -18,6 +18,7 @@ import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.core.env.PropertyResolver;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -45,7 +46,17 @@ class RuntimeConventionRulesTest {
             "a random or name-based UUID", UUID.class, Set.of("randomUUID", "nameUUIDFromBytes")::contains);
 
     private static final DescribedPredicate<JavaAccess<?>> AN_ENVIRONMENT_READ = callsOrReferences(
-            "a read or change of the process environment or the system properties", System.class, Set.of("getenv", "getProperty", "getProperties", "setProperty", "clearProperty")::contains);
+            "", System.class, Set.of("getenv", "getProperty", "getProperties", "setProperty", "clearProperty")::contains)
+            .or(callsOrReferences("", Integer.class, "getInteger"::equals))
+            .or(callsOrReferences("", Long.class, "getLong"::equals))
+            .or(callsOrReferences("", Boolean.class, "getBoolean"::equals))
+            .as("a read or change of the process environment or the system properties");
+
+    private static final DescribedPredicate<JavaAccess<?>> A_DEFAULT_HTTP_CLIENT = callsOrReferences(
+            "an HTTP client with the default settings (no connect timeout, redirects as the JDK decides)", HttpClient.class, "newHttpClient"::equals);
+
+    private static final DescribedPredicate<JavaAccess<?>> A_CACHE_FROM_A_SPEC = callsOrReferences(
+            "a cache built from a specification, whose bound the code does not show", Caffeine.class, "from"::equals);
 
     private static final DescribedPredicate<JavaAccess<?>> AN_EXIT = callsOrReferences("", System.class, "exit"::equals)
             .or(callsOrReferences("", Runtime.class, Set.of("exit", "halt")::contains))
@@ -77,6 +88,22 @@ class RuntimeConventionRulesTest {
             .because("backend.md, Configuration: @ConfigurationProperties records validated at startup, so a missing or wrong value stops the start, never a request");
 
     @ArchTest
+    static final ArchRule the_spring_environment_is_read_only_by_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat().areAssignableTo(PropertyResolver.class)
+            .because("backend.md, Configuration: a value reaches the application as a bound, validated record, so only an adapter reads the environment");
+
+    @ArchTest
+    static final ArchRule http_clients_are_never_built_with_the_defaults = noClasses()
+            .should().accessTargetWhere(A_DEFAULT_HTTP_CLIENT)
+            .because("reliability.md: every external call has a timeout, which the builder's connectTimeout sets and the default client lacks");
+
+    @ArchTest
+    static final ArchRule caches_show_their_bound = noClasses()
+            .should().accessTargetWhere(A_CACHE_FROM_A_SPEC)
+            .because("reliability.md: resources are bounded, and the bound rule reads it from the builder's maximumSize or maximumWeight");
+
+    @ArchTest
     static final ArchRule only_the_restarter_exits_the_jvm = noClasses()
             .that().doNotHaveFullyQualifiedName(RESTARTER)
             .should().accessTargetWhere(AN_EXIT)
@@ -99,9 +126,20 @@ class RuntimeConventionRulesTest {
             .because("reliability.md: every external call has a timeout, so a silent server never holds the scheduler thread");
 
     @Test
-    @DisplayName("Given planted classes that make a random UUID, read the environment, take @Value, exit, build an unbounded cache and clients without timeouts or with redirects, when the rules check them, then each is reported and the bounded, timed ones are not")
+    @DisplayName("Given planted classes that make a random UUID, read the environment or a system property, take @Value or the Spring environment outside an adapter, exit, build an unbounded cache, a cache from a specification, a default client and clients without timeouts or with redirects, when the rules check them, then each is reported and the bounded, timed ones are not")
     void should_report_every_runtime_hazard_when_checked_given_planted_classes(@TempDir Path folder) throws IOException {
-        JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.infrastructure.PlantedRuntime", """
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.application.PlantedSettingsReader", """
+                package cz.novanadeje.app.planteda.application;
+
+                import org.springframework.core.env.Environment;
+
+                class PlantedSettingsReader {
+
+                    String token(Environment environment) {
+                        return environment.getProperty("app.anything");
+                    }
+                }
+                """, "cz.novanadeje.app.planteda.infrastructure.PlantedRuntime", """
                 package cz.novanadeje.app.planteda.infrastructure;
 
                 import com.github.benmanes.caffeine.cache.Cache;
@@ -129,6 +167,18 @@ class RuntimeConventionRulesTest {
 
                     String environment() {
                         return System.getenv("FIO_TOKEN");
+                    }
+
+                    Integer systemProperty() {
+                        return Integer.getInteger("app.anything");
+                    }
+
+                    HttpClient defaults() {
+                        return HttpClient.newHttpClient();
+                    }
+
+                    Cache<String, String> fromSpec() {
+                        return Caffeine.from("maximumSize=10").build();
                     }
 
                     void exit() {
@@ -169,6 +219,7 @@ class RuntimeConventionRulesTest {
                 .hasSize(2).anySatisfy(detail -> assertThat(detail).contains("randomId(")).anySatisfy(detail -> assertThat(detail).contains("randomIds"));
         assertThat(configuration_comes_from_bound_records.evaluate(planted).getFailureReport().getDetails())
                 .anySatisfy(detail -> assertThat(detail).contains("environment"))
+                .anySatisfy(detail -> assertThat(detail).contains("systemProperty"))
                 .anySatisfy(detail -> assertThat(detail).contains("injected"));
         assertThat(only_the_restarter_exits_the_jvm.evaluate(planted).getFailureReport().getDetails())
                 .singleElement().satisfies(detail -> assertThat(detail).contains("exit()"));
@@ -178,6 +229,12 @@ class RuntimeConventionRulesTest {
                 .hasSize(2).anySatisfy(detail -> assertThat(detail).contains("followsRedirects")).anySatisfy(detail -> assertThat(detail).contains("waitsForever"));
         assertThat(every_http_request_has_a_timeout.evaluate(planted).getFailureReport().getDetails())
                 .singleElement().satisfies(detail -> assertThat(detail).contains("untimed"));
+        assertThat(http_clients_are_never_built_with_the_defaults.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().satisfies(detail -> assertThat(detail).contains("defaults"));
+        assertThat(caches_show_their_bound.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().satisfies(detail -> assertThat(detail).contains("fromSpec"));
+        assertThat(the_spring_environment_is_read_only_by_adapters.evaluate(planted).getFailureReport().getDetails())
+                .isNotEmpty().allSatisfy(detail -> assertThat(detail).contains("PlantedSettingsReader"));
     }
 
     private static ArchCondition<JavaCodeUnit> alsoMake(DescribedPredicate<JavaAccess<?>> trigger, DescribedPredicate<JavaAccess<?>> required) {

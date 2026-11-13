@@ -89,14 +89,15 @@ class StereotypeRulesTest {
 
     @ArchTest
     static final ArchRule configurations_are_adapters = classes()
-            .that().areAnnotatedWith(Configuration.class)
+            .that().areMetaAnnotatedWith(Configuration.class)
+            .and().doNotHaveFullyQualifiedName("cz.novanadeje.app.AppApplication")
             .should().resideInAnyPackage("..infrastructure..", "..interfaces.rest..")
             .because(LAYERS);
 
     @ArchTest
     static final ArchRule scheduled_work_is_started_by_adapters = methods()
-            .that().areAnnotatedWith(Scheduled.class)
-            .or().areAnnotatedWith(Schedules.class)
+            .that().areMetaAnnotatedWith(Scheduled.class)
+            .or().areMetaAnnotatedWith(Schedules.class)
             .should().beDeclaredInClassesThat().resideInAPackage("..infrastructure..")
             .because("backend.md, Configuration and operations: a cron job is a driving adapter with a property that turns it off");
 
@@ -212,6 +213,15 @@ class StereotypeRulesTest {
                         "@org.springframework.stereotype.Repository public class PlantedRepository {}"),
                 planted("configurations", configurations_are_adapters, "donors.application.PlantedConfiguration",
                         "@org.springframework.context.annotation.Configuration public class PlantedConfiguration {}"),
+                planted("configurations", configurations_are_adapters, "donors.application.PlantedComposedConfiguration",
+                        "@PlantedComposedConfiguration.Settings public class PlantedComposedConfiguration {"
+                                + " @org.springframework.context.annotation.Configuration"
+                                + " @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME) @interface Settings {} }"),
+                planted("scheduled work", scheduled_work_is_started_by_adapters, "donors.application.PlantedComposedJob",
+                        "public class PlantedComposedJob { @org.springframework.scheduling.annotation.Scheduled(cron = \"-\")"
+                                + " @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)"
+                                + " @java.lang.annotation.Target(java.lang.annotation.ElementType.METHOD) @interface Nightly {}"
+                                + " @Nightly void run() {} }"),
                 planted("scheduled work", scheduled_work_is_started_by_adapters, "donors.application.PlantedJob",
                         "public class PlantedJob { @org.springframework.scheduling.annotation.Scheduled(cron = \"-\") void run() {} }"),
                 planted("scheduled work", scheduled_work_is_started_by_adapters, "donors.application.PlantedTwiceScheduledJob",
