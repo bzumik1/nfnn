@@ -106,6 +106,9 @@ tr.is-verification td.amount {
 
 .download-btn.ui-pill-button {
   @include touch-target.reaches-finger-size;
+
+  max-width: 100%;
+  white-space: normal;
 }
 
 .donation-table-card {
@@ -262,5 +265,21 @@ tr.is-verification td.amount {
   .row-receipt-error,
   .receipt-diagnostics {
     max-width: none;
+  }
+}
+
+@include bp.container-down(donations-table, pair) {
+  .donation-rows .ui-list__row:has(.pairing-tag):not(:has(.ui-list__state)) {
+    > .ui-list__value {
+      grid-row: 1;
+    }
+
+    > .ui-list__meta {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .donation-rows .pairing-tag {
+    overflow-wrap: normal;
   }
 }
