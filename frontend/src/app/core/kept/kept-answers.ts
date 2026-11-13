@@ -26,9 +26,7 @@ export class KeptAnswers<Types extends object> {
       return concat(
         of(shown),
         fresh.pipe(
-          catchError((failure: unknown) =>
-            refused(failure) ? throwError(() => failure) : EMPTY,
-          ),
+          catchError((failure: unknown) => (refused(failure) ? throwError(() => failure) : EMPTY)),
         ),
       );
     });
