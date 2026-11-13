@@ -71,10 +71,17 @@ public class DonorPushDispatcher {
                 return;
             }
             Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-            timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)),
-                    () -> rounds.execute(() -> attempt(donors, attempt + 1, Optional.of(failed))));
+            timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)), () -> handOff(donors, attempt + 1, failed));
         } catch (RuntimeException failure) {
             log.warn("Push notification {} attempt {} could not be sent: {}", PushMessageKind.GIFT_ARRIVED, attempt, failure.getClass().getSimpleName());
+        }
+    }
+
+    private void handOff(Set<UUID> donors, int attempt, Set<PushSubscriptionId> failed) {
+        try {
+            rounds.execute(() -> attempt(donors, attempt, Optional.of(failed)));
+        } catch (RuntimeException rejected) {
+            log.warn("Push notification {} attempt {} could not be sent: {}", PushMessageKind.GIFT_ARRIVED, attempt, rejected.getClass().getSimpleName());
         }
     }
 

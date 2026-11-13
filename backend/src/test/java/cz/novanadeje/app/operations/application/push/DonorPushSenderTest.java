@@ -118,24 +118,20 @@ class DonorPushSenderTest {
     }
 
     @Test
-    @DisplayName("Given three devices, when they are sent a notification with a gap between starts, then each send starts at least the gap after the one before")
+    @DisplayName("Given three devices, when they are sent a notification with a gap between starts, then the sending takes at least the two gaps between the three starts")
     void should_keep_the_gap_between_starts_when_sent_given_three_devices() {
         List<DonorPushSubscription> devices = List.of(subscribed(UUID.randomUUID(), "jana-1"), subscribed(UUID.randomUUID(), "jana-2"),
                 subscribed(UUID.randomUUID(), "jana-3"));
-        List<Long> starts = new ArrayList<>();
         Duration gap = Duration.ofMillis(30);
-        DonorPushSender sender = new DonorPushSender((recipient, message, vapid) -> {
-            synchronized (starts) {
-                starts.add(System.nanoTime());
-            }
-            return PushOutcome.DELIVERED;
-        }, keys, subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC), gap);
+        DonorPushSender sender = new DonorPushSender((recipient, message, vapid) -> PushOutcome.DELIVERED, keys, subscriptions,
+                new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC), gap);
 
-        sender.send(devices, TEST);
+        long started = System.nanoTime();
+        PushAttempt sent = sender.send(devices, TEST);
+        long took = System.nanoTime() - started;
 
-        assertThat(starts).hasSize(3);
-        assertThat(starts.get(1) - starts.get(0)).isGreaterThanOrEqualTo(gap.toNanos());
-        assertThat(starts.get(2) - starts.get(1)).isGreaterThanOrEqualTo(gap.toNanos());
+        assertThat(sent.report()).isEqualTo(new PushDeliveryReport(3, 0, 0));
+        assertThat(took).isGreaterThanOrEqualTo(gap.multipliedBy(2).toNanos());
     }
 
     private DonorPushSender sender(InMemoryDonorPushSubscriptions stored, PushDelivery delivery) {

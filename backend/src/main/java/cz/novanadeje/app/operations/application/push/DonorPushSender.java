@@ -66,18 +66,23 @@ public class DonorPushSender {
             List<Future<PushOutcome>> outcomes = new ArrayList<>();
             for (DonorPushSubscription recipient : recipients) {
                 if (!outcomes.isEmpty()) {
-                    LockSupport.parkNanos(gap.toNanos());
+                    pause();
                 }
                 if (Thread.currentThread().isInterrupted() || !takeSlot()) {
                     break;
                 }
-                outcomes.add(sends.submit(() -> {
-                    try {
-                        return recorded(recipient, deliver(recipient, message, vapid));
-                    } finally {
-                        slots.release();
-                    }
-                }));
+                try {
+                    outcomes.add(sends.submit(() -> {
+                        try {
+                            return recorded(recipient, deliver(recipient, message, vapid));
+                        } finally {
+                            slots.release();
+                        }
+                    }));
+                } catch (RuntimeException rejected) {
+                    slots.release();
+                    break;
+                }
             }
             PushDeliveryReport report = PushDeliveryReport.NONE;
             List<PushSubscriptionId> failed = new ArrayList<>();
@@ -120,6 +125,13 @@ public class DonorPushSender {
                     .ifPresent(failures -> log.warn("Push subscription {} failed {} times in a row", recipient.id().value(), failures));
         }
         return outcome;
+    }
+
+    private void pause() {
+        long until = System.nanoTime() + gap.toNanos();
+        for (long left = gap.toNanos(); left > 0 && !Thread.currentThread().isInterrupted(); left = until - System.nanoTime()) {
+            LockSupport.parkNanos(left);
+        }
     }
 
     private boolean takeSlot() {

@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -113,7 +114,30 @@ class DonorPushDispatcherTest {
                 "jana-notebook gift-arrived", "jana-notebook gift-arrived");
     }
 
+    @Test
+    @DisplayName("Given a retry that comes while the server stops and its executor refuses work, when the retry is due, then one warning names the attempt and the refusal, and nothing else happens")
+    void should_warn_when_retried_given_executor_refuses_the_round() {
+        subscribed(JANA, "jana-notebook", true);
+        failing.add(new PushEndpoint("https://fcm.googleapis.com/fcm/send/jana-notebook"));
+        DonorPushDispatcher stopping = dispatcher(task -> {
+            throw new IllegalStateException("The executor has stopped");
+        });
+
+        stopping.on(new DonationsArrived(Set.of(JANA), NOW));
+        timer.fireNext();
+
+        assertThat(sent).containsExactly("jana-notebook gift-arrived");
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel().toString()).isEqualTo("WARN");
+            assertThat(event.getFormattedMessage()).isEqualTo("Push notification GIFT_ARRIVED attempt 2 could not be sent: IllegalStateException");
+        });
+    }
+
     private DonorPushDispatcher dispatcher() {
+        return dispatcher(Runnable::run);
+    }
+
+    private DonorPushDispatcher dispatcher(Executor rounds) {
         PushKeyService keys = mock(PushKeyService.class);
         when(keys.current()).thenReturn(new VapidKeys("B" + "a".repeat(86), "f".repeat(43)));
         TransactionTemplate transactions = new TransactionTemplate(mock(PlatformTransactionManager.class));
@@ -124,7 +148,7 @@ class DonorPushDispatcherTest {
             }
             return failing.contains(recipient.endpoint()) ? PushOutcome.FAILED : PushOutcome.DELIVERED;
         }, keys, subscriptions, transactions, clock, Duration.ZERO);
-        return new DonorPushDispatcher(subscriptions, sender, new SignedInDevicesOf(signedIn), timer, Runnable::run, transactions, clock);
+        return new DonorPushDispatcher(subscriptions, sender, new SignedInDevicesOf(signedIn), timer, rounds, transactions, clock);
     }
 
     private DonorPushSubscription subscribed(UUID donor, String name, boolean gifts) {

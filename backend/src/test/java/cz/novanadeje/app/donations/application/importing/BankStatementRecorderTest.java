@@ -400,6 +400,25 @@ class BankStatementRecorderTest {
     }
 
     @Test
+    @DisplayName("Given an import half an hour after midnight in Prague, when it pairs gifts, then the seven days count from the Prague date, not the UTC one")
+    void should_count_booking_days_from_prague_date_when_recorded_given_import_after_prague_midnight() {
+        Instant afterPragueMidnight = Instant.parse("2026-10-18T22:30:00Z");
+        stateCovering("2026-07-18", "2026-10-15");
+        when(payments.findKnownTransactionIds(anyCollection())).thenReturn(Set.of());
+        when(pairing.pairUnpaired(afterPragueMidnight)).thenReturn(new PairingOutcome(2, 0, 0, 0, 0));
+        when(donations.donorsOfBankPayments(anyCollection())).thenReturn(Set.of(JANA));
+
+        recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(movement(1001, LocalDate.of(2026, 10, 11)),
+                movement(1002, LocalDate.of(2026, 10, 12))), 2, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY,
+                afterPragueMidnight);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<BankPayment>> saved = ArgumentCaptor.forClass(List.class);
+        verify(payments).saveAll(saved.capture());
+        verify(donations).donorsOfBankPayments(List.of(saved.getValue().get(1).id()));
+    }
+
+    @Test
     @DisplayName("Given new movements nobody's gift, when they are recorded, then nobody is told that a gift arrived")
     void should_announce_nothing_when_recorded_given_no_new_gift() {
         stateCovering("2026-07-18", "2026-10-15");
