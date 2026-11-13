@@ -62,6 +62,15 @@ describe('Given an article or a story about to open', () => {
     request.flush({ slug: 'nova-zahrada' });
   });
 
+  it('when its answer is already kept, then the page opens at once and the server is not asked again', async () => {
+    const first = ready('news', 'zahrada-pro-deti');
+    http.expectOne('/api/content/news/zahrada-pro-deti').flush({ slug: 'zahrada-pro-deti' });
+    await first;
+
+    expect(await ready('news', 'zahrada-pro-deti')).toBe('opened');
+    http.expectNone('/api/content/news/zahrada-pro-deti');
+  });
+
   it('when the server cannot find it, then the page opens at once to say so', async () => {
     const opening = ready('news', 'neznama');
 
