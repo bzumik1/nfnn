@@ -421,7 +421,7 @@ function fixedWidth(instant: string): string {
     : `${fraction[1]}.${(fraction[2] ?? '').padEnd(NANOSECOND_DIGITS, '0')}Z`;
 }
 
-function inCzechOrder(first: string, second: string): number {
+export function inCzechOrder(first: string, second: string): number {
   return CZECH_ORDER.compare(first, second) || byCodePoints(first, second);
 }
 

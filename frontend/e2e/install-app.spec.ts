@@ -93,6 +93,49 @@ test.describe('Given a signed-in donor in Safari on an iPhone', () => {
 });
 
 test.describe('Given the app starting before its code has run', () => {
+  for (const [start, path, signedIn] of [
+    ['the home page', '/', false],
+    ['the start page of a donor still signed in', '/aplikace', true],
+  ] as const) {
+    test(`when ${start} opens, then the launch screen stays until the page is drawn, with no empty frame between`, async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      if (signedIn) {
+        await page.route('**/api/donors/auth/refresh', (route) =>
+          route.fulfill(session(200, donor)),
+        );
+        await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
+      }
+      await page.addInitScript(() => {
+        const frames: { launch: boolean; heading: boolean }[] = [];
+        Object.assign(window, { nfnnStartFrames: frames });
+        const sample = () => {
+          if (document.body) {
+            frames.push({
+              launch: document.querySelector('.launch-screen') !== null,
+              heading: document.querySelector('h1') !== null,
+            });
+          }
+          requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      });
+
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.locator('.launch-screen')).toHaveCount(0);
+
+      const frames = await page.evaluate(
+        () =>
+          (window as unknown as { nfnnStartFrames: { launch: boolean; heading: boolean }[] })
+            .nfnnStartFrames,
+      );
+      expect(frames.some((frame) => frame.launch)).toBe(true);
+      expect(frames.filter((frame) => !frame.launch && !frame.heading)).toEqual([]);
+    });
+  }
+
   test('when the page first paints, then it shows only the theme icon in the middle of the surface, as the launch image does', async ({
     page,
   }) => {

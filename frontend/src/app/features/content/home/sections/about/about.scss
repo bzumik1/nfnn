@@ -1,9 +1,5 @@
 @use 'breakpoints' as bp;
 
-.about {
-  background: linear-gradient(180deg, var(--color-surface-alt) 0, var(--color-surface) 40rem);
-}
-
 .intro {
   display: grid;
   grid-template-areas:
@@ -13,13 +9,11 @@
   grid-template-rows: auto 1fr;
   gap: var(--space-6) var(--space-16);
   align-items: start;
-  padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-16));
   padding-bottom: var(--space-16);
 }
 
 .intro-head {
   grid-area: head;
-  align-self: end;
 }
 
 .intro-figure {
@@ -29,21 +23,6 @@
 
 .intro-rest {
   grid-area: rest;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: var(--text-section-title);
-  font-weight: var(--weight-extrabold);
-  line-height: var(--leading-display);
-  margin-bottom: var(--space-5);
-  color: var(--color-text);
-}
-
-.lead {
-  color: var(--color-text-muted);
-  font-size: var(--text-xl);
-  line-height: var(--leading-loose);
 }
 
 .paragraph {
@@ -88,7 +67,6 @@
   border-radius: var(--radius-media);
   background: var(--color-accent-fill);
   color: var(--color-on-accent);
-  box-shadow: var(--shadow-badge);
   pointer-events: none;
 }
 
@@ -218,12 +196,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
     gap: var(--space-6);
-    padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-6));
     padding-bottom: var(--space-10);
-  }
-
-  .lead {
-    font-size: var(--text-lg);
   }
 
   .about-badge {

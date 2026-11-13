@@ -185,12 +185,12 @@ describe('Given the donate section', () => {
     expect(button('500 Kč').getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('when it renders, then the section is introduced as Přispět with a heading about the gift and one sentence why', async () => {
+  it('when it renders, then the shared header names the gift and says in one sentence why, with no label above the title', async () => {
     await openWithQr();
 
-    expect(text('.ui-eyebrow').trim()).toBe('Přispět');
-    expect(text('h1').trim()).toBe('Přispějte na pomůcky pro děti');
-    expect(squashed('.lead')).toBe(
+    expect(text('.ui-intro h1.ui-intro__title').trim()).toBe('Přispějte na pomůcky pro děti');
+    expect(fixture.nativeElement.querySelector('.ui-eyebrow')).toBeNull();
+    expect(squashed('.ui-intro__lead')).toBe(
       'Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.',
     );
   });

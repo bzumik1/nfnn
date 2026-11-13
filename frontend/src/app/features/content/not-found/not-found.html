@@ -1,6 +1,6 @@
 <section class="not-found ui-intro">
-  <div class="ui-container">
-    <p class="ui-eyebrow ui-eyebrow--on-inverse" i18n="@@content.notFound.eyebrow">Chyba 404</p>
+  <div class="ui-intro__head ui-container">
+    <p class="ui-intro__meta" i18n="@@content.notFound.eyebrow">Chyba 404</p>
     <h1 class="ui-intro__title" i18n="@@content.notFound.title">Tuhle stránku jsme nenašli</h1>
     @switch (missing()) {
       @case ('news') {
@@ -25,10 +25,7 @@
           <a class="ui-cta" routerLink="/aktuality" i18n="@@content.notFound.news.list"
             >Všechny aktuality</a
           >
-          <a
-            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
-            routerLink="/"
-            i18n="@@content.notFound.home"
+          <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.notFound.home"
             >Zpět na úvodní stránku</a
           >
         }
@@ -36,17 +33,14 @@
           <a class="ui-cta" routerLink="/projekty" i18n="@@content.notFound.project.list"
             >Kde všude pomáháme</a
           >
-          <a
-            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
-            routerLink="/"
-            i18n="@@content.notFound.home"
+          <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.notFound.home"
             >Zpět na úvodní stránku</a
           >
         }
         @default {
           <a class="ui-cta" routerLink="/" i18n="@@content.notFound.home">Zpět na úvodní stránku</a>
           <a
-            class="ui-cta ui-cta--ghost ui-cta--on-inverse"
+            class="ui-cta ui-cta--ghost"
             routerLink="/o-nas"
             fragment="kontakt"
             i18n="@@content.notFound.contact"

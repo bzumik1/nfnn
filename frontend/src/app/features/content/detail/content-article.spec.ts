@@ -34,7 +34,7 @@ describe('Given the page of a news article', () => {
     await fixture.whenStable();
 
     expect(text(fixture, 'h1')).toBe('Zahrada pro děti');
-    expect(text(fixture, '.ui-eyebrow')).toBe('Projekt · 20. 10. 2026');
+    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 20. 10. 2026');
     expect(text(fixture, '.crumbs a')).toBe('← Všechny aktuality');
     expect(
       (fixture.nativeElement.querySelector('.photo img') as HTMLImageElement).getAttribute('src'),
@@ -149,7 +149,7 @@ describe('Given the page of a project', () => {
     fixture.componentRef.setInput('page', projectPage(project()));
     await fixture.whenStable();
 
-    expect(text(fixture, '.ui-eyebrow')).toBe('Projekt · 2024');
+    expect(text(fixture, '.ui-intro__meta')).toBe('Projekt · 2024');
     expect(text(fixture, '.crumbs a')).toBe('← Kde pomáháme');
   });
 });

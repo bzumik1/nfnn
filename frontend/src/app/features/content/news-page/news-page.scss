@@ -71,10 +71,6 @@ app-featured-news ~ .older,
 }
 
 @include bp.down(phone) {
-  .ui-eyebrow {
-    display: none;
-  }
-
   .stories-block,
   .older {
     margin-top: var(--space-10);

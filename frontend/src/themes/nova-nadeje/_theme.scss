@@ -182,8 +182,8 @@
   --text-section-title-compact: clamp(max(1rem, min(1.75rem, 16vw)), 4vw, 2.875rem);
   --text-section-title: clamp(max(1rem, min(1.875rem, 16vw)), 4vw, 3.125rem);
   --text-cta-title: clamp(max(1rem, min(1.625rem, 16vw)), 3.5vw, 2.75rem);
-  --text-article-title: clamp(max(1rem, min(2.125rem, 16vw)), 5vw, 3.5rem);
-  --text-page-title: clamp(max(1rem, min(2.25rem, 16vw)), 5.5vw, 3.75rem);
+  --text-article-title: clamp(max(1rem, min(1.75rem, 16vw)), 4vw, 2.75rem);
+  --text-page-title: clamp(max(1rem, min(2.125rem, 16vw)), 4.5vw, 3.25rem);
   --text-hero: clamp(max(1rem, min(3.25rem, 27vw)), 8vw, 6.25rem);
   --text-hero-short: max(2.25rem, min(6vw, 13svh));
 
@@ -294,7 +294,6 @@
   --shadow-button: 0 6px 20px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
   --shadow-button-sm: 0 4px 14px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
   --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
-  --shadow-badge: 0 16px 48px color-mix(in srgb, var(--color-accent-fill) 40%, transparent);
   --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent-fill) 13%, transparent);
   --shadow-nav-active: inset 3px 0 0 var(--color-accent);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);

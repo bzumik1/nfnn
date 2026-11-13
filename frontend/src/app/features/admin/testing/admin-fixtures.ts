@@ -4,7 +4,6 @@ import {
   PushSubscriptionResponse,
   AdminBankAccountItem,
   AdminActionResponse,
-  AdminActivitySinceResponse,
   DiagnosticsResponse,
   LogFileResponse,
   LoggerResponse,
@@ -443,19 +442,6 @@ export function overview(overrides: Partial<AdminOverviewResponse> = {}): AdminO
         paired: { count: 1, totalMinor: 20000, currency: 'CZK' },
       }),
     ],
-    ...overrides,
-  };
-}
-
-export function activitySince(
-  overrides: Partial<AdminActivitySinceResponse> = {},
-): AdminActivitySinceResponse {
-  return {
-    from: '2026-10-28T20:14:00Z',
-    payments: { count: 5, totalMinor: 1250000, currency: 'CZK' },
-    paired: { count: 3, totalMinor: 750000, currency: 'CZK' },
-    unpaired: { count: 2, totalMinor: 500000, currency: 'CZK' },
-    newDonors: 3,
     ...overrides,
   };
 }

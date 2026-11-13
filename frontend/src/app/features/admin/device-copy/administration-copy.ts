@@ -40,18 +40,24 @@ export class AdministrationCopy {
     if (rows === undefined) {
       rows = computed(() => {
         const contents = this.contents();
-        if (contents === null) {
-          return null;
-        }
-        return contents.chunks
-          .filter((chunk) => chunk.id === key || chunk.id.startsWith(`${key}:`))
-          .sort((first, second) => (first.id < second.id ? -1 : first.id > second.id ? 1 : 0))
-          .flatMap((chunk) => chunk.rows);
+        return contents === null ? null : copyRows(contents, part, kind);
       });
       this.kinds.set(key, rows);
     }
     return rows as Signal<readonly T[] | null>;
   }
+}
+
+export function copyRows<T>(
+  contents: CopyContents,
+  part: AdministrationCopyPart,
+  kind: string,
+): readonly T[] {
+  const key = `${part}/${kind}`;
+  return contents.chunks
+    .filter((chunk) => chunk.id === key || chunk.id.startsWith(`${key}:`))
+    .sort((first, second) => (first.id < second.id ? -1 : first.id > second.id ? 1 : 0))
+    .flatMap((chunk) => chunk.rows as readonly T[]);
 }
 
 function isDonationsSummary(donations: unknown): donations is AdministrationDonationsSummary {

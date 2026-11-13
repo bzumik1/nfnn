@@ -1,10 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouteReuseStrategy } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { CompactLayout } from '../../../core/layout/compact-layout';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
 import { ProjectResponse } from '../projects-api';
 import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
@@ -34,10 +33,8 @@ const STORIES: ProjectResponse[] = [
 describe('Given the Pomáháme tab', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
-  const compact = signal(false);
 
   beforeEach(async () => {
-    compact.set(false);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -48,7 +45,6 @@ describe('Given the Pomáháme tab', () => {
           { path: 'aktuality/:slug', component: Elsewhere },
           { path: 'prispet', component: Elsewhere },
         ]),
-        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -300,12 +296,13 @@ describe('Given the Pomáháme tab', () => {
     answerAll(STORIES);
   });
 
-  it('when it shows on a phone, then the eyebrow above the title is left out, as the tab bar names the tab', async () => {
-    compact.set(true);
+  it('when it shows at any width, then the shared header names it with no label above the title, as the tab bar names the tab', async () => {
     const page = await open('/projekty');
 
-    expect(page.querySelector('.ui-eyebrow')?.closest('app-donate-band')).not.toBeNull();
-    expect(page.querySelector('.stories-intro .ui-eyebrow')).toBeNull();
+    expect(page.querySelector('.ui-intro h1.ui-intro__title')?.textContent?.trim()).toBe(
+      'Komu jsme pomohli',
+    );
+    expect(page.querySelector('.ui-intro .ui-eyebrow')).toBeNull();
   });
 });
 
@@ -322,7 +319,6 @@ describe('Given Pomáháme kept while the visitor is on another tab', () => {
           { path: 'projekty', component: ProjectsPage },
           { path: 'o-nas', component: Elsewhere },
         ]),
-        { provide: CompactLayout, useValue: { isCompact: signal(false).asReadonly() } },
         { provide: RouteReuseStrategy, useExisting: KeptTabPages },
       ],
     });

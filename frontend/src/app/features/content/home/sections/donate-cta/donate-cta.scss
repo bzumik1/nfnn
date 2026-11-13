@@ -1,8 +1,7 @@
 @use 'breakpoints' as bp;
 
 .donate {
-  padding: max(calc(var(--safe-area-top) + var(--space-27)), var(--page-top)) 0 var(--space-27);
-  background: var(--color-surface);
+  padding-bottom: var(--space-27);
 }
 
 .two-col {
@@ -53,22 +52,6 @@
 .donate-quote p {
   font-size: var(--text-sm);
   opacity: 0.85;
-}
-
-.title {
-  font-family: var(--font-display);
-  font-size: var(--text-cta-title);
-  font-weight: var(--weight-extrabold);
-  line-height: var(--leading-heading);
-  margin-bottom: var(--space-5);
-  color: var(--color-text);
-}
-
-.lead {
-  color: var(--color-text-muted);
-  line-height: var(--leading-loose);
-  font-size: var(--text-xl);
-  margin-bottom: var(--space-9);
 }
 
 .before-pay {
@@ -170,7 +153,7 @@
 
 @mixin one-column {
   .donate {
-    padding: max(calc(var(--safe-area-top) + var(--space-16)), var(--page-top)) 0 var(--space-16);
+    padding-bottom: var(--space-16);
   }
 
   .two-col {

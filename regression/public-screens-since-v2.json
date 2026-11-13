@@ -2,38 +2,38 @@
   "shots": [
     {
       "state": "home",
-      "since": "#225, #228, #245, #248, #263, #267, #205, #227, #230, #232, #242, #255, #530, #540",
-      "reason": "the home page since v2: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the usability fixes of #205, who runs the foundation with the details accountants need (#227, #230, #255), the About photo (#232) and the figures counting up (#242); and the payment QR asks for an instant payment (PT:IP, Jakub 2026-11-06, #530); and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540)"
+      "since": "#225, #228, #245, #248, #263, #267, #205, #227, #230, #232, #242, #255, #530, #540, #609",
+      "reason": "the home page since v2: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the usability fixes of #205, who runs the foundation with the details accountants need (#227, #230, #255), the About photo (#232) and the figures counting up (#242); and the payment QR asks for an instant payment (PT:IP, Jakub 2026-11-06, #530); and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "news",
-      "since": "#225, #228, #245, #248, #263, #267",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248)"
+      "since": "#225, #228, #245, #248, #263, #267, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "news-article",
-      "since": "#225, #228, #245, #248, #263, #267, #257",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the signature of the person of the foundation under an article (#257)"
+      "since": "#225, #228, #245, #248, #263, #267, #257, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the signature of the person of the foundation under an article (#257); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "projects",
-      "since": "#225, #228, #245, #248, #263, #267, #246, #249",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the projects ordered by year and whom they helped (#246, #249)"
+      "since": "#225, #228, #245, #248, #263, #267, #246, #249, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the projects ordered by year and whom they helped (#246, #249); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "project",
-      "since": "#225, #228, #245, #248, #263, #267, #246",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the project page's category of whom it helped (#246)"
+      "since": "#225, #228, #245, #248, #263, #267, #246, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the project page's category of whom it helped (#246); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "privacy-policy",
-      "since": "#225, #228, #245, #248, #263, #267, #220, #221, #271, #286",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the privacy policy rewritten for what an erasure keeps (#220), browser error reports (#221), receipt verification (#271), what the browser keeps (#286) the signed-in devices (2.9) and when a device deletes its copies (2.11)"
+      "since": "#225, #228, #245, #248, #263, #267, #220, #221, #271, #286, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the privacy policy rewritten for what an erasure keeps (#220), browser error reports (#221), receipt verification (#271), what the browser keeps (#286) the signed-in devices (2.9) and when a device deletes its copies (2.11); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "not-found",
-      "since": "#225, #228, #245, #248, #263, #267",
-      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248)"
+      "since": "#225, #228, #245, #248, #263, #267, #609",
+      "reason": "the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "password-reset-without-link",
@@ -87,18 +87,18 @@
     },
     {
       "state": "home-donate-1000",
-      "since": "#530, #540",
-      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540)"
+      "since": "#530, #540, #609",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "home-donate-own-amount",
-      "since": "#530, #540",
-      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540)"
+      "since": "#530, #540, #609",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "home-donate-signed-in",
-      "since": "#530, #540",
-      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540)"
+      "since": "#530, #540, #609",
+      "reason": "the payment QR asks the payer's bank for an instant payment (PT:IP, Jakub 2026-11-06), so its symbol changes; and the payment QR stands in the middle of its frame and its white ground has rounded corners concentric with the frame (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     },
     {
       "state": "sign-in-recovery-payment",
@@ -107,8 +107,8 @@
     },
     {
       "state": "home-donate-qr-error",
-      "since": "#540",
-      "reason": "the empty placeholder of the QR in the failure state keeps the QR's 260 px square in its frame instead of collapsing to a small box (#540)"
+      "since": "#540, #609",
+      "reason": "the empty placeholder of the QR in the failure state keeps the QR's 260 px square in its frame instead of collapsing to a small box (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609)"
     }
   ]
 }

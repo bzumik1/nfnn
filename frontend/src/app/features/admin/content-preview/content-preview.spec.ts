@@ -45,7 +45,7 @@ describe('Given the preview of a news article', () => {
       ),
     ).toBe(`/api/content/media/${IMAGE_ID}?w=480`);
     expect(text(fixture, 'app-content-article h3')).toBe('Zahrada pro děti');
-    expect(text(fixture, 'app-content-article .ui-eyebrow')).toBe('Projekt · 20. 10. 2026');
+    expect(text(fixture, 'app-content-article .ui-intro__meta')).toBe('Projekt · 20. 10. 2026');
     expect(texts(fixture, 'app-content-article .prose p')).toEqual([
       'První odstavec textu.',
       'Druhý odstavec textu.',
@@ -75,7 +75,7 @@ describe('Given the preview of a project', () => {
       'Stránka příběhu',
     ]);
     expect(text(fixture, '.card .card-year')).toBe('2024');
-    expect(text(fixture, 'app-content-article .ui-eyebrow')).toBe('Projekt · 2024');
+    expect(text(fixture, 'app-content-article .ui-intro__meta')).toBe('Projekt · 2024');
     expect(fixture.nativeElement.querySelector('.card a')).toBeNull();
   });
 });

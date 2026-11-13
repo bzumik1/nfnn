@@ -5,17 +5,16 @@
 }
 
 .crumbs {
-  margin-bottom: var(--space-7);
+  margin-bottom: var(--space-5);
 
   a {
-    color: color-mix(in srgb, var(--color-on-inverse) 80%, transparent);
+    color: var(--color-accent);
     font-size: var(--text-md);
     font-weight: var(--weight-semibold);
     text-decoration: none;
 
     @media (hover: hover) {
       &:hover {
-        color: var(--color-on-inverse);
         text-decoration: underline;
       }
     }
@@ -23,7 +22,6 @@
 }
 
 .body {
-  padding-top: var(--space-16);
   padding-bottom: var(--space-27);
 }
 
@@ -89,7 +87,6 @@
 
 @include bp.down(tablet) {
   .body {
-    padding-top: var(--space-10);
     padding-bottom: var(--space-18);
   }
 

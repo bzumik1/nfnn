@@ -3,51 +3,7 @@
   @if (compact()) {
     <ng-container *ngTemplateOutlet="attentionBlock" />
   }
-  <section class="ui-card since" aria-labelledby="admin-since-title">
-    <h2 id="admin-since-title" class="ui-card__title" i18n="@@admin.home.since.title">
-      Od posledního přihlášení
-    </h2>
-    @switch (sinceState()) {
-      @case ('loading') {
-        <p class="ui-load-state" role="status" i18n="@@admin.home.since.loading">
-          Zjišťujeme, co je od minula nového…
-        </p>
-      }
-      @case ('error') {
-        <div class="ui-load-state ui-load-state--error" role="alert">
-          <p i18n="@@admin.home.since.error.text">Co je od minula nového, se nepodařilo zjistit.</p>
-          <button
-            appNeedsConnection
-            type="button"
-            class="ui-button"
-            (click)="loadSince()"
-            i18n="@@admin.home.since.error.retry"
-          >
-            Zkusit znovu
-          </button>
-        </div>
-      }
-      @case ('ready') {
-        <p class="since-lead">{{ sinceLead() }}</p>
-        @if (sinceFigures().length > 0) {
-          <dl class="admin-data">
-            @for (figure of sinceFigures(); track figure.label) {
-              <div>
-                <dt>{{ figure.label }}</dt>
-                <dd>
-                  @if (figure.link; as link) {
-                    <a [routerLink]="link" [queryParams]="figure.query">{{ figure.text }}</a>
-                  } @else {
-                    {{ figure.text }}
-                  }
-                </dd>
-              </div>
-            }
-          </dl>
-        }
-      }
-    }
-  </section>
+  <app-since-last-visit class="since" />
   @if (compact()) {
     <app-admin-section-rows class="sections" [label]="sectionsLabel" [groups]="sections()" />
   } @else {
