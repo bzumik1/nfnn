@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.BROWSER;
-import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.CONNECTED_APPLICATION;
+import static cz.novanadeje.app.shared.application.administration.AdministrationChannel.BROWSER;
+import static cz.novanadeje.app.shared.application.administration.AdministrationChannel.CONNECTED_APPLICATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;

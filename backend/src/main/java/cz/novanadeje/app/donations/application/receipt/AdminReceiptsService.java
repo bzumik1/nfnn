@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -2,7 +2,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptView;
 import cz.novanadeje.app.donations.application.receipt.AdminReceiptsService;
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsRun;
 import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsService;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
@@ -41,7 +41,6 @@ import static cz.novanadeje.app.donations.interfaces.rest.DonorDonationsControll
 class AdminReceiptsController {
 
     static final int DEFAULT_LIMIT = 50;
-    private static final String SCOPE_CLAIM = "scope";
     private static final String NOT_STORED_BY_ANY_CACHE = "private, no-store";
 
     private final AdminReceiptsService receipts;
@@ -60,8 +59,8 @@ class AdminReceiptsController {
     }
 
     @PostMapping("/receipts/yearly")
-    ResponseEntity<YearlyReceiptsResponse> issueYearly(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody YearlyReceiptsRequest request) {
-        YearlyReceiptsRun run = yearlyReceipts.issue(UUID.fromString(jwt.getSubject()), channelOf(jwt), Year.of(request.year()),
+    ResponseEntity<YearlyReceiptsResponse> issueYearly(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @Valid @RequestBody YearlyReceiptsRequest request) {
+        YearlyReceiptsRun run = yearlyReceipts.issue(UUID.fromString(jwt.getSubject()), channel, Year.of(request.year()),
                 request.donorIds().stream().map(DonorReference::new).toList());
         return notStored(YearlyReceiptsResponse.from(run));
     }
@@ -79,9 +78,9 @@ class AdminReceiptsController {
     }
 
     @GetMapping("/receipts/{id}")
-    ResponseEntity<AdminReceiptResponse> receipt(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+    ResponseEntity<AdminReceiptResponse> receipt(AdministrationChannel channel, @PathVariable UUID id) {
         AdminReceiptView view = receipts.receipt(new DonationReceiptId(id));
-        return notStored(view.donorErased() && channelOf(jwt) == AdministrationChannel.CONNECTED_APPLICATION
+        return notStored(view.donorErased() && channel.isConnectedApplication()
                 ? AdminReceiptResponse.withoutErasedDonor(view.receipt())
                 : AdminReceiptResponse.asIssued(view.receipt(), view.donorErased()));
     }
@@ -98,10 +97,9 @@ class AdminReceiptsController {
     }
 
     @PostMapping("/donors/{donorId}/receipts")
-    ResponseEntity<AdminReceiptResponse> issue(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID donorId,
+    ResponseEntity<AdminReceiptResponse> issue(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @PathVariable UUID donorId,
                                                @Valid @RequestBody ReceiptIssueRequest request) {
         UUID admin = UUID.fromString(jwt.getSubject());
-        AdministrationChannel channel = channelOf(jwt);
         DonorReference donor = new DonorReference(donorId);
         DonationReceipt receipt = request.year() != null
                 ? receipts.issueForYear(admin, channel, donor, Year.of(request.year()))
@@ -109,9 +107,6 @@ class AdminReceiptsController {
         return notStored(AdminReceiptResponse.ofLiveDonor(receipt));
     }
 
-    private static AdministrationChannel channelOf(Jwt jwt) {
-        return jwt.hasClaim(SCOPE_CLAIM) ? AdministrationChannel.CONNECTED_APPLICATION : AdministrationChannel.BROWSER;
-    }
 
     private static <T> ResponseEntity<T> notStored(T body) {
         return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE).body(body);

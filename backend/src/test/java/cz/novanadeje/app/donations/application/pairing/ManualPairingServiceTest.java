@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.application.pairing;
 
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;

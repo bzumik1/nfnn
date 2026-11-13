@@ -4,7 +4,7 @@ import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.DonationRow;
 import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.PaymentRow;
 import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.PaymentWithGift;
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
@@ -106,7 +106,7 @@ public class ManualPairingService {
         }
         Optional<DonationReceipt> withdrawn = receipts.findActiveForYear(donation.donor(), donation.receivedYear())
                 .filter(yearly -> yearly.lists(donation.id()));
-        if (withdrawn.isPresent() && !channel.mayWithdrawReceipts()) {
+        if (withdrawn.isPresent() && channel.isConnectedApplication()) {
             throw new ReceiptWithdrawalInBrowserOnly(withdrawn.get().number());
         }
         withdrawn.ifPresent(yearly -> {
