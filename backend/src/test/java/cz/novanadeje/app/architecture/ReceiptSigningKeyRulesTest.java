@@ -37,7 +37,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
@@ -52,8 +51,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class ReceiptSigningKeyRulesTest {
 
     private static final Set<String> READS = Set.of("findAll", "lockForIssuing");
-    private static final Set<String> WRITES = Arrays.stream(ReceiptSigningKeyRepository.class.getMethods()).map(Method::getName)
-            .filter(Predicate.not(READS::contains)).collect(Collectors.toUnmodifiableSet());
     private static final String PERSISTENCE = "cz.novanadeje.app.donations.infrastructure.persistence.";
     private static final String KEY_ADAPTER = PERSISTENCE + "JpaReceiptSigningKeyRepository";
     private static final Set<String> KEY_PERSISTENCE = Set.of(
@@ -73,7 +70,7 @@ class ReceiptSigningKeyRulesTest {
 
     private static final DescribedPredicate<JavaAccess<?>> A_WRITE_OF_THE_KEY_REPOSITORY = callsOrReferences(
             "a method of " + ReceiptSigningKeyRepository.class.getSimpleName() + " other than " + String.join(" and ", new TreeSet<>(READS)),
-            ReceiptSigningKeyRepository.class, WRITES::contains);
+            ReceiptSigningKeyRepository.class, Predicate.not(READS::contains));
 
     private static final DescribedPredicate<JavaClass> THE_KEY_PERSISTENCE = DescribedPredicate.describe(
             "the JPA entities and Spring Data repositories of the receipt signing keys", javaClass -> KEY_PERSISTENCE.contains(javaClass.getName()));

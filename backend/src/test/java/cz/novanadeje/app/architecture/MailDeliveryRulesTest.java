@@ -9,12 +9,17 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Transport;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
@@ -29,7 +34,10 @@ class MailDeliveryRulesTest {
 
     private static final String TYPED_SERVER_PROBE = "cz.novanadeje.app.operations.infrastructure.settings.JavaMailServerProbe";
 
-    private static final DescribedPredicate<JavaAccess<?>> SENDING_MAIL = callsOrReferences("a send of Spring's mail sender", MailSender.class, "send"::equals);
+    private static final DescribedPredicate<JavaAccess<?>> SENDING_MAIL = callsOrReferences("", MailSender.class, "send"::equals)
+            .or(callsOrReferences("", JavaMailSenderImpl.class, "doSend"::equals))
+            .or(callsOrReferences("", Transport.class, Set.of("send", "sendMessage")::contains))
+            .as("a send of Spring's mail sender or of Jakarta Mail's transport");
 
     @ArchTest
     static final ArchRule mail_is_sent_only_through_the_observed_sender = noClasses()
@@ -52,6 +60,21 @@ class MailDeliveryRulesTest {
         var result = mail_is_sent_only_through_the_observed_sender.evaluate(new ClassFileImporter().importClasses(PlantedReferenceSender.class));
 
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedReferenceSender.class.getSimpleName());
+    }
+
+    @Test
+    @DisplayName("Given a class that sends through Jakarta Mail's transport itself, when the mail rule checks it, then it is reported")
+    void should_report_transport_send_when_rule_checks_given_class_bypassing_spring() {
+        var result = mail_is_sent_only_through_the_observed_sender.evaluate(new ClassFileImporter().importClasses(PlantedTransportSender.class));
+
+        assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains("Transport.send");
+    }
+
+    static final class PlantedTransportSender {
+
+        void send(Message message) throws MessagingException {
+            Transport.send(message);
+        }
     }
 
     static final class PlantedReferenceSender {

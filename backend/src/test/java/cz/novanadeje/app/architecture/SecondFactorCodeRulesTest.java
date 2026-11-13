@@ -11,6 +11,7 @@ import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donors.application.SecondFactorCodes;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.Totp;
+import cz.novanadeje.app.donors.domain.TotpSecret;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ import java.util.function.BiConsumer;
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 @AnalyzeClasses(
         packagesOf = AppApplication.class,
@@ -34,6 +36,12 @@ class SecondFactorCodeRulesTest {
     private static final Set<String> CODE_CHECKS = Set.of("verify", "check", "confirm");
 
     private static final Set<String> CODE_COMPUTATIONS = Set.of("matchingStep", "codeAt");
+
+    private static final String FACTOR_ROW = "cz.novanadeje.app.donors.infrastructure.persistence.SecondFactorJpaEntity";
+
+    private static final DescribedPredicate<JavaAccess<?>> READING_THE_SECRET = callsOrReferences("", SecondFactor.class, "secret"::equals)
+            .or(callsOrReferences("", TotpSecret.class, "bytes"::equals))
+            .as("a read of the factor's secret or of its bytes");
 
     private static final DescribedPredicate<JavaAccess<?>> A_CODE_CHECK_OF_THE_FACTOR = callsOrReferences("", SecondFactor.class, CODE_CHECKS::contains)
             .or(callsOrReferences("", Totp.class, CODE_COMPUTATIONS::contains))
@@ -47,11 +55,22 @@ class SecondFactorCodeRulesTest {
             .should().accessTargetWhere(A_CODE_CHECK_OF_THE_FACTOR)
             .because("every code check counts against the donor's wrong codes and spends a right code atomically (security.md, Abuse)");
 
+    @ArchTest
+    static final ArchRule the_secret_of_a_factor_is_read_only_to_store_it_and_compute_its_codes = noClasses()
+            .that().doNotHaveFullyQualifiedName(SecondFactor.class.getName())
+            .and().doNotHaveFullyQualifiedName(Totp.class.getName())
+            .and().doNotHaveFullyQualifiedName(FACTOR_ROW)
+            .should().accessTargetWhere(READING_THE_SECRET)
+            .because("a code computed from the secret outside Totp would skip the count of wrong codes (security.md, Abuse)");
+
     @Test
     @DisplayName("Given the guarded method names, when the factor and Totp are read, then each name is a method there, so no rule watches a name that is gone")
     void should_find_every_guarded_name_when_read_given_the_factor_and_totp() {
         assertThat(Arrays.stream(SecondFactor.class.getMethods()).map(Method::getName)).containsAll(CODE_CHECKS);
         assertThat(Arrays.stream(Totp.class.getMethods()).map(Method::getName)).containsAll(CODE_COMPUTATIONS);
+        assertThat(Arrays.stream(SecondFactor.class.getMethods()).map(Method::getName)).contains("secret");
+        assertThat(Arrays.stream(TotpSecret.class.getMethods()).map(Method::getName)).contains("bytes");
+        assertThatCode(() -> Class.forName(FACTOR_ROW)).doesNotThrowAnyException();
     }
 
     @Test
@@ -70,6 +89,23 @@ class SecondFactorCodeRulesTest {
         assertThat(result.getFailureReport().getDetails()).hasSize(2)
                 .anySatisfy(detail -> assertThat(detail).contains("SecondFactor.check"))
                 .anySatisfy(detail -> assertThat(detail).contains("Totp.matchingStep"));
+    }
+
+    @Test
+    @DisplayName("Given a class that reads the factor's secret and its bytes, when the secret rule checks it, then both reads are reported")
+    void should_report_secret_reads_when_rule_checks_given_class_computing_codes_itself() {
+        var result = the_secret_of_a_factor_is_read_only_to_store_it_and_compute_its_codes.evaluate(new ClassFileImporter().importClasses(PlantedSecretReader.class));
+
+        assertThat(result.getFailureReport().getDetails()).hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("SecondFactor.secret"))
+                .anySatisfy(detail -> assertThat(detail).contains("TotpSecret.bytes"));
+    }
+
+    static final class PlantedSecretReader {
+
+        byte[] read(SecondFactor factor) {
+            return factor.secret().bytes();
+        }
     }
 
     static final class PlantedBypasses {
