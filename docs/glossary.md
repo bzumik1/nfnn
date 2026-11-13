@@ -274,7 +274,7 @@ UI „Odemknout“ the administration (`frontend/src/app/features/admin/lock/`),
 The lock on the administration copy on a device, opened again with the password and a code or with a passkey.
 
 **Erasure**\
-UI „výmaz podle GDPR“, „vymazat“, „vymazaný dárce“; in the donor's „Údaje a zabezpečení“ the card „Smazání účtu“ · Code: `DonorErasureService`, `DonorErased`, `ErasedPersonalData`, `DonorRecordErased`; the audit text says „anonymized“.\
+UI „výmaz podle GDPR“, „vymazat“, „vymazaný dárce“; in the donor's „Údaje a zabezpečení“ the card „Smazání účtu“ · Code: `DonorErasureService`, `DonorErased`, `ErasedPersonalData`, `DonorRecordErased`, `PaymentToErasedDonor`; the audit text says „anonymized“.\
 The administrator's irreversible, web-only replacement of a donor's name, address, e-mail and credentials with placeholders, on the donor's request; donations and issued receipts stay for accounting.
 
 ## Administration

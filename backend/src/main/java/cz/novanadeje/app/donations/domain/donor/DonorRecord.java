@@ -97,6 +97,12 @@ public final class DonorRecord {
         return erasedAt != null;
     }
 
+    public void requireOpenToPairing() {
+        if (erasedAt != null) {
+            throw new PaymentToErasedDonor(id);
+        }
+    }
+
     public Optional<Instant> erasedAt() {
         return Optional.ofNullable(erasedAt);
     }

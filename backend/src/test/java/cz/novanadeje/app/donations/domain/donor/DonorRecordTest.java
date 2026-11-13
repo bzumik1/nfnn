@@ -469,6 +469,26 @@ class DonorRecordTest {
     }
 
     @Test
+    @DisplayName("Given a live record, when asked to take a payment paired by hand, then it accepts")
+    void should_accept_when_payment_paired_by_hand_given_live_record() {
+        DonorRecord record = person();
+
+        record.requireOpenToPairing();
+
+        assertThat(record.isErased()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an erased record, when asked to take a payment paired by hand, then it is refused as erased")
+    void should_refuse_when_payment_paired_by_hand_given_erased_record() {
+        DonorRecord record = person();
+        record.erase(LATER);
+
+        assertThatThrownBy(record::requireOpenToPairing).isInstanceOf(PaymentToErasedDonor.class)
+                .hasFieldOrPropertyWithValue("code", "donations/payment-to-erased-donor");
+    }
+
+    @Test
     @DisplayName("Given an erased record, when erased again, then it is refused")
     void should_refuse_when_erased_twice_given_erased_record() {
         DonorRecord record = person();

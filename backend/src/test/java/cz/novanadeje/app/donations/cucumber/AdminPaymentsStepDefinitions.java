@@ -115,6 +115,14 @@ public class AdminPaymentsStepDefinitions {
         api.post(PAYMENTS_PATH + "/" + payment + "/unpair", null, ApiClient.ifMatch(versions.ofPayment(payment)));
     }
 
+    @When("the exchanged API token pairs payment {long} with {string}")
+    public void theExchangedApiTokenPairsPaymentWith(long transactionId, String donorAlias) {
+        actAsTheExchangedApiToken();
+        UUID payment = paymentId(transactionId);
+        api.post(PAYMENTS_PATH + "/" + payment + "/pair", Map.of("donorId", scenarioDonors.idOf(donorAlias).toString()),
+                ApiClient.ifMatch(versions.ofPayment(payment)));
+    }
+
     @When("the exchanged API token unpairs payment {long}")
     public void theExchangedApiTokenUnpairsPayment(long transactionId) {
         actAsTheExchangedApiToken();

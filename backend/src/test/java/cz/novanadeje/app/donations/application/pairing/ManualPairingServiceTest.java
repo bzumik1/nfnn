@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.PaymentToErasedDonor;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -171,6 +172,18 @@ class ManualPairingServiceTest {
         assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), unknown, ExpectedVersion.none())).isInstanceOf(DonorRecordNotFound.class);
 
         verify(donations, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given an erased donor, when a payment is paired with them by hand, then it is refused before the donor lock and nothing is stored or audited")
+    void should_refuse_when_paired_given_erased_donor() {
+        janaRecord.erase(NOW);
+
+        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none())).isInstanceOf(PaymentToErasedDonor.class);
+
+        verify(receipts, never()).lockDonor(any());
+        verify(donations, never()).save(any());
+        verify(events, never()).publishEvent(any());
     }
 
     @Test
