@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
-public class InvalidReceiptProof extends IllegalArgumentException {
+public class InvalidReceiptProof extends RuntimeException {
 
     private final ReceiptProofRejection rejection;
 
