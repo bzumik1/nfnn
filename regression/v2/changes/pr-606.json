@@ -1,10 +1,10 @@
 [
   {
     "kind": "retired",
-    "suite": "e2e",
-    "test": "back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then a plain ground shows under it and the list opens",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then a plain ground shows under it and the list opens",
     "reason": "Jakub 2026-11-12 (exact iOS): a page never shown in the visit is drawn under cover and lies under the finger instead of the plain ground, and is the page that opens on release without being asked for again",
-    "replacement": "back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then the list, never shown before, is drawn under it and on letting go is the page that opens without being asked for again",
+    "replacement": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone with an article opened from the list > when the article was opened afresh and a finger drags it back, then the list, never shown before, is drawn under it and on letting go is the page that opens without being asked for again",
     "contract": "docs/frontend-overview.md, page-transitions and navigation-preview"
   },
   {
