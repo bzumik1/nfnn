@@ -3,12 +3,7 @@
 }
 
 .claim {
-  margin-top: var(--space-2-5);
   max-width: 560px;
-  padding: var(--space-3) var(--space-3-5);
-  background: var(--color-surface-accent);
-  border: 1px solid var(--color-border-accent);
-  border-radius: var(--radius-md);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   color: var(--color-text-secondary);
@@ -21,6 +16,8 @@
 
 .claim-symbol {
   font-weight: var(--weight-bold);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .claim-note {
@@ -42,27 +39,6 @@
 
 .claim-yes,
 .claim-no {
-  min-height: 32px;
-  padding: var(--space-1-5) var(--space-4);
-  border: 1.5px solid var(--color-accent);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-sm);
-  cursor: pointer;
-
-  &[aria-disabled='true'] {
-    cursor: progress;
-    opacity: 0.7;
-  }
-}
-
-.claim-yes {
-  background: var(--color-accent-fill);
-  color: var(--color-on-accent);
-}
-
-.claim-no {
-  background: var(--color-surface);
-  color: var(--color-accent);
+  max-width: 100%;
+  white-space: normal;
 }

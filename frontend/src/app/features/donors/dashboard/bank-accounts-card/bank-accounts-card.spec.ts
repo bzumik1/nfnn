@@ -161,17 +161,18 @@ describe('Given the bank accounts card in the overview', () => {
     expect(text('.account-action')).toBe('Nepřiřazovat platby z tohoto účtu');
   });
 
-  it('when accounts arrive, then each Czech account starts its row with the mark of its bank and a foreign account has none', async () => {
+  it('when accounts arrive, then each Czech account starts its row with the mark of its bank and a foreign account with a neutral bank mark', async () => {
     await respond([
       bankAccount({ id: 'a-1', accountNumber: '2000145399/0800' }),
       bankAccount({ id: 'a-2', accountNumber: 'CZ6508000000192000145399' }),
     ]);
 
     const [czech, foreign] = [
-      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.account-main'),
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll('.account-row'),
     ];
-    expect(czech.firstElementChild?.tagName).toBe('APP-BANK-LOGO');
+    expect(czech.firstElementChild?.firstElementChild?.tagName).toBe('APP-BANK-LOGO');
     expect(foreign.querySelector('app-bank-logo')).toBeNull();
+    expect(foreign.firstElementChild?.firstElementChild?.tagName).toBe('APP-BANK-MARK');
   });
 
   describe('when the site does not name the bank of an account itself', () => {
@@ -397,10 +398,32 @@ describe('Given the bank accounts card in the overview', () => {
     expect(element('.account:nth-child(1) .account-action')).not.toBeNull();
   });
 
+  it('when accounts arrive, then Přidat účet is the last row of their list, after every account', async () => {
+    await respond([
+      bankAccount(),
+      bankAccount({ id: 'second', accountNumber: '19-2000145399/0800' }),
+    ]);
+
+    const rows = [...(element('ul:has(> li.account)')?.children ?? [])];
+    expect(rows.map((row) => row.tagName)).toEqual(['LI', 'LI', 'LI']);
+    expect(rows.at(-1)?.querySelector('button')).toBe(element('.accounts-add'));
+    expect(normalized(rows.at(-1)?.textContent ?? '')).toBe('Přidat účet');
+  });
+
+  it('when a verified account arrives, then its number and its state read as words apart and the number may break only before its bank code', async () => {
+    await respond([bankAccount()]);
+
+    expect(text('.account-line')).toBe('2900233333/2010 Ověřený');
+    const wbr = element('.account-number wbr');
+    expect(wbr).not.toBeNull();
+    expect(normalized(wbr?.nextSibling?.textContent ?? '')).toBe('2010');
+  });
+
   it('when the donor has no known account, then the card explains how one becomes known', async () => {
     await respond([]);
 
-    expect(element('.accounts-list')).toBeNull();
+    expect(element('li.account')).toBeNull();
+    expect(texts('ul:has(.accounts-add) > li')).toEqual(['Přidat účet']);
     expect(text('.accounts-empty')).toBe(
       'Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. ' +
         'Poslali jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? ' +
@@ -667,7 +690,7 @@ describe('Given the bank accounts card in the overview', () => {
     }
 
     it('then the question stands in that row under the hint, and Nepřiřazovat platby z tohoto účtu stays', () => {
-      const claim = element('.account .account-main app-symbol-claim') as HTMLElement;
+      const claim = element('.account .account-row app-symbol-claim') as HTMLElement;
       expect(claim).not.toBeNull();
       expect(
         (element('.account-hint') as HTMLElement).compareDocumentPosition(claim) &

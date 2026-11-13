@@ -49,8 +49,9 @@ import {
   SymbolOffer,
 } from '../../../donations/bank-accounts-api';
 import { BankNames } from '../../../donations/bank-names';
-import { bankCodeOf } from '../../../donations/czech-account';
+import { bankCodeOf, splitBeforeBankCode } from '../../../donations/czech-account';
 import { BankLogo } from '../../../donations/bank-logo/bank-logo';
+import { BankMark } from '../../../donations/bank-logo/bank-mark';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { BankCheckResponse, DonationsApi } from '../../../donations/donations-api';
@@ -98,6 +99,14 @@ const LABELS: Record<AccountLabel, string> = {
   disconnected: $localize`:@@donor.bankAccounts.status.disconnected:Nepřiřazujeme`,
 };
 
+const BADGE_TONES: Record<AccountLabel, string> = {
+  active: 'ui-badge--success',
+  shared: 'ui-badge--warning',
+  awaiting: 'ui-badge--accent',
+  excluded: 'ui-badge--neutral',
+  disconnected: 'ui-badge--neutral',
+};
+
 const EXCLUDED_HINT = $localize`:@@donor.bankAccounts.hint.excluded:Z tohoto účtu už přiřazujeme jen platby s variabilním symbolem. Posílejte z něj prosím vždy s vaším variabilním symbolem.`;
 
 const HINTS: Record<AccountLabel, string> = {
@@ -134,6 +143,7 @@ const PAYMENT_WATCH_CHECKS = 20;
     SymbolClaim,
     NeedsConnection,
     BankLogo,
+    BankMark,
   ],
   templateUrl: './bank-accounts-card.html',
   styleUrl: './bank-accounts-card.scss',
@@ -366,8 +376,11 @@ export class BankAccountsCard {
   }
 
   protected labelModifier(account: BankAccountItem): string {
-    return `account-status--${labelOf(account)}`;
+    const label = labelOf(account);
+    return `${BADGE_TONES[label]} account-status--${label}`;
   }
+
+  protected readonly accountParts = splitBeforeBankCode;
 
   protected bankName(account: BankAccountItem): string | null {
     return this.bankNames.nameOf(account.accountNumber);

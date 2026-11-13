@@ -34,7 +34,7 @@
   <div class="claim-actions">
     <button
       type="button"
-      class="claim-yes"
+      class="ui-button ui-button--primary claim-yes"
       [attr.aria-disabled]="busy()"
       [attr.aria-busy]="busy() && pressed() === 'confirm'"
       [attr.aria-describedby]="noteId()"
@@ -45,7 +45,7 @@
     </button>
     <button
       type="button"
-      class="claim-no"
+      class="ui-button claim-no"
       [attr.aria-disabled]="busy()"
       [attr.aria-busy]="busy() && pressed() === 'decline'"
       (click)="press('decline')"

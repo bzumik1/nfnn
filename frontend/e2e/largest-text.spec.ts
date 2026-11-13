@@ -235,6 +235,58 @@ for (const { width, height } of [
       expect(Math.abs(logo.x - number.x)).toBeLessThanOrEqual(1);
     });
 
+    test('when a signed-in donor with a question about an older symbol opens Bankovní účty, then every account row keeps its number, state, question and actions within the row and the bank code of each number on one line', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.route(
+        (url) => url.pathname === '/api/donations/me/bank-accounts',
+        (route) =>
+          route.fulfill({
+            json: {
+              items: [
+                bankAccountItem({
+                  id: 'a-1',
+                  accountNumber: '19-2000145399/0800',
+                  donationCount: 2,
+                  totalAmountMinor: 60000,
+                }),
+                bankAccountItem({
+                  id: 'a-2',
+                  accountNumber: '2900233333/2010',
+                  symbolOffer: {
+                    variableSymbol: '6123456789',
+                    paymentCount: 14,
+                    firstMonth: '2025-01',
+                    lastMonth: '2026-10',
+                  },
+                }),
+              ],
+            },
+          }),
+      );
+      await mockBankLogos(page, [{ code: '0800', imageId: LOGO_IMAGE_ID }]);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Bankovní účty');
+      await page.setViewportSize({ width, height });
+      const rows = page.locator('li.account');
+      await expect(rows).toHaveCount(2);
+      await expect(page.locator('app-symbol-claim')).toBeVisible();
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        for (const row of await rows.all()) {
+          await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
+          await expect
+            .poll(() => linesOfTheBankCode(row.locator('.account-number')), textSize)
+            .toBe(1);
+        }
+      }
+    });
+
     test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row', async ({
       page,
     }) => {
