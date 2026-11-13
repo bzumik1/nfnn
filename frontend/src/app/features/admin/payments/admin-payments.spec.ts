@@ -14,7 +14,7 @@ import {
   paymentList,
   unpairedPayment,
 } from '../testing/admin-fixtures';
-import { AdminPayments } from './admin-payments';
+import { AdminPayments, PAIRING_WAIT_MS } from './admin-payments';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { LiveUpdates } from '../../../core/live/live-updates';
 import { FakeLiveUpdates } from '../../../core/live/testing/live-fixtures';
@@ -480,6 +480,56 @@ describe('Given an administrator on the bank payments page', () => {
 
       expect(rows()).toHaveLength(1);
       expect(incoming()).toBe('');
+    });
+  });
+
+  describe('when the administrator presses the pairing button', () => {
+    beforeEach(async () => {
+      await open();
+      await listResponds(paymentList([unpairedPayment()]));
+    });
+
+    function press(): void {
+      button('Přiřadit dárci').click();
+      fixture.detectChanges();
+    }
+
+    it('then the sheet waits for the donors found and opens with them in it', async () => {
+      press();
+      expect(document.querySelector('dialog')).toBeNull();
+
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
+      await settle();
+
+      expect(Array.from(document.querySelectorAll('dialog .pair-result')).map(rowText)).toEqual([
+        'Jana Nováková VS 4821937560',
+      ]);
+      http
+        .expectOne(`${ACCOUNTS_URL}?query=Nov%C3%A1kov%C3%A1&limit=100`)
+        .flush({ items: [], hasMore: false });
+      await settle();
+    });
+
+    it('then a slow search opens the sheet after the longest wait and its donors follow', async () => {
+      vi.useFakeTimers();
+      press();
+      vi.advanceTimersByTime(PAIRING_WAIT_MS - 1);
+      fixture.detectChanges();
+      expect(document.querySelector('dialog')).toBeNull();
+
+      vi.advanceTimersByTime(1);
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+      await settle();
+
+      expect(document.querySelector('dialog')).not.toBeNull();
+      http.expectOne((request) => request.url === DONORS_URL).flush({ items: [foundDonor()] });
+      await settle();
+      http
+        .expectOne(`${ACCOUNTS_URL}?query=Nov%C3%A1kov%C3%A1&limit=100`)
+        .flush({ items: [], hasMore: false });
+      await settle();
+      expect(document.querySelectorAll('dialog .pair-result')).toHaveLength(1);
     });
   });
 
