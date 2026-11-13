@@ -12,6 +12,7 @@ import {
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, Observable, take } from 'rxjs';
 import { Connectivity } from '../../core/connectivity/connectivity';
+import { pathOf, tabOf } from '../../core/navigation/app-tabs';
 import { askedAhead } from '../../core/navigation/kept-public-answers';
 import { LOOK_BACK_PAGE_SIZE, NEWS_PAGE_SIZE, PROJECTS_PAGE_SIZE } from './content-page-sizes';
 import { HomeApi } from './home-api';
@@ -30,7 +31,6 @@ export const SAVES_DATA = new InjectionToken<() => boolean>('SAVES_DATA', {
 });
 
 const ARTICLE_LINK = /^\/(aktuality|projekty)\/([^/]+)$/;
-const NOT_PUBLIC = /^\/(darce|sprava|donor|aplikace|prvni-nastaveni|pripojeni)(\/|$)/;
 
 @Injectable({ providedIn: 'root' })
 export class ContentAhead {
@@ -54,7 +54,7 @@ export class ContentAhead {
         take(1),
       )
       .subscribe((event) => {
-        if (!NOT_PUBLIC.test(event.urlAfterRedirects)) {
+        if (opensATab(event.urlAfterRedirects)) {
           afterNextRender(() => this.tabsAhead(), { injector: this.injector });
         }
       });
@@ -108,3 +108,7 @@ export class ContentAhead {
 export const contentAheadAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(ContentAhead);
 });
+
+function opensATab(url: string): boolean {
+  return pathOf(url) === '/' || tabOf(url) !== null;
+}

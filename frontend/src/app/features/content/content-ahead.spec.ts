@@ -32,6 +32,8 @@ describe('Given the public content the app gets ready ahead', () => {
         provideRouter([
           { path: 'o-nas', component: Page },
           { path: 'sprava', component: Page },
+          { path: 'overit', component: Page },
+          { path: '', component: Page },
         ]),
         { provide: SAVES_DATA, useValue: () => savesData },
       ],
@@ -115,6 +117,20 @@ describe('Given the public content the app gets ready ahead', () => {
   it('when the visitor asked the device to save data, then the tabs are not asked for ahead', async () => {
     savesData = true;
     await firstPage('/o-nas');
+    await vi.advanceTimersByTimeAsync(CONTENT_AHEAD_AFTER_MS);
+
+    expect(tabLists()).toEqual([]);
+  });
+
+  it('when the first page is the home page, then the tabs are asked for ahead too', async () => {
+    await firstPage('/');
+    await vi.advanceTimersByTimeAsync(CONTENT_AHEAD_AFTER_MS);
+
+    expect(tabLists()).toEqual(TAB_LISTS);
+  });
+
+  it('when the first page is a tool of its own, such as the verification of a receipt, then the tabs are not asked for ahead', async () => {
+    await firstPage('/overit');
     await vi.advanceTimersByTimeAsync(CONTENT_AHEAD_AFTER_MS);
 
     expect(tabLists()).toEqual([]);
