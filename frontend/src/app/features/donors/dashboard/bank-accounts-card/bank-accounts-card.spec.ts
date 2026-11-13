@@ -110,6 +110,40 @@ describe('Given the bank accounts card in the overview', () => {
     http.expectOne(LIST_URL).flush({ items: [] });
   });
 
+  it('when the card is opened again, then the accounts show at once without the loading line and are refreshed behind them', async () => {
+    await respond([bankAccount()]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(BankAccountsCard);
+    fixture.componentRef.setInput('variableSymbol', '9876543210');
+    fixture.detectChanges();
+
+    expect(element('.accounts-loading')).toBeNull();
+    expect(texts('.account-number')).toHaveLength(1);
+    await respond([]);
+    expect(texts('.account-number')).toHaveLength(0);
+  });
+
+  it('when the card is opened again and disconnecting fails before the refresh answered, then the list is asked for again and its answer shows', async () => {
+    await respond([bankAccount()]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(BankAccountsCard);
+    fixture.componentRef.setInput('variableSymbol', '9876543210');
+    fixture.detectChanges();
+    const refresh = http.expectOne({ method: 'GET', url: LIST_URL });
+
+    await click('.account-action');
+    await click('.account-confirm-yes');
+    http
+      .expectOne(`${LIST_URL}/${ACCOUNT_ID}/disconnect`)
+      .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+    await settle();
+
+    refresh.flush({ items: [bankAccount()] });
+    await settle();
+    await respond([]);
+    expect(texts('.account-number')).toHaveLength(0);
+  });
+
   it('when a verified account arrives, then its row shows the number, the status, the bank, the verification day and the gifts without a symbol', async () => {
     await respond([bankAccount()]);
 

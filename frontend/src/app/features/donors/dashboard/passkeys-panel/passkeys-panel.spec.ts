@@ -111,6 +111,40 @@ describe('Given the passkeys panel of the sign-in card', () => {
     expect(texts('.passkey-dates')[1]).toContain('zatím nepoužito');
   });
 
+  it('when the card is opened again, then the passkeys show at once without the loading line and are refreshed behind them', async () => {
+    await render([IPHONE, WINDOWS]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(PasskeysPanel);
+    fixture.detectChanges();
+
+    expect(root().textContent).not.toContain('Načítáme');
+    expect(texts('.passkey-name')).toHaveLength(2);
+    http.expectOne(PASSKEYS_URL).flush({ items: [IPHONE] });
+    await settle();
+    expect(texts('.passkey-name')).toHaveLength(1);
+  });
+
+  it('when the card is opened again and a removal fails before the refresh answered, then the list is asked for again and its answer shows', async () => {
+    await render([IPHONE, WINDOWS]);
+    fixture.destroy();
+    fixture = TestBed.createComponent(PasskeysPanel);
+    fixture.detectChanges();
+    const refresh = http.expectOne(PASSKEYS_URL);
+
+    await clickButton('Odebrat');
+    await clickButton('Ano, odebrat');
+    http
+      .expectOne(`${PASSKEYS_URL}/${IPHONE.id}`)
+      .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+    await settle();
+
+    refresh.flush({ items: [IPHONE, WINDOWS] });
+    await settle();
+    http.expectOne(PASSKEYS_URL).flush({ items: [WINDOWS] });
+    await settle();
+    expect(texts('.passkey-name')).toEqual(['Windows']);
+  });
+
   it('when the donor has no passkey, then the card says so and offers to add one', async () => {
     await render([]);
 

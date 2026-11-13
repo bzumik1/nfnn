@@ -26,13 +26,15 @@ import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
 })
 class StubSection {}
 
-const SECTION_PAGES: AccountSectionPages = {
-  '/darce/prehled': () => Promise.resolve(StubSection),
-  '/darce/dary': () => Promise.resolve(StubSection),
-  '/darce/potvrzeni': () => Promise.resolve(StubSection),
-  '/darce/ucty': () => Promise.resolve(StubSection),
-  '/darce/udaje': () => Promise.resolve(StubSection),
-};
+function sectionPages(): AccountSectionPages {
+  return {
+    '/darce/prehled': () => Promise.resolve(StubSection),
+    '/darce/dary': () => Promise.resolve(StubSection),
+    '/darce/potvrzeni': () => Promise.resolve(StubSection),
+    '/darce/ucty': () => Promise.resolve(StubSection),
+    '/darce/udaje': () => Promise.resolve(StubSection),
+  };
+}
 
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
@@ -57,7 +59,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: DialogHistory, useClass: FakeDialogHistory },
-        { provide: ACCOUNT_SECTION_PAGES, useValue: SECTION_PAGES },
+        { provide: ACCOUNT_SECTION_PAGES, useFactory: sectionPages },
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
         { provide: AppInstall, useValue: { way: installWay.asReadonly(), install } },
         {
@@ -145,6 +147,19 @@ describe('Given the account sheet of a signed-in donor', () => {
       sheet.querySelector<HTMLButtonElement>('button.account-back')!.click();
 
       expect(back).toHaveBeenCalledOnce();
+    });
+
+    it('and the visitor goes back and opens it again, then its page stands in the very first frame', async () => {
+      history.listener?.stepBack();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      sheet
+        .querySelector<HTMLAnchorElement>('nav a[href="/darce/potvrzeni"]')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      fixture.detectChanges();
+
+      expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
     });
 
     it('and the visitor goes back, then the list of the account returns with the focus on the row they came from', async () => {

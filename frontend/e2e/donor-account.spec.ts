@@ -5,6 +5,7 @@ import {
   openSignInDialog,
   paymentDetails,
   problem,
+  rememberedDonorSession,
   session,
 } from './donor-session';
 import { drawnModulesMatch, PAYMENT_QR_500_WITH_SYMBOL } from './qr-matrices';
@@ -339,5 +340,62 @@ test.describe('Given a visitor who wants a donor account', () => {
     const qrCode = page.getByRole('img', { name: 'QR platba na účet Nadačního fondu Nová naděje' });
     await expect.poll(() => drawnModulesMatch(qrCode, PAYMENT_QR_500_WITH_SYMBOL)).toBe(true);
     expect(authorizations).toEqual([undefined]);
+  });
+});
+
+test.describe('Given a donor signed in on a phone, whose sections open in the account sheet', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('when they open Moje dary and Údaje a zabezpečení a second time while the server is slow, then both show what they showed before at once, without a loading line, and the bank is not asked again', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await rememberedDonorSession(page);
+    const bankChecks: string[] = [];
+    page.on('request', (request) => {
+      if (
+        request.method() === 'POST' &&
+        new URL(request.url()).pathname === '/api/donations/me/bank-check'
+      ) {
+        bankChecks.push(request.url());
+      }
+    });
+    await page.goto('/');
+    const sheet = page.getByRole('dialog');
+
+    await openAccountItem(page, 'Moje dary');
+    await expect(sheet.getByRole('heading', { name: 'Všechny dary' })).toBeVisible();
+    await expect(sheet.locator('.bank-check-status')).toHaveText(
+      'Údaje z banky k 18. 10. 2026 10:05',
+    );
+    expect(bankChecks).toHaveLength(1);
+    await openAccountItem(page, 'Údaje a zabezpečení');
+    await expect(sheet.getByText('Mac · Safari')).toBeVisible();
+
+    let answer: () => void = () => undefined;
+    const slowServer = new Promise<void>((resolve) => (answer = resolve));
+    await page.route(
+      (url) =>
+        url.pathname.startsWith('/api/donations/me') || url.pathname.startsWith('/api/donors/me'),
+      async (route) => {
+        await slowServer;
+        await route.fallback();
+      },
+    );
+
+    await openAccountItem(page, 'Moje dary');
+    await expect(sheet.getByRole('heading', { name: 'Všechny dary' })).toBeVisible();
+    await expect(sheet.getByText(/Načítáme/)).toHaveCount(0);
+    await openAccountItem(page, 'Údaje a zabezpečení');
+    await expect(sheet.getByText('Mac · Safari')).toBeVisible();
+    await expect(sheet.getByText(/Načítáme/)).toHaveCount(0);
+    expect(bankChecks).toHaveLength(1);
+
+    const refreshed = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === '/api/donors/me/devices',
+    );
+    answer();
+    await refreshed;
+    await expect(sheet.getByText('Mac · Safari')).toBeVisible();
   });
 });

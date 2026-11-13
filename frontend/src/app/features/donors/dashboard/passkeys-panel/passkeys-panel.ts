@@ -35,6 +35,7 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
@@ -57,6 +58,8 @@ const PASSKEY_NAME_MAX_LENGTH = 64;
 export class PasskeysPanel {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly kept = inject(KeptDonorAnswers);
+  private readonly changes = new ListChanges(() => this.load(false, true));
   private readonly authenticator = inject(PasskeyAuthenticator);
   private readonly device = inject(SESSION_DEVICE);
   private readonly document = inject(DOCUMENT);
@@ -113,21 +116,24 @@ export class PasskeysPanel {
   protected newName = '';
 
   constructor() {
-    this.load();
+    this.load(true);
     effect(() => {
       const list = this.passkeys();
       if (list !== null) {
         this.countChanged.emit(list.length);
+        this.kept.keep('passkeys', { items: list });
       }
     });
   }
 
-  load(): void {
+  load(shownBefore = false, quietly = false): void {
     this.loadError.set('');
-    this.authApi.passkeys().subscribe({
+    const server = this.changes.track(this.authApi.passkeys());
+    const passkeys = shownBefore ? this.kept.read('passkeys', server) : server;
+    passkeys.subscribe({
       next: (list) => this.passkeys.set(list.items),
       error: (failure: unknown) => {
-        if (this.sessionLost(failure)) {
+        if (this.sessionLost(failure) || (quietly && this.passkeys() !== null)) {
           return;
         }
         this.loadError.set(
@@ -177,6 +183,7 @@ export class PasskeysPanel {
       return;
     }
     const name = this.name.trim();
+    this.changes.changing();
     this.saving.set(true);
     this.error.set('');
     this.confirm()
@@ -216,16 +223,19 @@ export class PasskeysPanel {
               : $localize`:@@donor.passkeys.added:Přístupový klíč ${passkey.name}:name: je přidaný. Příště se jím můžete přihlásit bez hesla.`,
           );
           this.closeForm();
+          this.changes.changed();
         },
         error: (failure: unknown) => {
           this.saving.set(false);
           if (failure instanceof PasskeyCeremonyError) {
             this.error.set(ceremonyMessage(failure.reason));
+            this.changes.changed();
             return;
           }
           if (this.sessionLost(failure)) {
             return;
           }
+          this.changes.changed();
           this.error.set(
             describeProblem(
               failure,
@@ -260,6 +270,7 @@ export class PasskeysPanel {
     if (form.invalid || this.renameSaving()) {
       return;
     }
+    this.changes.changing();
     this.renameSaving.set(true);
     this.renameError.set('');
     this.authApi.renamePasskey(passkey.id, this.newName.trim()).subscribe({
@@ -272,12 +283,14 @@ export class PasskeysPanel {
           $localize`:@@donor.passkeys.renamed:Přístupový klíč je přejmenovaný na ${renamed.name}:name:.`,
         );
         this.closeRename(passkey);
+        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.renameSaving.set(false);
         if (this.sessionLost(failure)) {
           return;
         }
+        this.changes.changed();
         this.renameError.set(
           describeProblem(
             failure,
@@ -296,6 +309,7 @@ export class PasskeysPanel {
     if (this.removing() !== null) {
       return;
     }
+    this.changes.changing();
     this.removing.set(passkey.id);
     this.authApi.removePasskey(passkey.id).subscribe({
       next: () => {
@@ -305,12 +319,14 @@ export class PasskeysPanel {
         this.status.set(
           $localize`:@@donor.passkeys.removed:Přístupový klíč ${passkey.name}:name: je odebraný. Tímto klíčem se už nepřihlásíte; v zařízení ho můžete smazat.`,
         );
+        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.removing.set(null);
         if (this.sessionLost(failure)) {
           return;
         }
+        this.changes.changed();
         this.loadError.set(
           describeProblem(
             failure,

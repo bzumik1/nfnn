@@ -400,6 +400,28 @@ describe('Given a signed-in donor in the donor area', () => {
 
       expect(element('.side-nav-badge')).toBeNull();
     });
+
+    it('then a list the section shows on a return replaces the one the area asked for when it opened, even if that one answers later', async () => {
+      areaAccounts = questions(1);
+      await open('/darce/ucty');
+      flushSectionAccounts(questions(1));
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush({ bankDataAsOf: EARLIER, checking: false });
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+      await go('/');
+
+      await harness.navigateByUrl('/darce/ucty');
+      await settle();
+      const [areaRequest, sectionRequest] = http.match({ method: 'GET', url: BANK_ACCOUNTS_URL });
+      sectionRequest.flush({ items: [bankAccount()] });
+      await settle();
+
+      expect(areaRequest.cancelled).toBe(true);
+      expect(element('.side-nav-badge')).toBeNull();
+      http.match('/api/donations/me/summary').forEach((request) => request.flush(twoYearSummary()));
+      http.match('/api/donations/me').forEach((request) => request.flush(twoYearDonations()));
+    });
   });
 
   describe('when the live stream says that something changed while the donor reads Moje dary', () => {
@@ -862,6 +884,54 @@ describe('Given a signed-in donor in the donor area', () => {
       await go('/darce/dary');
 
       http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+    });
+  });
+
+  describe('when the donor leaves the area and opens it again, as the account sheet does with each section', () => {
+    async function leaveAfterAreaCheck(): Promise<void> {
+      vi.useFakeTimers();
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+      bankCheck.flush(
+        { bankDataAsOf: EARLIER, checking: false },
+        { status: 202, statusText: 'Accepted' },
+      );
+      await settle();
+      await respond(twoYearSummary(), twoYearDonations());
+      await go('/');
+    }
+
+    it('and returns within half a minute, then the gifts show at once without the loading line, the bank is not asked again and the gifts are refreshed behind them', async () => {
+      await leaveAfterAreaCheck();
+      await vi.advanceTimersByTimeAsync(20_000);
+
+      await go('/darce/dary');
+
+      expect(root().textContent).not.toContain('Načítáme');
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:05');
+      http.expectNone({ method: 'POST', url: BANK_CHECK_URL });
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+      await respond(twoYearSummary(), twoYearDonations());
+      expect(texts('.payments-card tbody tr')).toHaveLength(twoYearDonations().items.length);
+    });
+
+    it('and returns more than half a minute later, then the bank is asked again', async () => {
+      await leaveAfterAreaCheck();
+      await vi.advanceTimersByTimeAsync(31_000);
+
+      await go('/darce/dary');
+
+      http.expectOne({ method: 'POST', url: BANK_CHECK_URL }).flush({
+        bankDataAsOf: LATER,
+        checking: false,
+      });
+      http.expectOne({ method: 'GET', url: BANK_ACCOUNTS_URL }).flush({ items: [] });
+      await settle();
+      http.match('/api/donations/me/summary').forEach((request) => request.flush(twoYearSummary()));
+      http.match('/api/donations/me').forEach((request) => request.flush(twoYearDonations()));
+      await settle();
+      expect(text('.bank-check-status')).toBe('Údaje z banky k 18. 10. 2026 10:07');
     });
   });
 

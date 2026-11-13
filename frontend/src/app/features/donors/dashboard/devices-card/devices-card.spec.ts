@@ -401,6 +401,144 @@ describe("Given a donor's signed-in devices card", () => {
     expect(rows()).toHaveLength(1);
   });
 
+  describe('when the card was shown once and is opened again', () => {
+    async function signOut(device: SignedInDevice, status: 204 | 503): Promise<void> {
+      const name = device === IPHONE ? 'iPhone · Safari' : 'Neznámé zařízení';
+      rows()
+        .find((row) => text(row.querySelector('.device-name')) === name)
+        ?.querySelector<HTMLButtonElement>('button')
+        ?.click();
+      await settle();
+      const request = http.expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${device.id}` });
+      if (status === 204) {
+        request.flush(null, { status: 204, statusText: 'No Content' });
+      } else {
+        request.flush(problem('x', 'Server neodpovídá'), {
+          status: 503,
+          statusText: 'Unavailable',
+        });
+      }
+      await settle();
+    }
+
+    beforeEach(async () => {
+      await signIn();
+      await listed([THIS_MAC, IPHONE]);
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      sessionEnded = 0;
+      fixture.componentInstance.sessionEnded.subscribe(() => sessionEnded++);
+      fixture.detectChanges();
+    });
+
+    it('then the devices show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(text(root())).not.toContain('Načítáme');
+      expect(rows()).toHaveLength(2);
+
+      await listed([THIS_MAC]);
+
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a device signed out before leaving does not come back for a moment', async () => {
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(1);
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
+    });
+
+    it('then a device signed out while the refresh is still on its way does not come back with its answer, and the list is asked for again', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      await listed([THIS_MAC]);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a sign-out that fails while the refresh is on its way asks for the list again and shows its answer', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 503);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+
+      await listed([THIS_MAC, IPHONE, UNKNOWN]);
+
+      expect(rows()).toHaveLength(3);
+    });
+
+    it('then a second sign-out while the list is asked for again after the first does not bring the second device back', async () => {
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, IPHONE, UNKNOWN] });
+      await settle();
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE, UNKNOWN] });
+      await settle();
+      const again = http.expectOne(DEVICES_URL);
+
+      await signOut(UNKNOWN, 204);
+      again.flush({ items: [THIS_MAC, UNKNOWN] });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      await listed([THIS_MAC]);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a list asked for again that fails keeps the devices shown, without an error', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+
+      http
+        .expectOne(DEVICES_URL)
+        .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      expect(text(root())).not.toContain('se nepodařilo načíst');
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(1);
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
+    });
+
+    it('then a refresh refused because the session ended still sends the donor to sign in', async () => {
+      http.expectOne(DEVICES_URL).flush(problem('auth/session-ended', 'Odhlášeno'), {
+        status: 401,
+        statusText: 'Unauthorized',
+      });
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(problem('auth/invalid-refresh-token', 'Neplatné'), {
+          status: 401,
+          statusText: 'Unauthorized',
+        });
+      await settle();
+
+      expect(sessionEnded).toBe(1);
+    });
+  });
+
   it('when this device was signed out elsewhere, then the details page is told to send the donor to sign in', async () => {
     await signIn();
     http.expectOne(DEVICES_URL).flush(problem('auth/session-ended', 'Odhlášeno'), {
