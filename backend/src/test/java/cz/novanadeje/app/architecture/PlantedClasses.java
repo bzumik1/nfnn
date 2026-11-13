@@ -26,7 +26,7 @@ final class PlantedClasses {
         assertThat(compiler).as("javac of the JDK toolchain").isNotNull();
         Path classes = Files.createDirectories(folder.resolve("classes"));
         List<Path> sources = written(Files.createDirectories(folder.resolve("sources")), sourcesByClassName);
-        List<String> options = List.of("-proc:none", "-classpath", System.getProperty("java.class.path"), "-d", classes.toString());
+        List<String> options = List.of("-proc:none", "-g", "-classpath", System.getProperty("java.class.path"), "-d", classes.toString());
         StringWriter errors = new StringWriter();
         try (StandardJavaFileManager files = compiler.getStandardFileManager(null, null, null)) {
             boolean compiled = compiler.getTask(errors, files, null, options, null, files.getJavaFileObjectsFromPaths(sources)).call();
