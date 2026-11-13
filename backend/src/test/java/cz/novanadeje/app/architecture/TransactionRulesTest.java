@@ -51,7 +51,9 @@ class TransactionRulesTest {
     private static final Map<String, String> SEPARATE_TRANSACTIONS = Map.of(
             "cz.novanadeje.app.donations.application.receipt.DonationReceiptIssuer", "one transaction per issue",
             "cz.novanadeje.app.donations.application.pairing.PaymentPairingService", "pairing called from an AFTER_COMMIT listener",
-            "cz.novanadeje.app.donations.application.report.MonthlyReportFigures", "a REPEATABLE READ snapshot inside the sending transaction");
+            "cz.novanadeje.app.donations.application.report.MonthlyReportFigures", "a REPEATABLE READ snapshot inside the sending transaction",
+            "cz.novanadeje.app.operations.application.alerts.MailWatch", "the mail outage outlives a send that rolls its transaction back",
+            "cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals", "the audit of a refused reveal outlives the reveal");
     private static final DescribedPredicate<JavaAnnotation<?>> A_NEW_TRANSACTION = describe("@Transactional(propagation = REQUIRES_NEW)",
             annotation -> annotation.getRawType().isEquivalentTo(Transactional.class) && propagationOf(annotation).filter(Propagation.REQUIRES_NEW.name()::equals).isPresent());
     private static final DescribedPredicate<JavaAccess<?>> A_PROPAGATION_CHOICE = describe(
