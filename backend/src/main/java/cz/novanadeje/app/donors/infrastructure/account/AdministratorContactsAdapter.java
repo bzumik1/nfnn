@@ -1,8 +1,8 @@
-package cz.novanadeje.app.donors.infrastructure.notification;
+package cz.novanadeje.app.donors.infrastructure.account;
 
 import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.shared.application.notification.AdministratorContact;
-import cz.novanadeje.app.shared.application.notification.AdministratorContacts;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

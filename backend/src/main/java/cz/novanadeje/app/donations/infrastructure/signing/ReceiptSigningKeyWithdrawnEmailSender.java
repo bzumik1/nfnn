@@ -2,8 +2,8 @@ package cz.novanadeje.app.donations.infrastructure.signing;
 
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
-import cz.novanadeje.app.shared.application.notification.AdministratorContact;
-import cz.novanadeje.app.shared.application.notification.AdministratorContacts;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;

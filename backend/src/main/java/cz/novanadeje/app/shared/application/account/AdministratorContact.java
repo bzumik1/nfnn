@@ -1,4 +1,4 @@
-package cz.novanadeje.app.shared.application.notification;
+package cz.novanadeje.app.shared.application.account;
 
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;

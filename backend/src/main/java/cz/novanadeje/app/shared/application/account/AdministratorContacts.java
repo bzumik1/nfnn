@@ -1,4 +1,4 @@
-package cz.novanadeje.app.shared.application.notification;
+package cz.novanadeje.app.shared.application.account;
 
 import java.util.List;
 

@@ -1,8 +1,8 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
-import cz.novanadeje.app.shared.application.notification.AdministratorContact;
-import cz.novanadeje.app.shared.application.notification.AdministratorContacts;
+import cz.novanadeje.app.operations.application.event.BackupKeyRevealed;
+import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.application.account.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
