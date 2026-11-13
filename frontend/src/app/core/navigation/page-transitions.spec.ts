@@ -26,6 +26,12 @@ class Blank {}
 })
 class ScrolledShell {}
 
+const jsdomWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+
+afterAll(() => {
+  expect(Object.getOwnPropertyDescriptor(window, 'innerWidth')).toEqual(jsdomWidth);
+});
+
 describe('Given a phone that animates and a page of the news with an article to open', () => {
   let router: Router;
   let layer: HTMLElement;
@@ -258,7 +264,7 @@ describe('Given the app on the home screen of a phone, where the news led to the
     document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
     layer.remove();
     delete (window as { matchMedia?: unknown }).matchMedia;
-    delete (window as { innerWidth?: number }).innerWidth;
+    Object.defineProperty(window, 'innerWidth', jsdomWidth!);
     vi.restoreAllMocks();
   });
 
