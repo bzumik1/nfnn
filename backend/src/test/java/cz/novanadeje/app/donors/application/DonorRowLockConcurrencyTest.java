@@ -89,7 +89,7 @@ class DonorRowLockConcurrencyTest {
     void twoDonors() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         jana = verified("Jana Nováková", "jana@example.cz", "4821937560", new PasswordHash(OLD_HASH));
-        jana.grantAdministration();
+        jana.grantAdministration(true);
         petr = verified("Petr Svoboda", "petr@example.cz", "4821937561", new PasswordHash(OLD_HASH));
         inTransaction(() -> {
             donors.save(jana);

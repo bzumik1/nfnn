@@ -7,7 +7,6 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailUnchanged;
-import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
@@ -83,12 +82,9 @@ public class DonorCredentialsService {
         return writes.execute(status -> {
             Donor donor = lock(donorId);
             confirmed.requireUnchangedIn(donor);
-            if (passkeys.countByDonor(donorId) == 0) {
-                throw new LastSignInMethod(donorId);
-            }
+            donor.removePassword(passkeys.countByDonor(donorId));
             sessions.requireLasting(donor, device);
             Instant now = clock.instant();
-            donor.removePassword();
             donors.save(donor);
             signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
             log.info("Password of donor {} removed, every session revoked", donor.id());

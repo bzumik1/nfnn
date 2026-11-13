@@ -135,7 +135,7 @@ class DonorSecondFactorServiceTest {
     @DisplayName("Given an administrator with a passkey in a session opened with the password only, when the set-up begins, then it is refused and nothing is stored")
     void should_refuse_setup_when_begun_in_password_session_given_administrator_with_passkey() {
         Donor administrator = donor();
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(administrator));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());

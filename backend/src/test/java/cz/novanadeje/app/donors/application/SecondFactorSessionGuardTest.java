@@ -95,7 +95,7 @@ class SecondFactorSessionGuardTest {
 
     private static Donor administrator() {
         Donor donor = donor();
-        donor.grantAdministration();
+        donor.grantAdministration(true);
         return donor;
     }
 

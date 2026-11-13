@@ -131,7 +131,7 @@ class AdministrationDeviceServiceTest {
         Donor administrator = Donor.register(ADMIN, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), hash, new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(3600));
         administrator.verifyEmail(NOW.minusSeconds(3000));
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         return administrator;
     }
 }

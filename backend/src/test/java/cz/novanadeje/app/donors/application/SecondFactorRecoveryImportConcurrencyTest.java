@@ -90,7 +90,7 @@ class SecondFactorRecoveryImportConcurrencyTest {
         new DatabaseCleaner(jdbc).emptyAllTables();
         Instant now = clock.instant();
         jana = verified("Jana Nováková", "jana@example.cz", "4821937560", now);
-        jana.grantAdministration();
+        jana.grantAdministration(true);
         petr = verified("Petr Svoboda", "petr@example.cz", "4821937561", now);
         inTransaction(() -> {
             donors.save(jana);

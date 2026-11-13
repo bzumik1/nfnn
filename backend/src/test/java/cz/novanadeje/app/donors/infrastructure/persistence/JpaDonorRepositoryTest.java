@@ -194,7 +194,7 @@ class JpaDonorRepositoryTest {
     void should_find_whole_donor_when_read_for_update_given_saved_administrator() {
         Donor jana = donor("jana@example.cz", "4821937580");
         jana.verifyEmail(NOW);
-        jana.grantAdministration();
+        jana.grantAdministration(true);
         donors.save(jana);
         donors.save(donor("petr@example.cz", "4821937581"));
         flushAndClear();
@@ -215,11 +215,11 @@ class JpaDonorRepositoryTest {
         Donor zdena = donor("zdena@example.cz", "4821937570");
         zdena.updateProfile("Zdeňka Horáčková", zdena.address(), zdena.preferredLocale());
         zdena.verifyEmail(NOW);
-        zdena.grantAdministration();
+        zdena.grantAdministration(true);
         Donor andrea = donor("andrea@example.cz", "4821937571");
         andrea.updateProfile("Andrea Horáčková", andrea.address(), andrea.preferredLocale());
         andrea.verifyEmail(NOW);
-        andrea.grantAdministration();
+        andrea.grantAdministration(true);
         Donor plain = donor("jana@example.cz", "4821937572");
         donors.save(zdena);
         donors.save(andrea);
@@ -235,7 +235,7 @@ class JpaDonorRepositoryTest {
     void should_list_every_donor_once_by_id_when_all_listed_given_administrator_among_them() {
         Donor admin = donor("andrea@example.cz", "4821937590");
         admin.verifyEmail(NOW);
-        admin.grantAdministration();
+        admin.grantAdministration(true);
         Donor jana = donor("jana@example.cz", "4821937591");
         Donor petr = donor("petr@example.cz", "4821937592");
         donors.save(jana);
@@ -320,7 +320,7 @@ class JpaDonorRepositoryTest {
             Donor donor = donor("darce" + index + "@example.cz", Long.toString(4_800_000_000L + index));
             donor.updateProfile(stored.get(index), donor.address(), donor.preferredLocale());
             donor.verifyEmail(NOW);
-            donor.grantAdministration();
+            donor.grantAdministration(true);
             donors.save(donor);
         }
         flushAndClear();
