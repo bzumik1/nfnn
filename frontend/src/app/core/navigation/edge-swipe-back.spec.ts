@@ -96,6 +96,12 @@ function openDialog(): HTMLDialogElement {
   return dialog;
 }
 
+const jsdomWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+
+afterAll(() => {
+  expect(Object.getOwnPropertyDescriptor(window, 'innerWidth')).toEqual(jsdomWidth);
+});
+
 const ACROSS: readonly Point[] = [
   { x: 120, y: 300, at: 0 },
   { x: 400, y: 300, at: 300 },
@@ -129,7 +135,7 @@ afterEach(() => {
   document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
   delete (navigator as { standalone?: boolean }).standalone;
   delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
-  delete (window as { innerWidth?: number }).innerWidth;
+  Object.defineProperty(window, 'innerWidth', jsdomWidth!);
 });
 
 describe('Given the app opened from the home screen of an iPhone', () => {
