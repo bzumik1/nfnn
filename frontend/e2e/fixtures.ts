@@ -34,6 +34,21 @@ export async function routeApiDefaults(target: RouteTarget): Promise<readonly st
     (route) => route.fulfill({ json: { news: [], projects: [] } }),
   );
   await target.route(
+    (url) => url.pathname === '/api/content/news' || url.pathname === '/api/content/projects',
+    (route) => {
+      const asked = new URL(route.request().url()).searchParams;
+      return route.fulfill({
+        json: {
+          items: [],
+          page: Number(asked.get('page') ?? 0),
+          size: Number(asked.get('size') ?? 10),
+          total: 0,
+          hasMore: false,
+        },
+      });
+    },
+  );
+  await target.route(
     (url) => url.pathname === PAYMENT_DETAILS_PATH,
     (route) => route.fulfill({ json: FOUNDATION_PAYMENT_DETAILS }),
   );
