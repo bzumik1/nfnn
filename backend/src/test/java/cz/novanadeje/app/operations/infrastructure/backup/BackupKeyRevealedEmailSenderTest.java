@@ -1,15 +1,15 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.operations.infrastructure.backup;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
-import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
+import cz.novanadeje.app.shared.application.notification.AdministratorContact;
+import cz.novanadeje.app.shared.application.notification.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
+import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
@@ -40,6 +40,7 @@ import org.thymeleaf.ITemplateEngine;
 import java.time.Instant;
 import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,8 +51,8 @@ import static org.mockito.Mockito.when;
 class BackupKeyRevealedEmailSenderTest {
 
     private static final Instant REVEALED_AT = Instant.parse("2026-03-05T07:05:00Z");
-    private static final DonorId JANA = DonorId.newId(REVEALED_AT.minusSeconds(3000));
-    private static final DonorId PETR = DonorId.newId(REVEALED_AT.minusSeconds(2000));
+    private static final UUID JANA = UuidV7.generate(REVEALED_AT.minusSeconds(3000));
+    private static final UUID PETR = UuidV7.generate(REVEALED_AT.minusSeconds(2000));
     private static final AdministratorContact JANA_CONTACT = new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS);
     private static final AdministratorContact PETR_CONTACT = new AdministratorContact(PETR, new EmailAddress("petr@example.cz"), LocaleCode.EN);
     private static final String SENDER = "info@nfnn.cz";
@@ -59,7 +60,7 @@ class BackupKeyRevealedEmailSenderTest {
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration.class, ThymeleafAutoConfiguration.class));
-    private final AdministratorService administrators = mock(AdministratorService.class);
+    private final AdministratorContacts administrators = mock(AdministratorContacts.class);
 
     private ListAppender<ILoggingEvent> logged;
     private Logger senderLog;
@@ -70,7 +71,7 @@ class BackupKeyRevealedEmailSenderTest {
         logged = new ListAppender<>();
         logged.start();
         senderLog.addAppender(logged);
-        when(administrators.contacts()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(JANA_CONTACT, PETR_CONTACT));
     }
 
     @AfterEach
@@ -83,7 +84,7 @@ class BackupKeyRevealedEmailSenderTest {
     void should_tell_every_administrator_when_key_shown_given_two_administrators() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA.value(), REVEALED_AT));
+            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA, REVEALED_AT));
 
             assertThat(recording.sent()).hasSize(2);
             MimeMessage czech = MailContents.asReceived(recording.sent().getFirst());
@@ -124,7 +125,7 @@ class BackupKeyRevealedEmailSenderTest {
     void should_send_the_recorded_messages_when_key_shown_given_two_administrators() {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA.value(), REVEALED_AT));
+            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA, REVEALED_AT));
 
             MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().getFirst()), "backup-key-revealed.cs");
             MailFixtures.assertSeenAsRecorded(MailContents.asReceived(recording.sent().get(1)), "backup-key-revealed.en");
@@ -134,10 +135,10 @@ class BackupKeyRevealedEmailSenderTest {
     @Test
     @DisplayName("Given the administrator who showed the key is no longer one, when the notice goes out, then it names no address")
     void should_name_no_address_when_key_shown_given_revealing_administrator_gone() {
-        when(administrators.contacts()).thenReturn(List.of(PETR_CONTACT));
+        when(administrators.all()).thenReturn(List.of(PETR_CONTACT));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA.value(), REVEALED_AT));
+            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA, REVEALED_AT));
 
             MimeMessage english = MailContents.asReceived(recording.sent().getFirst());
             assertThat(MailContents.plainText(english)).contains("an administrator viewed the backup key").doesNotContain("jana@example.cz");
@@ -152,15 +153,15 @@ class BackupKeyRevealedEmailSenderTest {
         doThrow(new MailSendException("Failed messages: 550 jana@example.cz rejected")).when(failing).send(any(MimeMessage.class));
 
         contexts.withBean(JavaMailSender.class, () -> failing).run(context -> {
-            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA.value(), REVEALED_AT));
+            sender(context).sendRevealedNotice(new BackupKeyRevealed(JANA, REVEALED_AT));
 
             assertThat(logged.list).hasSize(2).allSatisfy(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
                 assertThat(line.getFormattedMessage()).contains("MailSendException").doesNotContain("example.cz");
                 assertThat(line.getThrowableProxy()).isNull();
             });
-            assertThat(logged.list.getFirst().getFormattedMessage()).contains(JANA.value().toString());
-            assertThat(logged.list.get(1).getFormattedMessage()).contains(PETR.value().toString());
+            assertThat(logged.list.getFirst().getFormattedMessage()).contains(JANA.toString());
+            assertThat(logged.list.get(1).getFormattedMessage()).contains(PETR.toString());
         });
     }
 

@@ -24,6 +24,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
+import cz.novanadeje.app.shared.application.notification.AdministratorContact;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -111,8 +112,8 @@ class AdministratorServiceTest {
         when(donors.findAdministrators()).thenReturn(List.of(jana, petr));
 
         assertThat(service.contacts()).containsExactly(
-                new AdministratorContact(JANA, new EmailAddress("jana@example.cz"), LocaleCode.CS),
-                new AdministratorContact(PETR, PETR_EMAIL, LocaleCode.EN));
+                new AdministratorContact(JANA.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS),
+                new AdministratorContact(PETR.value(), PETR_EMAIL, LocaleCode.EN));
         verifyNoInteractions(secondFactors, passkeys, signOuts, events);
     }
 

@@ -1,9 +1,9 @@
-package cz.novanadeje.app.donors.infrastructure.mail;
+package cz.novanadeje.app.donations.infrastructure.signing;
 
-import cz.novanadeje.app.donors.application.AdministratorContact;
-import cz.novanadeje.app.donors.application.AdministratorService;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
+import cz.novanadeje.app.shared.application.notification.AdministratorContact;
+import cz.novanadeje.app.shared.application.notification.AdministratorContacts;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
@@ -31,18 +31,18 @@ import java.util.Optional;
 class ReceiptSigningKeyWithdrawnEmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(ReceiptSigningKeyWithdrawnEmailSender.class);
-    private static final String KEYS = "donors.receiptSigningKeyWithdrawn.email.";
-    private static final String TEMPLATE = "email/donors/receipt-signing-key-withdrawn";
+    private static final String KEYS = "donations.receiptSigningKeyWithdrawn.email.";
+    private static final String TEMPLATE = "email/donations/receipt-signing-key-withdrawn";
 
     private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
     private final MailSenderProperties sender;
-    private final AdministratorService administrators;
+    private final AdministratorContacts administrators;
     private final ApplicationEventPublisher events;
 
     ReceiptSigningKeyWithdrawnEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender,
-                                          AdministratorService administrators, ApplicationEventPublisher events) {
+                                          AdministratorContacts administrators, ApplicationEventPublisher events) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
@@ -55,9 +55,9 @@ class ReceiptSigningKeyWithdrawnEmailSender {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendWithdrawnNotice(ReceiptSigningKeyWithdrawn event) {
         try {
-            List<AdministratorContact> recipients = administrators.contacts();
+            List<AdministratorContact> recipients = administrators.all();
             Optional<String> withdrawnBy = recipients.stream()
-                    .filter(contact -> contact.id().value().equals(event.adminId()))
+                    .filter(contact -> contact.accountId().equals(event.adminId()))
                     .map(contact -> contact.email().value())
                     .findFirst();
             recipients.forEach(recipient -> send(recipient, withdrawnBy, event));
@@ -85,7 +85,7 @@ class ReceiptSigningKeyWithdrawnEmailSender {
         try {
             mailSender.send(emails.compose(draft));
         } catch (MailException e) {
-            log.error("The notice of the withdrawn receipt signing key for admin {} could not be sent: {}", recipient.id(), e.getClass().getSimpleName());
+            log.error("The notice of the withdrawn receipt signing key for admin {} could not be sent: {}", recipient.accountId(), e.getClass().getSimpleName());
         }
     }
 
