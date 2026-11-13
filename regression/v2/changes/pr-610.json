@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.DddLayeringRulesTest > time_comes_from_the_injected_clock",
+    "reason": "Architecture audit (Jakub 2026-11-13): the time rule moved into its own class and now also refuses method references, the other java.time types, a system Clock or InstantSource, new Date and Calendar",
+    "replacement": "architecture.TimeRulesTest > time_comes_from_the_injected_clock",
+    "contract": "docs/api-contract.md, ArchUnit"
+  }
+]

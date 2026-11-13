@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.report;
 import cz.novanadeje.app.donations.application.report.MonthlyReportNotDelivered;
 import cz.novanadeje.app.donations.application.report.MonthlyReportOutcome;
 import cz.novanadeje.app.donations.application.report.MonthlyReportService;
-import cz.novanadeje.app.donations.domain.FoundationCalendar;
+import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Conditional;
@@ -22,7 +22,7 @@ class MonthlyReportScheduler {
         this.service = service;
     }
 
-    @Scheduled(cron = "${app.donations.report.cron}", zone = FoundationCalendar.ZONE_ID)
+    @Scheduled(cron = "${app.donations.report.cron}", zone = FoundationZone.ID)
     void checkDueReport() {
         try {
             MonthlyReportOutcome outcome = service.sendDueReport();
