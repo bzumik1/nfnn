@@ -10,9 +10,10 @@ import jakarta.validation.constraints.Size;
 
 import java.util.Optional;
 
-public record FreshSecondFactorRequest(@Pattern(regexp = CODE_SHAPE) String secondFactorCode, @Valid Passkey passkey) {
+public record FreshSecondFactorRequest(@Size(max = DIGITS) @Pattern(regexp = CODE_SHAPE) String secondFactorCode, @Valid Passkey passkey) {
 
-    public static final String CODE_SHAPE = "^[0-9]{6}$";
+    public static final int DIGITS = 6;
+    public static final String CODE_SHAPE = "^[0-9]{" + DIGITS + "}$";
 
     public record Passkey(@NotBlank @Size(max = 43) String challenge, @NotNull @Valid Credential credential) {
     }

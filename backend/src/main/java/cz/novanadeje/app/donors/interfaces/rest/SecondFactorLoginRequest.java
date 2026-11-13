@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 record SecondFactorLoginRequest(
         @NotBlank @Size(max = 43) String challenge,
-        @NotBlank @Pattern(regexp = Totp.CODE_SHAPE) String code,
+        @NotBlank @Size(max = Totp.DIGITS) @Pattern(regexp = Totp.CODE_SHAPE) String code,
         SessionKind session
 ) {
 

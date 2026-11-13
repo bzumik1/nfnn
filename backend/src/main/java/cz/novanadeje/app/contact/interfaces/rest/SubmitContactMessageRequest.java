@@ -11,7 +11,7 @@ record SubmitContactMessageRequest(
         @NotBlank @Size(max = ContactMessage.MAX_SENDER_NAME_LENGTH) String fullName,
         @NotBlank @Email(regexp = EmailAddress.SHAPE_REGEX, message = "{contact.message.email.invalid}") @Size(max = 254) String email,
         @NotBlank @Size(max = ContactMessage.MAX_BODY_LENGTH) String message,
-        String website
+        @Size(max = ContactMessage.MAX_BODY_LENGTH) String website
 ) {
 
     boolean isFilledByBot() {

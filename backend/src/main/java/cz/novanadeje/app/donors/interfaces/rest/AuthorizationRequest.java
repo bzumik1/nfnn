@@ -22,7 +22,7 @@ record AuthorizationRequest(
         @Size(max = ClientId.MAX_LENGTH) String resource,
         @Size(max = 1000) String state,
         @NotNull Boolean approved,
-        @Pattern(regexp = Totp.CODE_SHAPE) String secondFactorCode,
+        @Size(max = Totp.DIGITS) @Pattern(regexp = Totp.CODE_SHAPE) String secondFactorCode,
         @Valid PasskeySignInRequest passkey) {
 
     boolean carriesCode() {
