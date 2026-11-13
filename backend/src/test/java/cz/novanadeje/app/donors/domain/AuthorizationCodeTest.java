@@ -37,7 +37,7 @@ class AuthorizationCodeTest {
 
     @Test
     @DisplayName("Given an issued code, when it is used, then it works once and only before it expires")
-    void should_be_usable_once_and_only_before_it_expires() {
+    void should_work_once_and_only_before_it_expires_when_used_given_an_issued_code() {
         AuthorizationCode code = issue(LinkSecret.generate());
 
         assertThat(code.isUsableAt(NOW.plus(Duration.ofMinutes(4)))).isTrue();
@@ -51,7 +51,7 @@ class AuthorizationCodeTest {
 
     @Test
     @DisplayName("Given an issued code, when it is exchanged, then only its client, redirect and verifier are accepted")
-    void should_accept_the_exchange_only_with_its_client_redirect_and_verifier() {
+    void should_accept_only_its_client_redirect_and_verifier_when_exchanged_given_an_issued_code() {
         AuthorizationCode code = issue(LinkSecret.generate());
 
         assertThat(code.belongsTo(CLIENT, REDIRECT)).isTrue();

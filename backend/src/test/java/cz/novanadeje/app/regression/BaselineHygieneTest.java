@@ -409,13 +409,13 @@ class BaselineHygieneTest {
 
     @Test
     @DisplayName("Given a file that is not valid JSON among the JSON artefacts, when it is checked, then it is reported, so no rule can be skipped")
-    void should_report_a_json_artefact_that_does_not_parse() {
+    void should_report_the_file_when_checked_given_a_json_artefact_that_does_not_parse() {
         assertThat(BaselineHygiene.findings("broken.json", "{\"a\":", NO_FIXTURES)).anyMatch(finding -> finding.contains("not valid JSON"));
     }
 
     @Test
     @DisplayName("Given the test sources, when fixtures are collected, then they come only from them plus the foundation's address")
-    void should_collect_fixtures_only_from_the_test_sources_plus_the_foundation_address(@TempDir Path testSources) throws IOException {
+    void should_take_only_the_test_sources_and_the_foundation_address_when_fixtures_are_collected(@TempDir Path testSources) throws IOException {
         Files.writeString(testSources.resolve("Fixture.java"), "\"jana@example.cz\" \"" + FIXTURE_SECRET + "\"");
 
         BaselineHygiene.Fixtures fixtures = BaselineHygiene.fixtures(testSources);
@@ -426,7 +426,7 @@ class BaselineHygieneTest {
 
     @Test
     @DisplayName("Given the TOTP golden cases, when their secrets are read, then they are exactly the test secrets the hygiene scan allows")
-    void should_allow_exactly_the_secrets_of_the_totp_golden_cases() throws IOException {
+    void should_allow_exactly_the_test_secrets_when_read_given_the_totp_golden_cases() throws IOException {
         JsonNode cases = JsonMapper.builder().build().readTree(SharedCases.repositoryRoot().resolve("shared-cases/totp/uri.json").toFile()).get("cases");
 
         assertThat(cases.valueStream().map(entry -> entry.get("input").get("secret").asString()).toList())
