@@ -27,7 +27,7 @@ class ReceiptSignatoryRequestTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"předseda 😀", "předseda 王", "​", "­⁠"})
+    @ValueSource(strings = {"předseda 😀", "předseda 王", "​", "­⁠", "\u00a0", "\u2007\u200b"})
     @DisplayName("Given a receipt role with a character no receipt can print, or only characters a receipt drops, when the choice is validated, then the role is refused")
     void should_refuse_the_role_when_validated_given_an_unprintable_role(String role) {
         assertThat(fields(VALIDATOR.validate(new ReceiptSignatoryRequest(PERSON, role)))).containsExactly("receiptRole");
