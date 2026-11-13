@@ -117,6 +117,17 @@ test.describe('Given a page checked as on a phone', () => {
     expect(failing.map((check) => check.name)).toEqual([]);
   });
 
+  test('when less than a pixel of a button is left below the top edge and the next button follows it, then neither counts as covered', async ({
+    page,
+  }) => {
+    expect(
+      await failingChecks(
+        page,
+        '<div style="margin-top: -39.6px"><button style="display: block">Gone</button><button style="display: block; position: relative; margin-top: -0.4px">Next</button></div>',
+      ),
+    ).toEqual([]);
+  });
+
   test('when the page has scrolled a button under a fixed bar at the top, then the button does not count as covered', async ({
     page,
   }) => {

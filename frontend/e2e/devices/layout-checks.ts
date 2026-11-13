@@ -117,7 +117,8 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 
   const inViewport = (box: DOMRect): boolean =>
-    box.right > 0 && box.left < viewportWidth && box.bottom > 0 && box.top < viewportHeight;
+    Math.min(box.right, viewportWidth) - Math.max(box.left, 0) >= 1 &&
+    Math.min(box.bottom, viewportHeight) - Math.max(box.top, 0) >= 1;
 
   const controls = [...scope.querySelectorAll(controlSelector)].filter(shown);
   const onScreen = controls.filter((element) => inViewport(element.getBoundingClientRect()));
