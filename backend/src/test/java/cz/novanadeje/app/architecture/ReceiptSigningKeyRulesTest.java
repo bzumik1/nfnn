@@ -3,7 +3,7 @@ package cz.novanadeje.app.architecture;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -30,13 +31,19 @@ import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 @AnalyzeClasses(
         packagesOf = AppApplication.class,
@@ -45,6 +52,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ReceiptSigningKeyRulesTest {
 
     private static final Set<String> READS = Set.of("findAll", "lockForIssuing");
+    private static final Set<String> WRITES = Arrays.stream(ReceiptSigningKeyRepository.class.getMethods()).map(Method::getName)
+            .filter(Predicate.not(READS::contains)).collect(Collectors.toUnmodifiableSet());
     private static final String PERSISTENCE = "cz.novanadeje.app.donations.infrastructure.persistence.";
     private static final String KEY_ADAPTER = PERSISTENCE + "JpaReceiptSigningKeyRepository";
     private static final Set<String> KEY_PERSISTENCE = Set.of(
@@ -62,9 +71,9 @@ class ReceiptSigningKeyRulesTest {
             .or(JavaClass.Predicates.resideInAnyPackage("java.security..").and(JavaClass.Predicates.simpleNameStartingWith("EdEC")))
             .as("the JDK's signing classes");
 
-    private static final DescribedPredicate<JavaMethodCall> A_WRITE_OF_THE_KEY_REPOSITORY = DescribedPredicate.describe(
+    private static final DescribedPredicate<JavaAccess<?>> A_WRITE_OF_THE_KEY_REPOSITORY = callsOrReferences(
             "a method of " + ReceiptSigningKeyRepository.class.getSimpleName() + " other than " + String.join(" and ", new TreeSet<>(READS)),
-            call -> !READS.contains(call.getTarget().getName()) && call.getTargetOwner().isAssignableTo(ReceiptSigningKeyRepository.class));
+            ReceiptSigningKeyRepository.class, WRITES::contains);
 
     private static final DescribedPredicate<JavaClass> THE_KEY_PERSISTENCE = DescribedPredicate.describe(
             "the JPA entities and Spring Data repositories of the receipt signing keys", javaClass -> KEY_PERSISTENCE.contains(javaClass.getName()));
@@ -78,7 +87,7 @@ class ReceiptSigningKeyRulesTest {
     static final ArchRule receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal = noClasses()
             .that().doNotHaveFullyQualifiedName(ReceiptSigningKeyRegistration.class.getName())
             .and().doNotHaveFullyQualifiedName(ReceiptSigningKeyWithdrawal.class.getName())
-            .should().callMethodWhere(A_WRITE_OF_THE_KEY_REPOSITORY);
+            .should().accessTargetWhere(A_WRITE_OF_THE_KEY_REPOSITORY);
 
     @ArchTest
     static final ArchRule receipt_signing_key_persistence_is_used_only_by_its_adapter = noClasses()
@@ -110,6 +119,23 @@ class ReceiptSigningKeyRulesTest {
         var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal.evaluate(classes);
 
         assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedAdoptionRecorder.class.getSimpleName());
+    }
+
+    @Test
+    @DisplayName("Given the names the key rules watch, when the classes are loaded, then each class and read exists, so no rule watches a name that is gone")
+    void should_find_every_watched_name_when_loaded_given_the_key_rules() {
+        assertThat(Stream.concat(KEY_PERSISTENCE.stream(), Stream.of(KEY_ADAPTER)))
+                .allSatisfy(name -> assertThatCode(() -> Class.forName(name)).doesNotThrowAnyException());
+        assertThat(Arrays.stream(ReceiptSigningKeyRepository.class.getMethods()).map(Method::getName)).containsAll(READS);
+    }
+
+    @Test
+    @DisplayName("Given a class that writes a key through a method reference, when the writer rule checks it, then it is reported")
+    void should_report_reference_writer_when_rule_checks_given_class_outside_registrar() {
+        var result = receipt_signing_keys_are_written_only_by_the_startup_registrar_and_the_web_only_withdrawal
+                .evaluate(new ClassFileImporter().importClasses(PlantedReferenceWriter.class));
+
+        assertThat(result.getFailureReport().getDetails()).singleElement().asString().contains(PlantedReferenceWriter.class.getSimpleName());
     }
 
     @Test
@@ -165,6 +191,13 @@ class ReceiptSigningKeyRulesTest {
 
         void write(ReceiptSigningKey key) {
             keys.save(key);
+        }
+    }
+
+    static final class PlantedReferenceWriter {
+
+        Consumer<ReceiptSigningKey> writer(ReceiptSigningKeyRepository keys) {
+            return keys::save;
         }
     }
 
