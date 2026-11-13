@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.InvalidPasswordResetToken;
+import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
@@ -16,10 +17,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class DonorPasswordResetService {
@@ -34,9 +38,12 @@ public class DonorPasswordResetService {
     private final ApplicationEventPublisher events;
     private final DeviceSignOuts signOuts;
     private final SecondFactorHoldings holdings;
+    private final TransactionTemplate reads;
+    private final TransactionTemplate writes;
 
     public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, DonorPasswordResetProperties properties, Clock clock,
-                                     ApplicationEventPublisher events, DeviceSignOuts signOuts, SecondFactorHoldings holdings) {
+                                     ApplicationEventPublisher events, DeviceSignOuts signOuts, SecondFactorHoldings holdings,
+                                     PlatformTransactionManager transactions) {
         this.signOuts = signOuts;
         this.holdings = holdings;
         this.donors = donors;
@@ -45,6 +52,9 @@ public class DonorPasswordResetService {
         this.properties = properties;
         this.clock = clock;
         this.events = events;
+        this.reads = new TransactionTemplate(transactions);
+        this.reads.setReadOnly(true);
+        this.writes = new TransactionTemplate(transactions);
     }
 
     @Transactional
@@ -75,27 +85,38 @@ public class DonorPasswordResetService {
         log.info("Password reset requested for donor {}", donor.id());
     }
 
-    @Transactional
     public void confirmReset(String token, String password) {
         RawPassword rawPassword = new RawPassword(password);
         LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
-        PasswordResetToken found = tokens.findBySecretHash(secret.hash())
-                .filter(candidate -> candidate.isUsableAt(now))
-                .orElseThrow(InvalidPasswordResetToken::new);
+        reads.executeWithoutResult(status -> resettableDonor(donors.findById(usableToken(secret, now).donorId())));
+        PasswordHash newHash = passwordHasher.hash(rawPassword);
+        writes.executeWithoutResult(status -> reset(secret, newHash, now));
+    }
+
+    private void reset(LinkSecret secret, PasswordHash newHash, Instant now) {
+        PasswordResetToken found = usableToken(secret, now);
         Donor donor = donors.findByIdForUpdate(found.donorId()).orElseThrow(InvalidPasswordResetToken::new);
         if (!tokens.markUsed(found.id(), now)) {
             throw new InvalidPasswordResetToken();
         }
-        if (isAdministratorWithoutSecondFactor(donor)) {
-            throw new InvalidPasswordResetToken();
-        }
-        donor.changePassword(passwordHasher.hash(rawPassword));
+        resettableDonor(Optional.of(donor));
+        donor.changePassword(newHash);
         donors.save(donor);
         tokens.deleteOthersOf(donor.id(), found.id());
         signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password reset completed for donor {}", donor.id());
+    }
+
+    private PasswordResetToken usableToken(LinkSecret secret, Instant now) {
+        return tokens.findBySecretHash(secret.hash())
+                .filter(candidate -> candidate.isUsableAt(now))
+                .orElseThrow(InvalidPasswordResetToken::new);
+    }
+
+    private Donor resettableDonor(Optional<Donor> found) {
+        return found.filter(donor -> !isAdministratorWithoutSecondFactor(donor)).orElseThrow(InvalidPasswordResetToken::new);
     }
 
     private boolean isAdministratorWithoutSecondFactor(Donor donor) {

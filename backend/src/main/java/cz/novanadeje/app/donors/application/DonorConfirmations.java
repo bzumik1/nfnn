@@ -16,9 +16,11 @@ import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -28,27 +30,32 @@ public class DonorConfirmations {
     private final PasskeyRepository passkeys;
     private final PasskeyChallengeRepository challenges;
     private final PasskeyCeremonies ceremonies;
+    private final CommittedRefusals passkeyConfirmations;
     private final Clock clock;
 
     public DonorConfirmations(PasswordHasher passwordHasher, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
-                              PasskeyCeremonies ceremonies, Clock clock) {
+                              PasskeyCeremonies ceremonies, PlatformTransactionManager transactions, Clock clock) {
         this.passwordHasher = passwordHasher;
         this.passkeys = passkeys;
         this.challenges = challenges;
         this.ceremonies = ceremonies;
+        this.passkeyConfirmations = new CommittedRefusals(transactions, List.of(PasskeyConfirmationRejected.class));
         this.clock = clock;
     }
 
-    public void confirm(Donor donor, Confirmation confirmation) {
+    ConfirmedCredentials confirm(Donor donor, Confirmation confirmation) {
         Optional<String> password = confirmation.givenPassword();
         if (password.isPresent()) {
             requireMatching(donor, password.get());
-            return;
+            return ConfirmedCredentials.byPassword(donor);
         }
-        confirmation.givenPasskey()
-                .ifPresentOrElse(proof -> requirePasskeyOf(donor, proof), () -> {
-                    throw new ConfirmationRequired();
-                });
+        PasskeyProof passkey = confirmation.givenPasskey().orElseThrow(ConfirmationRequired::new);
+        passkeyConfirmations.run(() -> requirePasskeyOf(donor, passkey));
+        return ConfirmedCredentials.byPasskey(donor);
+    }
+
+    void confirmPasskey(Donor donor, Confirmation confirmation) {
+        requirePasskeyOf(donor, confirmation.givenPasskey().orElseThrow(ConfirmationRequired::new));
     }
 
     private void requireMatching(Donor donor, String password) {

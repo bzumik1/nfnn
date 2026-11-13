@@ -63,11 +63,12 @@ class DonorConfirmationsTest {
     @Mock
     private PasskeyCeremonies ceremonies;
 
+    private final OpenTransactions transactions = new OpenTransactions();
     private DonorConfirmations confirmations;
 
     @BeforeEach
     void setUp() {
-        confirmations = new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC));
+        confirmations = new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test
@@ -170,6 +171,64 @@ class DonorConfirmationsTest {
         assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(live.value(), assertion))))
                 .isInstanceOf(PasskeyConfirmationRejected.class);
         verify(passkeys, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given a donor with a password, when the password confirms a change, then it is compared with no transaction open and none is opened")
+    void should_compare_outside_transaction_when_change_confirmed_given_password() {
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenAnswer(invocation -> transactions.recordingHashing(true));
+
+        confirmations.confirm(donor(HASH), Confirmation.withPassword(PASSWORD));
+
+        assertThat(transactions.openWhenHashing()).containsExactly(0);
+        assertThat(transactions.committed()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given another donor's passkey, when it confirms a change, then the challenge is spent in a transaction of its own that commits although the confirmation is rejected")
+    void should_commit_spent_challenge_in_own_transaction_when_change_confirmed_given_rejected_passkey() {
+        LinkSecret challenge = LinkSecret.generate();
+        PasskeyChallenge issued = PasskeyChallenge.forSignIn(challenge, NOW.minusSeconds(30), Duration.ofMinutes(5));
+        when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
+        when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
+        when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkeyOf(OTHER_DONOR)));
+
+        assertThatThrownBy(() -> confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertionBy(OTHER_DONOR)))))
+                .isInstanceOf(PasskeyConfirmationRejected.class);
+
+        assertThat(transactions.committed()).isEqualTo(1);
+        assertThat(transactions.rolledBack()).isZero();
+        assertThat(transactions.open()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a change confirmed with the password, when the donor's password changed before the write, then the write is refused as a wrong password, and an unchanged donor passes")
+    void should_refuse_changed_donor_when_write_checks_given_password_confirmation() {
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+
+        ConfirmedCredentials confirmed = confirmations.confirm(donor(HASH), Confirmation.withPassword(PASSWORD));
+
+        assertThatCode(() -> confirmed.requireUnchangedIn(donor(HASH))).doesNotThrowAnyException();
+        assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(new PasswordHash("$changed")))).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(null))).isInstanceOf(WrongPassword.class);
+    }
+
+    @Test
+    @DisplayName("Given a change confirmed with a passkey, when the donor's password changed before the write, then the write is refused as a rejected passkey confirmation")
+    void should_refuse_changed_donor_when_write_checks_given_passkey_confirmation() {
+        LinkSecret challenge = LinkSecret.generate();
+        PasskeyChallenge issued = PasskeyChallenge.forSignIn(challenge, NOW.minusSeconds(30), Duration.ofMinutes(5));
+        Passkey passkey = passkeyOf(DONOR);
+        PasskeyAssertion assertion = assertionBy(DONOR);
+        when(challenges.findByChallengeHash(challenge.hash())).thenReturn(Optional.of(issued));
+        when(passkeys.findByCredentialId(CREDENTIAL_ID)).thenReturn(Optional.of(passkey));
+        when(ceremonies.verifySignIn(assertion, challenge, passkey)).thenReturn(7L);
+        when(challenges.markUsed(issued.id(), NOW)).thenReturn(true);
+
+        ConfirmedCredentials confirmed = confirmations.confirm(donor(null), Confirmation.withPasskey(new PasskeyProof(challenge.value(), assertion)));
+
+        assertThatCode(() -> confirmed.requireUnchangedIn(donor(null))).doesNotThrowAnyException();
+        assertThatThrownBy(() -> confirmed.requireUnchangedIn(donor(HASH))).isInstanceOf(PasskeyConfirmationRejected.class);
     }
 
     private static PasskeyAssertion assertionBy(DonorId donorId) {
