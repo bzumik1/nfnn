@@ -11,6 +11,8 @@ export interface AdministrationCopyMock {
   readonly today?: string;
   readonly donations?: readonly AdministrationCopyChunk[];
   readonly donors?: readonly AdministrationCopyChunk[];
+  readonly content?: readonly AdministrationCopyChunk[];
+  readonly operations?: readonly AdministrationCopyChunk[];
 }
 
 export async function mockAdministrationCopy(
@@ -18,7 +20,7 @@ export async function mockAdministrationCopy(
   copy: AdministrationCopyMock = {},
 ): Promise<void> {
   const summary = { today: copy.today ?? '2027-02-10', byYear: [] };
-  for (const part of ['donations', 'donors'] as const) {
+  for (const part of ['donations', 'donors', 'content', 'operations'] as const) {
     const chunks = await Promise.all(
       (copy[part] ?? []).map(async ({ id, rows }) => ({
         id,
