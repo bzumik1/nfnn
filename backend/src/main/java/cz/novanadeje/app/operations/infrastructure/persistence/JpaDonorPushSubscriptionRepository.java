@@ -12,12 +12,16 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 class JpaDonorPushSubscriptionRepository implements DonorPushSubscriptionRepository {
+
+    static final int DONORS_PER_QUERY = 500;
 
     private final DonorPushSubscriptionJpaRepository jpa;
     private final EntityManager entityManager;
@@ -35,6 +39,17 @@ class JpaDonorPushSubscriptionRepository implements DonorPushSubscriptionReposit
     @Override
     public List<DonorPushSubscription> findAllOf(UUID donorId) {
         return jpa.findByDonorIdOrderByCreatedAtAscIdAsc(donorId).stream().map(DonorPushSubscriptionJpaEntity::toDomain).toList();
+    }
+
+    @Override
+    public List<DonorPushSubscription> findWithGiftNotificationsOf(Collection<UUID> donorIds) {
+        List<UUID> donors = List.copyOf(donorIds);
+        List<DonorPushSubscription> found = new ArrayList<>();
+        for (int from = 0; from < donors.size(); from += DONORS_PER_QUERY) {
+            jpa.findByDonorIdInAndGiftNotificationsTrueOrderByCreatedAtAscIdAsc(donors.subList(from, Math.min(from + DONORS_PER_QUERY, donors.size())))
+                    .forEach(entity -> found.add(entity.toDomain()));
+        }
+        return List.copyOf(found);
     }
 
     @Override

@@ -98,6 +98,27 @@ class JpaDonationRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given payments paired to two donors, one donor twice, and an unpaired payment, when the donors of those payments are asked, then each donor comes once and the unpaired payment adds nobody")
+    void should_name_each_donor_once_when_asked_given_payments_of_two_donors() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        BankPayment janaFirst = storedPayment(1001, LocalDate.of(2026, 10, 10));
+        BankPayment janaSecond = storedPayment(1002, LocalDate.of(2026, 10, 11));
+        BankPayment petrs = storedPayment(1003, LocalDate.of(2026, 10, 12));
+        BankPayment unpaired = storedPayment(1004, LocalDate.of(2026, 10, 13));
+        BankPayment otherOfPetr = storedPayment(1005, LocalDate.of(2026, 10, 14));
+        donations.save(bySymbol(jana, janaFirst));
+        donations.save(bySymbol(jana, janaSecond));
+        donations.save(bySymbol(petr, petrs));
+        donations.save(bySymbol(petr, otherOfPetr));
+        flushAndClear();
+
+        assertThat(donations.donorsOfBankPayments(List.of(janaFirst.id(), janaSecond.id(), unpaired.id()))).containsExactly(jana);
+        assertThat(donations.donorsOfBankPayments(List.of(janaFirst.id(), petrs.id()))).containsExactlyInAnyOrder(jana, petr);
+        assertThat(donations.donorsOfBankPayments(List.of())).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given donations of two donors, when one donor's donations are listed, then only theirs come, latest receipt first")
     void should_list_only_donor_donations_latest_first_when_listed_given_two_donors() {
         DonorReference jana = storedDonor("4821937560");

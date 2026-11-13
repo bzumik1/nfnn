@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 class LockedSignedInDevices implements SignedInDevices {
@@ -40,5 +43,12 @@ class LockedSignedInDevices implements SignedInDevices {
             throw new SessionEnded();
         }
         return new SignedInDevice(found.get().kind().keepsNothing());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Set<UUID> signedInAmong(Collection<UUID> deviceIds) {
+        return devices.signedInAmong(deviceIds.stream().map(DeviceId::new).toList(), clock.instant()).stream().map(DeviceId::value)
+                .collect(Collectors.toUnmodifiableSet());
     }
 }

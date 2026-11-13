@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,15 @@ class JpaDonationRepository implements DonationRepository {
     @Override
     public boolean existsForBankPayment(BankPaymentId bankPayment) {
         return jpa.existsByBankPaymentId(bankPayment.value());
+    }
+
+    @Override
+    public Set<DonorReference> donorsOfBankPayments(Collection<BankPaymentId> bankPayments) {
+        if (bankPayments.isEmpty()) {
+            return Set.of();
+        }
+        return jpa.findDonorIdsByBankPaymentIds(bankPayments.stream().map(BankPaymentId::value).toList()).stream()
+                .map(DonorReference::new).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

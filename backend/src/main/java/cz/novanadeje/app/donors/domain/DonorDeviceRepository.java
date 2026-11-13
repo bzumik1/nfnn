@@ -1,8 +1,10 @@
 package cz.novanadeje.app.donors.domain;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface DonorDeviceRepository {
 
@@ -25,6 +27,8 @@ public interface DonorDeviceRepository {
     List<DonorDevice> findActiveOf(DonorId donorId);
 
     boolean isSignedIn(DeviceId id, Instant now);
+
+    Set<DeviceId> signedInAmong(Collection<DeviceId> ids, Instant now);
 
     List<DonorDevice> findActiveWithoutUsableTokenAt(Instant now);
 

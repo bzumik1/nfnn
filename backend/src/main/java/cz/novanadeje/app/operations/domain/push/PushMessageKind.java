@@ -13,7 +13,8 @@ public enum PushMessageKind {
     BACKUPS_RECOVERED("backups-recovered", Optional.of(MonitoredArea.BACKUPS), false),
     MAIL_OUTAGE("mail-outage", Optional.of(MonitoredArea.MAIL), true),
     MAIL_RECOVERED("mail-recovered", Optional.of(MonitoredArea.MAIL), false),
-    DONOR_TEST("donor-test");
+    DONOR_TEST("donor-test"),
+    GIFT_ARRIVED("gift-arrived");
 
     private final String token;
     private final Optional<MonitoredArea> area;

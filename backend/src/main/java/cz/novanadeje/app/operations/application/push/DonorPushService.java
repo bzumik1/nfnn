@@ -8,14 +8,9 @@ import cz.novanadeje.app.operations.domain.push.PushDeviceKeepsNothing;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
-import cz.novanadeje.app.operations.domain.push.PushOutcome;
-import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionLimitReached;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionNotFound;
-import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -28,21 +23,20 @@ import java.util.UUID;
 @Service
 public class DonorPushService {
 
-    private static final Logger log = LoggerFactory.getLogger(DonorPushService.class);
     private static final PushMessage TEST = new PushMessage(PushMessageKind.DONOR_TEST, 0);
 
     private final DonorPushSubscriptionRepository subscriptions;
     private final PushKeyService keys;
-    private final PushDelivery delivery;
+    private final DonorPushSender sender;
     private final SignedInDevices devices;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
-    public DonorPushService(DonorPushSubscriptionRepository subscriptions, PushKeyService keys, PushDelivery delivery, SignedInDevices devices,
+    public DonorPushService(DonorPushSubscriptionRepository subscriptions, PushKeyService keys, DonorPushSender sender, SignedInDevices devices,
                             TransactionTemplate transactions, Clock clock) {
         this.subscriptions = subscriptions;
         this.keys = keys;
-        this.delivery = delivery;
+        this.sender = sender;
         this.devices = devices;
         this.transactions = transactions;
         this.clock = clock;
@@ -90,34 +84,6 @@ public class DonorPushService {
     public PushDeliveryReport sendTest(UUID donorId, UUID deviceId) {
         DonorPushSubscription subscription = transactions.execute(status -> subscriptions.findOfDevice(donorId, deviceId))
                 .orElseThrow(PushSubscriptionNotFound::new);
-        PushOutcome outcome = deliver(subscription, keys.current());
-        record(subscription, outcome);
-        return switch (outcome) {
-            case DELIVERED -> new PushDeliveryReport(1, 0, 0);
-            case FAILED -> new PushDeliveryReport(0, 1, 0);
-            case GONE -> new PushDeliveryReport(0, 0, 1);
-        };
-    }
-
-    private PushOutcome deliver(DonorPushSubscription subscription, VapidKeys vapid) {
-        try {
-            return delivery.deliver(subscription, TEST, vapid);
-        } catch (RuntimeException failure) {
-            return PushOutcome.FAILED;
-        }
-    }
-
-    private void record(DonorPushSubscription subscription, PushOutcome outcome) {
-        try {
-            switch (outcome) {
-                case DELIVERED -> transactions.executeWithoutResult(status -> subscriptions.markDelivered(subscription.id(), clock.instant()));
-                case GONE -> transactions.executeWithoutResult(status -> subscriptions.delete(subscription.id()));
-                case FAILED -> transactions.execute(status -> subscriptions.markFailed(subscription.id()))
-                        .filter(PushSubscription::failingLongEnoughToWarn)
-                        .ifPresent(failures -> log.warn("Push subscription {} failed {} times in a row", subscription.id().value(), failures));
-            }
-        } catch (RuntimeException notRecorded) {
-            return;
-        }
+        return sender.send(List.of(subscription), TEST).report();
     }
 }
