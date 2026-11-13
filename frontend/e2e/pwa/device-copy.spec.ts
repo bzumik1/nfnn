@@ -40,7 +40,9 @@ test.describe('Given a donor who signs in with a password to the site behind its
       (url) => url.pathname === '/api/live',
       (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: '' }),
     );
-    const gifts = page.locator('.payments-card tbody tr, .payments-card .donation-rows > li');
+    const gifts = page.locator(
+      '.payments-card tbody tr, .payments-card .donation-rows > li:not(.donation-last)',
+    );
 
     await openSignInDialog(page);
     await page.locator('#login-email').fill('jana@example.cz');

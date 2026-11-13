@@ -1,6 +1,13 @@
 import { Locator, Page } from '@playwright/test';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
-import { bankAccountItem, mockDonorApi, openDonorSection, signIn } from './donor-session';
+import {
+  bankAccountItem,
+  donationItem,
+  mockDonorApi,
+  noDonations,
+  openDonorSection,
+  signIn,
+} from './donor-session';
 import { expect, test } from './fixtures';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
@@ -61,6 +68,31 @@ async function linesOfTheBankCode(value: Locator): Promise<number> {
       }
     }
     return new Set(tops.slice(-4)).size;
+  });
+}
+
+async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const split: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.parentElement?.closest('.visually-hidden')) {
+        continue;
+      }
+      for (const number of (node.textContent ?? '').matchAll(/[\d/-]{4,}/g)) {
+        const range = document.createRange();
+        range.setStart(node, number.index);
+        range.setEnd(node, number.index + number[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size > 1) {
+          split.push(number[0]);
+        }
+      }
+    }
+    return split;
   });
 }
 
@@ -262,6 +294,65 @@ for (const { width, height } of [
           guideRows.first().locator('.standing-value'),
         ]) {
           await expect.poll(() => linesOfTheBankCode(value), textSize).toBe(1);
+        }
+      }
+    });
+
+    test('when a signed-in donor opens Moje dary, then the date, the symbol and the account end of every gift row, a refunded one too, stay whole within it', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, {
+        summary: {
+          ...noDonations.summary,
+          totalAmountMinor: 325000,
+          count: 3,
+          byYear: [{ year: 2026, count: 3, totalAmountMinor: 325000 }],
+        },
+        list: {
+          items: [
+            donationItem({
+              id: 'd-1',
+              amountMinor: 100000,
+              pairedBy: 'SENDER_ACCOUNT',
+              senderAccount: '19-2000145399/0800',
+            }),
+            donationItem({
+              id: 'd-2',
+              receivedAt: '2026-02-10',
+              amountMinor: 25000,
+              pairedBy: 'CONFIRMED_SYMBOL',
+              senderAccount: '2900233333/2010',
+              confirmedSymbol: '6123456789',
+            }),
+            donationItem({
+              id: 'd-3',
+              receivedAt: '2026-01-20',
+              amountMinor: 200000,
+              status: 'REFUNDED',
+              receiptAvailable: false,
+              pairedBy: 'SENDER_ACCOUNT',
+              senderAccount: '2900233333/2010',
+            }),
+          ],
+          totalAmountMinor: 325000,
+          currency: 'CZK',
+          count: 3,
+        },
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Moje dary');
+      await page.setViewportSize({ width, height });
+      const rows = page.locator('.payments-card .donation-rows > li');
+      await expect(rows).toHaveCount(3);
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        for (const row of await rows.all()) {
+          await expect.poll(() => numbersSplitAcrossLines(row), textSize).toEqual([]);
+          await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
         }
       }
     });
