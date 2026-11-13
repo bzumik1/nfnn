@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -58,7 +57,7 @@ public class ReportSettingsService {
         List<SentReport> sent = reportLog.sentReportsNewestFirst();
         LocalDate today = FoundationCalendar.today(clock);
         Optional<Instant> changedAt = settings.lastChangedAt();
-        return new ReportAdministrationView(current, changedAt, sent, nextReport(current, sent, today), ReportMonth.previousTo(today),
+        return new ReportAdministrationView(current, changedAt, sent, NextReport.after(current, sent, today), ReportMonth.previousTo(today),
                 rows.reportSettingsVersion(new StoredReportSettings(current, changedAt)));
     }
 
@@ -70,7 +69,7 @@ public class ReportSettingsService {
         if (!expected.admits(version)) {
             List<SentReport> sent = reportLog.sentReportsNewestFirst();
             LocalDate today = FoundationCalendar.today(clock);
-            throw new ChangedMeanwhile(version, rows.reportSettings(current, sent, nextReport(current.settings(), sent, today), ReportMonth.previousTo(today)));
+            throw new ChangedMeanwhile(version, rows.reportSettings(current, sent, NextReport.after(current.settings(), sent, today), ReportMonth.previousTo(today)));
         }
         if (!channel.mayChangeReportRecipients() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
             throw new ReportRecipientsInBrowserOnly();
@@ -100,12 +99,5 @@ public class ReportSettingsService {
             names.add("stahování z banky");
         }
         return String.join(", ", names);
-    }
-
-    private NextReport nextReport(ReportSettings current, List<SentReport> sent, LocalDate today) {
-        ReportMonth previous = ReportMonth.previousTo(today);
-        boolean previousSent = sent.stream().anyMatch(report -> report.month().equals(previous));
-        ReportMonth next = previousSent ? new ReportMonth(YearMonth.from(today)) : previous;
-        return new NextReport(next, current.sendDateFor(next));
     }
 }
