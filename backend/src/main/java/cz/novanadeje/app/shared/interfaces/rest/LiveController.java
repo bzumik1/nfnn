@@ -1,7 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.application.session.CurrentDevice;
-import cz.novanadeje.app.shared.domain.ExpiredAccessToken;
 import cz.novanadeje.app.shared.infrastructure.live.LiveOpening;
 import cz.novanadeje.app.shared.infrastructure.live.LiveStreamHub;
 import cz.novanadeje.app.shared.infrastructure.live.LiveSubscriber;
@@ -43,7 +42,7 @@ class LiveController {
                     .header(ACCEL_BUFFERING, "no")
                     .contentType(MediaType.TEXT_EVENT_STREAM)
                     .body(opened.connection().emitter());
-            case LiveOpening.SessionEnded<SseLiveConnection> ended -> throw new ExpiredAccessToken();
+            case LiveOpening.SessionEnded<SseLiveConnection> ended -> throw new ExpiredAccessTokenException();
             case LiveOpening.Full<SseLiveConnection> full -> throw new RateLimitExceededException(ProblemTypes.of("live-streams-full"));
             case LiveOpening.Unavailable<SseLiveConnection> unavailable -> throw new LiveUnavailableException();
         };
