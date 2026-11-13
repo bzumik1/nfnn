@@ -121,8 +121,6 @@ div.ui-list__row {
 
 .ui-list--inset .ui-list__chevron {
   flex-shrink: 0;
-  width: var(--list-chevron-size);
-  height: var(--list-chevron-size);
   transition: transform var(--duration-base);
 
   @media (prefers-reduced-motion: reduce) {

@@ -17,6 +17,8 @@
     <svg
       class="ui-list__chevron"
       [class.ui-list__chevron--open]="open()"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -70,9 +72,11 @@
         <div class="standing-row" [class]="look().row">
           <dt [class]="look().term" i18n="@@home.donate.bank.account">Číslo účtu</dt>
           <dd [class]="look().description">
-            <span class="standing-value ui-figures" [class]="look().value">{{
-              state.account.number
-            }}</span>
+            <span class="standing-value ui-figures" [class]="look().value"
+              >{{ accountParts(state.account.number).head }}<wbr />{{
+                accountParts(state.account.number).bankCode
+              }}</span
+            >
             <app-copy-button
               [value]="state.account.number"
               what="číslo účtu"

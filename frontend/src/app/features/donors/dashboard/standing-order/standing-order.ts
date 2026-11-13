@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CopyButton } from '../../../../shared/ui/copy-button/copy-button';
+import { splitBeforeBankCode } from '../../../donations/czech-account';
 import { formatCrowns } from '../../../donations/donation-amount';
 import { PaymentAccountState } from '../../../donations/payment-panel/payment-panel';
 import { PaymentDetailsStore } from '../../../donations/payment-details-store';
@@ -59,6 +60,7 @@ export class StandingOrder {
   readonly account = input<PaymentAccountState | null>(null);
   readonly amount = input<number | null>(null);
   readonly grouped = input(false);
+  protected readonly accountParts = splitBeforeBankCode;
   protected readonly look = computed(() =>
     this.grouped() ? DETAILS_LOOK.grouped : DETAILS_LOOK.public,
   );

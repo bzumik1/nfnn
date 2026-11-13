@@ -1,5 +1,10 @@
 import { sharedCases } from '../../../testing/shared-cases';
-import { accountMatchesIban, bankCodeOf, ibanOfAccountNumber } from './czech-account';
+import {
+  accountMatchesIban,
+  bankCodeOf,
+  ibanOfAccountNumber,
+  splitBeforeBankCode,
+} from './czech-account';
 
 for (const sharedCase of sharedCases('payment/account.json')) {
   describe(`Given the shared case ${sharedCase.name}`, () => {
@@ -32,4 +37,23 @@ describe('Given an account as the bank or the learned link writes it', () => {
       expect(bankCodeOf(account)).toBeNull();
     },
   );
+});
+
+describe('Given an account number shown where it may have to wrap', () => {
+  it.each([
+    ['5544332217/2010', { head: '5544332217/', bankCode: '2010' }],
+    ['19-2000145399/0800', { head: '19-2000145399/', bankCode: '0800' }],
+  ])(
+    'when %s is split, then the part before the bank code ends with its slash',
+    (account, parts) => {
+      expect(splitBeforeBankCode(account)).toEqual(parts);
+    },
+  );
+
+  it('when the text is not an account number, then it stays whole', () => {
+    expect(splitBeforeBankCode('CZ6508000000192000145399')).toEqual({
+      head: 'CZ6508000000192000145399',
+      bankCode: '',
+    });
+  });
 });

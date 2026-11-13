@@ -97,7 +97,11 @@
           >Číslo účtu</span
         >&ngsp;
         <span class="bank-value-wrap" [class]="look().values">
-          <span class="bank-value ui-figures" [class]="look().value">{{ account.number }}</span>
+          <span class="bank-value ui-figures" [class]="look().value"
+            >{{ accountParts(account.number).head }}<wbr />{{
+              accountParts(account.number).bankCode
+            }}</span
+          >
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
@@ -378,6 +382,8 @@
       [class.other-device-chevron]="!grouped()"
       [class.ui-list__chevron]="grouped()"
       [class.ui-list__chevron--open]="qrShown()"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

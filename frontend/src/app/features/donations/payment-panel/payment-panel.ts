@@ -27,6 +27,7 @@ import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
 import { ZoomQr } from '../../../shared/ui/zoom-viewer/zoom-content';
 import { Zoomable } from '../../../shared/ui/zoom-viewer/zoomable';
+import { splitBeforeBankCode } from '../czech-account';
 import { formatCrowns } from '../donation-amount';
 import { GiftArrivalWatch } from '../gift-arrival/gift-arrival-watch';
 import { whenLeft } from '../../../core/navigation/kept-tab-pages';
@@ -149,6 +150,7 @@ export class PaymentPanel {
     { amount: 100, label: $localize`:@@home.donate.amount.preset100:100 Kč` },
   ];
   protected readonly crowns = formatCrowns;
+  protected readonly accountParts = splitBeforeBankCode;
 
   private readonly initial = initialChoice(this.presets, this.chosenAmount.remembered());
   protected readonly customChosen = signal(this.initial.custom);
