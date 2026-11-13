@@ -577,6 +577,17 @@ describe('Given an administrator writing a new news article', () => {
   });
 });
 
+describe('Given an administrator opening a news article that is still on its way', () => {
+  it('when the page first shows, then its heading already says it is an edit, not a new article', async () => {
+    const { fixture, http } = await setUp(draftArticle().id);
+
+    expect(text(fixture, 'h1')).toBe('Úprava aktuality');
+
+    http.expectOne(`${NEWS_URL}/${draftArticle().id}`).flush(draftArticle());
+    http.verify();
+  });
+});
+
 describe('Given an administrator editing a draft', () => {
   let fixture: ComponentFixture<AdminNewsEditor>;
   let http: HttpTestingController;
