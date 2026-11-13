@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -44,6 +45,7 @@ class AresCompanyRegistry implements CompanyRegistry {
     private final URI base;
     private final boolean privateAddressesAllowed;
     private final Duration timeout;
+    private final HostResolver resolver;
     private final AresAnswers answers = new AresAnswers();
     private final Cache<CompanyIdentifier, Optional<RegisteredCompany>> cache;
 
@@ -52,10 +54,15 @@ class AresCompanyRegistry implements CompanyRegistry {
     }
 
     AresCompanyRegistry(HttpClient http, URI base, boolean privateAddressesAllowed, Duration timeout, Clock clock) {
+        this(http, base, privateAddressesAllowed, timeout, clock, InetAddress::getAllByName);
+    }
+
+    AresCompanyRegistry(HttpClient http, URI base, boolean privateAddressesAllowed, Duration timeout, Clock clock, HostResolver resolver) {
         this.http = http;
         this.base = base;
         this.privateAddressesAllowed = privateAddressesAllowed;
         this.timeout = timeout;
+        this.resolver = resolver;
         this.cache = Caffeine.newBuilder()
                 .maximumSize(CACHE_SIZE)
                 .expireAfterWrite(CACHE_TTL)
@@ -70,7 +77,7 @@ class AresCompanyRegistry implements CompanyRegistry {
 
     private Optional<RegisteredCompany> ask(CompanyIdentifier identifier) {
         long deadline = System.nanoTime() + timeout.toNanos();
-        requireSafeTarget();
+        requireSafeTarget(deadline);
         HttpRequest request = HttpRequest.newBuilder(base.resolve(identifier.value()))
                 .timeout(timeout)
                 .header("Accept", "application/json")
@@ -94,23 +101,35 @@ class AresCompanyRegistry implements CompanyRegistry {
         }
     }
 
-    private void requireSafeTarget() {
+    private void requireSafeTarget(long deadline) {
         if (privateAddressesAllowed) {
             return;
         }
         if (!"https".equals(base.getScheme())) {
             throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NOT_HTTPS);
         }
-        InetAddress[] addresses;
-        try {
-            addresses = InetAddress.getAllByName(base.getHost());
-        } catch (UnknownHostException unknown) {
-            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNKNOWN_HOST);
-        }
-        for (InetAddress address : addresses) {
+        for (InetAddress address : resolveBounded(base.getHost(), deadline)) {
             if (!PublicAddresses.isPublic(address)) {
                 throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NON_PUBLIC_ADDRESS);
             }
+        }
+    }
+
+    private InetAddress[] resolveBounded(String host, long deadline) {
+        FutureTask<InetAddress[]> lookup = new FutureTask<>(() -> resolver.resolve(host));
+        Thread.ofVirtual().name("company-register-lookup").start(lookup);
+        try {
+            return lookup.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException slow) {
+            lookup.cancel(true);
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
+        } catch (ExecutionException failed) {
+            throw new CompanyRegistryUnavailable(failed.getCause() instanceof UnknownHostException
+                    ? CompanyRegistryFailure.UNKNOWN_HOST : CompanyRegistryFailure.UNREACHABLE);
+        } catch (InterruptedException interrupted) {
+            lookup.cancel(true);
+            Thread.currentThread().interrupt();
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.INTERRUPTED);
         }
     }
 

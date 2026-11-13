@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -25,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -225,6 +227,28 @@ class AresCompanyRegistryTest {
 
         assertThatThrownBy(() -> strict.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NON_PUBLIC_ADDRESS));
         assertThatThrownBy(() -> plain.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NOT_HTTPS));
+        assertThat(requests.get()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a name lookup that never answers, when a company is found, then it is unavailable as timed out within the lookup's time and the register is not asked")
+    void should_time_out_when_found_given_a_name_lookup_that_never_answers() {
+        CountDownLatch never = new CountDownLatch(1);
+        AresCompanyRegistry stalled = new AresCompanyRegistry(HttpClient.newHttpClient(), URI.create("https://ares.gov.cz/ekonomicke-subjekty/"),
+                false, Duration.ofMillis(300), clock, host -> {
+                    try {
+                        never.await();
+                    } catch (InterruptedException cancelled) {
+                        Thread.currentThread().interrupt();
+                    }
+                    throw new UnknownHostException(host);
+                });
+        long started = System.nanoTime();
+
+        assertThatThrownBy(() -> stalled.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class,
+                failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(3));
         assertThat(requests.get()).isZero();
     }
 
