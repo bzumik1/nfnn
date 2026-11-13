@@ -1,0 +1,13 @@
+Hello,
+
+the administrator jana@example.cz withdrew the key 21fe31df in the administration of the Nová naděje site on 6 Nov 2026 at 08:30; the server signs the verification QR codes on donation receipts with it. The site keeps publishing this key, but as withdrawn, so nobody is to trust the QR codes signed with it. The receipts themselves stay valid.
+
+The server restarts and makes a new key of its own. Receipts issued after that are signed with the new key.
+
+If you know about it, there is nothing to do.
+
+If not, please change your password and your second factor at once, look in the administration history at what changed there lately, and write to the other administrators and to info@nfnn.cz.
+
+Nová naděje – nadační fond
+
+If you have a question, write to us at info@nfnn.cz.

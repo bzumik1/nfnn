@@ -1,0 +1,11 @@
+Hello,
+
+the administrator jana@example.cz viewed the backup key in the administration of the Nová naděje site on 5 Mar 2026 at 08:05. Whoever holds the key and a backup reads all the data of the site, so every administrator is told of each view.
+
+If you know about it, there is nothing to do.
+
+If not, please change your password and your second factor at once, check in the administration history who signed in, and write to the other administrators and to info@nfnn.cz.
+
+Nová naděje – nadační fond
+
+If you have a question, write to us at info@nfnn.cz.

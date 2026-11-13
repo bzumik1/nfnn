@@ -9,7 +9,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.application.event.BackupKeyRevealed;
+import cz.novanadeje.app.operations.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;

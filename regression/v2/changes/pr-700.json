@@ -1,0 +1,74 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.BackupKeyRevealedEmailSenderTest > Given two administrators, when the key is shown, then each gets a notice in their language that names who showed it and when",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "operations.infrastructure.backup.BackupKeyRevealedEmailSenderTest > Given two administrators, when the key is shown, then each gets a notice in their language that names who showed it and when",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.BackupKeyRevealedEmailSenderTest > Given the administrator who showed the key is no longer one, when the notice goes out, then it names no address",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "operations.infrastructure.backup.BackupKeyRevealedEmailSenderTest > Given the administrator who showed the key is no longer one, when the notice goes out, then it names no address",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.BackupKeyRevealedEmailSenderTest > Given a mail server that refuses, when the notice is sent, then one ERROR line per administrator names the id and the exception class, never the address",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "operations.infrastructure.backup.BackupKeyRevealedEmailSenderTest > Given a mail server that refuses, when the notice is sent, then one ERROR line per administrator names the id and the exception class, never the address",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given two administrators, when the server's own key is withdrawn, then each gets a notice in their language that names who withdrew which key, when, and that a new key follows",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given two administrators, when the server's own key is withdrawn, then each gets a notice in their language that names who withdrew which key, when, and that a new key follows",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given an earlier key withdrawn, when the notice goes out, then it says nothing of a new key",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given an earlier key withdrawn, when the notice goes out, then it says nothing of a new key",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the administrator who withdrew the key is no longer one, when the notice goes out, then it names no address",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the administrator who withdrew the key is no longer one, when the notice goes out, then it names no address",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given a mail server that refuses, when the notice is sent, then one ERROR line per administrator names the id and the exception class, never the address",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given a mail server that refuses, when the notice is sent, then one ERROR line per administrator names the id and the exception class, never the address",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given two administrators and a mail server that refuses the first notice, when the notices are sent, then the withdrawal is announced only after both sends were tried and the refusal was logged",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given two administrators and a mail server that refuses the first notice, when the notices are sent, then the withdrawal is announced only after both sends were tried and the refusal was logged",
+    "contract": "docs/system-overview.md, operations and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.mail.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the administrators cannot be read, when the notices are prepared, then the failure is logged and the withdrawal is announced anyway, so the seed is still renewed",
+    "reason": "Architecture audit #621 (Jakub 2026-11-13): the e-mail moved to the context that owns its event, with its test",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the administrators cannot be read, when the notices are prepared, then the failure is logged and the withdrawal is announced anyway, so the seed is still renewed",
+    "contract": "docs/system-overview.md, operations and donations"
+  }
+]

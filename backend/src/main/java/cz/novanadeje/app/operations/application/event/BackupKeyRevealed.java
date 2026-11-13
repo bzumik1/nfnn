@@ -1,4 +1,4 @@
-package cz.novanadeje.app.shared.application.event;
+package cz.novanadeje.app.operations.application.event;
 
 import java.time.Instant;
 import java.util.UUID;
