@@ -9,14 +9,16 @@ public class BankStatementUnavailable extends RuntimeException {
 
     private final ImportFailureKind kind;
     private final Instant retryAfter;
+    private final String description;
 
-    public BankStatementUnavailable(ImportFailureKind kind, Optional<Instant> retryAfter, String message, Throwable cause) {
-        super(message, cause);
-        if (kind == null || retryAfter == null) {
-            throw new IllegalArgumentException("An unavailable statement needs its failure kind and an optional retry time");
+    public BankStatementUnavailable(ImportFailureKind kind, Optional<Instant> retryAfter, String description, Throwable cause) {
+        super(description, cause);
+        if (kind == null || retryAfter == null || description == null) {
+            throw new IllegalArgumentException("An unavailable statement needs its failure kind, an optional retry time and its description");
         }
         this.kind = kind;
         this.retryAfter = retryAfter.orElse(null);
+        this.description = description;
     }
 
     public ImportFailureKind kind() {
@@ -25,5 +27,9 @@ public class BankStatementUnavailable extends RuntimeException {
 
     public Optional<Instant> retryAfter() {
         return Optional.ofNullable(retryAfter);
+    }
+
+    public String description() {
+        return description;
     }
 }

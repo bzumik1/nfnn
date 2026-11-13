@@ -11,7 +11,7 @@ public record CompanyIdentifier(String value) {
         }
         value = value.replace(" ", "").trim();
         if (!hasValidCheckDigit(value)) {
-            throw new IllegalArgumentException("Company identifier is not valid: " + value);
+            throw new IllegalArgumentException("Company identifier is not valid");
         }
     }
 

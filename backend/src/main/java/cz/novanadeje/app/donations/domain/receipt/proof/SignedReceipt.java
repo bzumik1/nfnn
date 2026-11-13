@@ -40,7 +40,7 @@ public record SignedReceipt(ReceiptKind kind, ReceiptNumber number, LocalDate is
         }
         long sum = gifts.stream().mapToLong(SignedGift::amountMinor).reduce(0, Math::addExact);
         if (sum != totalMinor) {
-            throw new IllegalArgumentException("The total " + totalMinor + " does not add up the gifts " + sum);
+            throw new IllegalArgumentException("The total does not add up the gifts");
         }
     }
 

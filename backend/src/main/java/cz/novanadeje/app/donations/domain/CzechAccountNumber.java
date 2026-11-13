@@ -25,23 +25,23 @@ public record CzechAccountNumber(String value) {
         value = value.trim();
         Matcher parts = FORMAT.matcher(value);
         if (!parts.matches()) {
-            throw new IllegalArgumentException("Account number must look like [prefix-]number/bank code: " + value);
+            throw new IllegalArgumentException("Account number must look like [prefix-]number/bank code");
         }
         if (parts.group(1) != null && !passesModulo11(parts.group(1))) {
-            throw new IllegalArgumentException("Account number prefix fails the modulo 11 check: " + value);
+            throw new IllegalArgumentException("Account number prefix fails the modulo 11 check");
         }
         if (!passesModulo11(parts.group(2))) {
-            throw new IllegalArgumentException("Account number fails the modulo 11 check: " + value);
+            throw new IllegalArgumentException("Account number fails the modulo 11 check");
         }
         if (Long.parseLong(parts.group(2)) == 0) {
-            throw new IllegalArgumentException("Account number must not be zero: " + value);
+            throw new IllegalArgumentException("Account number must not be zero");
         }
     }
 
     public Iban toIban() {
         Matcher parts = FORMAT.matcher(value);
         if (!parts.matches()) {
-            throw new IllegalStateException("A validated account number no longer matches its format: " + value);
+            throw new IllegalStateException("A validated account number no longer matches its format");
         }
         String prefix = parts.group(1) == null ? "" : parts.group(1);
         String basicBankAccountNumber = parts.group(3) + zeroPadded(prefix, PREFIX_DIGITS) + zeroPadded(parts.group(2), NUMBER_DIGITS);

@@ -85,4 +85,12 @@ class SpaydTextTest {
         assertThatIllegalArgumentException().isThrownBy(() -> SpaydText.message(null));
         assertThatIllegalArgumentException().isThrownBy(() -> new SpaydText(null));
     }
+
+    @Test
+    @DisplayName("Given a text with characters SPAYD cannot carry, when it is created, then the message names the rule without the text")
+    void should_name_the_rule_without_the_text_when_created_given_characters_spayd_cannot_carry() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new SpaydText("JANA*NOVAKOVA"))
+                .withMessage("SPAYD text is up to 60 characters of 0-9, A-Z, $ + - . / : and single spaces")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("JANA", "NOVAKOVA"));
+    }
 }

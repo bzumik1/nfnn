@@ -109,7 +109,7 @@ public class ReceiptSigningKeyWithdrawal {
         private final DomainException refused;
 
         private RefusedSecondFactor(DomainException refused) {
-            super(refused.getMessage(), refused, false, false);
+            super(refused.code(), refused, false, false);
             this.refused = refused;
         }
     }

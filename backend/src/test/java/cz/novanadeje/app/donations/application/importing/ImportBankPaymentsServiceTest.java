@@ -306,21 +306,21 @@ class ImportBankPaymentsServiceTest {
 
         assertThatThrownBy(() -> service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults())).isSameAs(failure);
 
-        verify(recorder).recordFailure(ImportFailureKind.UNEXPECTED, "Fio import is disabled: FIO_TOKEN is not set", NOW);
+        verify(recorder).recordFailure(ImportFailureKind.UNEXPECTED, "java.lang.IllegalStateException", NOW);
     }
 
     @Test
     @DisplayName("Given recording the statement fails, when the import runs, then the failure is recorded as unexpected and rethrown")
     void should_record_and_rethrow_when_recording_fails() {
         BankStatement statement = new BankStatement(SERVABLE, Optional.empty(), List.of(), 0, Optional.empty());
-        IllegalStateException failure = new IllegalStateException("pairing failed for payment 1001");
+        IllegalStateException failure = new IllegalStateException("pairing failed for payment 1001 from 2000145399/0800");
         when(states.current()).thenReturn(BankImportState.initial(NOW));
         when(source.fetch(SERVABLE)).thenReturn(statement);
         when(recorder.record(any(), any(), any(), any())).thenThrow(failure);
 
         assertThatThrownBy(() -> service.importIncomingPayments(ImportTrigger.HOURLY, ImportSettings.defaults())).isSameAs(failure);
 
-        verify(recorder).recordFailure(ImportFailureKind.UNEXPECTED, "pairing failed for payment 1001", NOW);
+        verify(recorder).recordFailure(ImportFailureKind.UNEXPECTED, "java.lang.IllegalStateException", NOW);
     }
 
     @Test

@@ -36,4 +36,12 @@ class PostalAddressTest {
         assertThat(new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01").singleLine())
                 .isEqualTo("Dlouhá 12, 400 01 Ústí nad Labem");
     }
+
+    @Test
+    @DisplayName("Given a postal code with letters, when the address is created, then the message names the rule without the postal code")
+    void should_name_the_rule_without_the_postal_code_when_created_given_letters_in_it() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new PostalAddress("Dlouhá 12", "Most", "43X 01"))
+                .withMessage("Postal code must consist of digits")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("43X", "Dlouhá", "Most"));
+    }
 }

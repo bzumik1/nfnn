@@ -189,4 +189,13 @@ class IncomingMovementTest {
     private static String text(int length) {
         return "x".repeat(length);
     }
+
+    @Test
+    @DisplayName("Given a matching symbol that does not follow from the variable symbol, when it is checked, then the message names the rule without either symbol")
+    void should_name_the_rule_without_the_symbols_when_checked_given_a_matching_symbol_of_another_variable_symbol() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> IncomingMovement.requireMatching(Optional.of("4821937560"), Optional.of(new VariableSymbol("7310582946"))))
+                .withMessage("Matching variable symbol does not follow from the variable symbol")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4821937560", "7310582946"));
+    }
 }

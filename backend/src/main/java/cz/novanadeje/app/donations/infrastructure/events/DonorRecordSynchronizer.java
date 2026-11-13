@@ -33,8 +33,9 @@ class DonorRecordSynchronizer {
     void pairAfterRegistration(DonorRegistered event) {
         try {
             donorRecordService.pairPaymentsOf(event.donorId());
-        } catch (RuntimeException e) {
-            log.warn("Pairing the payments of donor {} after the registration failed; the hourly import pairs them", event.donorId(), e);
+        } catch (RuntimeException failure) {
+            log.warn("Pairing the payments of donor {} after the registration failed ({}); the hourly import pairs them", event.donorId(),
+                    failure.getClass().getName());
         }
     }
 

@@ -49,7 +49,7 @@ public class ImportBankPaymentsService {
             ImportCounts counts = recorder.record(statement, plan, trigger, clock.instant());
             return completed(trigger, plan, statement, counts);
         } catch (BankStatementUnavailable unavailable) {
-            recorder.recordFailure(unavailable.kind(), unavailable.getMessage(), clock.instant());
+            recorder.recordFailure(unavailable.kind(), unavailable.description(), clock.instant());
             return failed(trigger, plan, state.coverage(), unavailable);
         } catch (RuntimeException unexpected) {
             recordUnexpected(unexpected);
@@ -91,7 +91,7 @@ public class ImportBankPaymentsService {
 
     private ImportReport failed(ImportTrigger trigger, ImportPlan plan, ImportCoverage coverage, BankStatementUnavailable unavailable) {
         return new ImportReport(trigger, plan.period(), plan.needsUnlockedHistory(), Optional.empty(), coverage, ImportCounts.none(),
-                Optional.of(unavailable.kind()), Optional.ofNullable(unavailable.getMessage()), followUp(trigger, plan, unavailable));
+                Optional.of(unavailable.kind()), Optional.of(unavailable.description()), followUp(trigger, plan, unavailable));
     }
 
     private Optional<FollowUp> followUp(ImportTrigger trigger, ImportPlan plan, BankStatementUnavailable unavailable) {
@@ -123,10 +123,9 @@ public class ImportBankPaymentsService {
     }
 
     private void recordUnexpected(RuntimeException unexpected) {
-        String message = unexpected.getMessage() == null ? unexpected.getClass().getName() : unexpected.getMessage();
         Instant at = clock.instant();
         try {
-            recorder.recordFailure(ImportFailureKind.UNEXPECTED, message, at);
+            recorder.recordFailure(ImportFailureKind.UNEXPECTED, unexpected.getClass().getName(), at);
         } catch (RuntimeException recordingFailure) {
             unexpected.addSuppressed(recordingFailure);
         }

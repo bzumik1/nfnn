@@ -130,4 +130,17 @@ class SignedReceiptTest {
     private static SignedDonor donor(String name) {
         return new SignedDonor(DonorType.PERSON, name, "Lipová 12", "Liberec", "460 01", Optional.empty());
     }
+
+    @Test
+    @DisplayName("Given gifts whose sum differs from the total or a malformed company identifier, when the receipt is made, then the message names the rule without the figures")
+    void should_name_the_rule_without_the_figures_when_made_given_wrong_total_or_malformed_identifier() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> single(NAME, List.of(new SignedGift(LocalDate.parse("2026-11-03"), 250000)), 250001))
+                .withMessage("The total does not add up the gifts")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("250000", "250001"));
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new SignedDonor(DonorType.COMPANY, "Pekárna s.r.o.", "Mlýnská 7", "Turnov", "511 01", Optional.of("4527464X")))
+                .withMessage("A company identifier is eight digits")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4527464"));
+    }
 }

@@ -15,7 +15,7 @@ public record EmailAddress(String value) {
         }
         value = value.trim().toLowerCase(Locale.ROOT);
         if (value.length() > MAX_LENGTH || !SHAPE.matcher(value).matches()) {
-            throw new IllegalArgumentException("Email address is not valid: " + value);
+            throw new IllegalArgumentException("Email address is not valid");
         }
     }
 

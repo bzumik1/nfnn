@@ -297,7 +297,8 @@ class FioBankStatementSourceTest {
 
         assertThat(unavailable.kind()).isEqualTo(ImportFailureKind.RATE_LIMITED);
         assertThat(unavailable.retryAfter()).contains(retryAfter);
-        assertThat(unavailable).hasMessage("refused with HTTP 409").hasCause(refusal);
+        assertThat(unavailable.description()).isEqualTo("Fio API request was refused with HTTP 409");
+        assertThat(unavailable).hasCause(refusal);
     }
 
     @Test
@@ -362,6 +363,32 @@ class FioBankStatementSourceTest {
 
         fio.fail(new FioResponseTooLargeException("answered with more than 256 bytes", 256, null));
         assertThat(unavailable().kind()).isEqualTo(ImportFailureKind.UNEXPECTED);
+    }
+
+    @Test
+    @DisplayName("Given each kind of Fio failure with a message that quotes the bank's answer, when the statement is fetched, then the description is closed and quotes nothing")
+    void should_describe_the_failure_in_closed_words_when_fetched_given_messages_that_quote_the_answer() {
+        String quoted = "Jana Nováková 2000145399/0800";
+
+        fio.fail(new FioAuthorizationException("GET /periods/***/ was refused with HTTP 401: " + quoted, 401, quoted));
+        assertThat(unavailable().description()).isEqualTo("Fio API request was refused with HTTP 401");
+
+        fio.fail(new FioMalformedResponseException("answered with HTTP 200 and a body this client does not understand: " + quoted, 200, quoted,
+                new IOException(quoted)));
+        assertThat(unavailable().description()).isEqualTo("Fio API answered with HTTP 200 and a body this client does not understand");
+
+        fio.fail(FioRateLimitException.notSent("not sent: " + quoted, NOW.plusSeconds(12)));
+        assertThat(unavailable().description()).isEqualTo("Fio API request was not sent: the token was used too recently");
+
+        fio.fail(new FioTransportException("GET failed: " + quoted, new HttpTimeoutException(quoted), true));
+        assertThat(unavailable().description()).isEqualTo("Fio API request failed: HttpTimeoutException");
+
+        fio.fail(new FioResponseTooLargeException("answered with more than 256 bytes: " + quoted, 256, null));
+        assertThat(unavailable().description()).isEqualTo("Fio API answered with more than this client reads");
+
+        fio.fail(new FioException("failed: " + quoted, new IllegalStateException(quoted)));
+        assertThat(unavailable().description()).isEqualTo("Fio API request failed: FioException");
+        assertThat(unavailable().getMessage()).isEqualTo("Fio API request failed: FioException");
     }
 
     private List<String> messages(Level level) {

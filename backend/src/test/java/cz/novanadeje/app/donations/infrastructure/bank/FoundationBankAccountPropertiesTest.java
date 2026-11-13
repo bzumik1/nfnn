@@ -27,7 +27,7 @@ class FoundationBankAccountPropertiesTest {
     void should_refuse_to_start_when_started_given_an_iban_of_another_account() {
         context.withPropertyValues("app.donations.bank-account.account-number=5544332217/2010", "app.donations.bank-account.iban=CZ6508000000192000145399")
                 .run(started -> assertThat(started).hasFailed()
-                        .getFailure().rootCause().isInstanceOf(IllegalArgumentException.class).hasMessageContaining("CZ6508000000192000145399"));
+                        .getFailure().rootCause().isInstanceOf(IllegalArgumentException.class).hasMessage("IBAN is not the IBAN of the account number"));
     }
 
     @Configuration(proxyBeanMethods = false)

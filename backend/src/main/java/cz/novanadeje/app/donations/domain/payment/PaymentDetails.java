@@ -40,7 +40,7 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
 
     public String spaydWithoutVariableSymbol(Money amount, SpaydText message) {
         if (amount == null || !amount.isPositive() || amount.amountMinor() > LARGEST_AMOUNT_MINOR || message == null || message.isEmpty()) {
-            throw new IllegalArgumentException("A SPAYD text needs a positive amount that fits AM and a message: " + amount);
+            throw new IllegalArgumentException("A SPAYD text needs a positive amount that fits AM and a message");
         }
         StringJoiner spayd = new StringJoiner(FIELD_SEPARATOR).add(HEADER)
                 .add("ACC:" + account.iban().value())

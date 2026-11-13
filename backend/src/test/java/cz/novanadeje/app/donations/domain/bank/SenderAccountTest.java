@@ -98,4 +98,15 @@ class SenderAccountTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount(null, "2010"));
         assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount("29 33", "2010"));
     }
+
+    @Test
+    @DisplayName("Given an account number or a bank code that is not canonical, when the account is created, then the message names the rule without the value")
+    void should_name_the_rule_without_the_value_when_created_given_a_refused_account_or_bank_code() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount("0019-2000145399", "0800"))
+                .withMessage("Not a canonical Czech account number")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("19", "2000145399", "0800"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount("2000145399", "08X0"))
+                .withMessage("Not a Czech bank code")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("08X0", "2000145399"));
+    }
 }

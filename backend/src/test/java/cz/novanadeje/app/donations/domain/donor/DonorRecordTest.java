@@ -526,4 +526,13 @@ class DonorRecordTest {
                 sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of("Nováková Jana"),
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem"), LATER);
     }
+
+    @Test
+    @DisplayName("Given a company identifier that is not eight digits, when the record is registered, then the message names the rule without the identifier")
+    void should_name_the_rule_without_the_identifier_when_registered_given_malformed_identifier() {
+        assertThatThrownBy(() -> company("4527464X"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A company identification number is eight digits")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4527464"));
+    }
 }
