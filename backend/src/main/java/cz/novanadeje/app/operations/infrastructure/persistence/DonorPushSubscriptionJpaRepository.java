@@ -19,6 +19,8 @@ interface DonorPushSubscriptionJpaRepository extends JpaRepository<DonorPushSubs
 
     List<DonorPushSubscriptionJpaEntity> findByDonorIdInAndGiftNotificationsTrueOrderByCreatedAtAscIdAsc(Collection<UUID> donorIds);
 
+    List<DonorPushSubscriptionJpaEntity> findByDonorIdInAndYearlyReceiptNotificationsTrueOrderByCreatedAtAscIdAsc(Collection<UUID> donorIds);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update DonorPushSubscriptionJpaEntity s set s.giftNotifications = :gifts, s.yearlyReceiptNotifications = :yearlyReceipts "
             + "where s.donorId = :donorId and s.deviceId = :deviceId")

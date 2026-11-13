@@ -67,6 +67,7 @@ class PushPayloads {
             case MAIL_OUTAGE, MAIL_RECOVERED -> "/sprava/nastaveni";
             case DONOR_TEST -> "/darce/udaje";
             case GIFT_ARRIVED -> "/darce/dary";
+            case YEARLY_RECEIPT_READY -> "/darce/potvrzeni";
         };
     }
 
@@ -78,6 +79,7 @@ class PushPayloads {
             case MAIL_OUTAGE, MAIL_RECOVERED -> "nfnn-mail";
             case DONOR_TEST -> "nfnn-donor-test";
             case GIFT_ARRIVED -> "nfnn-gifts";
+            case YEARLY_RECEIPT_READY -> "nfnn-receipts";
         };
     }
 

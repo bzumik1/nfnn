@@ -32,6 +32,7 @@ class AppApplicationTests {
 
 		assertThat(environment.getProperty("app.donations.fio.token")).isEmpty();
 		assertThat(environment.getProperty("app.donations.report.cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.donations.yearly-receipt-announcement.cron")).isEqualTo("-");
 		assertThat(environment.getProperty("app.donations.bank-codes.cron")).isEqualTo("-");
 		assertThat(environment.getProperty("app.donations.bank-logos.cron")).isEqualTo("-");
 		assertThat(environment.getProperty("app.contact.retention.cron")).isEqualTo("-");

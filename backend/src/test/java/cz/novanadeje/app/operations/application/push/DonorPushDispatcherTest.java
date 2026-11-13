@@ -10,6 +10,7 @@ import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import cz.novanadeje.app.shared.application.event.DonationsArrived;
+import cz.novanadeje.app.shared.application.event.YearlyReceiptsReady;
 import cz.novanadeje.app.shared.application.session.SignedInDevice;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.junit.jupiter.api.AfterEach;
@@ -76,6 +77,18 @@ class DonorPushDispatcherTest {
 
         assertThat(sent).containsExactlyInAnyOrder("jana-telefon gift-arrived", "petr-telefon gift-arrived");
         assertThat(timer.scheduled()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given devices with the yearly receipt switch on and off, when yearly receipts are ready for their donor, then only the device that wants them gets one yearly-receipt-ready message")
+    void should_tell_only_devices_wanting_yearly_receipts_when_receipts_ready() {
+        subscribed(JANA, "jana-telefon", true);
+        DonorPushSubscription notebook = subscribed(JANA, "jana-notebook", true);
+        subscriptions.changeNotifications(JANA, notebook.deviceId(), new DonorNotifications(true, false));
+
+        dispatcher.on(new YearlyReceiptsReady(Set.of(JANA), NOW));
+
+        assertThat(sent).containsExactly("jana-telefon yearly-receipt-ready");
     }
 
     @Test

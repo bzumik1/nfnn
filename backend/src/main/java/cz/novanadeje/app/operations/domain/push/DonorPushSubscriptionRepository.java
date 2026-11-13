@@ -14,6 +14,8 @@ public interface DonorPushSubscriptionRepository {
 
     List<DonorPushSubscription> findWithGiftNotificationsOf(Collection<UUID> donorIds);
 
+    List<DonorPushSubscription> findWithYearlyReceiptNotificationsOf(Collection<UUID> donorIds);
+
     void lockWrites();
 
     void deleteByEndpointOrDevice(PushEndpoint endpoint, UUID deviceId);
