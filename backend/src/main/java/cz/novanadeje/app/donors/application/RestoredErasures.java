@@ -4,8 +4,6 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,7 +19,6 @@ public class RestoredErasures {
         this.erasures = erasures;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
     public void completeErasuresARestoreBroughtBack() {
         for (Donor donor : donors.findErased()) {
             if (!donor.erasureIncomplete()) {

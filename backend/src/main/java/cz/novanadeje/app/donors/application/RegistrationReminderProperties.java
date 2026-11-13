@@ -1,10 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
 
-@ConfigurationProperties("app.donors.registration-reminder")
 public record RegistrationReminderProperties(String cron, Duration delay, Duration window) {
 
     private static final String PREFIX = "app.donors.registration-reminder.";

@@ -1,11 +1,9 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SessionLengths;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
-@ConfigurationProperties("app.donors.session")
 public record DonorSessionProperties(Duration refreshTokenTtl, Integer rememberDays) {
 
     public static final int DEFAULT_REMEMBER_DAYS = 14;

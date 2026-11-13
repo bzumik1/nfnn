@@ -1,12 +1,11 @@
-package cz.novanadeje.app.donors.application;
+package cz.novanadeje.app.donors.infrastructure.config;
 
+import cz.novanadeje.app.donors.application.AdministratorProperties;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
@@ -17,7 +16,7 @@ class AdministratorPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(DonorsApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml without ADMIN_EMAILS, when the context starts, then no administrator is configured")
@@ -50,10 +49,5 @@ class AdministratorPropertiesTest {
     @DisplayName("Given a null list, when the properties are made, then no administrator is configured")
     void should_configure_nobody_when_made_given_null() {
         assertThat(new AdministratorProperties(null).addresses()).isEmpty();
-    }
-
-    @Configuration
-    @EnableConfigurationProperties(AdministratorProperties.class)
-    static class Support {
     }
 }

@@ -14,9 +14,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +81,6 @@ public class BackupRestoreService {
         return request;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void recordFinishedRestore() {
         Optional<BackupRun> finished = store.lastRestore();

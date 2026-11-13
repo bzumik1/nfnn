@@ -1,10 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
 
-@ConfigurationProperties("app.donors.second-factor")
 public record DonorSecondFactorProperties(Duration challengeTtl, int challengeAttempts, String issuer, Duration recoveryTtl) {
 
     private static final String PREFIX = "app.donors.second-factor.";

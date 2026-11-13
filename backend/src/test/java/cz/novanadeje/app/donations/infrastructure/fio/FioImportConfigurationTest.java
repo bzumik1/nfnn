@@ -1,12 +1,12 @@
 package cz.novanadeje.app.donations.infrastructure.fio;
 
 import com.sun.net.httpserver.HttpServer;
-import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
 import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
 import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.domain.importing.BankImportOff;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
+import cz.novanadeje.app.donations.infrastructure.config.DonationsApplicationConfiguration;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import io.github.bzumik1.fio.AccountStatement;
 import io.github.bzumik1.fio.FioClient;
@@ -18,6 +18,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.config.FixedDelayTask;
@@ -262,7 +263,8 @@ class FioImportConfigurationTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties({FioImportProperties.class, BankImportProperties.class})
+    @EnableConfigurationProperties(FioImportProperties.class)
+    @Import(DonationsApplicationConfiguration.class)
     static class Support {
 
         @Bean
