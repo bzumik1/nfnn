@@ -1,6 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
-import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
+import cz.novanadeje.app.shared.domain.LiveSessionEnded;
 import cz.novanadeje.app.shared.infrastructure.live.LiveOpening;
 import cz.novanadeje.app.shared.infrastructure.live.LiveStreamHub;
 import cz.novanadeje.app.shared.infrastructure.live.LiveSubscriber;
@@ -56,12 +56,5 @@ class LiveController {
     private static boolean administrator(Jwt token) {
         List<String> roles = token.getClaimAsStringList(JwtProperties.ROLES_CLAIM);
         return roles != null && roles.contains(ADMIN_ROLE);
-    }
-
-    static final class LiveSessionEnded extends AuthenticationFailure {
-
-        LiveSessionEnded() {
-            super("auth/expired-token", "The session of this access token ended");
-        }
     }
 }
