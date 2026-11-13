@@ -44,10 +44,9 @@ export class ConnectedAppsCard {
 
   loadConnections(shownBefore = false, quietly = false): void {
     this.connectionsError.set('');
-    const connections = shownBefore
-      ? this.kept.read('connections', this.authApi.connections())
-      : this.authApi.connections();
-    this.changes.track(connections).subscribe({
+    const server = this.changes.track(this.authApi.connections());
+    const connections = shownBefore ? this.kept.read('connections', server) : server;
+    connections.subscribe({
       next: (list) => this.connections.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure) || (quietly && this.connections() !== null)) {

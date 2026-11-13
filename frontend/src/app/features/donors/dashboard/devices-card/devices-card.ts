@@ -87,10 +87,9 @@ export class DevicesCard {
 
   loadDevices(shownBefore = false, quietly = false): void {
     this.loadError.set('');
-    const devices = shownBefore
-      ? this.kept.read('devices', this.authApi.devices())
-      : this.authApi.devices();
-    this.changes.track(devices).subscribe({
+    const server = this.changes.track(this.authApi.devices());
+    const devices = shownBefore ? this.kept.read('devices', server) : server;
+    devices.subscribe({
       next: (list) => this.devices.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure) || (quietly && this.devices() !== null)) {

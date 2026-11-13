@@ -101,9 +101,10 @@ export class ListChanges {
   track<T>(list: Observable<T>): Observable<T> {
     this.outdated = false;
     const startedAt = this.changes;
+    const startedDuringChange = this.writing > 0;
     return list.pipe(
       filter(() => {
-        if (this.changes === startedAt) {
+        if (this.changes === startedAt && !startedDuringChange) {
           return true;
         }
         this.outdated = true;
@@ -118,9 +119,13 @@ export class ListChanges {
     this.writing += 1;
   }
 
-  changed(): void {
+  changed(reloadIfOutdated = true): void {
     this.writing = Math.max(0, this.writing - 1);
-    this.reloadOnceSettled();
+    if (reloadIfOutdated) {
+      this.reloadOnceSettled();
+    } else if (this.writing === 0) {
+      this.outdated = false;
+    }
   }
 
   private reloadOnceSettled(): void {

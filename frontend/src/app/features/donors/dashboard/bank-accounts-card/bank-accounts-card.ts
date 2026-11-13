@@ -277,27 +277,25 @@ export class BankAccountsCard {
   }
 
   private fetch(focusTitle = false, shownBefore = false, quietly = false): void {
-    const list = shownBefore ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
-    this.changes
-      .track(list)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ items }) => {
-          this.showAccounts(items);
-          if (focusTitle) {
-            afterNextRender(() => this.focusTitle(), { injector: this.injector });
-          }
-        },
-        error: (failure: unknown) => {
-          if (this.sessionHasEnded(failure)) {
-            this.sessionEnded.emit();
-            return;
-          }
-          if (!quietly || this.state() !== 'ready') {
-            this.state.set('error');
-          }
-        },
-      });
+    const server = this.changes.track(this.api.list());
+    const list = shownBefore ? this.kept.read('bank-accounts', server) : server;
+    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ items }) => {
+        this.showAccounts(items);
+        if (focusTitle) {
+          afterNextRender(() => this.focusTitle(), { injector: this.injector });
+        }
+      },
+      error: (failure: unknown) => {
+        if (this.sessionHasEnded(failure)) {
+          this.sessionEnded.emit();
+          return;
+        }
+        if (!quietly || this.state() !== 'ready') {
+          this.state.set('error');
+        }
+      },
+    });
   }
 
   private showAccounts(items: readonly BankAccountItem[]): void {
@@ -468,8 +466,8 @@ export class BankAccountsCard {
         this.busy.set(null);
         this.confirming.set(null);
         this.actionDone.set(doneMessage);
+        this.changes.changed(false);
         this.fetchAfterChange(this.addAnswer);
-        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.busy.set(null);
@@ -480,7 +478,9 @@ export class BankAccountsCard {
         this.actionError.set(describeProblem(failure, failedMessage));
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
+          this.changes.changed(false);
           this.fetchAfterChange(this.addError);
+          return;
         }
         this.changes.changed();
       },

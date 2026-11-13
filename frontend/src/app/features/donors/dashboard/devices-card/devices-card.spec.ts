@@ -513,6 +513,13 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(rows()).toHaveLength(1);
       expect(text(root())).not.toContain('se nepodařilo načíst');
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(1);
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
     });
 
     it('then a refresh refused because the session ended still sends the donor to sign in', async () => {

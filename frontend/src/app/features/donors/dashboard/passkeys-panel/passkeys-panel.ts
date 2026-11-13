@@ -128,10 +128,9 @@ export class PasskeysPanel {
 
   load(shownBefore = false, quietly = false): void {
     this.loadError.set('');
-    const passkeys = shownBefore
-      ? this.kept.read('passkeys', this.authApi.passkeys())
-      : this.authApi.passkeys();
-    this.changes.track(passkeys).subscribe({
+    const server = this.changes.track(this.authApi.passkeys());
+    const passkeys = shownBefore ? this.kept.read('passkeys', server) : server;
+    passkeys.subscribe({
       next: (list) => this.passkeys.set(list.items),
       error: (failure: unknown) => {
         if (this.sessionLost(failure) || (quietly && this.passkeys() !== null)) {
