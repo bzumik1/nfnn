@@ -25,21 +25,21 @@ class PackageCycleRulesTest {
 
     @ArchTest
     static final ArchRule no_package_depends_on_itself_through_others = slices()
-            .matching("cz.novanadeje.app.(**)")
+            .matching("cz.novanadeje.(**)")
             .namingSlices("$1")
             .should().beFreeOfCycles()
-            .because("a package that needs another which needs it back is not a module of its own (architecture audit #621)");
+            .because("a package that reaches itself through other packages is not a module of its own (architecture audit #621)");
 
     @Test
-    @DisplayName("Given two planted packages of one layer that import each other, when the cycle rule checks them, then the cycle is reported")
-    void should_report_the_cycle_when_checked_given_two_packages_importing_each_other(@TempDir Path folder) throws IOException {
+    @DisplayName("Given a planted package and its nested package that import each other, when the cycle rule checks them, then the cycle of the two is reported and the package that only reads one of them is not")
+    void should_report_the_cycle_when_checked_given_a_package_and_its_nested_package_importing_each_other(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.domain.gift.Gift", """
                         package cz.novanadeje.app.planteda.domain.gift;
-                        public class Gift { cz.novanadeje.app.planteda.domain.donor.Donor donor; }
+                        public class Gift { cz.novanadeje.app.planteda.domain.gift.donor.Donor donor; }
                         """,
-                "cz.novanadeje.app.planteda.domain.donor.Donor", """
-                        package cz.novanadeje.app.planteda.domain.donor;
+                "cz.novanadeje.app.planteda.domain.gift.donor.Donor", """
+                        package cz.novanadeje.app.planteda.domain.gift.donor;
                         public class Donor { cz.novanadeje.app.planteda.domain.gift.Gift gift; }
                         """,
                 "cz.novanadeje.app.planteda.domain.receipt.Receipt", """
@@ -48,6 +48,6 @@ class PackageCycleRulesTest {
                         """));
 
         assertThat(no_package_depends_on_itself_through_others.evaluate(planted).getFailureReport().getDetails())
-                .singleElement().asString().contains("planteda.domain.gift").contains("planteda.domain.donor").doesNotContain("planteda.domain.receipt");
+                .singleElement().asString().containsPattern("planteda\\.domain\\.gift(?!\\.)").contains("planteda.domain.gift.donor").doesNotContain("planteda.domain.receipt");
     }
 }
