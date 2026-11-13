@@ -49,9 +49,10 @@ export class ReceiptSignatory {
   private readonly heading = viewChild.required<ElementRef<HTMLHeadingElement>>('heading');
 
   protected readonly state = signal<LoadState>('loading');
+  private readonly refreshMissed = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
-    () => this.state() === 'offline',
-    () => this.load(),
+    () => this.state() === 'offline' || this.refreshMissed(),
+    () => this.load(this.state() === 'ready'),
   );
   protected readonly block = signal<SignatureBlock | null>(null);
   protected readonly signatureLabel = $localize`:@@admin.signatory.signatureAlt:Podpis na potvrzení`;
@@ -98,6 +99,7 @@ export class ReceiptSignatory {
   }
 
   private show(block: SignatureBlock | null): void {
+    this.refreshMissed.set(false);
     this.block.set(block);
     this.state.set('ready');
     this.kept.keep('receipt-signatory', { block });
@@ -105,6 +107,7 @@ export class ReceiptSignatory {
 
   private failed(quietly: boolean): void {
     if (quietly && this.state() === 'ready') {
+      this.refreshMissed.set(this.onlineAgain.offline());
       return;
     }
     this.state.set(this.onlineAgain.offline() ? 'offline' : 'error');

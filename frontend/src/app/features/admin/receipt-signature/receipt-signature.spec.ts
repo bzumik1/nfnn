@@ -1,3 +1,6 @@
+import { AuthStore } from '../../../core/auth/auth-store';
+import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -578,5 +581,44 @@ describe('Given the receipt signature part of a person of the foundation while t
     expect(text('.signature-offline[role="status"]')).toBe(
       'Podpis ukážeme, až server zase odpoví.',
     );
+  });
+});
+
+describe('Given an administrator who removes a receipt signature after seeing who signs in Nastavení', () => {
+  it('when the removal is done, then the card of who signs does not show the earlier signature from memory', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ReceiptSignature],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+    const http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    const kept = TestBed.inject(KeptAdministrationAnswers);
+    kept.keep('receipt-signatory', { block: null });
+    const fixture = TestBed.createComponent(ReceiptSignature);
+    fixture.componentRef.setInput('personId', SIGNATORY_ID);
+    fixture.componentRef.setInput('signs', true);
+    fixture.detectChanges();
+    http.expectOne({ method: 'GET', url: SIGNATURE_URL }).flush(receiptSignature());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.trim() === 'Odebrat podpis z potvrzení')
+      ?.click();
+    fixture.detectChanges();
+    (
+      fixture.nativeElement.querySelector('.signature-confirm .ui-button--danger') as HTMLElement
+    ).click();
+    fixture.detectChanges();
+    http
+      .expectOne({ method: 'DELETE', url: SIGNATURE_URL })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    expect(kept.kept('receipt-signatory')).toBeNull();
+    http.verify();
   });
 });

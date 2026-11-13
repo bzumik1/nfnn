@@ -5,7 +5,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   DestroyRef,
   ElementRef,
   inject,
@@ -70,9 +69,10 @@ export class ReceiptSigningKey {
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  private readonly refreshMissed = signal(false);
   protected readonly onlineAgain = reloadWhenOnlineAgain(
-    () => this.state() === 'offline',
-    () => this.load(),
+    () => this.state() === 'offline' || this.refreshMissed(),
+    () => this.load(this.state() === 'ready'),
   );
   protected readonly keys = signal<ReceiptSigningKeysResponse | null>(null);
   protected readonly withdrawal = signal<Withdrawal | null>(null);
@@ -133,12 +133,6 @@ export class ReceiptSigningKey {
       this.state.set('ready');
     }
     this.load(shown !== null);
-    effect(() => {
-      const keys = this.keys();
-      if (keys !== null) {
-        this.kept.keep('receipt-signing-keys', keys);
-      }
-    });
   }
 
   protected registeredAt(instant: string): string {
@@ -154,12 +148,14 @@ export class ReceiptSigningKey {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (keys) => {
+          this.refreshMissed.set(false);
           this.stillWithdrawnAfterRestart.set(false);
-          this.keys.set(keys);
+          this.show(keys);
           this.state.set('ready');
         },
         error: () => {
           if (quietly && this.state() === 'ready') {
+            this.refreshMissed.set(this.onlineAgain.offline());
             return;
           }
           this.state.set(this.onlineAgain.offline() ? 'offline' : 'error');
@@ -171,11 +167,16 @@ export class ReceiptSigningKey {
     this.changes.answeredByChange();
   }
 
+  private show(keys: ReceiptSigningKeysResponse): void {
+    this.keys.set(keys);
+    this.kept.keep('receipt-signing-keys', keys);
+  }
+
   private showAfterRestart(keyId: string, keys: ReceiptSigningKeysResponse): void {
     const same = keys.currentKeyId === keyId;
     this.stillWithdrawnAfterRestart.set(same);
     this.shownFromServerChange();
-    this.keys.set(keys);
+    this.show(keys);
     this.state.set('ready');
     this.notice.set(this.afterRestartNotice(keyId, keys));
   }
@@ -208,7 +209,7 @@ export class ReceiptSigningKey {
     const keyId = this.withdrawal()?.keyId ?? '';
     this.withdrawal.set(null);
     this.shownFromServerChange();
-    this.keys.set(response);
+    this.show(response);
     this.state.set('ready');
     if (response.restarting) {
       this.restartingFor.set(keyId);

@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { effect, Signal, untracked } from '@angular/core';
 import { catchError, concat, defer, EMPTY, Observable, of, tap, throwError } from 'rxjs';
 
-const SESSION_REFUSED = 401;
+const REFUSALS = [401, 403];
 
 export class KeptAnswers<Types extends object> {
   private readonly answers = new Map<keyof Types, unknown>();
@@ -27,7 +27,7 @@ export class KeptAnswers<Types extends object> {
         of(shown),
         fresh.pipe(
           catchError((failure: unknown) =>
-            sessionRefused(failure) ? throwError(() => failure) : EMPTY,
+            refused(failure) ? throwError(() => failure) : EMPTY,
           ),
         ),
       );
@@ -41,6 +41,10 @@ export class KeptAnswers<Types extends object> {
 
   keep<K extends keyof Types>(answer: K, value: Types[K]): void {
     this.keepFor(this.currentOwner(), answer, value);
+  }
+
+  forget(answer: keyof Types): void {
+    this.answers.delete(answer);
   }
 
   private keepFor<K extends keyof Types>(owner: string | null, answer: K, value: Types[K]): void {
@@ -62,6 +66,6 @@ export class KeptAnswers<Types extends object> {
   }
 }
 
-function sessionRefused(failure: unknown): boolean {
-  return failure instanceof HttpErrorResponse && failure.status === SESSION_REFUSED;
+function refused(failure: unknown): boolean {
+  return failure instanceof HttpErrorResponse && REFUSALS.includes(failure.status);
 }

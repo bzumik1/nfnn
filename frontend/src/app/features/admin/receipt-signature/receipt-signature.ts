@@ -28,6 +28,7 @@ import { Notice } from '../../../shared/ui/live-notice/live-notice';
 import { FileButton } from '../../../shared/ui/file-button/file-button';
 import { SignatureArtwork } from './signature-artwork';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error' | 'offline';
 
@@ -47,6 +48,7 @@ const PIXELS = new Intl.NumberFormat('cs-CZ');
 })
 export class ReceiptSignature {
   private readonly api = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -175,6 +177,7 @@ export class ReceiptSignature {
       this.api.uploadReceiptSignature(this.personId(), file).subscribe({
         next: (signature) => {
           this.setUploading(false);
+          this.kept.forget('receipt-signatory');
           this.signature.set(signature);
           this.changed.emit(signature);
           this.notice.set({
@@ -231,6 +234,7 @@ export class ReceiptSignature {
           };
           this.setRemoving(false);
           this.confirmingRemoval.set(false);
+          this.kept.forget('receipt-signatory');
           this.signature.set(removed);
           this.changed.emit(removed);
           this.notice.set({

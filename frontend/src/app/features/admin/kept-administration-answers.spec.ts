@@ -39,4 +39,10 @@ describe("Given the administration's answers kept in memory between visits", () 
 
     expect(kept.kept('administrators')).toBeNull();
   });
+
+  it('when another administrator signs in on the same tab, then the answers of the first are not shown', () => {
+    donor.set({ id: 'admin-b' });
+
+    expect(kept.kept('administrators')).toBeNull();
+  });
 });

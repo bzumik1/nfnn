@@ -1,3 +1,5 @@
+import { signal } from '@angular/core';
+import { Connectivity } from '../../../../core/connectivity/connectivity';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { authResponse, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
 import { provideHttpClient } from '@angular/common/http';
@@ -186,5 +188,67 @@ describe('Given an administrator who saw the card of who signs the receipts once
     );
     await signatoryArrives();
     expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+  });
+});
+
+describe('Given an administrator who saw the card of who signs the receipts once and then lost the connection', () => {
+  const offline = signal(false);
+  let fixture: ComponentFixture<ReceiptSignatory>;
+  let http: HttpTestingController;
+
+  async function settle(): Promise<void> {
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function signatoryArrives(): Promise<void> {
+    http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
+    await settle();
+    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
+    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    await settle();
+  }
+
+  beforeEach(async () => {
+    offline.set(false);
+    await TestBed.configureTestingModule({
+      imports: [ReceiptSignatory],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        {
+          provide: Connectivity,
+          useValue: { offline: offline.asReadonly(), cause: signal('network').asReadonly() },
+        },
+      ],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
+    http
+      .expectOne('/api/donors/auth/login')
+      .flush(authResponse('token-1', sampleDonor({ roles: ['DONOR', 'ADMIN'] })));
+    fixture = TestBed.createComponent(ReceiptSignatory);
+    fixture.detectChanges();
+    await signatoryArrives();
+    fixture.destroy();
+  });
+
+  afterEach(() => http.verify());
+
+  it('when the refresh behind the kept preview fails offline, then the preview stays and is asked for again once the connection is back', async () => {
+    offline.set(true);
+    fixture = TestBed.createComponent(ReceiptSignatory);
+    fixture.detectChanges();
+    http.expectOne(SIGNATORY_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('.signature-block-name')?.textContent?.trim()).toBe(
+      'Eva Vzorová',
+    );
+
+    offline.set(false);
+    await settle();
+    await signatoryArrives();
   });
 });

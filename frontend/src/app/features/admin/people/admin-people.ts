@@ -68,6 +68,7 @@ import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-d
 import { formatBankTime } from '../../donations/donation-date';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 import { reloadWhenOnlineAgain } from '../device-copy/online-again';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error';
 type SignatoryState = LoadState | 'offline';
@@ -148,6 +149,7 @@ export class AdminPeople {
   private readonly api = inject(PeopleApi);
   private readonly reads = inject(AdministrationPageReads);
   private readonly admin = inject(AdminApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
   private readonly media = inject(NewsApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -432,6 +434,7 @@ export class AdminPeople {
       .subscribe({
         next: (chosen) => {
           this.savingReceipt.set(false);
+          this.kept.forget('receipt-signatory');
           this.signatory.update((view) => ({
             signatory: chosen,
             signatures: view?.signatures ?? [],

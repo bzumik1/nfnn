@@ -121,4 +121,45 @@ describe('Given the changes a card makes to a list it loads', () => {
     expect(before.seen).toEqual([]);
     expect(reloads).toBe(0);
   });
+
+  it('when the load begun after the change fails, then the list is asked for again', () => {
+    const before = load();
+    changes.changing();
+    changes.changed(false);
+    const server = new Subject<string>();
+    changes.track(server).subscribe({ error: () => undefined });
+    before.server.next('before the change');
+
+    server.error(new Error('offline'));
+
+    expect(reloads).toBe(1);
+  });
+
+  it('when the load begun after the change is dropped before it answers, then the list is asked for again', () => {
+    const before = load();
+    changes.changing();
+    changes.changed(false);
+    const server = new Subject<string>();
+    const after = changes.track(server).subscribe();
+    before.server.next('before the change');
+
+    after.unsubscribe();
+
+    expect(reloads).toBe(1);
+  });
+
+  it('when the load begun after the change answers before an older one, then the older answer leaves nothing to ask for later', () => {
+    const before = load();
+    changes.changing();
+    changes.changed(false);
+    const after = load();
+    after.server.next('after the change');
+    before.server.next('before the change');
+
+    changes.changing();
+    changes.changed();
+
+    expect(before.seen).toEqual([]);
+    expect(reloads).toBe(0);
+  });
 });

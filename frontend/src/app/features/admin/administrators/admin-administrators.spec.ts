@@ -326,6 +326,17 @@ describe('Given an administrator on the administrators page', () => {
       expect(rows()).toHaveLength(1);
     });
 
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const refusal = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      peopleArrive();
+      http.expectOne(LIST_URL).flush(refusal.body, refusal.options);
+      fixture.detectChanges();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
     it('then an administrator removed while the refresh is on its way does not come back with its answer', async () => {
       peopleArrive();
       const refresh = http.expectOne(LIST_URL);
