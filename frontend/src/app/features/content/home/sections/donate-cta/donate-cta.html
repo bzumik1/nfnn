@@ -1,4 +1,11 @@
 <section id="prispet" class="donate section-pad">
+  <header class="ui-intro ui-intro__head ui-container">
+    <h1 class="ui-intro__title" i18n="@@home.donate.title">Přispějte na pomůcky pro děti</h1>
+    <p class="ui-intro__lead" i18n="@@home.donate.lead">
+      Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.
+    </p>
+  </header>
+
   <div class="two-col ui-container">
     <div class="donate-img-wrap">
       <div class="donate-img">
@@ -20,12 +27,6 @@
     </div>
 
     <div class="donate-text">
-      <p class="ui-eyebrow" i18n="@@home.donate.eyebrow">Přispět</p>
-      <h1 class="title" i18n="@@home.donate.title">Přispějte na pomůcky pro děti</h1>
-      <p class="lead" i18n="@@home.donate.lead">
-        Z darů pořizujeme zdravotní a kompenzační pomůcky a přístroje pro konkrétní děti.
-      </p>
-
       <app-payment-panel [variableSymbol]="variableSymbol()">
         <div class="before-pay">
           @if (variableSymbol(); as symbol) {

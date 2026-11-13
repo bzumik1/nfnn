@@ -32,7 +32,7 @@ export const contentRoutes: Routes = [
   {
     path: 'zasady-ochrany-osobnich-udaju',
     title: $localize`:@@content.privacy.pageTitle:Zásady ochrany osobních údajů | Nová naděje – nadační fond`,
-    data: { parent: '/o-nas' } satisfies RouteChromeData,
+    data: { ...LIGHT_HEAD, parent: '/o-nas' } satisfies RouteChromeData,
     loadComponent: () => import('./privacy-policy/privacy-policy').then((m) => m.PrivacyPolicy),
   },
   {
@@ -50,18 +50,19 @@ export const contentRoutes: Routes = [
   {
     path: 'aktuality/:slug',
     title: $localize`:@@content.newsDetail.pageTitle:Aktualita | Nová naděje – nadační fond`,
-    data: { kind: 'news', parent: '/aktuality' },
+    data: { ...LIGHT_HEAD, kind: 'news', parent: '/aktuality' },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },
   {
     path: 'projekty/:slug',
     title: $localize`:@@content.projectDetail.pageTitle:Příběh | Nová naděje – nadační fond`,
-    data: { kind: 'project', parent: '/projekty' },
+    data: { ...LIGHT_HEAD, kind: 'project', parent: '/projekty' },
     loadComponent: () => import('./detail/content-detail').then((m) => m.ContentDetail),
   },
   {
     path: '**',
     title: NOT_FOUND_TITLE,
+    data: LIGHT_HEAD,
     loadComponent: () => import('./not-found/not-found').then((m) => m.NotFound),
   },
 ];

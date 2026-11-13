@@ -1,8 +1,7 @@
 /// <reference types="@angular/localize" />
 
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { CompactLayout } from '../../../../../core/layout/compact-layout';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { AboutPhotoResponse } from '../../../about-api';
 import { mediaUrl } from '../../../news-api';
 import { PublicPeopleResponse } from '../../../people-api';
@@ -28,8 +27,6 @@ const NO_BREAK_SPACE = '\u00a0';
 export class About {
   readonly photo = input<AboutPhotoResponse | null>(null);
   readonly people = input<PublicPeopleResponse | null>(null);
-
-  protected readonly compact = inject(CompactLayout).isCompact;
 
   protected readonly boardLine = computed(() => {
     const board = this.people()?.board ?? [];
