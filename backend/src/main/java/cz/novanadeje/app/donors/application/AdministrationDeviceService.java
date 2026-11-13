@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
@@ -56,7 +57,7 @@ public class AdministrationDeviceService {
         });
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public void unlockWithPasskey(DonorId adminId, PasskeyProof passkey) {
         confirmations.confirmPasskey(load(adminId), Confirmation.withPasskey(passkey));
     }

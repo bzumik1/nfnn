@@ -62,7 +62,7 @@ public class BackupKeyService {
         return new BackupKeyView(true, confirmation.isPresent(), confirmation.map(BackupKeyConfirmation::confirmedAt));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = DomainException.class)
     public RevealedBackupKey reveal(UUID adminId, FreshSecondFactorProof proof) {
         BackupKey key = keys.current().orElseThrow(BackupKeyUnavailable::new);
         Instant now = clock.instant();
