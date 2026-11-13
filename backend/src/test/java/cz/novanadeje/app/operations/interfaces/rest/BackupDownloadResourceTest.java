@@ -50,7 +50,7 @@ class BackupDownloadResourceTest {
     }
 
     @ParameterizedTest(name = "Range: {0}")
-    @ValueSource(strings = {"", "bytes=4-11", "bytes=-5", "bytes=0-2,6-9"})
+    @ValueSource(strings = {"", "bytes=4-11", "bytes=-5", "bytes=0-2,6-9", "bytes=100-"})
     @DisplayName("Given a backup served from its content handle, when it is downloaded with or without a range, then the answer is the one a file resource gave: status, headers and bytes")
     void should_answer_like_a_file_resource_when_downloaded_given_a_content_handle(String range) throws Exception {
         MockHttpServletResponse fromFile = answer(get("/file"), range);

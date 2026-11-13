@@ -16,9 +16,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,6 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApplicationLayerRulesTest {
 
     private static final String AFTER_COMMIT_HELPER_UNTIL_PR_612 = "cz.novanadeje.app.donations.application.receipt.AfterCommit";
+
+    private static final Set<String> HELPER_USERS_UNTIL_PR_612 = Set.of(
+            "cz.novanadeje.app.donations.application.receipt.ReceiptSignatoryService",
+            "cz.novanadeje.app.donations.application.receipt.ReceiptSignatureService");
 
     private static JavaClasses planted;
 
@@ -44,6 +50,13 @@ class ApplicationLayerRulesTest {
                     "jakarta.mail..", "org.springframework.mail..", "org.thymeleaf..")
             .orShould().dependOnClassesThat().haveNameMatching("org\\.springframework\\.transaction\\.support\\.TransactionSynchronization.*")
             .because("backend.md, Application: the layer knows no HTTP, JPA entity or template; ports are interfaces implemented in infrastructure");
+
+    @ArchTest
+    static final ArchRule the_after_commit_helper_serves_only_the_receipt_signatory_and_signature_services_until_pr_612 = classes()
+            .that().haveFullyQualifiedName(AFTER_COMMIT_HELPER_UNTIL_PR_612)
+            .should().onlyHaveDependentClassesThat(DescribedPredicate.describe("are the helper itself or the receipt signatory and signature services",
+                    type -> type.getName().startsWith(AFTER_COMMIT_HELPER_UNTIL_PR_612) || HELPER_USERS_UNTIL_PR_612.contains(type.getName())))
+            .because("new work after commit goes through the AfterCommitWork port; this rule fails once the helper is gone, so its exception goes with it");
 
     @BeforeAll
     static void plantApplicationClassesOnAdapterTechnology(@TempDir Path folder) throws IOException {
@@ -77,6 +90,9 @@ class ApplicationLayerRulesTest {
                 planted(rule, "donations.application.PlantedEntity", "@jakarta.persistence.Entity public class PlantedEntity { }"),
                 planted(rule, "donations.application.PlantedHibernate",
                         "public class PlantedHibernate { Class<?> failure() { return org.hibernate.HibernateException.class; } }"),
+                planted(rule, "donations.application.receipt.AfterCommitLater",
+                        "public class AfterCommitLater { boolean active() { "
+                                + "return org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive(); } }"),
                 planted(rule, "donations.application.PlantedSql", "public class PlantedSql { java.sql.Connection connection() { return null; } }"),
                 planted(rule, "operations.application.PlantedPath",
                         "public record PlantedPath(java.nio.file.Path path) { }"),
