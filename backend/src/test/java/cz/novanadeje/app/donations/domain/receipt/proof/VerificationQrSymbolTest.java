@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt.proof;
 
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofText;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

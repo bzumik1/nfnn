@@ -12,7 +12,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptStatus;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptVerification;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProof;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

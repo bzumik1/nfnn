@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt.proof;
 
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofText;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 

@@ -1,5 +1,8 @@
 package cz.novanadeje.app.donations.domain.receipt.proof;
 
+import cz.novanadeje.app.donations.domain.receipt.InvalidReceiptProof;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofRejection;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;

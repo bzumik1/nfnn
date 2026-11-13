@@ -1,7 +1,9 @@
 package cz.novanadeje.app.donations.domain.receipt.proof;
 
+import cz.novanadeje.app.donations.domain.receipt.InvalidReceiptProof;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptProofRejection;
 import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.shared.domain.DonorType;

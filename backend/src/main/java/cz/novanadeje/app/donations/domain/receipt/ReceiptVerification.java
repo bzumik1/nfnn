@@ -1,7 +1,5 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProof;
-import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofMessage;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 
 import java.util.Arrays;
