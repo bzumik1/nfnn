@@ -7,10 +7,11 @@ import cz.novanadeje.app.operations.domain.push.DonorNotifications;
 import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
+import cz.novanadeje.app.operations.domain.push.PushMessage;
+import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
-import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,16 +21,21 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class DonorPushServiceTest {
+class DonorPushSenderTest {
 
     private static final Instant NOW = Instant.parse("2026-11-12T10:00:00Z");
     private static final VapidKeys KEYS = new VapidKeys("B" + "a".repeat(86), "f".repeat(43));
@@ -37,6 +43,7 @@ class DonorPushServiceTest {
             "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", "BTBZMqHH6r4Tts7J_aSIgg");
     private static final UUID JANA = UUID.randomUUID();
     private static final UUID PHONE = UUID.randomUUID();
+    private static final PushMessage TEST = new PushMessage(PushMessageKind.DONOR_TEST, 0);
 
     private final AtomicReference<PushOutcome> answer = new AtomicReference<>(PushOutcome.FAILED);
     private final InMemoryDonorPushSubscriptions subscriptions = new InMemoryDonorPushSubscriptions();
@@ -56,13 +63,13 @@ class DonorPushServiceTest {
     }
 
     @Test
-    @DisplayName("Given a device whose push service keeps failing, when the test notification fails the third time in a row, then one warning names the subscription by its id and the count")
+    @DisplayName("Given a device whose push service keeps failing, when a notification fails the third time in a row, then one warning names the subscription by its id and the count")
     void should_warn_once_when_tested_given_third_failure_in_a_row() {
         DonorPushSubscription phone = subscribed();
-        DonorPushService service = service(subscriptions);
+        DonorPushSender sender = sender(subscriptions);
 
         for (int attempt = 0; attempt < 4; attempt++) {
-            assertThat(service.sendTest(JANA, PHONE)).isEqualTo(new PushDeliveryReport(0, 1, 0));
+            assertThat(sender.send(List.of(phone), TEST).report()).isEqualTo(new PushDeliveryReport(0, 1, 0));
         }
 
         assertThat(log.list).singleElement().satisfies(event -> {
@@ -72,9 +79,9 @@ class DonorPushServiceTest {
     }
 
     @Test
-    @DisplayName("Given a test notification the push service took, when its outcome cannot be written, then the donor still learns it was delivered")
-    void should_report_delivery_when_tested_given_outcome_not_written() {
-        subscribed();
+    @DisplayName("Given a notification the push service took, when its outcome cannot be written, then it still counts as delivered")
+    void should_report_delivery_when_sent_given_outcome_not_written() {
+        DonorPushSubscription phone = subscribed();
         answer.set(PushOutcome.DELIVERED);
         InMemoryDonorPushSubscriptions unwritable = new InMemoryDonorPushSubscriptions() {
             @Override
@@ -84,22 +91,53 @@ class DonorPushServiceTest {
         };
         subscriptions.all().forEach(unwritable::save);
 
-        assertThat(service(unwritable).sendTest(JANA, PHONE)).isEqualTo(new PushDeliveryReport(1, 0, 0));
+        assertThat(sender(unwritable).send(List.of(phone), TEST).report()).isEqualTo(new PushDeliveryReport(1, 0, 0));
     }
 
-    private DonorPushService service(InMemoryDonorPushSubscriptions stored) {
-        return new DonorPushService(stored, keys, (recipient, message, vapid) -> answer.get(), mock(SignedInDevices.class),
-                new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC));
+    @Test
+    @DisplayName("Given twenty devices whose push services answer slowly, when they are sent a notification, then at most eight sends run at once, every device gets it and the one that failed is named for a retry")
+    void should_send_at_most_eight_at_once_when_sent_given_many_devices() {
+        List<DonorPushSubscription> devices = new ArrayList<>();
+        for (int index = 0; index < 20; index++) {
+            devices.add(subscribed(UUID.randomUUID(), "jana-" + index));
+        }
+        AtomicInteger running = new AtomicInteger();
+        AtomicInteger mostAtOnce = new AtomicInteger();
+        DonorPushSender sender = sender(subscriptions, (recipient, message, vapid) -> {
+            mostAtOnce.accumulateAndGet(running.incrementAndGet(), Math::max);
+            LockSupport.parkNanos(Duration.ofMillis(20).toNanos());
+            running.decrementAndGet();
+            return recipient.id().equals(devices.getLast().id()) ? PushOutcome.FAILED : PushOutcome.DELIVERED;
+        });
+
+        PushAttempt sent = sender.send(devices, TEST);
+
+        assertThat(sent.report()).isEqualTo(new PushDeliveryReport(19, 1, 0));
+        assertThat(sent.failed()).containsExactly(devices.getLast().id());
+        assertThat(mostAtOnce.get()).isBetween(2, DonorPushSender.SENDS_AT_ONCE);
+    }
+
+    private DonorPushSender sender(InMemoryDonorPushSubscriptions stored, PushDelivery delivery) {
+        return new DonorPushSender(delivery, keys, stored, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC),
+                Duration.ZERO);
+    }
+
+    private DonorPushSender sender(InMemoryDonorPushSubscriptions stored) {
+        return sender(stored, (recipient, message, vapid) -> answer.get());
     }
 
     private DonorPushSubscription subscribed() {
-        DonorPushSubscription subscription = DonorPushSubscription.subscribe(JANA, PHONE, new PushEndpoint("https://fcm.googleapis.com/fcm/send/jana"),
+        return subscribed(PHONE, "jana");
+    }
+
+    private DonorPushSubscription subscribed(UUID device, String name) {
+        DonorPushSubscription subscription = DonorPushSubscription.subscribe(JANA, device, new PushEndpoint("https://fcm.googleapis.com/fcm/send/" + name),
                 CLIENT, DonorNotifications.ALL, NOW);
         subscriptions.save(subscription);
         return subscription;
     }
 
     private static Logger logger() {
-        return (Logger) LoggerFactory.getLogger(DonorPushService.class);
+        return (Logger) LoggerFactory.getLogger(DonorPushSender.class);
     }
 }

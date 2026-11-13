@@ -66,6 +66,7 @@ class PushPayloads {
             case BACKUPS_OUTAGE, BACKUPS_RECOVERED -> "/sprava/zalohy";
             case MAIL_OUTAGE, MAIL_RECOVERED -> "/sprava/nastaveni";
             case DONOR_TEST -> "/darce/udaje";
+            case GIFT_ARRIVED -> "/darce/dary";
         };
     }
 
@@ -76,6 +77,7 @@ class PushPayloads {
             case BACKUPS_OUTAGE, BACKUPS_RECOVERED -> "nfnn-backups";
             case MAIL_OUTAGE, MAIL_RECOVERED -> "nfnn-mail";
             case DONOR_TEST -> "nfnn-donor-test";
+            case GIFT_ARRIVED -> "nfnn-gifts";
         };
     }
 

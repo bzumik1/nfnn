@@ -9,8 +9,11 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 class JpaDonorDeviceRepository implements DonorDeviceRepository {
@@ -69,6 +72,15 @@ class JpaDonorDeviceRepository implements DonorDeviceRepository {
     @Override
     public boolean isSignedIn(DeviceId id, Instant now) {
         return jpa.isSignedIn(id.value(), now);
+    }
+
+    @Override
+    public Set<DeviceId> signedInAmong(Collection<DeviceId> ids, Instant now) {
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return jpa.findSignedInAmong(ids.stream().map(DeviceId::value).toList(), now).stream().map(DeviceId::new)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

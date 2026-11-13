@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
@@ -34,6 +35,7 @@ import org.springframework.context.annotation.Import;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -109,7 +111,7 @@ class JpaDonorDeviceRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given devices with and without a usable token, ended ones and another donor's, when the donor's signed-in devices are read, then only the active ones with a usable token come")
+    @DisplayName("Given devices with and without a usable token, ended ones and another donor's, when the donor's signed-in devices are read or a list of devices is checked, then only the active ones with a usable token come")
     void should_return_only_active_devices_with_usable_token_when_read_given_mixed_devices() {
         DonorDevice live = deviceWithToken(jana, NOW, TTL);
         DonorDevice spent = deviceWithToken(jana, NOW.minus(TTL).minusSeconds(1), TTL);
@@ -126,6 +128,9 @@ class JpaDonorDeviceRepositoryTest {
         assertThat(devices.findActiveOf(jana)).extracting(DonorDevice::id).containsExactlyInAnyOrder(live.id(), spent.id());
         assertThat(devices.findActiveWithoutUsableTokenAt(NOW)).extracting(DonorDevice::id).containsExactly(spent.id());
         assertThat(devices.findSignedInOf(petr, NOW)).extracting(DonorDevice::id).containsExactly(petrs.id());
+        assertThat(devices.signedInAmong(List.of(live.id(), spent.id(), ended.id(), petrs.id(), DeviceId.newId(NOW)), NOW))
+                .containsExactlyInAnyOrder(live.id(), petrs.id());
+        assertThat(devices.signedInAmong(List.of(), NOW)).isEmpty();
     }
 
     @Test

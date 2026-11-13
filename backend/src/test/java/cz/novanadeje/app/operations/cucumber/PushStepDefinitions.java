@@ -479,6 +479,27 @@ public class PushStepDefinitions {
         assertThat(actual).containsExactlyElementsOf(table.asMaps());
     }
 
+    @Then("the device {string} of {string} received the push notifications:")
+    public void theDeviceReceivedThePushNotifications(String device, String alias, DataTable table) {
+        asyncTasks.awaitIdleAfter("the push notifications");
+        Device known = device(alias, device);
+        List<Map<String, String>> actual = new ArrayList<>();
+        for (RecordingPushTransport.Sent message : sentTo(known)) {
+            JsonNode notification = JSON.readTree(known.receiver().decrypt(message.body()));
+            assertThat(notification.has("count")).as("a donor's message carries no count").isFalse();
+            JsonNode shown = notification.get("notification");
+            actual.add(Map.of("kind", notification.get("kind").asString(), "title", shown.get("title").asString(), "body", shown.get("body").asString(),
+                    "url", shown.get("data").get("onActionClick").get("default").get("url").asString()));
+        }
+        assertThat(actual).containsExactlyElementsOf(table.asMaps());
+    }
+
+    @Given("the device {string} of {string} was signed out while an older version of the site ran")
+    public void theDeviceWasSignedOutWhileAnOlderVersionRan(String device, String alias) {
+        jdbc.sql("update donor_device set ended_at = :now, end_reason = 'SIGNED_OUT' where id = :id")
+                .param("now", Timestamp.from(clock.instant())).param("id", device(alias, device).deviceId()).update();
+    }
+
     @Then("a push alert retry is due in {int} minute(s)")
     public void aPushAlertRetryIsDueIn(int minutes) {
         asyncTasks.awaitIdleAfter("the push alerts");

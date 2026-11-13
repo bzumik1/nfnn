@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "shared-case",
+    "caseFile": "shared-cases/push/notification.json",
+    "reason": "Jakub 2026-11-12: donor push slice 2; the gift-arrived notification gets its tag nfnn-gifts and the route /darce/dary",
+    "contract": "docs/api-contract.md, Push notifications of donors"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushServiceTest > Given a device whose push service keeps failing, when the test notification fails the third time in a row, then one warning names the subscription by its id and the count",
+    "reason": "Jakub 2026-11-12: donor push slice 2 sends gift notifications to many devices, so recording each outcome moved from DonorPushService into the bounded DonorPushSender, which the test notification uses too; the same behaviour is proved there",
+    "replacement": "operations.application.push.DonorPushSenderTest > Given a device whose push service keeps failing, when a notification fails the third time in a row, then one warning names the subscription by its id and the count",
+    "contract": "docs/system-overview.md, operations (Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushServiceTest > Given a test notification the push service took, when its outcome cannot be written, then the donor still learns it was delivered",
+    "reason": "Jakub 2026-11-12: donor push slice 2 sends gift notifications to many devices, so recording each outcome moved from DonorPushService into the bounded DonorPushSender, which the test notification uses too; the same behaviour is proved there",
+    "replacement": "operations.application.push.DonorPushSenderTest > Given a notification the push service took, when its outcome cannot be written, then it still counts as delivered",
+    "contract": "docs/system-overview.md, operations (Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.persistence.JpaDonorDeviceRepositoryTest > Given devices with and without a usable token, ended ones and another donor's, when the donor's signed-in devices are read, then only the active ones with a usable token come",
+    "reason": "Jakub 2026-11-12: donor push slice 2 asks which of a list of devices are still signed in, so the test of the signed-in reads also proves that query and its name says so",
+    "replacement": "donors.infrastructure.persistence.JpaDonorDeviceRepositoryTest > Given devices with and without a usable token, ended ones and another donor's, when the donor's signed-in devices are read or a list of devices is checked, then only the active ones with a usable token come",
+    "contract": "docs/system-overview.md, operations (Push notifications of donors)"
+  }
+]
