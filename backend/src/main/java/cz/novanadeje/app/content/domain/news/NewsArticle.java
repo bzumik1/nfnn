@@ -1,7 +1,6 @@
 package cz.novanadeje.app.content.domain.news;
 
 import cz.novanadeje.app.content.domain.Slug;
-import cz.novanadeje.app.content.domain.project.ProjectContent;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -9,8 +8,8 @@ import java.util.Optional;
 public record NewsArticle(NewsArticleId id, NewsContent content, Optional<LocalDate> publishedOn, Optional<Integer> lookBackYear, Instant createdAt,
                           Instant updatedAt) {
 
-    public static final int MIN_LOOK_BACK_YEAR = ProjectContent.MIN_YEAR;
-    public static final int MAX_LOOK_BACK_YEAR = ProjectContent.MAX_YEAR;
+    public static final int MIN_LOOK_BACK_YEAR = 2005;
+    public static final int MAX_LOOK_BACK_YEAR = 2100;
 
     public NewsArticle {
         if (id == null || content == null || publishedOn == null || lookBackYear == null || createdAt == null || updatedAt == null) {

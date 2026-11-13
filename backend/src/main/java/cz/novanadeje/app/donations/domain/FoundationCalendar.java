@@ -9,7 +9,6 @@ import java.time.ZoneId;
 
 public final class FoundationCalendar {
 
-    public static final String ZONE_ID = FoundationZone.ID;
     public static final ZoneId ZONE = FoundationZone.ZONE;
 
     private FoundationCalendar() {

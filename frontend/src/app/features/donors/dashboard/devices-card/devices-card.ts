@@ -6,6 +6,7 @@ import {
   Component,
   computed,
   DOCUMENT,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -20,6 +21,7 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 import { groupDevices } from './device-groups';
 import { deviceName, sessionKindName } from './device-labels';
 
@@ -50,6 +52,8 @@ const SHAPES: Record<DevicePlatform, DeviceShape> = {
 export class DevicesCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly kept = inject(KeptDonorAnswers);
+  private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
@@ -72,15 +76,23 @@ export class DevicesCard {
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
 
   constructor() {
-    this.loadDevices();
+    this.loadDevices(true);
+    effect(() => {
+      const devices = this.devices();
+      if (devices !== null) {
+        this.kept.keep('devices', { items: devices });
+      }
+    });
   }
 
-  loadDevices(): void {
+  loadDevices(shownBefore = false, quietly = false): void {
     this.loadError.set('');
-    this.authApi.devices().subscribe({
+    const server = this.changes.track(this.authApi.devices());
+    const devices = shownBefore ? this.kept.read('devices', server) : server;
+    devices.subscribe({
       next: (list) => this.devices.set(list.items),
       error: (failure: unknown) => {
-        if (this.sessionLost(failure)) {
+        if (this.sessionLost(failure) || (quietly && this.devices() !== null)) {
           return;
         }
         this.loadError.set(
@@ -125,6 +137,7 @@ export class DevicesCard {
             : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
         this.focusAfterRender(() => this.heading().nativeElement);
+        this.changes.changed();
       },
       error: (failure: unknown) => this.failed(failure, () => this.othersButton()?.nativeElement),
     });
@@ -181,6 +194,7 @@ export class DevicesCard {
           this.othersButton()?.nativeElement ??
           this.heading().nativeElement),
     );
+    this.changes.changed();
   }
 
   private visibleDevices(): SignedInDevice[] {
@@ -192,6 +206,7 @@ export class DevicesCard {
   }
 
   private begin(target: string): void {
+    this.changes.changing();
     this.signingOut.set(target);
     this.actionError.set('');
     this.signedOut.set('');
@@ -202,6 +217,7 @@ export class DevicesCard {
     if (this.sessionLost(failure)) {
       return;
     }
+    this.changes.changed();
     this.focusAfterRender(pressed);
     this.actionError.set(
       describeProblem(

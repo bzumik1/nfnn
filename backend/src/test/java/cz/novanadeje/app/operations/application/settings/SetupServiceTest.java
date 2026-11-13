@@ -7,6 +7,7 @@ import cz.novanadeje.app.operations.application.backup.BackupRestoreService;
 import cz.novanadeje.app.operations.application.backup.BackupStore;
 import cz.novanadeje.app.operations.application.backup.InMemoryBackupKeyConfirmations;
 import cz.novanadeje.app.operations.application.backup.RestoreRequest;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;

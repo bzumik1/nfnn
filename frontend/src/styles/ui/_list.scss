@@ -47,7 +47,7 @@ div.ui-list__row {
 
 @media (hover: hover) {
   a.ui-list__row:hover,
-  button.ui-list__row:hover {
+  button.ui-list__row:not(:disabled):hover {
     background: var(--color-surface-alt);
   }
 }
@@ -145,19 +145,90 @@ div.ui-list__row {
 }
 
 .ui-list--inset {
-  background: var(--color-surface);
+  background: var(--color-group-cell);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   overflow: clip;
+
+  > li + li {
+    position: relative;
+    border-top: 0;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline: var(--space-4) 0;
+      border-top: 1px solid var(--color-separator);
+      pointer-events: none;
+    }
+  }
+
+  > li:has(> .ui-list__row > .ui-list__lead) + li:has(> .ui-list__row > .ui-list__lead)::before {
+    inset-inline-start: calc(var(--space-4) + var(--list-lead-size) + var(--space-3));
+  }
+
+  .ui-list__row {
+    min-height: var(--list-inset-row-min-height);
+    padding-block: var(--space-2);
+  }
+
+  .ui-list__lead {
+    justify-content: center;
+    min-inline-size: var(--list-lead-size);
+  }
+
+  .ui-list__title {
+    font-weight: var(--weight-list-inset-title);
+  }
+
+  .ui-list__value:not(.ui-list__count) {
+    font-weight: var(--weight-list-inset-title);
+  }
 }
 
-.ui-grouped .ui-list--inset:not(dialog .ui-list--inset) {
+.ui-grouped .ui-list--inset:not(dialog .ui-list--inset),
+.dialog-panel--grouped .ui-list--inset:not(.dialog-panel--grouped dialog .ui-list--inset) {
   border-radius: var(--radius-group);
   box-shadow: var(--shadow-group);
 }
 
 .ui-list--inset .ui-list__row:focus-visible {
   outline-offset: -3px;
+}
+
+.ui-list__tile,
+.ui-list__glyph {
+  justify-content: center;
+  width: var(--list-lead-size);
+}
+
+.ui-list__tile {
+  height: var(--list-lead-size);
+  border-radius: var(--radius-sm);
+  background: var(--color-tile-neutral);
+  color: var(--color-on-tile);
+}
+
+.ui-list__tile--accent {
+  background: var(--color-tile-accent);
+}
+
+.ui-list__tile--success {
+  background: var(--color-tile-success);
+}
+
+.ui-list__tile--warning {
+  background: var(--color-tile-warning);
+}
+
+.ui-list__tile--danger {
+  background: var(--color-danger-fill);
+  color: var(--color-on-danger);
+}
+
+.ui-list__glyph {
+  color: var(--color-accent);
 }
 
 .ui-list--grouped {
@@ -224,6 +295,15 @@ div.ui-list__row {
   > .ui-list__title {
     grid-column: 1 / -1;
     text-align: center;
+  }
+}
+
+button.ui-list__row:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+
+  @media (forced-colors: active) {
+    color: GrayText;
   }
 }
 

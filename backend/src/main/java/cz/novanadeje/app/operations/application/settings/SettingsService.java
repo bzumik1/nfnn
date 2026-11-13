@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.settings;
 
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;

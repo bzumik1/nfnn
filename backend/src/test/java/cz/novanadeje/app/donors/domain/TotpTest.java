@@ -23,7 +23,7 @@ class TotpTest {
             "20000000000, 353130"
     })
     @DisplayName("Given the RFC 6238 secret, when a code is computed at a test vector time, then it is the last six digits of the RFC's SHA-1 code")
-    void should_match_rfc_6238_vectors(long epochSecond, String expected) {
+    void should_give_the_rfc_6238_code_when_computed_at_a_test_vector_time(long epochSecond, String expected) {
         assertThat(Totp.codeAt(RFC_SECRET, Totp.stepAt(Instant.ofEpochSecond(epochSecond)))).isEqualTo(expected);
     }
 
@@ -40,7 +40,7 @@ class TotpTest {
 
     @Test
     @DisplayName("Given a code two steps old, a malformed code or a wrong one, when it is checked, then nothing matches")
-    void should_reject_old_malformed_and_wrong_codes() {
+    void should_match_nothing_when_checked_given_an_old_malformed_or_wrong_code() {
         Instant now = Instant.ofEpochSecond(1111111111);
         long step = Totp.stepAt(now);
 

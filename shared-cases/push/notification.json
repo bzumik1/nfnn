@@ -1,6 +1,6 @@
 {
   "source": "edited",
-  "logic": "Plan v3 slice 2.28: the kind of a push alert gives the tag that replaces the last notification of its area and the route a click on it opens. The backend writes both into the notification it sends (PushPayloads); the open app routes a click by the kind alone (core/push/alert-routes.ts), so a click opens the same page whether a tab is open or not",
+  "logic": "Plan v3 slice 2.28, donors since the donor push slice: the kind of a push message gives the tag that replaces the last notification of its area and the route a click on it opens. The backend writes both into the notification it sends (PushPayloads); the open app routes a click by the kind alone (core/push/alert-routes.ts), so a click opens the same page whether a tab is open or not",
   "cases": [
     {
       "name": "the test alert",
@@ -70,6 +70,16 @@
       "expected": {
         "tag": "nfnn-mail",
         "url": "/sprava/nastaveni"
+      }
+    },
+    {
+      "name": "the donor test notification",
+      "input": {
+        "kind": "donor-test"
+      },
+      "expected": {
+        "tag": "nfnn-donor-test",
+        "url": "/darce/udaje"
       }
     }
   ]

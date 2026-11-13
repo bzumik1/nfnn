@@ -5,7 +5,7 @@ import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
-import cz.novanadeje.app.content.domain.FormerSlugs;
+import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.springframework.stereotype.Service;
@@ -23,11 +23,11 @@ public class PublicProjectService {
 
     private final ProjectRepository projects;
     private final ProjectOrderRepository orders;
-    private final FormerSlugs formerSlugs;
+    private final FormerProjectSlugs formerSlugs;
     private final MediaImageRepository media;
     private final Clock clock;
 
-    public PublicProjectService(ProjectRepository projects, ProjectOrderRepository orders, FormerSlugs formerSlugs, MediaImageRepository media, Clock clock) {
+    public PublicProjectService(ProjectRepository projects, ProjectOrderRepository orders, FormerProjectSlugs formerSlugs, MediaImageRepository media, Clock clock) {
         this.projects = projects;
         this.orders = orders;
         this.formerSlugs = formerSlugs;

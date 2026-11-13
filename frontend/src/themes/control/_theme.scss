@@ -83,6 +83,7 @@
   --color-on-sheet-close: var(--color-text);
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
+  --color-group-cell: var(--color-surface);
   --color-sheet-text: var(--color-text);
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
@@ -296,6 +297,9 @@
   --scroll-edge-fade: 25px;
   --touch-target-size: 45px;
   --list-row-min-height: 55px;
+  --list-inset-row-min-height: 2.8rem;
+  --weight-list-inset-title: var(--weight-regular);
+  --list-lead-size: var(--space-7);
   --list-group-title-top: 0rem;
 
   --receipt-color-text: #202020;

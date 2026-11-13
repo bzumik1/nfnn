@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nfnn.cz/shared-cases/schemas/push/notification.schema.json",
-  "title": "Push notification cases: the kind of an alert gives its tag and the route a click opens",
+  "title": "Push notification cases: the kind of a message gives its tag and the route a click opens",
   "description": "The backend writes the tag and the route into the notification; the browser routes a click by the kind.",
   "type": "object",
   "required": [
@@ -67,7 +67,7 @@
             },
             "url": {
               "type": "string",
-              "pattern": "^/sprava(/[a-z]+)*$"
+              "pattern": "^/(sprava|darce)(/[a-z]+)*$"
             }
           }
         }

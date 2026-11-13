@@ -19,17 +19,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 @RestController
 @Validated
 @RequestMapping("/api/admin/operations/push")
 class AdminPushController {
 
-    static final String SESSION_CLAIM = "sid";
-    private static final Pattern DEVICE_ID = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     private final PushSubscriptionService push;
     private final PushTestRateLimiter testRateLimiter;
@@ -41,7 +37,7 @@ class AdminPushController {
 
     @GetMapping
     PushResponse view(@AuthenticationPrincipal Jwt jwt) {
-        return PushResponse.from(push.view(admin(jwt), sessionDevice(jwt)));
+        return PushResponse.from(push.view(admin(jwt), SessionDevices.of(jwt)));
     }
 
     @PostMapping("/subscriptions")
@@ -58,7 +54,7 @@ class AdminPushController {
 
     @PutMapping("/subscriptions/{id}/alerts")
     PushResponse.Subscription changeAlerts(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PushAlertsRequest request) {
-        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts(), sessionDevice(jwt)));
+        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts(), SessionDevices.of(jwt)));
     }
 
     @PostMapping("/test")
@@ -72,10 +68,6 @@ class AdminPushController {
     }
 
     private static UUID device(Jwt jwt) {
-        return sessionDevice(jwt).orElseThrow(PushDeviceRequired::new);
-    }
-
-    private static Optional<UUID> sessionDevice(Jwt jwt) {
-        return Optional.ofNullable(jwt.getClaimAsString(SESSION_CLAIM)).filter(session -> DEVICE_ID.matcher(session).matches()).map(UUID::fromString);
+        return SessionDevices.of(jwt).orElseThrow(PushDeviceRequired::new);
     }
 }

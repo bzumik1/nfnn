@@ -108,6 +108,9 @@ jobs:
           cache: npm
           cache-dependency-path: mcp/package-lock.json
 
+      - name: Every relative link and image of the README leads to a file, folder or heading that exists
+        run: node scripts/readme-links.mjs
+
       - name: Build the change's connector, whose tool list and instructions are measured
         working-directory: mcp
         run: |

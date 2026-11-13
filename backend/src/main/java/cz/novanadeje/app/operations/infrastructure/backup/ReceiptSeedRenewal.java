@@ -1,6 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
-import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import org.slf4j.Logger;

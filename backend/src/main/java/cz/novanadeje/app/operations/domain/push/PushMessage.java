@@ -10,6 +10,9 @@ public record PushMessage(PushMessageKind kind, int count) {
         if (kind == null || count < 0 || count > MAX_COUNT) {
             throw new IllegalArgumentException("A push message is a kind and a count of open problems");
         }
+        if (!kind.carriesOpenAlertCount() && count != 0) {
+            throw new IllegalArgumentException("A push message to donors carries no count");
+        }
     }
 
 }

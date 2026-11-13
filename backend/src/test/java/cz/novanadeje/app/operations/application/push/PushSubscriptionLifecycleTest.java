@@ -1,5 +1,7 @@
 package cz.novanadeje.app.operations.application.push;
 
+import cz.novanadeje.app.operations.domain.push.DonorNotifications;
+import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
@@ -24,7 +26,8 @@ class PushSubscriptionLifecycleTest {
     private static final UUID PETR = UUID.randomUUID();
 
     private final InMemoryPushSubscriptions subscriptions = new InMemoryPushSubscriptions();
-    private final PushSubscriptionLifecycle lifecycle = new PushSubscriptionLifecycle(subscriptions);
+    private final InMemoryDonorPushSubscriptions donorSubscriptions = new InMemoryDonorPushSubscriptions();
+    private final PushSubscriptionLifecycle lifecycle = new PushSubscriptionLifecycle(subscriptions, donorSubscriptions);
 
     @Test
     @DisplayName("Given devices of two administrators, when one loses the role, then only that one's devices go")
@@ -58,6 +61,49 @@ class PushSubscriptionLifecycleTest {
         lifecycle.on(new DeviceSignedOut(JANA, telefon, NOW));
 
         assertThat(subscriptions.all()).containsExactly(pocitac);
+    }
+
+    @Test
+    @DisplayName("Given an administrator's notifications as a donor, when the administrator loses the role, then the donor's notifications stay")
+    void should_keep_donor_notifications_when_role_revoked_given_administrator_who_donates() {
+        DonorPushSubscription jana = subscribedAsDonor(JANA, UUID.randomUUID(), "jana-darce");
+
+        lifecycle.on(new AdministrationRevoked(JANA, NOW));
+
+        assertThat(donorSubscriptions.all()).containsExactly(jana);
+    }
+
+    @Test
+    @DisplayName("Given the notifications of two donors, when one is erased, then only that donor's notifications go")
+    void should_remove_donor_notifications_when_erased_given_two_donors() {
+        subscribedAsDonor(JANA, UUID.randomUUID(), "jana-telefon");
+        subscribedAsDonor(JANA, UUID.randomUUID(), "jana-pocitac");
+        DonorPushSubscription petr = subscribedAsDonor(PETR, UUID.randomUUID(), "petr");
+
+        lifecycle.on(new DonorErased(JANA, NOW));
+
+        assertThat(donorSubscriptions.all()).containsExactly(petr);
+    }
+
+    @Test
+    @DisplayName("Given a device with the alerts and the notifications and another device, when the device signs out, then both of its subscriptions go and the other device keeps its own")
+    void should_remove_both_subscriptions_of_device_when_device_signed_out_given_administrator_who_donates() {
+        UUID telefon = UUID.randomUUID();
+        subscribed(JANA, telefon, "jana-telefon");
+        subscribedAsDonor(JANA, telefon, "jana-telefon");
+        DonorPushSubscription pocitac = subscribedAsDonor(JANA, UUID.randomUUID(), "jana-pocitac");
+
+        lifecycle.on(new DeviceSignedOut(JANA, telefon, NOW));
+
+        assertThat(subscriptions.all()).isEmpty();
+        assertThat(donorSubscriptions.all()).containsExactly(pocitac);
+    }
+
+    private DonorPushSubscription subscribedAsDonor(UUID donor, UUID device, String name) {
+        DonorPushSubscription subscription = DonorPushSubscription.subscribe(donor, device,
+                new PushEndpoint("https://fcm.googleapis.com/fcm/send/" + name), CLIENT, DonorNotifications.ALL, NOW);
+        donorSubscriptions.save(subscription);
+        return subscription;
     }
 
     private PushSubscription subscribed(UUID administrator, String name) {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.application.push;
 
+import cz.novanadeje.app.operations.domain.push.DonorPushSubscriptionRepository;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
 import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
@@ -12,9 +13,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class PushSubscriptionLifecycle {
 
     private final PushSubscriptionRepository subscriptions;
+    private final DonorPushSubscriptionRepository donorSubscriptions;
 
-    public PushSubscriptionLifecycle(PushSubscriptionRepository subscriptions) {
+    public PushSubscriptionLifecycle(PushSubscriptionRepository subscriptions, DonorPushSubscriptionRepository donorSubscriptions) {
         this.subscriptions = subscriptions;
+        this.donorSubscriptions = donorSubscriptions;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -25,10 +28,12 @@ public class PushSubscriptionLifecycle {
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void on(DonorErased erased) {
         subscriptions.deleteAllOf(erased.donorId());
+        donorSubscriptions.deleteAllOf(erased.donorId());
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void on(DeviceSignedOut signedOut) {
         subscriptions.deleteAllOfDevice(signedOut.deviceId());
+        donorSubscriptions.deleteAllOfDevice(signedOut.deviceId());
     }
 }

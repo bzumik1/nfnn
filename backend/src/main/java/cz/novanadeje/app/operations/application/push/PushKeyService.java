@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.application.push;
 
 import cz.novanadeje.app.operations.application.settings.CarriedSettingsKeyService;
 import cz.novanadeje.app.operations.application.settings.SecretSealer;
+import cz.novanadeje.app.operations.domain.push.DonorPushSubscriptionRepository;
 import cz.novanadeje.app.operations.domain.push.PushKey;
 import cz.novanadeje.app.operations.domain.push.PushKeyRepository;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
@@ -22,15 +23,17 @@ public class PushKeyService {
 
     private final PushKeyRepository keys;
     private final PushSubscriptionRepository subscriptions;
+    private final DonorPushSubscriptionRepository donorSubscriptions;
     private final SecretSealer sealer;
     private final PushKeyGenerator generator;
     private final CarriedSettingsKeyService carriedKeys;
     private final Clock clock;
 
-    public PushKeyService(PushKeyRepository keys, PushSubscriptionRepository subscriptions, SecretSealer sealer, PushKeyGenerator generator,
-                          CarriedSettingsKeyService carriedKeys, Clock clock) {
+    public PushKeyService(PushKeyRepository keys, PushSubscriptionRepository subscriptions, DonorPushSubscriptionRepository donorSubscriptions,
+                          SecretSealer sealer, PushKeyGenerator generator, CarriedSettingsKeyService carriedKeys, Clock clock) {
         this.keys = keys;
         this.subscriptions = subscriptions;
+        this.donorSubscriptions = donorSubscriptions;
         this.sealer = sealer;
         this.generator = generator;
         this.carriedKeys = carriedKeys;
@@ -53,7 +56,7 @@ public class PushKeyService {
             return readable.get();
         }
         VapidKeys fresh = generator.generate();
-        int removed = subscriptions.deleteAll();
+        int removed = subscriptions.deleteAll() + donorSubscriptions.deleteAll();
         keys.replace(sealed(fresh));
         log.warn("Push keys could not be read with this server's settings key; new keys were generated and {} push subscriptions removed", removed);
         return fresh;

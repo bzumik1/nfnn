@@ -63,6 +63,7 @@ import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -139,6 +140,8 @@ const PAYMENT_WATCH_CHECKS = 20;
 })
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
+  private readonly kept = inject(KeptDonorAnswers);
+  private readonly changes = new ListChanges(() => this.fetch(false, false, true));
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly live = inject(LiveUpdates);
@@ -231,7 +234,13 @@ export class BankAccountsCard {
         this.bankNames.require(account.accountNumber);
       }
     });
-    this.fetch();
+    this.fetch(false, true);
+    effect(() => {
+      const items = this.accounts();
+      if (this.state() === 'ready') {
+        this.kept.keep('bank-accounts', { items });
+      }
+    });
     effect(() => {
       if (this.newlyVerifiedId() !== null) {
         afterNextRender(() => this.addResult()?.nativeElement.focus(), {
@@ -267,25 +276,26 @@ export class BankAccountsCard {
     this.fetch();
   }
 
-  private fetch(focusTitle = false): void {
-    this.api
-      .list()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: ({ items }) => {
-          this.showAccounts(items);
-          if (focusTitle) {
-            afterNextRender(() => this.focusTitle(), { injector: this.injector });
-          }
-        },
-        error: (failure: unknown) => {
-          if (this.sessionHasEnded(failure)) {
-            this.sessionEnded.emit();
-            return;
-          }
+  private fetch(focusTitle = false, shownBefore = false, quietly = false): void {
+    const server = this.changes.track(this.api.list());
+    const list = shownBefore ? this.kept.read('bank-accounts', server) : server;
+    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: ({ items }) => {
+        this.showAccounts(items);
+        if (focusTitle) {
+          afterNextRender(() => this.focusTitle(), { injector: this.injector });
+        }
+      },
+      error: (failure: unknown) => {
+        if (this.sessionHasEnded(failure)) {
+          this.sessionEnded.emit();
+          return;
+        }
+        if (!quietly || this.state() !== 'ready') {
           this.state.set('error');
-        },
-      });
+        }
+      },
+    });
   }
 
   private showAccounts(items: readonly BankAccountItem[]): void {
@@ -447,6 +457,7 @@ export class BankAccountsCard {
     if (this.busy() !== null) {
       return;
     }
+    this.changes.changing();
     this.busy.set(account.id);
     this.actionError.set('');
     this.actionDone.set('');
@@ -455,6 +466,7 @@ export class BankAccountsCard {
         this.busy.set(null);
         this.confirming.set(null);
         this.actionDone.set(doneMessage);
+        this.changes.changed(false);
         this.fetchAfterChange(this.addAnswer);
       },
       error: (failure: unknown) => {
@@ -466,8 +478,11 @@ export class BankAccountsCard {
         this.actionError.set(describeProblem(failure, failedMessage));
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
+          this.changes.changed(false);
           this.fetchAfterChange(this.addError);
+          return;
         }
+        this.changes.changed();
       },
     });
   }
@@ -558,7 +573,7 @@ export class BankAccountsCard {
   }
 
   private listAccounts(): Observable<void> {
-    return this.api.list().pipe(
+    return this.changes.track(this.api.list()).pipe(
       map(({ items }: BankAccountListResponse) => this.showAccounts(items)),
       catchError((failure: unknown) => {
         if (this.sessionHasEnded(failure)) {

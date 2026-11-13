@@ -46,7 +46,14 @@
     max-width: var(--dialog-max-width-wide);
   }
 
+  &:not(&--grouped) {
+    --color-group-cell: var(--color-surface);
+  }
+
   &--grouped {
+    --color-group-cell: var(--color-sheet-group);
+    --color-surface-alt: var(--color-fill);
+
     background: var(--color-sheet-grouped);
     color: var(--color-sheet-text);
     font-family: var(--font-sheet);

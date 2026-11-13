@@ -1,4 +1,4 @@
-package cz.novanadeje.app.operations.application.settings;
+package cz.novanadeje.app.operations.application.restart;
 
 public interface ApplicationRestarter {
 

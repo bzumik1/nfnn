@@ -12,7 +12,7 @@ class TotpSecretTest {
 
     @Test
     @DisplayName("Given nothing, when a secret is generated, then it is 32 base32 characters that decode to 20 bytes and differ each time")
-    void should_generate_random_base32_secret() {
+    void should_give_32_random_base32_characters_of_20_bytes_when_generated() {
         TotpSecret first = TotpSecret.generate();
         TotpSecret second = TotpSecret.generate();
 
@@ -30,7 +30,7 @@ class TotpSecretTest {
 
     @Test
     @DisplayName("Given an issuer with a space and an account e-mail, when the otpauth link is built, then both are percent-encoded and the parameters are the standard ones")
-    void should_build_otpauth_uri() {
+    void should_percent_encode_issuer_and_account_when_otpauth_link_is_built() {
         TotpSecret secret = new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
 
         assertThat(secret.otpauthUri("Nová naděje", "jana@example.cz")).isEqualTo(
@@ -46,7 +46,7 @@ class TotpSecretTest {
 
     @Test
     @DisplayName("Given a value of the wrong length or alphabet, when a secret is made of it, then it is refused")
-    void should_refuse_malformed_value() {
+    void should_refuse_the_secret_when_made_given_a_value_of_wrong_length_or_alphabet() {
         assertThatThrownBy(() -> new TotpSecret("GEZDGNBVGY3TQOJQ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new TotpSecret("gezdgnbvgy3tqojqgezdgnbvgy3tqojq")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new TotpSecret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJ1")).isInstanceOf(IllegalArgumentException.class);

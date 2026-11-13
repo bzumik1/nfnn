@@ -7,6 +7,7 @@ public class PushSubscriptionLimitReached extends Conflict {
     public static final String CODE = "operations/push-subscription-limit";
 
     public PushSubscriptionLimitReached() {
-        super(CODE, "An administrator has at most " + PushSubscription.MAX_PER_ADMINISTRATOR + " devices with push alerts");
+        super(CODE, "An account has at most " + PushSubscription.MAX_PER_ADMINISTRATOR + " devices with push alerts and "
+                + DonorPushSubscription.MAX_PER_DONOR + " with push notifications");
     }
 }

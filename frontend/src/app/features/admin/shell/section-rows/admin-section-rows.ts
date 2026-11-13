@@ -22,7 +22,6 @@ export interface SectionRowGroup {
   selector: 'app-admin-section-rows',
   imports: [RouterLink],
   templateUrl: './admin-section-rows.html',
-  styleUrl: './admin-section-rows.scss',
 })
 export class AdminSectionRows {
   protected readonly star = FOUNDATION_STAR;

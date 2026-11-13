@@ -1,6 +1,6 @@
 package cz.novanadeje.app.support;
 
-import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

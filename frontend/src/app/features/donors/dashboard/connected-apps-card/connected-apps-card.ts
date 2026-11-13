@@ -1,6 +1,6 @@
 /// <reference types="@angular/localize" />
 
-import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, output, signal } from '@angular/core';
 import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
@@ -8,6 +8,7 @@ import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
@@ -21,6 +22,8 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 export class ConnectedAppsCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
+  private readonly kept = inject(KeptDonorAnswers);
+  private readonly changes = new ListChanges(() => this.loadConnections(false, true));
 
   readonly sessionEnded = output<void>();
 
@@ -30,15 +33,23 @@ export class ConnectedAppsCard {
   protected readonly disconnected = signal('');
 
   constructor() {
-    this.loadConnections();
+    this.loadConnections(true);
+    effect(() => {
+      const connections = this.connections();
+      if (connections !== null) {
+        this.kept.keep('connections', { items: connections });
+      }
+    });
   }
 
-  loadConnections(): void {
+  loadConnections(shownBefore = false, quietly = false): void {
     this.connectionsError.set('');
-    this.authApi.connections().subscribe({
+    const server = this.changes.track(this.authApi.connections());
+    const connections = shownBefore ? this.kept.read('connections', server) : server;
+    connections.subscribe({
       next: (list) => this.connections.set(list.items),
       error: (failure: unknown) => {
-        if (this.sessionLost(failure)) {
+        if (this.sessionLost(failure) || (quietly && this.connections() !== null)) {
           return;
         }
         this.connectionsError.set(
@@ -55,6 +66,7 @@ export class ConnectedAppsCard {
     if (this.disconnecting() !== null) {
       return;
     }
+    this.changes.changing();
     this.disconnecting.set(app.id);
     this.connectionsError.set('');
     this.disconnected.set('');
@@ -63,12 +75,14 @@ export class ConnectedAppsCard {
         this.disconnecting.set(null);
         this.connections.update((apps) => (apps ?? []).filter((other) => other.id !== app.id));
         this.disconnected.set(app.client);
+        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.disconnecting.set(null);
         if (this.sessionLost(failure)) {
           return;
         }
+        this.changes.changed();
         this.connectionsError.set(
           describeProblem(
             failure,

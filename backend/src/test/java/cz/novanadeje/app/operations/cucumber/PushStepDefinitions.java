@@ -38,6 +38,7 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -47,6 +48,8 @@ public class PushStepDefinitions {
 
     private static final String PUSH = "/api/admin/operations/push";
     private static final String SUBSCRIPTIONS = PUSH + "/subscriptions";
+    private static final String DONOR_PUSH = "/api/operations/push";
+    private static final String DONOR_DEVICE = DONOR_PUSH + "/device";
     private static final String PUBLIC_KEY_SHAPE = "B[A-Za-z0-9_-]{86}";
     private static final long VAPID_LIFETIME_SECONDS = 3600;
     private static final int CREATED = 201;
@@ -199,6 +202,151 @@ public class PushStepDefinitions {
         List<UUID> expected = Arrays.stream(names.split(",\\s*")).map(name -> device(alias, name).deviceId()).toList();
         assertThat(jdbc.sql("select device_id from operations_push_subscription where administrator_id = ?").param(donors.idOf(alias))
                 .query(UUID.class).list()).containsExactlyInAnyOrderElementsOf(expected);
+    }
+
+    @When("{string} asks for the push notifications on the device {string}")
+    public void asksForThePushNotificationsOnTheDevice(String alias, String device) {
+        actOnDevice(alias, deviceIdOf(alias, device));
+        api.get(DONOR_PUSH);
+    }
+
+    @When("{string} asks for the push notifications in a browser session that names no device")
+    public void asksForThePushNotificationsInASessionThatNamesNoDevice(String alias) {
+        actWithoutDevice(alias);
+        api.get(DONOR_PUSH);
+    }
+
+    @When("someone without a token asks for the push notifications")
+    public void someoneWithoutATokenAsksForThePushNotifications() {
+        api.forgetCredentials();
+        api.get(DONOR_PUSH);
+    }
+
+    @When("{string} turns push notifications on for the device {string} at {string}")
+    public void turnsPushNotificationsOnForTheDeviceAt(String alias, String device, String endpoint) {
+        PushReceiver receiver = PushReceiver.generate();
+        subscribeDonor(alias, device, endpoint, receiver, receiver.p256dh(), Optional.empty(), DeviceSession.SIGNED_IN);
+    }
+
+    @When("{string} turns push notifications on for the device {string} at {string} with gifts {word} and yearly receipts {word}")
+    public void turnsPushNotificationsOnWithChoices(String alias, String device, String endpoint, String gifts, String yearlyReceipts) {
+        PushReceiver receiver = PushReceiver.generate();
+        subscribeDonor(alias, device, endpoint, receiver, receiver.p256dh(), Optional.of(notifications(gifts, yearlyReceipts)), DeviceSession.SIGNED_IN);
+    }
+
+    @When("{string} turns push notifications on for the public computer {string} at {string}")
+    public void turnsPushNotificationsOnForThePublicComputer(String alias, String device, String endpoint) {
+        PushReceiver receiver = PushReceiver.generate();
+        subscribeDonor(alias, device, endpoint, receiver, receiver.p256dh(), Optional.empty(), DeviceSession.PUBLIC_COMPUTER);
+    }
+
+    @When("{string} turns push notifications on for the signed-out device {string} at {string}")
+    public void turnsPushNotificationsOnForTheSignedOutDevice(String alias, String device, String endpoint) {
+        PushReceiver receiver = PushReceiver.generate();
+        subscribeDonor(alias, device, endpoint, receiver, receiver.p256dh(), Optional.empty(), DeviceSession.SIGNED_OUT);
+    }
+
+    @When("{string} turns push notifications on in a browser session that names no device")
+    public void turnsPushNotificationsOnInASessionThatNamesNoDevice(String alias) {
+        actWithoutDevice(alias);
+        PushReceiver receiver = PushReceiver.generate();
+        api.put(DONOR_DEVICE, body("https://fcm.googleapis.com/fcm/send/" + alias.toLowerCase() + "-bez-zarizeni", receiver.p256dh(), receiver.auth()));
+    }
+
+    @Given("{string} turned push notifications on for the device {string} at {string}")
+    public void turnedPushNotificationsOnForTheDeviceAt(String alias, String device, String endpoint) {
+        turnsPushNotificationsOnForTheDeviceAt(alias, device, endpoint);
+        assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("Subscribing answered %s", api.lastResponse().getBody()).isEqualTo(200);
+    }
+
+    @Given("{string} turned push notifications on for {int} devices")
+    public void turnedPushNotificationsOnForDevices(String alias, int count) {
+        for (int index = 1; index <= count; index++) {
+            turnedPushNotificationsOnForTheDeviceAt(alias, "zařízení " + index, "https://fcm.googleapis.com/fcm/send/" + alias.toLowerCase() + "-" + index);
+        }
+    }
+
+    @When("{string} changes the push notifications of the device {string} to gifts {word} and yearly receipts {word}")
+    public void changesThePushNotificationsOfTheDevice(String alias, String device, String gifts, String yearlyReceipts) {
+        actOnDevice(alias, deviceIdOf(alias, device));
+        api.put(DONOR_DEVICE + "/notifications", notifications(gifts, yearlyReceipts));
+    }
+
+    @When("{string} turns push notifications off for the device {string}")
+    public void turnsPushNotificationsOffForTheDevice(String alias, String device) {
+        actOnDevice(alias, deviceIdOf(alias, device));
+        api.delete(DONOR_DEVICE);
+    }
+
+    @When("{string} sends a test push notification on the device {string}")
+    public void sendsATestPushNotificationOnTheDevice(String alias, String device) {
+        actOnDevice(alias, deviceIdOf(alias, device));
+        api.post(DONOR_PUSH + "/test", Map.of());
+    }
+
+    @Given("{string} sent {int} test push notifications on the device {string}")
+    public void sentTestPushNotificationsOnTheDevice(String alias, int count, String device) {
+        for (int index = 0; index < count; index++) {
+            sendsATestPushNotificationOnTheDevice(alias, device);
+            assertThat(api.lastResponse().getStatusCode().value()).withFailMessage("The test answered %s", api.lastResponse().getBody()).isEqualTo(200);
+        }
+    }
+
+    @Then("the device says service {string} with gifts {word} and yearly receipts {word}")
+    public void theDeviceSays(String service, String gifts, String yearlyReceipts) {
+        JsonNode device = api.lastResponseJson();
+        assertThat(device.get("service").asString()).isEqualTo(service);
+        assertThat(onOff(device.get("notifications").get("gifts").asBoolean())).isEqualTo(gifts);
+        assertThat(onOff(device.get("notifications").get("yearlyReceipts").asBoolean())).isEqualTo(yearlyReceipts);
+        assertThat(device.has("endpoint")).isFalse();
+        assertThat(device.has("keys")).isFalse();
+    }
+
+    @Then("the push notifications say this device gets none")
+    public void thePushNotificationsSayThisDeviceGetsNone() {
+        assertThat(api.lastResponseJson().get("device").isNull()).isTrue();
+    }
+
+    @Then("the push notifications say this device gets them from service {string} with gifts {word} and yearly receipts {word}, {word} delivered")
+    public void thePushNotificationsSayThisDeviceGetsThem(String service, String gifts, String yearlyReceipts, String delivered) {
+        JsonNode device = api.lastResponseJson().get("device");
+        assertThat(device.get("service").asString()).isEqualTo(service);
+        assertThat(onOff(device.get("notifications").get("gifts").asBoolean())).isEqualTo(gifts);
+        assertThat(onOff(device.get("notifications").get("yearlyReceipts").asBoolean())).isEqualTo(yearlyReceipts);
+        assertThat(device.get("lastDeliveredAt").isNull() ? "never" : "yes").isEqualTo("never".equals(delivered) ? "never" : "yes");
+    }
+
+    @Then("the push notifications say this device gets them from service {string} with gifts {word} and yearly receipts {word}, delivered")
+    public void thePushNotificationsSayThisDeviceGetsThemDelivered(String service, String gifts, String yearlyReceipts) {
+        thePushNotificationsSayThisDeviceGetsThem(service, gifts, yearlyReceipts, "yes");
+    }
+
+    @Then("the push notifications say this device failed {int} time(s) in a row")
+    public void thePushNotificationsSayThisDeviceFailed(int failures) {
+        assertThat(api.lastResponseJson().get("device").get("failuresInARow").asInt()).isEqualTo(failures);
+    }
+
+    @Then("the push notifications list the devices {string} of {string}")
+    public void thePushNotificationsListTheDevices(String names, String alias) {
+        List<UUID> expected = Arrays.stream(names.split(",\\s*")).map(name -> device(alias, name).deviceId()).toList();
+        assertThat(jdbc.sql("select device_id from operations_donor_push_subscription where donor_id = ?").param(donors.idOf(alias))
+                .query(UUID.class).list()).containsExactlyInAnyOrderElementsOf(expected);
+        if (api.lastResponse().getStatusCode().value() == 200 && api.lastResponseJson().has("devices")) {
+            List<UUID> listed = new ArrayList<>();
+            api.lastResponseJson().get("devices").forEach(id -> listed.add(UUID.fromString(id.asString())));
+            assertThat(listed).containsExactlyInAnyOrderElementsOf(expected);
+        }
+    }
+
+    @Then("no push notification subscription of {string} is stored")
+    public void noPushNotificationSubscriptionOfIsStored(String alias) {
+        pushNotificationSubscriptionsOfAreStored(0, alias);
+    }
+
+    @Then("{int} push notification subscription(s) of {string} is/are stored")
+    public void pushNotificationSubscriptionsOfAreStored(int count, String alias) {
+        assertThat(jdbc.sql("select count(*) from operations_donor_push_subscription where donor_id = ?").param(donors.idOf(alias))
+                .query(Long.class).single()).isEqualTo(count);
     }
 
     @Then("the push settings carry the server's public key")
@@ -390,6 +538,28 @@ public class PushStepDefinitions {
         devices.put(key, new Device(deviceId, URI.create(endpoint), receiver, subscriptionId));
     }
 
+    private void subscribeDonor(String alias, String device, String endpoint, PushReceiver receiver, String p256dh,
+                                Optional<Map<String, Object>> notifications, DeviceSession session) {
+        String key = alias + "/" + device;
+        UUID deviceId = devices.containsKey(key) ? devices.get(key).deviceId() : UUID.randomUUID();
+        sessions.actAs(alias);
+        signedIn(alias, deviceId, session);
+        actWith(alias, claims -> claims.claim(JwtProperties.SESSION_CLAIM, deviceId.toString()));
+        Map<String, Object> request = new LinkedHashMap<>(body(endpoint, p256dh, receiver.auth()));
+        notifications.ifPresent(chosen -> request.put("notifications", chosen));
+        api.put(DONOR_DEVICE, request);
+        devices.put(key, new Device(deviceId, URI.create(endpoint), receiver, null));
+    }
+
+    private UUID deviceIdOf(String alias, String device) {
+        return devices.computeIfAbsent(alias + "/" + device, unknown -> new Device(UUID.randomUUID(), URI.create("https://unused.invalid"),
+                PushReceiver.generate(), null)).deviceId();
+    }
+
+    private static Map<String, Object> notifications(String gifts, String yearlyReceipts) {
+        return Map.of("gifts", on(gifts), "yearlyReceipts", on(yearlyReceipts));
+    }
+
     private void actOnDevice(String alias, UUID deviceId) {
         sessions.actAs(alias);
         signedIn(alias, deviceId);
@@ -412,12 +582,22 @@ public class PushStepDefinitions {
     }
 
     private void signedIn(String alias, UUID deviceId) {
+        signedIn(alias, deviceId, DeviceSession.SIGNED_IN);
+    }
+
+    private void signedIn(String alias, UUID deviceId, DeviceSession session) {
         Instant now = clock.instant();
         UUID donorId = donors.idOf(alias);
         jdbc.sql("""
-                insert into donor_device (id, donor_id, platform, browser, signed_in_at, last_used_at)
-                values (:id, :donor, 'OTHER', 'OTHER', :now, :now) on conflict (id) do nothing""")
-                .param("id", deviceId).param("donor", donorId).param("now", Timestamp.from(now)).update();
+                insert into donor_device (id, donor_id, platform, browser, signed_in_at, last_used_at, session_kind)
+                values (:id, :donor, 'OTHER', 'OTHER', :now, :now, :kind) on conflict (id) do nothing""")
+                .param("id", deviceId).param("donor", donorId).param("now", Timestamp.from(now))
+                .param("kind", session == DeviceSession.PUBLIC_COMPUTER ? "PUBLIC" : null).update();
+        if (session == DeviceSession.SIGNED_OUT) {
+            jdbc.sql("update donor_device set ended_at = :now, end_reason = 'SIGNED_OUT' where id = :id")
+                    .param("now", Timestamp.from(now)).param("id", deviceId).update();
+            return;
+        }
         jdbc.sql("""
                 insert into donor_refresh_token (id, donor_id, secret_hash, issued_at, granted_at, expires_at, device_id)
                 select :id, d.donor_id, :hash, :now, :now, :expires, d.id from donor_device d where d.id = :device""")
@@ -452,5 +632,9 @@ public class PushStepDefinitions {
     }
 
     private record Device(UUID deviceId, URI endpoint, PushReceiver receiver, String subscriptionId) {
+    }
+
+    private enum DeviceSession {
+        SIGNED_IN, PUBLIC_COMPUTER, SIGNED_OUT
     }
 }
