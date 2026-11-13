@@ -9,6 +9,7 @@ import {
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
 import { APP_DEPTH_KEY, BackTarget } from './back-target';
+import { NavigationPreview } from './navigation-preview';
 import {
   PAGE_LAYER_CLASS,
   PAGE_TRANSITION_CLASS,
@@ -253,6 +254,15 @@ describe('Given the app on the home screen of a phone, where the news led to the
           { path: 'projekty', component: Blank },
         ]),
         { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: NavigationPreview,
+          useValue: {
+            active: () => false,
+            drives: () => false,
+            discard: () => undefined,
+            visit: () => Promise.resolve(null),
+          },
+        },
       ],
     });
     router = TestBed.inject(Router);
@@ -426,5 +436,72 @@ describe('Given the app on the home screen of a phone, where the news led to the
       watch.disconnect();
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Given the app on the home screen of a phone opened straight on the donor overview, whose Zpět leads to a page never drawn', () => {
+  let layer: HTMLElement;
+  let visits: string[];
+  let finishVisit: () => void;
+
+  beforeEach(async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: (query: string) => ({ matches: false, media: query }) as MediaQueryList,
+    });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    layer = document.createElement('div');
+    layer.className = PAGE_LAYER_CLASS;
+    document.body.append(layer);
+    visits = [];
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          { path: '', component: Blank },
+          { path: 'darce/prehled', component: Blank, data: { parent: '/' } },
+        ]),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: NavigationPreview,
+          useValue: {
+            active: () => false,
+            discard: () => undefined,
+            visit: <T>(path: string, capture: () => T) => {
+              visits.push(path);
+              return new Promise<T>((done) => {
+                finishVisit = () => {
+                  paint(layer, { title: 'Úvod' });
+                  const captured = capture();
+                  paint(layer, { title: 'Přehled' });
+                  done(captured);
+                };
+              });
+            },
+          },
+        },
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl('/darce/prehled');
+    paint(layer, { title: 'Přehled' });
+  });
+
+  afterEach(() => {
+    document.querySelectorAll(`.${PAGE_TRANSITION_CLASS}`).forEach((node) => node.remove());
+    layer.remove();
+    delete (window as { matchMedia?: unknown }).matchMedia;
+    Object.defineProperty(window, 'innerWidth', jsdomWidth!);
+  });
+
+  it('when a finger takes the page, then the page Zpět leads to is drawn under cover and then lies under the finger', async () => {
+    TestBed.inject(PageTransitions).startSwipe({ kind: 'parent', path: '/' });
+    const under = () =>
+      document.querySelector(`.${PAGE_TRANSITION_CLASS}__page--under h1`)?.textContent ?? null;
+
+    expect(visits).toEqual(['/']);
+    expect(under()).toBeNull();
+    finishVisit();
+    await Promise.resolve();
+
+    expect(under()).toBe('Úvod');
   });
 });

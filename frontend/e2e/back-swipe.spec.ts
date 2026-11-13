@@ -61,6 +61,16 @@ async function drag(finger: Finger, from: number, to: number): Promise<void> {
   }
 }
 
+function asked(page: Page, path: string): () => number {
+  let count = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === path) {
+      count++;
+    }
+  });
+  return () => count;
+}
+
 function swipeOverlay(page: Page) {
   return page.locator('.page-transition--swipe');
 }
@@ -163,21 +173,49 @@ test.describe('Given the app on the home screen of a phone with an article opene
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 
-  test('when the article was opened afresh and a finger drags it back, then a plain ground shows under it and the list opens', async ({
+  test('when the article was opened afresh and a finger drags it back, then the list, never shown before, is drawn under it and on letting go is the page that opens without being asked for again', async ({
     page,
   }) => {
+    const listAsked = asked(page, '/api/content/news');
     await page.goto(`/aktuality/${article.slug}`);
     await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
     const finger = await fingerOn(page);
 
     await drag(finger, 30, 250);
 
-    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveCount(0);
+    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveText(
+      LIST_TITLE,
+    );
     await restLongerThanAFlick(page);
     await finger.up();
 
     await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
     await expect(page.locator('.page-transition')).toHaveCount(0);
+    expect(listAsked()).toBe(1);
+  });
+
+  test('when the article was opened afresh and the swipe is called off, then the article is the same live page, not drawn again', async ({
+    page,
+  }) => {
+    const articleAsked = asked(page, `/api/content/news/${article.slug}`);
+    await page.goto(`/aktuality/${article.slug}`);
+    const heading = page.getByRole('heading', { level: 1, name: article.title });
+    await expect(heading).toBeVisible();
+    await heading.evaluate((element) => element.setAttribute('data-still-the-same', ''));
+    const finger = await fingerOn(page);
+
+    await drag(finger, 30, 150);
+    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveText(
+      LIST_TITLE,
+    );
+    await restLongerThanAFlick(page);
+    await finger.up();
+
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+    await expect(page).toHaveURL(`/aktuality/${article.slug}`);
+    await expect(heading).toHaveAttribute('data-still-the-same', '');
+    expect(articleAsked()).toBe(1);
   });
 
   test('when the visitor asks for less motion, then nothing follows the finger and letting go past half still returns to the list', async ({
@@ -256,6 +294,51 @@ test.describe('Given the app on the home screen of a phone and an administrator 
     await finger.up();
 
     await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+});
+
+test.describe('Given the app on the home screen of a phone opened by an administrator straight on the administration', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'touch events come only through CDP; the swipe in Safari is recorded on the iOS simulator',
+  );
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      localStorage.setItem('nfnn.donor-session-app', '1');
+    });
+    await mockDonorApi(page);
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava');
+    await copied();
+    await expect(page.locator('.page-transition')).toHaveCount(0);
+  });
+
+  test('when a finger drags the administration back, then the landing page, never shown in this visit, lies under it, and on letting go it opens', async ({
+    page,
+  }) => {
+    const finger = await fingerOn(page);
+
+    await drag(finger, 30, 250);
+    await expect(swipeOverlay(page).locator('.page-transition__page--under h1')).toHaveText(
+      'Nová naděje',
+    );
+    await restLongerThanAFlick(page);
+    await finger.up();
+
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 });
