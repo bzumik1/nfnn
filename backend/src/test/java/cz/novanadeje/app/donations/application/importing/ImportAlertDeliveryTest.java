@@ -19,6 +19,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -53,7 +54,7 @@ class ImportAlertDeliveryTest {
 
     @BeforeEach
     void setUp() {
-        delivery = new ImportAlertDelivery(alerts, sender, new MutableClock(NOW, ZoneId.of("UTC")));
+        delivery = new ImportAlertDelivery(alerts, sender, TransactionOperations.withoutTransaction(), new MutableClock(NOW, ZoneId.of("UTC")));
         logged = new ListAppender<>();
         logged.start();
         logger().addAppender(logged);

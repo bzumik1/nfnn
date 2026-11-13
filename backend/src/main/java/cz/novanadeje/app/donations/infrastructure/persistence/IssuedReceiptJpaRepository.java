@@ -71,7 +71,7 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Page<IssuedReceiptJpaEntity> findByDonorIdAndIssuedOnBetween(UUID donorId, LocalDate from, LocalDate to, Pageable page);
 
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     @Query(nativeQuery = true, value = "select nextval('donation_receipt_number_seq')")
     long nextSerial();
 
