@@ -20,7 +20,7 @@ public record CompanyIdentifier(String value) {
     }
 
     private static boolean hasValidCheckDigit(String digits) {
-        if (digits.length() != LENGTH || !digits.chars().allMatch(Character::isDigit)) {
+        if (digits.length() != LENGTH || !digits.chars().allMatch(CompanyIdentifier::isAsciiDigit)) {
             return false;
         }
         int sum = 0;
@@ -29,6 +29,10 @@ public record CompanyIdentifier(String value) {
         }
         int expected = (11 - (sum % 11)) % 10;
         return Character.digit(digits.charAt(LENGTH - 1), 10) == expected;
+    }
+
+    private static boolean isAsciiDigit(int character) {
+        return character >= '0' && character <= '9';
     }
 
     @Override
