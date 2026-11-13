@@ -13,9 +13,8 @@
   }
 }
 
-.payments-empty-state {
-  display: grid;
-  gap: var(--space-4);
+.receipt-diagnostics {
+  padding-inline: var(--space-4);
 }
 
 .payments-empty {

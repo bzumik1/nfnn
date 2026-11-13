@@ -1758,6 +1758,21 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(element(`${yearSection(2026)} .donation-rows .yearly-pdf`)).toBeNull();
     });
 
+    it('then on a phone a yearly receipt being prepared says so in its row and marks the row busy and unavailable', async () => {
+      compact.set(true);
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      await click(`${yearSection(2025)} .donation-rows .yearly-pdf`);
+
+      const row = button(`${yearSection(2025)} .donation-rows .yearly-pdf`);
+      expect(normalized(row.textContent ?? '')).toBe('Připravujeme PDF…');
+      expect(row.getAttribute('aria-busy')).toBe('true');
+      expect(row.getAttribute('aria-disabled')).toBe('true');
+      receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
+      await settle();
+    });
+
     it('then on a wide screen the yearly receipt is a row of its own list under the table of its year', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());

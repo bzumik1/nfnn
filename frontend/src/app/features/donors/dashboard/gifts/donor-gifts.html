@@ -1,7 +1,7 @@
 <app-page-title i18n="@@donor.gifts.heading">Moje dary</app-page-title>
 
 @if (donations.state() === 'ready') {
-  <app-bank-check class="gifts-bank-check" />
+  <app-bank-check />
   <p class="ui-group-note bank-hint" i18n="@@donor.dashboard.bank.hint">
     Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba se
     tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
@@ -22,7 +22,7 @@
         {{ message }}
       </p>
       @if (donations.offersDiagnostics()) {
-        <app-diagnostics-download class="ui-group-note receipt-diagnostics" source="receipt-pdf" />
+        <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
       }
     }
     @if (donations.items().length > 0) {
@@ -87,10 +87,7 @@
               {{ message }}
             </p>
             @if (donations.offersDiagnostics()) {
-              <app-diagnostics-download
-                class="ui-group-note receipt-diagnostics"
-                source="receipt-pdf"
-              />
+              <app-diagnostics-download class="receipt-diagnostics" source="receipt-pdf" />
             }
           }
         </section>

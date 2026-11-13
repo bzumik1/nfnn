@@ -269,17 +269,32 @@ tr.is-verification td.amount {
 }
 
 @include bp.container-down(donations-table, pair) {
-  .donation-rows .ui-list__row:has(.pairing-tag):not(:has(.ui-list__state)) {
-    > .ui-list__value {
+  .donation-rows.ui-list--inset .ui-list__row {
+    > :is(.ui-list__title, .ui-list__value, .ui-list__meta, .ui-list__state) {
+      grid-column: 1 / -1;
+      justify-self: start;
+      margin-inline-start: 0;
+      text-align: start;
+    }
+
+    > .ui-list__title {
       grid-row: 1;
     }
 
+    > .ui-list__value {
+      grid-row: 2;
+    }
+
     > .ui-list__meta {
-      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+
+    > .ui-list__state {
+      grid-row: 4;
     }
   }
 
-  .donation-rows .pairing-tag {
+  .donation-rows.ui-list--inset .pairing-tag {
     overflow-wrap: normal;
   }
 }

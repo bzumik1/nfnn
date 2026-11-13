@@ -77,6 +77,9 @@ async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
     const split: string[] = [];
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.parentElement?.closest('.visually-hidden')) {
+        continue;
+      }
       for (const number of (node.textContent ?? '').matchAll(/[\d/-]{4,}/g)) {
         const range = document.createRange();
         range.setStart(node, number.index);
@@ -295,15 +298,15 @@ for (const { width, height } of [
       }
     });
 
-    test('when a signed-in donor opens Moje dary, then the symbol and the account end of every pairing tag stay whole within their gift row', async ({
+    test('when a signed-in donor opens Moje dary, then the date, the symbol and the account end of every gift row, a refunded one too, stay whole within it', async ({
       page,
     }) => {
       await mockDonorApi(page, {
         summary: {
           ...noDonations.summary,
-          totalAmountMinor: 125000,
-          count: 2,
-          byYear: [{ year: 2026, count: 2, totalAmountMinor: 125000 }],
+          totalAmountMinor: 325000,
+          count: 3,
+          byYear: [{ year: 2026, count: 3, totalAmountMinor: 325000 }],
         },
         list: {
           items: [
@@ -321,10 +324,19 @@ for (const { width, height } of [
               senderAccount: '2900233333/2010',
               confirmedSymbol: '6123456789',
             }),
+            donationItem({
+              id: 'd-3',
+              receivedAt: '2026-01-20',
+              amountMinor: 200000,
+              status: 'REFUNDED',
+              receiptAvailable: false,
+              pairedBy: 'SENDER_ACCOUNT',
+              senderAccount: '2900233333/2010',
+            }),
           ],
-          totalAmountMinor: 125000,
+          totalAmountMinor: 325000,
           currency: 'CZK',
-          count: 2,
+          count: 3,
         },
       });
       await page.setViewportSize({ width: 1280, height: 900 });
@@ -332,15 +344,14 @@ for (const { width, height } of [
       await openDonorSection(page, 'Moje dary');
       await page.setViewportSize({ width, height });
       const rows = page.locator('.payments-card .donation-rows > li');
-      await expect(rows).toHaveCount(2);
+      await expect(rows).toHaveCount(3);
 
       for (const textSize of ['largest', 'double']) {
         if (textSize === 'double') {
           await page.addStyleTag({ content: 'html { font-size: 32px; }' });
         }
         for (const row of await rows.all()) {
-          const tag = row.locator('.pairing-tag [aria-hidden="true"]');
-          await expect.poll(() => numbersSplitAcrossLines(tag), textSize).toEqual([]);
+          await expect.poll(() => numbersSplitAcrossLines(row), textSize).toEqual([]);
           await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
         }
       }
