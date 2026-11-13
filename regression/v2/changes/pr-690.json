@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > outbound_http_clients_are_used_only_by_infrastructure_adapters",
+    "reason": "Architecture audit #621: the rule now confines every outbound request, not only HTTP clients, to the five reviewed adapters, so its name says that",
+    "replacement": "architecture.AdapterLibraryRulesTest > outbound_requests_are_made_only_by_the_reviewed_adapters",
+    "contract": "docs/api-contract.md, ArchUnit"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.AdapterLibraryRulesTest > template_library_is_used_only_by_infrastructure_adapters",
+    "reason": "Architecture audit #621: Thymeleaf is now confined to the shared mail adapter, its only user, so the rule's name says that",
+    "replacement": "architecture.AdapterLibraryRulesTest > template_library_is_used_only_by_the_shared_mail_adapter",
+    "contract": "docs/api-contract.md, ArchUnit"
+  }
+]
