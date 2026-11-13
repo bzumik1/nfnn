@@ -26,7 +26,7 @@ final class ExpectedVersionArgumentResolver implements HandlerMethodArgumentReso
         Optional<String> sent = Optional.ofNullable(request.getHeader(HttpHeaders.IF_MATCH)).map(String::strip).filter(value -> !value.isEmpty())
                 .map(ExpectedVersionArgumentResolver::unquoted);
         if (sent.isEmpty()) {
-            if (AdministrationChannelArgumentResolver.channelOf(SecurityContextHolder.getContext().getAuthentication()).isConnectedApplication()) {
+            if (AdministrationChannels.of(SecurityContextHolder.getContext().getAuthentication()).isConnectedApplication()) {
                 return ExpectedVersion.none();
             }
             throw new VersionRequiredException();

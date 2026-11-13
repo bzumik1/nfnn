@@ -25,7 +25,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/operations/settings")
 class AdminSettingsController {
 
-
     private final SettingsService settings;
     private final TestEmailRateLimiter testEmailRateLimiter;
 

@@ -107,7 +107,6 @@ class AdminReceiptsController {
         return notStored(AdminReceiptResponse.ofLiveDonor(receipt));
     }
 
-
     private static <T> ResponseEntity<T> notStored(T body) {
         return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE).body(body);
     }

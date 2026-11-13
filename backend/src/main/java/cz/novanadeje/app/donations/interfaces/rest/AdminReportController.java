@@ -31,7 +31,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/donations/report")
 class AdminReportController {
 
-
     private final ReportSettingsService settings;
     private final MonthlyReportService reports;
     private final SentReportService sentReports;
