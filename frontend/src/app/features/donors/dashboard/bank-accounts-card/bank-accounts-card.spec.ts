@@ -138,7 +138,8 @@ describe('Given the bank accounts card in the overview', () => {
       .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
     await settle();
 
-    expect(refresh.cancelled).toBe(true);
+    refresh.flush({ items: [bankAccount()] });
+    await settle();
     await respond([]);
     expect(texts('.account-number')).toHaveLength(0);
   });

@@ -117,7 +117,7 @@ describe("Given an administrator's connected applications card", () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
   });
 
-  it('when the card is opened again and a disconnect fails before the refresh answered, then the list is asked for again and its answer shows', async () => {
+  it('when the card is opened again and a disconnect fails before the refresh answered, then the answer of the refresh is set aside, the list is asked for again and its answer shows', async () => {
     http.expectOne(CONNECTIONS_URL).flush({ items: [CLAUDE_CONNECTION] });
     await settle();
     fixture.destroy();
@@ -132,7 +132,8 @@ describe("Given an administrator's connected applications card", () => {
       .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
     await settle();
 
-    expect(refresh.cancelled).toBe(true);
+    refresh.flush({ items: [CLAUDE_CONNECTION] });
+    await settle();
     http.expectOne(CONNECTIONS_URL).flush({ items: [] });
     await settle();
     expect(root().textContent).not.toContain(CLAUDE_CONNECTION.client);

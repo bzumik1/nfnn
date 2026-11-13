@@ -402,6 +402,25 @@ describe("Given a donor's signed-in devices card", () => {
   });
 
   describe('when the card was shown once and is opened again', () => {
+    async function signOut(device: SignedInDevice, status: 204 | 503): Promise<void> {
+      const name = device === IPHONE ? 'iPhone · Safari' : 'Neznámé zařízení';
+      rows()
+        .find((row) => text(row.querySelector('.device-name')) === name)
+        ?.querySelector<HTMLButtonElement>('button')
+        ?.click();
+      await settle();
+      const request = http.expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${device.id}` });
+      if (status === 204) {
+        request.flush(null, { status: 204, statusText: 'No Content' });
+      } else {
+        request.flush(problem('x', 'Server neodpovídá'), {
+          status: 503,
+          statusText: 'Unavailable',
+        });
+      }
+      await settle();
+    }
+
     beforeEach(async () => {
       await signIn();
       await listed([THIS_MAC, IPHONE]);
@@ -438,33 +457,62 @@ describe("Given a donor's signed-in devices card", () => {
       http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC] });
     });
 
-    it('then a device signed out while the refresh is still on its way does not come back, and the list is asked for again once it is gone', async () => {
+    it('then a device signed out while the refresh is still on its way does not come back with its answer, and the list is asked for again', async () => {
       const refresh = http.expectOne(DEVICES_URL);
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
-      http
-        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
-        .flush(null, { status: 204, statusText: 'No Content' });
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
       await settle();
 
-      expect(refresh.cancelled).toBe(true);
       expect(rows()).toHaveLength(1);
       await listed([THIS_MAC]);
       expect(rows()).toHaveLength(1);
     });
 
-    it('then a sign-out that fails after cutting the refresh off asks for the list again and shows its answer', async () => {
-      http.expectOne(DEVICES_URL);
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
-      http
-        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
-        .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+    it('then a sign-out that fails while the refresh is on its way asks for the list again and shows its answer', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 503);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
       await settle();
 
       await listed([THIS_MAC, IPHONE, UNKNOWN]);
 
       expect(rows()).toHaveLength(3);
+    });
+
+    it('then a second sign-out while the list is asked for again after the first does not bring the second device back', async () => {
+      http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, IPHONE, UNKNOWN] });
+      await settle();
+      fixture.destroy();
+      fixture = TestBed.createComponent(DevicesCard);
+      fixture.detectChanges();
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE, UNKNOWN] });
+      await settle();
+      const again = http.expectOne(DEVICES_URL);
+
+      await signOut(UNKNOWN, 204);
+      again.flush({ items: [THIS_MAC, UNKNOWN] });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      await listed([THIS_MAC]);
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a list asked for again that fails keeps the devices shown, without an error', async () => {
+      const refresh = http.expectOne(DEVICES_URL);
+      await signOut(IPHONE, 204);
+      refresh.flush({ items: [THIS_MAC, IPHONE] });
+      await settle();
+
+      http
+        .expectOne(DEVICES_URL)
+        .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
+      await settle();
+
+      expect(rows()).toHaveLength(1);
+      expect(text(root())).not.toContain('se nepodařilo načíst');
     });
 
     it('then a refresh refused because the session ended still sends the donor to sign in', async () => {

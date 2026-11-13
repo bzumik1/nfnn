@@ -1,16 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { effect, inject, Injectable, untracked } from '@angular/core';
-import {
-  catchError,
-  concat,
-  defer,
-  EMPTY,
-  Observable,
-  of,
-  Subscription,
-  tap,
-  throwError,
-} from 'rxjs';
+import { catchError, concat, defer, EMPTY, Observable, filter, of, tap, throwError } from 'rxjs';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { ConnectedAppList, PasskeyList, SignedInDeviceList } from '../../../core/auth/donor';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
@@ -101,31 +91,43 @@ export class KeptDonorAnswers {
   }
 }
 
-export class KeptRefresh {
-  private running = Subscription.EMPTY;
-  private cut = false;
+export class ListChanges {
+  private changes = 0;
+  private writing = 0;
+  private outdated = false;
 
-  follow(refresh: Subscription): void {
-    this.running = refresh;
+  constructor(private readonly reload: () => void) {}
+
+  track<T>(list: Observable<T>): Observable<T> {
+    this.outdated = false;
+    const startedAt = this.changes;
+    return list.pipe(
+      filter(() => {
+        if (this.changes === startedAt) {
+          return true;
+        }
+        this.outdated = true;
+        this.reloadOnceSettled();
+        return false;
+      }),
+    );
   }
 
-  pause(): void {
-    if (!this.running.closed) {
-      this.running.unsubscribe();
-      this.cut = true;
+  changing(): void {
+    this.changes += 1;
+    this.writing += 1;
+  }
+
+  changed(): void {
+    this.writing = Math.max(0, this.writing - 1);
+    this.reloadOnceSettled();
+  }
+
+  private reloadOnceSettled(): void {
+    if (this.writing === 0 && this.outdated) {
+      this.outdated = false;
+      this.reload();
     }
-  }
-
-  resume(loadAgain: () => void): void {
-    if (this.cut) {
-      this.cut = false;
-      loadAgain();
-    }
-  }
-
-  stop(): void {
-    this.running.unsubscribe();
-    this.cut = false;
   }
 }
 

@@ -63,7 +63,7 @@ import { QrMatrix } from '../../../../shared/ui/qr-code/qr-matrix';
 import { PairingHelp } from './pairing-help/pairing-help';
 import { SymbolClaim, SymbolClaimAnswer } from './symbol-claim/symbol-claim';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, KeptRefresh } from '../kept-donor-answers';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 
 type ListState = 'loading' | 'ready' | 'error';
 
@@ -141,7 +141,7 @@ const PAYMENT_WATCH_CHECKS = 20;
 export class BankAccountsCard {
   private readonly api = inject(BankAccountsApi);
   private readonly kept = inject(KeptDonorAnswers);
-  private readonly refresh = new KeptRefresh();
+  private readonly changes = new ListChanges(() => this.fetch(false, false, true));
   private readonly paymentDetails = inject(PaymentDetailsStore);
   private readonly donations = inject(DonationsApi);
   private readonly live = inject(LiveUpdates);
@@ -276,28 +276,28 @@ export class BankAccountsCard {
     this.fetch();
   }
 
-  private fetch(focusTitle = false, shownBefore = false): void {
-    this.refresh.stop();
-    const behindKept = shownBefore && this.kept.kept('bank-accounts') !== null;
-    const list = behindKept ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
-    const load = list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: ({ items }) => {
-        this.showAccounts(items);
-        if (focusTitle) {
-          afterNextRender(() => this.focusTitle(), { injector: this.injector });
-        }
-      },
-      error: (failure: unknown) => {
-        if (this.sessionHasEnded(failure)) {
-          this.sessionEnded.emit();
-          return;
-        }
-        this.state.set('error');
-      },
-    });
-    if (behindKept) {
-      this.refresh.follow(load);
-    }
+  private fetch(focusTitle = false, shownBefore = false, quietly = false): void {
+    const list = shownBefore ? this.kept.read('bank-accounts', this.api.list()) : this.api.list();
+    this.changes
+      .track(list)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ items }) => {
+          this.showAccounts(items);
+          if (focusTitle) {
+            afterNextRender(() => this.focusTitle(), { injector: this.injector });
+          }
+        },
+        error: (failure: unknown) => {
+          if (this.sessionHasEnded(failure)) {
+            this.sessionEnded.emit();
+            return;
+          }
+          if (!quietly || this.state() !== 'ready') {
+            this.state.set('error');
+          }
+        },
+      });
   }
 
   private showAccounts(items: readonly BankAccountItem[]): void {
@@ -459,7 +459,7 @@ export class BankAccountsCard {
     if (this.busy() !== null) {
       return;
     }
-    this.refresh.pause();
+    this.changes.changing();
     this.busy.set(account.id);
     this.actionError.set('');
     this.actionDone.set('');
@@ -469,6 +469,7 @@ export class BankAccountsCard {
         this.confirming.set(null);
         this.actionDone.set(doneMessage);
         this.fetchAfterChange(this.addAnswer);
+        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.busy.set(null);
@@ -480,9 +481,8 @@ export class BankAccountsCard {
         if (STALE_LIST_STATUSES.includes(problemOf(failure)?.status ?? 0)) {
           this.confirming.set(null);
           this.fetchAfterChange(this.addError);
-        } else {
-          this.refresh.resume(() => this.fetch());
         }
+        this.changes.changed();
       },
     });
   }
@@ -573,11 +573,8 @@ export class BankAccountsCard {
   }
 
   private listAccounts(): Observable<void> {
-    return this.api.list().pipe(
-      map(({ items }: BankAccountListResponse) => {
-        this.refresh.stop();
-        this.showAccounts(items);
-      }),
+    return this.changes.track(this.api.list()).pipe(
+      map(({ items }: BankAccountListResponse) => this.showAccounts(items)),
       catchError((failure: unknown) => {
         if (this.sessionHasEnded(failure)) {
           this.closeAdd();

@@ -8,7 +8,7 @@ import { ConnectedApp } from '../../../../core/auth/donor';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { describeScopes } from '../../connect-app/oauth-scopes';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, KeptRefresh } from '../kept-donor-answers';
+import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 
@@ -23,7 +23,7 @@ export class ConnectedAppsCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
-  private readonly refresh = new KeptRefresh();
+  private readonly changes = new ListChanges(() => this.loadConnections(false, true));
 
   readonly sessionEnded = output<void>();
 
@@ -42,15 +42,15 @@ export class ConnectedAppsCard {
     });
   }
 
-  loadConnections(shownBefore = false): void {
+  loadConnections(shownBefore = false, quietly = false): void {
     this.connectionsError.set('');
     const connections = shownBefore
       ? this.kept.read('connections', this.authApi.connections())
       : this.authApi.connections();
-    const load = connections.subscribe({
+    this.changes.track(connections).subscribe({
       next: (list) => this.connections.set(list.items),
       error: (failure: unknown) => {
-        if (this.sessionLost(failure)) {
+        if (this.sessionLost(failure) || (quietly && this.connections() !== null)) {
           return;
         }
         this.connectionsError.set(
@@ -61,16 +61,13 @@ export class ConnectedAppsCard {
         );
       },
     });
-    if (shownBefore) {
-      this.refresh.follow(load);
-    }
   }
 
   disconnect(app: ConnectedApp): void {
     if (this.disconnecting() !== null) {
       return;
     }
-    this.refresh.pause();
+    this.changes.changing();
     this.disconnecting.set(app.id);
     this.connectionsError.set('');
     this.disconnected.set('');
@@ -79,14 +76,14 @@ export class ConnectedAppsCard {
         this.disconnecting.set(null);
         this.connections.update((apps) => (apps ?? []).filter((other) => other.id !== app.id));
         this.disconnected.set(app.client);
-        this.loadAgainIfCut();
+        this.changes.changed();
       },
       error: (failure: unknown) => {
         this.disconnecting.set(null);
         if (this.sessionLost(failure)) {
           return;
         }
-        this.loadAgainIfCut();
+        this.changes.changed();
         this.connectionsError.set(
           describeProblem(
             failure,
@@ -103,10 +100,6 @@ export class ConnectedAppsCard {
 
   protected formatDate(isoInstant: string): string {
     return formatDonationDate(isoInstant);
-  }
-
-  private loadAgainIfCut(): void {
-    this.refresh.resume(() => this.loadConnections());
   }
 
   private sessionLost(failure: unknown): boolean {

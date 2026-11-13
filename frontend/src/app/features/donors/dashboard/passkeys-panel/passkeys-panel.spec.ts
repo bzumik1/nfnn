@@ -138,7 +138,8 @@ describe('Given the passkeys panel of the sign-in card', () => {
       .flush(problem('x', 'Server neodpovídá'), { status: 503, statusText: 'Unavailable' });
     await settle();
 
-    expect(refresh.cancelled).toBe(true);
+    refresh.flush({ items: [IPHONE, WINDOWS] });
+    await settle();
     http.expectOne(PASSKEYS_URL).flush({ items: [WINDOWS] });
     await settle();
     expect(texts('.passkey-name')).toEqual(['Windows']);
