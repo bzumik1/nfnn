@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
-import cz.novanadeje.app.shared.domain.PrintableText;
+import cz.novanadeje.app.shared.interfaces.rest.PrintableOnReceiptCheck;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
@@ -24,27 +24,9 @@ import java.lang.annotation.Target;
 
     class Validator implements ConstraintValidator<PrintableOnReceipt, String> {
 
-        private static final String BLANK_MESSAGE = "{jakarta.validation.constraints.NotBlank.message}";
-
         @Override
         public boolean isValid(String value, ConstraintValidatorContext context) {
-            if (value == null) {
-                return true;
-            }
-            PrintableText printed = PrintableText.of(value);
-            if (!printed.prints()) {
-                return false;
-            }
-            if (value.isBlank() || !blank(printed.text())) {
-                return true;
-            }
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(BLANK_MESSAGE).addConstraintViolation();
-            return false;
-        }
-
-        private static boolean blank(String text) {
-            return text.codePoints().allMatch(codePoint -> Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint));
+            return PrintableOnReceiptCheck.isValid(value, context);
         }
     }
 }
