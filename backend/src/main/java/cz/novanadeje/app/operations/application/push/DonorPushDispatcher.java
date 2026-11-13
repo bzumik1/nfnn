@@ -89,7 +89,7 @@ public class DonorPushDispatcher {
         if (found.isEmpty()) {
             return found;
         }
-        Set<UUID> signedIn = devices.signedInAmong(found.stream().map(DonorPushSubscription::deviceId).toList());
+        Set<UUID> signedIn = transactions.execute(status -> devices.signedInAmong(found.stream().map(DonorPushSubscription::deviceId).toList()));
         found.stream().filter(subscription -> !signedIn.contains(subscription.deviceId()))
                 .forEach(leftover -> transactions.executeWithoutResult(status -> subscriptions.delete(leftover.id())));
         return found.stream().filter(subscription -> signedIn.contains(subscription.deviceId())).toList();

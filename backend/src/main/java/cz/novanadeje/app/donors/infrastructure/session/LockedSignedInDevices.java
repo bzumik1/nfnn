@@ -46,7 +46,7 @@ class LockedSignedInDevices implements SignedInDevices {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.MANDATORY)
     public Set<UUID> signedInAmong(Collection<UUID> deviceIds) {
         return devices.signedInAmong(deviceIds.stream().map(DeviceId::new).toList(), clock.instant()).stream().map(DeviceId::value)
                 .collect(Collectors.toUnmodifiableSet());
