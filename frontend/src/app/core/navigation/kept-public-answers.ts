@@ -152,6 +152,6 @@ function isGone(failure: unknown): boolean {
     : false;
 }
 
-export function askedAhead(): HttpContext {
-  return new HttpContext().set(ASKED_AHEAD, true);
+export function askedAhead(context = new HttpContext()): HttpContext {
+  return context.set(ASKED_AHEAD, true);
 }

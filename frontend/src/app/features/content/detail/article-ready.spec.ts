@@ -3,19 +3,23 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, convertToParamMap, provideRouter } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
+import { Connectivity } from '../../../core/connectivity/connectivity';
 import { keptPublicAnswersInterceptor } from '../../../core/navigation/kept-public-answers';
 import { ARTICLE_WAIT_MS, articleReady } from './article-ready';
 
 describe('Given an article or a story about to open', () => {
   let http: HttpTestingController;
+  let offline: boolean;
 
   beforeEach(() => {
+    offline = false;
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([keptPublicAnswersInterceptor])),
         provideHttpClientTesting(),
         provideRouter([]),
+        { provide: Connectivity, useValue: { offline: () => offline } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -66,5 +70,12 @@ describe('Given an article or a story about to open', () => {
       .flush(null, { status: 404, statusText: 'Not Found' });
 
     expect(await opening).toBe('opened');
+  });
+
+  it('when the device is offline, then the page opens at once without waiting for an answer', async () => {
+    offline = true;
+
+    expect(await ready('news', 'zahrada-pro-deti')).toBe('opened');
+    http.match('/api/content/news/zahrada-pro-deti').forEach((request) => request.flush({}));
   });
 });

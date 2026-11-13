@@ -338,7 +338,7 @@ test.describe('Given a visitor switching between the tabs', () => {
     news.release();
   });
 
-  test('when a finger rests on an article before opening it, then the article is fetched ahead and opens complete, without its loading line', async ({
+  test('when the pointer rests on an article before opening it, then the article is fetched ahead and opens complete, without its loading line', async ({
     page,
   }) => {
     await newsWithPhotos(page);

@@ -215,11 +215,12 @@ export class NewsApi {
     return this.http.get<NewsPageResponse>(PUBLIC_NEWS, { params: { page, size }, context });
   }
 
-  publishedWithLatest(page: number, size: number): Observable<NewsPageResponse> {
-    return this.http.get<NewsPageResponse>(PUBLIC_NEWS, {
-      params: { page, size },
-      context: refreshedAfterKeptCopy(),
-    });
+  publishedWithLatest(
+    page: number,
+    size: number,
+    context: HttpContext = refreshedAfterKeptCopy(),
+  ): Observable<NewsPageResponse> {
+    return this.http.get<NewsPageResponse>(PUBLIC_NEWS, { params: { page, size }, context });
   }
 
   publishedBySlug(

@@ -4,7 +4,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { CONTENT_AHEAD_AFTER_MS, ContentAhead, SAVES_DATA } from './content-ahead';
+import { REFRESH_AFTER_KEPT_COPY } from '../../core/connectivity/kept-answer-refresh';
+import { CONTENT_AHEAD_AFTER_MS, ContentAhead, HOVER_INTENT_MS, SAVES_DATA } from './content-ahead';
 
 @Component({ template: '<h1>Stránka</h1>' })
 class Page {}
@@ -74,10 +75,33 @@ describe('Given the public content the app gets ready ahead', () => {
     return TAB_LISTS.filter((url) => http.match(url).length > 0);
   }
 
-  it('when a finger touches a link to an article, then the article is asked for before its page opens', () => {
+  it('when a finger touches a link to an article, then the article is asked for before its page opens, with the refresh after a kept copy its page asks for', () => {
     touch(link('/aktuality/zahrada-pro-deti'));
 
+    const asked = http.expectOne('/api/content/news/zahrada-pro-deti');
+    expect(asked.request.context.get(REFRESH_AFTER_KEPT_COPY)).toBe(true);
+    asked.flush({});
+  });
+
+  it('when the pointer rests on a link to an article, then the article is asked for after a short pause, and not when it only passes over it', async () => {
+    const resting = link('/aktuality/zahrada-pro-deti');
+    const passing = link('/aktuality/jina-zprava');
+    passing.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    passing.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+    resting.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+    http.expectNone('/api/content/news/zahrada-pro-deti');
+    await vi.advanceTimersByTimeAsync(HOVER_INTENT_MS);
+
     http.expectOne('/api/content/news/zahrada-pro-deti').flush({});
+    http.expectNone('/api/content/news/jina-zprava');
+  });
+
+  it('when the visitor asked the device to save data, then a touched article is not asked for ahead', () => {
+    savesData = true;
+    touch(link('/aktuality/zahrada-pro-deti'));
+
+    http.expectNone(() => true);
   });
 
   it('when a finger touches a link to a story, then the story is asked for before its page opens', () => {
