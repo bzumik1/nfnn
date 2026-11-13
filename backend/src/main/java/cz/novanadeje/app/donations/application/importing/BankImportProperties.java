@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donations.application.importing;
 
 import cz.novanadeje.app.donations.domain.importing.ImportSettings;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -11,7 +10,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@ConfigurationProperties("app.donations.import")
 public record BankImportProperties(Period overlap, Period historyWindow, String historyFrom, Duration onDemandCooldown) {
 
     private static final Pattern DATE_AT_UTC_MIDNIGHT =

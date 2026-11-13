@@ -1,13 +1,12 @@
-package cz.novanadeje.app.donors.application;
+package cz.novanadeje.app.donors.infrastructure.config;
 
+import cz.novanadeje.app.donors.application.DonorSessionProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -18,7 +17,7 @@ class DonorSessionPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(DonorsApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then a remembered sign-in lasts 14 days")
@@ -51,10 +50,5 @@ class DonorSessionPropertiesTest {
     @DisplayName("Given no remembered length, when the properties are made, then a remembered sign-in lasts 14 days")
     void should_remember_fourteen_days_when_made_given_no_length() {
         assertThat(new DonorSessionProperties(Duration.ofDays(14), null).rememberDays()).isEqualTo(14);
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(DonorSessionProperties.class)
-    static class Support {
     }
 }

@@ -1,13 +1,12 @@
-package cz.novanadeje.app.content.application.media;
+package cz.novanadeje.app.content.infrastructure.config;
 
+import cz.novanadeje.app.content.application.media.UnusedMediaCleanupProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -18,7 +17,7 @@ class UnusedMediaCleanupPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(ContentApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then unused photos are kept for 7 days")
@@ -54,10 +53,5 @@ class UnusedMediaCleanupPropertiesTest {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("app.content.media-cleanup.max-age");
         });
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(UnusedMediaCleanupProperties.class)
-    static class Support {
     }
 }
