@@ -8,6 +8,11 @@ import java.util.Optional;
 
 record SettingRow(String name, String value, boolean sealed, Instant updatedAt) {
 
+    @Override
+    public String toString() {
+        return "SettingRow[" + name + (sealed ? "=sealed" : "=" + value) + ", updatedAt=" + updatedAt + "]";
+    }
+
     Optional<StoredSetting> toDomain() {
         return Setting.named(name).map(setting -> new StoredSetting(setting, value, sealed, updatedAt));
     }

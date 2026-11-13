@@ -17,4 +17,10 @@ public record RegisterDonorCommand(
         String preferredLocale,
         Optional<RegistrationReturn> returnTo
 ) {
+
+    @Override
+    public String toString() {
+        return "RegisterDonorCommand[type=" + type + ", password=" + (password == null ? "none" : "***") + ", preferredLocale=" + preferredLocale
+                + ", returnTo=" + returnTo + "]";
+    }
 }

@@ -13,6 +13,11 @@ record SettingsResponse(List<Item> settings, boolean secretsCanBeStored, String 
 
     record Item(String name, String group, boolean secret, String value, boolean configured, boolean stored, boolean unreadable) {
 
+        @Override
+        public String toString() {
+            return "Item[" + name + "=" + (secret ? "********" : value) + ", configured=" + configured + ", stored=" + stored + ", unreadable=" + unreadable + "]";
+        }
+
         static Item from(SettingView view) {
             return new Item(view.setting().name(), view.setting().group().name(), view.setting().secret(), view.value().orElse(null),
                     view.configured(), view.stored(), view.unreadable());
