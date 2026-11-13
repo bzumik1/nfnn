@@ -21,7 +21,8 @@ import { AuthStore } from '../../../../core/auth/auth-store';
 import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
-import { KeptDonorAnswers, ListChanges } from '../kept-donor-answers';
+import { ListChanges } from '../../../../core/kept/list-changes';
+import { KeptDonorAnswers } from '../kept-donor-answers';
 import { groupDevices } from './device-groups';
 import { deviceName, sessionKindName } from './device-labels';
 

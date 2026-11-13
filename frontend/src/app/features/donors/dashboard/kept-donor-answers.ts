@@ -1,8 +1,7 @@
-import { HttpErrorResponse } from '@angular/common/http';
-import { effect, inject, Injectable, untracked } from '@angular/core';
-import { catchError, concat, defer, EMPTY, Observable, filter, of, tap, throwError } from 'rxjs';
+import { computed, inject, Injectable, Signal } from '@angular/core';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { ConnectedAppList, PasskeyList, SignedInDeviceList } from '../../../core/auth/donor';
+import { KeptAnswers } from '../../../core/kept/kept-answers';
 import { BankAccountItem } from '../../donations/bank-accounts-api';
 import { DonorDonationsRead } from '../../donations/device-copy/donor-donations-repository';
 
@@ -22,120 +21,14 @@ export interface KeptDonorAnswerTypes {
 
 export type KeptDonorAnswer = keyof KeptDonorAnswerTypes;
 
-const SESSION_REFUSED = 401;
-
 @Injectable({ providedIn: 'root' })
-export class KeptDonorAnswers {
-  private readonly donor = inject(AuthStore).donor;
-  private readonly answers = new Map<KeptDonorAnswer, unknown>();
-  private owner: string | null = null;
-
+export class KeptDonorAnswers extends KeptAnswers<KeptDonorAnswerTypes> {
   constructor() {
-    effect(() => {
-      const owner = this.donor()?.id ?? null;
-      untracked(() => this.follow(owner));
-    });
-  }
-
-  read<K extends KeptDonorAnswer>(
-    answer: K,
-    server: Observable<KeptDonorAnswerTypes[K]>,
-  ): Observable<KeptDonorAnswerTypes[K]> {
-    return defer(() => {
-      const askedFor = this.currentOwner();
-      const fresh = server.pipe(tap((value) => this.keepFor(askedFor, answer, value)));
-      const shown = this.kept(answer);
-      if (shown === null) {
-        return fresh;
-      }
-      return concat(
-        of(shown),
-        fresh.pipe(
-          catchError((failure: unknown) =>
-            sessionRefused(failure) ? throwError(() => failure) : EMPTY,
-          ),
-        ),
-      );
-    });
-  }
-
-  kept<K extends KeptDonorAnswer>(answer: K): KeptDonorAnswerTypes[K] | null {
-    this.follow(this.currentOwner());
-    return this.answers.has(answer) ? (this.answers.get(answer) as KeptDonorAnswerTypes[K]) : null;
-  }
-
-  keep<K extends KeptDonorAnswer>(answer: K, value: KeptDonorAnswerTypes[K]): void {
-    this.keepFor(this.currentOwner(), answer, value);
-  }
-
-  private keepFor<K extends KeptDonorAnswer>(
-    owner: string | null,
-    answer: K,
-    value: KeptDonorAnswerTypes[K],
-  ): void {
-    this.follow(this.currentOwner());
-    if (owner !== null && owner === this.owner) {
-      this.answers.set(answer, value);
-    }
-  }
-
-  private currentOwner(): string | null {
-    return untracked(this.donor)?.id ?? null;
-  }
-
-  private follow(owner: string | null): void {
-    if (owner !== this.owner) {
-      this.answers.clear();
-      this.owner = owner;
-    }
+    super(signedInDonor());
   }
 }
 
-export class ListChanges {
-  private changes = 0;
-  private writing = 0;
-  private outdated = false;
-
-  constructor(private readonly reload: () => void) {}
-
-  track<T>(list: Observable<T>): Observable<T> {
-    this.outdated = false;
-    const startedAt = this.changes;
-    const startedDuringChange = this.writing > 0;
-    return list.pipe(
-      filter(() => {
-        if (this.changes === startedAt && !startedDuringChange) {
-          return true;
-        }
-        this.outdated = true;
-        this.reloadOnceSettled();
-        return false;
-      }),
-    );
-  }
-
-  changing(): void {
-    this.changes += 1;
-    this.writing += 1;
-  }
-
-  changed(reloadIfOutdated = true): void {
-    this.writing = Math.max(0, this.writing - 1);
-    if (reloadIfOutdated) {
-      this.reloadOnceSettled();
-    } else if (this.writing === 0) {
-      this.outdated = false;
-    }
-  }
-
-  private reloadOnceSettled(): void {
-    if (this.writing === 0 && this.outdated) {
-      this.outdated = false;
-      this.reload();
-    }
-  }
-}
-
-function sessionRefused(failure: unknown): boolean {
-  return failure instanceof HttpErrorResponse && failure.status === SESSION_REFUSED;
+function signedInDonor(): Signal<string | null> {
+  const donor = inject(AuthStore).donor;
+  return computed(() => donor()?.id ?? null);
 }
