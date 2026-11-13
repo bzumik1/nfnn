@@ -1,8 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.util.regex.Pattern;
 
 public record ContentDigest(String value) {
@@ -21,11 +20,7 @@ public record ContentDigest(String value) {
         if (content == null) {
             throw new IllegalArgumentException("Content to digest is required");
         }
-        try {
-            return new ContentDigest(HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return new ContentDigest(Sha256.hex(content));
     }
 
     @Override

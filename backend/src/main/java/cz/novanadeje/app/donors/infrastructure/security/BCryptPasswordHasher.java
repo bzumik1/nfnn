@@ -3,16 +3,14 @@ package cz.novanadeje.app.donors.infrastructure.security;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.shared.domain.Sha256;
 import cz.novanadeje.app.shared.infrastructure.busy.CpuSlots;
 import cz.novanadeje.app.shared.infrastructure.busy.CpuWork;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.HexFormat;
 
 @Component
 class BCryptPasswordHasher implements PasswordHasher {
@@ -49,15 +47,6 @@ class BCryptPasswordHasher implements PasswordHasher {
     }
 
     private static String digestOf(RawPassword password) {
-        byte[] digest = sha256().digest(password.value().getBytes(StandardCharsets.UTF_8));
-        return HexFormat.of().formatHex(digest);
-    }
-
-    private static MessageDigest sha256() {
-        try {
-            return MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 is part of every Java runtime", e);
-        }
+        return Sha256.hex(password.value().getBytes(StandardCharsets.UTF_8));
     }
 }

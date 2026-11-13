@@ -2,13 +2,11 @@ package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.shared.domain.Sha256;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Year;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -50,19 +48,10 @@ public record ReceiptFingerprint(String value) {
                 .append(line.amount().amountMinor()).append('|')
                 .append(line.amount().currency()).append('\n'));
         canonical.append("total=").append(total.amountMinor()).append('|').append(total.currency()).append('\n');
-        return new ReceiptFingerprint(sha256Hex(canonical.toString()));
+        return new ReceiptFingerprint(Sha256.hex(canonical.toString().getBytes(StandardCharsets.UTF_8)));
     }
 
     private static String escaped(String text) {
         return text.replace("\\", "\\\\").replace("\n", "\\n").replace("|", "\\|");
-    }
-
-    private static String sha256Hex(String text) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
     }
 }

@@ -1,11 +1,10 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.regex.Pattern;
 
 public record DeviceStatusSecret(String value) {
@@ -30,12 +29,7 @@ public record DeviceStatusSecret(String value) {
     }
 
     public String hash() {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return Sha256.hex(value.getBytes(StandardCharsets.US_ASCII));
     }
 
     @Override

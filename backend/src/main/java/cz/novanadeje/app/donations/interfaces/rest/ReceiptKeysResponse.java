@@ -2,10 +2,9 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.signing.PublishedReceiptKey;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
+import cz.novanadeje.app.shared.domain.Sha256;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
@@ -32,12 +31,8 @@ record ReceiptKeysResponse(Foundation foundation, List<Key> keys) {
             content.append('\n').append(key.keyId()).append(' ').append(key.publicKey()).append(' ').append(key.status()).append(' ')
                     .append(key.registeredAt());
         }
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(content.toString().getBytes(StandardCharsets.UTF_8));
-            return "\"" + Base64.getUrlEncoder().withoutPadding().encodeToString(Arrays.copyOf(digest, ETAG_BYTES)) + "\"";
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is part of every Java platform", missing);
-        }
+        byte[] digest = Sha256.digest(content.toString().getBytes(StandardCharsets.UTF_8));
+        return "\"" + Base64.getUrlEncoder().withoutPadding().encodeToString(Arrays.copyOf(digest, ETAG_BYTES)) + "\"";
     }
 
     record Foundation(String name, String companyIdentifier) {

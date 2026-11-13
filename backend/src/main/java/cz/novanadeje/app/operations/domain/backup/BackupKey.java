@@ -1,9 +1,8 @@
 package cz.novanadeje.app.operations.domain.backup;
 
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 
@@ -57,11 +56,7 @@ public record BackupKey(String value) {
     }
 
     public String fingerprint() {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is part of every Java platform", missing);
-        }
+        return Sha256.hex(value.getBytes(StandardCharsets.US_ASCII));
     }
 
     @Override

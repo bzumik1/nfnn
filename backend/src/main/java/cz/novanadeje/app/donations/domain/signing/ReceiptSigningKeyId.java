@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.domain.signing;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Set;
@@ -24,11 +24,7 @@ public record ReceiptSigningKeyId(String value) {
         if (publicKey == null || publicKey.length != PUBLIC_KEY_BYTES) {
             throw new IllegalArgumentException("An Ed25519 public key has " + PUBLIC_KEY_BYTES + " bytes");
         }
-        try {
-            return fromBytes(Arrays.copyOf(MessageDigest.getInstance("SHA-256").digest(publicKey), BYTES));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return fromBytes(Arrays.copyOf(Sha256.digest(publicKey), BYTES));
     }
 
     public static ReceiptSigningKeyId fromBytes(byte[] bytes) {
