@@ -5,7 +5,6 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
-  computed,
   DOCUMENT,
   effect,
   ElementRef,
@@ -16,9 +15,7 @@ import {
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CompactLayout } from '../../../core/layout/compact-layout';
-import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { AppHeader } from '../../../layout/app-header/app-header';
-import { TabBar } from '../../../layout/tab-bar/tab-bar';
 import { AlertsOffer } from '../alerts/offer/alerts-offer';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { SuspendsDialogs } from '../../../shared/ui/dialog/dialog-suspension';
@@ -28,15 +25,7 @@ import { ADMINISTRATION_LOCK } from './administration-lock';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [
-    AlertsOffer,
-    AppHeader,
-    NgComponentOutlet,
-    RouterOutlet,
-    SideNav,
-    SuspendsDialogs,
-    TabBar,
-  ],
+  imports: [AlertsOffer, AppHeader, NgComponentOutlet, RouterOutlet, SideNav, SuspendsDialogs],
   providers: [{ provide: DIALOG_PRESENTATION, useValue: 'sheet' }],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
@@ -46,8 +35,6 @@ export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
   protected readonly navLabel = $localize`:@@admin.nav.label:Správa`;
   protected readonly compact = inject(CompactLayout).isCompact;
-  private readonly chrome = inject(RouteChrome).current;
-  protected readonly tabBar = computed(() => this.compact() && this.chrome().tabBar);
   protected readonly lock = inject(ADMINISTRATION_LOCK);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);

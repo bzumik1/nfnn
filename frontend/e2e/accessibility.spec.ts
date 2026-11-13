@@ -34,6 +34,7 @@ import {
   secondFactorEnrolment,
   secondFactorRecovery,
   secondFactorRequired,
+  leaveAccountForSite,
   longUnusedDevices,
   signedInDevices,
   signIn,
@@ -241,6 +242,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     page,
   }) => {
     await signIn(page);
+    await leaveAccountForSite(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page
       .getByRole('navigation', { name: 'Hlavní sekce' })

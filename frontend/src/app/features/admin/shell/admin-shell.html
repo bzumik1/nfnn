@@ -1,7 +1,7 @@
 <app-header />
 
 <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
-  <div class="admin-content" [class.admin-content--with-tab-bar]="tabBar()">
+  <div class="admin-content">
     <div class="admin-first-download" aria-live="polite">
       @if (!lock.locked() && lock.firstDownload(); as progress) {
         <div class="ui-notice ui-notice--status first-download">
@@ -40,9 +40,5 @@
     }
   </div>
 </app-side-nav>
-
-@if (tabBar()) {
-  <app-tab-bar />
-}
 
 <app-alerts-offer />
