@@ -1013,6 +1013,19 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then the card Poslat dar explains the variable symbol right under the bank details, before the standing order guide', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const lead = element('.send-gift .send-gift-lead') as HTMLElement;
+      expect(element('.send-gift .bank')!.compareDocumentPosition(lead)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(lead.compareDocumentPosition(element('.send-gift app-standing-order')!)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
     it('then a card Poslat dar offers the amounts, the account, the variable symbol and the IBAN with copy buttons and a QR carrying the symbol', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());

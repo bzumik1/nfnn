@@ -26,6 +26,10 @@ let nextId = 0;
   imports: [RouterLink, CopyButton],
   templateUrl: './standing-order.html',
   styleUrl: './standing-order.scss',
+  host: {
+    '[class.ui-list]': 'inset()',
+    '[class.ui-list--inset]': 'inset()',
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StandingOrder {
@@ -36,6 +40,7 @@ export class StandingOrder {
   readonly variableSymbol = input.required<string>();
   readonly account = input<PaymentAccountState | null>(null);
   readonly amount = input<number | null>(null);
+  readonly inset = input(false);
   readonly retryRequested = output<void>();
 
   private readonly toggleButton = viewChild.required<ElementRef<HTMLButtonElement>>('toggleButton');

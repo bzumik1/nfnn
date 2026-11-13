@@ -1,18 +1,40 @@
 <button
   #toggleButton
   type="button"
-  class="ui-link-button standing-toggle"
+  class="standing-toggle"
+  [class.ui-link-button]="!inset()"
+  [class.standing-link]="!inset()"
+  [class.ui-list__row]="inset()"
   [id]="toggleId"
   [attr.aria-controls]="panelId"
   [attr.aria-expanded]="open()"
   (click)="toggle()"
-  i18n="@@donor.standingOrder.toggle"
 >
-  Jak nastavit trvalý příkaz
+  <span [class.ui-list__title]="inset()" i18n="@@donor.standingOrder.toggle"
+    >Jak nastavit trvalý příkaz</span
+  >
+  @if (inset()) {
+    <svg
+      class="ui-list__chevron standing-chevron"
+      [class.ui-list__chevron--open]="open()"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  }
 </button>
 
 <div
   class="standing-panel"
+  [class.standing-box]="!inset()"
   role="region"
   [id]="panelId"
   [attr.aria-labelledby]="toggleId"
@@ -54,6 +76,7 @@
             <app-copy-button
               [value]="state.account.number"
               what="číslo účtu"
+              [tone]="inset() ? 'tinted' : 'light'"
               i18n-what="@@home.donate.bank.copyAccount"
             />
           </dd>
@@ -67,6 +90,7 @@
         <app-copy-button
           [value]="variableSymbol()"
           what="variabilní symbol"
+          [tone]="inset() ? 'tinted' : 'light'"
           i18n-what="@@home.donate.bank.copyVs"
         />
       </dd>

@@ -114,6 +114,10 @@ div.ui-list__row {
   color: var(--color-text-subtle);
 }
 
+.ui-list__chevron--open {
+  transform: rotate(180deg);
+}
+
 .ui-list__state {
   grid-area: state;
   justify-self: end;
@@ -150,7 +154,8 @@ div.ui-list__row {
   box-shadow: var(--shadow-card);
   overflow: clip;
 
-  > li + li {
+  > li + li,
+  > .ui-list__item + .ui-list__item {
     position: relative;
     border-top: 0;
 

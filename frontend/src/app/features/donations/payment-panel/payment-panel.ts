@@ -98,6 +98,7 @@ export type PaymentAccountState =
   providers: [GiftArrivalWatch, RepositoryGiftFeed],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
+  host: { '[class.is-grouped]': 'grouped()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentPanel {
@@ -120,6 +121,7 @@ export class PaymentPanel {
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
+  readonly grouped = input(false);
 
   protected readonly presets: readonly AmountPreset[] = [
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
