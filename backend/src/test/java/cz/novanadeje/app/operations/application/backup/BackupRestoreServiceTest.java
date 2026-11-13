@@ -1,6 +1,6 @@
 package cz.novanadeje.app.operations.application.backup;
 
-import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.operations.domain.backup.BackupFile;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupNotFound;

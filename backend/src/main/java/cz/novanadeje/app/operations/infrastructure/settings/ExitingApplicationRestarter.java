@@ -1,6 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.settings;
 
-import cz.novanadeje.app.operations.application.settings.ApplicationRestarter;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
