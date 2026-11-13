@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import { ShownAnswers } from '../connectivity/shown-answers';
 import { mayComeFromServiceWorker } from '../updates/service-worker-bypass';
 import {
+  AHEAD_ANSWER_FRESH_MS,
   ASKED_AHEAD,
   isKeptPublicAnswer,
   KEPT_ANSWER_MAX_AGE_MS,
@@ -75,13 +76,23 @@ describe('Given the public answers the app keeps in memory', () => {
       );
     }
 
-    it('then an answer not kept yet is asked for and kept for the page', async () => {
+    it('then an answer not kept yet is asked for and kept for the page, which shows it without asking again', async () => {
       const asked = ahead(HOME);
       backend.expectOne(HOME).flush({ news: ['ahead'] });
       await asked;
 
       expect(await get(HOME)).toEqual({ news: ['ahead'] });
+      backend.expectNone(HOME);
+    });
+
+    it('then a page that shows the answer once it is no longer fresh asks again in the background', async () => {
+      const asked = ahead(HOME);
       backend.expectOne(HOME).flush({ news: ['ahead'] });
+      await asked;
+      vi.advanceTimersByTime(AHEAD_ANSWER_FRESH_MS + 1);
+
+      expect(await get(HOME)).toEqual({ news: ['ahead'] });
+      backend.expectOne(HOME).flush({ news: ['later'] });
     });
 
     it('then an answer already kept or on its way is not asked for again', async () => {

@@ -14,6 +14,7 @@ import { ShownAnswers } from '../connectivity/shown-answers';
 export const ASKED_AHEAD = new HttpContextToken<boolean>(() => false);
 export const KEPT_ANSWER_MAX_AGE_MS = 10 * 60 * 1000;
 export const KEPT_ANSWERS_LIMIT = 50;
+export const AHEAD_ANSWER_FRESH_MS = 10_000;
 
 const PUBLIC_CONTENT = [
   /^\/api\/content\/home$/,
@@ -26,6 +27,7 @@ interface KeptAnswer {
   readonly response: HttpResponse<unknown>;
   readonly keptAt: number;
   readonly receivedAt: number;
+  readonly askedAhead: boolean;
 }
 
 export function isKeptPublicAnswer(request: HttpRequest<unknown>): boolean {
@@ -50,7 +52,9 @@ export class KeptPublicAnswers {
       return this.sharedFromServer(key, request, next);
     }
     this.shown.record(key, kept.response.headers, kept.receivedAt);
-    this.refresh(key, request, next);
+    if (!this.freshFromAhead(kept)) {
+      this.refresh(key, request, next);
+    }
     return of(kept.response.clone({ body: structuredClone(kept.response.body) }));
   }
 
@@ -81,6 +85,10 @@ export class KeptPublicAnswers {
     return performance.now() - kept.keptAt > KEPT_ANSWER_MAX_AGE_MS;
   }
 
+  private freshFromAhead(kept: KeptAnswer): boolean {
+    return kept.askedAhead && performance.now() - kept.keptAt <= AHEAD_ANSWER_FRESH_MS;
+  }
+
   private sharedFromServer(
     key: string,
     request: HttpRequest<unknown>,
@@ -107,7 +115,7 @@ export class KeptPublicAnswers {
       tap({
         next: (event) => {
           if (event instanceof HttpResponse) {
-            this.keep(key, event);
+            this.keep(key, event, request.context.get(ASKED_AHEAD));
           }
         },
         error: (failure: unknown) => {
@@ -119,12 +127,13 @@ export class KeptPublicAnswers {
     );
   }
 
-  private keep(key: string, response: HttpResponse<unknown>): void {
+  private keep(key: string, response: HttpResponse<unknown>, askedAhead: boolean): void {
     this.answers.delete(key);
     this.answers.set(key, {
       response: response.clone({ body: structuredClone(response.body) }),
       keptAt: performance.now(),
       receivedAt: Date.now(),
+      askedAhead,
     });
     for (const oldest of this.answers.keys()) {
       if (this.answers.size <= KEPT_ANSWERS_LIMIT) {
