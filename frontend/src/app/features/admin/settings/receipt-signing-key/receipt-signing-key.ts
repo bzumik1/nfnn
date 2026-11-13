@@ -127,7 +127,7 @@ export class ReceiptSigningKey {
   });
 
   constructor() {
-    const shown = this.kept.kept('receipt-signing-keys');
+    const shown = this.onlineAgain.offline() ? null : this.kept.kept('receipt-signing-keys');
     if (shown !== null) {
       this.keys.set(shown);
       this.state.set('ready');

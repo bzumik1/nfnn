@@ -58,7 +58,7 @@ export class ReceiptSignatory {
   protected readonly signatureLabel = $localize`:@@admin.signatory.signatureAlt:Podpis na potvrzení`;
 
   constructor() {
-    const shown = this.kept.kept('receipt-signatory');
+    const shown = this.onlineAgain.offline() ? null : this.kept.kept('receipt-signatory');
     if (shown === null) {
       this.load();
       return;

@@ -236,10 +236,26 @@ describe('Given an administrator who saw the card of who signs the receipts once
 
   afterEach(() => http.verify());
 
-  it('when the refresh behind the kept preview fails offline, then the preview stays and is asked for again once the connection is back', async () => {
+  it('when the card opens offline, then it says who signs shows once online instead of the kept preview', async () => {
     offline.set(true);
     fixture = TestBed.createComponent(ReceiptSignatory);
     fixture.detectChanges();
+    http.expectOne(SIGNATORY_URL).error(new ProgressEvent('error'), { status: 0 });
+    await settle();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Kdo potvrzení podepisuje, ukážeme, až budete online.',
+    );
+    offline.set(false);
+    await settle();
+    await signatoryArrives();
+  });
+
+  it('when the refresh behind the kept preview fails offline, then the preview stays and is asked for again once the connection is back', async () => {
+    fixture = TestBed.createComponent(ReceiptSignatory);
+    fixture.detectChanges();
+    offline.set(true);
+    await settle();
     http.expectOne(SIGNATORY_URL).error(new ProgressEvent('error'), { status: 0 });
     await settle();
 
