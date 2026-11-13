@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorSecondFactorService;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -38,16 +39,16 @@ class DonorSecondFactorController {
 
     @PostMapping("/confirm")
     ResponseEntity<AuthResponse> confirm(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SecondFactorCodeRequest request,
-                                         HttpServletRequest http) {
+                                         HttpServletRequest http, CurrentDevice device) {
         limiter.check(http.getRemoteAddr());
-        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), request.code(), SessionDevices.requesting(jwt, http)), clock.instant());
+        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), request.code(), SessionDevices.requesting(device, http)), clock.instant());
     }
 
     @PostMapping("/disable")
     ResponseEntity<AuthResponse> disable(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SecondFactorDisableRequest request,
-                                         HttpServletRequest http) {
+                                         HttpServletRequest http, CurrentDevice device) {
         limiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
-                secondFactors.disable(DonorId.of(jwt.getSubject()), request.confirmation(), request.code(), SessionDevices.requesting(jwt, http)), clock.instant());
+                secondFactors.disable(DonorId.of(jwt.getSubject()), request.confirmation(), request.code(), SessionDevices.requesting(device, http)), clock.instant());
     }
 }

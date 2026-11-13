@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 import cz.novanadeje.app.donors.application.DonorDevicesService;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -26,8 +27,8 @@ class DonorDevicesController {
     }
 
     @GetMapping
-    DeviceListResponse list(@AuthenticationPrincipal Jwt jwt) {
-        return DeviceListResponse.of(devices.list(DonorId.of(jwt.getSubject()), SessionDevices.current(jwt)));
+    DeviceListResponse list(@AuthenticationPrincipal Jwt jwt, CurrentDevice device) {
+        return DeviceListResponse.of(devices.list(DonorId.of(jwt.getSubject()), SessionDevices.current(device)));
     }
 
     @DeleteMapping("/{id}")
@@ -38,7 +39,7 @@ class DonorDevicesController {
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void signOutOthers(@AuthenticationPrincipal Jwt jwt) {
-        devices.signOutOthers(DonorId.of(jwt.getSubject()), SessionDevices.current(jwt));
+    void signOutOthers(@AuthenticationPrincipal Jwt jwt, CurrentDevice device) {
+        devices.signOutOthers(DonorId.of(jwt.getSubject()), SessionDevices.current(device));
     }
 }

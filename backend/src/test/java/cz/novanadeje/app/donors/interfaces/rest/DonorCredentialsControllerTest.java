@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.DonorCredentialsService;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import cz.novanadeje.app.shared.interfaces.rest.RateLimitExceededException;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +37,7 @@ class DonorCredentialsControllerTest {
         }
 
         assertThatThrownBy(() -> controller.changePassword(JWT, new ChangePasswordRequest("correct horse battery", null, "a brand new passphrase"),
-                requestFrom(ADDRESS)))
+                requestFrom(ADDRESS), CurrentDevice.none()))
                 .isInstanceOf(RateLimitExceededException.class);
 
         verifyNoInteractions(credentials);

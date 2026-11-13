@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import cz.novanadeje.app.shared.infrastructure.live.LiveOpening;
 import cz.novanadeje.app.shared.infrastructure.live.LiveStreamHub;
 import cz.novanadeje.app.shared.infrastructure.live.LiveSubscriber;
@@ -37,7 +38,7 @@ class LiveControllerTest {
         Jwt token = Jwt.withTokenValue("token").header("alg", "HS256").subject(UUID.randomUUID().toString())
                 .issuedAt(NOW).expiresAt(NOW.plusSeconds(900)).build();
 
-        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token));
+        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token, CurrentDevice.none()));
 
         assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(refused.getBody().getType()).hasToString("https://nfnn.cz/problems/live-unavailable");
@@ -55,7 +56,7 @@ class LiveControllerTest {
         messages.setDefaultEncoding("UTF-8");
         messages.setFallbackToSystemLocale(false);
 
-        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token));
+        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token, CurrentDevice.none()));
 
         assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getTitle()).isEqualTo("Živé změny teď nejdou");
         assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getDetail()).isEqualTo("Server se právě spouští nebo zastavuje. Stránka se připojí znovu sama.");
@@ -75,7 +76,7 @@ class LiveControllerTest {
                 .issuedAt(NOW).expiresAt(NOW.plusSeconds(900)).build();
         ArgumentCaptor<LiveSubscriber> subscriber = ArgumentCaptor.forClass(LiveSubscriber.class);
 
-        catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token));
+        catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token, new CurrentDevice(Optional.of(device))));
 
         verify(hub).open(subscriber.capture(), any());
         assertThat(subscriber.getValue()).isEqualTo(new LiveSubscriber(donor, false, Optional.of(device), NOW, NOW.plusSeconds(900)));

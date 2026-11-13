@@ -16,6 +16,7 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,8 +43,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class TokenClaimRulesTest {
 
     private static final Map<String, String> CLAIM_READERS = Map.of(
-            "cz.novanadeje.app.donors.interfaces.rest.SessionDevices", "reads the session id of a browser token for the device sign-outs",
-            "cz.novanadeje.app.operations.interfaces.rest.SessionDevices", "reads the session id of a browser token for the push devices",
             "cz.novanadeje.app.donors.interfaces.rest.SessionRoles", "reads the roles a session was opened with",
             "cz.novanadeje.app.content.interfaces.rest.AdminPeopleController", "until #612, which changes the controller, merges");
 
@@ -60,8 +59,9 @@ class TokenClaimRulesTest {
             .and().resideOutsideOfPackage("cz.novanadeje.app.shared.interfaces..")
             .and(DescribedPredicate.describe("are not named as reading a claim", type -> !CLAIM_READERS.containsKey(type.getName())))
             .should().accessTargetWhere(A_CLAIM_READ)
-            .because("whether a request comes from a browser session or a connected application is read once, by the shared resolver of "
-                    + "AdministrationChannel, so no controller spells the scope claim or decides it on its own (security.md, Connected applications)");
+            .because("whether a request comes from a browser session or a connected application, and which device a browser session names, "
+                    + "are read once, by the shared resolvers of AdministrationChannel and CurrentDevice, so no controller spells the scope or "
+                    + "session claim or decides it on its own (security.md, Connected applications)");
 
     @ArchTest
     static final ArchRule handlers_take_no_principal_expression = methods()
@@ -72,9 +72,15 @@ class TokenClaimRulesTest {
 
     @ArchTest
     static final ArchRule the_channel_is_never_bound_from_the_request = methods()
-            .should(takeTheChannelOnlyBare())
+            .should(takeOnlyBare(AdministrationChannel.class))
             .because("an annotated AdministrationChannel parameter (@RequestParam, @RequestHeader, @PathVariable) would be bound from the request, "
                     + "so the client could name its own channel; a bare one is resolved from the token only");
+
+    @ArchTest
+    static final ArchRule the_current_device_is_never_bound_from_the_request = methods()
+            .should(takeOnlyBare(CurrentDevice.class))
+            .because("an annotated CurrentDevice parameter (@RequestParam, @RequestHeader, @PathVariable) would be bound from the request, "
+                    + "so the client could name another device; a bare one is resolved from the token's session claim only");
 
     @Test
     @DisplayName("Given the classes allowed to read a claim, when they are read, then each exists and still reads one, so the list names no class that is gone or no longer needs it")
@@ -110,15 +116,16 @@ class TokenClaimRulesTest {
         return annotation.get("expression").map(String.class::cast).filter(expression -> !expression.isBlank()).isPresent();
     }
 
-    private static ArchCondition<JavaMethod> takeTheChannelOnlyBare() {
-        return new ArchCondition<>("take an AdministrationChannel only without an annotation") {
+    private static ArchCondition<JavaMethod> takeOnlyBare(Class<?> resolved) {
+        return new ArchCondition<>("take a " + resolved.getSimpleName() + " only without an annotation") {
             @Override
             public void check(JavaMethod method, ConditionEvents events) {
                 method.getParameters().stream()
-                        .filter(parameter -> parameter.getRawType().isEquivalentTo(AdministrationChannel.class))
+                        .filter(parameter -> parameter.getRawType().isEquivalentTo(resolved))
                         .filter(parameter -> !parameter.getAnnotations().isEmpty())
                         .map(JavaParameter::getIndex)
-                        .forEach(index -> events.add(SimpleConditionEvent.violated(method, method.getFullName() + " binds the channel from the request")));
+                        .forEach(index -> events.add(SimpleConditionEvent.violated(method,
+                                method.getFullName() + " binds the " + resolved.getSimpleName() + " from the request")));
             }
         };
     }
@@ -177,5 +184,30 @@ class TokenClaimRulesTest {
                 .singleElement().satisfies(detail -> assertThat(detail).contains("expressed"));
         assertThat(the_channel_is_never_bound_from_the_request.evaluate(planted).getFailureReport().getDetails())
                 .singleElement().satisfies(detail -> assertThat(detail).contains("chosen"));
+    }
+
+    @Test
+    @DisplayName("Given a planted controller that binds the current device from the query and one that takes it bare, when the rule checks it, then only the bound one is reported")
+    void should_report_a_bound_device_when_checked_given_a_planted_controller(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.interfaces.rest.PlantedDeviceController", """
+                package cz.novanadeje.app.planteda.interfaces.rest;
+
+                import cz.novanadeje.app.shared.application.session.CurrentDevice;
+                import org.springframework.web.bind.annotation.RequestParam;
+
+                class PlantedDeviceController {
+
+                    String named(@RequestParam CurrentDevice device) {
+                        return device.toString();
+                    }
+
+                    String session(CurrentDevice device) {
+                        return device.toString();
+                    }
+                }
+                """));
+
+        assertThat(the_current_device_is_never_bound_from_the_request.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().satisfies(detail -> assertThat(detail).contains("named"));
     }
 }
