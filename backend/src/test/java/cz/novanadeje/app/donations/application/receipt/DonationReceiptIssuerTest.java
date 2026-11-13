@@ -55,8 +55,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -65,6 +63,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -108,9 +107,10 @@ class DonationReceiptIssuerTest {
     private final IssuingSignatory signatories = mock(IssuingSignatory.class);
     private final ReceiptSigningKeys signingKeys = mock(ReceiptSigningKeys.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final List<Runnable> afterCommit = new ArrayList<>();
     private final DonationReceiptIssuer issuer = new DonationReceiptIssuer(receipts,
             new ReceiptRequestReader(donations, donorRecords, new FirstReceiptYear(YEAR_2026)), freezer, signatories, signingKeys, FOUNDATION, events,
-            Clock.fixed(NOW, ZoneOffset.UTC));
+            afterCommit::add, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void signedBySignatoryUnderThePublishedOwnKey() {
@@ -237,28 +237,23 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
-    @DisplayName("Given an issue inside a transaction, when the receipt is stored, then the line naming the issued receipt is written only once the transaction commits, and never when it rolls back")
-    void should_log_issued_receipt_only_after_commit_when_issued_in_transaction() {
+    @DisplayName("Given a receipt to issue, when it is stored, then the line naming the issued receipt is handed over to run after the commit and is not written before")
+    void should_hand_issued_receipt_line_over_to_run_after_commit_when_issued() {
         givenDonationsOfJana(jana(), MARCH);
         when(receipts.findActiveForDonation(MARCH.id())).thenReturn(Optional.empty());
         when(receipts.nextSerial()).thenReturn(1L);
         givenFreezer();
         ListAppender<ILoggingEvent> lines = issuerLog();
-        TransactionSynchronizationManager.initSynchronization();
         try {
             issuer.issueForDonation(JANA, MARCH.id(), TODAY);
 
             assertThat(lines.list).isEmpty();
-            List<TransactionSynchronization> afterIssue = TransactionSynchronizationManager.getSynchronizations();
-            afterIssue.forEach(synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
-            assertThat(lines.list).isEmpty();
-            afterIssue.forEach(TransactionSynchronization::afterCommit);
+            assertThat(afterCommit).singleElement().satisfies(Runnable::run);
             assertThat(lines.list).singleElement().satisfies(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.INFO);
                 assertThat(line.getFormattedMessage()).isEqualTo("Issued receipt 2027-000001 (SINGLE) for donor " + JANA);
             });
         } finally {
-            TransactionSynchronizationManager.clearSynchronization();
             ((Logger) LoggerFactory.getLogger(DonationReceiptIssuer.class)).detachAppender(lines);
         }
     }

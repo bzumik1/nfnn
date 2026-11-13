@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when accounts arrive, then each Czech account starts its row with the mark of its bank and a foreign account has none",
+    "replacement": "src/app/features/donors/dashboard/bank-accounts-card/bank-accounts-card.spec.ts > Given the bank accounts card in the overview > when accounts arrive, then each Czech account starts its row with the mark of its bank and a foreign account with a neutral bank mark",
+    "reason": "PR #711 (#708, part of #630; Jakub 2026-11-12: icons per list, all rows or none): every account row of Bankovní účty now leads with an icon, so a foreign account gets the neutral bank mark instead of none",
+    "contract": "docs/frontend-overview.md, Donor area (Bankovní účty)"
+  }
+]

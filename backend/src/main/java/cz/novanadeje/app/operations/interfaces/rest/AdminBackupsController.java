@@ -10,7 +10,6 @@ import cz.novanadeje.app.shared.interfaces.rest.FreshSecondFactorRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -97,7 +96,7 @@ class AdminBackupsController {
                 .header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(download.file().name(), StandardCharsets.UTF_8).build().toString())
-                .body(new FileSystemResource(download.path()));
+                .body(new BackupDownloadResource(download));
     }
 
     @PostMapping("/{fileName}/restore")

@@ -1,11 +1,11 @@
-package cz.novanadeje.app.donors.application;
+package cz.novanadeje.app.donors.infrastructure.config;
 
+import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
+import cz.novanadeje.app.donors.application.RegistrationReminderProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -16,7 +16,7 @@ class RegistrationReminderPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(DonorsApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then the reminder runs hourly for registrations one to seven days old")
@@ -60,10 +60,5 @@ class RegistrationReminderPropertiesTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new RegistrationReminderProperties("-", Duration.ofDays(1), DonorRegistrationExpiryService.RETENTION))
                 .withMessageContaining("app.donors.registration-reminder.window");
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(RegistrationReminderProperties.class)
-    static class Support {
     }
 }

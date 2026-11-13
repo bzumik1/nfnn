@@ -307,6 +307,61 @@ describe('Given an administrator on the administrators page', () => {
     expect(rows()).toHaveLength(1);
   });
 
+  describe('when the page was shown once and is opened again', () => {
+    beforeEach(async () => {
+      peopleArrive([person({ linkedToAccount: false })]);
+      await listed();
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAdministrators);
+      fixture.detectChanges();
+    });
+
+    it('then the administrators show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(rows()).toHaveLength(2);
+
+      peopleArrive();
+      await listed([jana]);
+
+      expect(rows()).toHaveLength(1);
+    });
+
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const refusal = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      peopleArrive();
+      http.expectOne(LIST_URL).flush(refusal.body, refusal.options);
+      fixture.detectChanges();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('then an administrator removed while the refresh is on its way does not come back with its answer', async () => {
+      peopleArrive();
+      const refresh = http.expectOne(LIST_URL);
+      button(rows()[1], 'Odebrat roli správce').click();
+      fixture.detectChanges();
+      button(rows()[1], 'Ano, odebrat').click();
+      fixture.detectChanges();
+      http
+        .expectOne(`/api/admin/donors/administrators/${PETR_ID}`)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const after = http.expectOne(LIST_URL);
+
+      refresh.flush({ items: [jana, petr] });
+      fixture.detectChanges();
+      after.flush({ items: [jana] });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(rows()).toHaveLength(1);
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+    });
+  });
+
   it('when "Ponechat" answers the confirmation, then nothing is sent, the buttons come back and the focus returns to the opener', async () => {
     peopleArrive();
     await listed();

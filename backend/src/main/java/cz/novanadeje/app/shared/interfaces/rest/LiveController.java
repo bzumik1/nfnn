@@ -1,6 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
-import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
+import cz.novanadeje.app.shared.domain.ExpiredAccessToken;
 import cz.novanadeje.app.shared.infrastructure.live.LiveOpening;
 import cz.novanadeje.app.shared.infrastructure.live.LiveStreamHub;
 import cz.novanadeje.app.shared.infrastructure.live.LiveSubscriber;
@@ -43,7 +43,7 @@ class LiveController {
                     .header(ACCEL_BUFFERING, "no")
                     .contentType(MediaType.TEXT_EVENT_STREAM)
                     .body(opened.connection().emitter());
-            case LiveOpening.SessionEnded<SseLiveConnection> ended -> throw new LiveSessionEnded();
+            case LiveOpening.SessionEnded<SseLiveConnection> ended -> throw new ExpiredAccessToken();
             case LiveOpening.Full<SseLiveConnection> full -> throw new RateLimitExceededException(ProblemTypes.of("live-streams-full"));
             case LiveOpening.Unavailable<SseLiveConnection> unavailable -> throw new LiveUnavailableException();
         };
@@ -56,12 +56,5 @@ class LiveController {
     private static boolean administrator(Jwt token) {
         List<String> roles = token.getClaimAsStringList(JwtProperties.ROLES_CLAIM);
         return roles != null && roles.contains(ADMIN_ROLE);
-    }
-
-    static final class LiveSessionEnded extends AuthenticationFailure {
-
-        LiveSessionEnded() {
-            super("auth/expired-token", "The session of this access token ended");
-        }
     }
 }

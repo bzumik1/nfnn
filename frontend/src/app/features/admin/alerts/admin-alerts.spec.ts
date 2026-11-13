@@ -1,3 +1,4 @@
+import { OpenAlerts } from '../../../core/push/open-alerts';
 import type { Mock } from 'vitest';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -756,5 +757,138 @@ describe('Given an administrator on the alerts page', () => {
     await settle();
 
     expect(text('h2')).toBe('Co se hlídá');
+  });
+
+  describe('when the page was shown once and is opened again', () => {
+    const phone = pushSubscription({
+      id: 'push-phone',
+      service: 'apple',
+      current: false,
+      createdAt: '2026-10-30T10:00:00Z',
+      lastDeliveredAt: null,
+      failuresInARow: 0,
+    });
+
+    beforeEach(async () => {
+      withPushApi();
+      await open(adminPush({ subscriptions: [phone, pushSubscription()] }));
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAlerts);
+      fixture.detectChanges();
+    });
+
+    it('then the devices show at once, without the loading line, and are refreshed behind them', async () => {
+      expect(fixture.nativeElement.textContent).not.toContain('Načítáme');
+      expect(sectionText('Další zařízení')).toContain('Apple');
+
+      http
+        .expectOne({ method: 'GET', url: PUSH_URL })
+        .flush(adminPush({ subscriptions: [pushSubscription()] }));
+      await settle();
+
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+    });
+
+    it('then a refresh refused because the role was taken away meanwhile still sends the page to the overview', async () => {
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const forbidden = problem(403, 'auth/forbidden', 'Nemáte oprávnění', 'Jen pro správce.');
+
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(forbidden.body, forbidden.options);
+      await settle();
+
+      expect(navigate).toHaveBeenCalledWith('/darce/prehled');
+    });
+
+    it('then a device removed before the refresh answers does not come back with that answer, and the list is asked for again', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: PUSH_URL });
+      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await settle();
+      http
+        .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+
+      refresh.flush(adminPush({ subscriptions: [phone, pushSubscription()] }));
+      await settle();
+
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(
+        adminPush({
+          subscriptions: [
+            pushSubscription({ alerts: { bankImport: false, backups: true, mail: true } }),
+          ],
+        }),
+      );
+      await settle();
+      expect(switches(section('Toto zařízení')).map((box) => box.checked)).toEqual([
+        false,
+        true,
+        true,
+      ]);
+
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAlerts);
+      fixture.detectChanges();
+      expect(sectionText('Další zařízení')).toContain(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+      http
+        .expectOne({ method: 'GET', url: PUSH_URL })
+        .flush(adminPush({ subscriptions: [pushSubscription()] }));
+      await settle();
+    });
+
+    it('then a switch saved while the refresh answers keeps the saved switch, and the list is asked for again', async () => {
+      const refresh = http.expectOne({ method: 'GET', url: PUSH_URL });
+      const mail = switches(section('Toto zařízení'))[2];
+      mail.checked = false;
+      mail.dispatchEvent(new Event('change'));
+      await settle();
+      const save = http.expectOne({
+        method: 'PUT',
+        url: `${PUSH_URL}/subscriptions/push-this-device/alerts`,
+      });
+
+      refresh.flush(adminPush({ subscriptions: [phone, pushSubscription()] }));
+      await settle();
+      save.flush(pushSubscription({ alerts: { bankImport: true, backups: true, mail: false } }));
+      await settle();
+
+      expect(switches(section('Toto zařízení')).map((box) => box.checked)).toEqual([
+        true,
+        true,
+        false,
+      ]);
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(
+        adminPush({
+          subscriptions: [
+            phone,
+            pushSubscription({ alerts: { bankImport: true, backups: true, mail: false } }),
+          ],
+        }),
+      );
+      await settle();
+      expect(switches(section('Toto zařízení'))[2].checked).toBe(false);
+    });
+
+    it('then the kept answer is not handed to the badge, only the fresh one', async () => {
+      const accept = vi.spyOn(TestBed.inject(OpenAlerts), 'accept');
+      fixture.destroy();
+      fixture = TestBed.createComponent(AdminAlerts);
+      fixture.detectChanges();
+
+      expect(accept).not.toHaveBeenCalled();
+      http
+        .match({ method: 'GET', url: PUSH_URL })
+        .filter((request) => !request.cancelled)
+        .forEach((request) => request.flush(adminPush()));
+      await settle();
+      expect(accept).toHaveBeenCalled();
+    });
   });
 });

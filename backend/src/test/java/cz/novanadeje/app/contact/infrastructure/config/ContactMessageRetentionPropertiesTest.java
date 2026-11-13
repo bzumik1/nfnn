@@ -1,13 +1,12 @@
-package cz.novanadeje.app.contact.application;
+package cz.novanadeje.app.contact.infrastructure.config;
 
+import cz.novanadeje.app.contact.application.ContactMessageRetentionProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -18,7 +17,7 @@ class ContactMessageRetentionPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(ContactApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then contact messages are kept for 365 days")
@@ -48,16 +47,20 @@ class ContactMessageRetentionPropertiesTest {
     }
 
     @Test
+    @DisplayName("Given no configuration at all, when the context starts, then the missing group still fails naming the property")
+    void should_fail_naming_property_when_started_given_no_configuration() {
+        new ApplicationContextRunner().withUserConfiguration(ContactApplicationConfiguration.class).run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("app.contact.retention.max-age");
+        });
+    }
+
+    @Test
     @DisplayName("Given an empty retention, when the context starts, then it fails naming the property")
     void should_fail_naming_property_when_started_given_empty_retention() {
         contexts.withPropertyValues("app.contact.retention.max-age=").run(context -> {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("app.contact.retention.max-age");
         });
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(ContactMessageRetentionProperties.class)
-    static class Support {
     }
 }

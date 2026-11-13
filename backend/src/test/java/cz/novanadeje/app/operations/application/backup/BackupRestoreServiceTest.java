@@ -22,7 +22,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
@@ -56,7 +55,7 @@ class BackupRestoreServiceTest {
     @Test
     @DisplayName("Given a backup on the server, when an administrator restores it, then a restore request names it and the administrator, it is audited and the backend restarts")
     void should_request_restore_when_restored_given_a_backup() {
-        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), Path.of(FILE))));
+        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
 
         RestoreRequest request = service.restoreBackup(ADMIN, FILE);
 
@@ -88,7 +87,7 @@ class BackupRestoreServiceTest {
     @Test
     @DisplayName("Given a restore is already waiting or running, when another is asked for, then it is refused and nothing restarts")
     void should_refuse_restore_when_restored_given_one_pending() {
-        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), Path.of(FILE))));
+        when(store.open(FILE)).thenReturn(Optional.of(new BackupDownload(new BackupFile(FILE, 1590, NOW), InputStream::nullInputStream)));
         when(store.restorePending()).thenReturn(true);
 
         assertThatThrownBy(() -> service.restoreBackup(ADMIN, FILE)).isInstanceOf(RestorePending.class);

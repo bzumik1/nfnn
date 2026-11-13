@@ -67,6 +67,11 @@
   color: var(--color-accent);
 }
 
+.ui-badge--neutral {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
 .ui-mono {
   font-family: var(--font-mono);
   font-variant-numeric: var(--numeric-figures);

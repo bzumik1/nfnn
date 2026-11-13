@@ -14,6 +14,8 @@ import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.env.MockEnvironment;
@@ -82,6 +84,16 @@ class StoredSettingsIntegrationTest {
 
         assertThat(validator.validate(Map.of(), candidate, Set.of(Setting.MAIL_PORT, Setting.PAIRING_EXCLUDED_ACCOUNTS)))
                 .containsExactly(SettingError.of(Setting.PAIRING_EXCLUDED_ACCOUNTS, SettingProblem.REJECTED_AT_STARTUP));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SESSION_REMEMBER_DAYS, 99", "FIO_HISTORY_FROM, 1. 1. 2025", "ADMIN_EMAILS, not-an-address"})
+    @DisplayName("Given a value a record the application uses would refuse at startup, when validated as at startup, then that setting is named")
+    void should_name_setting_when_validated_given_value_an_application_record_refuses(Setting setting, String value) {
+        Map<Setting, String> candidate = Map.of(Setting.MAIL_PORT, "587", setting, value);
+
+        assertThat(validator.validate(Map.of(), candidate, Set.of(Setting.MAIL_PORT, setting)))
+                .containsExactly(SettingError.of(setting, SettingProblem.REJECTED_AT_STARTUP));
     }
 
     @Test

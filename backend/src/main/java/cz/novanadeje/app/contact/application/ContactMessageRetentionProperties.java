@@ -1,10 +1,7 @@
 package cz.novanadeje.app.contact.application;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
 
-@ConfigurationProperties("app.contact.retention")
 public record ContactMessageRetentionProperties(Duration maxAge) {
 
     public ContactMessageRetentionProperties {

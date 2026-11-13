@@ -1,10 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
 
-@ConfigurationProperties("app.donors.passkeys")
 public record PasskeyProperties(Duration challengeTtl, int maxPerDonor, String relyingPartyName) {
 
     private static final String PREFIX = "app.donors.passkeys.";

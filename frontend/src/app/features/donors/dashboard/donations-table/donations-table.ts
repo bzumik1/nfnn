@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, TemplateRef } from '@angular/core';
 import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
@@ -25,7 +25,7 @@ export function donationStatusLabel(status: DonationStatus): string {
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '[class.ui-card]': 'inset() && !rows()' },
+  host: { '[class.donations-table--card]': 'inset() && !rows()' },
 })
 export class DonationsTable {
   protected readonly donations = inject(DonorDonations);
@@ -36,6 +36,7 @@ export class DonationsTable {
   readonly inset = input(false);
   readonly errorsAtRows = input(false);
   readonly labelledBy = input<string | null>(null);
+  readonly lastRow = input<TemplateRef<unknown> | null>(null);
 
   protected crowns(amountMinor: number): string {
     return formatMinorUnits(amountMinor);

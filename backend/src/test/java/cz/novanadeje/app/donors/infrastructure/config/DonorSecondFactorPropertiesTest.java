@@ -1,11 +1,10 @@
-package cz.novanadeje.app.donors.application;
+package cz.novanadeje.app.donors.infrastructure.config;
 
+import cz.novanadeje.app.donors.application.DonorSecondFactorProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -16,7 +15,7 @@ class DonorSecondFactorPropertiesTest {
 
     private final ApplicationContextRunner contexts = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
-            .withUserConfiguration(Support.class);
+            .withUserConfiguration(DonorsApplicationConfiguration.class);
 
     @Test
     @DisplayName("Given only application.yml, when the context starts, then a sign-in code waits five minutes for five attempts and a recovery by payment stays open fourteen days")
@@ -37,10 +36,5 @@ class DonorSecondFactorPropertiesTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ZERO))
                 .withMessageContaining("app.donors.second-factor.recovery-ttl");
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(DonorSecondFactorProperties.class)
-    static class Support {
     }
 }

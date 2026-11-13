@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
@@ -103,12 +104,27 @@ tr.is-verification td.amount {
   font-size: var(--text-sm);
 }
 
+.download-btn.ui-pill-button {
+  @include touch-target.reaches-finger-size;
+
+  max-width: 100%;
+  white-space: normal;
+}
+
+.donation-table-card {
+  margin-bottom: 0;
+}
+
+.donation-last-list {
+  margin-top: var(--space-3);
+}
+
 .receipt-note {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
-.download-btn {
+.download-btn:not(.ui-pill-button) {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   border: none;
@@ -249,5 +265,36 @@ tr.is-verification td.amount {
   .row-receipt-error,
   .receipt-diagnostics {
     max-width: none;
+  }
+}
+
+@include bp.container-down(donations-table, pair) {
+  .donation-rows.ui-list--inset .ui-list__row {
+    > :is(.ui-list__title, .ui-list__value, .ui-list__meta, .ui-list__state) {
+      grid-column: 1 / -1;
+      justify-self: start;
+      margin-inline-start: 0;
+      text-align: start;
+    }
+
+    > .ui-list__title {
+      grid-row: 1;
+    }
+
+    > .ui-list__value {
+      grid-row: 2;
+    }
+
+    > .ui-list__meta {
+      grid-row: 3;
+    }
+
+    > .ui-list__state {
+      grid-row: 4;
+    }
+  }
+
+  .donation-rows.ui-list--inset .pairing-tag {
+    overflow-wrap: normal;
   }
 }

@@ -25,6 +25,8 @@ import { PeopleApi, PersonResponse } from '../../content/people-api';
 import { AdminApi, AdministratorResponse } from '../admin-api';
 import { portraitsByEmail } from '../people/portraits-by-email';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { ListChanges } from '../../../core/kept/list-changes';
+import { KeptAdministrationAnswers } from '../kept-administration-answers';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -54,6 +56,8 @@ const FORBIDDEN = 'auth/forbidden';
 export class AdminAdministrators {
   private readonly api = inject(AdminApi);
   private readonly people = inject(PeopleApi);
+  private readonly kept = inject(KeptAdministrationAnswers);
+  private readonly changes = new ListChanges(() => this.load(false, true));
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly loginDialog = inject(LoginDialogService);
@@ -82,33 +86,38 @@ export class AdminAdministrators {
   protected email = '';
 
   constructor() {
-    this.load();
+    this.load(true);
     this.loadPortraits();
     afterNextRender(() => this.title().nativeElement.focus(), { injector: this.injector });
   }
 
-  protected load(): void {
-    this.state.set('loading');
-    this.api
-      .administrators()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (list) => {
-          this.items.set(list.items);
-          this.state.set('ready');
-        },
-        error: (failure: unknown) => {
-          if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
-            this.sendToSignIn();
-            return;
-          }
-          if (problemTypeEndsWith(failure, FORBIDDEN)) {
-            this.router.navigateByUrl('/darce/prehled');
-            return;
-          }
-          this.state.set('error');
-        },
-      });
+  protected load(shownBefore = false, quietly = false): void {
+    if (this.state() !== 'ready') {
+      this.state.set('loading');
+    }
+    const server = this.changes.track(this.api.administrators());
+    const list = shownBefore ? this.kept.read('administrators', server) : server;
+    list.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (answer) => {
+        this.items.set(answer.items);
+        this.state.set('ready');
+        this.kept.keep('administrators', answer);
+      },
+      error: (failure: unknown) => {
+        if (problemTypeEndsWith(failure, UNAUTHENTICATED)) {
+          this.sendToSignIn();
+          return;
+        }
+        if (problemTypeEndsWith(failure, FORBIDDEN)) {
+          this.router.navigateByUrl('/darce/prehled');
+          return;
+        }
+        if (quietly && this.state() === 'ready') {
+          return;
+        }
+        this.state.set('error');
+      },
+    });
   }
 
   protected portraitOf(item: AdministratorResponse): string | null {
@@ -126,6 +135,7 @@ export class AdminAdministrators {
     this.busy.set(true);
     this.grantError.set(null);
     this.notice.set(null);
+    this.changes.changing();
     this.api
       .grantAdministration(this.email.trim())
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -140,11 +150,13 @@ export class AdminAdministrators {
               ? $localize`:@@admin.administrators.grant.doneWithFactor:${added.name}:name: je teď správce. Správa se mu otevře po dalším přihlášení.`
               : $localize`:@@admin.administrators.grant.done:${added.name}:name: je teď správce. Správa se mu otevře, až se přihlásí s kódem z ověřovací aplikace nebo přístupovým klíčem.`,
           });
+          this.changes.changed(false);
           this.load();
           this.focusAfterRender(() => this.noticeElement());
         },
         error: (failure: unknown) => {
           this.busy.set(false);
+          this.changes.changed();
           this.grantError.set(
             describeProblem(
               failure,
@@ -210,17 +222,20 @@ export class AdminAdministrators {
     }
     const opener = this.openerOf(this.pending());
     this.busy.set(true);
+    this.changes.changing();
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.pending.set(null);
         this.notice.set({ kind: 'status', text: done });
+        this.changes.changed(false);
         this.load();
         this.focusAfterRender(() => this.noticeElement());
       },
       error: (failure: unknown) => {
         this.busy.set(false);
         this.pending.set(null);
+        this.changes.changed();
         this.notice.set({ kind: 'alert', text: describeProblem(failure, failed) });
         this.focusAfterRender(() => opener() ?? this.noticeElement());
       },
@@ -228,8 +243,8 @@ export class AdminAdministrators {
   }
 
   private loadPortraits(): void {
-    this.people
-      .load()
+    this.kept
+      .read('people', this.people.load())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (people) => this.members.set(people.members),

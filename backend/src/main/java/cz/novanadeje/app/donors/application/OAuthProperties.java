@@ -1,10 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
 
-@ConfigurationProperties("app.donors.oauth")
 public record OAuthProperties(String issuer, String authorizationPath, Duration authorizationCodeTtl, String mcpResource, String apiResource) {
 
     private static final String PREFIX = "app.donors.oauth.";

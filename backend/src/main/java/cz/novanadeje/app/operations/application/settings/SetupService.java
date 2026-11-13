@@ -20,8 +20,6 @@ import cz.novanadeje.app.operations.domain.settings.SetupLocked;
 import cz.novanadeje.app.operations.domain.settings.SetupStateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,7 +62,6 @@ public class SetupService {
         this.code = SetupCode.generate(new SecureRandom());
     }
 
-    @EventListener(ApplicationReadyEvent.class)
     @Transactional(readOnly = true)
     public void announceCodeWhileRequired() {
         if (!state.isCompleted()) {
