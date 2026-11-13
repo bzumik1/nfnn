@@ -89,22 +89,6 @@ label.ui-list__row {
   color: var(--color-accent);
 }
 
-.ui-grouped .ui-list--inset .ui-list__row--action > .ui-list__title {
-  font-weight: var(--weight-regular);
-}
-
-.ui-grouped .ui-list--inset:not(dialog .ui-list--inset) > li + li {
-  position: relative;
-  border-top: 0;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto var(--space-4);
-    border-top: 1px solid var(--color-separator);
-  }
-}
-
 .ui-switch {
   appearance: none;
   position: relative;

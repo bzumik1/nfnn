@@ -13,6 +13,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { PageTitle } from '../../donors/dashboard/page-title/page-title';
 import { type FoundProof, ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
 import { type FinalOutcome, VerificationResult } from './verification-result';
@@ -23,7 +25,7 @@ const PAGE_PATH = '/overit';
 
 @Component({
   selector: 'app-verification-page',
-  imports: [ProofInput, VerificationResult],
+  imports: [PageTitle, ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
   styleUrls: ['./verification-page.scss', './verdict-card.scss'],
   host: { class: 'ui-grouped' },
@@ -37,6 +39,7 @@ export class VerificationPage {
   private readonly destroyRef = inject(DestroyRef);
   private fragment: string | null = null;
   protected readonly scanned = signal(false);
+  protected readonly compact = inject(CompactLayout).isCompact;
   private run = 0;
 
   protected readonly page = signal<PageState>({ state: 'checking' });

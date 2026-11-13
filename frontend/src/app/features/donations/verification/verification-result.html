@@ -1,13 +1,10 @@
 <section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
-  <div class="ui-status__icon ui-status__icon--{{ tone() }}" aria-hidden="true">{{ icon() }}</div>
+  <span class="ui-list__tile ui-list__tile--{{ tile() }} verify-tone" aria-hidden="true">{{
+    icon()
+  }}</span>
   @switch (kind()) {
     @case ('signed') {
-      <h2
-        id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
-        tabindex="-1"
-        i18n="@@donor.verify.signed.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.signed.title">
         Podepsáno fondem Nová naděje
       </h2>
       <p class="verify-lead" i18n="@@donor.verify.signed.text">
@@ -17,7 +14,7 @@
     @case ('signed-no-answer') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.signedNoAnswer.title"
       >
@@ -32,7 +29,7 @@
     @case ('replaced') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.replaced.title"
       >
@@ -47,7 +44,7 @@
     @case ('withdrawn') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.withdrawn.title"
       >
@@ -62,7 +59,7 @@
     @case ('outdated') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.outdated.title"
       >
@@ -77,7 +74,7 @@
     @case ('unrecorded') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unrecorded.title"
       >
@@ -92,7 +89,7 @@
     @case ('invalid') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.invalid.title"
       >
@@ -107,7 +104,7 @@
     @case ('revoked') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.revoked.title"
       >
@@ -122,7 +119,7 @@
     @case ('unknown-key-online') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.onlineTitle"
       >
@@ -137,7 +134,7 @@
     @case ('unknown-key-offline') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.offlineTitle"
       >
@@ -151,7 +148,7 @@
     @case ('unknown-key-no-answer') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.noAnswerTitle"
       >
@@ -165,7 +162,7 @@
     @case ('no-connection') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.noConnection.title"
       >
@@ -179,7 +176,7 @@
     @case ('no-answer') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.noAnswer.title"
       >
@@ -192,7 +189,7 @@
     @case ('keys-refused') {
       <h2
         id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.keysRefused.title"
       >
@@ -205,12 +202,7 @@
       </p>
     }
     @case ('broken') {
-      <h2
-        id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
-        tabindex="-1"
-        i18n="@@donor.verify.broken.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.broken.title">
         Odkaz je neúplný
       </h2>
       @if (scanned()) {
@@ -226,12 +218,7 @@
       }
     }
     @case ('newer') {
-      <h2
-        id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
-        tabindex="-1"
-        i18n="@@donor.verify.newer.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.newer.title">
         Tento kód je novější než stránka
       </h2>
       <p class="verify-lead" i18n="@@donor.verify.newer.text">
@@ -241,12 +228,7 @@
       </p>
     }
     @case ('failed') {
-      <h2
-        id="verify-title"
-        class="ui-card__title ui-card__title--large verify-card__title"
-        tabindex="-1"
-        i18n="@@donor.verify.failed.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.failed.title">
         Ověření se nepodařilo
       </h2>
       <p class="verify-lead" i18n="@@donor.verify.failed.text">
@@ -315,85 +297,101 @@
 </section>
 
 @if (receipt(); as data) {
-  <div class="verify-data-group">
-    <h2 class="ui-group-title" i18n="@@donor.verify.data.title">Údaje v kódu</h2>
-    <dl class="verify-data">
-      <div>
-        <dt i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
-        <dd class="ui-figures">{{ data.number }}</dd>
+  <section class="verify-data-group" aria-labelledby="verify-data-title">
+    <h2 id="verify-data-title" class="ui-group-title" i18n="@@donor.verify.data.title">
+      Údaje v kódu
+    </h2>
+    <dl class="ui-list ui-list--inset ui-list--fields verify-data">
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value ui-figures">{{ data.number }}</span>
+        </dd>
       </div>
-      <div>
-        <dt i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
-        <dd>{{ data.issuedOn }}</dd>
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.issuedOn }}</span>
+        </dd>
       </div>
       @if (data.replaces; as replaced) {
-        <div>
-          <dt i18n="@@donor.verify.data.replaces">Nahrazuje potvrzení</dt>
-          <dd i18n="@@donor.verify.data.replacesValue">
-            {{ replaced.number }} ze dne {{ replaced.issuedOn }}
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.replaces">
+            Nahrazuje potvrzení
+          </dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value" i18n="@@donor.verify.data.replacesValue"
+              >{{ replaced.number }} ze dne {{ replaced.issuedOn }}</span
+            >
           </dd>
         </div>
       }
-      <div>
-        <dt i18n="@@donor.verify.data.donor">Dárce</dt>
-        <dd>{{ data.donorName }}</dd>
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.donor">Dárce</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.donorName }}</span>
+        </dd>
       </div>
       @if (data.donorIdentifier) {
-        <div>
-          <dt i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
-          <dd>{{ data.donorIdentifier }}</dd>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.donorIdentifier }}</span>
+          </dd>
         </div>
       }
-      <div>
-        <dt i18n="@@donor.verify.data.address">Adresa</dt>
-        <dd>{{ data.donorAddress }}</dd>
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.address">Adresa</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.donorAddress }}</span>
+        </dd>
       </div>
       @if (data.year === null) {
-        <div>
-          <dt i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
-          <dd>{{ data.gifts[0].receivedOn }}</dd>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.gifts[0].receivedOn }}</span>
+          </dd>
         </div>
-        <div>
-          <dt i18n="@@donor.verify.data.amount">Částka</dt>
-          <dd class="ui-figures">{{ data.total }}</dd>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.amount">Částka</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
+          </dd>
         </div>
       } @else {
-        <div>
-          <dt i18n="@@donor.verify.data.year">Za rok</dt>
-          <dd>{{ data.year }}</dd>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.year">Za rok</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.year }}</span>
+          </dd>
         </div>
-        <div>
-          <dt i18n="@@donor.verify.data.total">Celkem</dt>
-          <dd class="ui-figures">{{ data.total }}</dd>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.total">Celkem</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
+          </dd>
         </div>
       }
     </dl>
-    @if (data.year !== null) {
-      <table class="verify-gifts">
-        <caption class="ui-group-title" i18n="@@donor.verify.data.gifts">
-          Jednotlivé dary ({{
-            data.gifts.length
-          }})
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col" i18n="@@donor.verify.data.receivedOn">Přijato</th>
-            <th scope="col" class="verify-gifts__amount" i18n="@@donor.verify.data.giftAmount">
-              Částka
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (gift of data.gifts; track $index) {
-            <tr>
-              <th scope="row">{{ gift.receivedOn }}</th>
-              <td class="verify-gifts__amount ui-figures">{{ gift.amount }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
-  </div>
+  </section>
+  @if (data.year !== null) {
+    <section class="verify-gifts" aria-labelledby="verify-gifts-title">
+      <h3 id="verify-gifts-title" class="ui-group-title" i18n="@@donor.verify.data.gifts">
+        Jednotlivé dary ({{ data.gifts.length }})
+      </h3>
+      <ul class="ui-list ui-list--inset">
+        @for (gift of data.gifts; track $index) {
+          <li>
+            <div class="ui-list__row">
+              <span class="ui-list__title">{{ gift.receivedOn }}</span
+              >&ngsp;<span class="ui-list__value ui-figures">{{ gift.amount }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
 }
 
 @if (checked()) {

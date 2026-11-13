@@ -113,11 +113,11 @@ describe('Given the verification page', () => {
   }
 
   function tone(): string {
-    return text('.ui-status__icon');
+    return text('.verify-tone');
   }
 
   function lead(): string {
-    return text('.verify-lead');
+    return text('.verify-intro') || text('.verify-lead');
   }
 
   function button(name: string): HTMLButtonElement | undefined {
@@ -270,7 +270,7 @@ describe('Given the verification page', () => {
         'Dar ze dne': '3. 11. 2026',
         Částka: '2 500 Kč',
       });
-      expect(root().querySelector('table')).toBeNull();
+      expect(root().querySelector('[aria-labelledby="verify-gifts-title"]')).toBeNull();
     });
 
     it('then it says what left the device for the status check', () => {
@@ -297,24 +297,13 @@ describe('Given the verification page', () => {
       'Za rok': '2026',
       Celkem: '1 750,50 Kč',
     });
-    const rows = Array.from(root().querySelectorAll('tbody tr')).map((row) =>
-      Array.from(row.children).map((cell) => [
-        cell.tagName.toLowerCase(),
-        cell.getAttribute('scope'),
-        cell.textContent?.trim(),
-      ]),
-    );
-    expect(rows).toEqual([
-      [
-        ['th', 'row', '15. 3. 2026'],
-        ['td', null, '500 Kč'],
-      ],
-      [
-        ['th', 'row', '3. 11. 2026'],
-        ['td', null, '1 250,50 Kč'],
-      ],
-    ]);
-    expect(text('caption')).toBe('Jednotlivé dary (2)');
+    const gifts = root().querySelector('[aria-labelledby="verify-gifts-title"]');
+    expect(gifts?.querySelector('h3')?.textContent?.trim()).toBe('Jednotlivé dary (2)');
+    expect(
+      Array.from(gifts?.querySelectorAll('li') ?? [], (row) =>
+        row.textContent?.replace(/\s+/g, ' ').trim(),
+      ),
+    ).toEqual(['15. 3. 2026 500 Kč', '3. 11. 2026 1 250,50 Kč']);
   });
 
   it('when the receipt is signed but checked offline, then it stays signed and says a replacement cannot be seen', async () => {

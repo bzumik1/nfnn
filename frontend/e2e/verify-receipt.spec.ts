@@ -86,7 +86,7 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
 
       await expect(verdictHeading(page)).toHaveText(heading);
       await expect(page.getByText(SIGNED)).toHaveCount(0);
-      await expect(page.locator('.ui-status__icon')).not.toHaveText('✓');
+      await expect(page.locator('.verify-tone')).not.toHaveText('✓');
     });
   }
 
@@ -99,8 +99,9 @@ test.describe('Given a visitor who scans the verification QR of a receipt', () =
     await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
 
     await expect(verdictHeading(page)).toHaveText(SIGNED);
-    await expect(page.getByRole('table', { name: 'Jednotlivé dary (12)' })).toBeVisible();
-    await expect(page.locator('tbody tr')).toHaveCount(12);
+    const gifts = page.getByRole('region', { name: 'Jednotlivé dary (12)' });
+    await expect(gifts).toBeVisible();
+    await expect(gifts.getByRole('listitem')).toHaveCount(12);
   });
 
   test('when the data in the code were changed, then the page says the signature does not match', async ({
@@ -283,7 +284,7 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
     await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
     await expect(verdictHeading(page)).toHaveText(NO_ANSWER);
-    await expect(page.locator('.ui-status__icon')).toHaveText('!');
+    await expect(page.locator('.verify-tone')).toHaveText('!');
     await expect(page.getByText('Bez připojení')).toHaveCount(0);
   });
 
@@ -312,7 +313,7 @@ test.describe('Given a visitor who is online while the fund gives no usable answ
       await page.goto(`/overit#${SINGLE_RECEIPT.fragment}`);
 
       await expect(verdictHeading(page)).toHaveText(NO_ANSWER);
-      await expect(page.locator('.ui-status__icon')).toHaveText('!');
+      await expect(page.locator('.verify-tone')).toHaveText('!');
       await expect(page.getByRole('button', { name: 'Zkusit znovu' })).toBeVisible();
       await expect(
         page.getByText(

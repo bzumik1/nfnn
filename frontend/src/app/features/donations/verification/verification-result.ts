@@ -48,6 +48,12 @@ const TONES: Readonly<Record<ResultKind, Tone>> = {
 
 const ICONS: Readonly<Record<Tone, string>> = { success: '✓', caution: '!', danger: '×' };
 
+const TILES: Readonly<Record<Tone, string>> = {
+  success: 'success',
+  caution: 'warning',
+  danger: 'danger',
+};
+
 const RETRIABLE: readonly ResultKind[] = [
   'signed-no-answer',
   'unknown-key-offline',
@@ -88,6 +94,7 @@ export class VerificationResult {
   protected readonly kind = computed(() => kindOf(this.outcome()));
   protected readonly tone = computed(() => TONES[this.kind()]);
   protected readonly icon = computed(() => ICONS[this.tone()]);
+  protected readonly tile = computed(() => TILES[this.tone()]);
   protected readonly status = computed(() => {
     const outcome = this.outcome();
     return outcome.state === 'signed' ? outcome.status : null;
