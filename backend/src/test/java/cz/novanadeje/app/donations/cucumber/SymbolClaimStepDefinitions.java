@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Clock;
@@ -24,12 +25,14 @@ public class SymbolClaimStepDefinitions {
     private final ScenarioDonors scenarioDonors;
     private final SymbolClaimRepository claims;
     private final ApiClient api;
+    private final TransactionTemplate transaction;
     private final Clock clock;
 
-    public SymbolClaimStepDefinitions(ScenarioDonors scenarioDonors, SymbolClaimRepository claims, ApiClient api, Clock clock) {
+    public SymbolClaimStepDefinitions(ScenarioDonors scenarioDonors, SymbolClaimRepository claims, ApiClient api, TransactionTemplate transaction, Clock clock) {
         this.scenarioDonors = scenarioDonors;
         this.claims = claims;
         this.api = api;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
@@ -38,7 +41,8 @@ public class SymbolClaimStepDefinitions {
         Instant now = clock.instant();
         SymbolClaim claim = SymbolClaim.answer(SymbolClaimId.newId(now), donor(alias), senderAccount(account), new VariableSymbol(symbol),
                 SymbolClaimAnswer.CONFIRMED, now);
-        assertThat(claims.saveIfAbsent(claim)).withFailMessage("\"%s\" has already answered symbol %s from %s", alias, symbol, account).isTrue();
+        Boolean saved = transaction.execute(status -> claims.saveIfAbsent(claim));
+        assertThat(saved).withFailMessage("\"%s\" has already answered symbol %s from %s", alias, symbol, account).isTrue();
     }
 
     @Then("the confirmation paired {int} payment(s) and changed no yearly receipt")
