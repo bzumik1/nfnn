@@ -1614,6 +1614,15 @@ describe('Given an administrator on a donor card opened part by part', () => {
     expect(crumb()).toBeNull();
   });
 
+  it('when the card opens, then its parts are plain rows of one card under the summary', async () => {
+    await open(null);
+
+    const parts = fixture.nativeElement.querySelector('nav.card-rows') as HTMLElement;
+    expect(parts.classList).toContain('ui-card');
+    expect(parts.querySelectorAll('ul.ui-list').length).toBe(1);
+    expect(parts.querySelector('.ui-list--inset')).toBeNull();
+  });
+
   it('when a part opens on a phone, then only that part shows under the name, and the header alone leads back', async () => {
     await open('dary');
 

@@ -229,6 +229,19 @@ describe('Given an administrator on the alerts page', () => {
       );
     });
 
+    it('then turning on is the filled main action of its card over its footer, and the empty list of other devices says so as an empty card', () => {
+      const turnOn = button('Zapnout upozornění na tomto zařízení');
+      expect(turnOn.classList).toContain('ui-button--primary');
+      expect(turnOn.getAttribute('aria-describedby')).toBe('alerts-device-offer');
+      expect(section('Toto zařízení').querySelector('.ui-card__footer')?.id).toBe(
+        'alerts-device-offer',
+      );
+      expect(section('Další zařízení').querySelector('.ui-card__empty')?.textContent?.trim()).toBe(
+        'Na jiném zařízení upozornění zapnutá nemáte.',
+      );
+      expect(section('Další zařízení').querySelector('.ui-card__footer')).toBeNull();
+    });
+
     it('then a working area reads that it has no fault, and no test alert is offered without a device', () => {
       expect(sectionText('Co se hlídá')).toContain('Bez poruchy');
       expect(fixture.nativeElement.querySelector('#alerts-test-title')).toBeNull();
@@ -410,6 +423,44 @@ describe('Given an administrator on the alerts page', () => {
             pushSubscription(),
           ],
         }),
+      );
+    });
+
+    it('then each block is a card that holds its own heading over plain rows', () => {
+      for (const title of [
+        'Co se hlídá',
+        'Toto zařízení',
+        'Zkušební upozornění',
+        'Další zařízení',
+      ]) {
+        const card = section(title);
+        expect(card.classList).toContain('ui-card');
+        expect(card.querySelector('h2')?.classList).toContain('ui-card__title');
+        expect(card.querySelector('.ui-list')).not.toBeNull();
+        expect(card.querySelector('.ui-list--inset')).toBeNull();
+      }
+    });
+
+    it('then the switches and the turn-off row come first and the note of this device closes its card as the footer, as does the note of the test alert', () => {
+      const card = section('Toto zařízení');
+      const deviceNote = card.querySelector('.ui-card__footer');
+      expect(deviceNote?.textContent).toContain('Upozornění máte na tomto zařízení zapnutá');
+      expect(card.querySelectorAll('.ui-card__footer').length).toBe(1);
+      const turnOff = button('Vypnout na tomto zařízení');
+      expect(turnOff.closest('ul')).toBe(switches(card)[0].closest('ul'));
+      expect(
+        deviceNote!.compareDocumentPosition(turnOff) & Node.DOCUMENT_POSITION_PRECEDING,
+      ).toBeTruthy();
+      expect(
+        Array.from(card.querySelectorAll('*')).some(
+          (element) =>
+            deviceNote!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING &&
+            (element.textContent ?? '').trim() !== '' &&
+            !deviceNote!.contains(element),
+        ),
+      ).toBe(false);
+      expect(section('Zkušební upozornění').querySelector('.ui-card__footer')?.id).toBe(
+        'alerts-test-note',
       );
     });
 
@@ -648,7 +699,17 @@ describe('Given an administrator on the alerts page', () => {
     expect(sectionText('Toto zařízení')).toContain(
       'Prohlížeč ale upozornění od tohoto webu už nepřijímá',
     );
-    button('Zapnout znovu').click();
+    const card = section('Toto zařízení');
+    const warning = card.querySelector('.ui-callout--warning');
+    const again = button('Zapnout znovu');
+    expect(warning?.textContent).toContain('už nepřijímá');
+    expect(again.classList).toContain('ui-button--primary');
+    expect(warning!.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      again.compareDocumentPosition(switches(card)[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(card.querySelector('.ui-card__footer')?.textContent).not.toContain('už nepřijímá');
+    again.click();
     await settle();
     push.browserSubscription.mockResolvedValue('subscribed');
     http
@@ -670,6 +731,9 @@ describe('Given an administrator on the alerts page', () => {
     expect(sectionText('Toto zařízení')).toContain(
       'Prohlížeč ale upozornění tohoto webu teď blokuje',
     );
+    expect(section('Toto zařízení').querySelector('.ui-callout--warning')?.textContent).toContain(
+      'teď blokuje',
+    );
     expect(() => button('Zapnout znovu')).toThrow();
   });
 
@@ -678,6 +742,9 @@ describe('Given an administrator on the alerts page', () => {
     await open();
 
     expect(sectionText('Toto zařízení')).toContain(
+      'Upozornění má tento web v prohlížeči zakázaná.',
+    );
+    expect(section('Toto zařízení').querySelector('.ui-card__footer')?.textContent).toContain(
       'Upozornění má tento web v prohlížeči zakázaná.',
     );
   });

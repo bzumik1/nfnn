@@ -6,27 +6,6 @@
   max-width: 900px;
 }
 
-.delivery + .delivery {
-  margin-top: var(--space-10);
-}
-
-.delivery-title {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text);
-}
-
 .delivery-meta {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.recomputed-note {
-  margin-top: var(--space-3);
-}
-
-.ui-groups {
-  margin-top: var(--space-5);
+  margin-top: var(--space-1);
 }

@@ -155,7 +155,8 @@ div.ui-list__row {
   font-weight: var(--weight-semibold);
 }
 
-.ui-card > .ui-list {
+.ui-card > .ui-list,
+.ui-card__group {
   container: list-card / inline-size;
 }
 
@@ -168,8 +169,14 @@ div.ui-list__row {
   padding-inline: var(--list-row-padding-inline);
 }
 
+.ui-card__group > .ui-card__subtitle {
+  margin: 0;
+  padding: var(--space-4) var(--list-row-padding-inline) var(--space-1);
+}
+
 @include bp.container-down(list-card, pair) {
-  .ui-card > .ui-list > * {
+  .ui-card > .ui-list > *,
+  .ui-card__group > * {
     --list-row-padding-inline: var(--space-4);
   }
 
