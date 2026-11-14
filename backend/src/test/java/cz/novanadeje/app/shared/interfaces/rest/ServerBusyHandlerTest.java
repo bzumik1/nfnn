@@ -4,6 +4,8 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.shared.infrastructure.busy.CpuSlotsFull;
+import cz.novanadeje.app.shared.infrastructure.busy.CpuWork;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +50,7 @@ class ServerBusyHandlerTest {
                 case "deadlock" -> new PessimisticLockingFailureException(EXCEPTION_TEXT);
                 case "statement" -> new QueryTimeoutException(EXCEPTION_TEXT);
                 case "connection" -> new CannotCreateTransactionException(EXCEPTION_TEXT);
+                case "cpu" -> new CpuSlotsFull(CpuWork.PASSWORD_HASHING);
                 default -> new IllegalStateException(EXCEPTION_TEXT);
             };
         }
@@ -75,9 +78,9 @@ class ServerBusyHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"lock", "deadlock", "statement", "connection"})
-    @DisplayName("Given a request whose database wait ran out, when it fails, then the answer is a 503 problem to retry in five seconds without the exception's text")
-    void should_answer_503_to_retry_without_exception_text_when_failed_given_database_wait_ran_out(String wait) throws Exception {
+    @ValueSource(strings = {"lock", "deadlock", "statement", "connection", "cpu"})
+    @DisplayName("Given a request whose database wait or CPU slot wait ran out, when it fails, then the answer is a 503 problem to retry in five seconds without the exception's text")
+    void should_answer_503_to_retry_without_exception_text_when_failed_given_database_or_cpu_wait_ran_out(String wait) throws Exception {
         mockMvc.perform(get("/probe/donors/" + wait).header("Accept-Language", "cs"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(header().string("Retry-After", "5"))
@@ -98,6 +101,18 @@ class ServerBusyHandlerTest {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage()).isEqualTo("Database wait ran out (" + (wait.equals("lock") ? "CannotAcquireLockException" : "QueryTimeoutException")
                     + ") answered as 503 at GET /probe/donors/{wait}");
+            assertThat(line.getThrowableProxy()).isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a request that found every CPU slot of its work taken, when it fails, then one WARN line names the work, the method and the path pattern")
+    void should_log_one_warn_with_work_method_and_pattern_when_failed_given_cpu_slots_full() throws Exception {
+        mockMvc.perform(get("/probe/donors/cpu"));
+
+        assertThat(logged.list).singleElement().satisfies(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage()).isEqualTo("CPU slots of password hashing full, answered as 503 at GET /probe/donors/{wait}");
             assertThat(line.getThrowableProxy()).isNull();
         });
     }
