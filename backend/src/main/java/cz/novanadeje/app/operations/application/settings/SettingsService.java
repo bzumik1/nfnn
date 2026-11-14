@@ -101,7 +101,7 @@ public class SettingsService {
         String names = changed.stream().map(Enum::name).collect(Collectors.joining(", "));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
                 "Změněna nastavení: " + names + "; backend se restartuje, aby je použil", now));
-        restarter.restartAfterCommit();
+        restarter.restartAfterCommitOnceAsyncWorkIsDone();
         log.info("Admin {} changed the settings {}; the backend restarts", adminId, names);
         return new SavedSettings(changed, versions.of(SettingsVersions.StoredSettings.of(writer.stored())));
     }

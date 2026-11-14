@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 class ApplicationExecutorIdleWaitTest {
 
     private static final Duration POLL = Duration.ofMillis(5);
+    private static final Duration REAL_POLL = Duration.ofMillis(50);
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-11-14T10:00:00Z"), ZoneOffset.UTC);
     private final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -62,7 +63,7 @@ class ApplicationExecutorIdleWaitTest {
     void should_end_after_two_idle_polls_when_waited_given_an_idle_executor() throws InterruptedException {
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()).awaitIdle();
+        boolean idle = awaitIdleWhileWanted(new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()));
 
         assertThat(idle).isTrue();
         assertThat(pauses).hasValue(1);
@@ -77,7 +78,7 @@ class ApplicationExecutorIdleWaitTest {
         when(between.getQueueSize()).thenReturn(0);
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(between, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()).awaitIdle();
+        boolean idle = awaitIdleWhileWanted(new ApplicationExecutorIdleWait(between, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()));
 
         assertThat(idle).isTrue();
         assertThat(pauses).hasValue(3);
@@ -96,12 +97,12 @@ class ApplicationExecutorIdleWaitTest {
         });
         assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue();
         CountDownLatch pausedWhileBusy = new CountDownLatch(1);
-        ApplicationExecutorIdleWait wait = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> {
+        ApplicationExecutorIdleWait wait = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), REAL_POLL, length -> {
             pausedWhileBusy.countDown();
             Thread.sleep(length);
         });
 
-        CompletableFuture<Boolean> idle = CompletableFuture.supplyAsync(() -> awaitIdle(wait), waiting);
+        CompletableFuture<Boolean> idle = CompletableFuture.supplyAsync(() -> awaitIdleQuietly(wait), waiting);
         assertThat(pausedWhileBusy.await(10, TimeUnit.SECONDS)).isTrue();
         releaseFirst.countDown();
         assertThat(secondStarted.await(10, TimeUnit.SECONDS)).isTrue();
@@ -119,10 +120,10 @@ class ApplicationExecutorIdleWaitTest {
         startTwoTasksThatKeepRunning();
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(3), POLL, length -> {
+        boolean idle = awaitIdleWhileWanted(new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(3), POLL, length -> {
             pauses.incrementAndGet();
             clock.advance(length);
-        }).awaitIdle();
+        }));
 
         assertThat(idle).isFalse();
         assertThat(pauses).hasValue(3);
@@ -139,13 +140,31 @@ class ApplicationExecutorIdleWaitTest {
         startTwoTasksThatKeepRunning();
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(4), POLL, length -> {
+        boolean idle = awaitIdleWhileWanted(new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(4), POLL, length -> {
             pauses.incrementAndGet();
             clock.advance(length.multipliedBy(2));
-        }).awaitIdle();
+        }));
 
         assertThat(idle).isFalse();
         assertThat(pauses).hasValue(2);
+    }
+
+    @Test
+    @DisplayName("Given a task that keeps running, when the one waiting no longer wants the wait, then it ends at the next poll without the executor idle and logs nothing")
+    void should_end_at_the_next_poll_without_a_warn_when_no_longer_wanted_given_a_task_that_keeps_running() throws InterruptedException {
+        startTwoTasksThatKeepRunning();
+        AtomicInteger pauses = new AtomicInteger();
+        ApplicationExecutorIdleWait wait = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet());
+
+        boolean idle = wait.awaitIdle(wait.deadline(), () -> pauses.get() < 2);
+
+        assertThat(idle).isFalse();
+        assertThat(pauses).hasValue(2);
+        assertThat(lines.list).isEmpty();
+    }
+
+    private static boolean awaitIdleWhileWanted(ApplicationExecutorIdleWait wait) throws InterruptedException {
+        return wait.awaitIdle(wait.deadline(), () -> true);
     }
 
     private void startTwoTasksThatKeepRunning() throws InterruptedException {
@@ -157,9 +176,9 @@ class ApplicationExecutorIdleWaitTest {
         assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
-    private static boolean awaitIdle(ApplicationExecutorIdleWait wait) {
+    private static boolean awaitIdleQuietly(ApplicationExecutorIdleWait wait) {
         try {
-            return wait.awaitIdle();
+            return awaitIdleWhileWanted(wait);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return false;

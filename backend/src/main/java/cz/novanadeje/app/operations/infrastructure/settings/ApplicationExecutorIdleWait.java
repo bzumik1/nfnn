@@ -7,6 +7,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.BooleanSupplier;
 
 final class ApplicationExecutorIdleWait {
 
@@ -33,10 +34,13 @@ final class ApplicationExecutorIdleWait {
         this.pause = pause;
     }
 
-    boolean awaitIdle() throws InterruptedException {
-        Instant deadline = clock.instant().plus(bound);
+    Instant deadline() {
+        return clock.instant().plus(bound);
+    }
+
+    boolean awaitIdle(Instant deadline, BooleanSupplier wanted) throws InterruptedException {
         int idlePolls = 0;
-        while (true) {
+        while (wanted.getAsBoolean()) {
             idlePolls = idle() ? idlePolls + 1 : 0;
             if (idlePolls == IDLE_POLLS_IN_A_ROW) {
                 return true;
@@ -48,6 +52,7 @@ final class ApplicationExecutorIdleWait {
             }
             pause.pause(poll);
         }
+        return false;
     }
 
     private boolean idle() {

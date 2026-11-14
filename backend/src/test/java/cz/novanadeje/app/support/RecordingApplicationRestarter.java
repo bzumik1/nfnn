@@ -7,7 +7,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class RecordingApplicationRestarter implements ApplicationRestarter {
 
-    public record Restart(long asyncTasksHandedOver) {
+    public enum Kind {
+        ONCE_ASYNC_WORK_IS_DONE,
+        FOR_RESTORE
+    }
+
+    public record Restart(Kind kind, long asyncTasksHandedOver) {
     }
 
     private final AsyncTaskTracker asyncTasks;
@@ -18,8 +23,13 @@ public class RecordingApplicationRestarter implements ApplicationRestarter {
     }
 
     @Override
-    public void restartAfterCommit() {
-        restarts.add(new Restart(asyncTasks.handedOver()));
+    public void restartAfterCommitOnceAsyncWorkIsDone() {
+        restarts.add(new Restart(Kind.ONCE_ASYNC_WORK_IS_DONE, asyncTasks.handedOver()));
+    }
+
+    @Override
+    public void restartAfterCommitForRestore() {
+        restarts.add(new Restart(Kind.FOR_RESTORE, asyncTasks.handedOver()));
     }
 
     public int restarts() {

@@ -48,7 +48,7 @@ class ReceiptSeedRenewalServiceTest {
 
         InOrder order = inOrder(seeds, restarter);
         order.verify(seeds).requestNewSeedFor("21fe31df");
-        order.verify(restarter).restartAfterCommit();
+        order.verify(restarter).restartAfterCommitOnceAsyncWorkIsDone();
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage())
