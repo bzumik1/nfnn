@@ -1,17 +1,30 @@
 package cz.novanadeje.app.operations.infrastructure.events;
 
 import cz.novanadeje.app.operations.application.receiptseed.ReceiptSeedRenewalService;
+import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.lang.reflect.Method;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,5 +57,56 @@ class ReceiptSigningKeyWithdrawnListenerTest {
         assertThat(on.getAnnotation(TransactionalEventListener.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
         assertThat(on.getAnnotation(Order.class).value()).isEqualTo(Ordered.LOWEST_PRECEDENCE);
         assertThat(on.getAnnotation(Async.class)).isNull();
+    }
+
+    @Test
+    @DisplayName("Given the withdrawal of the server's own key published in a transaction, when it commits, then the restart is asked for after the commit with no transaction synchronization left, so the restarter stops the backend at once instead of waiting for a commit that already passed")
+    void should_ask_for_the_restart_outside_any_synchronization_when_committed_given_the_current_key() {
+        List<String> steps = new ArrayList<>();
+        ApplicationRestarter restarter = () -> steps.add("restart, synchronization active: " + TransactionSynchronizationManager.isSynchronizationActive());
+
+        new ApplicationContextRunner()
+                .withUserConfiguration(InMemoryTransactionManagement.class)
+                .withBean(ReceiptSeedRenewalService.class, () -> new ReceiptSeedRenewalService(keyId -> steps.add("seed requested for " + keyId), restarter))
+                .withBean(ReceiptSigningKeyWithdrawnListener.class)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    new TransactionTemplate(context.getBean(PlatformTransactionManager.class)).executeWithoutResult(status -> {
+                        context.publishEvent(new ReceiptSigningKeyWithdrawn(ADMIN, "21fe31df", true, AT));
+                        steps.add("withdrawal still in its transaction");
+                    });
+                });
+
+        assertThat(steps).containsExactly("withdrawal still in its transaction", "seed requested for 21fe31df", "restart, synchronization active: false");
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableTransactionManagement
+    static class InMemoryTransactionManagement {
+
+        @Bean
+        PlatformTransactionManager transactionManager() {
+            return new InMemoryTransactions();
+        }
+    }
+
+    private static final class InMemoryTransactions extends AbstractPlatformTransactionManager {
+
+        @Override
+        protected Object doGetTransaction() {
+            return new Object();
+        }
+
+        @Override
+        protected void doBegin(Object transaction, TransactionDefinition definition) {
+        }
+
+        @Override
+        protected void doCommit(DefaultTransactionStatus status) {
+        }
+
+        @Override
+        protected void doRollback(DefaultTransactionStatus status) {
+        }
     }
 }
