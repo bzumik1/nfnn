@@ -1219,28 +1219,28 @@
                         <button
                           type="button"
                           class="ui-button ui-button--small receipt-pdf"
-                          [id]="receiptPdfId(receipt)"
                           [attr.aria-disabled]="pdfs.drawing(receipt.id) ? 'true' : null"
                           [attr.aria-busy]="pdfs.drawing(receipt.id)"
+                          [id]="receiptPdfId(receipt)"
                           [attr.aria-describedby]="
                             signedWithWithdrawnKey(receipt) ? withdrawnKeyNoteId(receipt) : null
                           "
                           (click)="pdfs.press(receipt.id)"
                         >
-                          @if (pdfs.drawing(receipt.id)) {
-                            <span i18n="@@admin.donorDetail.receiptPdf.preparing"
-                              >Připravujeme PDF…</span
-                            >
-                          } @else if (pdfs.ready(receipt.id)) {
-                            <span i18n="@@admin.donorDetail.receiptPdf.open">Otevřít PDF</span>
-                          } @else {
-                            <span i18n="@@admin.donorDetail.receiptPdf.download">Stáhnout PDF</span>
-                          }
+                          <app-pdf-button-face
+                            [state]="pdfs.state(receipt.id)"
+                            downloadLabel="Stáhnout PDF"
+                            i18n-downloadLabel="@@admin.donorDetail.receiptPdf.download"
+                            preparingLabel="Připravujeme PDF…"
+                            i18n-preparingLabel="@@admin.donorDetail.receiptPdf.preparing"
+                            openLabel="Otevřít PDF"
+                            i18n-openLabel="@@admin.donorDetail.receiptPdf.open"
+                          />
                           <span class="visually-hidden" i18n="@@admin.donorDetail.receiptPdf.of">
                             potvrzení {{ receipt.number }}</span
                           >
                         </button>
-                        <app-download-progress
+                        <app-pdf-progress
                           class="receipt-pdf-progress"
                           [compact]="true"
                           [progress]="pdfs.progress(receipt.id)"

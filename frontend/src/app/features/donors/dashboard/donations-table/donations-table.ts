@@ -5,7 +5,8 @@ import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationItem, DonationStatus } from '../../../donations/donations-api';
 import { DonorDonations } from '../donor-donations';
-import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { PdfButtonFace } from '../../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
 import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/diagnostics-download';
 
 const STATUS_LABELS: Record<DonationStatus, string> = {
@@ -21,7 +22,7 @@ export function donationStatusLabel(status: DonationStatus): string {
 
 @Component({
   selector: 'app-donations-table',
-  imports: [DiagnosticsDownload, DownloadProgress, NgTemplateOutlet],
+  imports: [DiagnosticsDownload, PdfButtonFace, PdfProgress, NgTemplateOutlet],
   templateUrl: './donations-table.html',
   styleUrl: './donations-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

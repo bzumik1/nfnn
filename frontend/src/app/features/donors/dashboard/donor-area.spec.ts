@@ -39,7 +39,6 @@ import { FakeReceiptPdfEnvironment } from '../../donations/receipt-pdf/testing/f
 import {
   frozenCase,
   SINGLE_PERSON_CS,
-  YEARLY_120,
   YEARLY_ONE,
 } from '../../donations/receipt-pdf/testing/receipt-fixtures';
 import { DonorCopyLink } from '../../donations/device-copy/donor-copy';
@@ -52,6 +51,7 @@ import { AccountBadges } from '../../../core/layout/account-badges';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DonorArea } from './donor-area';
 import { DonorDonations } from './donor-donations';
+import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
 
 const OBJECT_URL = 'blob:http://localhost/receipt';
 const RECEIPTS_URL = '/api/donations/me/receipts';
@@ -187,6 +187,11 @@ describe('Given a signed-in donor in the donor area', () => {
     harness.fixture.detectChanges();
     await harness.fixture.whenStable();
     harness.fixture.detectChanges();
+  }
+
+  async function afterPhaseLasts(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, PHASE_SHOWN_AFTER_MS));
+    await settle();
   }
 
   async function settleBlobFailure(): Promise<void> {
@@ -1622,9 +1627,9 @@ describe('Given a signed-in donor in the donor area', () => {
       yearly.say({ kind: 'page', page: 1 });
       await settle();
       await click(secondRowButton);
+      await afterPhaseLasts();
 
-      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
-      expect(text(`${yearlyLine} .download-progress-detail`)).toBe('Strana 1');
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF… · strana 1');
       expect(text(singleLine)).toBe('Připravujeme údaje potvrzení…');
       receiptRequest({ donationId: 'd-3' }).flush(issuedSingle('2026-000017'));
       await settle();
@@ -1634,7 +1639,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(singleLine)).toBe(
         'Potvrzení potvrzeni-o-daru-2026-000017.pdf je stažené. Najdete ho ve stažených souborech.',
       );
-      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF…');
+      expect(text(`${yearlyLine} [role="status"]`)).toBe('Vytváříme PDF… · strana 1');
       yearly.drawAll();
       await settle();
       expect(text(yearlyLine)).toBe(
@@ -2172,6 +2177,8 @@ describe('Given a signed-in donor in the donor area', () => {
 
       await click(thirdRowButton);
 
+      expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([]);
+      await afterPhaseLasts();
       expect(texts('.payments-card .receipt-saved').filter((line) => line !== '')).toEqual([
         'Připravujeme údaje potvrzení…',
       ]);
@@ -2571,61 +2578,39 @@ describe('Given a signed-in donor in the donor area', () => {
         await respond(twoYearSummary(), twoYearDonations());
       });
 
-      it('then the line at the button names each phase with a progress bar until the PDF is saved', async () => {
+      it('then the line at the button names each phase that lasts, and the ring in the button turns until the PDF is saved', async () => {
         await downloadYear(2025);
+        expect(line(2025)).toBe('');
+        expect(pdfButton(2025).querySelector('.pdf-button__ring')).not.toBeNull();
+        await afterPhaseLasts();
         expect(line(2025)).toBe('Připravujeme údaje potvrzení…');
-        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('1');
+        expect(yearRow(2025).querySelector('progress')).toBeNull();
 
         receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
         await settle();
+        await afterPhaseLasts();
         expect(line(2025)).toBe('Načítáme nástroje pro PDF…');
 
         receiptEnvironment.last().say({ kind: 'ready' });
         receiptEnvironment.last().say({ kind: 'page', page: 1 });
         await settle();
-        expect(status(2025)).toBe('Vytváříme PDF…');
+        await afterPhaseLasts();
+        expect(status(2025)).toBe('Vytváříme PDF… · strana 1');
         receiptEnvironment.last().say({ kind: 'page', page: 2 });
         await settle();
-        expect(status(2025)).toBe('Vytváříme PDF…');
-        expect(
-          normalized(yearRow(2025).querySelector('.download-progress-detail')?.textContent ?? ''),
-        ).toBe('Strana 2');
-        expect(yearRow(2025).querySelector('progress')?.getAttribute('aria-valuetext')).toBe(
-          'Strana 2',
-        );
-        expect(yearRow(2025).querySelector('progress')?.getAttribute('value')).toBe('3');
-        expect(yearRow(2025).querySelector('progress')?.getAttribute('max')).toBe('4');
+        await afterPhaseLasts();
+        expect(status(2025)).toBe('Vytváříme PDF… · strana 2');
 
         receiptEnvironment.last().drawAll();
         await settle();
         expect(line(2025)).toBe(
           'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
         );
-        expect(yearRow(2025).querySelector('progress')).toBeNull();
+        expect(
+          yearRow(2025).querySelector<HTMLElement>('.pdf-progress__brief')?.dataset['brief'],
+        ).toBe('PDF je stažené');
+        expect(pdfButton(2025).querySelector('.pdf-button__download')).not.toBeNull();
         expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
-      });
-
-      it('then each page drawn moves the bar on, against the pages a year of that many gifts takes', async () => {
-        await downloadYear(2025);
-        receiptRequest({ year: 2025 }).flush(
-          issued({ ...frozenCase(YEARLY_120), year: 2025, number: '2026-000001' }),
-        );
-        await settle();
-        receiptEnvironment.last().say({ kind: 'ready' });
-        const bar = (): string[] => {
-          const progress = yearRow(2025).querySelector('progress');
-          return [progress?.getAttribute('value') ?? '', progress?.getAttribute('max') ?? ''];
-        };
-
-        receiptEnvironment.last().say({ kind: 'page', page: 1 });
-        await settle();
-        expect(bar()).toEqual(['3', '7']);
-        receiptEnvironment.last().say({ kind: 'page', page: 3 });
-        await settle();
-        expect(bar()).toEqual(['5', '7']);
-        receiptEnvironment.last().say({ kind: 'page', page: 7 });
-        await settle();
-        expect(bar()).toEqual(['6', '7']);
       });
 
       it('then a drawing that takes longer than eight seconds can be cancelled, which stops it and frees the button', async () => {
@@ -2633,16 +2618,16 @@ describe('Given a signed-in donor in the donor area', () => {
         await downloadYear(2025);
         receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
         await settle();
-        expect(yearRow(2025).querySelector('.download-progress-cancel')).toBeNull();
+        expect(yearRow(2025).querySelector('.pdf-progress__cancel')).toBeNull();
 
         await vi.advanceTimersByTimeAsync(8000);
         await settle();
-        (yearRow(2025).querySelector('.download-progress-cancel') as HTMLButtonElement).click();
+        (yearRow(2025).querySelector('.pdf-progress__cancel') as HTMLButtonElement).click();
         await settle();
 
         expect(receiptEnvironment.last().terminated).toBe(true);
         expect(line(2025)).toBe('Přípravu potvrzení jste zrušili.');
-        expect(yearRow(2025).querySelector('.download-progress-line--done')).toBeNull();
+        expect(yearRow(2025).querySelector('.pdf-progress__line--done')).toBeNull();
         expect(button('.yearly-pdf').disabled).toBe(false);
         expect(savedFiles).toEqual([]);
         await vi.advanceTimersByTimeAsync(0);
@@ -2714,6 +2699,8 @@ describe('Given a signed-in donor in the donor area', () => {
           'PDF se v prohlížeči nepodařilo vytvořit. Zkuste to prosím znovu; když to nepomůže, zkuste jiný prohlížeč nebo nám napište na info@nfnn.cz.',
         );
         expect(button('.yearly-pdf').disabled).toBe(false);
+        expect(text('.yearly-pdf')).toBe('Zkusit znovu');
+        expect(pdfButton(2025).querySelector('.pdf-button__warning')).not.toBeNull();
       });
 
       it('then a drawing that fails offers the diagnostic file under its line', async () => {

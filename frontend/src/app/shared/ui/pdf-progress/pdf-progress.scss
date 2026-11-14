@@ -1,0 +1,42 @@
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  margin-top: var(--space-1-5);
+}
+
+.pdf-progress__line {
+  min-inline-size: 0;
+  min-block-size: 1lh;
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-soft);
+  overflow-wrap: anywhere;
+}
+
+:host(.pdf-progress--compact) .pdf-progress__line {
+  font-size: var(--text-xs);
+}
+
+.pdf-progress__line--done {
+  color: var(--color-success);
+}
+
+.pdf-progress__brief {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+
+  svg {
+    flex: none;
+    inline-size: 1.15em;
+    block-size: 1.15em;
+  }
+
+  &::after {
+    content: attr(data-brief);
+  }
+}

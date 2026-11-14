@@ -123,26 +123,31 @@
       class="download-btn"
       [class.ui-pill-button]="inset()"
       [class.ui-pill-button--tinted]="inset()"
-      [attr.data-receipt-download]="donations.singleTarget(item)"
       [attr.aria-disabled]="donations.singleDownloading(item) ? 'true' : null"
       [attr.aria-busy]="donations.singleDownloading(item)"
+      [attr.data-receipt-download]="donations.singleTarget(item)"
       (click)="donations.downloadSingleReceipt(item)"
     >
-      @if (donations.singleDownloading(item)) {
-        <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-      } @else if (donations.singleReady(item)) {
-        <span i18n="@@donor.dashboard.payments.open">Otevřít PDF</span>
+      <app-pdf-button-face
+        [state]="donations.singleButton(item)"
+        downloadLabel="Stáhnout PDF"
+        i18n-downloadLabel="@@donor.dashboard.payments.download"
+        preparingLabel="Připravujeme PDF…"
+        i18n-preparingLabel="@@donor.dashboard.receipt.preparing"
+        openLabel="Otevřít PDF"
+        i18n-openLabel="@@donor.dashboard.payments.open"
+      />
+      @if (donations.singleReady(item)) {
         <span class="visually-hidden" i18n="@@donor.dashboard.payments.openOf"
           >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
         >
-      } @else {
-        <span i18n="@@donor.dashboard.payments.download">Stáhnout PDF</span>
+      } @else if (!donations.singleDownloading(item)) {
         <span class="visually-hidden" i18n="@@donor.dashboard.payments.downloadOf"
           >, dar z {{ formatDate(item.receivedAt) }}, {{ crowns(item.amountMinor) }}&nbsp;Kč</span
         >
       }
     </button>
-    <app-download-progress
+    <app-pdf-progress
       class="receipt-saved"
       [progress]="donations.singleProgress(item)"
       [compact]="true"

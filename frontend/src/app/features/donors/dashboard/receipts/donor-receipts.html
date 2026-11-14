@@ -43,40 +43,22 @@
                   <button
                     type="button"
                     class="ui-button ui-button--primary yearly-pdf"
-                    [attr.data-receipt-download]="donations.yearlyTarget(row.year)"
                     [attr.aria-disabled]="donations.yearlyDownloading(row.year) ? 'true' : null"
                     [attr.aria-busy]="donations.yearlyDownloading(row.year)"
+                    [attr.data-receipt-download]="donations.yearlyTarget(row.year)"
                     (click)="donations.downloadYearlyReceipt(row.year)"
                   >
-                    @if (donations.yearlyDownloading(row.year)) {
-                      <span i18n="@@donor.dashboard.receipt.preparing">Připravujeme PDF…</span>
-                    } @else if (donations.yearlyReady(row.year)) {
-                      <span i18n="@@donor.dashboard.yearly.open"
-                        >Otevřít potvrzení za rok {{ row.year }} (PDF)</span
-                      >
-                    } @else {
-                      <svg
-                        class="yearly-pdf-icon"
-                        aria-hidden="true"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M12 3v12" />
-                        <path d="m7 10 5 5 5-5" />
-                        <path d="M5 21h14" />
-                      </svg>
-                      <span i18n="@@donor.dashboard.yearly.pdf"
-                        >Stáhnout potvrzení za rok {{ row.year }} (PDF)</span
-                      >
-                    }
+                    <app-pdf-button-face
+                      [state]="donations.yearlyButton(row.year)"
+                      downloadLabel="Stáhnout potvrzení za rok {{ row.year }} (PDF)"
+                      i18n-downloadLabel="@@donor.dashboard.yearly.pdf"
+                      preparingLabel="Připravujeme PDF…"
+                      i18n-preparingLabel="@@donor.dashboard.receipt.preparing"
+                      openLabel="Otevřít potvrzení za rok {{ row.year }} (PDF)"
+                      i18n-openLabel="@@donor.dashboard.yearly.open"
+                    />
                   </button>
-                  <app-download-progress
+                  <app-pdf-progress
                     class="receipt-saved"
                     [progress]="donations.yearlyProgress(row.year)"
                     (cancelled)="donations.cancelYearlyReceipt(row.year)"

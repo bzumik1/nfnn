@@ -215,8 +215,12 @@ td.receipt-pdf-cell {
   inline-size: 15rem;
 }
 
+.receipt-pdf[aria-disabled='true'] {
+  opacity: 1;
+}
+
 .receipt-pdf-progress {
-  justify-items: end;
+  justify-content: flex-end;
   text-align: right;
 }
 
@@ -309,7 +313,7 @@ td.amount {
   }
 
   .receipt-pdf-progress {
-    justify-items: start;
+    justify-content: flex-start;
     text-align: left;
   }
 

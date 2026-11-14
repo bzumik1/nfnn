@@ -36,7 +36,7 @@ export const donations = {
 };
 
 export const yearlyButton = (page: Page) => page.locator('.yearly-pdf');
-export const yearlyLine = (page: Page) => page.locator('.year-row .download-progress-line');
+export const yearlyLine = (page: Page) => page.locator('.year-row .pdf-progress__line');
 
 export async function openReceiptsAfterSignIn(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, donor)));

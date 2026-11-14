@@ -15,7 +15,8 @@ import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonationsTable } from '../donations-table/donations-table';
 import { DonorDonations } from '../donor-donations';
-import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { PdfButtonFace } from '../../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
 import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { StandingOrder } from '../standing-order/standing-order';
@@ -35,7 +36,8 @@ interface GiftYear {
   selector: 'app-donor-gifts',
   imports: [
     DiagnosticsDownload,
-    DownloadProgress,
+    PdfButtonFace,
+    PdfProgress,
     PageTitle,
     BankCheck,
     DonationsPending,
