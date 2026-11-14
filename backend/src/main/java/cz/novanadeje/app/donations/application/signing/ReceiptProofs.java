@@ -27,6 +27,15 @@ public class ReceiptProofs {
         this.foundation = foundation;
     }
 
+    public void requireFits(SignedReceipt receipt) {
+        ReceiptProof unsigned = new ReceiptProof(ReceiptProofBody.encode(receipt, signer.keyId()), new byte[ReceiptProof.SIGNATURE_BYTES]);
+        if (VerificationQrSymbol.of(unsigned.text()).isEmpty()) {
+            log.error("A receipt needs a verification proof of {} bytes, more than a QR code holds, so it is not issued and takes no number",
+                    unsigned.bytes().length);
+            throw new ReceiptTooLong();
+        }
+    }
+
     public ReceiptProof prove(SignedReceipt receipt) {
         byte[] body = ReceiptProofBody.encode(receipt, signer.keyId());
         ReceiptProof proof = new ReceiptProof(body, signer.sign(ReceiptProofMessage.of(foundation.companyIdentifier(), body)));

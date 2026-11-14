@@ -89,6 +89,7 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
         if (symbol.isPresent()) {
             answer.putObject("qr").put("version", symbol.get().version()).put("errorCorrection", symbol.get().errorCorrection().name());
             assertThat(proofs.prove(receipt)).isEqualTo(proof);
+            proofs.requireFits(receipt);
         } else {
             answer.putObject("qr").put("refusal", ReceiptTooLong.CODE);
             ListAppender<ILoggingEvent> lines = new ListAppender<>();
@@ -96,12 +97,18 @@ class ReceiptProofSharedCasesTest extends SharedCaseRunner {
             lines.start();
             logger.addAppender(lines);
             try {
+                assertThatThrownBy(() -> proofs.requireFits(receipt)).isInstanceOfSatisfying(ReceiptTooLong.class,
+                        refused -> assertThat(refused.code()).isEqualTo(ReceiptTooLong.CODE));
                 assertThatThrownBy(() -> proofs.prove(receipt)).isInstanceOfSatisfying(ReceiptTooLong.class,
                         refused -> assertThat(refused.code()).isEqualTo(ReceiptTooLong.CODE));
             } finally {
                 logger.detachAppender(lines);
             }
-            assertThat(lines.list).singleElement().satisfies(line -> {
+            assertThat(lines.list).satisfiesExactly(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.ERROR);
+                assertThat(line.getFormattedMessage()).isEqualTo("A receipt needs a verification proof of " + proof.bytes().length
+                        + " bytes, more than a QR code holds, so it is not issued and takes no number");
+            }, line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
                 assertThat(line.getFormattedMessage()).isEqualTo("Receipt " + receipt.number() + " needs a verification proof of " + proof.bytes().length
                         + " bytes, more than a QR code holds, so it is not issued");

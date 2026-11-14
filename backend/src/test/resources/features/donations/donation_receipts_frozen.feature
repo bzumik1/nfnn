@@ -690,7 +690,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     Then the response status is 400
     And the problem type ends with "donations/year-not-yet-completed"
 
-  Scenario: A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering
+  Scenario: A yearly receipt with more gifts than its verification QR code holds is refused before it takes a number and stores nothing
     Given today is 2026-12-20
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -704,9 +704,12 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the problem type ends with "donations/receipt-too-long"
     And the problem has the title "Potvrzení má příliš mnoho darů pro ověřovací QR kód"
     And 0 receipts are stored
+    When "Jana" issues her yearly receipt for 2026
+    Then the response status is 400
+    And the problem type ends with "donations/receipt-too-long"
     When "Jana" issues the receipt of her donation received on 2026-09-30
     Then the response status is 200
-    And the issued receipt has number "2027-000002"
+    And the issued receipt has number "2027-000001"
     And 1 receipt is stored
 
   Scenario: A replacement refused for its too long proof leaves the active yearly receipt active
