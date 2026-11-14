@@ -38,6 +38,7 @@ FROM runtime
 COPY --from=aot-training /app/app.aot /app/app.aot
 COPY --chmod=0755 docker-entrypoint.sh /app/docker-entrypoint.sh
 ARG REVISION=dev
-ENV APP_REVISION=$REVISION
+ARG VERSION=dev
+ENV APP_REVISION=$REVISION APP_VERSION=$VERSION
 EXPOSE 8080
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

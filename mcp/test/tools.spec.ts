@@ -293,6 +293,7 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
     expect(text).toContain('"revision":"abc1234"');
+    expect(text).toContain('"version":"2026.11.3"');
     expect(text).toContain('"health":"UP"');
     expect(text).toContain('"lastSucceededAt":"2026-10-23T07:00:00+02:00"');
     expect(text).toContain('"outcome":"OK"');

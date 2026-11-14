@@ -10,3 +10,4 @@ Feature: Anyone reads whether the server is up and which revision it runs, as th
     When an anonymous client asks for the server's info
     Then the response status is 200
     And the info names the revision "dev"
+    And the info names the release "dev"

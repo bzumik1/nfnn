@@ -1,0 +1,10 @@
+[
+  {
+    "path": "GET /actuator/info",
+    "scenario": "operations/server_status: *",
+    "kind": "added",
+    "field": "$.build.version",
+    "reason": "Jakub 2026-11-14 (#809): every publication of the images is a release numbered YYYY.M.N; the server names the release it runs beside its revision, dev for a build outside images.yml, so nfnn_status and the administration can tell it",
+    "contract": "docs/api-contract.md, Versions; MCP connector"
+  }
+]
