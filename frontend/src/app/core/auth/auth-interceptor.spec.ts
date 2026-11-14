@@ -52,15 +52,18 @@ describe('Given the auth interceptor', () => {
     '/api/content/news?page=1',
     '/api/content/projects/skola-v-prirode',
     '/api/donations/bank-logos',
-  ])('when a signed-in donor loads public content %s, then the request carries no access token', (url) => {
-    signIn('token-1');
+  ])(
+    'when a signed-in donor loads public content %s, then the request carries no access token',
+    (url) => {
+      signIn('token-1');
 
-    client.get(url).subscribe();
+      client.get(url).subscribe();
 
-    const request = http.expectOne(url);
-    expect(request.request.headers.has('Authorization')).toBe(false);
-    request.flush({});
-  });
+      const request = http.expectOne(url);
+      expect(request.request.headers.has('Authorization')).toBe(false);
+      request.flush({});
+    },
+  );
 
   it.each([
     ['GET', '/api/donations/me/receipts'],
