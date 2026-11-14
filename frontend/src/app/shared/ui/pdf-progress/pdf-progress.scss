@@ -33,7 +33,6 @@
 }
 
 .pdf-progress__brief {
-
   &::after {
     content: attr(data-brief);
   }
