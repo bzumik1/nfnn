@@ -1,44 +1,95 @@
-<app-header />
+@if (sheet()) {
+  <div class="admin-sheet-backdrop" aria-hidden="true"></div>
+} @else {
+  <app-header />
+}
 
-<app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
-  <div class="admin-content">
-    <div class="admin-first-download" aria-live="polite">
-      @if (!lock.locked() && lock.firstDownload(); as progress) {
-        <div class="ui-notice ui-notice--status first-download">
-          <p class="first-download__title" i18n="@@admin.lock.firstDownload.title">
-            Ukládáme správu do zařízení
-          </p>
-          @if (progress.total > 0) {
-            <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
-              {{ progress.done }} z {{ progress.total }}
+<div class="admin-frame" [class.admin-sheet]="sheet()">
+  @if (sheet()) {
+    <header class="admin-sheet-head">
+      <button
+        type="button"
+        class="admin-sheet-button"
+        aria-label="Zpět"
+        i18n-aria-label="@@layout.header.back"
+        (click)="back()"
+      >
+        <svg
+          aria-hidden="true"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="admin-sheet-button"
+        aria-label="Zavřít"
+        i18n-aria-label="@@ui.dialog.close"
+        (click)="close()"
+      >
+        <svg
+          aria-hidden="true"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+        >
+          <path d="M4.5 4.5l15 15M19.5 4.5l-15 15" />
+        </svg>
+      </button>
+    </header>
+  }
+  <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
+    <div class="admin-content">
+      <div class="admin-first-download" aria-live="polite">
+        @if (!lock.locked() && lock.firstDownload(); as progress) {
+          <div class="ui-notice ui-notice--status first-download">
+            <p class="first-download__title" i18n="@@admin.lock.firstDownload.title">
+              Ukládáme správu do zařízení
             </p>
-            <progress
-              class="first-download__bar"
-              [value]="progress.done"
-              [max]="progress.total"
-              aria-hidden="true"
-            ></progress>
-          }
+            @if (progress.total > 0) {
+              <p class="first-download__count" i18n="@@admin.lock.firstDownload.count">
+                {{ progress.done }} z {{ progress.total }}
+              </p>
+              <progress
+                class="first-download__bar"
+                [value]="progress.done"
+                [max]="progress.total"
+                aria-hidden="true"
+              ></progress>
+            }
+          </div>
+        }
+      </div>
+      @if (lock.locked()) {
+        @if (lock.panel(); as panel) {
+          <ng-container *ngComponentOutlet="panel" />
+        }
+      }
+      @if (!lock.locked() || lock.keepsPage()) {
+        <div
+          #page
+          class="admin-page"
+          [hidden]="lock.locked()"
+          [attr.inert]="lock.locked() ? '' : null"
+          [appSuspendsDialogs]="lock.locked()"
+        >
+          <router-outlet />
         </div>
       }
     </div>
-    @if (lock.locked()) {
-      @if (lock.panel(); as panel) {
-        <ng-container *ngComponentOutlet="panel" />
-      }
-    }
-    @if (!lock.locked() || lock.keepsPage()) {
-      <div
-        #page
-        class="admin-page"
-        [hidden]="lock.locked()"
-        [attr.inert]="lock.locked() ? '' : null"
-        [appSuspendsDialogs]="lock.locked()"
-      >
-        <router-outlet />
-      </div>
-    }
-  </div>
-</app-side-nav>
+  </app-side-nav>
+</div>
 
 <app-alerts-offer />

@@ -1,10 +1,12 @@
 /// <reference types="@angular/localize" />
 
-import { NgComponentOutlet } from '@angular/common';
+import { Location, NgComponentOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
+  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -13,7 +15,11 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map, take } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
+import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AppHeader } from '../../../layout/app-header/app-header';
 import { AlertsOffer } from '../alerts/offer/alerts-offer';
@@ -30,6 +36,7 @@ import { ADMINISTRATION_LOCK } from './administration-lock';
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.admin-shell--sheet]': 'sheet()' },
 })
 export class AdminShell {
   protected readonly groups = ADMIN_SECTIONS;
@@ -39,14 +46,47 @@ export class AdminShell {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   private readonly page = viewChild<ElementRef<HTMLElement>>('page');
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly backTarget = inject(BackTarget);
+  private readonly chrome = inject(RouteChrome).current;
+  private readonly fullScreen = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => framedFullScreen(this.router.routerState.snapshot.root)),
+    ),
+    { initialValue: framedFullScreen(this.router.routerState.snapshot.root) },
+  );
+  protected readonly sheet = computed(() => this.compact() && !this.fullScreen());
+  private entryDepth = 0;
   private focusBeforeLock: Element | null = null;
   private wasLocked = false;
 
   constructor() {
+    const entry = this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        take(1),
+      )
+      .subscribe(() => (this.entryDepth = depthOf(this.location.getState())));
+    inject(DestroyRef).onDestroy(() => entry.unsubscribe());
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));
     });
+  }
+
+  protected back(): void {
+    this.backTarget.back(this.chrome().parent ?? '/');
+  }
+
+  protected close(): void {
+    const steps = depthOf(this.location.getState()) - this.entryDepth + 1;
+    if (this.entryDepth > 0 && steps > 0) {
+      this.location.historyGo(-steps);
+    } else {
+      void this.router.navigateByUrl('/', { replaceUrl: true, info: BACK_NAVIGATION });
+    }
   }
 
   private followLock(locked: boolean): void {
@@ -82,4 +122,20 @@ export class AdminShell {
     }
     heading.focus({ preventScroll: true });
   }
+}
+
+function depthOf(state: unknown): number {
+  const depth =
+    typeof state === 'object' && state !== null
+      ? (state as Record<string, unknown>)[APP_DEPTH_KEY]
+      : undefined;
+  return typeof depth === 'number' && depth > 0 ? depth : 0;
+}
+
+function framedFullScreen(root: ActivatedRouteSnapshot): boolean {
+  let route: ActivatedRouteSnapshot | null = root;
+  while (route?.firstChild) {
+    route = route.firstChild;
+  }
+  return route?.data['adminFrame'] === 'full';
 }
