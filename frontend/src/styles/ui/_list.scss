@@ -172,6 +172,15 @@ div.ui-list__row {
   .ui-card > .ui-list > * {
     --list-row-padding-inline: var(--space-4);
   }
+
+  .ui-card .ui-list__lead.ui-list__glyph {
+    width: auto;
+    margin-inline-end: var(--space-2);
+  }
+
+  .ui-card .ui-list__chevron {
+    margin-inline-start: var(--space-2);
+  }
 }
 
 .ui-list__lead--blank {
