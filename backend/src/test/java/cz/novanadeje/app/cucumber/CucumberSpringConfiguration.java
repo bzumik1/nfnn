@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Import;
 
 @CucumberContextConfiguration
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"PAIRING_EXCLUDED_ACCOUNTS=2400000002/2010",
+        "spring.jpa.show-sql=false", "spring.jpa.properties.hibernate.format_sql=false",
         "app.operations.backups.directory=build/cucumber/fork-${org.gradle.test.worker:0}/backups",
         "app.operations.backups.restore-directory=build/cucumber/fork-${org.gradle.test.worker:0}/restore",
         "app.operations.logs.directory=build/cucumber/fork-${org.gradle.test.worker:0}/logs"})

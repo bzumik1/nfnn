@@ -12,7 +12,12 @@ import cz.novanadeje.app.cucumber.CucumberSpringConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.test.context.BootstrapUtils;
+import org.springframework.test.context.support.TestPropertySourceUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -55,5 +60,17 @@ class TestContextRulesTest {
                 .singleElement().satisfies(detail -> assertThat(detail).contains("PlantedContextTest"));
         assertThat(spring_boot_tests_share_the_integration_test_configuration.evaluate(planted).getFailureReport().getDetails())
                 .isNotEmpty().allSatisfy(detail -> assertThat(detail).contains("PlantedContextTest"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(classes = {CucumberSpringConfiguration.class, IntegrationTest.class})
+    @DisplayName("Given a Spring Boot test context, when its test properties are resolved, then Hibernate neither echoes SQL to standard output nor spreads a statement over several lines, so the SQL logger alone writes each statement once")
+    void should_echo_no_sql_and_keep_each_statement_on_one_line_when_resolved_given_a_spring_boot_test_context(Class<?> testClass) {
+        StandardEnvironment environment = new StandardEnvironment();
+        TestPropertySourceUtils.addInlinedPropertiesToEnvironment(environment,
+                BootstrapUtils.resolveTestContextBootstrapper(testClass).buildMergedContextConfiguration().getPropertySourceProperties());
+
+        assertThat(environment.getProperty("spring.jpa.show-sql")).as("spring.jpa.show-sql of %s", testClass.getSimpleName()).isEqualTo("false");
+        assertThat(environment.getProperty("spring.jpa.properties.hibernate.format_sql")).as("hibernate.format_sql of %s", testClass.getSimpleName()).isEqualTo("false");
     }
 }
