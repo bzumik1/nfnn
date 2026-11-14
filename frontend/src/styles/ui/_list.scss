@@ -250,7 +250,8 @@ div.ui-list__row {
     font-weight: var(--weight-list-inset-title);
   }
 
-  .ui-list__value:not(.ui-list__count) {
+  .ui-list__value:not(.ui-list__count),
+  .ui-list__field-value {
     font-weight: var(--weight-list-inset-title);
   }
 }
@@ -265,7 +266,7 @@ div.ui-list__row {
   container: list-fields / inline-size;
 }
 
-.ui-list--inset .ui-list__field {
+.ui-list--fields .ui-list__field {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
@@ -296,7 +297,7 @@ div.ui-list__row {
   flex: 1 1 0;
   color: var(--color-text);
   font-variant-numeric: var(--numeric-figures);
-  font-weight: var(--weight-list-inset-title);
+  font-weight: var(--weight-semibold);
   white-space: normal;
   overflow-wrap: anywhere;
 
@@ -306,7 +307,7 @@ div.ui-list__row {
 }
 
 @include bp.container-up(list-fields, cards) {
-  .ui-list--inset .ui-list__field {
+  .ui-list--fields .ui-list__field {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas: 'label body';
   }

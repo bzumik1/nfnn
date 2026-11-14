@@ -251,8 +251,11 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       );
       expect(device.track.stopped).toBe(false);
       expect(
-        element().querySelector('[aria-labelledby="proof-camera-title"] [role="alert"]'),
-      ).not.toBeNull();
+        element().querySelector('[aria-labelledby="proof-camera-title"] [role="alert"]')?.classList,
+      ).toContain('ui-callout--danger');
+      expect(element().querySelector('[aria-labelledby="proof-camera-title"]')?.classList).toContain(
+        'ui-card',
+      );
 
       reader.answers = [[FOREIGN, LINK]];
       await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
@@ -505,8 +508,8 @@ describe('Given the ways to read a receipt code on the verification page', () =>
 
       expect(found).toEqual([]);
       expect(
-        element().querySelector('[aria-labelledby="proof-file-title"] [role="alert"]'),
-      ).not.toBeNull();
+        element().querySelector('[aria-labelledby="proof-file-title"] [role="alert"]')?.classList,
+      ).toContain('ui-callout--danger');
       expect(alertText()).toBe(
         'V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.',
       );

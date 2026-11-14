@@ -32,7 +32,7 @@
   margin-top: var(--space-4);
 }
 
-.verify-data-group,
-.verify-gifts {
-  margin-top: var(--space-5);
+.verify-local {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-5);
+  padding-inline: var(--space-6);
 }

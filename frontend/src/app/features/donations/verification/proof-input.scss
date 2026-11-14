@@ -31,4 +31,14 @@
 .proof-status:empty {
   position: absolute;
   margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.proof-problem {
+  margin: var(--space-4) var(--space-6) var(--space-5);
+}
+
+.proof-hint ~ .proof-problem {
+  margin-top: 0;
 }

@@ -297,11 +297,13 @@
 </section>
 
 @if (receipt(); as data) {
-  <section class="verify-data-group" aria-labelledby="verify-data-title">
-    <h2 id="verify-data-title" class="ui-group-title" i18n="@@donor.verify.data.title">
-      Údaje v kódu
-    </h2>
-    <dl class="ui-list ui-list--inset ui-list--fields verify-data">
+  <section class="ui-card" aria-labelledby="verify-data-title">
+    <div class="ui-card__bar">
+      <h2 id="verify-data-title" class="ui-card__title" i18n="@@donor.verify.data.title">
+        Údaje v kódu
+      </h2>
+    </div>
+    <dl class="ui-list ui-list--fields verify-data">
       <div class="ui-list__row ui-list__item ui-list__field">
         <dt class="ui-list__field-label" i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
         <dd class="ui-list__field-body">
@@ -376,11 +378,13 @@
     </dl>
   </section>
   @if (data.year !== null) {
-    <section class="verify-gifts" aria-labelledby="verify-gifts-title">
-      <h3 id="verify-gifts-title" class="ui-group-title" i18n="@@donor.verify.data.gifts">
-        Jednotlivé dary ({{ data.gifts.length }})
-      </h3>
-      <ul class="ui-list ui-list--inset">
+    <section class="ui-card" aria-labelledby="verify-gifts-title">
+      <div class="ui-card__bar">
+        <h3 id="verify-gifts-title" class="ui-card__title" i18n="@@donor.verify.data.gifts">
+          Jednotlivé dary ({{ data.gifts.length }})
+        </h3>
+      </div>
+      <ul class="ui-list">
         @for (gift of data.gifts; track $index) {
           <li>
             <div class="ui-list__row">
@@ -395,7 +399,7 @@
 }
 
 @if (checked()) {
-  <p class="ui-group-note verify-local">
+  <p class="verify-note verify-local">
     @if (statusAnswered()) {
       <ng-container i18n="@@donor.verify.local.withStatus"
         >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby

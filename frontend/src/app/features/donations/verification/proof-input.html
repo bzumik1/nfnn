@@ -1,10 +1,10 @@
-<div class="ui-groups">
+<div>
   @if (hasCamera) {
-    <section aria-labelledby="proof-camera-title">
+    <section class="ui-card" aria-labelledby="proof-camera-title">
       <h2 id="proof-camera-title" class="visually-hidden" i18n="@@donor.verify.input.cameraTitle">
         Načíst fotoaparátem
       </h2>
-      <ul class="ui-list ui-list--inset">
+      <ul class="ui-list">
         @if (scan() === 'scanning') {
           <li>
             <video
@@ -61,7 +61,7 @@
           </li>
         }
       </ul>
-      <p class="ui-group-note proof-status" role="status">
+      <p class="ui-card__footer proof-status" role="status">
         @if (scan() === 'scanning') {
           <span i18n="@@donor.verify.input.scanning"
             >Namiřte fotoaparát na QR kód z potvrzení.</span
@@ -71,16 +71,16 @@
         }
       </p>
       @if (problemOf('camera'); as text) {
-        <p class="ui-group-note ui-group-note--warning" role="alert">{{ text }}</p>
+        <p class="ui-callout ui-callout--danger proof-problem" role="alert">{{ text }}</p>
       }
     </section>
   }
 
-  <section aria-labelledby="proof-file-title">
+  <section class="ui-card" aria-labelledby="proof-file-title">
     <h2 id="proof-file-title" class="visually-hidden" i18n="@@donor.verify.input.fileTitle">
       Nahrát soubor
     </h2>
-    <ul class="ui-list ui-list--inset">
+    <ul class="ui-list">
       <li>
         <app-file-button
           inputId="proof-file"
@@ -108,16 +108,16 @@
         >
       </li>
     </ul>
-    <p id="proof-file-hint" class="ui-group-note" i18n="@@donor.verify.input.fileHint">
+    <p id="proof-file-hint" class="ui-card__footer proof-hint" i18n="@@donor.verify.input.fileHint">
       PDF potvrzení, jak jste ho stáhli z webu fondu, nebo fotka či snímek obrazovky jeho QR kódu.
     </p>
-    <p class="ui-group-note proof-status" role="status">
+    <p class="ui-card__footer proof-status" role="status">
       @if (reading()) {
         <span i18n="@@donor.verify.input.reading">Čteme kód ze souboru…</span>
       }
     </p>
     @if (problemOf('file'); as text) {
-      <p class="ui-group-note ui-group-note--warning" role="alert">{{ text }}</p>
+      <p class="ui-callout ui-callout--danger proof-problem" role="alert">{{ text }}</p>
     }
   </section>
 

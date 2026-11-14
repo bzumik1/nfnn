@@ -191,6 +191,17 @@ describe('Given the verification page', () => {
     expect(button('Ověřit další potvrzení')).toBeUndefined();
   });
 
+  it('when it opens without a code, then each way to read a code is a card holding its own heading, and nothing on the page is a grouped row', async () => {
+    await open('/overit');
+
+    for (const title of Array.from(root().querySelectorAll('h2'))) {
+      const card = title.closest('section');
+      expect(card?.classList).toContain('ui-card');
+      expect(card?.getAttribute('aria-labelledby')).toBe(title.id);
+    }
+    expect(root().querySelector('.ui-list--inset, .ui-groups, .ui-group-note')).toBeNull();
+  });
+
   it('when it opens, then search engines are asked not to index it, and leaving it lifts that', async () => {
     await open('/overit');
     const meta = TestBed.inject(Meta);
@@ -304,6 +315,21 @@ describe('Given the verification page', () => {
         row.textContent?.replace(/\s+/g, ' ').trim(),
       ),
     ).toEqual(['15. 3. 2026 500 Kč', '3. 11. 2026 1 250,50 Kč']);
+  });
+
+  it('when a yearly receipt is signed, then the signed data and the gifts each sit in a card under their own title, and verifying another is an action row of a card', async () => {
+    await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: YEARLY, status: 'active' });
+
+    for (const id of ['verify-data-title', 'verify-gifts-title']) {
+      const title = root().querySelector(`#${id}`);
+      expect(title?.classList).toContain('ui-card__title');
+      expect(title?.closest(`[aria-labelledby="${id}"]`)?.classList).toContain('ui-card');
+    }
+    expect(root().querySelector('#verify-gifts-title')?.tagName).toBe('H3');
+    expect(button('Ověřit další potvrzení')?.closest('.ui-card')).not.toBeNull();
+    expect(
+      root().querySelector('.ui-list--inset, .ui-group-title, .ui-group-note'),
+    ).toBeNull();
   });
 
   it('when the receipt is signed but checked offline, then it stays signed and says a replacement cannot be seen', async () => {
