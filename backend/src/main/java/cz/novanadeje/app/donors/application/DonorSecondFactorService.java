@@ -85,13 +85,12 @@ public class DonorSecondFactorService {
     }
 
     @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
-    public AuthenticatedDonor confirm(DonorId donorId, String code, RequestingDevice device) {
+    public AuthenticatedDonor confirm(DonorId donorId, boolean secondFactorVerified, String code, RequestingDevice device) {
         Donor donor = load(donorId);
+        sessionGuard.requireForFactorChange(donor, secondFactorVerified);
         SecondFactor factor = secondFactors.findByDonor(donorId).orElseThrow(SecondFactorNotPending::new);
-        if (factor.isEnabled()) {
-            throw new SecondFactorAlreadyEnabled();
-        }
         Instant now = clock.instant();
+        factor.requireConfirmableAt(now);
         codes.confirm(factor, code, now);
         sessions.requireLasting(donor, device);
         secondFactors.save(factor);

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -118,6 +119,29 @@ class JpaSecondFactorRepositoryTest {
         flushAndClear();
 
         assertThat(secondFactors.findByDonor(jana)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given set-ups begun before, at and after the cutoff and a factor confirmed long ago, when the pending ones begun up to the cutoff are deleted, then only those go and the count says how many")
+    void should_delete_only_pending_factors_begun_up_to_cutoff_when_deleted_given_pending_and_confirmed_factors() {
+        DonorId petr = donor("petr@example.cz", "4821937561");
+        DonorId eva = donor("eva@example.cz", "4821937562");
+        DonorId adam = donor("adam@example.cz", "4821937563");
+        Instant cutoff = NOW.minus(Duration.ofMinutes(30));
+        secondFactors.save(SecondFactor.enrol(jana, SECRET, cutoff.minusSeconds(1)));
+        secondFactors.save(SecondFactor.enrol(petr, SECRET, cutoff));
+        secondFactors.save(SecondFactor.enrol(eva, SECRET, cutoff.plusSeconds(1)));
+        secondFactors.save(SecondFactor.reconstitute(adam, SECRET, cutoff.minus(Duration.ofDays(30)), cutoff.minus(Duration.ofDays(30)), 7L));
+        flushAndClear();
+
+        int deleted = secondFactors.deletePendingBegunUpTo(cutoff);
+        flushAndClear();
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(secondFactors.findByDonor(jana)).isEmpty();
+        assertThat(secondFactors.findByDonor(petr)).isEmpty();
+        assertThat(secondFactors.findByDonor(eva)).isPresent();
+        assertThat(secondFactors.findByDonor(adam)).isPresent();
     }
 
     @Test

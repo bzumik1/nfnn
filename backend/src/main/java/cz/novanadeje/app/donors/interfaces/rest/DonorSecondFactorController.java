@@ -41,7 +41,7 @@ class DonorSecondFactorController {
     ResponseEntity<AuthResponse> confirm(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SecondFactorCodeRequest request,
                                          HttpServletRequest http, CurrentDevice device) {
         limiter.check(http.getRemoteAddr());
-        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), request.code(), SessionDevices.requesting(device, http)), clock.instant());
+        return SessionResponses.opened(HttpStatus.OK, secondFactors.confirm(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.code(), SessionDevices.requesting(device, http)), clock.instant());
     }
 
     @PostMapping("/disable")

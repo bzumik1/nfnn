@@ -4,8 +4,10 @@ import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,17 +27,20 @@ public class DonorSessionCleanupService {
     private final SecondFactorChallengeRepository challenges;
     private final AuthorizationCodeRepository authorizationCodes;
     private final SecondFactorRecoveryRepository recoveries;
+    private final SecondFactorRepository secondFactors;
     private final DeviceSignOuts signOuts;
     private final Clock clock;
 
     public DonorSessionCleanupService(DonorDeviceRepository devices, RefreshTokenRepository refreshTokens, SecondFactorChallengeRepository challenges,
-                                      AuthorizationCodeRepository authorizationCodes, SecondFactorRecoveryRepository recoveries, DeviceSignOuts signOuts,
+                                      AuthorizationCodeRepository authorizationCodes, SecondFactorRecoveryRepository recoveries, SecondFactorRepository secondFactors,
+                                      DeviceSignOuts signOuts,
                                       Clock clock) {
         this.devices = devices;
         this.refreshTokens = refreshTokens;
         this.challenges = challenges;
         this.authorizationCodes = authorizationCodes;
         this.recoveries = recoveries;
+        this.secondFactors = secondFactors;
         this.signOuts = signOuts;
         this.clock = clock;
     }
@@ -47,6 +52,7 @@ public class DonorSessionCleanupService {
         recoveries.forgetCodesClosedAt(now);
         recoveries.deleteExpiredBefore(spentSecretsCutoff);
         challenges.deleteExpiredBefore(spentSecretsCutoff);
+        secondFactors.deletePendingBegunUpTo(now.minus(SecondFactor.PENDING_LIFETIME));
         authorizationCodes.deleteExpiredBefore(spentSecretsCutoff);
         int expired = (int) devices.findActiveWithoutUsableTokenAt(now).stream()
                 .filter(device -> signOuts.end(device.donorId(), device.id(), DeviceSignOutReason.EXPIRED, now))

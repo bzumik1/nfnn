@@ -56,6 +56,30 @@ class SecondFactorTest {
     }
 
     @Test
+    @DisplayName("Given a pending factor set up 30 minutes ago, when it is confirmed, even with the right code, then it is refused as not pending and stays pending, while one set up a second less ago is still confirmed")
+    void should_refuse_as_not_pending_when_confirmed_given_set_up_thirty_minutes_ago() {
+        SecondFactor expired = SecondFactor.enrol(DONOR, SECRET, NOW.minus(Duration.ofMinutes(30)));
+        SecondFactor lasting = SecondFactor.enrol(DONOR, SECRET, NOW.minus(Duration.ofMinutes(30)).plusSeconds(1));
+
+        assertThatThrownBy(() -> expired.requireConfirmableAt(NOW)).isInstanceOf(SecondFactorNotPending.class);
+        assertThatThrownBy(() -> expired.confirm(codeAt(NOW), NOW)).isInstanceOf(SecondFactorNotPending.class);
+        lasting.requireConfirmableAt(NOW);
+        lasting.confirm(codeAt(NOW), NOW);
+
+        assertThat(SecondFactor.PENDING_LIFETIME).isEqualTo(Duration.ofMinutes(30));
+        assertThat(expired.isEnabled()).isFalse();
+        assertThat(lasting.isEnabled()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given an enabled factor, when it is checked for a confirmation, then it is refused as already enabled however old its set-up is")
+    void should_refuse_as_already_enabled_when_checked_for_confirmation_given_enabled_factor() {
+        SecondFactor enabled = SecondFactor.reconstitute(DONOR, SECRET, NOW.minus(Duration.ofDays(30)), NOW.minus(Duration.ofDays(30)), 1L);
+
+        assertThatThrownBy(() -> enabled.requireConfirmableAt(NOW)).isInstanceOf(SecondFactorAlreadyEnabled.class);
+    }
+
+    @Test
     @DisplayName("Given an enabled factor, when the next step's code is verified, then it passes once and the same code is refused afterwards")
     void should_refuse_reused_code_when_verified_given_enabled_factor() {
         SecondFactor factor = SecondFactor.enrol(DONOR, SECRET, NOW);

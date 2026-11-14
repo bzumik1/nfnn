@@ -1,10 +1,13 @@
 package cz.novanadeje.app.donors.domain;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.OptionalLong;
 
 public final class SecondFactor {
+
+    public static final Duration PENDING_LIFETIME = Duration.ofMinutes(30);
 
     private final DonorId donorId;
     private final TotpSecret secret;
@@ -29,15 +32,22 @@ public final class SecondFactor {
     }
 
     public void confirm(String code, Instant now) {
-        if (isEnabled()) {
-            throw new SecondFactorAlreadyEnabled();
-        }
+        requireConfirmableAt(now);
         OptionalLong step = Totp.matchingStep(secret, code, now);
         if (step.isEmpty()) {
             throw new SecondFactorCodeRejected();
         }
         confirmedAt = now;
         lastUsedStep = step.getAsLong();
+    }
+
+    public void requireConfirmableAt(Instant now) {
+        if (isEnabled()) {
+            throw new SecondFactorAlreadyEnabled();
+        }
+        if (!now.isBefore(createdAt.plus(PENDING_LIFETIME))) {
+            throw new SecondFactorNotPending();
+        }
     }
 
     public void verify(String code, Instant now) {

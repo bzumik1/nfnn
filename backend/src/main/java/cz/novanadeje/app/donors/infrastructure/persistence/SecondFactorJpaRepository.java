@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -20,4 +21,8 @@ interface SecondFactorJpaRepository extends JpaRepository<SecondFactorJpaEntity,
     @Modifying(flushAutomatically = true)
     @Query("update SecondFactorJpaEntity f set f.lastUsedStep = :step where f.donorId = :donorId and (f.lastUsedStep is null or f.lastUsedStep < :step)")
     int recordUse(@Param("donorId") UUID donorId, @Param("step") long step);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from SecondFactorJpaEntity f where f.confirmedAt is null and f.createdAt <= :cutoff")
+    int deletePendingCreatedUpTo(@Param("cutoff") Instant cutoff);
 }

@@ -190,6 +190,26 @@ Feature: Donor protects the account with a second factor from an authenticator a
     Then the response status is 409
     And the problem type ends with "donors/second-factor-already-enabled"
 
+  Scenario: A set-up not confirmed within 30 minutes is no longer pending and the nightly clean-up deletes it
+    Given the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    And the donor starts the second factor set-up with password "correct horse battery"
+    When 29 minutes pass
+    And the sessions are cleaned up
+    Then a second factor set-up of "jana@example.cz" is stored
+    When 1 minute passes
+    And the donor refreshes the session
+    And the donor confirms the second factor with the current code
+    Then the response status is 400
+    And the problem type ends with "donors/second-factor-not-pending"
+    When the sessions are cleaned up
+    Then no second factor of "jana@example.cz" is stored
+    When the donor starts the second factor set-up with password "correct horse battery"
+    And 29 minutes pass
+    And the donor refreshes the session
+    And the donor confirms the second factor with the current code
+    Then the response status is 200
+    And the donor profile shows roles "DONOR" and the second factor on
+
   Scenario: Without a session the second factor cannot be set up, confirmed or turned off
     Given nobody is signed in
     When the donor starts the second factor set-up with password "correct horse battery"

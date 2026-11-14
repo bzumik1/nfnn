@@ -37,6 +37,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,13 +104,14 @@ class DonorSecondFactorServiceTest {
     private WrongSecondFactorCodeCount wrongCodes;
 
     private final OpenTransactions transactions = new OpenTransactions();
+    private final MutableClock clock = new MutableClock(NOW, ZoneOffset.UTC);
     private DonorSecondFactorService service;
 
     @BeforeEach
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts,
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, clock, signOuts,
                 new SecondFactorCodes(secondFactors, wrongCodes), transactions);
     }
 
@@ -204,7 +206,7 @@ class DonorSecondFactorServiceTest {
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
         when(sessions.continueOn(donor, true, DEVICE)).thenReturn(TOKENS);
 
-        AuthenticatedDonor result = service.confirm(DONOR, codeAt(NOW), DEVICE);
+        AuthenticatedDonor result = service.confirm(DONOR, false, codeAt(NOW), DEVICE);
 
         InOrder order = inOrder(secondFactors, signOuts, sessions);
         order.verify(secondFactors).save(factor);
@@ -217,6 +219,66 @@ class DonorSecondFactorServiceTest {
     }
 
     @Test
+    @DisplayName("Given an administrator with a passkey and a set-up begun before, in a session opened with the password only, when it is confirmed with the right code, then it is refused before the code is counted and nothing changes")
+    void should_refuse_confirmation_when_session_opened_with_password_only_given_administrator_with_passkey() {
+        Donor administrator = donor();
+        administrator.grantAdministration(true);
+        SecondFactor pending = SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(pending));
+        when(passkeys.countByDonor(DONOR)).thenReturn(1);
+
+        assertThatThrownBy(() -> service.confirm(DONOR, false, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorSessionRequired.class);
+
+        assertThat(pending.isEnabled()).isFalse();
+        verify(secondFactors, never()).save(any());
+        verifyNoInteractions(wrongCodes, signOuts, sessions, events);
+    }
+
+    @Test
+    @DisplayName("Given an administrator with a passkey in a session opened with it, when a pending factor is confirmed with the right code, then it is enabled and a verified session continues")
+    void should_enable_when_confirmed_in_verified_session_given_administrator_with_passkey() {
+        Donor administrator = donor();
+        administrator.grantAdministration(true);
+        SecondFactor pending = SecondFactor.enrol(DONOR, SECRET, NOW.minusSeconds(60));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(administrator));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(pending));
+        when(sessions.continueOn(administrator, true, DEVICE)).thenReturn(TOKENS);
+
+        service.confirm(DONOR, true, codeAt(NOW), DEVICE);
+
+        assertThat(pending.isEnabled()).isTrue();
+        verify(secondFactors).save(pending);
+    }
+
+    @Test
+    @DisplayName("Given a set-up begun 30 minutes ago, when it is confirmed with the right code, then it is refused as not pending before the code is counted, while one begun a second later is still confirmed")
+    void should_refuse_as_not_pending_before_counting_code_when_confirmed_given_set_up_begun_thirty_minutes_ago() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
+        service.begin(DONOR, false, Confirmation.withPassword(PASSWORD));
+        ArgumentCaptor<SecondFactor> stored = ArgumentCaptor.forClass(SecondFactor.class);
+        verify(secondFactors).save(stored.capture());
+        TotpSecret secret = stored.getValue().secret();
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(stored.getValue()));
+
+        clock.advance(Duration.ofMinutes(30));
+
+        assertThatThrownBy(() -> service.confirm(DONOR, false, Totp.codeAt(secret, Totp.stepAt(clock.instant())), DEVICE))
+                .isInstanceOf(SecondFactorNotPending.class);
+        verifyNoInteractions(wrongCodes, signOuts, sessions, events);
+
+        clock.advance(Duration.ofSeconds(-1));
+        when(sessions.continueOn(donor, true, DEVICE)).thenReturn(TOKENS);
+
+        service.confirm(DONOR, false, Totp.codeAt(secret, Totp.stepAt(clock.instant())), DEVICE);
+
+        assertThat(stored.getValue().isEnabled()).isTrue();
+    }
+
+    @Test
     @DisplayName("Given a session that has ended, when a pending factor is confirmed or an enabled one disabled with the right code, then it is refused as ended before the factor is stored or deleted, any device is signed out or the donor is told")
     void should_refuse_as_ended_and_change_nothing_when_confirmed_or_disabled_given_ended_session() {
         Donor donor = donor();
@@ -226,7 +288,7 @@ class DonorSecondFactorServiceTest {
         doThrow(new SessionEnded()).when(sessions).requireLasting(donor, DEVICE);
         when(secondFactors.recordUse(any())).thenReturn(true);
 
-        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, false, codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(SessionEnded.class);
 
         verify(secondFactors, never()).save(any());
@@ -242,7 +304,7 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(factor));
 
-        assertThatThrownBy(() -> service.confirm(DONOR, "000000", DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, false, "000000", DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
 
         assertThat(factor.isEnabled()).isFalse();
         verify(secondFactors, never()).save(any());
@@ -255,8 +317,8 @@ class DonorSecondFactorServiceTest {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty(), Optional.of(enabledFactor()));
 
-        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotPending.class);
-        assertThatThrownBy(() -> service.confirm(DONOR, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorAlreadyEnabled.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, false, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorNotPending.class);
+        assertThatThrownBy(() -> service.confirm(DONOR, false, codeAt(NOW), DEVICE)).isInstanceOf(SecondFactorAlreadyEnabled.class);
 
         verifyNoInteractions(signOuts, sessions, events);
     }
