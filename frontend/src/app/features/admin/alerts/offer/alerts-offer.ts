@@ -43,7 +43,6 @@ const ALERTS_PAGE = '/sprava/upozorneni';
   selector: 'app-alerts-offer',
   imports: [Dialog, NeedsConnection, RouterLink],
   templateUrl: './alerts-offer.html',
-  styleUrl: './alerts-offer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertsOffer {

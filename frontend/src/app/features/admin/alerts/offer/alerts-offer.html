@@ -5,10 +5,10 @@
     [dismissible]="current !== 'turning-on'"
     (dismissed)="dismiss()"
   >
-    <div class="alerts-offer">
+    <div class="ui-offer-sheet">
       <span
-        class="alerts-offer__icon"
-        [class.alerts-offer__icon--on]="current === 'on'"
+        class="ui-offer-sheet__icon"
+        [class.ui-offer-sheet__icon--on]="current === 'on'"
         aria-hidden="true"
       >
         @if (current === 'on') {
@@ -95,7 +95,7 @@
         }
       </div>
     </div>
-    <div class="ui-dialog__actions alerts-offer__actions">
+    <div class="ui-dialog__actions ui-offer-sheet__actions">
       @switch (current) {
         @case ('on') {
           <button

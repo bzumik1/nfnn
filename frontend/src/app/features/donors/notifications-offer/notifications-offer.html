@@ -1,0 +1,166 @@
+@if (step(); as current) {
+  <app-dialog
+    labelledBy="notifications-offer-title"
+    presentation="sheet"
+    [dismissible]="current !== 'turning-on'"
+    (dismissed)="dismiss()"
+  >
+    <div class="ui-offer-sheet">
+      <span
+        class="ui-offer-sheet__icon"
+        [class.ui-offer-sheet__icon--on]="current === 'on'"
+        aria-hidden="true"
+      >
+        @if (current === 'on') {
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        } @else {
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+        }
+      </span>
+      <h2 #title id="notifications-offer-title" class="ui-dialog__title" tabindex="-1">
+        @switch (current) {
+          @case ('on') {
+            <ng-container i18n="@@donor.notifications.offer.onTitle"
+              >Upozornění jsou zapnutá</ng-container
+            >
+          }
+          @case ('refused') {
+            <ng-container i18n="@@donor.notifications.offer.refusedTitle"
+              >Upozornění jsou vypnutá</ng-container
+            >
+          }
+          @default {
+            <ng-container i18n="@@donor.notifications.offer.title"
+              >Chcete vědět, až dar dorazí?</ng-container
+            >
+          }
+        }
+      </h2>
+      <div role="status">
+        @switch (current) {
+          @case ('on') {
+            @if (testSent()) {
+              <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.onLead">
+                Poslali jsme zkušební upozornění, mělo by se hned objevit. Která upozornění chcete,
+                změníte v Údajích a zabezpečení.
+              </p>
+            } @else {
+              <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.onLeadNoTest">
+                Zkušební upozornění se teď na toto zařízení nepodařilo předat. Upozornění najdete v
+                Údajích a zabezpečení.
+              </p>
+            }
+          }
+          @case ('turning-on') {
+            <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.turningOnLead">
+              Zapínáme upozornění…
+            </p>
+          }
+        }
+      </div>
+      @if (current === 'offer' || current === 'failed') {
+        <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.lead">
+          Pošleme krátké upozornění, jakmile váš dar z banky přiřadíme k vašemu účtu, a jednou za
+          rok, až bude připravené roční potvrzení. Upozornění neříká jména ani částky.
+        </p>
+      }
+      <div role="alert">
+        @if (current === 'refused') {
+          <p class="ui-dialog__lead" i18n="@@donor.notifications.offer.refusedLead">
+            Zařízení upozornění pro tuto aplikaci nepovolilo. Povolte jí oznámení v nastavení
+            zařízení (na iPhonu Nastavení → Oznámení → Nová naděje, nebo jak jste ikonu na ploše
+            pojmenovali) a potom upozornění zapněte v Údajích a zabezpečení.
+          </p>
+        }
+        @if (current === 'failed') {
+          <p class="ui-dialog__lead">{{ failure() }}</p>
+        }
+      </div>
+    </div>
+    <div class="ui-dialog__actions ui-offer-sheet__actions">
+      @switch (current) {
+        @case ('on') {
+          <button
+            type="button"
+            class="ui-button ui-button--primary"
+            (click)="close()"
+            i18n="@@donor.notifications.offer.done"
+          >
+            Hotovo
+          </button>
+          <a
+            class="ui-button ui-button--quiet"
+            routerLink="/darce/udaje"
+            (click)="close()"
+            i18n="@@donor.notifications.offer.edit"
+          >
+            Upravit upozornění
+          </a>
+        }
+        @case ('refused') {
+          <button
+            type="button"
+            class="ui-button ui-button--primary"
+            (click)="close()"
+            i18n="@@donor.notifications.offer.close"
+          >
+            Zavřít
+          </button>
+        }
+        @default {
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button ui-button--primary"
+            [disabled]="current === 'turning-on'"
+            (click)="turnOn()"
+          >
+            @switch (current) {
+              @case ('turning-on') {
+                <ng-container i18n="@@donor.notifications.offer.turningOn">Zapínáme…</ng-container>
+              }
+              @case ('failed') {
+                <ng-container i18n="@@donor.notifications.offer.retry">Zkusit znovu</ng-container>
+              }
+              @default {
+                <ng-container i18n="@@donor.notifications.offer.turnOn">Zapnout</ng-container>
+              }
+            }
+          </button>
+          <button
+            type="button"
+            class="ui-button ui-button--quiet"
+            [disabled]="current === 'turning-on'"
+            (click)="putOff()"
+            i18n="@@donor.notifications.offer.later"
+          >
+            Teď ne
+          </button>
+        }
+      }
+    </div>
+  </app-dialog>
+}
