@@ -1,5 +1,6 @@
 package cz.novanadeje.app.support;
 
+import cz.novanadeje.app.operations.application.push.PushPace;
 import cz.novanadeje.app.operations.application.push.PushRetryTimer;
 
 import java.time.Instant;
@@ -14,7 +15,7 @@ public class RecordingPushRetryTimer implements PushRetryTimer {
     private final List<Scheduled> scheduled = new ArrayList<>();
 
     @Override
-    public synchronized void at(Instant when, Runnable task) {
+    public synchronized void at(Instant when, PushPace pace, Runnable task) {
         scheduled.add(new Scheduled(when, task));
     }
 

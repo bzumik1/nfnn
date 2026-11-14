@@ -3,18 +3,17 @@ package cz.novanadeje.app.operations.application.push;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.operations.application.settings.CarriedSettingsKeyService;
-import cz.novanadeje.app.operations.application.settings.ReversibleSealer;
+import cz.novanadeje.app.operations.domain.push.DonorNotifications;
+import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
-import cz.novanadeje.app.operations.domain.push.PushKey;
-import cz.novanadeje.app.operations.domain.push.PushKeyRepository;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.PushRecipient;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
+import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,18 +26,20 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class PushSenderTest {
 
@@ -47,176 +48,219 @@ class PushSenderTest {
     private static final PushClientKeys CLIENT = new PushClientKeys(
             "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4", "BTBZMqHH6r4Tts7J_aSIgg");
     private static final UUID ADMIN = UUID.randomUUID();
+    private static final UUID JANA = UUID.randomUUID();
+    private static final PushMessage TEST = new PushMessage(PushMessageKind.TEST, 0);
+    private static final PushMessage DONOR_TEST = new PushMessage(PushMessageKind.DONOR_TEST, 0);
 
-    private final InMemoryPushSubscriptions subscriptions = new InMemoryPushSubscriptions();
-    private final Map<PushEndpoint, PushOutcome> outcomes = new ConcurrentHashMap<>();
-    private final Set<PushEndpoint> throwing = ConcurrentHashMap.newKeySet();
-    private final AtomicReference<CountDownLatch> allStarted = new AtomicReference<>();
+    private final InMemoryPushSubscriptions administrators = new InMemoryPushSubscriptions();
+    private final InMemoryDonorPushSubscriptions donors = new InMemoryDonorPushSubscriptions();
+    private final Map<PushEndpoint, PushOutcome> outcomes = new LinkedHashMap<>();
+    private final Set<PushEndpoint> unread = new HashSet<>();
+    private final List<PushPace> paces = new ArrayList<>();
+    private final PushKeyService keys = mock(PushKeyService.class);
     private final ListAppender<ILoggingEvent> log = new ListAppender<>();
-    private final PushSender sender = new PushSender((recipient, message, keys) -> deliverTo(recipient),
-            new PushKeyService(new StoredKey(), subscriptions, new InMemoryDonorPushSubscriptions(), new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), Clock.fixed(NOW, ZoneOffset.UTC)),
-            subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void captureLog() {
+        when(keys.current()).thenReturn(KEYS);
         log.start();
-        ((Logger) LoggerFactory.getLogger(PushSender.class)).addAppender(log);
+        logger().addAppender(log);
     }
 
     @AfterEach
     void releaseLog() {
-        ((Logger) LoggerFactory.getLogger(PushSender.class)).detachAppender(log);
+        logger().detachAppender(log);
     }
 
     @Test
     @DisplayName("Given three subscriptions, when the push services deliver one, answer gone for one and fail one, then they are marked delivered, removed and counted as failed")
     void should_record_each_outcome_when_sent_given_three_subscriptions() {
-        PushSubscription delivered = subscribed("delivered");
-        PushSubscription gone = subscribed("gone");
-        PushSubscription failing = subscribed("failing");
+        PushSubscription delivered = administratorDevice("delivered");
+        PushSubscription gone = administratorDevice("gone");
+        PushSubscription failing = administratorDevice("failing");
         outcomes.put(gone.endpoint(), PushOutcome.GONE);
         outcomes.put(failing.endpoint(), PushOutcome.FAILED);
 
-        PushDeliveryReport report = sender.send(List.of(delivered, gone, failing), new PushMessage(PushMessageKind.TEST, 0));
+        PushDeliveryReport report = sender(administrators, donors).toAdministrators(List.of(delivered, gone, failing), TEST).report();
 
         assertThat(report).isEqualTo(new PushDeliveryReport(1, 1, 1));
-        assertThat(subscriptions.findById(delivered.id())).get().satisfies(row -> {
+        assertThat(administrators.findById(delivered.id())).get().satisfies(row -> {
             assertThat(row.lastDeliveredAt()).contains(NOW);
             assertThat(row.failuresInARow()).isZero();
         });
-        assertThat(subscriptions.findById(gone.id())).isEmpty();
-        assertThat(subscriptions.findById(failing.id())).get().extracting(PushSubscription::failuresInARow).isEqualTo(1);
+        assertThat(administrators.findById(gone.id())).isEmpty();
+        assertThat(administrators.findById(failing.id())).get().extracting(PushSubscription::failuresInARow).isEqualTo(1);
         assertThat(log.list).isEmpty();
     }
 
     @Test
     @DisplayName("Given a subscription that keeps failing, when the third send in a row fails, then one warning names only its id, and a later delivery resets the count")
     void should_warn_once_when_failing_given_three_failures_in_a_row() {
-        PushSubscription failing = subscribed("failing");
+        PushSubscription failing = administratorDevice("failing");
         outcomes.put(failing.endpoint(), PushOutcome.FAILED);
+        PushSender sender = sender(administrators, donors);
 
         for (int send = 0; send < 4; send++) {
-            sender.send(List.of(failing), new PushMessage(PushMessageKind.TEST, 0));
+            sender.toAdministrators(List.of(failing), TEST);
         }
         outcomes.remove(failing.endpoint());
-        sender.send(List.of(failing), new PushMessage(PushMessageKind.TEST, 0));
+        sender.toAdministrators(List.of(failing), TEST);
 
         assertThat(log.list).singleElement().extracting(ILoggingEvent::getFormattedMessage)
                 .isEqualTo("Push subscription " + failing.id().value() + " failed 3 times in a row");
-        assertThat(subscriptions.findById(failing.id())).get().extracting(PushSubscription::failuresInARow).isEqualTo(0);
+        assertThat(administrators.findById(failing.id())).get().extracting(PushSubscription::failuresInARow).isEqualTo(0);
     }
 
     @Test
     @DisplayName("Given a subscription removed while its message was on the way, when the delivery or failure is recorded, then it stays removed")
     void should_not_bring_back_when_recorded_given_removed_meanwhile() {
-        PushSubscription delivered = subscribed("delivered");
-        PushSubscription failing = subscribed("failing");
+        PushSubscription delivered = administratorDevice("delivered");
+        PushSubscription failing = administratorDevice("failing");
         outcomes.put(failing.endpoint(), PushOutcome.FAILED);
-        subscriptions.deleteAll();
+        administrators.deleteAll();
 
-        sender.send(List.of(delivered, failing), new PushMessage(PushMessageKind.TEST, 0));
+        sender(administrators, donors).toAdministrators(List.of(delivered, failing), TEST);
 
-        assertThat(subscriptions.all()).isEmpty();
+        assertThat(administrators.all()).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a delivery that throws, when a message is sent to three devices, then that one counts as failed and the others are still delivered")
-    void should_count_failed_and_deliver_rest_when_sent_given_delivery_that_throws() {
-        PushSubscription first = subscribed("first");
-        PushSubscription throwingOne = subscribed("throwing");
-        PushSubscription last = subscribed("last");
-        throwing.add(throwingOne.endpoint());
-
-        PushDeliveryReport report = sender.send(List.of(first, throwingOne, last), new PushMessage(PushMessageKind.TEST, 0));
-
-        assertThat(report).isEqualTo(new PushDeliveryReport(2, 1, 0));
-        assertThat(subscriptions.findById(throwingOne.id())).get().extracting(PushSubscription::failuresInARow).isEqualTo(1);
-        assertThat(subscriptions.findById(last.id())).get().extracting(PushSubscription::lastDeliveredAt).isEqualTo(Optional.of(NOW));
-    }
-
-    @Test
-    @DisplayName("Given ten devices, when a message is sent, then every delivery runs at the same time, so the slowest service alone bounds the wait")
-    void should_deliver_at_once_when_sent_given_ten_devices() {
-        List<PushSubscription> devices = java.util.stream.IntStream.range(0, PushSubscription.MAX_PER_ADMINISTRATOR)
-                .mapToObj(device -> subscribed("device-" + device)).toList();
-        allStarted.set(new CountDownLatch(devices.size()));
-
-        PushDeliveryReport report = sender.send(devices, new PushMessage(PushMessageKind.TEST, 0));
-
-        assertThat(report).isEqualTo(new PushDeliveryReport(devices.size(), 0, 0));
-    }
-
-    @Test
-    @DisplayName("Given a delivered, a gone, a failing and a throwing device, when a message is attempted, then the attempt names the failing and the throwing one to try again")
+    @DisplayName("Given a delivered, a gone and two failing devices, when a message is attempted, then the attempt names both failing ones to try again in their order")
     void should_name_failed_devices_when_attempted_given_mixed_outcomes() {
-        PushSubscription delivered = subscribed("delivered");
-        PushSubscription gone = subscribed("gone");
-        PushSubscription failing = subscribed("failing");
-        PushSubscription throwingOne = subscribed("throwing");
+        PushSubscription delivered = administratorDevice("delivered");
+        PushSubscription gone = administratorDevice("gone");
+        PushSubscription failing = administratorDevice("failing");
+        PushSubscription alsoFailing = administratorDevice("also-failing");
         outcomes.put(gone.endpoint(), PushOutcome.GONE);
         outcomes.put(failing.endpoint(), PushOutcome.FAILED);
-        throwing.add(throwingOne.endpoint());
+        outcomes.put(alsoFailing.endpoint(), PushOutcome.FAILED);
 
-        PushAttempt attempt = sender.attempt(List.of(delivered, gone, failing, throwingOne), new PushMessage(PushMessageKind.MAIL_OUTAGE, 1));
+        PushAttempt attempt = sender(administrators, donors).toAdministrators(List.of(delivered, gone, failing, alsoFailing),
+                new PushMessage(PushMessageKind.MAIL_OUTAGE, 1));
 
         assertThat(attempt.report()).isEqualTo(new PushDeliveryReport(1, 2, 1));
-        assertThat(attempt.failed()).containsExactly(failing.id(), throwingOne.id());
+        assertThat(attempt.failed()).containsExactly(failing.id(), alsoFailing.id());
     }
 
     @Test
     @DisplayName("Given no subscriptions, when a message is sent, then nothing is delivered")
     void should_send_nothing_when_sent_given_no_subscriptions() {
-        assertThat(sender.send(List.of(), new PushMessage(PushMessageKind.TEST, 0))).isEqualTo(PushDeliveryReport.NONE);
+        assertThat(sender(administrators, donors).toAdministrators(List.of(), TEST)).isEqualTo(PushAttempt.NONE);
+        verify(keys, never()).current();
     }
 
-    private PushOutcome deliverTo(PushRecipient subscription) {
-        if (throwing.contains(subscription.endpoint())) {
-            throw new IllegalStateException("The push service could not be reached");
+    @Test
+    @DisplayName("Given an administrator's devices and a donor's device, when each is sent a message, then the administrators' are delivered all at once and the donor's paced")
+    void should_deliver_administrators_at_once_and_donors_paced_when_sent() {
+        PushSender sender = sender(administrators, donors);
+
+        sender.toAdministrators(List.of(administratorDevice("admin")), TEST);
+        sender.toDonors(List.of(donorDevice("jana")), DONOR_TEST);
+
+        assertThat(paces).containsExactly(PushPace.AT_ONCE, PushPace.PACED);
+    }
+
+    @Test
+    @DisplayName("Given a donor's devices delivered, gone and failing, when they are sent a notification, then the donor's rows are marked delivered, removed and failed and the administrators' rows are untouched")
+    void should_record_in_the_donor_rows_when_sent_to_donors() {
+        DonorPushSubscription delivered = donorDevice("delivered");
+        DonorPushSubscription gone = donorDevice("gone");
+        DonorPushSubscription failing = donorDevice("failing");
+        PushSubscription administrator = administratorDevice("admin");
+        outcomes.put(gone.endpoint(), PushOutcome.GONE);
+        outcomes.put(failing.endpoint(), PushOutcome.FAILED);
+
+        PushAttempt sent = sender(administrators, donors).toDonors(List.of(delivered, gone, failing), DONOR_TEST);
+
+        assertThat(sent.report()).isEqualTo(new PushDeliveryReport(1, 1, 1));
+        assertThat(sent.failed()).containsExactly(failing.id());
+        assertThat(donors.all()).extracting(DonorPushSubscription::id).containsExactlyInAnyOrder(delivered.id(), failing.id());
+        assertThat(donors.all()).filteredOn(row -> row.id().equals(delivered.id())).singleElement()
+                .extracting(DonorPushSubscription::lastDeliveredAt).isEqualTo(Optional.of(NOW));
+        assertThat(administrators.findById(administrator.id())).get().satisfies(row -> {
+            assertThat(row.lastDeliveredAt()).isEmpty();
+            assertThat(row.failuresInARow()).isZero();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a device whose push service keeps failing, when a notification fails the third time in a row, then one warning names the subscription by its id and the count")
+    void should_warn_once_when_tested_given_third_failure_in_a_row() {
+        DonorPushSubscription phone = donorDevice("jana");
+        outcomes.put(phone.endpoint(), PushOutcome.FAILED);
+        PushSender sender = sender(administrators, donors);
+
+        for (int attempt = 0; attempt < 4; attempt++) {
+            assertThat(sender.toDonors(List.of(phone), DONOR_TEST).report()).isEqualTo(new PushDeliveryReport(0, 1, 0));
         }
-        CountDownLatch together = allStarted.get();
-        if (together != null) {
-            together.countDown();
-            try {
-                return together.await(5, TimeUnit.SECONDS) ? PushOutcome.DELIVERED : PushOutcome.FAILED;
-            } catch (InterruptedException interrupted) {
-                Thread.currentThread().interrupt();
-                return PushOutcome.FAILED;
+
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel().toString()).isEqualTo("WARN");
+            assertThat(event.getFormattedMessage()).isEqualTo("Push subscription " + phone.id().value() + " failed 3 times in a row");
+        });
+    }
+
+    @Test
+    @DisplayName("Given a notification the push service took, when its outcome cannot be written, then it still counts as delivered")
+    void should_report_delivery_when_sent_given_outcome_not_written() {
+        DonorPushSubscription phone = donorDevice("jana");
+        InMemoryDonorPushSubscriptions unwritable = new InMemoryDonorPushSubscriptions() {
+            @Override
+            public synchronized void markDelivered(PushSubscriptionId id, Instant at) {
+                throw new IllegalStateException("The database is busy");
             }
-        }
-        return outcomes.getOrDefault(subscription.endpoint(), PushOutcome.DELIVERED);
+        };
+        donors.all().forEach(unwritable::save);
+
+        assertThat(sender(administrators, unwritable).toDonors(List.of(phone), DONOR_TEST).report()).isEqualTo(new PushDeliveryReport(1, 0, 0));
     }
 
-    private PushSubscription subscribed(String name) {
+    @Test
+    @DisplayName("Given a device whose outcome the delivery could not read because its thread was stopped, when a message is sent, then it counts neither as delivered nor as failed and its row is untouched")
+    void should_count_nothing_when_sent_given_outcome_not_read() {
+        PushSubscription read = administratorDevice("read");
+        PushSubscription notRead = administratorDevice("not-read");
+        unread.add(notRead.endpoint());
+
+        PushAttempt sent = sender(administrators, donors).toAdministrators(List.of(read, notRead), TEST);
+
+        assertThat(sent).isEqualTo(new PushAttempt(new PushDeliveryReport(1, 0, 0), List.of()));
+        assertThat(administrators.findById(notRead.id())).get().satisfies(row -> {
+            assertThat(row.lastDeliveredAt()).isEmpty();
+            assertThat(row.failuresInARow()).isZero();
+        });
+    }
+
+    private PushSender sender(InMemoryPushSubscriptions administratorRows, InMemoryDonorPushSubscriptions donorRows) {
+        PushDelivery delivery = (recipients, message, vapid, pace) -> {
+            paces.add(pace);
+            Map<PushSubscriptionId, PushOutcome> delivered = new LinkedHashMap<>();
+            for (PushRecipient recipient : recipients) {
+                if (!unread.contains(recipient.endpoint())) {
+                    delivered.put(recipient.id(), outcomes.getOrDefault(recipient.endpoint(), PushOutcome.DELIVERED));
+                }
+            }
+            return delivered;
+        };
+        return new PushSender(delivery, keys, administratorRows, donorRows, new TransactionTemplate(mock(PlatformTransactionManager.class)),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    private PushSubscription administratorDevice(String name) {
         PushSubscription subscription = PushSubscription.subscribe(ADMIN, UUID.randomUUID(), new PushEndpoint("https://fcm.googleapis.com/fcm/send/" + name),
                 CLIENT, PushAlerts.ALL, NOW);
-        subscriptions.save(subscription);
+        administrators.save(subscription);
         return subscription;
     }
 
-    private static final class StoredKey implements PushKeyRepository {
+    private DonorPushSubscription donorDevice(String name) {
+        DonorPushSubscription subscription = DonorPushSubscription.subscribe(JANA, UUID.randomUUID(),
+                new PushEndpoint("https://fcm.googleapis.com/fcm/send/" + name), CLIENT, DonorNotifications.ALL, NOW);
+        donors.save(subscription);
+        return subscription;
+    }
 
-        private Optional<PushKey> key = Optional.empty();
-
-        @Override
-        public Optional<PushKey> find() {
-            return key;
-        }
-
-        @Override
-        public Optional<PushKey> findLocked() {
-            return key;
-        }
-
-        @Override
-        public void insertIfAbsent(PushKey stored) {
-            if (key.isEmpty()) {
-                key = Optional.of(stored);
-            }
-        }
-
-        @Override
-        public void replace(PushKey stored) {
-            key = Optional.of(stored);
-        }
+    private static Logger logger() {
+        return (Logger) LoggerFactory.getLogger(PushSender.class);
     }
 }

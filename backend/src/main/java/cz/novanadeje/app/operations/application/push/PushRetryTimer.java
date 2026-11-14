@@ -4,5 +4,5 @@ import java.time.Instant;
 
 public interface PushRetryTimer {
 
-    void at(Instant when, Runnable task);
+    void at(Instant when, PushPace pace, Runnable retry);
 }

@@ -1,6 +1,6 @@
 package cz.novanadeje.app.operations.domain.push;
 
-public interface PushRecipient {
+public sealed interface PushRecipient permits PushSubscription, DonorPushSubscription {
 
     PushSubscriptionId id();
 

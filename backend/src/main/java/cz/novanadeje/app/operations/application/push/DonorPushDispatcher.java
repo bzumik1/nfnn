@@ -8,7 +8,6 @@ import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Executor;
 
 @Component
 public class DonorPushDispatcher {
@@ -26,20 +24,18 @@ public class DonorPushDispatcher {
     private static final Logger log = LoggerFactory.getLogger(DonorPushDispatcher.class);
 
     private final DonorPushSubscriptionRepository subscriptions;
-    private final DonorPushSender sender;
+    private final PushSender sender;
     private final SignedInDevices devices;
     private final PushRetryTimer timer;
-    private final Executor rounds;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
-    public DonorPushDispatcher(DonorPushSubscriptionRepository subscriptions, DonorPushSender sender, SignedInDevices devices, PushRetryTimer timer,
-                               @Qualifier("applicationTaskExecutor") Executor rounds, TransactionTemplate transactions, Clock clock) {
+    public DonorPushDispatcher(DonorPushSubscriptionRepository subscriptions, PushSender sender, SignedInDevices devices, PushRetryTimer timer,
+                               TransactionTemplate transactions, Clock clock) {
         this.subscriptions = subscriptions;
         this.sender = sender;
         this.devices = devices;
         this.timer = timer;
-        this.rounds = rounds;
         this.transactions = transactions;
         this.clock = clock;
     }
@@ -59,7 +55,7 @@ public class DonorPushDispatcher {
             if (recipients.isEmpty()) {
                 return;
             }
-            PushAttempt sent = sender.send(recipients, new PushMessage(kind, 0));
+            PushAttempt sent = sender.toDonors(recipients, new PushMessage(kind, 0));
             if (sent.failed().isEmpty()) {
                 return;
             }
@@ -68,17 +64,10 @@ public class DonorPushDispatcher {
                 return;
             }
             Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-            timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)), () -> handOff(kind, donors, attempt + 1, failed));
+            timer.at(clock.instant().plus(PushAlertDispatcher.RETRY_DELAYS.get(attempt - 1)), PushPace.PACED,
+                    () -> attempt(kind, donors, attempt + 1, Optional.of(failed)));
         } catch (RuntimeException failure) {
             log.warn("Push notification {} attempt {} could not be sent: {}", kind, attempt, failure.getClass().getSimpleName());
-        }
-    }
-
-    private void handOff(PushMessageKind kind, Set<UUID> donors, int attempt, Set<PushSubscriptionId> failed) {
-        try {
-            rounds.execute(() -> attempt(kind, donors, attempt, Optional.of(failed)));
-        } catch (RuntimeException rejected) {
-            log.warn("Push notification {} attempt {} could not be sent: {}", kind, attempt, rejected.getClass().getSimpleName());
         }
     }
 
