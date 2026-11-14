@@ -49,40 +49,42 @@
     @default {
       @if (outcome(); as final) {
         <app-verification-result [outcome]="final" [scanned]="scanned()" (retry)="retry()" />
-        <ul class="ui-list ui-list--inset verify-another">
-          <li>
-            <button
-              type="button"
-              class="ui-list__row ui-list__row--action"
-              (click)="verifyAnother()"
-            >
-              <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"
-                  />
-                  <path d="M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z" />
-                </svg>
-              </span>
-              <span class="ui-list__title" i18n="@@donor.verify.another"
-                >Ověřit další potvrzení</span
+        <div class="ui-card verify-another">
+          <ul class="ui-list">
+            <li>
+              <button
+                type="button"
+                class="ui-list__row ui-list__row--action"
+                (click)="verifyAnother()"
               >
-            </button>
-          </li>
-        </ul>
+                <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"
+                    />
+                    <path d="M8 8h3v3H8zM13 8h3v3h-3zM8 13h3v3H8zM13 13h3v3h-3z" />
+                  </svg>
+                </span>
+                <span class="ui-list__title" i18n="@@donor.verify.another"
+                  >Ověřit další potvrzení</span
+                >
+              </button>
+            </li>
+          </ul>
+        </div>
       }
     }
   }
-  <p class="ui-group-note verify-domain" i18n="@@donor.verify.domain">
+  <p class="ui-footnote verify-domain" i18n="@@donor.verify.domain">
     Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
     prohlížeče.
   </p>

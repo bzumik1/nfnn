@@ -31,6 +31,7 @@ import {
   serveRecentDonors,
 } from './screen-mocks';
 import { openRequests, quietNetwork } from '../settled';
+import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from '../receipt-verification';
 
 interface ElementShot {
   name: string;
@@ -450,6 +451,21 @@ const SCREENS_SINCE_V2: Screen[] = [
       await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
       await expect(page.getByRole('dialog').getByRole('link').first()).toBeVisible();
     },
+  },
+  publicPage('receipt-verification', '/overit', {
+    ready: (page) => expect(page.getByRole('heading', { name: 'Vložit odkaz' })).toBeVisible(),
+  }),
+  {
+    name: 'receipt-verification-yearly',
+    open: async (page) => {
+      await mockDonorApi(page);
+      await mockPublicContent(page);
+      await serveReceiptKeys(page);
+      await serveReceiptStatus(page, 'active');
+      await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
+    },
+    ready: (page) =>
+      expect(page.getByRole('heading', { name: 'Jednotlivé dary (12)' })).toBeVisible(),
   },
   adminPage('admin-more', '/sprava/vice'),
   adminPage('admin-backup-history', '/sprava/zalohy/historie'),

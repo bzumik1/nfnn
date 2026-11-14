@@ -262,6 +262,21 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(alertText()).toBe('');
     });
 
+    it('and the camera sees another code, then the camera way is a card under its visible title and its problem a danger callout', async () => {
+      reader.answers = [[FOREIGN]];
+      await render();
+
+      button('Naskenovat QR kód')?.click();
+      await settle();
+      await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
+      await settle();
+
+      const card = element().querySelector('[aria-labelledby="proof-camera-title"]');
+      expect(card?.classList).toContain('ui-card');
+      expect(card?.querySelector('#proof-camera-title')?.classList).toContain('ui-card__title');
+      expect(card?.querySelector('[role="alert"]')?.classList).toContain('ui-callout--danger');
+    });
+
     it('and they stop it, then the camera turns off and the scan button returns, focused', async () => {
       await render();
 
@@ -510,6 +525,17 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(alertText()).toBe(
         'V tomto PDF jsme ověřovací kód nenašli. Nahrajte PDF potvrzení tak, jak jste ho stáhli z webu fondu, nebo načtěte jeho QR kód.',
       );
+    });
+
+    it('and the PDF carries no verification link, then the file way is a card under its visible title and its problem a danger callout', async () => {
+      await render();
+
+      await choose(pdfFile('https://example.org'));
+
+      const card = element().querySelector('[aria-labelledby="proof-file-title"]');
+      expect(card?.classList).toContain('ui-card');
+      expect(card?.querySelector('#proof-file-title')?.classList).toContain('ui-card__title');
+      expect(card?.querySelector('[role="alert"]')?.classList).toContain('ui-callout--danger');
     });
 
     it('and it is a photo of the code, then it hands the code over', async () => {
