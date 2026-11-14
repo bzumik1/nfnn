@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -35,4 +37,21 @@
 .verify-local {
   margin: calc(-1 * var(--space-2)) 0 var(--space-5);
   padding-inline: var(--space-6);
+}
+
+@include bp.container-down(list-card, pair) {
+  .verify-gift {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+
+    > .ui-list__title {
+      flex: 1 0 auto;
+      max-width: 100%;
+    }
+
+    > .ui-list__value {
+      margin-inline-start: auto;
+    }
+  }
 }

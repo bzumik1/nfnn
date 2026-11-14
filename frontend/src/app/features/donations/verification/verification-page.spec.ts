@@ -327,9 +327,7 @@ describe('Given the verification page', () => {
     }
     expect(root().querySelector('#verify-gifts-title')?.tagName).toBe('H3');
     expect(button('Ověřit další potvrzení')?.closest('.ui-card')).not.toBeNull();
-    expect(
-      root().querySelector('.ui-list--inset, .ui-group-title, .ui-group-note'),
-    ).toBeNull();
+    expect(root().querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
   });
 
   it('when the receipt is signed but checked offline, then it stays signed and says a replacement cannot be seen', async () => {

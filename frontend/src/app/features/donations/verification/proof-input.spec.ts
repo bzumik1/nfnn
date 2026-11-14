@@ -253,9 +253,9 @@ describe('Given the ways to read a receipt code on the verification page', () =>
       expect(
         element().querySelector('[aria-labelledby="proof-camera-title"] [role="alert"]')?.classList,
       ).toContain('ui-callout--danger');
-      expect(element().querySelector('[aria-labelledby="proof-camera-title"]')?.classList).toContain(
-        'ui-card',
-      );
+      expect(
+        element().querySelector('[aria-labelledby="proof-camera-title"]')?.classList,
+      ).toContain('ui-card');
 
       reader.answers = [[FOREIGN, LINK]];
       await vi.advanceTimersByTimeAsync(SCAN_INTERVAL_MS);
