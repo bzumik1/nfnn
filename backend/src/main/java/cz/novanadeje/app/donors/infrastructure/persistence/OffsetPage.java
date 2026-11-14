@@ -7,7 +7,7 @@ record OffsetPage(long offset, int size) implements Pageable {
 
     OffsetPage {
         if (offset < 0 || size < 1) {
-            throw new IllegalArgumentException("An offset page starts at zero or later and holds at least one row");
+            throw new IllegalStateException("An offset page starts at zero or later and holds at least one row");
         }
     }
 

@@ -1,6 +1,8 @@
 package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.AccessTarget;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -55,6 +57,19 @@ class DomainFailureRulesTest {
             .because("the API answers every IllegalArgumentException with 400 as the client's error, and adapters catch IllegalStateException "
                     + "generically around library calls; a failure of its own is a DomainException when the client caused it and a plain RuntimeException when the server did");
 
+    @ArchTest
+    static final ArchRule persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error = noClasses()
+            .that().resideInAPackage("..infrastructure.persistence..")
+            .should().accessTargetWhere(JavaAccess.Predicates.target(constructorOf(IllegalArgumentException.class)))
+            .because("a client's input is refused before it reaches persistence, so a check there guards the server's own data or code, "
+                    + "and an IllegalArgumentException would answer that server fault with 400 and log it as the client's error; "
+                    + "throw IllegalStateException, which answers 500");
+
+    private static DescribedPredicate<AccessTarget> constructorOf(Class<? extends RuntimeException> failure) {
+        return DescribedPredicate.describe("a constructor of " + failure.getSimpleName() + " or of a subclass",
+                target -> target.getName().equals("<init>") && target.getOwner().isAssignableTo(failure));
+    }
+
     @BeforeAll
     static void plantMisplacedFailures(@TempDir Path folder) throws IOException {
         planted = PlantedClasses.compiled(folder, plantedClasses().collect(Collectors.toMap(PlantedClass::sourceName, PlantedClass::source)));
@@ -88,7 +103,13 @@ class DomainFailureRulesTest {
                 planted("argument", no_class_extends_the_argument_or_state_exceptions, "donations.domain.PlantedArgumentFailure",
                         "public class PlantedArgumentFailure extends IllegalArgumentException {}"),
                 planted("state", no_class_extends_the_argument_or_state_exceptions, "donations.application.PlantedStateFailure",
-                        "public class PlantedStateFailure extends IllegalStateException {}"));
+                        "public class PlantedStateFailure extends IllegalStateException {}"),
+                planted("persistence argument", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "donations.infrastructure.persistence.PlantedRepository",
+                        "public class PlantedRepository { void save(int offset) { if (offset < 0) { throw new IllegalArgumentException(\"planted\"); } } }"),
+                planted("persistence argument reference", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "shared.infrastructure.persistence.PlantedEntity",
+                        "public class PlantedEntity { java.util.function.Supplier<RuntimeException> refusal() { return NumberFormatException::new; } }"));
     }
 
     private static PlantedClass planted(String label, ArchRule rule, String relativeName, String body) {

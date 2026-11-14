@@ -48,7 +48,7 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
         Optional<DonorSenderAccountJpaEntity> stored = accounts.findById(link.id().value());
         if (stored.isPresent()) {
             if (!stored.get().donorId().equals(donor.value())) {
-                throw new IllegalArgumentException("Sender account link " + link.id() + " belongs to another donor");
+                throw new IllegalStateException("Sender account link " + link.id() + " belongs to another donor");
             }
             stored.get().updateFrom(link);
             accounts.saveAndFlush(stored.get());
@@ -69,7 +69,7 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     public void deleteSenderAccountLink(DonorReference donor, SenderAccountLinkId link) {
         DonorSenderAccountJpaEntity stored = accounts.findById(link.value())
                 .filter(entity -> entity.donorId().equals(donor.value()))
-                .orElseThrow(() -> new IllegalArgumentException("Sender account link " + link + " is not stored for donor " + donor));
+                .orElseThrow(() -> new IllegalStateException("Sender account link " + link + " is not stored for donor " + donor));
         accounts.delete(stored);
         accounts.flush();
         accountsChanged(donor);

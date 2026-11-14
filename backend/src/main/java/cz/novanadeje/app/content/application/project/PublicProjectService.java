@@ -35,8 +35,8 @@ public class PublicProjectService {
     }
 
     public ProjectPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE || page > Integer.MAX_VALUE / size) {
+            throw new IllegalArgumentException("The page is 0 or more, the size 1 to " + MAX_PAGE_SIZE + " and the page's offset within an int");
         }
         LocalDate today = today();
         List<ProjectView> items = views.of(projects.findVisible(today, orders.current(), page * size, size), today);

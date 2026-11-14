@@ -17,7 +17,7 @@ class JpaRestoreRecordRepository implements RestoreRecordRepository {
     @Override
     public boolean recordOnce(String requestId, Instant recordedAt) {
         if (requestId.length() > RestoreRecordJpaEntity.MAX_REQUEST_ID_LENGTH) {
-            throw new IllegalArgumentException("A restore request id is at most " + RestoreRecordJpaEntity.MAX_REQUEST_ID_LENGTH + " characters");
+            throw new IllegalStateException("A restore request id is at most " + RestoreRecordJpaEntity.MAX_REQUEST_ID_LENGTH + " characters");
         }
         return jpa.insertIfAbsent(requestId, recordedAt) == 1;
     }

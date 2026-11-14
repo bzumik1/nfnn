@@ -32,8 +32,8 @@ public class PublicNewsService {
     }
 
     public NewsPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE || page > Integer.MAX_VALUE / size) {
+            throw new IllegalArgumentException("The page is 0 or more, the size 1 to " + MAX_PAGE_SIZE + " and the page's offset within an int");
         }
         LocalDate today = today();
         List<NewsArticleView> items = signers.views(news.findVisibleNewestFirst(today, page * size, size), today);

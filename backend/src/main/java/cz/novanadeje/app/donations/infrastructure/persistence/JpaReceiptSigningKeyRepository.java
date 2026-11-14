@@ -51,7 +51,7 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
     @Override
     public boolean recordRestoreAdoption(String restoreId, Instant adoptedAt) {
         if (restoreId.length() > ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH) {
-            throw new IllegalArgumentException("A restore id is at most " + ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH + " characters");
+            throw new IllegalStateException("A restore id is at most " + ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH + " characters");
         }
         return adoptions.insertIfAbsent(restoreId, adoptedAt) == 1;
     }

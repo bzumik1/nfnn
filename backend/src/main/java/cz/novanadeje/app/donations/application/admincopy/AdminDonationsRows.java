@@ -49,7 +49,7 @@ public class AdminDonationsRows {
 
     public PaymentRow paidPayment(BankPayment payment, Donation gift, DonorRecord giver) {
         if (!giver.id().equals(gift.donor())) {
-            throw new IllegalArgumentException("The giver " + giver.id().value() + " is not the donor of the gift " + gift.id().value());
+            throw new IllegalStateException("The giver " + giver.id().value() + " is not the donor of the gift " + gift.id().value());
         }
         PaymentRow row = giver.isErased() ? withoutPayer(unversioned(payment)) : unversioned(payment);
         return withVersion(row, versionOf(row, DonationRow.from(gift)));
