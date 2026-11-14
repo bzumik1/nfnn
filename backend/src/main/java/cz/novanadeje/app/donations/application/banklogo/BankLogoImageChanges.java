@@ -6,15 +6,20 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoRepository;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.domain.UuidV7;
+import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
-final class BankLogoImageChanges {
+@Component
+public class BankLogoImageChanges {
 
-    private BankLogoImageChanges() {
+    private final BankLogoRepository logos;
+
+    public BankLogoImageChanges(BankLogoRepository logos) {
+        this.logos = logos;
     }
 
-    static BankLogo apply(BankLogoRepository logos, BankLogo locked, BankLogoSource source, FetchedBankLogo fetched, Instant now) {
+    BankLogo apply(BankLogo locked, BankLogoSource source, FetchedBankLogo fetched, Instant now) {
         if (locked.holds(fetched.sha256())) {
             BankLogo kept = locked.unchangedFrom(source, now);
             logos.save(kept);

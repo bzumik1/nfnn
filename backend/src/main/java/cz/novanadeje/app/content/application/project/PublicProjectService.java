@@ -40,7 +40,7 @@ public class PublicProjectService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
-        List<ProjectView> items = ProjectView.all(projects.findVisible(today, orders.current(), page * size, size), today, media);
+        List<ProjectView> items = views(projects.findVisible(today, orders.current(), page * size, size), today);
         return new ProjectPage(items, page, size, projects.countVisible(today));
     }
 
@@ -50,10 +50,14 @@ public class PublicProjectService {
                 .or(() -> formerSlugs.project(slug).flatMap(projects::findById))
                 .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new ProjectNotFound(slug));
-        return ProjectView.of(project, today, media);
+        return views(List.of(project), today).getFirst();
     }
 
     private LocalDate today() {
         return LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
+    }
+
+    private List<ProjectView> views(List<Project> shown, LocalDate today) {
+        return ProjectView.all(shown, today, media.findFocalPoints(ProjectView.coverImagesOf(shown)));
     }
 }

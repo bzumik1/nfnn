@@ -1,7 +1,9 @@
 package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -16,6 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,6 +26,7 @@ import java.util.stream.Stream;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @AnalyzeClasses(
@@ -68,9 +72,25 @@ class ApplicationLayerRulesTest {
             .because("security.md, Logs: an exception's message may quote a refused value, a bank's answer or SQL; the application logs and stores "
                     + "only closed values (an id, a kind, an outcome its port names), and adapters translate their failures into those");
 
+    @ArchTest
+    static final ArchRule static_methods_take_no_repository = noMethods()
+            .that().areStatic()
+            .and().areDeclaredInClassesThat().resideInAnyPackage("cz.novanadeje.app..application..", "cz.novanadeje.app..domain..")
+            .and(DescribedPredicate.describe("are written in the source", method -> !method.getModifiers().contains(JavaModifier.SYNTHETIC)))
+            .should().haveRawParameterTypes(DescribedPredicate.describe("a repository among them",
+                    (List<JavaClass> parameters) -> parameters.stream().anyMatch(ApplicationLayerRulesTest::isRepository)))
+            .because("backend.md, Application: a static method that reads or writes through a repository hides a dependency and keeps a rule "
+                    + "outside the aggregate or a domain service; a rule over loaded data goes to the domain, a read or write to an injected collaborator");
+
+    private static boolean isRepository(JavaClass type) {
+        return type.isAssignableTo(DescribedPredicate.describe("a repository of the site",
+                candidate -> candidate.getPackageName().startsWith("cz.novanadeje.app") && candidate.getSimpleName().endsWith("Repository")));
+    }
+
     @BeforeAll
     static void plantApplicationClassesOnAdapterTechnology(@TempDir Path folder) throws IOException {
-        planted = PlantedClasses.compiled(folder, plantedClasses().collect(Collectors.toMap(PlantedClass::className, PlantedClass::source)));
+        planted = PlantedClasses.compiled(folder, Stream.concat(plantedClasses(), allowedClasses())
+                .collect(Collectors.toMap(PlantedClass::className, PlantedClass::source)));
     }
 
     @ParameterizedTest(name = "{0} reports {1}")
@@ -83,6 +103,16 @@ class ApplicationLayerRulesTest {
 
         assertThat(checked.evaluate(plantedClass).getFailureReport().getDetails())
                 .isNotEmpty().allSatisfy(detail -> assertThat(detail).contains(className.substring(className.lastIndexOf('.') + 1)));
+    }
+
+    @ParameterizedTest(name = "{0} leaves {1} alone")
+    @MethodSource("allowedClasses")
+    @DisplayName("Given a planted instance method on a repository or a static method on plain values, when the rule checks every planted class, then that class is not reported")
+    void should_report_nothing_when_checked_given_an_allowed_class(String rule, String className) throws ReflectiveOperationException {
+        ArchRule checked = (ArchRule) ApplicationLayerRulesTest.class.getDeclaredField(rule).get(null);
+
+        assertThat(checked.evaluate(planted).getFailureReport().getDetails())
+                .isNotEmpty().noneSatisfy(detail -> assertThat(detail).contains(className.substring(className.lastIndexOf('.') + 1)));
     }
 
     static Stream<PlantedClass> plantedClasses() {
@@ -123,7 +153,31 @@ class ApplicationLayerRulesTest {
                         "public class PlantedLocalizedMessageRead { String outcome(Exception failure) { return failure.getLocalizedMessage(); } }"),
                 planted("application_must_not_read_exception_messages", "shared.application.PlantedMessageReference",
                         "public class PlantedMessageReference { java.util.function.Function<RuntimeException, String> outcome() { "
-                                + "return RuntimeException::getMessage; } }"));
+                                + "return RuntimeException::getMessage; } }"),
+                planted("static_methods_take_no_repository", "donations.application.admin.PlantedStaticCoverage",
+                        "final class PlantedStaticCoverage { static boolean covers("
+                                + "cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository receipts, java.util.List<String> ids) { "
+                                + "return !ids.isEmpty(); } }"),
+                planted("static_methods_take_no_repository", "donors.domain.PlantedStaticDomainRead",
+                        "public final class PlantedStaticDomainRead { public static int count(int limit, "
+                                + "cz.novanadeje.app.donors.domain.DonorRepository donors) { return limit; } }"),
+                planted("static_methods_take_no_repository", "donations.application.banklogo.PlantedStaticOnImplementation",
+                        "final class PlantedStaticOnImplementation { "
+                                + "abstract static class Logos implements cz.novanadeje.app.donations.domain.banklogo.BankLogoRepository { } "
+                                + "static void forget(Logos logos) { } }"));
+    }
+
+    static Stream<PlantedClass> allowedClasses() {
+        return Stream.of(
+                planted("static_methods_take_no_repository", "donations.application.admin.PlantedInstanceCoverage",
+                        "final class PlantedInstanceCoverage { private final cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository receipts; "
+                                + "PlantedInstanceCoverage(cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository receipts) { "
+                                + "this.receipts = receipts; } "
+                                + "boolean covers(cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository other, java.util.List<String> ids) { "
+                                + "return receipts != other && ids.stream().anyMatch(id -> other.equals(id)); } }"),
+                planted("static_methods_take_no_repository", "donations.domain.PlantedStaticOnValues",
+                        "public final class PlantedStaticOnValues { public static boolean covers(java.util.List<String> ids, java.time.Instant at) { "
+                                + "return ids.stream().anyMatch(id -> at != null); } }"));
     }
 
     private static PlantedClass planted(String rule, String relativeName, String body) {

@@ -175,7 +175,12 @@ public class PeopleAdminService {
     }
 
     private PersonView view(Person person) {
-        return PersonView.of(person, media, emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount));
+        return PersonView.of(person, imageOf(person.details().portrait()), imageOf(person.webSignature()),
+                emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount));
+    }
+
+    private Optional<PersonImageView> imageOf(Optional<MediaId> image) {
+        return image.flatMap(id -> media.findSize(id).map(size -> PersonImageView.of(id, size)));
     }
 
     private static Stream<EmailAddress> emailsOf(Person person) {

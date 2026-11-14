@@ -47,17 +47,19 @@ public class AdminSymbolClaimsService {
     private final DonationRepository donations;
     private final DonorRecordRepository donorRecords;
     private final DonationReceiptRepository receipts;
+    private final ReceiptCoverage coverage;
     private final PairingLock lock;
     private final ApplicationEventPublisher events;
     private final AdminDonationsRows rows;
     private final Clock clock;
 
     public AdminSymbolClaimsService(SymbolClaimRepository claims, DonationRepository donations, DonorRecordRepository donorRecords,
-                                    DonationReceiptRepository receipts, PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
+                                    DonationReceiptRepository receipts, ReceiptCoverage coverage, PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.claims = claims;
         this.donations = donations;
         this.donorRecords = donorRecords;
         this.receipts = receipts;
+        this.coverage = coverage;
         this.lock = lock;
         this.events = events;
         this.rows = rows;
@@ -84,7 +86,7 @@ public class AdminSymbolClaimsService {
         SymbolClaim reversed = claim.reverse(now);
         receipts.lockDonor(claim.donor());
         List<Donation> paired = donations.findBySymbolClaim(claimId);
-        if (ReceiptCoverage.anyReceiptCovers(receipts, claim.donor(), paired)) {
+        if (coverage.anyReceiptCovers(claim.donor(), paired)) {
             throw new SymbolClaimHasReceipt(claimId);
         }
         paired.forEach(donation -> donations.delete(donation.id()));

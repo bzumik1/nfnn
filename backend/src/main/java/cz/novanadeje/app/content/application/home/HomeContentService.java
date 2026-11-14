@@ -7,6 +7,7 @@ import cz.novanadeje.app.content.application.people.PublicPeopleService;
 import cz.novanadeje.app.content.application.project.ProjectView;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
+import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.shared.domain.FoundationZone;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -50,9 +52,13 @@ public class HomeContentService {
         LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
         return new HomeContent(
                 signers.views(news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME), today),
-                ProjectView.all(projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME), today, media),
+                projectViews(projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME), today),
                 about.read(),
                 donateBand.read(),
                 people.read());
+    }
+
+    private List<ProjectView> projectViews(List<Project> shown, LocalDate today) {
+        return ProjectView.all(shown, today, media.findFocalPoints(ProjectView.coverImagesOf(shown)));
     }
 }

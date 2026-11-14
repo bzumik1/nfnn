@@ -1893,7 +1893,7 @@ Shared pieces that came with it: the sealed `shared/domain/error/DomainException
 
 `architecture/PackageCycleRulesTest`: every package of `cz.novanadeje.app`, the root and every nested package included, is its own slice, and no slice depends on itself through others (architecture audit #621, with a planted cycle it must report).
 
-`architecture/ApplicationLayerRulesTest`: no class in `application` depends on Spring DAO, Spring JDBC, Spring ORM, Spring Data, JPA, Hibernate, `java.sql`, `java.nio.file`, the mail libraries, Thymeleaf or Spring's `TransactionSynchronization*` (`TransactionTemplate` and `TransactionOperations` stay allowed); the one exception is the receipt services' `AfterCommit` helper until #612 merges, fenced by a rule that lets only those two services use it.
+`architecture/ApplicationLayerRulesTest`: no class in `application` depends on Spring DAO, Spring JDBC, Spring ORM, Spring Data, JPA, Hibernate, `java.sql`, `java.nio.file`, the mail libraries, Thymeleaf or Spring's `TransactionSynchronization*` (`TransactionTemplate` and `TransactionOperations` stay allowed); the one exception is the receipt services' `AfterCommit` helper until #612 merges, fenced by a rule that lets only those two services use it. No static method of an application or domain class takes a repository (`static_methods_take_no_repository`): a read stays in the service or an injected collaborator, javac's lambda methods excepted.
 
 ## Shared kernel inventory
 

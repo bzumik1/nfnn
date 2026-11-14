@@ -66,7 +66,7 @@ public class ProjectAdminService {
     public List<Versioned<ProjectView>> list() {
         LocalDate today = today(clock.instant());
         List<Project> all = projects.findAllDraftsFirst(orders.current());
-        List<ProjectView> views = ProjectView.all(all, today, media);
+        List<ProjectView> views = views(all, today);
         return IntStream.range(0, all.size()).mapToObj(index -> new Versioned<>(views.get(index), versions.of(all.get(index)))).toList();
     }
 
@@ -147,7 +147,7 @@ public class ProjectAdminService {
     }
 
     private Versioned<ProjectView> versioned(Project project, LocalDate today) {
-        return new Versioned<>(ProjectView.of(project, today, media), versions.of(project));
+        return new Versioned<>(views(List.of(project), today).getFirst(), versions.of(project));
     }
 
     private Project requireUnchanged(ProjectId id, ExpectedVersion expected) {
@@ -171,5 +171,9 @@ public class ProjectAdminService {
         String titled = details + "; titulek „" + article.content().title() + "“";
         events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled, now));
         log.info("{} on project {} by admin {}", action, article.id(), adminId);
+    }
+
+    private List<ProjectView> views(List<Project> shown, LocalDate today) {
+        return ProjectView.all(shown, today, media.findFocalPoints(ProjectView.coverImagesOf(shown)));
     }
 }
