@@ -30,23 +30,11 @@
         </div>
       </li>
     }
-    @if (lastRow(); as last) {
-      <li class="donation-last">
-        <ng-container *ngTemplateOutlet="last" />
-      </li>
-    }
   </ul>
 } @else if (inset()) {
   <div class="ui-card donation-table-card">
     <ng-container *ngTemplateOutlet="tablePart" />
   </div>
-  @if (lastRow(); as last) {
-    <ul class="ui-list ui-list--inset donation-last-list">
-      <li class="donation-last">
-        <ng-container *ngTemplateOutlet="last" />
-      </li>
-    </ul>
-  }
 } @else {
   <ng-container *ngTemplateOutlet="tablePart" />
 }

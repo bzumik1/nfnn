@@ -44,7 +44,7 @@ async function cutOffTheServer(page: Page): Promise<string[]> {
 }
 
 const gifts = (page: Page) =>
-  page.locator('.payments-card tbody tr, .payments-card .donation-rows > li:not(.donation-last)');
+  page.locator('.payments-card tbody tr, .payments-card .donation-rows > li');
 
 test.describe('Given a donor whose copy on this device holds her gifts', () => {
   test.beforeEach(async ({ page }) => {
