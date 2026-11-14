@@ -1,8 +1,8 @@
 package cz.novanadeje.app.shared.infrastructure.live;
 
 import cz.novanadeje.app.IntegrationTest;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.junit.jupiter.api.DisplayName;
@@ -92,10 +92,10 @@ class LiveEndpointTest {
         MvcResult stream = open(token(donor, List.of(), null, clock.instant()));
 
         transactions.executeWithoutResult(status -> {
-            events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, donor));
+            events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.BANK_ACCOUNTS, donor));
             status.setRollbackOnly();
         });
-        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, donor)));
+        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.DONATIONS, donor)));
 
         await().atMost(HINT_WITHIN).untilAsserted(() ->
                 assertThat(stream.getResponse().getContentAsString()).contains("event:changed\ndata:{\"feed\":\"donations\"}\n\n"));
@@ -108,8 +108,8 @@ class LiveEndpointTest {
         MvcResult donor = open(token(UUID.randomUUID(), List.of(), null, clock.instant()));
         MvcResult admin = open(token(UUID.randomUUID(), List.of("ADMIN"), null, clock.instant()));
 
-        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.of(LiveFeed.PAYMENTS)));
-        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT)));
+        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.PAYMENTS)));
+        transactions.executeWithoutResult(status -> events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT)));
 
         await().atMost(HINT_WITHIN).untilAsserted(() -> assertThat(admin.getResponse().getContentAsString())
                 .contains("data:{\"feed\":\"payments\"}").contains("data:{\"feed\":\"bank-import\"}"));

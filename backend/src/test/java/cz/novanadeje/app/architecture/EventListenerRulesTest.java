@@ -390,9 +390,9 @@ class EventListenerRulesTest {
 
                         import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
                         import cz.novanadeje.app.shared.application.event.DonorErased;
-                        import cz.novanadeje.app.shared.application.event.LiveFeed;
                         import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
                         import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
+                        import cz.novanadeje.app.shared.application.event.StoredDataChanged.LiveFeed;
 
                         import java.util.List;
                         import java.util.Optional;
@@ -527,7 +527,7 @@ class EventListenerRulesTest {
                 "cz.novanadeje.app.planteda.application.FeedChange", """
                         package cz.novanadeje.app.planteda.application;
 
-                        import cz.novanadeje.app.shared.application.event.LiveFeed;
+                        import cz.novanadeje.app.shared.application.event.StoredDataChanged.LiveFeed;
 
                         public record FeedChange(LiveFeed feed) {
                         }

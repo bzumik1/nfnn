@@ -5,8 +5,8 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentRepository;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import jakarta.persistence.EntityManager;
 import org.springframework.context.ApplicationEventPublisher;
@@ -135,6 +135,6 @@ class JpaBankPaymentRepository implements BankPaymentRepository {
     }
 
     private void changed() {
-        events.publishEvent(StoredDataChanged.of(LiveFeed.PAYMENTS));
+        events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.PAYMENTS));
     }
 }
