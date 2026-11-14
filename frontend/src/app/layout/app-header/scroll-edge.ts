@@ -32,6 +32,12 @@ export function followScrollEdge(document: Document, header: HTMLElement): () =>
     }
   };
   const appearance = typeof view.matchMedia === 'function' ? view.matchMedia(APPEARANCE) : null;
+  const chosenAppearance =
+    typeof MutationObserver === 'function' ? new MutationObserver(schedule) : null;
+  chosenAppearance?.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-appearance'],
+  });
   follow();
   view.addEventListener('scroll', schedule, { passive: true });
   view.addEventListener('resize', schedule, { passive: true });
@@ -40,6 +46,7 @@ export function followScrollEdge(document: Document, header: HTMLElement): () =>
     view.removeEventListener('scroll', schedule);
     view.removeEventListener('resize', schedule);
     appearance?.removeEventListener('change', schedule);
+    chosenAppearance?.disconnect();
     if (frame !== 0) {
       view.cancelAnimationFrame(frame);
     }

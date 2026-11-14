@@ -1,3 +1,4 @@
+import { APPEARANCE_STORAGE_KEY, Appearance } from '../appearance/appearance';
 import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -247,6 +248,31 @@ describe('Given the auth store', () => {
     expect(store.currentAccessToken()).toBeNull();
     expect(store.status()).toBe('anonymous');
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when a donor who chose the dark appearance signs out, then the site follows the device again, so the next visitor of the device does not inherit the choice (Jakub 2026-11-14)', () => {
+    const appearance = TestBed.inject(Appearance);
+    signIn();
+    appearance.choose('dark');
+
+    store.logout().subscribe();
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(appearance.choice()).toBe('auto');
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBeNull();
+    expect(document.documentElement.hasAttribute('data-appearance')).toBe(false);
+  });
+
+  it('when nobody was signed in and the session is found gone, then a kept appearance stays', () => {
+    const appearance = TestBed.inject(Appearance);
+    appearance.choose('dark');
+
+    void store.restore();
+
+    expect(appearance.choice()).toBe('dark');
+    appearance.choose('auto');
   });
 
   it('when the donor signs in here and then signs out, then the administration of this tab unlocks with the sign-in and locks again with the sign-out', () => {

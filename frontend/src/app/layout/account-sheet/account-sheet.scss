@@ -1,11 +1,45 @@
 @use 'pressed';
 @use 'touch-target';
 
-.account-title {
+.account-head {
   display: flex;
   align-items: center;
+  gap: var(--space-3);
+  margin-right: calc(var(--sheet-close-size) + var(--space-3));
+}
+
+.account-head--centered {
+  margin-right: 0;
+
+  .account-appearance {
+    position: absolute;
+    top: var(--dialog-close-inset);
+    right: calc(var(--dialog-close-inset) + var(--dialog-close-size) + var(--space-3));
+    width: var(--dialog-close-size);
+    height: var(--dialog-close-size);
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-text-subtle);
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-accent-bg);
+        color: var(--color-accent);
+      }
+    }
+  }
+}
+
+.account-appearance {
+  position: relative;
+}
+
+.account-title {
+  display: flex;
+  flex: 1;
+  align-items: center;
   min-height: var(--sheet-close-size);
-  margin: 0 calc(var(--sheet-close-size) + var(--space-3)) 0 0;
+  margin: 0;
 }
 
 .account-logo {
@@ -142,7 +176,8 @@
   background: var(--color-sheet-grouped);
 }
 
-.account-back {
+.account-back,
+.account-appearance {
   display: grid;
   place-items: center;
   width: var(--sheet-close-size);

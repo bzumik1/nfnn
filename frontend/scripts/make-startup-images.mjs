@@ -240,7 +240,10 @@ function launchIconPoints(styles) {
 }
 
 function darkSurface(styles) {
-  const block = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root\s*\{([^}]*)\}/.exec(styles);
+  const block =
+    /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root(?::not\(\[data-appearance=["']?light["']?\]\))?\s*\{([^}]*)\}/.exec(
+      styles,
+    );
   const surface = block && /--color-surface:\s*([^;}\s]+)/.exec(block[1]);
   if (!surface) {
     throw new Error(

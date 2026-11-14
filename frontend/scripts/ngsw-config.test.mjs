@@ -236,6 +236,7 @@ describe('Given the service worker configuration', () => {
     const shell = [
       '/index.html',
       '/boot-guard.js',
+      '/appearance.js',
       '/manifest.webmanifest',
       '/favicon.svg',
       '/launch-icon.svg',

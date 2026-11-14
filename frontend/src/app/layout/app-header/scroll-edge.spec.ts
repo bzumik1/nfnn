@@ -155,6 +155,17 @@ describe('Given the edge at the top of a page', () => {
       expect(header.style.getPropertyValue(SCROLL_EDGE_TONE)).toBe('rgb(242, 243, 247)');
     });
 
+    it('and the visitor chooses another appearance for the site, then the edge takes the ground of the chosen appearance', async () => {
+      content.style.backgroundColor = 'rgb(242, 243, 247)';
+
+      document.documentElement.setAttribute('data-appearance', 'light');
+      await nextFrame();
+      await nextFrame();
+
+      expect(header.style.getPropertyValue(SCROLL_EDGE_TONE)).toBe('rgb(242, 243, 247)');
+      document.documentElement.removeAttribute('data-appearance');
+    });
+
     it('and it returns to the top, then the edge is lowered again', async () => {
       scrollTo(0);
       await nextFrame();

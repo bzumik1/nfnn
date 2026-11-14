@@ -24,6 +24,7 @@ import {
   problemOf,
   problemTypeEndsWith,
 } from '../../../core/auth/api-problem';
+import { Appearance } from '../../../core/appearance/appearance';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { SESSION_DEVICE } from '../../../core/auth/session-device';
@@ -137,6 +138,7 @@ export class LoginDialog {
   private readonly authApi = inject(AuthApi);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
+  protected readonly appearance = inject(Appearance);
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
   private readonly companyLookup = inject(CompanyLookupApi);
   private readonly changeDetector = inject(ChangeDetectorRef);

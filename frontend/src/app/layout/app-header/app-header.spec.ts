@@ -1,3 +1,4 @@
+import { Appearance } from '../../core/appearance/appearance';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, signal } from '@angular/core';
@@ -177,6 +178,22 @@ describe('Given the header of the app', () => {
     expect(signIn(await openAt('/'))).toEqual([true, true]);
     fixture.destroy();
     expect(signIn(await openAt('/aktuality/clanek'))).toEqual([true, true]);
+  });
+
+  it('when the visitor chooses the dark appearance, then a light head shows the white logo, and the blue one again after choosing the light appearance', async () => {
+    const logo = (header: HTMLElement) => header.querySelector('a.brand img')?.getAttribute('src');
+    const appearance = TestBed.inject(Appearance);
+    const header = await openAt('/o-nas');
+
+    appearance.choose('dark');
+    fixture.detectChanges();
+    expect(logo(header)).toBe('/images/logo-on-dark.svg');
+    expect(header.querySelector('a.brand source')).toBeNull();
+
+    appearance.choose('light');
+    fixture.detectChanges();
+    expect(logo(header)).toBe('/images/logo.svg');
+    appearance.choose('auto');
   });
 
   it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {

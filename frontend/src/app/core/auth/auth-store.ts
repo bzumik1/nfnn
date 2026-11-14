@@ -1,3 +1,4 @@
+import { Appearance } from '../appearance/appearance';
 import { HttpErrorResponse } from '@angular/common/http';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import {
@@ -92,6 +93,7 @@ export class AuthStore {
   private changes = 0;
 
   readonly donor = this.currentDonor.asReadonly();
+  private readonly appearance = inject(Appearance);
   readonly status = this.currentStatus.asReadonly();
   readonly signedIn = computed(() => this.currentDonor() !== null);
   readonly isAdmin = computed(() => this.currentDonor()?.roles.includes('ADMIN') ?? false);
@@ -511,6 +513,7 @@ export class AuthStore {
   private forget(): void {
     if (this.currentDonor() !== null) {
       this.diagnostics.clear();
+      this.appearance.choose('auto');
     }
     this.administrationAccess.ended();
     this.changes++;

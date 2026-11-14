@@ -49,6 +49,7 @@ import { AppBadge } from './core/push/app-badge';
 import { OpenAlerts } from './core/push/open-alerts';
 import { pressedOnTouchAtStart } from './core/touch/pressed-on-touch';
 import { inputModalityAtStart } from './core/input/input-modality';
+import { appearanceAtStart } from './core/appearance/appearance';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
@@ -167,6 +168,7 @@ export const appConfig: ApplicationConfig = {
     pagePinchLockAtStart,
     pressedOnTouchAtStart,
     inputModalityAtStart,
+    appearanceAtStart,
     systemTextSizeAtStart,
     windowControlsAtStart,
     navigationAtStart,

@@ -1,3 +1,5 @@
+import { APPEARANCE_STORAGE_KEY } from '../../core/appearance/appearance';
+import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { Component, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -236,6 +238,28 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(closed).toBe(1);
       expect(navigate).toHaveBeenCalledWith('/overit', expect.anything());
     });
+  });
+
+  it('when the appearance button is pressed again and again, then it goes Automaticky, Světlý, Tmavý and back, says each choice aloud and keeps it on the device', () => {
+    localStorage.removeItem(APPEARANCE_STORAGE_KEY);
+    const sheet = open();
+    const button = () => sheet.querySelector<HTMLButtonElement>('button.account-appearance')!;
+    const announcer = TestBed.inject(DialogAnnouncer);
+
+    expect(button().getAttribute('aria-label')).toBe('Vzhled: Automaticky');
+    expect(button().hasAttribute('appNeedsConnection')).toBe(false);
+
+    const said: string[] = [];
+    for (const expected of ['Vzhled: Světlý', 'Vzhled: Tmavý', 'Vzhled: Automaticky']) {
+      button().click();
+      fixture.detectChanges();
+      expect(button().getAttribute('aria-label')).toBe(expected);
+      said.push(announcer.message());
+    }
+
+    expect(said).toEqual(['Vzhled: Světlý', 'Vzhled: Tmavý', 'Vzhled: Automaticky']);
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBeNull();
+    document.documentElement.removeAttribute('data-appearance');
   });
 
   it('when the card of the donor is chosen on a phone, then Údaje a zabezpečení opens inside the sheet', async () => {

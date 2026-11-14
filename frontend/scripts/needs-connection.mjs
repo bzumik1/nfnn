@@ -14,6 +14,8 @@ export const WORKS_WITHOUT_CONNECTION = {
     "It is the probe that ends the offline state, as the offline sheet's Zkusit znovu, so it must run while offline.",
   'layout/account-sheet/account-sheet.html#signOut':
     'AuthStore.logout forgets the session on the device when the server cannot be reached, so signing out from the account sheet works offline.',
+  'layout/account-sheet/account-sheet.html#nextAppearance':
+    'The appearance is kept only on this device (nfnn.appearance in localStorage) and applied by the theme, so switching it needs no server.',
   'features/donors/connect-app/connect-app.html#switchAccount':
     'It signs out through AuthStore.logout, which works offline, and then opens the sign-in dialog.',
   'features/donors/dashboard/device-data-card/delete-device-data-dialog.html':

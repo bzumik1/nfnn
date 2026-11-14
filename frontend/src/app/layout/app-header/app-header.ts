@@ -19,6 +19,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { Appearance } from '../../core/appearance/appearance';
 import { AuthStore } from '../../core/auth/auth-store';
 import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../core/layout/compact-layout';
@@ -53,6 +54,8 @@ export class AppHeader {
   });
   protected readonly showsLogo = computed(() => this.parent() === null);
   protected readonly onDark = computed(() => this.chrome().head !== 'light');
+  private readonly appearance = inject(Appearance);
+  protected readonly logoOnDark = computed(() => this.onDark() || this.appearance.dark());
   protected readonly onPhoto = computed(() => this.chrome().head === 'photo');
   protected readonly initials = computed(() => initialsOf(this.auth.donor()?.name ?? ''));
   private readonly router = inject(Router);
