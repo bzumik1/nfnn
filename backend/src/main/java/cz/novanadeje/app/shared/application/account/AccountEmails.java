@@ -5,7 +5,9 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface VerifiedAccountEmails {
+public interface AccountEmails {
+
+    Optional<EmailAddress> emailOf(UUID accountId);
 
     Optional<EmailAddress> verifiedEmailOf(UUID accountId);
 

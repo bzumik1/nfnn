@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -24,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class VerifiedAccountEmailsAdapterTest {
+class AccountEmailsAdapterTest {
 
     private static final Instant NOW = Instant.parse("2026-10-31T08:00:00Z");
     private static final DonorId DONOR = new DonorId(UUID.fromString("019a1c00-0000-7000-8000-00000000d001"));
@@ -33,25 +34,34 @@ class VerifiedAccountEmailsAdapterTest {
     @Mock
     private DonorRepository donors;
 
-    private VerifiedAccountEmailsAdapter adapter() {
-        return new VerifiedAccountEmailsAdapter(donors);
+    private AccountEmailsAdapter adapter() {
+        return new AccountEmailsAdapter(donors);
     }
 
     @Test
-    @DisplayName("Given an account with a confirmed e-mail, when its e-mail is asked for and the address is checked, then both name the account")
+    @DisplayName("Given an account with a confirmed e-mail, when its e-mail and its confirmed e-mail are asked for and the address is checked, then all name the account")
     void should_answer_with_the_email_when_asked_given_a_confirmed_account() {
         Donor donor = donor();
         donor.verifyEmail(NOW);
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor));
 
+        assertThat(adapter().emailOf(DONOR.value())).contains(EMAIL);
         assertThat(adapter().verifiedEmailOf(DONOR.value())).contains(EMAIL);
         assertThat(adapter().belongsToVerifiedAccount(EMAIL)).isTrue();
     }
 
     @Test
-    @DisplayName("Given an account whose e-mail is not confirmed, when its e-mail is asked for and the address is checked, then neither counts it")
-    void should_answer_with_nothing_when_asked_given_an_unconfirmed_account() {
+    @DisplayName("Given an account whose e-mail is not confirmed, when its e-mail is asked for, then it is the account's address")
+    void should_answer_with_the_unconfirmed_email_when_its_email_is_asked_for_given_an_unconfirmed_account() {
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+
+        assertThat(adapter().emailOf(DONOR.value())).contains(EMAIL);
+    }
+
+    @Test
+    @DisplayName("Given an account whose e-mail is not confirmed, when its confirmed e-mail is asked for and the address is checked, then neither counts it")
+    void should_answer_with_nothing_when_its_confirmed_email_is_asked_for_given_an_unconfirmed_account() {
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.of(donor()));
 
@@ -60,11 +70,24 @@ class VerifiedAccountEmailsAdapterTest {
     }
 
     @Test
-    @DisplayName("Given no account, when an e-mail is asked for and an address is checked, then there is none")
+    @DisplayName("Given an erased account, when its e-mail and its confirmed e-mail are asked for, then only the erasure's placeholder answers")
+    void should_answer_with_the_placeholder_when_its_email_is_asked_for_given_an_erased_account() {
+        Donor donor = donor();
+        donor.verifyEmail(NOW);
+        donor.erase(NOW);
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+
+        assertThat(adapter().emailOf(DONOR.value())).contains(ErasedPersonalData.emailFor(DONOR.value()));
+        assertThat(adapter().verifiedEmailOf(DONOR.value())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given no account, when its e-mails are asked for and an address is checked, then there is none")
     void should_answer_with_nothing_when_asked_given_no_account() {
         when(donors.findById(DONOR)).thenReturn(Optional.empty());
         when(donors.findByEmail(EMAIL)).thenReturn(Optional.empty());
 
+        assertThat(adapter().emailOf(DONOR.value())).isEmpty();
         assertThat(adapter().verifiedEmailOf(DONOR.value())).isEmpty();
         assertThat(adapter().belongsToVerifiedAccount(EMAIL)).isFalse();
     }

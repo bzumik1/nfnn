@@ -4,7 +4,8 @@ import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
-import cz.novanadeje.app.shared.application.notification.AlertRecipients;
+import cz.novanadeje.app.shared.application.alert.AlertRecipients;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
@@ -57,7 +58,7 @@ class BackupAlertEmailSender {
         List<String> paragraphs = new ArrayList<>(List.of(text("greeting"), intro));
         paragraphs.addAll(problems.stream().map(problem -> "- " + problem).toList());
         paragraphs.addAll(List.of(consequence, action, next, text("signature"), footer));
-        send("problems " + event.problems(), new EmailDraft(CZECH, recipients.emailAddresses(), text("problem.subject"), text("problem.title"),
+        send("problems " + event.problems(), new EmailDraft(CZECH, recipientAddresses(), text("problem.subject"), text("problem.title"),
                 PROBLEM_TEMPLATE, Map.of("intro", intro, "problems", problems, "consequence", consequence, "action", action, "next", next),
                 paragraphs(paragraphs), footer));
     }
@@ -75,7 +76,7 @@ class BackupAlertEmailSender {
                 .map(run -> text("recovery.lastTestRestore", BackupFormats.time(run.finishedAt()), run.tables().orElse(0)))
                 .orElseGet(() -> text("recovery.noTestRestore"));
         String footer = text("footer");
-        send("recovery from " + event.resolvedProblems(), new EmailDraft(CZECH, recipients.emailAddresses(), text("recovery.subject"),
+        send("recovery from " + event.resolvedProblems(), new EmailDraft(CZECH, recipientAddresses(), text("recovery.subject"),
                 text("recovery.title"), RECOVERY_TEMPLATE,
                 Map.of("intro", intro, "resolved", resolved, "lastBackup", lastBackup, "lastTestRestore", lastTest),
                 paragraphs(List.of(text("greeting"), intro, resolved, lastBackup, lastTest, text("signature"), footer)), footer));
@@ -121,6 +122,10 @@ class BackupAlertEmailSender {
 
     private static String paragraphs(List<String> texts) {
         return String.join("\n\n", texts) + "\n";
+    }
+
+    private List<String> recipientAddresses() {
+        return recipients.emailAddresses().stream().map(EmailAddress::value).toList();
     }
 
     private String text(String key, Object... arguments) {

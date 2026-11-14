@@ -7,9 +7,10 @@ import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
+import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.application.notification.AccountEmails;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -107,7 +108,7 @@ public class SettingsService {
     }
 
     public TestEmailResult sendTestEmail(UUID adminId, MailServer server, String sender) {
-        String recipient = accountEmails.emailOf(adminId).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
+        String recipient = accountEmails.emailOf(adminId).map(EmailAddress::value).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
         boolean typed = server.password() != null && !server.password().isBlank();
         MailServer probed = !typed && isRunningServer(server)
                 ? server.withPassword(current.effectiveValue(Setting.MAIL_PASSWORD).orElse(""))
