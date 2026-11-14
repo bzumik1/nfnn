@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,6 +26,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,11 +64,24 @@ class ConnectedAppsServiceTest {
     @DisplayName("Given the donor's own connection, when it is disconnected, then the token is revoked")
     void should_revoke_when_disconnected_given_own_connection() {
         when(refreshTokens.findById(connection.id())).thenReturn(Optional.of(connection));
+        when(refreshTokens.revokeIfUnused(connection.id(), NOW)).thenReturn(true);
 
         service().disconnect(JANA, connection.id());
 
-        assertThat(connection.isRevoked()).isTrue();
-        verify(refreshTokens).save(connection);
+        InOrder order = inOrder(refreshTokens);
+        order.verify(refreshTokens).lockSessionsOf(JANA);
+        order.verify(refreshTokens).findById(connection.id());
+        order.verify(refreshTokens).revokeIfUnused(connection.id(), NOW);
+        verify(refreshTokens, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given the donor's own connection whose token is no longer unused when it is revoked, when it is disconnected, then it is not found")
+    void should_not_find_when_disconnected_given_token_no_longer_unused() {
+        when(refreshTokens.findById(connection.id())).thenReturn(Optional.of(connection));
+        when(refreshTokens.revokeIfUnused(connection.id(), NOW)).thenReturn(false);
+
+        assertThatThrownBy(() -> service().disconnect(JANA, connection.id())).isInstanceOf(ConnectedAppNotFound.class);
     }
 
     @Test
@@ -76,7 +91,7 @@ class ConnectedAppsServiceTest {
 
         assertThatThrownBy(() -> service().disconnect(PETR, connection.id())).isInstanceOf(ConnectedAppNotFound.class);
 
-        verify(refreshTokens, never()).save(any());
+        verify(refreshTokens, never()).revokeIfUnused(any(), any());
     }
 
     @Test

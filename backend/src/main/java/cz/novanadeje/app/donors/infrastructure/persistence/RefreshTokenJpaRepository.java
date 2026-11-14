@@ -44,7 +44,7 @@ interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpaEntity,
     List<RefreshTokenJpaEntity> findUsableClientTokensOf(@Param("donorId") UUID donorId, @Param("now") Instant now);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update RefreshTokenJpaEntity t set t.usedAt = :at where t.id = :id and t.usedAt is null")
+    @Query("update RefreshTokenJpaEntity t set t.usedAt = :at where t.id = :id and t.usedAt is null and t.revokedAt is null")
     int markUsed(@Param("id") UUID id, @Param("at") Instant at);
 
     @Modifying

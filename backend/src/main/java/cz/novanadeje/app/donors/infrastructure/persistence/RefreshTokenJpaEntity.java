@@ -45,16 +45,16 @@ class RefreshTokenJpaEntity {
     @Column(name = "granted_at", nullable = false)
     private Instant grantedAt;
 
-    @Column(name = "used_at")
+    @Column(name = "used_at", updatable = false)
     private Instant usedAt;
 
-    @Column(name = "revoked_at")
+    @Column(name = "revoked_at", updatable = false)
     private Instant revokedAt;
 
-    @Column(name = "successor_id")
+    @Column(name = "successor_id", updatable = false)
     private UUID successorId;
 
-    @Column(name = "superseded_at")
+    @Column(name = "superseded_at", updatable = false)
     private Instant supersededAt;
 
     @Column(name = "device_id")

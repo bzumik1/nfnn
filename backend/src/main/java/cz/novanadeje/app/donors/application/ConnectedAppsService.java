@@ -36,11 +36,13 @@ public class ConnectedAppsService {
     @Transactional
     public void disconnect(DonorId donorId, UUID id) {
         Instant now = clock.instant();
+        refreshTokens.lockSessionsOf(donorId);
         RefreshToken token = refreshTokens.findById(id)
                 .filter(found -> found.donorId().equals(donorId) && found.clientId().isPresent() && found.isUsableAt(now))
                 .orElseThrow(() -> new ConnectedAppNotFound(id));
-        token.revoke(now);
-        refreshTokens.save(token);
+        if (!refreshTokens.revokeIfUnused(token.id(), now)) {
+            throw new ConnectedAppNotFound(id);
+        }
         log.info("Donor {} disconnected client {}", donorId, token.clientId().map(ClientId::host).orElse("?"));
     }
 
