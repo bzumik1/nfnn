@@ -4,7 +4,7 @@
     "suite": "backend-junit",
     "test": "operations.infrastructure.backup.ReceiptSeedRenewalTest > Given the withdrawal of the server's own key, when it is committed, then the request for a new seed names the key in the restore folder at once, a WARN says why, and the backend waits for the notices before it restarts",
     "reason": "Architecture audit #621, round 3, item R3-A2 (#834): the seed renewal is decided by an operations application service on ReceiptSigningKeyWithdrawn instead of adapters driven by the mail sender's ReceiptSigningKeyWithdrawalAnnounced, which is gone",
-    "replacement": "operations.application.receiptseed.ReceiptSeedRenewalServiceTest > Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts",
+    "replacement": "operations.application.receiptseed.ReceiptSeedRenewalServiceTest > Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts once the async work, the administrators' notices among it, is done",
     "contract": "docs/system-overview.md, donations (Receipt signing keys); docs/api-contract.md, Withdrawing a key"
   },
   {
@@ -12,7 +12,7 @@
     "suite": "backend-junit",
     "test": "operations.infrastructure.backup.ReceiptSeedRenewalTest > Given the request for a new seed left after the withdrawal of the server's own key, when the administrators were told, then the backend restarts once",
     "reason": "Architecture audit #621, round 3, item R3-A2 (#834): the seed renewal is decided by an operations application service on ReceiptSigningKeyWithdrawn instead of adapters driven by the mail sender's ReceiptSigningKeyWithdrawalAnnounced, which is gone",
-    "replacement": "operations.application.receiptseed.ReceiptSeedRenewalServiceTest > Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts",
+    "replacement": "operations.application.receiptseed.ReceiptSeedRenewalServiceTest > Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts once the async work, the administrators' notices among it, is done",
     "contract": "docs/system-overview.md, donations (Receipt signing keys); docs/api-contract.md, Withdrawing a key"
   },
   {
@@ -44,7 +44,7 @@
     "suite": "backend-junit",
     "test": "operations.infrastructure.backup.ReceiptSeedRenewalTest > Given the listeners of a committed withdrawal, when Spring runs its after-commit callbacks, then the request for a new seed is written first, before the notices are handed to their thread",
     "reason": "Architecture audit #621, round 3, item R3-A2 (#834): the seed renewal is decided by an operations application service on ReceiptSigningKeyWithdrawn instead of adapters driven by the mail sender's ReceiptSigningKeyWithdrawalAnnounced, which is gone",
-    "replacement": "operations.infrastructure.events.ReceiptSigningKeyWithdrawnListenerTest > Given the listeners of a committed withdrawal, when Spring runs its after-commit callbacks, then the renewal runs last and on the committing thread, after the notices were handed to the async executor",
+    "replacement": "operations.infrastructure.events.ReceiptSigningKeyWithdrawnListenerTest > Given the renewal's listener, when its listener method is read, then it hears a withdrawal after the commit, ordered last and on the committing thread",
     "contract": "docs/system-overview.md, donations (Receipt signing keys); docs/api-contract.md, Withdrawing a key"
   },
   {
@@ -52,7 +52,7 @@
     "suite": "backend-junit",
     "test": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given two administrators and a mail server that refuses the first notice, when the notices are sent, then the withdrawal is announced only after both sends were tried and the refusal was logged",
     "reason": "Architecture audit #621, round 3, item R3-A2 (#834): the seed renewal is decided by an operations application service on ReceiptSigningKeyWithdrawn instead of adapters driven by the mail sender's ReceiptSigningKeyWithdrawalAnnounced, which is gone",
-    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the listeners of a committed withdrawal, when Spring runs its after-commit callbacks, then the notices are handed to the async executor first, before the seed renewal can restart the backend",
+    "replacement": "donations.infrastructure.signing.ReceiptSigningKeyWithdrawnEmailSenderTest > Given the notice sender, when its listener method is read, then it hears a withdrawal after the commit, ordered first and on the async executor",
     "contract": "docs/system-overview.md, donations (Receipt signing keys); docs/api-contract.md, Withdrawing a key"
   },
   {

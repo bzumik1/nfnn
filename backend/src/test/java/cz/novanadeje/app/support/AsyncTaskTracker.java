@@ -15,6 +15,7 @@ public class AsyncTaskTracker {
     private final Condition idle = lock.newCondition();
     private boolean attached;
     private int unfinished;
+    private long handedOver;
 
     public TaskDecorator decorator() {
         lock.lock();
@@ -52,10 +53,20 @@ public class AsyncTaskTracker {
         }
     }
 
+    public long handedOver() {
+        lock.lock();
+        try {
+            return handedOver;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private Runnable track(Runnable task) {
         lock.lock();
         try {
             unfinished++;
+            handedOver++;
         } finally {
             lock.unlock();
         }

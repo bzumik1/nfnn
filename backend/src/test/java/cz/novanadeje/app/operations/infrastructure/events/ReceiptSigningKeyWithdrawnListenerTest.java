@@ -50,8 +50,8 @@ class ReceiptSigningKeyWithdrawnListenerTest {
     }
 
     @Test
-    @DisplayName("Given the listeners of a committed withdrawal, when Spring runs its after-commit callbacks, then the renewal runs last and on the committing thread, after the notices were handed to the async executor")
-    void should_run_last_on_the_committing_thread_when_committed_given_the_listeners_of_a_withdrawal() throws NoSuchMethodException {
+    @DisplayName("Given the renewal's listener, when its listener method is read, then it hears a withdrawal after the commit, ordered last and on the committing thread")
+    void should_listen_after_commit_ordered_last_on_the_committing_thread_when_read_given_the_renewal_listener() throws NoSuchMethodException {
         Method on = ReceiptSigningKeyWithdrawnListener.class.getDeclaredMethod("on", ReceiptSigningKeyWithdrawn.class);
 
         assertThat(on.getAnnotation(TransactionalEventListener.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
@@ -60,10 +60,20 @@ class ReceiptSigningKeyWithdrawnListenerTest {
     }
 
     @Test
-    @DisplayName("Given the withdrawal of the server's own key published in a transaction, when it commits, then the restart is asked for after the commit with no transaction synchronization left, so the restarter stops the backend at once instead of waiting for a commit that already passed")
+    @DisplayName("Given the withdrawal of the server's own key published in a transaction, when it commits, then the restart once the async work is done is asked for after the commit with no transaction synchronization left, so the restarter starts its wait at once instead of waiting for a commit that already passed")
     void should_ask_for_the_restart_outside_any_synchronization_when_committed_given_the_current_key() {
         List<String> steps = new ArrayList<>();
-        ApplicationRestarter restarter = () -> steps.add("restart, synchronization active: " + TransactionSynchronizationManager.isSynchronizationActive());
+        ApplicationRestarter restarter = new ApplicationRestarter() {
+            @Override
+            public void restartAfterCommit() {
+                steps.add("restart at once");
+            }
+
+            @Override
+            public void restartAfterCommitOnceAsyncWorkIsDone() {
+                steps.add("restart once async work is done, synchronization active: " + TransactionSynchronizationManager.isSynchronizationActive());
+            }
+        };
 
         new ApplicationContextRunner()
                 .withUserConfiguration(InMemoryTransactionManagement.class)
@@ -77,7 +87,7 @@ class ReceiptSigningKeyWithdrawnListenerTest {
                     });
                 });
 
-        assertThat(steps).containsExactly("withdrawal still in its transaction", "seed requested for 21fe31df", "restart, synchronization active: false");
+        assertThat(steps).containsExactly("withdrawal still in its transaction", "seed requested for 21fe31df", "restart once async work is done, synchronization active: false");
     }
 
     @Configuration(proxyBeanMethods = false)

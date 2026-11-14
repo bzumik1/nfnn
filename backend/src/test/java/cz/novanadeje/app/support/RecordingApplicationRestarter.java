@@ -2,22 +2,40 @@ package cz.novanadeje.app.support;
 
 import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class RecordingApplicationRestarter implements ApplicationRestarter {
 
-    private final AtomicInteger restarts = new AtomicInteger();
+    public record Restart(boolean onceAsyncWorkIsDone, long asyncTasksHandedOver) {
+    }
+
+    private final AsyncTaskTracker asyncTasks;
+    private final List<Restart> restarts = new CopyOnWriteArrayList<>();
+
+    public RecordingApplicationRestarter(AsyncTaskTracker asyncTasks) {
+        this.asyncTasks = asyncTasks;
+    }
 
     @Override
     public void restartAfterCommit() {
-        restarts.incrementAndGet();
+        restarts.add(new Restart(false, asyncTasks.handedOver()));
+    }
+
+    @Override
+    public void restartAfterCommitOnceAsyncWorkIsDone() {
+        restarts.add(new Restart(true, asyncTasks.handedOver()));
     }
 
     public int restarts() {
-        return restarts.get();
+        return restarts.size();
+    }
+
+    public List<Restart> recorded() {
+        return List.copyOf(restarts);
     }
 
     public void reset() {
-        restarts.set(0);
+        restarts.clear();
     }
 }

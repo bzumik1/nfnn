@@ -208,8 +208,8 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     }
 
     @Test
-    @DisplayName("Given the listeners of a committed withdrawal, when Spring runs its after-commit callbacks, then the notices are handed to the async executor first, before the seed renewal can restart the backend")
-    void should_hand_the_notices_over_first_when_committed_given_the_listeners_of_a_withdrawal() throws NoSuchMethodException {
+    @DisplayName("Given the notice sender, when its listener method is read, then it hears a withdrawal after the commit, ordered first and on the async executor")
+    void should_listen_after_commit_ordered_first_and_async_when_read_given_the_notice_sender() throws NoSuchMethodException {
         Method send = ReceiptSigningKeyWithdrawnEmailSender.class.getMethod("sendWithdrawnNotice", ReceiptSigningKeyWithdrawn.class);
 
         assertThat(send.getAnnotation(TransactionalEventListener.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);

@@ -84,8 +84,8 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
-    public RecordingApplicationRestarter recordingApplicationRestarter() {
-        return new RecordingApplicationRestarter();
+    public RecordingApplicationRestarter recordingApplicationRestarter(AsyncTaskTracker asyncTasks) {
+        return new RecordingApplicationRestarter(asyncTasks);
     }
 
     @Bean

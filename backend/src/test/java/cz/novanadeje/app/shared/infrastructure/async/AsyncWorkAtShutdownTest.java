@@ -28,13 +28,15 @@ class AsyncWorkAtShutdownTest {
             .withBean("closingSignal", ApplicationListener.class, () -> (ApplicationListener<ContextClosedEvent>) closed -> closing.countDown());
 
     @Test
-    @DisplayName("Given async work handed to the application executor that runs on past the executor's own stop, when the context closes, then the close waits until the work is done")
-    void should_finish_the_work_before_the_close_ends_when_closed_given_async_work_running_past_the_executor_stop() {
+    @DisplayName("Given async work the application executor has started that runs on past the executor's own stop, when the context closes, then the close waits until the work is done")
+    void should_finish_the_work_before_the_close_ends_when_closed_given_started_async_work_running_past_the_executor_stop() {
         AtomicBoolean done = new AtomicBoolean();
+        CountDownLatch started = new CountDownLatch(1);
 
         contexts.run(context -> {
             ThreadPoolTaskExecutor executor = context.getBean("applicationTaskExecutor", ThreadPoolTaskExecutor.class);
             executor.execute(() -> {
+                started.countDown();
                 try {
                     assertThat(closing.await(10, TimeUnit.SECONDS)).isTrue();
                     await().atMost(Duration.ofSeconds(10)).until(() -> !executor.isRunning());
@@ -43,6 +45,7 @@ class AsyncWorkAtShutdownTest {
                     Thread.currentThread().interrupt();
                 }
             });
+            assertThat(started.await(10, TimeUnit.SECONDS)).isTrue();
         });
 
         assertThat(done).isTrue();

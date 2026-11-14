@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
 import cz.novanadeje.app.donors.cucumber.DonorPasskeyStepDefinitions;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import io.cucumber.datatable.DataTable;
@@ -46,13 +47,16 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     private final ReceiptSigningKeyRepository keys;
     private final RecordSeals seals;
     private final KeptAsideWithdrawnSeeds keptAside;
+    private final AsyncTaskTracker asyncTasks;
     private final Path seedRequest;
     private final Map<String, Map<String, Object>> copiedRows = new HashMap<>();
+    private long asyncTasksBeforeWithdrawal;
+    private long asyncTasksAfterWithdrawal;
 
     public ReceiptKeyWithdrawalStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors donors, TotpCodes totpCodes,
                                                DonorPasskeyStepDefinitions passkeys, JdbcClient jdbc, RecordingApplicationRestarter restarter,
                                                ReceiptSigningKeyRepository keys, RecordSeals seals, KeptAsideWithdrawnSeeds keptAside,
-                                               BackupProperties backups) {
+                                               BackupProperties backups, AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.sessions = sessions;
         this.donors = donors;
@@ -63,6 +67,7 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         this.keys = keys;
         this.seals = seals;
         this.keptAside = keptAside;
+        this.asyncTasks = asyncTasks;
         this.seedRequest = backups.restoreDirectory().resolve(SEED_REQUEST);
     }
 
@@ -74,7 +79,10 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     @When("{string} withdraws the receipt signing key {string} with a fresh code")
     public void withdrawsWithAFreshCode(String alias, String keyId) {
         sessions.actAs(alias);
-        api.post(KEYS + keyId + "/withdrawal", Map.of("secondFactorCode", totpCodes.freshCode(donors.secondFactorSecretOf(alias))));
+        String code = totpCodes.freshCode(donors.secondFactorSecretOf(alias));
+        asyncTasksBeforeWithdrawal = asyncTasks.handedOver();
+        api.post(KEYS + keyId + "/withdrawal", Map.of("secondFactorCode", code));
+        asyncTasksAfterWithdrawal = asyncTasks.handedOver();
     }
 
     @Given("{string} withdrew the receipt signing key {string} with a fresh code")
@@ -133,10 +141,17 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         assertThat(api.lastResponseJson().get("restarting").asBoolean()).isEqualTo(Boolean.parseBoolean(restarting));
     }
 
-    @Then("the backend restarts once to replace the seed of the receipt signing key {string}")
+    @Then("the backend restarts once to replace the seed of the receipt signing key {string}, after the notices were handed to the async executor and once they are done")
     public void theBackendRestartsToReplaceTheSeed(String keyId) {
         await().until(() -> restarter.restarts() > 0);
-        assertThat(restarter.restarts()).isEqualTo(1);
+        assertThat(restarter.recorded()).singleElement().satisfies(restart -> {
+            assertThat(restart.onceAsyncWorkIsDone()).isTrue();
+            assertThat(restart.asyncTasksHandedOver())
+                    .withFailMessage("The restart was asked for with %s async tasks handed over since the withdrawal began, of the %s the withdrawal handed over",
+                            restart.asyncTasksHandedOver() - asyncTasksBeforeWithdrawal, asyncTasksAfterWithdrawal - asyncTasksBeforeWithdrawal)
+                    .isEqualTo(asyncTasksBeforeWithdrawal + 1)
+                    .isEqualTo(asyncTasksAfterWithdrawal);
+        });
         assertThat(seedRequest).hasContent(keyId);
     }
 

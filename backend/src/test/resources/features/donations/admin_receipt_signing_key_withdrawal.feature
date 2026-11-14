@@ -21,7 +21,7 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     And the admin action "WITHDRAW_RECEIPT_SIGNING_KEY" by "Jana" is recorded with details containing "Zneplatněn klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)"
     And an e-mail goes to the address of "Jana" with the subject "Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje"
     And an e-mail goes to the address of "Petr" with the subject "Klíč k ověřovacím QR kódům byl zneplatněn – Nová naděje"
-    And the backend restarts once to replace the seed of the receipt signing key "21fe31df"
+    And the backend restarts once to replace the seed of the receipt signing key "21fe31df", after the notices were handed to the async executor and once they are done
     When a visitor asks for the receipt keys
     Then the response status is 200
     And the receipt keys are those of the foundation "Nová naděje - nadační fond" "27278794":

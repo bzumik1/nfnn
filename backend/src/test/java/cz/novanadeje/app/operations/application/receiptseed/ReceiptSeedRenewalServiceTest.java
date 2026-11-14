@@ -18,6 +18,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ReceiptSeedRenewalServiceTest {
@@ -39,15 +40,16 @@ class ReceiptSeedRenewalServiceTest {
     }
 
     @Test
-    @DisplayName("Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts")
-    void should_request_a_seed_then_restart_when_renewed_given_the_current_key() {
+    @DisplayName("Given the server's own key withdrawn, when the seed is renewed, then a new seed is requested for that key, a WARN says why, and only then the backend restarts once the async work, the administrators' notices among it, is done")
+    void should_request_a_seed_then_restart_once_async_work_is_done_when_renewed_given_the_current_key() {
         when(seeds.requestNewSeedFor("21fe31df")).thenReturn(true);
 
         renewal.renewAfterWithdrawal("21fe31df", true);
 
         InOrder order = inOrder(seeds, restarter);
         order.verify(seeds).requestNewSeedFor("21fe31df");
-        order.verify(restarter).restartAfterCommit();
+        order.verify(restarter).restartAfterCommitOnceAsyncWorkIsDone();
+        verify(restarter, never()).restartAfterCommit();
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage())
@@ -61,7 +63,7 @@ class ReceiptSeedRenewalServiceTest {
         renewal.renewAfterWithdrawal("39f713d0", false);
 
         verify(seeds, never()).requestNewSeedFor(anyString());
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
         assertThat(lines.list).isEmpty();
     }
 
@@ -72,7 +74,7 @@ class ReceiptSeedRenewalServiceTest {
 
         renewal.renewAfterWithdrawal("21fe31df", true);
 
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
         assertThat(lines.list).isEmpty();
     }
 
