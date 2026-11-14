@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.domain;
 
-import cz.novanadeje.app.shared.domain.Iban;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

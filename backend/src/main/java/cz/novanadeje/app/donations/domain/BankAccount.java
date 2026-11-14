@@ -1,7 +1,5 @@
 package cz.novanadeje.app.donations.domain;
 
-import cz.novanadeje.app.shared.domain.Iban;
-
 public record BankAccount(String accountNumber, Iban iban, String recipientName) {
 
     public BankAccount {

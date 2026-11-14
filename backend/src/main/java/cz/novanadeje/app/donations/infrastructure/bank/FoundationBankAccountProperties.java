@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.bank;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
-import cz.novanadeje.app.shared.domain.Iban;
+import cz.novanadeje.app.donations.domain.Iban;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app.donations.bank-account")

@@ -1,0 +1,114 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > Given a spaced lowercase IBAN, when it is created, then it keeps the compact uppercase form",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > Given a spaced lowercase IBAN, when it is created, then it keeps the compact uppercase form",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > Given wrong check digits, when the IBAN is created, then it is rejected",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > Given wrong check digits, when the IBAN is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > Given a mistyped account digit, when the IBAN is created, then it is rejected",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > Given a mistyped account digit, when the IBAN is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > Given no value, when the IBAN is created, then it is rejected",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > Given no value, when the IBAN is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > Given an IBAN that is malformed or fails its check digits, when it is created, then the message names the rule without the IBAN",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > Given an IBAN that is malformed or fails its check digits, when it is created, then the message names the rule without the IBAN",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [1] iban = \"CZ6508000000192000145399\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [1] iban = \"CZ6508000000192000145399\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [2] iban = \"DE89370400440532013000\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [2] iban = \"DE89370400440532013000\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [3] iban = \"GB82WEST12345698765432\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [3] iban = \"GB82WEST12345698765432\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [4] iban = \"SK3112000000198742637541\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [4] iban = \"SK3112000000198742637541\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [1] iban = \"\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [1] iban = \"\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [2] iban = \"CZ65\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [2] iban = \"CZ65\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [3] iban = \"6508000000192000145399CZ\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [3] iban = \"6508000000192000145399CZ\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [4] iban = \"CZ65-0800-0000-1920-0014-5399\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [4] iban = \"CZ65-0800-0000-1920-0014-5399\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.domain.IbanTest > [5] iban = \"CZ650800000019200014539912345678901234\"",
+    "reason": "Architecture audit #621 (round 4, #859): Iban moved unchanged from shared/domain to donations/domain, the only context that uses it, and its unchanged test moved with it",
+    "replacement": "donations.domain.IbanTest > [5] iban = \"CZ650800000019200014539912345678901234\"",
+    "contract": "docs/system-overview.md, shared and donations"
+  }
+]
