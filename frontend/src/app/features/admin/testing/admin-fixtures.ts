@@ -58,6 +58,7 @@ export function importState(overrides: Partial<ImportStateResponse> = {}): Impor
     reportedOutage: null,
     historyImport: null,
     defaultHistoryFrom: '2026-01-01',
+    balance: null,
     ...overrides,
   };
 }
