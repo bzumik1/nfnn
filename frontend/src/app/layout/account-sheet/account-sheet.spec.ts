@@ -16,6 +16,8 @@ import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { FakeDialogHistory } from '../../shared/ui/dialog/testing/fake-dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall, InstallWay } from '../../core/install/app-install';
+import { OpenAlerts } from '../../core/push/open-alerts';
+import { OpenAlert } from '../../core/push/open-alerts-api';
 import { AccountSheet } from './account-sheet';
 import { ACCOUNT_SECTION_PAGES, AccountSectionPages } from './account-section';
 
@@ -41,6 +43,7 @@ function sectionPages(): AccountSectionPages {
 describe('Given the account sheet of a signed-in donor', () => {
   const donor = signal<Donor | null>(null);
   const admin = signal(false);
+  const openAlerts = signal<readonly OpenAlert[] | null>(null);
   const compact = signal(true);
   const logout = vi.fn(() => of(undefined));
   const installWay = signal<InstallWay>('none');
@@ -52,6 +55,7 @@ describe('Given the account sheet of a signed-in donor', () => {
   beforeEach(async () => {
     donor.set(sampleDonor({ name: 'Jana Nováková', variableSymbol: '1234567890' }));
     admin.set(false);
+    openAlerts.set(null);
     compact.set(true);
     logout.mockClear();
     installWay.set('none');
@@ -63,6 +67,7 @@ describe('Given the account sheet of a signed-in donor', () => {
         { provide: DialogHistory, useClass: FakeDialogHistory },
         { provide: ACCOUNT_SECTION_PAGES, useFactory: sectionPages },
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly() } },
         { provide: AppInstall, useValue: { way: installWay.asReadonly(), install } },
         {
           provide: AuthStore,
@@ -106,6 +111,57 @@ describe('Given the account sheet of a signed-in donor', () => {
       'Variabilní symbol pro vaše dary: 1234567890',
     );
     expect(sheet.querySelector('.account-sign-out')?.textContent?.trim()).toBe('Odhlásit se');
+  });
+
+  describe('when an administrator has open faults', () => {
+    function faultRow(sheet: HTMLElement): HTMLAnchorElement | null {
+      return sheet.querySelector('.account-faults a');
+    }
+
+    beforeEach(() => admin.set(true));
+
+    it('then one fault is the first row, named by its area and time, leading to its page', () => {
+      openAlerts.set([{ area: 'backups', since: '2026-11-14T02:00:05Z' }]);
+      const sheet = open();
+
+      const row = faultRow(sheet)!;
+      expect(row.querySelector('.ui-list__title')?.textContent?.trim()).toBe('Nefunguje: Zálohy');
+      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe('od 14. 11. 2026 3:00');
+      expect(row.getAttribute('href')).toBe('/sprava/zalohy');
+      expect(
+        sheet
+          .querySelector('.account-faults')!
+          .compareDocumentPosition(sheet.querySelector('nav')!),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('then several faults are one row with their count and areas, leading to the alerts page', () => {
+      openAlerts.set([
+        { area: 'backups', since: '2026-11-14T02:00:05Z' },
+        { area: 'mail', since: '2026-11-14T04:00:00Z' },
+      ]);
+      const sheet = open();
+
+      const row = faultRow(sheet)!;
+      expect(row.querySelector('.ui-list__title')?.textContent?.trim()).toBe('Poruchy: 2');
+      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe(
+        'Zálohy, Odesílání e-mailů',
+      );
+      expect(row.getAttribute('href')).toBe('/sprava/upozorneni');
+    });
+
+    it('then without a fault there is no such row', () => {
+      openAlerts.set([]);
+
+      expect(faultRow(open())).toBeNull();
+    });
+
+    it('then a donor without the role never sees the row, whatever is known', () => {
+      admin.set(false);
+      openAlerts.set([{ area: 'backups', since: '2026-11-14T02:00:05Z' }]);
+
+      expect(faultRow(open())).toBeNull();
+    });
   });
 
   describe('when a section is chosen on a phone', () => {

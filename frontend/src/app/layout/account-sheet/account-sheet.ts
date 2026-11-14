@@ -1,5 +1,8 @@
 /// <reference types="@angular/localize" />
 
+import { ALERT_AREA_NAMES, faultRoute } from '../../core/push/alert-areas';
+import { OpenAlerts } from '../../core/push/open-alerts';
+import { formatBankTime } from '../../features/donations/donation-date';
 import { Location } from '@angular/common';
 import {
   afterNextRender,
@@ -95,6 +98,21 @@ export class AccountSheet {
   protected readonly administrationItem = ADMINISTRATION_ITEM;
   protected readonly isAdmin = this.auth.isAdmin;
   protected readonly badges = inject(AccountBadges);
+  private readonly openAlerts = inject(OpenAlerts).alerts;
+  protected readonly faults = computed(() => (this.isAdmin() ? (this.openAlerts() ?? []) : []));
+  protected readonly faultPath = computed(() => faultRoute(this.faults()));
+  protected readonly faultTitle = computed(() => {
+    const faults = this.faults();
+    return faults.length === 1
+      ? $localize`:@@layout.account.faults.single:Nefunguje: ${ALERT_AREA_NAMES[faults[0].area]}:area:`
+      : $localize`:@@layout.account.faults.several:Poruchy: ${faults.length}:count:`;
+  });
+  protected readonly faultMeta = computed(() => {
+    const faults = this.faults();
+    return faults.length === 1
+      ? $localize`:@@layout.account.faults.since:od ${formatBankTime(faults[0].since)}:since:`
+      : faults.map((fault) => ALERT_AREA_NAMES[fault.area]).join(', ');
+  });
   protected readonly signingOut = signal(false);
   protected readonly adminNote = $localize`:@@layout.account.adminNote:jen správci`;
   private readonly install = inject(AppInstall);
