@@ -24,7 +24,9 @@ import { CompactLayout } from '../../core/layout/compact-layout';
 import { pathOf } from '../../core/navigation/app-tabs';
 import { APP_DEPTH_KEY, BackTarget } from '../../core/navigation/back-target';
 import { Dialog } from '../../shared/ui/dialog/dialog';
+import { Appearance, AppearanceChoice } from '../../core/appearance/appearance';
 import { AccountSection } from './account-section';
+import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall } from '../../core/install/app-install';
@@ -115,6 +117,9 @@ export class AccountSheet {
   protected readonly discardAsked = signal(false);
   private discarding = false;
   private openedFrom: string | null = null;
+  protected readonly appearance = inject(Appearance);
+  protected readonly appearanceLabel = computed(() => APPEARANCE_LABELS[this.appearance.choice()]);
+  private readonly announcer = inject(DialogAnnouncer);
   protected readonly contactUrl = '/o-nas#kontakt';
   protected readonly privacyUrl = '/zasady-ochrany-osobnich-udaju';
 
@@ -217,6 +222,12 @@ export class AccountSheet {
     });
   }
 
+  protected nextAppearance(): void {
+    const next = NEXT_APPEARANCE[this.appearance.choice()];
+    this.appearance.choose(next);
+    this.announcer.announce(APPEARANCE_LABELS[next]);
+  }
+
   protected addToHomeScreen(): void {
     if (this.installWay() === 'prompt') {
       this.closed.emit();
@@ -256,6 +267,18 @@ export class AccountSheet {
     }
   }
 }
+
+const APPEARANCE_LABELS: Record<AppearanceChoice, string> = {
+  auto: $localize`:@@layout.account.appearance.auto:Vzhled: Automaticky`,
+  light: $localize`:@@layout.account.appearance.light:Vzhled: Světlý`,
+  dark: $localize`:@@layout.account.appearance.dark:Vzhled: Tmavý`,
+};
+
+const NEXT_APPEARANCE: Record<AppearanceChoice, AppearanceChoice> = {
+  auto: 'light',
+  light: 'dark',
+  dark: 'auto',
+};
 
 function pressedAside(event: MouseEvent): boolean {
   return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;

@@ -36,8 +36,22 @@ function values(source) {
   );
 }
 
+const MIXIN = /@mixin\s+([a-z0-9-]+)\s*\{([^{}]*)\}/g;
+const INCLUDE = /@include\s+([a-z0-9-]+)\s*;/g;
+
+export function expandMixins(code) {
+  const bodies = new Map();
+  const withoutMixins = code.replace(MIXIN, (_, name, body) => {
+    bodies.set(name, body);
+    return '';
+  });
+  return withoutMixins.replace(INCLUDE, (include, name) => bodies.get(name) ?? include);
+}
+
 export function receiptTokensOutsideRoot(source) {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const code = expandMixins(
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1'),
+  );
   const blocks = [];
   const outside = new Set();
   let boundary = 0;
@@ -87,7 +101,9 @@ const PAGES = [
 ];
 
 function declarationsByBlock(source) {
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const code = expandMixins(
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1'),
+  );
   const blocks = [];
   const found = [];
   let boundary = 0;
@@ -146,8 +162,8 @@ export function barContrastProblems(theme, source) {
   const problems = [];
   for (const { chain, name } of declarations) {
     const checked =
-      (chain.length === 1 && chain[0] === ':root') ||
-      (chain.length === 2 && chain[0].startsWith('@media') && chain[1] === ':root');
+      (chain.length === 1 && ROOT_SELECTORS.has(chain[0])) ||
+      (chain.length === 2 && chain[0].startsWith('@media') && ROOT_SELECTORS.has(chain[1]));
     if (!checked) {
       problems.push(
         `theme ${theme} sets ${name} under ${chain.join(' > ')}, where its contrast is not checked; set it in the top-level :root or a @media block of :root`,
@@ -172,20 +188,18 @@ export function barContrastProblems(theme, source) {
     return problems;
   }
   const contexts = [{ label: '', values: atRoot }];
-  for (const chain of new Set(
-    declarations
-      .filter(
-        ({ chain }) => chain.length === 2 && chain[1] === ':root' && chain[0].startsWith('@media'),
-      )
-      .map(({ chain }) => chain[0]),
+  const blockOf = ({ chain }) =>
+    chain.length === 2 && chain[1] === ':root' ? chain[0] : chain.join(' > ');
+  for (const block of new Set(
+    declarations.filter(({ chain }) => !(chain.length === 1 && chain[0] === ':root')).map(blockOf),
   )) {
     const values = new Map(atRoot);
     for (const declaration of declarations) {
-      if (declaration.chain[0] === chain && declaration.chain.length === 2) {
+      if (blockOf(declaration) === block) {
         values.set(declaration.name, declaration.value);
       }
     }
-    contexts.push({ label: ` under ${chain}`, values });
+    contexts.push({ label: ` under ${block}`, values });
   }
   for (const { label, values } of contexts) {
     for (const page of PAGES) {
@@ -218,10 +232,15 @@ export function barContrastProblems(theme, source) {
 }
 
 const DARK_SCHEME = /^@media \(prefers-color-scheme: dark\)/;
+const DARK_MORE_CONTRAST = /^@media \(prefers-color-scheme: dark\) and \(prefers-contrast: more\)$/;
+const MORE_CONTRAST = /^@media \(prefers-contrast: more\)$/;
+const INVERTED = '@media (inverted-colors: inverted)';
+const FORCED_DARK = ":root[data-appearance='dark']";
 const APPEARANCES = [
   {
     name: 'light appearance',
     media: { 'prefers-color-scheme': 'light', 'prefers-contrast': 'no-preference' },
+    defaultLook: true,
   },
   {
     name: 'light appearance with more contrast',
@@ -235,7 +254,38 @@ const APPEARANCES = [
     name: 'dark appearance with more contrast',
     media: { 'prefers-color-scheme': 'dark', 'prefers-contrast': 'more' },
   },
+  {
+    name: 'light appearance chosen on a dark device',
+    media: { 'prefers-color-scheme': 'dark', 'prefers-contrast': 'no-preference' },
+    chosen: 'light',
+    defaultLook: true,
+  },
+  {
+    name: 'light appearance chosen on a dark device with more contrast',
+    media: { 'prefers-color-scheme': 'dark', 'prefers-contrast': 'more' },
+    chosen: 'light',
+  },
+  {
+    name: 'dark appearance chosen on a light device',
+    media: { 'prefers-color-scheme': 'light', 'prefers-contrast': 'no-preference' },
+    chosen: 'dark',
+  },
+  {
+    name: 'dark appearance chosen on a light device with more contrast',
+    media: { 'prefers-color-scheme': 'light', 'prefers-contrast': 'more' },
+    chosen: 'dark',
+  },
 ];
+const ROOT_SELECTORS = new Map([
+  [':root', () => true],
+  [":root:not([data-appearance='light'])", (chosen) => chosen !== 'light'],
+  [FORCED_DARK, (chosen) => chosen === 'dark'],
+  [":root[data-appearance='light']", (chosen) => chosen === 'light'],
+]);
+
+function rootMatches(selector, chosen) {
+  return ROOT_SELECTORS.get(selector)?.(chosen) ?? false;
+}
 const TINTED_GROUNDS = [
   '--color-surface',
   '--color-surface-alt',
@@ -343,20 +393,22 @@ function mediaMatches(query, media) {
   });
 }
 
-function tokensIn(declarations, media) {
-  const tokens = new Map();
-  for (const { chain, name, value } of declarations) {
-    const atRoot = chain.length === 1 && chain[0] === ':root';
+function tokensIn(declarations, media, chosen) {
+  const matching = [];
+  declarations.forEach(({ chain, name, value }, order) => {
+    const selector = chain.length === 1 ? chain[0] : chain[1];
+    const atRoot = chain.length === 1 && rootMatches(selector, chosen);
     const inMedia =
       chain.length === 2 &&
-      chain[1] === ':root' &&
+      rootMatches(selector, chosen) &&
       chain[0].startsWith('@media') &&
       mediaMatches(chain[0], media);
     if (atRoot || inMedia) {
-      tokens.set(name, value);
+      matching.push({ name, value, order, specificity: selector === ':root' ? 1 : 2 });
     }
-  }
-  return tokens;
+  });
+  matching.sort((a, b) => a.specificity - b.specificity || a.order - b.order);
+  return new Map(matching.map(({ name, value }) => [name, value]));
 }
 
 function resolvedColour(tokens, name, seen = new Set()) {
@@ -383,16 +435,54 @@ function groundName(ground) {
 export function appearanceProblems(theme, source) {
   const declarations = declarationsByBlock(source);
   const darkBlock = declarations.some(
-    ({ chain }) => chain.length === 2 && DARK_SCHEME.test(chain[0]) && chain[1] === ':root',
+    ({ chain }) =>
+      chain.length === 2 && DARK_SCHEME.test(chain[0]) && rootMatches(chain[1], undefined),
   );
   if (!darkBlock) {
     return [
       `theme ${theme} sets no colours under @media (prefers-color-scheme: dark), so it ignores the dark appearance of the device`,
     ];
   }
+  const chosenDarkBlock = declarations.some(
+    ({ chain }) => chain.length === 1 && chain[0] === FORCED_DARK,
+  );
+  if (!chosenDarkBlock) {
+    return [
+      `theme ${theme} sets no colours under ${FORCED_DARK}, so a visitor who chooses the dark appearance stays light on a light device`,
+    ];
+  }
+  const darkContrastBlock = declarations.some(
+    ({ chain }) =>
+      chain.length === 2 && DARK_MORE_CONTRAST.test(chain[0]) && rootMatches(chain[1], undefined),
+  );
+  const chosenDarkContrastBlock = declarations.some(
+    ({ chain }) => chain.length === 2 && MORE_CONTRAST.test(chain[0]) && chain[1] === FORCED_DARK,
+  );
+  if (darkContrastBlock && !chosenDarkContrastBlock) {
+    return [
+      `theme ${theme} sets more contrast for the dark device but not under @media (prefers-contrast: more) > ${FORCED_DARK}, so a visitor who chooses the dark appearance loses it`,
+    ];
+  }
   const problems = [];
+  const invertedBlock = declarations.filter(
+    ({ chain }) => chain.length === 2 && chain[0] === INVERTED,
+  );
   for (const appearance of APPEARANCES) {
-    const tokens = tokensIn(declarations, appearance.media);
+    if (invertedBlock.length > 0) {
+      const inverted = tokensIn(
+        declarations,
+        { ...appearance.media, 'inverted-colors': 'inverted' },
+        appearance.chosen,
+      );
+      for (const { name, value } of invertedBlock) {
+        if (inverted.get(name) !== value) {
+          problems.push(
+            `theme ${theme} in the ${appearance.name} with Smart Invert: ${name} is ${inverted.get(name)}, not ${value} as its inverted-colors block sets`,
+          );
+        }
+      }
+    }
+    const tokens = tokensIn(declarations, appearance.media, appearance.chosen);
     const label = `theme ${theme} in the ${appearance.name}`;
     const measurable = (name) => {
       const { written, colour } = resolvedColour(tokens, name);
@@ -408,7 +498,7 @@ export function appearanceProblems(theme, source) {
       continue;
     }
     for (const pair of READABLE_PAIRS) {
-      if (pair.softInTheDefaultLook && appearance.name === 'light appearance') {
+      if (pair.softInTheDefaultLook && appearance.defaultLook) {
         continue;
       }
       for (const ground of pair.grounds) {

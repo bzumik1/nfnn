@@ -5,14 +5,11 @@
   (dismissed)="closeDialog()"
 >
   <div class="logo">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="/images/logo-on-dark.svg" />
-      <img
-        src="/images/logo.svg"
-        alt="Nová naděje – nadační fond"
-        i18n-alt="@@layout.header.logoAlt"
-      />
-    </picture>
+    <img
+      [src]="appearance.dark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+      alt="Nová naděje – nadační fond"
+      i18n-alt="@@layout.header.logoAlt"
+    />
   </div>
 
   <h2 id="login-dialog-title" class="visually-hidden" i18n="@@donor.login.title">

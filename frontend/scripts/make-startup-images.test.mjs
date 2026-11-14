@@ -20,7 +20,7 @@ const THEME_LAUNCH_ICON = readFileSync(
   'utf8',
 );
 const THEME_STYLES =
-  ':root{--launch-icon-size: 128px;--color-surface: #ffffff}@media(prefers-color-scheme:dark){:root{color-scheme:dark;--color-surface: #10141f}}@media(prefers-color-scheme:dark)and (prefers-contrast:more){:root{--color-surface: #000000}}';
+  ':root{--launch-icon-size: 128px;--color-surface: #ffffff}@media(prefers-color-scheme:dark){:root:not([data-appearance=light]){color-scheme:dark;--color-surface: #10141f}}:root[data-appearance=dark]{color-scheme:dark;--color-surface: #10141f}@media(prefers-color-scheme:dark)and (prefers-contrast:more){:root:not([data-appearance=light]){--color-surface: #000000}}';
 const LIGHT = [255, 255, 255];
 const DARK = [16, 20, 31];
 const THEME_MANIFEST = JSON.parse(
