@@ -358,8 +358,21 @@ public class ConnectedAppsStepDefinitions {
     @When("the exchanged API token sends a test e-mail through the running mail server")
     public void theExchangedApiTokenSendsATestEmailThroughTheRunningMailServer() {
         actAsExchangedApiToken();
-        api.post("/api/admin/operations/settings/test-email", Map.of("host", "localhost", "port", 1025, "username", "",
-                "auth", false, "startTls", false, "sender", "info@nfnn.cz"));
+        api.post("/api/admin/operations/settings/test-email", runningMailServerTest());
+    }
+
+    @When("the exchanged API token sends a test e-mail through the running mail server with {string} set to {string}")
+    public void theExchangedApiTokenSendsATestEmailThroughTheRunningMailServerWith(String field, String value) {
+        actAsExchangedApiToken();
+        Map<String, Object> request = new LinkedHashMap<>(runningMailServerTest());
+        Object running = request.get(field);
+        assertThat(running).as(field).isNotNull();
+        request.put(field, running instanceof Integer ? Integer.valueOf(value) : running instanceof Boolean ? Boolean.valueOf(value) : value);
+        api.post("/api/admin/operations/settings/test-email", request);
+    }
+
+    private static Map<String, Object> runningMailServerTest() {
+        return Map.of("host", "localhost", "port", 1025, "username", "", "auth", false, "startTls", false, "sender", "info@nfnn.cz");
     }
 
     @When("the exchanged API token sets the logger {string} to {string} for {int} minutes")

@@ -4,10 +4,12 @@ import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
+import cz.novanadeje.app.operations.domain.settings.SecretSettingsInBrowserOnly;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.shared.application.account.AccountEmails;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -107,9 +109,12 @@ public class SettingsService {
         return new SavedSettings(changed, versions.of(SettingsVersions.StoredSettings.of(writer.stored())));
     }
 
-    public TestEmailResult sendTestEmail(UUID adminId, MailServer server, String sender) {
-        String recipient = accountEmails.emailOf(adminId).map(EmailAddress::value).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
+    public TestEmailResult sendTestEmail(UUID adminId, AdministrationChannel channel, MailServer server, String sender) {
         boolean typed = server.password() != null && !server.password().isBlank();
+        if (channel.isConnectedApplication() && (typed || !isRunningServer(server) || !signsInAsRunning(server) || !sendsAsRunning(sender))) {
+            throw new SecretSettingsInBrowserOnly();
+        }
+        String recipient = accountEmails.emailOf(adminId).map(EmailAddress::value).orElseThrow(() -> new IllegalStateException("An administrator without an e-mail"));
         MailServer probed = !typed && isRunningServer(server)
                 ? server.withPassword(current.effectiveValue(Setting.MAIL_PASSWORD).orElse(""))
                 : server;
@@ -154,6 +159,14 @@ public class SettingsService {
                 && sameValue(String.valueOf(server.port()), running(Setting.MAIL_PORT).orElse(null))
                 && sameValue(server.username(), running(Setting.MAIL_USERNAME).orElse(null))
                 && sameValue(String.valueOf(server.startTls()), running(Setting.MAIL_STARTTLS).orElse("false"));
+    }
+
+    private boolean signsInAsRunning(MailServer server) {
+        return sameValue(String.valueOf(server.auth()), running(Setting.MAIL_AUTH).orElse("false"));
+    }
+
+    private boolean sendsAsRunning(String sender) {
+        return sameValue(sender, running(Setting.MAIL_FROM).orElse(null));
     }
 
     private Optional<String> running(Setting setting) {

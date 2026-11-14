@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.application.restart.ApplicationRestarter;
+import cz.novanadeje.app.operations.domain.settings.SecretSettingsInBrowserOnly;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
@@ -8,6 +9,7 @@ import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import cz.novanadeje.app.shared.application.account.AccountEmails;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -111,7 +113,7 @@ class SettingsServiceTest {
         when(mailProbe.sendTestEmail(typed.withPassword("running-key"), new TestEmail("info@nfnn.cz", "jana@example.cz")))
                 .thenReturn(TestEmailOutcome.SENT);
 
-        assertThat(settings.sendTestEmail(ADMIN, typed, "info@nfnn.cz")).isEqualTo(new TestEmailResult(TestEmailOutcome.SENT, "jana@example.cz"));
+        assertThat(settings.sendTestEmail(ADMIN, AdministrationChannel.BROWSER, typed, "info@nfnn.cz")).isEqualTo(new TestEmailResult(TestEmailOutcome.SENT, "jana@example.cz"));
     }
 
     @Test
@@ -125,10 +127,43 @@ class SettingsServiceTest {
         when(mailProbe.sendTestEmail(any(), any())).thenReturn(TestEmailOutcome.SIGN_IN_REFUSED);
 
         for (MailServer server : List.of(elsewhere, otherUser, withoutTls, otherPort)) {
-            settings.sendTestEmail(ADMIN, server, "info@nfnn.cz");
+            settings.sendTestEmail(ADMIN, AdministrationChannel.BROWSER, server, "info@nfnn.cz");
             verify(mailProbe).sendTestEmail(server, new TestEmail("info@nfnn.cz", "jana@example.cz"));
         }
         verify(mailProbe, never()).sendTestEmail(argThat(server -> "running-key".equals(server.password())), any());
+    }
+
+    @Test
+    @DisplayName("Given a connected application, when it sends a test e-mail through the running server as the running sender, then the running password is used")
+    void should_use_running_password_when_connection_sends_test_email_given_running_server_and_sender() {
+        runningMailServer();
+        MailServer running = new MailServer("smtp-relay.brevo.com", 587, "user", "", true, true);
+        when(mailProbe.sendTestEmail(running.withPassword("running-key"), new TestEmail("info@nfnn.cz", "jana@example.cz")))
+                .thenReturn(TestEmailOutcome.SENT);
+
+        assertThat(settings.sendTestEmail(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, running, "info@nfnn.cz"))
+                .isEqualTo(new TestEmailResult(TestEmailOutcome.SENT, "jana@example.cz"));
+    }
+
+    @Test
+    @DisplayName("Given a connected application, when it names another host, port, user, sign-in, STARTTLS or sender, or types a password, then it is refused before any connection is opened")
+    void should_refuse_without_probing_when_connection_sends_test_email_given_other_server_sender_or_password() {
+        runningMailServer();
+        List<MailServer> others = List.of(new MailServer("192.168.1.1", 587, "user", "", true, true),
+                new MailServer("smtp-relay.brevo.com", 22, "user", "", true, true),
+                new MailServer("smtp-relay.brevo.com", 587, "mallory", "", true, true),
+                new MailServer("smtp-relay.brevo.com", 587, "user", "", false, true),
+                new MailServer("smtp-relay.brevo.com", 587, "user", "", true, false),
+                new MailServer("smtp-relay.brevo.com", 587, "user", "typed-key", true, true));
+
+        for (MailServer server : others) {
+            assertThatThrownBy(() -> settings.sendTestEmail(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, server, "info@nfnn.cz"))
+                    .as(server.toString()).isInstanceOf(SecretSettingsInBrowserOnly.class);
+        }
+        assertThatThrownBy(() -> settings.sendTestEmail(ADMIN, AdministrationChannel.CONNECTED_APPLICATION,
+                new MailServer("smtp-relay.brevo.com", 587, "user", "", true, true), "x@attacker.example"))
+                .isInstanceOf(SecretSettingsInBrowserOnly.class);
+        verifyNoInteractions(mailProbe, events);
     }
 
     @Test
@@ -137,7 +172,7 @@ class SettingsServiceTest {
         runningMailServer();
         when(mailProbe.sendTestEmail(any(), any())).thenReturn(TestEmailOutcome.SENDER_REFUSED);
 
-        TestEmailResult result = settings.sendTestEmail(ADMIN, new MailServer("smtp.example.cz", 2525, "user", "typed-key", true, true), "novy@nfnn.cz");
+        TestEmailResult result = settings.sendTestEmail(ADMIN, AdministrationChannel.BROWSER, new MailServer("smtp.example.cz", 2525, "user", "typed-key", true, true), "novy@nfnn.cz");
 
         assertThat(result).isEqualTo(new TestEmailResult(TestEmailOutcome.SENDER_REFUSED, "jana@example.cz"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
@@ -196,6 +231,8 @@ class SettingsServiceTest {
         when(current.effectiveValue(Setting.MAIL_PORT)).thenReturn(Optional.of("587"));
         when(current.effectiveValue(Setting.MAIL_USERNAME)).thenReturn(Optional.of("user"));
         when(current.effectiveValue(Setting.MAIL_STARTTLS)).thenReturn(Optional.of("true"));
+        when(current.effectiveValue(Setting.MAIL_AUTH)).thenReturn(Optional.of("true"));
+        when(current.effectiveValue(Setting.MAIL_FROM)).thenReturn(Optional.of("info@nfnn.cz"));
         when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
         when(accountEmails.emailOf(ADMIN)).thenReturn(Optional.of(new EmailAddress("jana@example.cz")));
     }

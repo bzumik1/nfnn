@@ -167,3 +167,19 @@ Feature: An administrator changes the settings of the site in the administration
     When the connector exchanges the connector token for an API token
     And the exchanged API token sends a test e-mail through the running mail server
     Then the test e-mail says "SENT" to the e-mail of "Jana"
+
+  Scenario Outline: A connected application tests only the running mail server, never another host, port, user, sign-in, STARTTLS or sender
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sends a test e-mail through the running mail server with "<field>" set to "<value>"
+    Then the response status is 403
+    And the problem type ends with "operations/secret-settings-in-browser-only"
+
+    Examples:
+      | field    | value              |
+      | host     | smtp.example.cz    |
+      | port     | 22                 |
+      | username | mallory            |
+      | auth     | true               |
+      | startTls | true               |
+      | sender   | x@attacker.example |
