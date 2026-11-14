@@ -122,8 +122,6 @@ class PasswordHashingRulesTest {
                         import cz.novanadeje.app.donors.domain.Donor;
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.PasswordPolicy;
-import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
                         import java.util.function.Function;
                         import org.springframework.transaction.annotation.Transactional;
@@ -193,8 +191,6 @@ import cz.novanadeje.app.donors.domain.RawPassword;
 
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.PasswordPolicy;
-import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
                         import org.springframework.transaction.annotation.Transactional;
 
@@ -213,8 +209,6 @@ import cz.novanadeje.app.donors.domain.RawPassword;
 
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.PasswordPolicy;
-import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
 
                         class PlantedHashingCollaborator {
