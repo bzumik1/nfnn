@@ -22,6 +22,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryPaymentText;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -238,7 +239,7 @@ class SecondFactorRecoveryServiceTest {
         when(recoveries.markUsed(recovery.id(), NOW)).thenReturn(true);
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", true);
         Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", true);
-        Donor eva = Donor.reconstitute(EVA, DonorType.PERSON, "Eva Malá", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        Donor eva = Donor.reconstitute(EVA, DonorType.PERSON, new DonorName("Eva Malá"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("eva@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937562"), LocaleCode.EN,
                 Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
         when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(jana));
@@ -310,7 +311,7 @@ class SecondFactorRecoveryServiceTest {
     }
 
     private static Donor donor(DonorId id, String name, String email, boolean administrator) {
-        return Donor.reconstitute(id, DonorType.PERSON, name, null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS,
                 administrator ? Set.of(Role.DONOR, Role.ADMIN) : Set.of(Role.DONOR), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }

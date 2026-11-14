@@ -3,12 +3,14 @@ package cz.novanadeje.app.operations.application.settings;
 import cz.novanadeje.app.donations.DonationRowsContext;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
 import cz.novanadeje.app.operations.domain.settings.Setting;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
 import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +41,8 @@ import static org.awaitility.Awaitility.await;
 
 @DonationRowsContext
 class SettingsSaveConcurrencyTest {
+
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final UUID JANA = UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831369");
     private static final UUID PETR = UUID.fromString("01a18e56-bdb0-775a-bd0a-a6075683136a");
@@ -143,7 +147,7 @@ class SettingsSaveConcurrencyTest {
     }
 
     private List<BackupKeyWordCheck> backupKeyWords() {
-        List<String> words = backupKeys.current().orElseThrow().words();
+        List<String> words = backupKeys.current().orElseThrow().words(WORDLIST);
         return List.of(new BackupKeyWordCheck(4, words.get(3)), new BackupKeyWordCheck(11, words.get(10)), new BackupKeyWordCheck(24, words.get(23)));
     }
 

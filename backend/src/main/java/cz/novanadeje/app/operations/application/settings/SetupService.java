@@ -109,7 +109,7 @@ public class SetupService {
         backupKeys.confirmInSetup(backupKeyWords, now);
         List<Setting> changed = writer.apply(changes, Setting.requiredInSetup(), now);
         state.markCompleted(now);
-        restarter.restartAfterCommit();
+        restarter.restartAfterCommitOnceAsyncWorkIsDone();
         log.info("The first setup was completed {}; settings stored: {}; the backend restarts",
                 access.fromHomeNetwork() ? "from the home network" : "with the setup code",
                 changed.stream().map(Enum::name).collect(Collectors.joining(", ")));

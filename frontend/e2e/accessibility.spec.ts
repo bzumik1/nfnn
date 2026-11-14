@@ -3280,7 +3280,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when a signed-in donor waits for a receipt PDF, then its progress line, bar and cancel button break no rule', async ({
+  test('when a signed-in donor waits for a receipt PDF, then its progress line, ring and cancel button break no rule', async ({
     page,
   }) => {
     await mockDonorApi(page, receiptDonations);

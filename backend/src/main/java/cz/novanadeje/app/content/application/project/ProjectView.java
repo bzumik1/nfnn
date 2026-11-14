@@ -2,7 +2,6 @@ package cz.novanadeje.app.content.application.project;
 
 import cz.novanadeje.app.content.domain.media.FocalPoint;
 import cz.novanadeje.app.content.domain.media.MediaId;
-import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.content.domain.project.ProjectId;
@@ -17,12 +16,7 @@ public record ProjectView(ProjectId id, String slug, String title, int year, Pro
                           Optional<MediaId> coverImage, Optional<String> coverImageAlt, Optional<FocalPoint> coverFocalPoint, Optional<LocalDate> publishedOn,
                           boolean live, Instant createdAt, Instant updatedAt) {
 
-    public static ProjectView of(Project project, LocalDate today, MediaImageRepository media) {
-        return all(List.of(project), today, media).getFirst();
-    }
-
-    public static List<ProjectView> all(List<Project> projects, LocalDate today, MediaImageRepository media) {
-        Map<MediaId, FocalPoint> focalPoints = media.findFocalPoints(projects.stream().flatMap(project -> project.content().coverImage().stream()).toList());
+    static List<ProjectView> all(List<Project> projects, LocalDate today, Map<MediaId, FocalPoint> focalPoints) {
         return projects.stream().map(project -> from(project, today, focalPoints)).toList();
     }
 

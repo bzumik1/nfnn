@@ -26,6 +26,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.pairing.SymbolClaimOffer;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -382,7 +383,7 @@ class DonorBankAccountsServiceTest {
     }
 
     private static DonorRecord record(DonorReference id, SenderAccountLink... links) {
-        return DonorRecord.reconstitute(id, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return DonorRecord.reconstitute(id, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 JANA_SYMBOL, LocaleCode.CS, List.of(links), NOW, NOW, null);
     }
 

@@ -46,16 +46,18 @@ public class ProjectAdminService {
     private final ProjectRepository projects;
     private final ProjectOrderRepository orders;
     private final MediaImageRepository media;
+    private final ProjectViews projectViews;
     private final FormerProjectSlugs formerSlugs;
     private final ContentVersions versions;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, FormerProjectSlugs formerSlugs,
-                               ContentVersions versions, ApplicationEventPublisher events, Clock clock) {
+    public ProjectAdminService(ProjectRepository projects, ProjectOrderRepository orders, MediaImageRepository media, ProjectViews projectViews,
+                               FormerProjectSlugs formerSlugs, ContentVersions versions, ApplicationEventPublisher events, Clock clock) {
         this.projects = projects;
         this.orders = orders;
         this.media = media;
+        this.projectViews = projectViews;
         this.formerSlugs = formerSlugs;
         this.versions = versions;
         this.events = events;
@@ -66,7 +68,7 @@ public class ProjectAdminService {
     public List<Versioned<ProjectView>> list() {
         LocalDate today = today(clock.instant());
         List<Project> all = projects.findAllDraftsFirst(orders.current());
-        List<ProjectView> views = ProjectView.all(all, today, media);
+        List<ProjectView> views = projectViews.of(all, today);
         return IntStream.range(0, all.size()).mapToObj(index -> new Versioned<>(views.get(index), versions.of(all.get(index)))).toList();
     }
 
@@ -147,7 +149,7 @@ public class ProjectAdminService {
     }
 
     private Versioned<ProjectView> versioned(Project project, LocalDate today) {
-        return new Versioned<>(ProjectView.of(project, today, media), versions.of(project));
+        return new Versioned<>(projectViews.of(project, today), versions.of(project));
     }
 
     private Project requireUnchanged(ProjectId id, ExpectedVersion expected) {

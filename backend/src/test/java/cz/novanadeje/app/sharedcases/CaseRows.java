@@ -182,7 +182,7 @@ public final class CaseRows {
         for (Donor donor : donors) {
             UUID id = donorId(donor.alias());
             ++sequence;
-            String name = donor.erasedAt().isPresent() ? ErasedPersonalData.NAME : donor.name().orElse("Dárce " + donor.alias());
+            String name = donor.erasedAt().isPresent() ? ErasedPersonalData.NAME.value() : donor.name().orElse("Dárce " + donor.alias());
             String street = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.street() : "Dlouhá 12";
             String city = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.city() : "Ústí nad Labem";
             String postalCode = donor.erasedAt().isPresent() ? ErasedPersonalData.ADDRESS.postalCode() : "400 01";

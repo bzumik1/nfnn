@@ -37,23 +37,25 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend build (revision: its commit; version: its release, YYYY.M.N, or dev) and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage, balance: the account balance the bank reported with the last successful import and when it was read, kept when a later import fails, historyImport: the last run of older payments that nfnn_import_history queued since the server started, with its status QUEUED, RUNNING, COMPLETED, HISTORY_LOCKED or FAILED and the payments added, or null, and defaultHistoryFrom, the day such a run starts from by default), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say.',
+        'The running backend build (revision: its commit; version: its release, YYYY.M.N, or dev) and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage, balance: the account balance the bank reported with the last successful import and when it was read, kept when a later import fails, historyImport: the last run of older payments that nfnn_import_history queued since the server started, with its status QUEUED, RUNNING, COMPLETED, HISTORY_LOCKED or FAILED and the payments added, or null, and defaultHistoryFrom, the day such a run starts from by default), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say, and release: running (the release the server runs, YYYY.M.N, or dev for a build outside the releases), latest (the newest release published on GitHub, its version and publishedAt, or null before the first successful daily check), checkedAt and succeededAt of that check, failure (why the last check failed, or null) and updateAvailable (true when the latest is newer than the running one: an administrator deploys it by hand in ZimaOS: the app settings, Save without a change), or unavailable when the backend did not say.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
       answer(deps, ctx, 'nfnn_status', async ({ apiToken }) => {
-        const [info, health, importState, backups, signingKeys, signatory] = await Promise.all([
-          backend.get('/actuator/info'),
-          backend.get('/actuator/health'),
-          backend.get('/api/admin/donations/import-state', apiToken),
-          backend.get('/api/admin/operations/backups', apiToken),
-          backend
-            .get('/api/admin/donations/receipt-signing-keys', apiToken)
-            .then(receiptSigningKeys, unavailableReceiptSigningKeys),
-          backend
-            .get('/api/admin/donations/receipt-signatory', apiToken)
-            .then(receiptSignatoryState, () => 'unavailable'),
-        ]);
+        const [info, health, importState, backups, signingKeys, signatory, release] =
+          await Promise.all([
+            backend.get('/actuator/info'),
+            backend.get('/actuator/health'),
+            backend.get('/api/admin/donations/import-state', apiToken),
+            backend.get('/api/admin/operations/backups', apiToken),
+            backend
+              .get('/api/admin/donations/receipt-signing-keys', apiToken)
+              .then(receiptSigningKeys, unavailableReceiptSigningKeys),
+            backend
+              .get('/api/admin/donations/receipt-signatory', apiToken)
+              .then(receiptSignatoryState, () => 'unavailable'),
+            backend.get('/api/admin/operations/release', apiToken).catch(() => 'unavailable'),
+          ]);
         const backupView = asRecord(backups);
         return text({
           build: asRecord(info)['build'],
@@ -64,6 +66,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
           backupProblems: backupView['problems'],
           receiptSigningKeys: signingKeys,
           receiptSignatory: signatory,
+          release,
         });
       }),
   );

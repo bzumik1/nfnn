@@ -25,6 +25,7 @@ import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
 import cz.novanadeje.app.shared.application.account.AdministratorContact;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -107,7 +108,7 @@ class AdministratorServiceTest {
     @DisplayName("Given two administrators, when their contacts are asked for, then each comes with the address and the language to write in")
     void should_give_address_and_language_of_each_administrator_when_contacts_asked_given_two_administrators() {
         Donor jana = administrator(JANA, "Jana Nováková", "jana@example.cz");
-        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
+        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, new DonorName("Petr Svoboda"), null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
                 new VariableSymbol("4821937561"), LocaleCode.EN, Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
         when(donors.findAdministrators()).thenReturn(List.of(jana, petr));
 
@@ -409,17 +410,17 @@ class AdministratorServiceTest {
     }
 
     private static Donor plainDonor(DonorId id, String name, String email) {
-        return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 
     private static Donor unconfirmedDonor(DonorId id, String name, String email) {
-        return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(1000), null, null);
     }
 
     private static Donor administrator(DonorId id, String name, String email) {
-        return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, Set.of(Role.DONOR, Role.ADMIN), NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 }

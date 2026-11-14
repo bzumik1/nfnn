@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.infrastructure.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
 import cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeys;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,8 @@ import org.springframework.mock.env.MockEnvironment;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DevelopmentBackupKeyPolicyTest {
+
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final BackupKey SERVER_KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
 
@@ -22,7 +25,7 @@ class DevelopmentBackupKeyPolicyTest {
         DevelopmentBackupKeyPolicy policy = new DevelopmentBackupKeyPolicy(production);
 
         assertThat(policy.refuses(developmentKey)).isTrue();
-        assertThat(policy.refuses(BackupKey.parse(String.join(" ", developmentKey.words())))).isTrue();
+        assertThat(policy.refuses(BackupKey.parse(String.join(" ", developmentKey.words(WORDLIST)), WORDLIST))).isTrue();
         assertThat(policy.refuses(SERVER_KEY)).isFalse();
     }
 

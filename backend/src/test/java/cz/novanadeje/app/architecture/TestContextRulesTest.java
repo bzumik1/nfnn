@@ -62,12 +62,7 @@ class TestContextRulesTest {
                 package cz.novanadeje.app.planteda;
 
                 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.annotation.MergedAnnotations;
-import org.springframework.core.env.StandardEnvironment;
-import org.springframework.test.context.BootstrapUtils;
-import org.springframework.test.context.MergedContextConfiguration;
-import org.springframework.test.context.support.TestPropertySourceUtils;
+                import org.springframework.boot.test.context.SpringBootTest;
 
                 @SpringBootTest
                 class PlantedContextTest {

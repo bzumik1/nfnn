@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 public class ImportFollowUps {
 
-    public static final int MAX_IN_A_ROW = 3;
+    static final int MAX_IN_A_ROW = 3;
 
     private static final Logger log = LoggerFactory.getLogger(ImportFollowUps.class);
 

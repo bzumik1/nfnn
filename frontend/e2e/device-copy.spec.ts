@@ -151,7 +151,7 @@ test.describe('Given a donor whose copy on this device holds her gifts and her y
   });
 
   const gifts = (page: Page) =>
-    page.locator('.payments-card tbody tr, .payments-card .donation-rows > li:not(.donation-last)');
+    page.locator('.payments-card tbody tr, .payments-card .donation-rows > li');
 
   test.beforeEach(async ({ page }) => {
     await mockDonorApi(page, {

@@ -14,6 +14,7 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -383,7 +384,7 @@ class JpaBankPaymentRepositoryTest {
     }
 
     private void pair(BankPayment payment, PairingMethod method) {
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Jana Nováková"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
         donorRecords.save(jana);
         donations.save(Donation.fromBankPayment(DonationId.newId(NOW), jana.id(), payment, method, NOW));

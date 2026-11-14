@@ -155,6 +155,23 @@ async function adminPage(ui: Ui, path: string): Promise<void> {
   await ui.waitVisible({ css: '.admin-page h1' });
 }
 
+async function newerRelease(ui: Ui): Promise<void> {
+  await ui.routes.route(
+    (url) => url.pathname === '/api/admin/operations/release',
+    (route) =>
+      route.fulfill({
+        json: {
+          running: '2026.11.3',
+          latest: { version: '2026.11.5', publishedAt: '2026-11-14T09:30:12Z' },
+          checkedAt: '2026-11-15T05:10:00Z',
+          succeededAt: '2026-11-15T05:10:00Z',
+          failure: null,
+          updateAvailable: true,
+        },
+      }),
+  );
+}
+
 async function openSignInDialog(ui: Ui): Promise<void> {
   await mockDonorApi(ui.routes);
   await ui.goto('/');
@@ -357,6 +374,15 @@ export const STEPS: Step[] = [
   },
   { id: 'admin-home', title: 'the administration', open: (ui) => adminPage(ui, '/sprava') },
   {
+    id: 'admin-home-newer-release',
+    title: 'the administration reminding of a newer release',
+    open: async (ui) => {
+      await newerRelease(ui);
+      await adminPage(ui, '/sprava');
+      await ui.waitVisible({ css: '.attention-release' });
+    },
+  },
+  {
     id: 'admin-payments',
     title: 'the payments in the administration',
     open: (ui) => adminPage(ui, '/sprava/platby'),
@@ -508,6 +534,15 @@ export const STEPS: Step[] = [
     id: 'admin-server-state',
     title: 'the server state',
     open: (ui) => adminPage(ui, '/sprava/logy/stav'),
+  },
+  {
+    id: 'admin-server-state-newer-release',
+    title: 'the server state with a newer release and the steps in ZimaOS',
+    open: async (ui) => {
+      await newerRelease(ui);
+      await adminPage(ui, '/sprava/logy/stav');
+      await ui.waitVisible({ css: '.release-steps' });
+    },
   },
   {
     id: 'admin-backups',

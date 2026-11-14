@@ -63,7 +63,7 @@
 .receipt-saved {
   inline-size: 0;
   min-inline-size: 100%;
-  justify-items: end;
+  justify-content: flex-end;
   text-align: right;
 }
 
@@ -122,7 +122,7 @@ a {
   }
 
   .receipt-saved {
-    justify-items: start;
+    justify-content: flex-start;
     text-align: left;
   }
 
@@ -137,10 +137,10 @@ a {
   gap: var(--space-2);
   white-space: normal;
   text-align: left;
-}
 
-.yearly-pdf-icon {
-  flex: none;
+  &[aria-disabled='true'] {
+    opacity: 1;
+  }
 }
 
 .single-gifts {

@@ -9,6 +9,7 @@ import cz.novanadeje.app.content.application.donateband.DonateBandView;
 import cz.novanadeje.app.content.application.people.BoardMemberView;
 import cz.novanadeje.app.content.application.people.PublicPeopleService;
 import cz.novanadeje.app.content.application.people.PublicPeopleView;
+import cz.novanadeje.app.content.application.project.ProjectViews;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -57,7 +58,7 @@ class HomeContentServiceTest {
     private final DonateBandService donateBand = mock(DonateBandService.class);
     private final NewsSigners signers = new NewsSigners(mock(PersonRepository.class), mock(MediaImageRepository.class));
     private final HomeContentService service = new HomeContentService(news, signers, projects, projectOrders, about, donateBand, people,
-            mock(MediaImageRepository.class), Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
+            new ProjectViews(mock(MediaImageRepository.class)), Clock.fixed(LATE_EVENING_UTC, ZoneOffset.UTC));
 
     @BeforeEach
     void showNoBandPhoto() {

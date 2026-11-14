@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -125,7 +126,7 @@ class SecondFactorRecoveryPolicyTest {
     }
 
     private static DonorRecord donor(String name, String symbol) {
-        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new VariableSymbol(symbol), LocaleCode.CS, NOW);
     }
 

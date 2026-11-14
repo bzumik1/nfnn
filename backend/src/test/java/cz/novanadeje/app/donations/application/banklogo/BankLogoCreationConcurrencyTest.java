@@ -67,7 +67,7 @@ class BankLogoCreationConcurrencyTest {
     void noLogos() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         BankLogoImages mine = source -> FetchedBankLogo.of(FakeBankLogoSource.webpOf("mine"));
-        service = new BankLogoAdminService(logos, banks, mine, versions, events, transaction, clock);
+        service = new BankLogoAdminService(logos, banks, mine, new BankLogoImageChanges(logos), versions, events, transaction, clock);
     }
 
     @Test

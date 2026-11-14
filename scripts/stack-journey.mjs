@@ -9,7 +9,7 @@ import { crc32, deflateSync } from 'node:zlib';
 const REPOSITORY = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CZECH_WORDS = join(
   REPOSITORY,
-  'backend/src/main/resources/cz/novanadeje/app/operations/domain/backup/bip39-czech.txt',
+  'backend/src/main/resources/cz/novanadeje/app/operations/infrastructure/backup/bip39-czech.txt',
 );
 const FOUNDATION_COMPANY_IDENTIFIER = 27278794;
 const PROOF_MESSAGE_TAG = 'nfnn.cz/receipt/v1';

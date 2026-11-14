@@ -3,15 +3,20 @@ package cz.novanadeje.app.donations.application.admin;
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-final class ReceiptCoverage {
+@Component
+public class ReceiptCoverage {
 
-    private ReceiptCoverage() {
+    private final DonationReceiptRepository receipts;
+
+    public ReceiptCoverage(DonationReceiptRepository receipts) {
+        this.receipts = receipts;
     }
 
-    static boolean anyReceiptCovers(DonationReceiptRepository receipts, DonorReference donor, List<Donation> donations) {
+    boolean anyReceiptCovers(DonorReference donor, List<Donation> donations) {
         if (donations.isEmpty()) {
             return false;
         }

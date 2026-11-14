@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.List;
@@ -78,10 +79,10 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         Optional<String> account = payment.payerAccount();
         if (payerWithheld) {
             return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(),
-                    donation.map(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
+                    donation.map(PairedDonationView::donor).map(DonorRecord::name).map(DonorName::value)).flatMap(Optional::stream);
         }
         return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(), account, payment.counterpartyName(),
-                        payment.messageForRecipient(), donation.map(PairedDonationView::donor).map(DonorRecord::name))
+                        payment.messageForRecipient(), donation.map(PairedDonationView::donor).map(DonorRecord::name).map(DonorName::value))
                 .flatMap(Optional::stream);
     }
 

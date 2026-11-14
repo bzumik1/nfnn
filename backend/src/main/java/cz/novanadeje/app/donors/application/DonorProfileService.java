@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.ProfileChangedMeanwhile;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.springframework.context.ApplicationEventPublisher;
@@ -47,7 +48,7 @@ public class DonorProfileService {
         if (!expected.admits(version)) {
             throw new ProfileChangedMeanwhile(version, ProfileVersions.StoredProfile.of(donor));
         }
-        String name = command.name() == null ? donor.name() : command.name();
+        DonorName name = command.name() == null ? donor.name() : new DonorName(command.name());
         PostalAddress address = command.street() == null && command.city() == null && command.postalCode() == null
                 ? donor.address()
                 : new PostalAddress(command.street(), command.city(), command.postalCode());

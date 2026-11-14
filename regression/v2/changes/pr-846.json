@@ -1,0 +1,202 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given a candidate, when asked, then the validity is reported",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given a candidate, when asked, then the validity is reported",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given a wrong check digit, when the identifier is created, then it is rejected",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given a wrong check digit, when the identifier is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given eight digits with a valid check digit, when the identifier is created, then it is accepted",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given eight digits with a valid check digit, when the identifier is created, then it is accepted",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given grouped digits, when the identifier is created, then the spaces are stripped",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given grouped digits, when the identifier is created, then the spaces are stripped",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given letters, when the identifier is created, then it is rejected",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given letters, when the identifier is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given seven digits, when the identifier is created, then it is rejected",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given seven digits, when the identifier is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > Given an identifier with a wrong check digit, when it is created, then the message names the rule without the identifier",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given an identifier with a wrong check digit, when it is created, then the message names the rule without the identifier",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > [1] digits = \"４５２７４６４９\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > [1] digits = \"４５２７４６４９\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > [2] digits = \"٤٥٢٧٤٦٤٩\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > [2] digits = \"٤٥٢٧٤٦٤٩\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.CompanyIdentifierTest > [3] digits = \"4527464٩\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): CompanyIdentifier moved unchanged from donors/domain to shared/domain, and its unchanged test moved with it",
+    "replacement": "shared.domain.CompanyIdentifierTest > [3] digits = \"4527464٩\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [1] name = \" \"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [1] name = \" \"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [2] name = \"\\t\\n\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [2] name = \"\\t\\n\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [3] name = \" \"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [3] name = \" \"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [4] name = \" \"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [4] name = \" \"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [5] name = \"Jana\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [5] name = \"Jana\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [6] name = \" J \"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [6] name = \" J \"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [7] name = \" Jana\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [7] name = \" Jana\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorNameShapeTest > [8] name = \"Jana\\nNováková\"",
+    "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
+    "replacement": "shared.domain.DonorNameTest > [8] name = \"Jana\\nNováková\"",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a name with surrounding spaces, when the record is registered, then the name is trimmed",
+    "reason": "Architecture audit #621 (R3-D4, #844): DonorRecord takes a DonorName, which trims, so the rule is proved once on the shared value object",
+    "replacement": "shared.domain.DonorNameTest > Given a name with surrounding spaces, when the name is created, then it is trimmed",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a blank or overlong name, when the record is registered, then it is refused",
+    "reason": "Architecture audit #621 (R3-D4, #844): DonorRecord takes a DonorName, which refuses a blank or overlong name, so the rule is proved once on the shared value object (the blank cases in its parameterised test)",
+    "replacement": "shared.domain.DonorNameTest > Given a name one character too long, when the name is created, then it is refused naming the rule without the name",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a company identifier that is not eight digits, when the record is registered, then it is refused",
+    "reason": "Architecture audit #621 (R3-D4, #844): DonorRecord takes a CompanyIdentifier instead of keeping its own eight-digit pattern, so the shape is proved once on the shared value object",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given seven digits, when the identifier is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a company identifier that is not eight digits, when the record is registered, then the message names the rule without the identifier",
+    "reason": "Architecture audit #621 (R3-D4, #844): DonorRecord no longer validates the identifier itself; the shared CompanyIdentifier refuses it with a message naming only the rule",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given an identifier with a wrong check digit, when it is created, then the message names the rule without the identifier",
+    "contract": "docs/security-overview.md, Logs (exception messages)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a company identifier with a wrong check digit, when the record is registered, then it is accepted because donors validated it",
+    "reason": "Architecture audit #621 (R3-D4, #844): the donations copy now holds the same CompanyIdentifier donors validated, check digit included, instead of a string it accepted unchecked; every stored identifier came from a donor checked since #9",
+    "replacement": "shared.domain.CompanyIdentifierTest > Given a wrong check digit, when the identifier is created, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.donor.DonorRecordTest > Given a record, when the profile changes to a blank name, then it is refused and the profile stays",
+    "reason": "Architecture audit #621 (R3-D4, #844): a blank DonorName cannot be built, so the record refuses a missing name and the blank one is refused by DonorName",
+    "replacement": "donations.domain.donor.DonorRecordTest > Given a record, when the profile changes without a name, then it is refused and the profile stays",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorTest > Given a blank name, when a donor registers, then it is rejected",
+    "reason": "Architecture audit #621 (R3-D4, #844): a blank name is refused by DonorName before Donor.register runs (DonorNameTest keeps that case); Donor itself now only refuses a missing name, which the renamed test checks",
+    "replacement": "donors.domain.DonorTest > Given no name, when a donor registers, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
+  }
+]

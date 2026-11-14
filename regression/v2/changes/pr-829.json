@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "added",
+    "path": "GET /api/admin/operations/release",
+    "scenario": "operations/release_check: *",
+    "reason": "Jakub 2026-11-14 (#810): the backend checks GitHub Releases daily for the newest release; administrators and the connector's nfnn_status read the running release, the latest published one, the time and outcome of the check and whether an update is available; v2 had no releases",
+    "contract": "docs/api-contract.md, Release check; MCP connector"
+  }
+]

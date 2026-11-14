@@ -41,3 +41,17 @@ h2.ui-list__title {
 .ui-list__value {
   white-space: normal;
 }
+
+.release-steps {
+  margin: var(--space-2) 0;
+  padding-inline-start: var(--space-4-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.release-notes {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}

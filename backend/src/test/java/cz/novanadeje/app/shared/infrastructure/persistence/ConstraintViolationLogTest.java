@@ -8,6 +8,7 @@ import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -92,7 +93,7 @@ class ConstraintViolationLogTest {
 
     private Donor donor(String email, String symbol) {
         Instant now = clock.instant();
-        return Donor.register(DonorId.newId(now), DonorType.PERSON, CANARY_NAME, null, new PostalAddress(CANARY_STREET, "Most", "434 01"),
+        return Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(CANARY_NAME), null, new PostalAddress(CANARY_STREET, "Most", "434 01"),
                 new EmailAddress(email), null, new VariableSymbol(symbol), LocaleCode.CS, now);
     }
 

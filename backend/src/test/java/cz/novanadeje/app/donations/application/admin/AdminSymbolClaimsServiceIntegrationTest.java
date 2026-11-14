@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimNotConfirmed;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimStillConfirmed;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -200,14 +201,14 @@ class AdminSymbolClaimsServiceIntegrationTest {
             assertThat(view.claim().account()).isEqualTo(ACCOUNT);
             assertThat(view.claim().symbol()).isEqualTo(OLD_SYMBOL);
             assertThat(view.claim().answer()).isEqualTo(SymbolClaimAnswer.CONFIRMED);
-            assertThat(view.donor()).map(DonorRecord::name).contains("Jana Nováková");
+            assertThat(view.donor()).map(DonorRecord::name).contains(new DonorName("Jana Nováková"));
             assertThat(view.donationCount()).isEqualTo(3);
         });
     }
 
     private DonorReference janaWithVerifiedAccountAndOldSymbolPayments() {
         Instant now = Instant.now();
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), "Jana Nováková",
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), new DonorName("Jana Nováková"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol(JANAS_SYMBOL), LocaleCode.CS, now);
         donorRecords.save(jana);
         Optional<SenderAccount> account = Optional.of(ACCOUNT);

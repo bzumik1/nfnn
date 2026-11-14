@@ -22,7 +22,7 @@ public class ProfileVersions {
     public record StoredProfile(String name, String street, String city, String postalCode, String preferredLocale) {
 
         public static StoredProfile of(Donor donor) {
-            return new StoredProfile(donor.name(), donor.address().street(), donor.address().city(), donor.address().postalCode(),
+            return new StoredProfile(donor.name().value(), donor.address().street(), donor.address().city(), donor.address().postalCode(),
                     donor.preferredLocale().tag());
         }
     }

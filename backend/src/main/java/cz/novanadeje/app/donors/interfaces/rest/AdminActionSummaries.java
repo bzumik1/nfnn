@@ -99,7 +99,7 @@ class AdminActionSummaries {
     }
 
     private String donorName(Donor donor, Locale locale) {
-        return donor.isErased() ? text("donor.erased", locale) : donor.name();
+        return donor.isErased() ? text("donor.erased", locale) : donor.name().value();
     }
 
     private static String crowns(long amountMinor, Locale locale) {

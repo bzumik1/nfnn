@@ -55,6 +55,18 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public FakeLatestReleaseSource fakeLatestReleaseSource() {
+        return new FakeLatestReleaseSource();
+    }
+
+    @Bean
+    @Primary
+    public ResettableReleaseChecks resettableReleaseChecks() {
+        return new ResettableReleaseChecks();
+    }
+
+    @Bean
+    @Primary
     public FakeBankLogoSource fakeBankLogoSource() {
         return new FakeBankLogoSource();
     }
@@ -84,8 +96,8 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
-    public RecordingApplicationRestarter recordingApplicationRestarter() {
-        return new RecordingApplicationRestarter();
+    public RecordingApplicationRestarter recordingApplicationRestarter(AsyncTaskTracker asyncTasks) {
+        return new RecordingApplicationRestarter(asyncTasks);
     }
 
     @Bean

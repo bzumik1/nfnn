@@ -2,9 +2,9 @@ package cz.novanadeje.app.support;
 
 import cz.novanadeje.app.donors.application.CompanyRegistry;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;

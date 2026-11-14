@@ -84,7 +84,7 @@ class AdminSymbolClaimsServiceTest {
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final PairingLock lock = mock(PairingLock.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, lock, events,
+    private final AdminSymbolClaimsService service = new AdminSymbolClaimsService(claims, donations, donorRecords, receipts, new ReceiptCoverage(receipts), lock, events,
             new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach

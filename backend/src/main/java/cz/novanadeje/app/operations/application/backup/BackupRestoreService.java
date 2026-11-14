@@ -61,7 +61,7 @@ public class BackupRestoreService {
         store.requestRestore(request);
         events.publishEvent(new AdminActionPerformed(adminId, RESTORE_BACKUP_ACTION, Optional.empty(),
                 "Vyžádána obnova ze zálohy " + fileName + " (požadavek " + request.id() + "); backend se restartuje a počká na kontejner záloh", now));
-        restarter.restartAfterCommit();
+        restarter.restartAfterCommitForRestore();
         log.info("Admin {} requested a restore of {} as request {}; the backend restarts", adminId, fileName, request.id());
         return request;
     }
@@ -76,7 +76,7 @@ public class BackupRestoreService {
         String stored = store.storeUpload(id, content, key);
         RestoreRequest request = new RestoreRequest(id, RestoreSource.UPLOAD, stored, Optional.empty(), now);
         store.requestRestore(request);
-        restarter.restartAfterCommit();
+        restarter.restartAfterCommitForRestore();
         log.info("A backup uploaded in the first setup waits for the backup container as request {}; the backend restarts", id);
         return request;
     }

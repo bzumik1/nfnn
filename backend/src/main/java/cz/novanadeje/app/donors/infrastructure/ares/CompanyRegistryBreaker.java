@@ -4,9 +4,9 @@ import cz.novanadeje.app.donors.application.CompanyRegistry;
 import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryPause;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

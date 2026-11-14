@@ -97,7 +97,7 @@ public class DonorPasskeyService {
                 .map(passkey -> new PasskeyDescriptor(passkey.credentialId(), passkey.transports()))
                 .toList();
         return new PasskeyCreationOptions(challenge.value(), ceremonies.relyingPartyId(), properties.relyingPartyName(),
-                PasskeyUserHandle.of(donorId).value(), donor.email().value(), donor.name(), ceremonies.algorithms(), excluded,
+                PasskeyUserHandle.of(donorId).value(), donor.email().value(), donor.name().value(), ceremonies.algorithms(), excluded,
                 properties.challengeTtl());
     }
 

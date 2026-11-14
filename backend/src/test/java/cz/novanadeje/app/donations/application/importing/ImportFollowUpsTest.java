@@ -178,6 +178,21 @@ class ImportFollowUpsTest {
     }
 
     @Test
+    @DisplayName("Given a history run held back twice, when the next scheduled run starts between its follow-ups, then the history run keeps its count and the fourth refusal still ends it")
+    void should_keep_history_count_when_scheduled_run_starts_given_history_run_held_back_twice() {
+        HistoryImportRun run = queue();
+        ImportReport heldBack = failed(HISTORY, new FollowUp(RETRY_AT, HISTORY));
+        followUps.afterHistory(run, heldBack);
+        followUps.afterHistory(run, heldBack);
+
+        followUps.scheduledRunStarted();
+
+        assertThat(followUps.afterHistory(run, heldBack)).contains(RETRY_AT);
+        assertThat(followUps.afterHistory(run, heldBack)).isEmpty();
+        assertThat(historyImports.last()).flatMap(HistoryImportRun::failure).contains(ImportFailureKind.RATE_LIMITED);
+    }
+
+    @Test
     @DisplayName("Given another import holding the thread, when a history run is put off, then it runs again after the bank's cooldown without using up a follow-up")
     void should_put_off_by_cooldown_without_follow_up_when_thread_busy_given_history_run() {
         HistoryImportRun run = queue();

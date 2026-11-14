@@ -35,7 +35,7 @@ public record FrozenReceiptResponse(int schemaVersion, ReceiptKind kind, String 
     }
 
     FrozenReceiptResponse withoutErasedDonor() {
-        DonorResponse erased = new DonorResponse(donor.type(), ErasedPersonalData.NAME, null, AddressResponse.from(ErasedPersonalData.ADDRESS),
+        DonorResponse erased = new DonorResponse(donor.type(), ErasedPersonalData.NAME.value(), null, AddressResponse.from(ErasedPersonalData.ADDRESS),
                 donor.variableSymbol());
         return new FrozenReceiptResponse(schemaVersion, kind, number, issuedOn, locale, year, replaces, foundation, erased, gifts, total, signatory,
                 texts, new VerificationResponse(verification.keyId(), null));

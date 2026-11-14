@@ -11,6 +11,8 @@ import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -63,7 +65,7 @@ class DonorRegistrationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorRegistrationService(donors, passwordHasher, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC), transactions);
+        service = new DonorRegistrationService(donors, passwordHasher, CommonPasswords.POLICY, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC), transactions);
     }
 
     @Test
@@ -84,7 +86,7 @@ class DonorRegistrationServiceTest {
         assertThat(donor.variableSymbol().value()).matches("[1-9][0-9]{9}");
         assertThat(donor.isEmailVerified()).isFalse();
         assertThat(donor.type()).isEqualTo(DonorType.PERSON);
-        assertThat(donor.name()).isEqualTo("Jana Nováková");
+        assertThat(donor.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(donor.address()).isEqualTo(ADDRESS);
         assertThat(donor.preferredLocale()).isEqualTo(LocaleCode.CS);
         assertThat(donor.registeredAt()).isEqualTo(NOW);
@@ -244,14 +246,14 @@ class DonorRegistrationServiceTest {
         order.verify(donors).save(stored.capture());
         order.verify(emailVerification).issueLink(stored.getValue());
         assertThat(stored.getValue().id()).isNotEqualTo(unverified.id());
-        assertThat(stored.getValue().name()).isEqualTo("Jana Svobodová");
+        assertThat(stored.getValue().name()).isEqualTo(new DonorName("Jana Svobodová"));
         assertThat(stored.getValue().passwordHash()).contains(new PasswordHash("$new"));
         assertThat(stored.getValue().isEmailVerified()).isFalse();
         verifyNoInteractions(events);
     }
 
     private static Donor donor(LocaleCode locale) {
-        return Donor.register(DonorId.newId(NOW.minusSeconds(7200)), DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL,
+        return Donor.register(DonorId.newId(NOW.minusSeconds(7200)), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL,
                 new PasswordHash("$old"), new VariableSymbol("4821937560"), locale, NOW.minusSeconds(7200));
     }
 

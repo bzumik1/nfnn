@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import jakarta.validation.Constraint;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

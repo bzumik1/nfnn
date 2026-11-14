@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.cucumber;
 import cz.novanadeje.app.donations.domain.importing.BankImportState;
 import cz.novanadeje.app.donations.domain.importing.BankImportStateRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.Then;
@@ -20,26 +21,26 @@ import static org.awaitility.Awaitility.await;
 public class ImportAlertStepDefinitions {
 
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
-    private static final Duration SETTLE = Duration.ofMillis(300);
 
     private final RecordingMailSender mailSender;
     private final BankImportStateRepository states;
+    private final AsyncTaskTracker asyncTasks;
 
-    public ImportAlertStepDefinitions(RecordingMailSender mailSender, BankImportStateRepository states) {
+    public ImportAlertStepDefinitions(RecordingMailSender mailSender, BankImportStateRepository states, AsyncTaskTracker asyncTasks) {
         this.mailSender = mailSender;
         this.states = states;
+        this.asyncTasks = asyncTasks;
     }
 
     @Then("no alert e-mail is sent")
     public void noAlertEmailIsSent() {
-        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        asyncTasks.awaitIdleAfter("no alert e-mail is sent");
         assertThat(mailSender.sent()).isEmpty();
     }
 
     @Then("{int} e-mails are sent to {string}")
     public void emailsAreSentTo(int count, String recipient) {
-        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThanOrEqualTo(count));
-        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        asyncTasks.awaitIdleAfter(count + " e-mails are sent to " + recipient);
         assertThat(mailSender.sent()).hasSize(count);
         assertThat(mailSender.sent()).allSatisfy(email -> assertThat(recipientsOf(email)).containsExactly(recipient));
     }

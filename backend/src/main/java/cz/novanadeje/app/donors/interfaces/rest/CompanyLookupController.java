@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.CompanyLookupService;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

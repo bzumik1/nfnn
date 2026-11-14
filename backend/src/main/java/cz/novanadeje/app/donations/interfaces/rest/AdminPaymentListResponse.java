@@ -42,7 +42,7 @@ record AdminPaymentListResponse(Integer year, List<Integer> availableYears, List
 
         static PairedDonationResponse from(PairedDonationView view) {
             return new PairedDonationResponse(view.donation().id().value(), view.donation().donor().value(),
-                    view.donor().name(), view.donation().pairedBy().orElse(null), view.donation().status(),
+                    view.donor().name().value(), view.donation().pairedBy().orElse(null), view.donation().status(),
                     view.donation().recordedAt(), view.receiptIssued());
         }
     }

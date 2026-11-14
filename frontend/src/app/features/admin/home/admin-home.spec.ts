@@ -22,6 +22,8 @@ import {
   unpairedPayment,
   noReceiptSignatory,
   receiptSignatory,
+  newerReleaseView,
+  releaseView,
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
@@ -44,6 +46,7 @@ const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
+const RELEASE_URL = '/api/admin/operations/release';
 
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
@@ -98,6 +101,7 @@ describe('Given an administrator on the administration home', () => {
       .forEach((pending) => pending.flush({ items: [administrator()] }));
     http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
     http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
+    http.match(RELEASE_URL).forEach((pending) => pending.flush(releaseView()));
     http.verify();
   });
 
@@ -658,6 +662,34 @@ describe('Given an administrator on the administration home', () => {
       expect(text('.attention [role="status"]')).toBe('Zjišťujeme, jestli na vás něco nečeká…');
     });
 
+    it('then what needs attention holds its own heading and one list of its rows', async () => {
+      await sources();
+
+      const heading = attention().querySelector(`#${attention().getAttribute('aria-labelledby')}`);
+      expect(heading?.tagName).toBe('H2');
+      expect(attention().querySelectorAll('ul').length).toBe(1);
+    });
+
+    it('then a next step under a problem leads with an empty lead hidden from screen readers, so it lines up under the title of the problem', async () => {
+      openAlerts.set([{ area: 'mail', since: '2026-11-12T05:15:00Z' }]);
+      await sources();
+
+      const lead = attention().querySelector('.attention-mail-next a > .ui-list__lead');
+      expect(lead?.getAttribute('aria-hidden')).toBe('true');
+      expect(lead?.textContent?.trim()).toBe('');
+      expect(lead?.children.length).toBe(0);
+    });
+
+    it('then a retry inside the card is a button of the cards', async () => {
+      await sources();
+      http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const retry = attention().querySelector('.attention-signatory button');
+      expect(retry?.classList).toContain('ui-button');
+    });
+
     it('then with nothing pending one calm row says everything is fine with the last import and backup', async () => {
       await sources();
 
@@ -862,6 +894,31 @@ describe('Given an administrator on the administration home', () => {
       ]);
     });
 
+    it('then a newer release adds a calm row leading to the release on the server state, after every problem', async () => {
+      await sources(paymentList([unpairedPayment()]));
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
+      http.expectOne(RELEASE_URL).flush(newerReleaseView());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        expect.stringContaining('čeká na přiřazení'),
+        'Nové vydání 2026.11.5 Běží 2026.11.3. V ZimaOS otevřete nastavení aplikace „Nová naděje“ a klikněte na Uložit.',
+      ]);
+      expect(links()).toEqual(['/sprava/platby', '/sprava/logy/stav#vydani']);
+    });
+
+    it('then a running latest release, a build outside the releases or a check that cannot be read adds no row', async () => {
+      await sources();
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
+      http.expectOne(RELEASE_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toHaveLength(1);
+      expect(items()[0]).toContain('Vše je v pořádku');
+    });
+
     it('then a signatory without an uploaded signature gets a row leading to the people of the foundation', async () => {
       await sources();
       http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ signature: false }));
@@ -1023,6 +1080,17 @@ describe('Given an administrator on the administration home', () => {
         ],
         ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
       ]);
+    });
+
+    it('then each group of sections holds its own heading over its list', () => {
+      const groups: HTMLElement[] = Array.from(sections()?.querySelectorAll('section') ?? []);
+
+      expect(groups.length).toBeGreaterThan(0);
+      for (const group of groups) {
+        const heading = group.querySelector(`#${group.getAttribute('aria-labelledby')}`);
+        expect(heading?.tagName).toBe('H2');
+        expect(group.querySelector('ul')).not.toBeNull();
+      }
     });
 
     it("then the way to the rest leads with the foundation's star, hidden from screen readers", () => {

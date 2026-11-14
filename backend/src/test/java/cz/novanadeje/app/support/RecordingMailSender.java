@@ -18,14 +18,20 @@ public class RecordingMailSender extends JavaMailSenderImpl {
     private final List<MimeMessage> sent = new CopyOnWriteArrayList<>();
     private final List<MimeMessage> sentInScenario = new CopyOnWriteArrayList<>();
     private final AtomicBoolean refuseNext = new AtomicBoolean();
+    private volatile Duration acceptance = Duration.ZERO;
 
     @Override
     protected void doSend(MimeMessage[] mimeMessages, Object[] originalMessages) {
+        takeAcceptanceTime();
         if (refuseNext.compareAndSet(true, false)) {
             throw new MailSendException("The recording mail server refused the e-mail");
         }
         sent.addAll(Arrays.asList(mimeMessages));
         sentInScenario.addAll(Arrays.asList(mimeMessages));
+    }
+
+    public void acceptAfter(Duration acceptance) {
+        this.acceptance = acceptance;
     }
 
     public void failNextSend() {
@@ -52,6 +58,19 @@ public class RecordingMailSender extends JavaMailSenderImpl {
     public void clear() {
         sent.clear();
         refuseNext.set(false);
+        acceptance = Duration.ZERO;
+    }
+
+    private void takeAcceptanceTime() {
+        if (acceptance.isZero()) {
+            return;
+        }
+        try {
+            Thread.sleep(acceptance);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new MailSendException("The recording mail server was interrupted while accepting the e-mail");
+        }
     }
 
     private static boolean hasSubject(MimeMessage message, String subject) {

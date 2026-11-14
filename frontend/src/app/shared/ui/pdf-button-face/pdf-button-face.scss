@@ -1,0 +1,85 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  max-inline-size: 100%;
+  vertical-align: middle;
+}
+
+:host-context(.ui-list__row) {
+  grid-column: 1 / -1;
+  font-weight: var(--weight-semibold);
+}
+
+.pdf-button__icon {
+  display: inline-grid;
+  flex: none;
+  inline-size: 1.15em;
+  block-size: 1.15em;
+
+  svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+}
+
+:host(.pdf-button--failed) .pdf-button__icon {
+  color: var(--color-danger);
+}
+
+:host-context(.ui-button--primary) .pdf-button__icon {
+  color: inherit;
+}
+
+.pdf-button__ring {
+  animation: pdf-button-spin 0.9s linear infinite;
+}
+
+.pdf-button__ring-track {
+  stroke: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.pdf-button__ring-arc {
+  stroke: currentColor;
+  stroke-dasharray: 14 50.3;
+}
+
+.pdf-button__labels {
+  display: inline-grid;
+  min-inline-size: 0;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.pdf-button__label,
+.pdf-button__reserve {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.pdf-button__reserve {
+  visibility: hidden;
+
+  &::after {
+    content: attr(data-label);
+  }
+}
+
+@keyframes pdf-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-button__ring {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :host(.pdf-button--failed) .pdf-button__icon {
+    color: currentColor;
+  }
+}

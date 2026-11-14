@@ -20,6 +20,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -307,7 +308,7 @@ class DonationReceiptIssuerConcurrencyTest {
 
     private DonorRecord storedJana() {
         Instant now = Instant.now();
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), "Jana Nováková", OLD_ADDRESS,
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), new DonorName("Jana Nováková"), OLD_ADDRESS,
                 new VariableSymbol("4821937560"), LocaleCode.CS, now);
         donorRecords.save(jana);
         return jana;

@@ -55,7 +55,7 @@ class BankLogoAdminServiceTest {
     private final List<Object> events = new ArrayList<>();
     private final ApplicationEventPublisher publisher = events::add;
     private final BankLogoVersions versions = new BankLogoVersions(rows -> Integer.toHexString(rows.toString().hashCode()));
-    private final BankLogoAdminService service = new BankLogoAdminService(logos, new Banks(), images, versions, publisher,
+    private final BankLogoAdminService service = new BankLogoAdminService(logos, new Banks(), images, new BankLogoImageChanges(logos), versions, publisher,
             new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
 
     @Test
@@ -151,7 +151,7 @@ class BankLogoAdminServiceTest {
                 return false;
             }
         };
-        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, versions, publisher,
+        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, new BankLogoImageChanges(racing), versions, publisher,
                 new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
         images.answer(NEW_WEBP);
 
@@ -170,7 +170,7 @@ class BankLogoAdminServiceTest {
                 return false;
             }
         };
-        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, versions, publisher,
+        BankLogoAdminService racingService = new BankLogoAdminService(racing, new Banks(), images, new BankLogoImageChanges(racing), versions, publisher,
                 new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
         images.answer(NEW_WEBP);
 

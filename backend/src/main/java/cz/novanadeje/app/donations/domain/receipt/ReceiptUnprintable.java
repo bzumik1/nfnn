@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.PrintableText;
 import cz.novanadeje.app.shared.domain.error.Conflict;
@@ -20,8 +21,8 @@ public class ReceiptUnprintable extends Conflict {
 
     public static void refuseUnlessPrintable(DonorRecord record, FoundationIdentity foundation, Signatory signatory) {
         List<String> printed = new ArrayList<>();
-        printed.add(record.name());
-        record.companyIdentifier().ifPresent(printed::add);
+        printed.add(record.name().value());
+        record.companyIdentifier().map(CompanyIdentifier::value).ifPresent(printed::add);
         printed.addAll(lines(record.address()));
         printed.addAll(List.of(foundation.name(), foundation.companyIdentifier(), foundation.registryCourt(), foundation.registryFile(),
                 foundation.bankAccountNumber(), foundation.issuePlace(), foundation.issuePlaceEn()));

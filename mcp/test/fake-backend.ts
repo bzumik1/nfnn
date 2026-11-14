@@ -66,6 +66,7 @@ export class FakeBackend {
   readonly requests: RecordedRequest[] = [];
   metadataAvailable = true;
   receiptSigningKeysAvailable = true;
+  releaseAvailable = true;
   receiptSigningKeysAnswer: Record<string, unknown> | undefined;
   previousSignInAt: string | null = '2026-10-28T20:14:00Z';
   signatoryChosen = true;
@@ -177,6 +178,9 @@ export class FakeBackend {
       url.pathname === '/api/admin/donations/receipt-signatory'
     ) {
       return [200, NO_SIGNATORY];
+    }
+    if (!this.releaseAvailable && url.pathname === '/api/admin/operations/release') {
+      return [404, problem(404, 'not-found', 'Nenalezeno')];
     }
     if (
       !this.receiptSigningKeysAvailable &&
@@ -532,6 +536,18 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
             },
           ],
           recomputed: null,
+        },
+      ];
+    case 'GET /api/admin/operations/release':
+      return [
+        200,
+        {
+          running: '2026.11.3',
+          latest: { version: '2026.11.5', publishedAt: '2026-11-14T09:30:12Z' },
+          checkedAt: '2026-11-15T05:10:00Z',
+          succeededAt: '2026-11-15T05:10:00Z',
+          failure: null,
+          updateAvailable: true,
         },
       ];
     case 'GET /api/admin/donations/report':

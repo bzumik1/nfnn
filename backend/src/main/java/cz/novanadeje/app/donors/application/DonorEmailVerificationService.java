@@ -8,7 +8,6 @@ import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
 import cz.novanadeje.app.donors.application.event.DonorEmailChanged;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
@@ -109,7 +108,7 @@ public class DonorEmailVerificationService {
         donors.save(donor);
         tokens.deleteAllOf(donor.id());
         events.publishEvent(new DonorRegistered(
-                donor.id().value(), donor.type(), donor.name(), donor.companyIdentifier().map(CompanyIdentifier::value),
+                donor.id().value(), donor.type(), donor.name(), donor.companyIdentifier(),
                 donor.address(), donor.email(), donor.variableSymbol(), donor.preferredLocale(), donor.registeredAt()
         ));
         log.info("E-mail of donor {} verified", donor.id());

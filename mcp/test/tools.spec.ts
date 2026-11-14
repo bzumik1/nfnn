@@ -384,6 +384,28 @@ describe('Given an administrator connected with the reading permission only', ()
     }
   });
 
+  it('when the status is asked, then it names the running release, the latest published one and whether to update', async () => {
+    const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+
+    expect(text).toContain(
+      '"release":{"running":"2026.11.3","latest":{"version":"2026.11.5","publishedAt":"2026-11-14T10:30:12+01:00"},"checkedAt":"2026-11-15T06:10:00+01:00","succeededAt":"2026-11-15T06:10:00+01:00","failure":null,"updateAvailable":true}',
+    );
+    expect(stack.backend.requests.map((request) => request.path)).toContain(
+      '/api/admin/operations/release',
+    );
+  });
+
+  it('when the status is asked of a backend without the release check, then the rest still comes and the release part says it is unavailable', async () => {
+    stack.backend.releaseAvailable = false;
+    try {
+      const text = textOf(await client.callTool({ name: 'nfnn_status', arguments: {} }));
+      expect(text).toContain('"revision":"abc1234"');
+      expect(text).toContain('"release":"unavailable"');
+    } finally {
+      stack.backend.releaseAvailable = true;
+    }
+  });
+
   it('when the status is asked of a backend without the receipt signing keys, then the rest still comes and the key part says it is unavailable', async () => {
     stack.backend.receiptSigningKeysAvailable = false;
     try {

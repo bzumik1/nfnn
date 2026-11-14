@@ -57,15 +57,17 @@ import {
   ReceiptPdfFailureReason,
 } from '../../donations/receipt-pdf/receipt-pdf';
 import {
-  finishedReceiptProgress as finished,
+  cancelledReceiptProgress,
+  readyReceiptProgress,
   readySingleReceiptText,
   receiptPhaseProgress,
-  savedReceiptText as savedText,
-  sharedReceiptText as sharedText,
+  savedReceiptProgress,
+  sharedReceiptProgress,
 } from '../../donations/receipt-pdf/receipt-progress';
 import { RECEIPT_RESTART_PARAM, ReceiptRestart } from '../../donations/receipt-pdf/receipt-restart';
 import { ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
-import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
+import { PdfButtonState } from '../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgressState } from '../../../shared/ui/pdf-progress/pdf-progress';
 import { KeptDonorAnswers } from './kept-donor-answers';
 import { userHandleOf } from '../../../core/auth/session-device';
 
@@ -81,7 +83,7 @@ export type BankCheckOutcome =
 
 interface ReceiptTask {
   readonly key: string;
-  readonly progress: DownloadProgressState;
+  readonly progress: PdfProgressState;
   readonly file: DownloadedFile | null;
 }
 
@@ -479,11 +481,19 @@ export class DonorDonations implements GiftFeed {
     return this.errorAt(singleKey(item.id));
   }
 
-  yearlyProgress(year: number): DownloadProgressState | null {
+  yearlyButton(year: number): PdfButtonState {
+    return this.buttonState(yearlyKey(year));
+  }
+
+  singleButton(item: DonationItem): PdfButtonState {
+    return this.buttonState(singleKey(item.id));
+  }
+
+  yearlyProgress(year: number): PdfProgressState | null {
     return this.progressOf(yearlyKey(year));
   }
 
-  singleProgress(item: DonationItem): DownloadProgressState | null {
+  singleProgress(item: DonationItem): PdfProgressState | null {
     return this.progressOf(singleKey(item.id));
   }
 
@@ -500,7 +510,17 @@ export class DonorDonations implements GiftFeed {
     return error?.key === key ? error.message : null;
   }
 
-  private progressOf(key: string): DownloadProgressState | null {
+  private buttonState(key: string): PdfButtonState {
+    if (this.downloads().has(key)) {
+      return 'running';
+    }
+    if (this.readyFile(key) !== null) {
+      return 'ready';
+    }
+    return this.errorAt(key) === null ? 'idle' : 'failed';
+  }
+
+  private progressOf(key: string): PdfProgressState | null {
     return this.receiptTasks().get(key)?.progress ?? null;
   }
 
@@ -741,12 +761,12 @@ export class DonorDonations implements GiftFeed {
     this.restart.finished();
     const file = event.file;
     if (this.delivery.needsSecondTap(file)) {
-      this.setTask(key, { file, progress: finished('ready', readyText(scope, file.fileName)) });
+      this.setTask(key, { file, progress: readyReceiptProgress(readyText(scope, file.fileName)) });
       this.focusDownloadButtonIfLost(key);
       return;
     }
     this.delivery.save(file);
-    this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+    this.setTask(key, { file: null, progress: savedReceiptProgress(file.fileName) });
     this.focusDownloadButtonIfLost(key);
   }
 
@@ -761,12 +781,12 @@ export class DonorDonations implements GiftFeed {
         return;
       }
       if (outcome === 'shared') {
-        this.setTask(key, { file: null, progress: finished('done', sharedText(file.fileName)) });
+        this.setTask(key, { file: null, progress: sharedReceiptProgress(file.fileName) });
       } else if (outcome === 'saved') {
-        this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+        this.setTask(key, { file: null, progress: savedReceiptProgress(file.fileName) });
       } else if (outcome === 'failed') {
         this.delivery.save(file);
-        this.setTask(key, { file: null, progress: finished('done', savedText(file.fileName)) });
+        this.setTask(key, { file: null, progress: savedReceiptProgress(file.fileName) });
       }
     });
   }
@@ -779,7 +799,7 @@ export class DonorDonations implements GiftFeed {
     subscription.unsubscribe();
     this.finishDownload(key);
     this.restart.abandoned(downloadName(key));
-    this.setTask(key, { file: null, progress: finished('cancelled', RECEIPT_CANCELLED) });
+    this.setTask(key, { file: null, progress: cancelledReceiptProgress(RECEIPT_CANCELLED) });
     this.focusDownloadButtonIfLost(key);
   }
 

@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.DonorRegistrations;
 import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
@@ -37,7 +38,6 @@ public class DonorEmailVerificationStepDefinitions {
     private static final String REFRESH_PATH = "/api/donors/auth/refresh";
     private static final String PROFILE_PATH = "/api/donors/me";
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
-    private static final Duration SETTLE = Duration.ofMillis(300);
     private static final Pattern LINK_RETURN = Pattern.compile("potvrzeni-emailu#token=[A-Za-z0-9_-]{43}(?:&returnTo=(\\S+))?");
 
     private final ApiClient api;
@@ -45,12 +45,14 @@ public class DonorEmailVerificationStepDefinitions {
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final EmailVerificationTokenRepository tokens;
+    private final AsyncTaskTracker asyncTasks;
     private final List<Integer> requestStatuses = new ArrayList<>();
     private int mailsBefore;
 
     public DonorEmailVerificationStepDefinitions(ApiClient api, DonorRegistrations registrations, RecordingMailSender mailSender,
-                                                 JdbcClient jdbc, EmailVerificationTokenRepository tokens) {
+                                                 JdbcClient jdbc, EmailVerificationTokenRepository tokens, AsyncTaskTracker asyncTasks) {
         this.api = api;
+        this.asyncTasks = asyncTasks;
         this.registrations = registrations;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
@@ -156,8 +158,7 @@ public class DonorEmailVerificationStepDefinitions {
 
     @Then("{int} e-mail(s) is/are sent to {string} with the subject {string}")
     public void emailsAreSentToWithTheSubject(int count, String recipient, String subject) throws Exception {
-        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThanOrEqualTo(count));
-        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        asyncTasks.awaitIdleAfter(count + " e-mails are sent to " + recipient);
         assertThat(mailSender.sent()).hasSize(count);
         for (MimeMessage sent : mailSender.sent()) {
             MimeMessage email = MailContents.asReceived(sent);

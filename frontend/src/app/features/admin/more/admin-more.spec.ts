@@ -39,6 +39,19 @@ describe('Given an administrator who opens the less frequent sections of the adm
     expect(document.activeElement).toBe(heading);
   });
 
+  it('when the page opens, then each group holds its own heading over one list of its sections', () => {
+    const sections: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('nav section'),
+    );
+
+    expect(sections.length).toBe(2);
+    for (const section of sections) {
+      const title = section.querySelector(`#${section.getAttribute('aria-labelledby')}`);
+      expect(title?.tagName).toBe('H2');
+      expect(section.querySelectorAll('ul').length).toBe(1);
+    }
+  });
+
   it('when the page opens, then a navigation lists every section the overview leaves out, grouped as in the side panel', () => {
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
       'Další sekce správy',

@@ -40,6 +40,7 @@ class AppApplicationTests {
 		assertThat(environment.getProperty("app.operations.backups.check-cron")).isEqualTo("-");
 		assertThat(environment.getProperty("app.donors.registration-reminder.cron")).isEqualTo("-");
 		assertThat(environment.getProperty("app.donors.session-cleanup.cron")).isEqualTo("-");
+		assertThat(environment.getProperty("app.operations.releases.cron")).isEqualTo("-");
 	}
 
 }

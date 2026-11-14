@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.SessionEnded;
@@ -103,8 +105,8 @@ class DonorCredentialsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorCredentialsService(donors, passwordHasher,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), emailVerification, events,
+        service = new DonorCredentialsService(donors, passwordHasher, CommonPasswords.POLICY,
+                new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), emailVerification, events,
                 Clock.fixed(NOW, ZoneOffset.UTC), signOuts, transactions);
     }
 
@@ -344,7 +346,7 @@ class DonorCredentialsServiceTest {
     }
 
     private static Donor donor() {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, OLD_HASH, SYMBOL, LocaleCode.CS,
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, OLD_HASH, SYMBOL, LocaleCode.CS,
                 NOW.minusSeconds(60));
         donor.verifyEmail(NOW.minusSeconds(30));
         return donor;

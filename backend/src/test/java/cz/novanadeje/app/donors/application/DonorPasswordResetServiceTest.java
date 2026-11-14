@@ -16,6 +16,8 @@ import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -78,7 +80,7 @@ class DonorPasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorPasswordResetService(donors, tokens, passwordHasher, new DonorPasswordResetProperties(TTL, 3),
+        service = new DonorPasswordResetService(donors, tokens, passwordHasher, CommonPasswords.POLICY, new DonorPasswordResetProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts, new SecondFactorHoldings(secondFactors, passkeys), transactions);
     }
 
@@ -352,7 +354,7 @@ class DonorPasswordResetServiceTest {
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {
-        return Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 EMAIL, OLD_HASH, new VariableSymbol("1234567890"), locale, NOW);
     }
 }

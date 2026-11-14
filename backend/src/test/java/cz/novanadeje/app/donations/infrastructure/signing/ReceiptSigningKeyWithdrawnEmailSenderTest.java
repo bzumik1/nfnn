@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import cz.novanadeje.app.shared.application.account.AdministratorContact;
 import cz.novanadeje.app.shared.application.account.AdministratorContacts;
@@ -33,24 +32,26 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.thymeleaf.autoconfigure.ThymeleafAutoConfiguration;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.mail.MailSendException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.thymeleaf.ITemplateEngine;
 
+import java.lang.reflect.Method;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ReceiptSigningKeyWithdrawnEmailSenderTest {
@@ -66,7 +67,6 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             .withInitializer(new ConfigDataApplicationContextInitializer())
             .withConfiguration(AutoConfigurations.of(MessageSourceAutoConfiguration.class, ThymeleafAutoConfiguration.class));
     private final AdministratorContacts administrators = mock(AdministratorContacts.class);
-    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
 
     private ListAppender<ILoggingEvent> logged;
     private Logger senderLog;
@@ -194,33 +194,8 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
     }
 
     @Test
-    @DisplayName("Given two administrators and a mail server that refuses the first notice, when the notices are sent, then the withdrawal is announced only after both sends were tried and the refusal was logged")
-    void should_announce_after_every_send_and_its_log_when_sent_given_a_refused_notice() {
-        List<String> steps = new ArrayList<>();
-        JavaMailSender refusingJana = mock(JavaMailSender.class);
-        when(refusingJana.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
-        doAnswer(invocation -> {
-            String to = invocation.<MimeMessage>getArgument(0).getRecipients(Message.RecipientType.TO)[0].toString();
-            steps.add("send " + to);
-            if (to.startsWith("jana")) {
-                throw new MailSendException("refused");
-            }
-            return null;
-        }).when(refusingJana).send(any(MimeMessage.class));
-        doAnswer(invocation -> steps.add("announce " + invocation.getArgument(0) + " after " + logged.list.size() + " log line(s)"))
-                .when(events).publishEvent(any(Object.class));
-
-        contexts.withBean(JavaMailSender.class, () -> refusingJana).run(context -> {
-            sender(context).sendWithdrawnNotice(new ReceiptSigningKeyWithdrawn(JANA, "21fe31df", true, WITHDRAWN_AT));
-
-            assertThat(steps).containsExactly("send jana@example.cz", "send petr@example.cz",
-                    "announce " + new ReceiptSigningKeyWithdrawalAnnounced("21fe31df", true) + " after 1 log line(s)");
-        });
-    }
-
-    @Test
-    @DisplayName("Given the administrators cannot be read, when the notices are prepared, then the failure is logged and the withdrawal is announced anyway, so the seed is still renewed")
-    void should_announce_anyway_when_prepared_given_unreadable_administrators() {
+    @DisplayName("Given the administrators cannot be read, when the notices are prepared, then nothing is sent and one ERROR names the administrator and the exception class")
+    void should_send_nothing_and_log_error_when_prepared_given_unreadable_administrators() {
         when(administrators.all()).thenThrow(new IllegalStateException("database gone"));
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
@@ -229,8 +204,17 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
             assertThat(recording.sent()).isEmpty();
             assertThat(logged.list).singleElement().satisfies(line -> assertThat(line.getFormattedMessage())
                     .isEqualTo("The notices that admin " + JANA + " withdrew a receipt signing key could not be prepared: IllegalStateException"));
-            verify(events).publishEvent(new ReceiptSigningKeyWithdrawalAnnounced("39f713d0", false));
         });
+    }
+
+    @Test
+    @DisplayName("Given the notice sender, when its listener method is read, then it hears a withdrawal after the commit, ordered first and on the async executor")
+    void should_listen_after_commit_ordered_first_and_async_when_read_given_the_notice_sender() throws NoSuchMethodException {
+        Method send = ReceiptSigningKeyWithdrawnEmailSender.class.getMethod("sendWithdrawnNotice", ReceiptSigningKeyWithdrawn.class);
+
+        assertThat(send.getAnnotation(TransactionalEventListener.class).phase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
+        assertThat(send.getAnnotation(Async.class)).isNotNull();
+        assertThat(send.getAnnotation(Order.class).value()).isEqualTo(Ordered.HIGHEST_PRECEDENCE);
     }
 
     private ReceiptSigningKeyWithdrawnEmailSender sender(AssertableApplicationContext context) {
@@ -239,6 +223,6 @@ class ReceiptSigningKeyWithdrawnEmailSenderTest {
         MailSenderProperties sender = new MailSenderProperties(SENDER);
         PublicUrlProperties publicUrl = new PublicUrlProperties("http://localhost:4200/");
         BrandedEmails emails = new BrandedEmails(mailSender, context.getBean(ITemplateEngine.class), context.getBean(MessageSource.class), sender, publicUrl);
-        return new ReceiptSigningKeyWithdrawnEmailSender(ObservedMailSenders.of(mailSender), emails, context.getBean(MessageSource.class), sender, administrators, events);
+        return new ReceiptSigningKeyWithdrawnEmailSender(ObservedMailSenders.of(mailSender), emails, context.getBean(MessageSource.class), sender, administrators);
     }
 }

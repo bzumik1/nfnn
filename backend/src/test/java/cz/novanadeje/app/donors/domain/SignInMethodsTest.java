@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -93,7 +94,7 @@ class SignInMethodsTest {
     @Test
     @DisplayName("Given a donor with a password, when the sign-in methods are read with a passkey count, then they hold both")
     void should_hold_password_and_passkeys_when_read_given_donor_with_password() {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), new PasswordHash("$2a$12$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
 
         assertThat(SignInMethods.of(donor, 2)).isEqualTo(new SignInMethods(DONOR, true, 2));

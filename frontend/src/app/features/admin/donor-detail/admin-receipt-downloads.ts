@@ -11,17 +11,19 @@ import {
   ReceiptPdfFailureReason,
 } from '../../donations/receipt-pdf/receipt-pdf';
 import {
-  finishedReceiptProgress,
+  cancelledReceiptProgress,
+  readyReceiptProgress,
   readySingleReceiptText,
   receiptPhaseProgress,
-  savedReceiptText,
-  sharedReceiptText,
+  savedReceiptProgress,
+  sharedReceiptProgress,
 } from '../../donations/receipt-pdf/receipt-progress';
 import { ReceiptSource, ReceiptsApi } from '../../donations/receipt-pdf/receipts-api';
-import { DownloadProgressState } from '../../../shared/ui/download-progress/download-progress';
+import { PdfButtonState } from '../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgressState } from '../../../shared/ui/pdf-progress/pdf-progress';
 
 interface DownloadTask {
-  readonly progress: DownloadProgressState | null;
+  readonly progress: PdfProgressState | null;
   readonly file: DownloadedFile | null;
   readonly failure: string | null;
 }
@@ -61,7 +63,7 @@ export class AdminReceiptDownloads {
     this.receiptReplaced = handler;
   }
 
-  progress(receiptId: string): DownloadProgressState | null {
+  progress(receiptId: string): PdfProgressState | null {
     return this.tasks().get(receiptId)?.progress ?? null;
   }
 
@@ -75,6 +77,16 @@ export class AdminReceiptDownloads {
 
   ready(receiptId: string): boolean {
     return (this.tasks().get(receiptId)?.file ?? null) !== null;
+  }
+
+  state(receiptId: string): PdfButtonState {
+    if (this.drawing(receiptId)) {
+      return 'running';
+    }
+    if (this.ready(receiptId)) {
+      return 'ready';
+    }
+    return this.failure(receiptId) === null ? 'idle' : 'failed';
   }
 
   press(receiptId: string): void {
@@ -112,7 +124,7 @@ export class AdminReceiptDownloads {
     subscription.unsubscribe();
     this.running.delete(receiptId);
     this.setTask(receiptId, {
-      progress: finishedReceiptProgress('cancelled', CANCELLED),
+      progress: cancelledReceiptProgress(CANCELLED),
       file: null,
       failure: null,
     });
@@ -143,7 +155,7 @@ export class AdminReceiptDownloads {
     const file = event.file;
     if (this.delivery.needsSecondTap(file)) {
       this.setTask(receiptId, {
-        progress: finishedReceiptProgress('ready', readySingleReceiptText(file.fileName)),
+        progress: readyReceiptProgress(readySingleReceiptText(file.fileName)),
         file,
         failure: null,
       });
@@ -151,7 +163,7 @@ export class AdminReceiptDownloads {
     }
     this.delivery.save(file);
     this.setTask(receiptId, {
-      progress: finishedReceiptProgress('done', savedReceiptText(file.fileName)),
+      progress: savedReceiptProgress(file.fileName),
       file: null,
       failure: null,
     });
@@ -169,10 +181,11 @@ export class AdminReceiptDownloads {
       if (outcome === 'failed') {
         this.delivery.save(file);
       }
-      const text =
-        outcome === 'shared' ? sharedReceiptText(file.fileName) : savedReceiptText(file.fileName);
       this.setTask(receiptId, {
-        progress: finishedReceiptProgress('done', text),
+        progress:
+          outcome === 'shared'
+            ? sharedReceiptProgress(file.fileName)
+            : savedReceiptProgress(file.fileName),
         file: null,
         failure: null,
       });

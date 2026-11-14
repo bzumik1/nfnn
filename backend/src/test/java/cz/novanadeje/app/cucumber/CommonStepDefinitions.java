@@ -14,6 +14,7 @@ import cz.novanadeje.app.support.FakeBankCodeSource;
 import cz.novanadeje.app.support.FakeBankLogoSource;
 import cz.novanadeje.app.support.FakeCompanyRegistry;
 import cz.novanadeje.app.support.FakeFioClient;
+import cz.novanadeje.app.support.FakeLatestReleaseSource;
 import cz.novanadeje.app.support.HistoryImportRuns;
 import cz.novanadeje.app.support.KeptAsideWithdrawnSeeds;
 import cz.novanadeje.app.support.MutableClock;
@@ -21,6 +22,7 @@ import cz.novanadeje.app.support.RateLimiterWindows;
 import cz.novanadeje.app.support.RecordingMailSender;
 import cz.novanadeje.app.support.RecordingPushRetryTimer;
 import cz.novanadeje.app.support.RecordingPushTransport;
+import cz.novanadeje.app.support.ResettableReleaseChecks;
 import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
@@ -92,6 +94,8 @@ public class CommonStepDefinitions {
         context.getBean(RecordingPushTransport.class).reset();
         context.getBean(RecordingPushRetryTimer.class).reset();
         context.getBean(FakeBankCodeSource.class).reset();
+        context.getBean(FakeLatestReleaseSource.class).reset();
+        context.getBean(ResettableReleaseChecks.class).reset();
         context.getBean(FakeBankLogoSource.class).reset();
     }
 

@@ -24,6 +24,7 @@ import cz.novanadeje.app.operations.domain.settings.SetupCode;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
 import cz.novanadeje.app.operations.domain.settings.SetupLocked;
 import cz.novanadeje.app.operations.domain.settings.SetupStateRepository;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -75,7 +76,7 @@ class SetupServiceTest {
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final InMemoryBackupKeyConfirmations keyConfirmations = new InMemoryBackupKeyConfirmations();
     private final BackupKeyService backupKeys = new BackupKeyService(() -> Optional.of(BACKUP_KEY), keyConfirmations, mock(FreshSecondFactor.class),
-            mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), mock(ApplicationEventPublisher.class), clock);
+            mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), CzechBackupKeyWords.WORDLIST, mock(ApplicationEventPublisher.class), clock);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
             mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
             mock(ApplicationEventPublisher.class), key -> false, clock), backupKeys, clock);
@@ -122,7 +123,7 @@ class SetupServiceTest {
         assertThat(stored).hasSize(ESSENTIALS.size());
         assertThat(repository.findAll()).hasSize(ESSENTIALS.size());
         assertThat(state.completedAt).contains(NOW);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitOnceAsyncWorkIsDone();
         assertThat(setup.status(true)).isEqualTo(new SetupStatusView(false, false, Optional.empty()));
     }
 
@@ -159,7 +160,7 @@ class SetupServiceTest {
         assertThat(repository.findAll()).isEmpty();
         assertThat(state.completedAt).isEmpty();
         assertThat(keyConfirmations.find()).isEmpty();
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
     }
 
     @Test
@@ -168,7 +169,7 @@ class SetupServiceTest {
         assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS.subList(0, 3), KEY_CHECK)).isInstanceOf(SettingsRejected.class);
 
         assertThat(state.completedAt).isEmpty();
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
     }
 
     @Test
@@ -235,7 +236,7 @@ class SetupServiceTest {
 
         assertThat(request.source()).isEqualTo(RestoreSource.UPLOAD);
         verify(backups).requestRestore(request);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitForRestore();
     }
 
     @Test

@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.TotpSecret;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -438,7 +439,7 @@ class DeviceOrdersAcrossDevicesTest {
 
         private DonorId register(String name, String email, String symbol) {
             Instant now = clock.instant();
-            Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, name, null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+            Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                     new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(symbol), LocaleCode.CS, now);
             donor.verifyEmail(now);
             donors.save(donor);

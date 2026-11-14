@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.DonorType;
 
 import java.util.List;
@@ -15,8 +16,8 @@ record AdminDonorSearchResponse(List<AdminDonorResponse> items) {
     record AdminDonorResponse(UUID donorId, String name, DonorType type, String variableSymbol, String companyIdentifier) {
 
         static AdminDonorResponse from(DonorRecord record) {
-            return new AdminDonorResponse(record.id().value(), record.name(), record.type(), record.variableSymbol().value(),
-                    record.companyIdentifier().orElse(null));
+            return new AdminDonorResponse(record.id().value(), record.name().value(), record.type(), record.variableSymbol().value(),
+                    record.companyIdentifier().map(CompanyIdentifier::value).orElse(null));
         }
     }
 }
