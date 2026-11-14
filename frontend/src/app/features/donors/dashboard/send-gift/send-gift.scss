@@ -1,12 +1,14 @@
 :host {
   display: block;
-  margin-bottom: var(--space-5);
 }
 
 .send-gift-lead {
-  margin-bottom: var(--space-5);
+  margin: var(--space-4) 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
 }
 
 .send-gift-standing {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
