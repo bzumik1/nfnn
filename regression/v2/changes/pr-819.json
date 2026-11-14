@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it stands on a grouped page, then Platíte z jiného zařízení? leaves the bank app buttons and heads the QR it unfolds",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it opens, then Platíte z jiného zařízení? stays with the bank app buttons",
+    "reason": "PR #819 (#816, part of #630; Poslat dar is a donor card again, so the payment panel has no grouped look and the toggle always stays with the bank app buttons)",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it stands on a grouped page, then Bankovní spojení heads the bank details and still takes the focus",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it opens, then Bankovní spojení heads the bank details and still takes the focus",
+    "reason": "PR #819 (#816, part of #630; the payment panel has no grouped look any more, so the same assertion runs on its only look)",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it stands outside a grouped page, then Platíte z jiného zařízení? stays with the bank app buttons",
+    "replacement": "src/app/features/donations/payment-panel/payment-panel.spec.ts > Given the payment panel on a phone or a tablet > when it opens, then Platíte z jiného zařízení? stays with the bank app buttons",
+    "reason": "PR #819 (#816, part of #630; the payment panel has no grouped look any more, so the test no longer names one)",
+    "contract": "docs/frontend-overview.md"
+  }
+]
