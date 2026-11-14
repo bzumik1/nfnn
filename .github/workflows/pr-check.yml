@@ -889,7 +889,7 @@ jobs:
         run: |
           for compose in deploy/compose.yml docker-compose.yml; do
             if [ "$(yq '.services.backend.stop_grace_period' "$compose")" != 75s ]; then
-              echo "::error::$compose must give the backend stop_grace_period 75s: Spring drains requests for up to 30 s and then awaits a running bank import for up to 30 s (spring.task.scheduling.shutdown), and Docker kills after 10 s by default"
+              echo "::error::$compose must give the backend stop_grace_period 75s: Spring drains requests for up to 20 s, waits up to 20 s for running async work (spring.lifecycle.timeout-per-shutdown-phase) and awaits a running bank import for up to 30 s (spring.task.scheduling.shutdown), and Docker kills after 10 s by default"
               exit 1
             fi
           done
