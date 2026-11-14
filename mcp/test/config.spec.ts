@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { configFromEnv } from '../src/config.js';
 
 describe('Given the environment of the connector container', () => {
-  it('when nothing is set, then it listens on 8081, calls the backend by its link, writes no file and names a dev build', () => {
+  it('when nothing is set, then it listens on 8081, calls the backend by its link and writes no file', () => {
     expect(configFromEnv({})).toEqual({
       port: 8081,
       backendUrl: 'http://backend:8080',

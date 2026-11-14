@@ -14,6 +14,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BuildRevisionTest {
 
     @Test
+    @DisplayName("Given the image revision, when the info endpoint asks, then the build section names it")
+    void should_contribute_revision_when_info_is_built_given_revision() {
+        BuildRevision revision = new BuildRevision(new BuildProperties("a1b2c3d", "dev"));
+        Info.Builder builder = new Info.Builder();
+
+        revision.contribute(builder);
+
+        assertThat(builder.build().getDetails().get("build")).isInstanceOfSatisfying(Map.class,
+                build -> assertThat(build).containsEntry("revision", "a1b2c3d"));
+    }
+
+    @Test
     @DisplayName("Given the image revision and release, when the info endpoint asks, then the build section names both")
     void should_contribute_revision_and_release_when_info_is_built_given_both() {
         BuildRevision revision = new BuildRevision(new BuildProperties("a1b2c3d", "2026.11.3"));
@@ -34,12 +46,15 @@ class BuildRevisionTest {
     }
 
     @Test
-    @DisplayName("Given a revision and release with surrounding spaces, when the properties are bound, then they are trimmed")
-    void should_trim_revision_and_release_when_bound_given_spaces() {
-        BuildProperties properties = new BuildProperties(" dev ", " 2026.11.3 ");
+    @DisplayName("Given a revision with surrounding spaces, when the properties are bound, then it is trimmed")
+    void should_trim_revision_when_bound_given_spaces() {
+        assertThat(new BuildProperties(" dev ", "dev").revision()).isEqualTo("dev");
+    }
 
-        assertThat(properties.revision()).isEqualTo("dev");
-        assertThat(properties.version()).isEqualTo("2026.11.3");
+    @Test
+    @DisplayName("Given a release with surrounding spaces, when the properties are bound, then it is trimmed")
+    void should_trim_release_when_bound_given_spaces() {
+        assertThat(new BuildProperties("dev", " 2026.11.3 ").version()).isEqualTo("2026.11.3");
     }
 
     @ParameterizedTest
