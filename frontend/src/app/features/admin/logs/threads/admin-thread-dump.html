@@ -26,12 +26,12 @@
     </div>
   }
   @if (state() === 'ready') {
-    <div class="ui-groups groups">
-      <section class="states" aria-labelledby="threads-states-title">
-        <h2 id="threads-states-title" class="ui-group-title" i18n="@@admin.logs.threads.states">
+    <div class="cards">
+      <section class="ui-card states" aria-labelledby="threads-states-title">
+        <h2 id="threads-states-title" class="ui-card__title" i18n="@@admin.logs.threads.states">
           Podle stavu
         </h2>
-        <ul class="ui-list ui-list--inset">
+        <ul class="ui-list">
           <li>
             <div class="ui-list__row">
               <span class="ui-list__title" i18n="@@admin.logs.threads.total">Celkem</span>
@@ -49,9 +49,9 @@
         </ul>
       </section>
 
-      <section aria-labelledby="threads-dump-title">
-        <div class="dump-head">
-          <h2 id="threads-dump-title" class="ui-group-title" i18n="@@admin.logs.threads.dump">
+      <section class="ui-card" aria-labelledby="threads-dump-title">
+        <div class="ui-card__bar dump-head">
+          <h2 id="threads-dump-title" class="ui-card__title" i18n="@@admin.logs.threads.dump">
             Celý výpis
           </h2>
           <app-copy-button
@@ -61,15 +61,17 @@
           />
         </div>
         <pre class="dump" tabindex="0">{{ dump() }}</pre>
-        <button
-          appNeedsConnection
-          type="button"
-          class="ui-button"
-          (click)="load()"
-          i18n="@@admin.logs.threads.reload"
-        >
-          Načíst znovu
-        </button>
+        <div class="ui-card__footer">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button reload"
+            (click)="load()"
+            i18n="@@admin.logs.threads.reload"
+          >
+            Načíst znovu
+          </button>
+        </div>
       </section>
     </div>
   }

@@ -29,6 +29,17 @@ describe('Given an administrator on the thread dump page', () => {
     expect(page.button('Kopírovat výpis vláken')).toBeTruthy();
   });
 
+  it('when the dump loads, then the counts and the whole dump are cards with their heading inside, the dump with its copy and reload', async () => {
+    page.http.expectOne(`${DIAGNOSTICS_URL}/threads`).flush(DUMP);
+    await page.settle();
+
+    expect(page.cardTitled('Podle stavu').querySelector('.ui-list .ui-list__row')).not.toBeNull();
+    const dump = page.cardTitled('Celý výpis');
+    expect(dump.querySelector('.ui-card__bar app-copy-button')).not.toBeNull();
+    expect(dump.querySelector('pre')?.textContent).toContain('"main" #1 state=RUNNABLE');
+    expect(dump.querySelector('button.reload')?.textContent?.trim()).toBe('Načíst znovu');
+  });
+
   it('when they load it again, then a fresh dump replaces the old one', async () => {
     page.http.expectOne(`${DIAGNOSTICS_URL}/threads`).flush(DUMP);
     await page.settle();

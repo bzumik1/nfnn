@@ -181,6 +181,29 @@ div.ui-list__row {
   .ui-card .ui-list__chevron {
     margin-inline-start: var(--space-2);
   }
+
+  .ui-card .ui-list__row:has(> .ui-list__value):not(:has(> .ui-list__state, > .ui-switch)) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead meta meta chevron'
+      'lead value value chevron';
+  }
+
+  .ui-card
+    .ui-list__row:has(> .ui-list__value):not(
+      :has(> .ui-list__state, > .ui-list__meta, > .ui-switch)
+    ) {
+    grid-template-areas:
+      'lead title title chevron'
+      'lead value value chevron';
+  }
+
+  .ui-card .ui-list__row:not(:has(> .ui-list__state, > .ui-switch)) > .ui-list__value {
+    justify-self: start;
+    margin-inline-start: 0;
+    text-align: start;
+    white-space: normal;
+  }
 }
 
 .ui-list__lead--blank {

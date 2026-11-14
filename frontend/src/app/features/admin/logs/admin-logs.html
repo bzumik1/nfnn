@@ -5,19 +5,23 @@
     vy tu nic nastavovat nemusíte.
   </p>
 
-  <div class="ui-groups groups">
-    <section class="health" aria-labelledby="logs-health-title">
-      <h2 id="logs-health-title" class="ui-group-title" i18n="@@admin.logs.health.title">
+  <div class="cards">
+    <section class="ui-card health" aria-labelledby="logs-health-title">
+      <h2 id="logs-health-title" class="ui-card__title" i18n="@@admin.logs.health.title">
         Stav serveru
       </h2>
       @switch (healthState()) {
         @case ('loading') {
-          <p class="ui-load-state" role="status" i18n="@@admin.logs.health.loading">
+          <p
+            class="ui-load-state ui-load-state--inset"
+            role="status"
+            i18n="@@admin.logs.health.loading"
+          >
             Zjišťujeme stav serveru…
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error" role="alert">
+          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
             <p i18n="@@admin.logs.health.failed">Stav serveru se nepodařilo zjistit.</p>
             <button
               appNeedsConnection
@@ -32,10 +36,12 @@
         }
         @case ('ready') {
           @if (health(); as health) {
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               <li>
                 <a class="ui-list__row" routerLink="/sprava/logy/stav">
-                  <span class="ui-list__lead"><app-health-icon [kind]="health.kind" /></span>
+                  <span class="ui-list__lead ui-list__glyph"
+                    ><app-health-icon [kind]="health.kind"
+                  /></span>
                   <span class="ui-list__title">{{ healthTitle(health.kind) }}</span>
                   <span class="ui-list__meta">{{ healthSummary() }}</span>
                   <svg
@@ -64,18 +70,22 @@
       <app-logs-today [today]="today()" />
     }
 
-    <section class="files" aria-labelledby="logs-files-title">
-      <h2 id="logs-files-title" class="ui-group-title" i18n="@@admin.logs.files.title">
+    <section class="ui-card files" aria-labelledby="logs-files-title">
+      <h2 id="logs-files-title" class="ui-card__title" i18n="@@admin.logs.files.title">
         Soubory logu
       </h2>
       @switch (filesState()) {
         @case ('loading') {
-          <p class="ui-load-state" role="status" i18n="@@admin.logs.files.loading">
+          <p
+            class="ui-load-state ui-load-state--inset"
+            role="status"
+            i18n="@@admin.logs.files.loading"
+          >
             Načítáme soubory…
           </p>
         }
         @case ('error') {
-          <div class="ui-load-state ui-load-state--error" role="alert">
+          <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
             <p i18n="@@admin.logs.files.failed">Soubory logu se nepodařilo načíst.</p>
             <button
               appNeedsConnection
@@ -90,18 +100,20 @@
         }
         @case ('ready') {
           @if (!available()) {
-            <p
-              class="ui-callout ui-callout--danger"
-              role="alert"
-              i18n="@@admin.logs.files.unavailable"
-            >
-              Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
-              složku /DATA/AppData/nfnn/logs jako /logs.
-            </p>
+            <div class="ui-card__body">
+              <p
+                class="ui-callout ui-callout--danger"
+                role="alert"
+                i18n="@@admin.logs.files.unavailable"
+              >
+                Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít
+                připojenou složku /DATA/AppData/nfnn/logs jako /logs.
+              </p>
+            </div>
           } @else if (files().length === 0) {
-            <p class="empty" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
+            <p class="ui-card__empty" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
           } @else {
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               @for (file of current(); track file.name) {
                 <li>
                   <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">
@@ -184,9 +196,9 @@
       }
     </section>
 
-    <section class="tools" aria-labelledby="logs-tools-title">
-      <h2 id="logs-tools-title" class="ui-group-title" i18n="@@admin.logs.tools.title">Nástroje</h2>
-      <ul class="ui-list ui-list--inset">
+    <section class="ui-card tools" aria-labelledby="logs-tools-title">
+      <h2 id="logs-tools-title" class="ui-card__title" i18n="@@admin.logs.tools.title">Nástroje</h2>
+      <ul class="ui-list">
         <li>
           <a class="ui-list__row" routerLink="/sprava/logy/urovne">
             <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
