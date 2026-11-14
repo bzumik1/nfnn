@@ -9,7 +9,7 @@ public final class ProtectedLoggers {
     public static final Map<String, LogLevel> PINS = Map.ofEntries(
             entry("org.hibernate.orm.jdbc.bind", LogLevel.INFO),
             entry("org.hibernate.orm.jdbc.extract", LogLevel.INFO),
-            entry("org.hibernate.internal.util.EntityPrinter", LogLevel.INFO),
+            entry("org.hibernate.orm.core", LogLevel.INFO),
             entry("org.springframework.web.method", LogLevel.INFO),
             entry("org.springframework.web.servlet.mvc.method.annotation", LogLevel.INFO),
             entry("org.springframework.web.client", LogLevel.INFO),
@@ -24,7 +24,8 @@ public final class ProtectedLoggers {
             entry("org.apache.tomcat.util.http", LogLevel.INFO),
             entry("org.apache.tomcat.util.http.parser.Cookie", LogLevel.WARN),
             entry("org.postgresql", LogLevel.INFO),
-            entry("jakarta.mail", LogLevel.INFO));
+            entry("jakarta.mail", LogLevel.INFO),
+            entry("org.eclipse.angus.mail", LogLevel.INFO));
 
     private ProtectedLoggers() {
     }

@@ -219,7 +219,7 @@ logging:
   level:
     org.hibernate.orm.jdbc.bind: INFO
     org.hibernate.orm.jdbc.extract: INFO
-    org.hibernate.internal.util.EntityPrinter: INFO
+    org.hibernate.orm.core: INFO
     org.springframework.web.method: INFO
     org.springframework.web.servlet.mvc.method.annotation: INFO
     org.springframework.web.client: INFO
@@ -235,5 +235,6 @@ logging:
     org.apache.tomcat.util.http.parser.Cookie: WARN
     org.postgresql: INFO
     jakarta.mail: INFO
+    org.eclipse.angus.mail: INFO
     cz.novanadeje.app: INFO
     org.springframework.web: INFO
