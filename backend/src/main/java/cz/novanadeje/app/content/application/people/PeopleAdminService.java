@@ -189,7 +189,7 @@ public class PeopleAdminService {
     private PersonView view(Person person) {
         boolean linkedToAccount = emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount);
         Map<MediaId, MediaSize> sizes = new HashMap<>();
-        Stream.concat(person.details().portrait().stream(), person.webSignature().stream())
+        Stream.concat(person.details().portrait().stream(), person.signature().stream())
                 .forEach(image -> media.findSize(image).ifPresent(size -> sizes.put(image, size)));
         return PersonView.of(person, sizes, linkedToAccount);
     }
