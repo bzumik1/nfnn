@@ -124,7 +124,7 @@ const people = {
       boardNote: null,
       featured: true,
       portrait: null,
-      webSignature: null,
+      signature: null,
       personalEmail: null,
       fundEmail: null,
       linkedToAccount: false,

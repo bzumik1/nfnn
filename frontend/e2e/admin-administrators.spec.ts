@@ -71,7 +71,7 @@ test.describe('Given an administrator on the administrators page', () => {
                   width: 640,
                   height: 640,
                 },
-                webSignature: null,
+                signature: null,
                 personalEmail: 'jana@example.cz',
                 fundEmail: null,
                 linkedToAccount: true,

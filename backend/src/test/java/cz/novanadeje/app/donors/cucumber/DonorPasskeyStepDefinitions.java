@@ -506,6 +506,18 @@ public class DonorPasskeyStepDefinitions {
                 }));
     }
 
+    @Then("{int} e-mails with the subject {string} went to the address of {string}")
+    public void emailsWithTheSubjectWentToTheAddressOf(int count, String subject, String alias) {
+        String recipient = scenarioDonors.credentialsOf(alias).email();
+        assertThat(mailSender.sent()).filteredOn(sent -> {
+            try {
+                return recipients(sent).equals(List.of(recipient)) && subject.equals(sent.getSubject());
+            } catch (MessagingException unreadable) {
+                throw new IllegalStateException(unreadable);
+            }
+        }).hasSize(count);
+    }
+
     private void register(String alias, String name, SoftwarePasskey key, Function<String, Map<String, Object>> credential) {
         asksToAddAPasskeyWith(alias, confirmationOf(alias));
         if (api.lastResponse().getStatusCode().value() != 200) {

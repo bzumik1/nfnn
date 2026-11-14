@@ -133,7 +133,8 @@ Feature: An administrator's device keeps a copy of the site's content by downloa
       | portrait      | adam.png                |
       | personalEmail | adam.vzor@example.org   |
       | fundEmail     | fond.adam@example.cz    |
-    And "Jana" uploads a 600 by 200 pixel JPEG scan as the receipt signature of "Adam Vzor"
+    And "Jana" uploads a 600 by 200 pixel PNG image named "podpis-adam.png"
+    And "Jana" sets the signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
     And "Jana" chooses "Adam Vzor" to sign the receipts as "místopředseda správní rady"
     And the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |
@@ -147,7 +148,7 @@ Feature: An administrator's device keeps a copy of the site's content by downloa
     Then the administration device's chunk "people" holds what the administration reads at "/api/admin/content/people"
     When an administration device of "Jana" syncs the donors
     Then no chunk on any administration device holds any of the 2 receipt images, a receipt signature or an image's bytes
-    And the people on the administration device carry only their public portrait and web signature
+    And the people on the administration device carry only their public portrait and signature
     And no audit chunk on the administration device holds the text "adam.vzor@example.org"
     And no audit chunk on the administration device holds the text "fond.adam@example.cz"
 

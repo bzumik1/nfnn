@@ -122,7 +122,7 @@ class FocalPointServiceTest {
     @DisplayName("Given a web signature of a person of the foundation, when a focal point is placed on it, then it is refused")
     void should_refuse_the_point_when_placed_given_a_web_signature() {
         when(media.findSize(PHOTO)).thenReturn(Optional.of(new MediaSize(600, 200)));
-        when(people.isAnyonesWebSignature(PHOTO)).thenReturn(true);
+        when(people.isAnyonesSignature(PHOTO)).thenReturn(true);
 
         assertThatThrownBy(() -> service().place(ADMIN, PHOTO, Optional.of(new FocalPoint(42, 18))))
                 .isInstanceOf(FocalPointOnPersonImage.class);

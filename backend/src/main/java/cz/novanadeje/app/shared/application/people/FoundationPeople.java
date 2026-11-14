@@ -10,4 +10,6 @@ public interface FoundationPeople {
     Optional<FoundationPerson> findForUpdate(UUID personId);
 
     Optional<PrintPortrait> printPortraitOf(UUID personId);
+
+    Optional<PrintSignature> printSignatureOf(UUID personId);
 }

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.application.people;
 
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
@@ -43,8 +44,8 @@ public class PeopleAdminService {
     static final String UPDATE_ACTION = "UPDATE_PERSON";
     static final String REMOVE_ACTION = "REMOVE_PERSON";
     static final String ORDER_ACTION = "ORDER_PEOPLE";
-    static final String CHANGE_SIGNATURE_ACTION = "CHANGE_WEB_SIGNATURE";
-    static final String REMOVE_SIGNATURE_ACTION = "REMOVE_WEB_SIGNATURE";
+    static final String CHANGE_SIGNATURE_ACTION = "CHANGE_SIGNATURE";
+    static final String REMOVE_SIGNATURE_ACTION = "REMOVE_SIGNATURE";
 
     private final PersonRepository people;
     private final MediaImageRepository media;
@@ -132,7 +133,7 @@ public class PeopleAdminService {
         return ordered.stream().map(this::view).toList();
     }
 
-    public PersonView setWebSignature(UUID adminId, PersonId id, MediaId signature) {
+    public PersonView setSignature(ActingAdministrator admin, PersonId id, MediaId signature) {
         Instant now = clock.instant();
         Person current = find(id);
         media.lockForUse(signature);
@@ -145,21 +146,29 @@ public class PeopleAdminService {
         Person signed = current.signWith(signature, now);
         people.save(signed);
         current.imagesLeftBy(signed).forEach(media::deleteIfUnused);
-        publish(adminId, CHANGE_SIGNATURE_ACTION, "Podpis " + signature + " na webu u osoby " + id + " nastaven", now);
+        publish(admin.id(), CHANGE_SIGNATURE_ACTION, "Podpis " + signature + " u osoby " + id + " nastaven", now);
+        announceToAdministrators(admin, signed, false, now);
         return view(signed);
     }
 
-    public PersonView removeWebSignature(UUID adminId, PersonId id) {
+    public PersonView removeSignature(ActingAdministrator admin, PersonId id) {
         Instant now = clock.instant();
         Person current = find(id);
-        if (current.webSignature().isEmpty()) {
+        if (current.signature().isEmpty()) {
             return view(current);
         }
-        Person unsigned = current.withoutWebSignature(now);
+        Person unsigned = current.withoutSignature(now);
         people.save(unsigned);
         current.imagesLeftBy(unsigned).forEach(media::deleteIfUnused);
-        publish(adminId, REMOVE_SIGNATURE_ACTION, "Podpis na webu u osoby " + id + " odebrán", now);
+        publish(admin.id(), REMOVE_SIGNATURE_ACTION, "Podpis u osoby " + id + " odebrán", now);
+        announceToAdministrators(admin, unsigned, true, now);
         return view(unsigned);
+    }
+
+    private void announceToAdministrators(ActingAdministrator admin, Person person, boolean removed, Instant now) {
+        if (signatories.signsReceipts(person.id().value())) {
+            events.publishEvent(new ReceiptSignatureChanged(admin.id(), admin.client(), person.id().value(), person.details().name(), removed, now));
+        }
     }
 
     private PersonDetails checked(PersonDetails details) {
@@ -167,7 +176,7 @@ public class PeopleAdminService {
         details.portrait().filter(portrait -> media.findSize(portrait).isEmpty()).ifPresent(portrait -> {
             throw new MediaNotFound(portrait);
         });
-        details.portrait().filter(people::isAnyonesWebSignature).ifPresent(portrait -> {
+        details.portrait().filter(people::isAnyonesSignature).ifPresent(portrait -> {
             throw new PersonImageInUse(portrait);
         });
         return details;
@@ -180,7 +189,7 @@ public class PeopleAdminService {
     private PersonView view(Person person) {
         boolean linkedToAccount = emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount);
         Map<MediaId, MediaSize> sizes = new HashMap<>();
-        Stream.concat(person.details().portrait().stream(), person.webSignature().stream())
+        Stream.concat(person.details().portrait().stream(), person.signature().stream())
                 .forEach(image -> media.findSize(image).ifPresent(size -> sizes.put(image, size)));
         return PersonView.of(person, sizes, linkedToAccount);
     }

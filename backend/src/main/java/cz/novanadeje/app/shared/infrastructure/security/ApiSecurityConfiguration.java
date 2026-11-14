@@ -29,7 +29,6 @@ class ApiSecurityConfiguration {
             "/api/admin/content/projects/*",
             "/api/admin/donations/donors/*/bank-accounts/*",
             "/api/admin/donations/symbol-claims/*",
-            "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/bank-logos/*",
             "/api/admin/operations/push/subscriptions/*"};
     private static final String[] BROWSER_ONLY_POSTS = {
@@ -38,7 +37,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donors/devices/current/unlock",
             "/api/admin/donors/devices/current/administration-copy",
             "/api/admin/donations/symbol-claims/*/reverse",
-            "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/receipt-signing-keys/*/withdrawal",
             "/api/admin/operations/backups/key/reveal",
             "/api/admin/operations/backups/key/confirmation",
@@ -48,7 +46,6 @@ class ApiSecurityConfiguration {
             "/api/admin/donations/receipt-signatory"};
 
     private static final String[] BROWSER_ONLY_GETS = {
-            "/api/admin/donations/receipt-signatures/*",
             "/api/admin/donations/receipt-images/*",
             "/api/admin/donations/sync",
             "/api/admin/donations/sync/chunks",

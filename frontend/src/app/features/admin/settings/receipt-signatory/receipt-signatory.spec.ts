@@ -7,17 +7,20 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { person, PORTRAIT_ID } from '../../../content/testing/people-fixtures';
-import {
-  noReceiptSignatory,
-  receiptSignatory,
-  SIGNATORY_ID,
-  vectorReceiptSignature,
-} from '../../testing/admin-fixtures';
+import { noReceiptSignatory, receiptSignatory } from '../../testing/admin-fixtures';
 import { ReceiptSignatory } from './receipt-signatory';
 
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
 const PEOPLE_URL = '/api/admin/content/people';
-const SIGNATURE_URL = `/api/admin/donations/receipt-signatures/${SIGNATORY_ID}`;
+const SIGNATURE_ID = '019a0000-0000-7000-8000-00000000d101';
+const SIGNED = person({
+  signature: {
+    id: SIGNATURE_ID,
+    url: `/api/content/media/${SIGNATURE_ID}`,
+    width: 600,
+    height: 180,
+  },
+});
 
 describe('Given the receipt settings card that shows who signs the receipts', () => {
   let fixture: ComponentFixture<ReceiptSignatory>;
@@ -71,8 +74,7 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
   it('when a signatory with a portrait and a signature is chosen, then the preview shows the round portrait, the line for the foundation, the signature, the name and the receipt role', async () => {
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
 
     expect(text('figcaption')).toBe('Náhled podpisu na potvrzení');
@@ -80,11 +82,11 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
       fixture.nativeElement.querySelector('img.signature-block-portrait')?.getAttribute('src'),
     ).toBe(`/api/content/media/${PORTRAIT_ID}?w=240`);
     expect(text('.signature-block-for')).toBe('Za Nová naděje - nadační fond:');
-    const svg = fixture.nativeElement.querySelector('svg.signature-artwork') as SVGSVGElement;
-    expect(svg.getAttribute('aria-label')).toBe('Podpis na potvrzení');
-    expect(svg.querySelector('path')?.getAttribute('d')).toBe(
-      'M10 80 C40 10 65 10 95 80 S150 150 180 80 Z',
-    );
+    const signature = fixture.nativeElement.querySelector(
+      'img.signature-block-image',
+    ) as HTMLImageElement;
+    expect(signature.getAttribute('src')).toBe(`/api/content/media/${SIGNATURE_ID}?w=480`);
+    expect(signature.getAttribute('alt')).toBe('Podpis na potvrzení');
     expect(text('.signature-block-name')).toBe('Eva Vzorová');
     expect(text('.signature-block-role')).toBe('předsedkyně správní rady');
     expect(fixture.nativeElement.querySelector('.signatory-gaps')).toBeNull();
@@ -95,10 +97,10 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     await settle();
 
     expect(fixture.nativeElement.querySelector('.signature-block-portrait')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.signature-artwork')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.signature-block-image')).toBeNull();
     expect(text('.signature-block-name')).toBe('Eva Vzorová');
     expect(text('.signatory-gaps')).toBe(
-      'Osoba nemá portrét ani podpis na potvrzení. Potvrzení budou mít jen čáru se jménem a funkcí.',
+      'Osoba nemá portrét ani podpis. Potvrzení budou mít jen čáru se jménem a funkcí.',
     );
   });
 
@@ -107,8 +109,7 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
       .expectOne(SIGNATORY_URL)
       .flush(receiptSignatory({ portrait: true, portraitPrintable: false }));
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
 
     expect(text('.signatory-gaps')).toBe(
@@ -125,8 +126,23 @@ describe('Given the receipt settings card that shows who signs the receipts', ()
     await settle();
 
     expect(text('.signatory-gaps')).toBe(
-      'Portrét této osoby nejde připravit pro tisk a osoba nemá nahraný podpis na potvrzení. Potvrzení budou mít jen čáru se jménem a funkcí. Nahrajte u lidí fondu jiný portrét a podpis.',
+      'Portrét této osoby nejde připravit pro tisk a osoba nemá nahraný podpis. Potvrzení budou mít jen čáru se jménem a funkcí. Nahrajte u lidí fondu jiný portrét a podpis.',
     );
+  });
+
+  it('when the signatory has a signature but no portrait, then the preview shows the signature and says the portrait is missing', async () => {
+    http
+      .expectOne(SIGNATORY_URL)
+      .flush(receiptSignatory({ portrait: false, portraitPrintable: false }));
+    await settle();
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('.signature-block-portrait')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('img.signature-block-image')?.getAttribute('src'),
+    ).toBe(`/api/content/media/${SIGNATURE_ID}?w=480`);
+    expect(text('.signatory-gaps')).toBe('Osoba nemá portrét. Potvrzení budou bez fotky.');
   });
 
   it('when the signatory cannot be loaded, then it says so and loads again on request', async () => {
@@ -155,8 +171,7 @@ describe('Given an administrator who saw the card of who signs the receipts once
   async function signatoryArrives(): Promise<void> {
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
   }
 
@@ -204,8 +219,7 @@ describe('Given an administrator who saw the card of who signs the receipts once
   async function signatoryArrives(): Promise<void> {
     http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
     await settle();
-    http.expectOne(PEOPLE_URL).flush({ members: [person()], note: null });
-    http.expectOne(SIGNATURE_URL).flush(vectorReceiptSignature());
+    http.expectOne(PEOPLE_URL).flush({ members: [SIGNED], note: null });
     await settle();
   }
 

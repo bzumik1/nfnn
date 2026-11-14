@@ -57,7 +57,7 @@ class AdapterLibraryRulesTest {
             "cz.novanadeje.app.donations.infrastructure.banklogo..", "cz.novanadeje.app.donations.infrastructure.cnb..",
             "cz.novanadeje.app.operations.infrastructure.github..", "cz.novanadeje.app.operations.infrastructure.push.."};
     private static final String[] MAIL_ADAPTERS = {
-            "cz.novanadeje.app.shared.infrastructure.mail..", "cz.novanadeje.app.contact.infrastructure.mail..",
+            "cz.novanadeje.app.shared.infrastructure.mail..", "cz.novanadeje.app.contact.infrastructure.mail..", "cz.novanadeje.app.content.infrastructure.mail..",
             "cz.novanadeje.app.donors.infrastructure.mail..", "cz.novanadeje.app.donations.infrastructure.report..",
             "cz.novanadeje.app.operations.infrastructure.backup..", "cz.novanadeje.app.operations.infrastructure.settings..",
             "cz.novanadeje.app.donations.infrastructure.signing.."};

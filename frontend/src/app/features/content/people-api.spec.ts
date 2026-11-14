@@ -98,16 +98,16 @@ describe('Given the API of the people of the foundation', () => {
     removed.flush(null);
   });
 
-  it('when a web signature is set and removed, then the image id goes to the signature address', () => {
-    api.setWebSignature(PERSON_ID, SIGNATURE_ID).subscribe();
-    api.removeWebSignature(PERSON_ID).subscribe();
+  it('when a signature is set and removed, then the image id goes to the signature address', () => {
+    api.setSignature(PERSON_ID, SIGNATURE_ID).subscribe();
+    api.removeSignature(PERSON_ID).subscribe();
 
     const set = http.expectOne((call) => call.method === 'POST');
-    expect(set.request.url).toBe(`${PEOPLE}/${PERSON_ID}/web-signature`);
+    expect(set.request.url).toBe(`${PEOPLE}/${PERSON_ID}/signature`);
     expect(set.request.body).toEqual({ imageId: SIGNATURE_ID });
     set.flush(person());
     const removed = http.expectOne((call) => call.method === 'DELETE');
-    expect(removed.request.url).toBe(`${PEOPLE}/${PERSON_ID}/web-signature`);
+    expect(removed.request.url).toBe(`${PEOPLE}/${PERSON_ID}/signature`);
     removed.flush(person());
   });
 });

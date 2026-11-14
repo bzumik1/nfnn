@@ -17,7 +17,7 @@ public interface PersonRepository {
 
     boolean isAnyonesPortrait(MediaId image);
 
-    boolean isAnyonesWebSignature(MediaId image);
+    boolean isAnyonesSignature(MediaId image);
 
     void save(Person person);
 

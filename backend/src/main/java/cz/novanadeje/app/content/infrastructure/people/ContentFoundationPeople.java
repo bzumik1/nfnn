@@ -7,9 +7,11 @@ import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.content.infrastructure.media.PrintPortraits;
+import cz.novanadeje.app.content.infrastructure.media.PrintSignatures;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
+import cz.novanadeje.app.shared.application.people.PrintSignature;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -24,6 +26,7 @@ import java.util.UUID;
 class ContentFoundationPeople implements FoundationPeople {
 
     private static final int PORTRAITS_KEPT = 4;
+    private static final int SIGNATURES_KEPT = 4;
 
     private static final Logger log = LoggerFactory.getLogger(ContentFoundationPeople.class);
 
@@ -31,6 +34,10 @@ class ContentFoundationPeople implements FoundationPeople {
     private final MediaImageRepository media;
     private final Cache<MediaId, Optional<PrintPortrait>> prepared = Caffeine.newBuilder()
             .maximumSize(PORTRAITS_KEPT)
+            .executor(Runnable::run)
+            .build();
+    private final Cache<MediaId, Optional<PrintSignature>> preparedSignatures = Caffeine.newBuilder()
+            .maximumSize(SIGNATURES_KEPT)
             .executor(Runnable::run)
             .build();
 
@@ -57,6 +64,13 @@ class ContentFoundationPeople implements FoundationPeople {
                 .flatMap(portrait -> prepared.get(portrait, this::prepare));
     }
 
+    @Override
+    public Optional<PrintSignature> printSignatureOf(UUID personId) {
+        return people.findById(new PersonId(personId))
+                .flatMap(Person::signature)
+                .flatMap(signature -> preparedSignatures.get(signature, this::prepareSignature));
+    }
+
     long portraitsKept() {
         prepared.cleanUp();
         return prepared.estimatedSize();
@@ -71,6 +85,19 @@ class ContentFoundationPeople implements FoundationPeople {
             return Optional.of(PrintPortraits.prepare(largest.get()));
         } catch (IllegalStateException undecodable) {
             log.warn("Portrait {} cannot be prepared for print, the receipt is issued without it", portrait.value());
+            return Optional.empty();
+        }
+    }
+
+    private Optional<PrintSignature> prepareSignature(MediaId signature) {
+        Optional<MediaVariant> largest = media.findLargestVariant(signature);
+        if (largest.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(PrintSignatures.prepare(largest.get()));
+        } catch (IllegalStateException undecodable) {
+            log.warn("Signature {} cannot be prepared for print, the receipt is issued without it", signature.value());
             return Optional.empty();
         }
     }

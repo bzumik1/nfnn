@@ -64,8 +64,13 @@
   margin-bottom: var(--space-1-5);
 }
 
-.signature-block-signature app-signature-artwork {
-  max-width: 220px;
+.signature-block-image {
+  display: block;
+  width: auto;
+  max-width: min(100%, 220px);
+  height: auto;
+  max-height: var(--space-12);
+  mix-blend-mode: var(--blend-ink-on-paper);
 }
 
 .signature-block-name {

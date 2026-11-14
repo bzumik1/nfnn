@@ -4,5 +4,5 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record WebSignatureRequest(@NotNull UUID imageId) {
+public record SignatureRequest(@NotNull UUID imageId) {
 }

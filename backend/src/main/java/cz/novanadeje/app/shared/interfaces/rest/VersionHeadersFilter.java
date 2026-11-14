@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 class VersionHeadersFilter extends OncePerRequestFilter {
 
-    static final int API_GENERATION = 4;
+    static final int API_GENERATION = 5;
     static final String REVISION_HEADER = "Nfnn-Revision";
     static final String API_HEADER = "Nfnn-Api";
     static final String APP_API_HEADER = "Nfnn-App-Api";

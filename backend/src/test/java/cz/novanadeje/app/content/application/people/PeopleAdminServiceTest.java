@@ -19,6 +19,7 @@ import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
+import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.junit.jupiter.api.DisplayName;
@@ -61,6 +62,8 @@ class PeopleAdminServiceTest {
     private static final MediaId SIGNATURE = MediaId.newId(BEFORE.plusSeconds(1));
     private static final MediaSize SQUARE = new MediaSize(640, 640);
     private static final MediaSize INK = new MediaSize(600, 180);
+    private static final ActingAdministrator BROWSER = new ActingAdministrator(ADMIN, Optional.empty());
+    private static final ActingAdministrator CONNECTOR = new ActingAdministrator(ADMIN, Optional.of("claude.ai"));
 
     @Mock
     private PersonRepository people;
@@ -128,7 +131,7 @@ class PeopleAdminServiceTest {
         assertThat(saved.getValue().createdAt()).isEqualTo(NOW);
         assertThat(view.name()).isEqualTo("Eva Vzorová");
         assertThat(view.portrait()).contains(new PersonImageView(PORTRAIT, 640, 640));
-        assertThat(view.webSignature()).isEmpty();
+        assertThat(view.signature()).isEmpty();
         AdminActionPerformed action = audited();
         assertThat(action.action()).isEqualTo("ADD_PERSON");
         assertThat(action.subjectId()).isEmpty();
@@ -171,7 +174,7 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given a person with a portrait and a web signature, when the portrait is replaced, then the old portrait is deleted when unused, the signature stays and the change is audited")
+    @DisplayName("Given a person with a portrait and a signature, when the portrait is replaced, then the old portrait is deleted when unused, the signature stays and the change is audited")
     void should_delete_the_old_portrait_when_replaced_given_a_portrait_and_a_signature() {
         Person current = stored(0, Optional.of(PORTRAIT)).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
@@ -181,7 +184,7 @@ class PeopleAdminServiceTest {
         PersonView view = service().update(ADMIN, current.id(), command(Optional.of(OTHER_PORTRAIT)), false);
 
         assertThat(view.portrait()).contains(new PersonImageView(OTHER_PORTRAIT, 640, 640));
-        assertThat(view.webSignature()).contains(new PersonImageView(SIGNATURE, 600, 180));
+        assertThat(view.signature()).contains(new PersonImageView(SIGNATURE, 600, 180));
         verify(media).deleteIfUnused(PORTRAIT);
         verify(media, never()).deleteIfUnused(SIGNATURE);
         assertThat(audited().details()).isEqualTo("Osoba " + current.id() + " v lidech fondu upravena");
@@ -197,7 +200,7 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given a person with a portrait and a web signature, when they are removed, then they go first and both images are deleted when unused")
+    @DisplayName("Given a person with a portrait and a signature, when they are removed, then they go first and both images are deleted when unused")
     void should_remove_the_person_and_their_images_when_removed_given_both_images() {
         Person current = stored(0, Optional.of(PORTRAIT)).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
@@ -354,43 +357,74 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given a person, when a web signature is set, then it is stored with its size and audited with the image and the person")
+    @DisplayName("Given a person, when a signature is set, then it is stored with its size and audited with the image and the person")
     void should_store_the_signature_when_set_given_a_person() {
         Person current = stored(0, Optional.empty());
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
         when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
 
-        PersonView view = service().setWebSignature(ADMIN, current.id(), SIGNATURE);
+        PersonView view = service().setSignature(BROWSER, current.id(), SIGNATURE);
 
-        assertThat(view.webSignature()).contains(new PersonImageView(SIGNATURE, 600, 180));
+        assertThat(view.signature()).contains(new PersonImageView(SIGNATURE, 600, 180));
         verify(media, never()).deleteIfUnused(any());
         AdminActionPerformed action = audited();
-        assertThat(action.action()).isEqualTo("CHANGE_WEB_SIGNATURE");
-        assertThat(action.details()).isEqualTo("Podpis " + SIGNATURE + " na webu u osoby " + current.id() + " nastaven");
+        assertThat(action.action()).isEqualTo("CHANGE_SIGNATURE");
+        assertThat(action.details()).isEqualTo("Podpis " + SIGNATURE + " u osoby " + current.id() + " nastaven");
+        assertThat(published(ReceiptSignatureChanged.class)).isEmpty();
     }
 
     @Test
-    @DisplayName("Given a person with a web signature, when another is set or the signature is removed, then the old one is deleted when unused")
+    @DisplayName("Given the person who signs the receipts, when a connection sets their signature, then every administrator is to be told who changed it and through which connection")
+    void should_announce_the_change_when_set_given_the_person_who_signs_the_receipts() {
+        Person current = stored(0, Optional.empty());
+        when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
+        when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
+        when(signatories.signsReceipts(current.id().value())).thenReturn(true);
+
+        service().setSignature(CONNECTOR, current.id(), SIGNATURE);
+
+        assertThat(published(ReceiptSignatureChanged.class)).containsExactly(
+                new ReceiptSignatureChanged(ADMIN, Optional.of("claude.ai"), current.id().value(), current.details().name(), false, NOW));
+    }
+
+    @Test
+    @DisplayName("Given the person who signs the receipts, when their signature is removed, then every administrator is to be told, and nobody when they had none")
+    void should_announce_the_removal_when_removed_given_the_person_who_signs_the_receipts() {
+        Person signed = stored(0, Optional.empty()).signWith(SIGNATURE, BEFORE);
+        Person unsigned = stored(1, Optional.empty());
+        when(people.findByIdForUpdate(signed.id())).thenReturn(Optional.of(signed));
+        when(people.findByIdForUpdate(unsigned.id())).thenReturn(Optional.of(unsigned));
+        lenient().when(signatories.signsReceipts(any())).thenReturn(true);
+
+        service().removeSignature(BROWSER, signed.id());
+        service().removeSignature(BROWSER, unsigned.id());
+
+        assertThat(published(ReceiptSignatureChanged.class)).containsExactly(
+                new ReceiptSignatureChanged(ADMIN, Optional.empty(), signed.id().value(), signed.details().name(), true, NOW));
+    }
+
+    @Test
+    @DisplayName("Given a person with a signature, when another is set or the signature is removed, then the old one is deleted when unused")
     void should_delete_the_old_signature_when_replaced_or_removed_given_a_signature() {
         Person signed = stored(0, Optional.empty()).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(signed.id())).thenReturn(Optional.of(signed));
 
-        PersonView view = service().removeWebSignature(ADMIN, signed.id());
+        PersonView view = service().removeSignature(BROWSER, signed.id());
 
-        assertThat(view.webSignature()).isEmpty();
+        assertThat(view.signature()).isEmpty();
         verify(media).deleteIfUnused(SIGNATURE);
         AdminActionPerformed action = audited();
-        assertThat(action.action()).isEqualTo("REMOVE_WEB_SIGNATURE");
-        assertThat(action.details()).isEqualTo("Podpis na webu u osoby " + signed.id() + " odebrán");
+        assertThat(action.action()).isEqualTo("REMOVE_SIGNATURE");
+        assertThat(action.details()).isEqualTo("Podpis u osoby " + signed.id() + " odebrán");
     }
 
     @Test
-    @DisplayName("Given a person without a web signature, when the signature is removed, then nothing is stored, deleted or audited")
+    @DisplayName("Given a person without a signature, when the signature is removed, then nothing is stored, deleted or audited")
     void should_change_nothing_when_the_signature_is_removed_given_none() {
         Person current = stored(0, Optional.empty());
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
 
-        service().removeWebSignature(ADMIN, current.id());
+        service().removeSignature(BROWSER, current.id());
 
         verify(people, never()).save(any());
         verify(media, never()).deleteIfUnused(any());
@@ -398,13 +432,13 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given an image that is a person's web signature, when a person is added or edited with it as the portrait, then it is refused and nothing is stored")
-    void should_refuse_the_portrait_when_saved_given_an_image_that_is_a_web_signature() {
+    @DisplayName("Given an image that is a person's signature, when a person is added or edited with it as the portrait, then it is refused and nothing is stored")
+    void should_refuse_the_portrait_when_saved_given_an_image_that_is_a_signature() {
         Person current = stored(0, Optional.empty());
         when(people.findAllInOrderForUpdate()).thenReturn(List.of(current));
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
         when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
-        when(people.isAnyonesWebSignature(SIGNATURE)).thenReturn(true);
+        when(people.isAnyonesSignature(SIGNATURE)).thenReturn(true);
 
         assertThatThrownBy(() -> service().add(ADMIN, command(Optional.of(SIGNATURE)))).isInstanceOf(PersonImageInUse.class);
         assertThatThrownBy(() -> service().update(ADMIN, current.id(), command(Optional.of(SIGNATURE)), false))
@@ -414,21 +448,21 @@ class PeopleAdminServiceTest {
     }
 
     @Test
-    @DisplayName("Given an image that is a person's portrait, when it is set as a web signature, then it is refused and nothing is stored")
+    @DisplayName("Given an image that is a person's portrait, when it is set as a signature, then it is refused and nothing is stored")
     void should_refuse_the_signature_when_set_given_an_image_that_is_a_portrait() {
         Person current = stored(0, Optional.of(PORTRAIT));
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
         when(media.findSize(PORTRAIT)).thenReturn(Optional.of(SQUARE));
         when(people.isAnyonesPortrait(PORTRAIT)).thenReturn(true);
 
-        assertThatThrownBy(() -> service().setWebSignature(ADMIN, current.id(), PORTRAIT)).isInstanceOf(PersonImageInUse.class);
+        assertThatThrownBy(() -> service().setSignature(BROWSER, current.id(), PORTRAIT)).isInstanceOf(PersonImageInUse.class);
         verify(people, never()).save(any());
         verify(events, never()).publishEvent(any(Object.class));
     }
 
     @Test
-    @DisplayName("Given a person with a web signature, when they are renamed, then the new name is stored and the signature stays")
-    void should_keep_the_signature_when_renamed_given_a_web_signature() {
+    @DisplayName("Given a person with a signature, when they are renamed, then the new name is stored and the signature stays")
+    void should_keep_the_signature_when_renamed_given_a_signature() {
         Person current = stored(0, Optional.empty()).signWith(SIGNATURE, BEFORE);
         when(people.findByIdForUpdate(current.id())).thenReturn(Optional.of(current));
         when(media.findSize(SIGNATURE)).thenReturn(Optional.of(INK));
@@ -436,10 +470,10 @@ class PeopleAdminServiceTest {
         PersonView view = service().update(ADMIN, current.id(), command(Optional.empty()), false);
 
         assertThat(view.name()).isEqualTo("Eva Vzorová");
-        assertThat(view.webSignature()).contains(new PersonImageView(SIGNATURE, 600, 180));
+        assertThat(view.signature()).contains(new PersonImageView(SIGNATURE, 600, 180));
         ArgumentCaptor<Person> saved = ArgumentCaptor.forClass(Person.class);
         verify(people).save(saved.capture());
-        assertThat(saved.getValue().webSignature()).contains(SIGNATURE);
+        assertThat(saved.getValue().signature()).contains(SIGNATURE);
         verify(media, never()).deleteIfUnused(any());
     }
 

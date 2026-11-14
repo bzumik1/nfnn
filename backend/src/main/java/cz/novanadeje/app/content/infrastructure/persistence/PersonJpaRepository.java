@@ -24,5 +24,5 @@ interface PersonJpaRepository extends JpaRepository<PersonJpaEntity, UUID> {
 
     boolean existsByPortraitMediaId(UUID portraitMediaId);
 
-    boolean existsByWebSignatureMediaId(UUID webSignatureMediaId);
+    boolean existsBySignatureMediaId(UUID signatureMediaId);
 }

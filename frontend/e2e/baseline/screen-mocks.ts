@@ -640,7 +640,7 @@ export async function serveRecentDonors(page: RouteTarget): Promise<void> {
                 width: 640,
                 height: 640,
               },
-              webSignature: null,
+              signature: null,
               personalEmail: janaAccount.email,
               fundEmail: null,
               linkedToAccount: true,
