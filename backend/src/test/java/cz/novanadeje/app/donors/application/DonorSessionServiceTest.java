@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SpentCredentials;
+import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -447,6 +448,27 @@ class DonorSessionServiceTest {
         verify(refreshTokens).recordSuccessor(used.id(), saved.getValue().id());
         assertThat(refreshed.tokens().accessToken()).isEqualTo("access3");
         assertThat(refreshed.tokens().roles()).containsExactlyInAnyOrder(Role.DONOR, Role.ADMIN);
+    }
+
+    @Test
+    @DisplayName("Given a connected application's token used 30 seconds ago whose successor was never used, when it is presented as the browser's refresh cookie, then every session of the donor ends and no browser session is issued")
+    void should_end_every_session_and_issue_nothing_when_presented_in_browser_cookie_given_used_client_token_within_the_reuse_grace() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        UUID successor = UUID.randomUUID();
+        Instant issued = NOW.minus(Duration.ofDays(1));
+        RefreshToken client = RefreshToken.reconstitute(UUID.randomUUID(), DONOR, secret.hash(), issued, issued.plus(REFRESH_TTL), true,
+                new ClientId("https://claude.ai/oauth/claude-code-client-metadata"), Set.of(), issued, NOW.minusSeconds(30), null, successor, null, null);
+        when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(client));
+        lenient().when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+        lenient().when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
+                .isInstanceOf(InvalidRefreshToken.class);
+
+        verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+        verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        verify(devices, never()).save(any());
+        verify(accessTokens, never()).issue(any(), any(), any(), any());
     }
 
     @Test

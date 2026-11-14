@@ -138,6 +138,9 @@ public class DonorSessionService {
     }
 
     private RefreshedSession reissueWithinReuseGrace(RefreshToken token, SessionCookie presentedIn, DeviceDescription description, Instant now) {
+        if (token.clientId().isPresent()) {
+            throw replay(token, now);
+        }
         if (usedWithinReuseGrace(token, now) && deviceEnded(token)) {
             throw new InvalidRefreshToken();
         }
