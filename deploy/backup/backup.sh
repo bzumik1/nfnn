@@ -33,7 +33,10 @@
 # backend's entrypoint makes it the server's backup key only when the two match.
 # The schedule is the one the backend writes to $BACKUPS/requests/schedule (chosen on /sprava/zalohy),
 # read again on every pass; a missing or invalid value keeps the default below, and the schedule in
-# use is reported in $BACKUPS/status/schedule.
+# use is reported in $BACKUPS/status/schedule. A scheduled backup that fails is tried again every
+# $BACKUP_RETRY_SECONDS (15 minutes) at most $BACKUP_RETRIES more times; a retry that finds the database
+# not answering is not counted and waits another interval, so requests are still handled meanwhile, and
+# a requested backup that succeeds ends the retries.
 
 set -u
 
@@ -57,6 +60,8 @@ LOGS=${LOGS_DIR:-/logs}
 SECRETS=${SECRETS_DIR:-/secrets}
 KEY_FILE=${BACKUP_KEY_FILE:-$SECRETS/backup-key}
 POLL_SECONDS=${POLL_SECONDS:-10}
+BACKUP_RETRY_SECONDS=${BACKUP_RETRY_SECONDS:-900}
+BACKUP_RETRIES=3
 AGE_HEADER="age-encryption.org/v1"
 RECEIPT_SWITCH_CHANGESET="024-delete-test-receipts-and-drop-the-server-drawing"
 
@@ -599,7 +604,7 @@ handle_requests() {
     [ -e "$request" ] || continue
     id=$(basename "$request")
     case "$id" in
-      *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" ;;
+      *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" && backup_attempts_left=0 ;;
       *.test-restore) rm -f "$request"; test_restore "${id%.test-restore}" ;;
       *.restore) restore_requested "$request" ;;
     esac
@@ -607,6 +612,16 @@ handle_requests() {
   find "$RESTORE" -maxdepth 1 \( -name '*.upload' -o -name '*.key' \) -mmin +60 -delete 2>/dev/null
 }
 
+take_scheduled_backup() {
+  backup_attempts_left=$((backup_attempts_left - 1))
+  if take_backup "" ""; then
+    backup_attempts_left=0
+  fi
+  backup_retry_at=$(($(date +%s) + BACKUP_RETRY_SECONDS))
+}
+
+backup_attempts_left=0
+backup_retry_at=0
 mkdir -p "$STATUS" "$REQUESTS"
 chmod 1777 "$REQUESTS"
 rm -f "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore
@@ -637,7 +652,14 @@ while true; do
   today=$(date +%Y-%m-%d)
   if reached "$BACKUP_TIME" && [ "$last_backup_day" != "$today" ]; then
     last_backup_day=$today
-    take_backup "" ""
+    backup_attempts_left=$((BACKUP_RETRIES + 1))
+    take_scheduled_backup
+  elif [ "$backup_attempts_left" -gt 0 ] && [ "$(date +%s)" -ge "$backup_retry_at" ]; then
+    if pg_isready --quiet; then
+      take_scheduled_backup
+    else
+      backup_retry_at=$(($(date +%s) + BACKUP_RETRY_SECONDS))
+    fi
   fi
   if [ "$(date +%u)" = "$TEST_RESTORE_DAY" ] && reached "$TEST_RESTORE_TIME" && [ "$last_test_day" != "$today" ]; then
     last_test_day=$today

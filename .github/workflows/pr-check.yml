@@ -944,6 +944,7 @@ jobs:
           done
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/compose.yml"
+          yq -i '.services.backup.environment.BACKUP_RETRY_SECONDS = "5"' "$RUNNER_TEMP/compose.yml"
           echo "The backend starts with -XX:AOTMode=on, so a JVM that cannot use the image's AOT cache refuses to start instead of starting slower"
           yq -i '.services.backend.environment._JAVA_OPTIONS = "-XX:AOTMode=on"' "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
@@ -1231,6 +1232,22 @@ jobs:
           grep -q 'schedule: daily backup at 02:30, test restore on day 6 at 05:15' "$logs/backup.log" || { echo "::error::the backup log does not name the changed schedule"; exit 1; }
           docker exec -u app nfnn-backend sh -c "printf 'backup_time=25:00\ntest_restore_day=9\ntest_restore_time=05:15\n' > /backups/requests/schedule"
           wait_for "grep -q '^backup_time=03:00$' $backups/status/schedule && grep -q '^test_restore_day=7$' $backups/status/schedule" 15 "an invalid schedule did not fall back to the defaults"
+
+          echo "A scheduled backup that fails because the database cannot be reached is tried again once it can"
+          next_minute=$(docker exec nfnn-backup sh -c 'date -d "@$(($(date +%s) + 90))" +%H:%M')
+          trap 'docker network connect nfnn-edge nfnn-backup 2> /dev/null || true' EXIT
+          docker network disconnect nfnn-edge nfnn-backup
+          docker exec -u app nfnn-backend sh -c "printf 'backup_time=$next_minute\ntest_restore_day=7\ntest_restore_time=04:00\n' > /backups/requests/schedule"
+          wait_for "grep -q '^outcome=failed$' $backups/status/backup" 120 "the scheduled backup did not fail while the database could not be reached"
+          grep -q '^request=$' "$backups/status/backup" || { echo "::error::the failed backup is not the scheduled one"; cat "$backups/status/backup"; exit 1; }
+          echo "While the database cannot be reached, the pending retry does not hold up a requested backup"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-unreachable.backup'
+          wait_for "grep -q '^request=ci-unreachable$' $backups/status/backup" 30 "a requested backup was not handled while a scheduled retry waited for the database"
+          grep -q '^outcome=failed$' "$backups/status/backup" || { echo "::error::the requested backup did not fail while the database could not be reached"; cat "$backups/status/backup"; exit 1; }
+          docker network connect nfnn-edge nfnn-backup
+          trap - EXIT
+          wait_for "grep -q '^outcome=ok$' $backups/status/backup" 60 "the failed scheduled backup was not tried again once the database could be reached"
+          grep -q '^request=$' "$backups/status/backup" || { echo "::error::the backup after the failure is not the scheduled one's retry"; cat "$backups/status/backup"; exit 1; }
 
           echo "A requested backup and a test restore run from request files"
           docker exec nfnn-backend sh -c 'touch /backups/requests/ci-1.backup && touch /backups/requests/ci-2.test-restore'
