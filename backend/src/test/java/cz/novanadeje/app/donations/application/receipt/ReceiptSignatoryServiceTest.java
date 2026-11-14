@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donations.application.receipt;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPersonNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
@@ -16,10 +20,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,7 +52,8 @@ class ReceiptSignatoryServiceTest {
     private final ReceiptSignatoryRepository signatories = mock(ReceiptSignatoryRepository.class);
     private final FoundationPeople people = mock(FoundationPeople.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final ReceiptSignatoryService service = new ReceiptSignatoryService(signatories, people, events,
+    private final List<Runnable> afterCommit = new ArrayList<>();
+    private final ReceiptSignatoryService service = new ReceiptSignatoryService(signatories, people, events, afterCommit::add,
             new MutableClock(NOW, ZoneId.of("Europe/Prague")));
 
     @Test
@@ -109,6 +117,25 @@ class ReceiptSignatoryServiceTest {
     }
 
     @Test
+    @DisplayName("Given a person of the foundation, when an administrator chooses them, then the line naming the choice is handed over to run after the commit and is not written before")
+    void should_hand_choice_line_over_to_run_after_commit_when_chosen_given_person() {
+        when(people.findForUpdate(CHAIR.value())).thenReturn(Optional.of(new FoundationPerson(CHAIR.value(), "Josef Vzorový", false)));
+        ListAppender<ILoggingEvent> lines = serviceLog();
+        try {
+            service.choose(ADMIN, CHAIR, "předseda správní rady");
+
+            assertThat(lines.list).isEmpty();
+            assertThat(afterCommit).singleElement().satisfies(Runnable::run);
+            assertThat(lines.list).singleElement().satisfies(line -> {
+                assertThat(line.getLevel()).isEqualTo(Level.INFO);
+                assertThat(line.getFormattedMessage()).isEqualTo("Admin " + ADMIN + " chose person " + CHAIR + " to sign the receipts");
+            });
+        } finally {
+            ((Logger) LoggerFactory.getLogger(ReceiptSignatoryService.class)).detachAppender(lines);
+        }
+    }
+
+    @Test
     @DisplayName("Given a person the foundation does not have, when an administrator chooses them, then it is refused as not found and nothing changes")
     void should_refuse_as_not_found_when_chosen_given_unknown_person() {
         when(people.findForUpdate(OTHER.value())).thenReturn(Optional.empty());
@@ -117,6 +144,7 @@ class ReceiptSignatoryServiceTest {
 
         verify(signatories, never()).choose(any());
         verifyNoInteractions(events);
+        assertThat(afterCommit).isEmpty();
     }
 
     @Test
@@ -155,5 +183,12 @@ class ReceiptSignatoryServiceTest {
         order.verify(people).findForUpdate(CHAIR.value());
         order.verify(signatories).choose(any());
         verify(people, never()).find(any());
+    }
+
+    private static ListAppender<ILoggingEvent> serviceLog() {
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        ((Logger) LoggerFactory.getLogger(ReceiptSignatoryService.class)).addAppender(lines);
+        return lines;
     }
 }

@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
@@ -41,12 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApplicationLayerRulesTest {
 
     private static final String REPOSITORY_PARAMETER = "application_and_domain_code_takes_no_repository_parameter";
-
-    private static final String AFTER_COMMIT_HELPER_UNTIL_PR_612 = "cz.novanadeje.app.donations.application.receipt.AfterCommit";
-
-    private static final Set<String> HELPER_USERS_UNTIL_PR_612 = Set.of(
-            "cz.novanadeje.app.donations.application.receipt.ReceiptSignatoryService",
-            "cz.novanadeje.app.donations.application.receipt.ReceiptSignatureService");
 
     private static final Set<String> EXCEPTION_MESSAGES = Set.of("getMessage", "getLocalizedMessage");
 
@@ -67,22 +60,12 @@ class ApplicationLayerRulesTest {
     @ArchTest
     static final ArchRule application_must_not_depend_on_adapter_technology = noClasses()
             .that().resideInAPackage("..application..")
-            .and(DescribedPredicate.describe("are not the after-commit helper of the receipt signatory and signature services, which move to AfterCommitWork after PR #612",
-                    type -> !type.getName().equals(AFTER_COMMIT_HELPER_UNTIL_PR_612)
-                            && !type.getName().startsWith(AFTER_COMMIT_HELPER_UNTIL_PR_612 + "$")))
             .should().dependOnClassesThat().resideInAnyPackage(
                     "org.springframework.dao..", "org.springframework.jdbc..", "org.springframework.orm..", "org.springframework.data..",
                     "jakarta.persistence..", "org.hibernate..", "java.sql..", "java.nio.file..",
                     "jakarta.mail..", "org.springframework.mail..", "org.thymeleaf..")
             .orShould().dependOnClassesThat().haveNameMatching("org\\.springframework\\.transaction\\.support\\.TransactionSynchronization.*")
             .because("backend.md, Application: the layer knows no HTTP, JPA entity or template; ports are interfaces implemented in infrastructure");
-
-    @ArchTest
-    static final ArchRule the_after_commit_helper_serves_only_the_receipt_signatory_and_signature_services_until_pr_612 = classes()
-            .that().haveFullyQualifiedName(AFTER_COMMIT_HELPER_UNTIL_PR_612)
-            .should().onlyHaveDependentClassesThat(DescribedPredicate.describe("are the helper itself or the receipt signatory and signature services",
-                    type -> type.getName().startsWith(AFTER_COMMIT_HELPER_UNTIL_PR_612) || HELPER_USERS_UNTIL_PR_612.contains(type.getName())))
-            .because("new work after commit goes through the AfterCommitWork port; this rule fails once the helper is gone, so its exception goes with it");
 
     @ArchTest
     static final ArchRule application_must_not_read_exception_messages = noClasses()
