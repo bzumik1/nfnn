@@ -32,6 +32,7 @@ import { formatCrowns } from '../donation-amount';
 import { GiftArrivalWatch } from '../gift-arrival/gift-arrival-watch';
 import { whenLeft } from '../../../core/navigation/kept-tab-pages';
 import { giftArrivalText } from '../gift-arrival/gift-arrival-text';
+import { PaymentHandOffs } from './payment-hand-offs';
 import { RepositoryGiftFeed } from '../gift-arrival/repository-gift-feed';
 import { ibanHalves } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
@@ -108,6 +109,7 @@ export class PaymentPanel {
   private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly localPaymentRoute = inject(LocalPaymentRoute);
   private readonly giftArrival = inject(GiftArrivalWatch);
+  private readonly handOffs = inject(PaymentHandOffs);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
@@ -399,6 +401,7 @@ export class PaymentPanel {
       return;
     }
     this.noteIntentToPay();
+    this.handOffs.note();
     const png = this.opensWithImage ? (this.preparedImage()?.png ?? null) : null;
     if (png !== null) {
       await this.handOverPayment(payment, imageFile(png, sharedImageName(payment)), imageNotice);
