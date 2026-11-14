@@ -108,6 +108,20 @@ jobs:
               echo "::error::$prefix-$app:$RELEASE is already published, and a release tag is never overwritten"
               exit 1
             fi
+            context_tree=$(git rev-parse "HEAD:$context")
+            if [ "$app" = backup ] || [ "$app" = postgres ]; then
+              previous_tree=
+              if docker pull -q "$prefix-$app:latest" > /dev/null 2>&1; then
+                previous_tree=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.context"}}' "$prefix-$app:latest")
+              fi
+              if [ "$context_tree" = "$previous_tree" ]; then
+                previous=$(docker inspect -f '{{index .RepoDigests 0}}' "$prefix-$app:latest")
+                echo "$previous" | grep -qxE "$prefix-$app@sha256:[0-9a-f]{64}" || { echo "::error::$prefix-$app:latest has no readable digest (got $previous)" >&2; exit 1; }
+                docker buildx imagetools create --prefer-index=false -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$previous"
+                echo "::notice::$context is unchanged since $prefix-$app:latest, so its image ${previous#*@} only gets the tags ${GITHUB_SHA::7} and $RELEASE and the server keeps its container"
+                continue
+              fi
+            fi
             docker build \
               --build-arg REVISION="${GITHUB_SHA::7}" \
               --build-arg VERSION="$RELEASE" \
@@ -115,6 +129,7 @@ jobs:
               --label org.opencontainers.image.revision="$GITHUB_SHA" \
               --label org.opencontainers.image.version="$RELEASE" \
               --label cz.novanadeje.build.inputs="$INPUTS" \
+              --label cz.novanadeje.build.context="$context_tree" \
               -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$context"
             docker push --all-tags "$prefix-$app"
           done
