@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
+import cz.novanadeje.app.shared.infrastructure.net.TimeBoundedCall;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +27,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -79,7 +79,7 @@ class AresCompanyRegistry implements CompanyRegistry {
         long deadline = System.nanoTime() + timeout.toNanos();
         requireSafeTarget(deadline);
         HttpRequest request = HttpRequest.newBuilder(base.resolve(identifier.value()))
-                .timeout(timeout)
+                .timeout(Duration.ofNanos(remaining(deadline)))
                 .header("Accept", "application/json")
                 .GET()
                 .build();
@@ -116,21 +116,25 @@ class AresCompanyRegistry implements CompanyRegistry {
     }
 
     private InetAddress[] resolveBounded(String host, long deadline) {
-        FutureTask<InetAddress[]> lookup = new FutureTask<>(() -> resolver.resolve(host));
-        Thread.ofVirtual().name("company-register-lookup").start(lookup);
         try {
-            return lookup.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            return TimeBoundedCall.within(Duration.ofNanos(remaining(deadline)), "company-register-lookup", () -> resolver.resolve(host));
         } catch (TimeoutException slow) {
-            lookup.cancel(true);
             throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
         } catch (ExecutionException failed) {
             throw new CompanyRegistryUnavailable(failed.getCause() instanceof UnknownHostException
                     ? CompanyRegistryFailure.UNKNOWN_HOST : CompanyRegistryFailure.UNREACHABLE);
         } catch (InterruptedException interrupted) {
-            lookup.cancel(true);
             Thread.currentThread().interrupt();
             throw new CompanyRegistryUnavailable(CompanyRegistryFailure.INTERRUPTED);
         }
+    }
+
+    private static long remaining(long deadline) {
+        long remaining = deadline - System.nanoTime();
+        if (remaining <= 0) {
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
+        }
+        return remaining;
     }
 
     private HttpResponse<InputStream> send(HttpRequest request) {
