@@ -1538,6 +1538,40 @@ jobs:
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::a backup without the planted objects does not restore in a test database"; cat "$backups/status/test-restore"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+      - name: The backend's whole heap fits into its 1 GB container beside what Java keeps outside it, so a full heap never gets the backend killed by the kernel
+        if: matrix.part == 'keys'
+        run: |
+          echo "Started again with its whole heap touched and no swap to spill into, the backend must start and serve without being killed: a full heap ends in Java's own error, never in a kill that leaves no log line"
+          limit=$(yq '.services.backend.deploy.resources.limits.memory' "$RUNNER_TEMP/compose.yml")
+          LIMIT="$limit" yq -i '.services.backend.environment._JAVA_OPTIONS = "-Xms0 -XX:InitialRAMPercentage=100 -XX:+AlwaysPreTouch -Xlog:gc+init" | .services.backend.memswap_limit = strenv(LIMIT)' "$RUNNER_TEMP/compose.yml"
+          docker compose up -d backend
+          state=
+          for _ in $(seq 240); do
+            state=$(docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' nfnn-backend)
+            case "$state" in
+              'false 0 healthy') break ;;
+              true*|'false '[1-9]*) break ;;
+            esac
+            sleep 1
+          done
+          [ "$state" = 'false 0 healthy' ] || { echo "::error::the backend with its whole heap touched did not stay up in its $limit container (OOM-killed, restarts, health: $state): the heap leaves too little room for what Java keeps beside it"; docker logs --tail 20 nfnn-backend 2>&1; exit 1; }
+          heap=$(docker logs nfnn-backend 2>&1 | grep -oE 'Heap (Initial|Max) Capacity: [0-9]+[KMG]' | tail -n 2 | sed 's/.*: //' | sort -u)
+          [ "$(echo "$heap" | wc -l)" = 1 ] && [ -n "$heap" ] || { echo "::error::the probe did not touch the whole heap (initial and maximum capacity differ: $heap)"; exit 1; }
+          echo "The backend holds its whole heap of $heap touched"
+          docker restart nfnn-frontend > /dev/null
+          for _ in $(seq 30); do
+            curl -fsS -o /dev/null --max-time 2 http://localhost:8089/api/content/home 2> /dev/null && break
+            sleep 1
+          done
+          for path in /api/content/home /api/content/news /api/donations/payment-details /api/donations/receipt-keys; do
+            seq 500 | xargs -P 20 -I{} curl -s -o /dev/null --max-time 30 -H 'X-Forwarded-For: 203.0.113.51' "http://localhost:8089$path" || true
+          done
+          state=$(docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}} {{.State.Health.Status}}' nfnn-backend)
+          [ "$state" = 'false 0 healthy' ] || { echo "::error::the backend with its whole heap touched was killed or restarted under 2 000 requests (OOM-killed, restarts, health: $state)"; exit 1; }
+          peak="/sys/fs/cgroup/system.slice/docker-$(docker inspect -f '{{.Id}}' nfnn-backend).scope/memory.peak"
+          [ -r "$peak" ] && echo "Peak memory of the backend's container: $(( $(cat "$peak") / 1024 / 1024 )) MiB of $limit"
+          true
+
       - name: An administrator with the second factor chooses who signs the receipts, with their receipt role, an SVG signature and a portrait, issues a receipt from the donor card, and the donor issues and reads theirs, active and then replaced after moving, while nfnn_status follows the signatory
         if: matrix.part == 'journeys'
         run: |

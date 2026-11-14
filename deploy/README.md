@@ -57,6 +57,8 @@ sudo docker exec nfnn-postgres psql -U novanadeje -d novanadeje -tA -c "select r
 
 Ukáže-li první příkaz `false []`, ZimaOS tato nastavení při instalaci zahodil; web poběží dál, jen bez tohoto omezení (napiš Claudovi).
 
+Backend má v kontejneru 1 GB paměti a Java z toho smí na data (heap) nejvýš 60 % (`-XX:MaxRAMPercentage=60` v `backend/docker-entrypoint.sh`, přijde s novou image po Uložit). Zbytek potřebuje Java sama pro sebe (280 až 370 MB). Dřív to bylo 75 %, a když se heap opravdu zaplnil, jádro backend bez jediného řádku v logu zabilo a celý web se restartoval; teď Java vrátí chybu jen u požadavku, který paměť přečerpal. V `deploy/compose.yml` zůstává `JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75`: hodnota na řádku `java` ho přebije, takže kvůli tomu není potřeba aplikaci odinstalovat a nainstalovat znovu.
+
 Do dokončení průvodce by ho mohl vyplnit kdokoli z domácí sítě; po dokončení odpovídá 409 a nastavení mění jen správce se druhým faktorem. Změní-li se `compose.yml` v repu, aplikaci přeinstaluj s novým souborem; nastavení v databázi i složka `secrets/` zůstanou.
 
 ## Přechod z env souborů
