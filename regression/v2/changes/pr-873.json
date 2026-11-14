@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.events.OperationalAlertRaisedListenerTest > Given an outage of each area, when it is raised, then the alert of the same area is recorded as opened at its moment",
+    "replacement": "operations.infrastructure.events.ImportOutageListenerTest > Given an import outage, when donations announces it, then the bank import alert is recorded as opened at its moment",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/system-overview.md, operations (Operational alerts)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.infrastructure.events.OperationalAlertRaisedListenerTest > Given a recovery, when it is raised, then the alert of its area is recorded as resolved at its moment",
+    "replacement": "operations.infrastructure.events.ImportOutageListenerTest > Given a working import, when donations announces it, then the bank import alert is recorded as resolved at its moment",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/system-overview.md, operations (Operational alerts)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given a failed backup not yet reported, when the check runs, then the problem is reported once and remembered",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given a failed backup not yet reported, when the check runs, then the problem is reported once and remembered and the backup alert is recorded as opened",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given the same problem already reported, when the check runs again, then only the open backup alert is announced and nothing is reported or saved",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given the same problem already reported, when the check runs again, then only the backup alert is recorded as opened and nothing is reported or saved",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is published once and the state cleared",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given a reported problem that has ended, when the check runs, then the recovery is published once, the state cleared and the backup alert recorded as resolved",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved",
+    "replacement": "operations.application.backup.BackupWatchServiceTest > Given healthy backups and nothing reported, when the check runs, then only the backup alert is recorded as resolved and nothing is reported or saved",
+    "reason": "PR #873 (#871, part of #621; shared kernel cleanup, Jakub 2026-11-13): OperationalAlertRaised and its Area leave the kernel; donations publishes ImportOutageChanged, recorded by ImportOutageListener, and BackupWatchService records the backup alert through OperationalAlertService directly",
+    "contract": "docs/api-contract.md, Push alerts of the administration"
+  }
+]
