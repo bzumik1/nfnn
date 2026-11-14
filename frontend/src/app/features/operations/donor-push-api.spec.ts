@@ -10,7 +10,11 @@ describe('Given the push notifications of a donor', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: DonorPushApi, useClass: DonorPushApi },
+      ],
     });
     api = TestBed.inject(DonorPushApi);
     http = TestBed.inject(HttpTestingController);

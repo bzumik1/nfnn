@@ -16,7 +16,7 @@ import {
   ServiceWorkerPush,
 } from '../../../../core/push/service-worker-push';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
-import { DonorPushDevice, DonorPushResponse } from '../../../operations/donor-push-api';
+import { DonorPushApi, DonorPushDevice, DonorPushResponse } from '../../../operations/donor-push-api';
 import { NotificationsCard } from './notifications-card';
 
 const PUSH_URL = '/api/operations/push';
@@ -140,6 +140,7 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: SERVICE_WORKER_PUSH, useFactory: () => push },
+        { provide: DonorPushApi, useClass: DonorPushApi },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);

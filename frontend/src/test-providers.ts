@@ -6,6 +6,8 @@ import { LiveUpdates } from './app/core/live/live-updates';
 import { FakeLiveUpdates } from './app/core/live/testing/live-fixtures';
 import { BankLogosApi } from './app/features/donations/bank-logos-api';
 import { FakeBankLogosApi } from './app/features/donations/testing/bank-logo-fixtures';
+import { DonorPushApi } from './app/features/operations/donor-push-api';
+import { FakeDonorPushApi } from './app/features/operations/testing/donor-push-fixtures';
 
 registerLocaleData(localeCs);
 
@@ -15,6 +17,7 @@ const testProviders: Provider[] = [
   { provide: SESSION_CHANNEL, useValue: () => null },
   { provide: LiveUpdates, useClass: FakeLiveUpdates },
   { provide: BankLogosApi, useClass: FakeBankLogosApi },
+  { provide: DonorPushApi, useClass: FakeDonorPushApi },
 ];
 
 export default testProviders;
