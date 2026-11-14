@@ -22,7 +22,7 @@ function fetchAnswering(token: (form: URLSearchParams) => Response | Promise<Res
 
 function verifier(fetch: FetchLike, clock: { now: number }): TokenExchangeVerifier {
   return new TokenExchangeVerifier(
-    new AuthorizationServerDiscovery(BACKEND, fetch),
+    new AuthorizationServerDiscovery(BACKEND, fetch, silent),
     BACKEND,
     fetch,
     silent,

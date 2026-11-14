@@ -13,7 +13,7 @@ const logger: Logger = createLogger({
   ...(config.logFile ? { file: config.logFile } : {}),
   console: (line) => console.log(line),
 });
-const discovery = new AuthorizationServerDiscovery(config.backendUrl, fetch);
+const discovery = new AuthorizationServerDiscovery(config.backendUrl, fetch, logger);
 const app = createApp({
   discovery,
   verifier: new TokenExchangeVerifier(discovery, config.backendUrl, fetch, logger),
