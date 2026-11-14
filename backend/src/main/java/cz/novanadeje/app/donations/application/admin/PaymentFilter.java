@@ -40,16 +40,30 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         return new PaymentFilter(null, null, null, null, 0, null);
     }
 
-    boolean matches(AdminPaymentView view) {
-        BankPayment payment = view.payment();
-        if (from != null && payment.bookedOn().isBefore(from) || to != null && payment.bookedOn().isAfter(to)) {
-            return false;
+    Match match() {
+        return new Match(this, text == null ? Optional.empty() : amountMinor(text));
+    }
+
+    <T> List<T> page(List<T> matching) {
+        Stream<T> skipped = matching.stream().skip(offset);
+        return (limit == null ? skipped : skipped.limit(limit)).toList();
+    }
+
+    record Match(PaymentFilter filter, Optional<Long> textAmountMinor) {
+
+        boolean test(BankPayment payment, Optional<PairedDonationView> donation, boolean payerWithheld) {
+            LocalDate from = filter.from();
+            LocalDate to = filter.to();
+            if (from != null && payment.bookedOn().isBefore(from) || to != null && payment.bookedOn().isAfter(to)) {
+                return false;
+            }
+            if (filter.donor() != null && donation.filter(paired -> paired.donation().donor().equals(filter.donor())).isEmpty()) {
+                return false;
+            }
+            String text = filter.text();
+            return text == null || searchable(payment, donation, payerWithheld).anyMatch(value -> plain(value).contains(text))
+                    || textAmountMinor.filter(amount -> amount == payment.amount().amountMinor()).isPresent();
         }
-        if (donor != null && view.donation().filter(paired -> paired.donation().donor().equals(donor)).isEmpty()) {
-            return false;
-        }
-        return text == null || searchable(view).anyMatch(value -> plain(value).contains(text))
-                || amountMinor(text).filter(amount -> amount == payment.amount().amountMinor()).isPresent();
     }
 
     LocalDate firstDayNotBefore(LocalDate earliest) {
@@ -60,20 +74,14 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
         return to != null && to.isBefore(latest) ? to : latest;
     }
 
-    List<AdminPaymentView> page(List<AdminPaymentView> matching) {
-        Stream<AdminPaymentView> skipped = matching.stream().skip(offset);
-        return (limit == null ? skipped : skipped.limit(limit)).toList();
-    }
-
-    private static Stream<String> searchable(AdminPaymentView view) {
-        BankPayment payment = view.payment();
+    private static Stream<String> searchable(BankPayment payment, Optional<PairedDonationView> donation, boolean payerWithheld) {
         Optional<String> account = payment.payerAccount();
-        if (view.payerWithheld()) {
+        if (payerWithheld) {
             return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(),
-                    view.donation().map(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
+                    donation.map(PairedDonationView::donor).map(DonorRecord::name)).flatMap(Optional::stream);
         }
         return Stream.of(Optional.of(String.valueOf(payment.transactionId().value())), payment.variableSymbol(), account, payment.counterpartyName(),
-                        payment.messageForRecipient(), view.donation().map(PairedDonationView::donor).map(DonorRecord::name))
+                        payment.messageForRecipient(), donation.map(PairedDonationView::donor).map(DonorRecord::name))
                 .flatMap(Optional::stream);
     }
 
