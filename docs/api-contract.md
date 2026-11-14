@@ -1858,14 +1858,14 @@ Events consumed by another context live in `shared/application/event/` and carry
 Shapes of the shared events:
 
 ```java
-record DonorRegistered(UUID donorId, DonorType type, String name, Optional<String> companyIdentifier, PostalAddress address,
+record DonorRegistered(UUID donorId, DonorType type, DonorName name, Optional<CompanyIdentifier> companyIdentifier, PostalAddress address,
                        EmailAddress email, VariableSymbol variableSymbol, LocaleCode preferredLocale, Instant registeredAt)
-record DonorProfileChanged(UUID donorId, String name, PostalAddress address, LocaleCode preferredLocale)
+record DonorProfileChanged(UUID donorId, DonorName name, PostalAddress address, LocaleCode preferredLocale)
 record DonorErased(UUID donorId, Instant erasedAt)
 record SecondFactorRecoveryPaid(UUID donorId, SecondFactorRecoveryCode code, String senderAccount, Instant at)
 ```
 
-The donor id travels as a `UUID` and the IČO as a `String`, because `DonorId` and `CompanyIdentifier` stay in `donors`; `preferredLocale` is on both events because the PDF receipt is rendered in it.
+The donor id travels as a `UUID`, because `DonorId` stays in `donors`; the name and the IČO travel as the shared value objects `DonorName` and `CompanyIdentifier` (`shared/domain`), so the donations copy keeps no rule of its own for them; `preferredLocale` is on both events because the PDF receipt is rendered in it.
 
 Side effects belong to the publishing context, unless another context owns a real reaction in its own model.
 
