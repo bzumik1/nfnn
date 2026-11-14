@@ -7,9 +7,10 @@ import cz.novanadeje.app.operations.domain.settings.SettingError;
 import cz.novanadeje.app.operations.domain.settings.SettingProblem;
 import cz.novanadeje.app.operations.domain.settings.SettingsRejected;
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
+import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.application.notification.AccountEmails;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
 import org.junit.jupiter.api.DisplayName;
@@ -196,7 +197,7 @@ class SettingsServiceTest {
         when(current.effectiveValue(Setting.MAIL_USERNAME)).thenReturn(Optional.of("user"));
         when(current.effectiveValue(Setting.MAIL_STARTTLS)).thenReturn(Optional.of("true"));
         when(current.effectiveValue(Setting.MAIL_PASSWORD)).thenReturn(Optional.of("running-key"));
-        when(accountEmails.emailOf(ADMIN)).thenReturn(Optional.of("jana@example.cz"));
+        when(accountEmails.emailOf(ADMIN)).thenReturn(Optional.of(new EmailAddress("jana@example.cz")));
     }
 
     @Test

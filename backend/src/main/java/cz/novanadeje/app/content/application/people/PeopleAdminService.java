@@ -17,7 +17,7 @@ import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.ReceiptSignatoryNameInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.content.domain.people.TooManyPeople;
-import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
+import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
@@ -51,11 +51,11 @@ public class PeopleAdminService {
     private final MediaImageRepository media;
     private final ReceiptSignatoryLookup signatories;
     private final ApplicationEventPublisher events;
-    private final VerifiedAccountEmails accounts;
+    private final AccountEmails accounts;
     private final Clock clock;
 
     public PeopleAdminService(PersonRepository people, MediaImageRepository media, ReceiptSignatoryLookup signatories,
-                              ApplicationEventPublisher events, VerifiedAccountEmails accounts, Clock clock) {
+                              ApplicationEventPublisher events, AccountEmails accounts, Clock clock) {
         this.people = people;
         this.media = media;
         this.signatories = signatories;

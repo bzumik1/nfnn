@@ -5,7 +5,8 @@ import cz.novanadeje.app.operations.application.event.BackupRecovered;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
-import cz.novanadeje.app.shared.application.notification.AlertRecipients;
+import cz.novanadeje.app.shared.application.alert.AlertRecipients;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BackupAlertEmailSenderTest {
 
     private static final Instant CHECKED_AT = Instant.parse("2026-10-23T10:00:00Z");
-    private static final AlertRecipients RECIPIENTS = () -> List.of("info@nfnn.cz");
+    private static final AlertRecipients RECIPIENTS = () -> List.of(new EmailAddress("info@nfnn.cz"));
     private static final BackupRun FAILED_BACKUP = run(RunOutcome.FAILED, Instant.parse("2026-10-23T01:00:01Z"), Optional.of("nfnn-2026-10-23_0300.dump.age"),
             Optional.empty(), Optional.empty(), Optional.of("pg_dump: error: connection to server failed"));
     private static final BackupRun FAILED_TEST_RESTORE = run(RunOutcome.FAILED, Instant.parse("2026-10-18T02:10:00Z"),

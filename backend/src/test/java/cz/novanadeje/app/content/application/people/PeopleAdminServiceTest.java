@@ -16,7 +16,7 @@ import cz.novanadeje.app.content.domain.people.PersonSignsReceipts;
 import cz.novanadeje.app.content.domain.people.ReceiptPortraitInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.ReceiptSignatoryNameInBrowserOnly;
 import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
-import cz.novanadeje.app.shared.application.account.VerifiedAccountEmails;
+import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
 import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
@@ -72,7 +72,7 @@ class PeopleAdminServiceTest {
     @Mock
     private ApplicationEventPublisher events;
     @Mock
-    private VerifiedAccountEmails accounts;
+    private AccountEmails accounts;
     @Mock
     private ReceiptSignatoryLookup signatories;
 
