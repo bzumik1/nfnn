@@ -190,7 +190,10 @@
   max-width: 560px;
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
-  color: var(--color-text-muted);
+
+  &:not(.ui-callout) {
+    color: var(--color-text-muted);
+  }
 
   strong {
     color: var(--color-text);
@@ -202,7 +205,6 @@
   align-items: flex-start;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--text-sm);
 }
 
 .account-hint-icon {
