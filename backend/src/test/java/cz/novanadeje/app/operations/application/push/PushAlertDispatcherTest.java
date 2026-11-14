@@ -14,7 +14,9 @@ import cz.novanadeje.app.operations.domain.push.PushKeyRepository;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
+import cz.novanadeje.app.operations.domain.push.PushRecipient;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
+import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,13 +53,15 @@ class PushAlertDispatcherTest {
     private final Map<PushEndpoint, PushOutcome> outcomes = new ConcurrentHashMap<>();
     private final List<Delivered> delivered = new ArrayList<>();
     private final RecordingRetryTimer timer = new RecordingRetryTimer();
-    private final PushSender sender = new PushSender((subscription, message, keys) -> {
-        synchronized (delivered) {
-            delivered.add(new Delivered(subscription.endpoint(), message));
+    private final PushSender sender = new PushSender((recipients, message, keys, pace) -> {
+        Map<PushSubscriptionId, PushOutcome> sent = new LinkedHashMap<>();
+        for (PushRecipient recipient : recipients) {
+            delivered.add(new Delivered(recipient.endpoint(), message));
+            sent.put(recipient.id(), outcomes.getOrDefault(recipient.endpoint(), PushOutcome.DELIVERED));
         }
-        return outcomes.getOrDefault(subscription.endpoint(), PushOutcome.DELIVERED);
+        return sent;
     }, new PushKeyService(new StoredKey(), subscriptions, new InMemoryDonorPushSubscriptions(), new ReversibleSealer(), () -> KEYS, mock(CarriedSettingsKeyService.class), CLOCK),
-            subscriptions, new TransactionTemplate(mock(PlatformTransactionManager.class)), CLOCK);
+            subscriptions, new InMemoryDonorPushSubscriptions(), new TransactionTemplate(mock(PlatformTransactionManager.class)), CLOCK);
     private final PushAlertDispatcher dispatcher = new PushAlertDispatcher(sender, subscriptions, alerts, timer, CLOCK);
 
     @Test
@@ -93,6 +98,7 @@ class PushAlertDispatcherTest {
         OperationalAlertChanged changed = opened(MonitoredArea.BACKUPS);
 
         dispatcher.on(changed);
+        assertThat(timer.scheduled()).extracting(RecordingRetryTimer.Scheduled::pace).containsExactly(PushPace.AT_ONCE);
         assertThat(timer.scheduled()).extracting(RecordingRetryTimer.Scheduled::when).containsExactly(NOW.plus(Duration.ofMinutes(1)));
         timer.fireNext();
         assertThat(timer.scheduled()).extracting(RecordingRetryTimer.Scheduled::when).containsExactly(NOW.plus(Duration.ofMinutes(5)));

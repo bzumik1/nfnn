@@ -97,7 +97,8 @@ public class PushSubscriptionService {
     }
 
     public PushDeliveryReport sendTest(UUID administratorId) {
-        return sender.send(subscriptions.findAllOf(administratorId), new PushMessage(PushMessageKind.TEST, Math.min(alerts.open().size(), PushMessage.MAX_COUNT)));
+        return sender.toAdministrators(subscriptions.findAllOf(administratorId),
+                new PushMessage(PushMessageKind.TEST, Math.min(alerts.open().size(), PushMessage.MAX_COUNT))).report();
     }
 
     private PushSubscription ownedBy(UUID administratorId, PushSubscriptionId id) {

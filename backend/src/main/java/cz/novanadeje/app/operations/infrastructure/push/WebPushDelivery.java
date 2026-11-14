@@ -1,6 +1,5 @@
 package cz.novanadeje.app.operations.infrastructure.push;
 
-import cz.novanadeje.app.operations.application.push.PushDelivery;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.PushRecipient;
@@ -14,7 +13,7 @@ import java.time.Duration;
 import java.util.Map;
 
 @Component
-class WebPushDelivery implements PushDelivery {
+class WebPushDelivery implements DeviceDelivery {
 
     static final Duration TIME_TO_LIVE = Duration.ofDays(1);
     static final int PADDED_MESSAGE_BYTES = 1024;

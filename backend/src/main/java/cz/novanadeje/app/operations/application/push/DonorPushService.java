@@ -27,12 +27,12 @@ public class DonorPushService {
 
     private final DonorPushSubscriptionRepository subscriptions;
     private final PushKeyService keys;
-    private final DonorPushSender sender;
+    private final PushSender sender;
     private final SignedInDevices devices;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
-    public DonorPushService(DonorPushSubscriptionRepository subscriptions, PushKeyService keys, DonorPushSender sender, SignedInDevices devices,
+    public DonorPushService(DonorPushSubscriptionRepository subscriptions, PushKeyService keys, PushSender sender, SignedInDevices devices,
                             TransactionTemplate transactions, Clock clock) {
         this.subscriptions = subscriptions;
         this.keys = keys;
@@ -84,6 +84,6 @@ public class DonorPushService {
     public PushDeliveryReport sendTest(UUID donorId, UUID deviceId) {
         DonorPushSubscription subscription = transactions.execute(status -> subscriptions.findOfDevice(donorId, deviceId))
                 .orElseThrow(PushSubscriptionNotFound::new);
-        return sender.send(List.of(subscription), TEST).report();
+        return sender.toDonors(List.of(subscription), TEST).report();
     }
 }

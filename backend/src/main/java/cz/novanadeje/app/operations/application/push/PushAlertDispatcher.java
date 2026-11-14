@@ -60,12 +60,12 @@ public class PushAlertDispatcher {
             if (recipients.isEmpty()) {
                 return;
             }
-            PushAttempt sent = sender.attempt(recipients, new PushMessage(kind, changed.openCount()));
+            PushAttempt sent = sender.toAdministrators(recipients, new PushMessage(kind, changed.openCount()));
             log.info("Push alert {} attempt {}: {} delivered, {} failed, {} removed", kind, attempt, sent.report().delivered(),
                     sent.report().failed(), sent.report().removed());
             if (!sent.failed().isEmpty() && attempt <= RETRY_DELAYS.size()) {
                 Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), () -> attempt(changed, attempt + 1, Optional.of(failed)));
+                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), PushPace.AT_ONCE, () -> attempt(changed, attempt + 1, Optional.of(failed)));
             }
         } catch (RuntimeException failure) {
             log.warn("Push alert {} attempt {} could not be sent: {}", kind, attempt, failure.getClass().getSimpleName());

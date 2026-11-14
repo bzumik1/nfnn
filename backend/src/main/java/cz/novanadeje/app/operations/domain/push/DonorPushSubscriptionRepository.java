@@ -1,12 +1,11 @@
 package cz.novanadeje.app.operations.domain.push;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DonorPushSubscriptionRepository {
+public interface DonorPushSubscriptionRepository extends PushRecipientRepository {
 
     Optional<DonorPushSubscription> findOfDevice(UUID donorId, UUID deviceId);
 
@@ -23,12 +22,6 @@ public interface DonorPushSubscriptionRepository {
     void save(DonorPushSubscription subscription);
 
     boolean changeNotifications(UUID donorId, UUID deviceId, DonorNotifications notifications);
-
-    void markDelivered(PushSubscriptionId id, Instant at);
-
-    Optional<Integer> markFailed(PushSubscriptionId id);
-
-    void delete(PushSubscriptionId id);
 
     int deleteAllOfDevice(UUID deviceId);
 

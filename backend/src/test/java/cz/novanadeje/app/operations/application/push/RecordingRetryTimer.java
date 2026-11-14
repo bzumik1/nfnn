@@ -6,14 +6,14 @@ import java.util.List;
 
 class RecordingRetryTimer implements PushRetryTimer {
 
-    record Scheduled(Instant when, Runnable task) {
+    record Scheduled(Instant when, PushPace pace, Runnable task) {
     }
 
     private final List<Scheduled> scheduled = new ArrayList<>();
 
     @Override
-    public void at(Instant when, Runnable task) {
-        scheduled.add(new Scheduled(when, task));
+    public void at(Instant when, PushPace pace, Runnable task) {
+        scheduled.add(new Scheduled(when, pace, task));
     }
 
     List<Scheduled> scheduled() {
