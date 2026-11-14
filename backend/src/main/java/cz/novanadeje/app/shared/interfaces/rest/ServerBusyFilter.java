@@ -36,16 +36,18 @@ class ServerBusyFilter extends OncePerRequestFilter {
             if (!ServerBusyHandler.isDatabaseWait(failure) || response.isCommitted()) {
                 throw failure;
             }
-            answerBusy(request, response, failure);
+            if (!answeredBusy(request, response, failure)) {
+                throw failure;
+            }
         }
     }
 
-    private void answerBusy(HttpServletRequest request, HttpServletResponse response, RuntimeException failure) {
+    private boolean answeredBusy(HttpServletRequest request, HttpServletResponse response, RuntimeException failure) {
         LocaleContext previous = LocaleContextHolder.getLocaleContext();
         LocaleContextHolder.setLocale(locales.resolveLocale(request));
         try {
             response.resetBuffer();
-            exceptionHandlers.resolveException(request, response, null, failure);
+            return exceptionHandlers.resolveException(request, response, null, failure) != null;
         } finally {
             LocaleContextHolder.setLocaleContext(previous);
         }

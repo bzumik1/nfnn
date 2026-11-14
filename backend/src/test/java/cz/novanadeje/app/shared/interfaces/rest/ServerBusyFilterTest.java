@@ -61,6 +61,16 @@ class ServerBusyFilterTest {
     }
 
     @Test
+    @DisplayName("Given exception handlers that cannot answer a database wait, when a request's wait in a filter runs out, then the original failure goes on unchanged")
+    void should_rethrow_original_failure_when_wait_runs_out_given_handlers_cannot_answer() {
+        QueryTimeoutException wait = new QueryTimeoutException("statement");
+        ServerBusyFilter unanswered = new ServerBusyFilter((request, response, handler, ex) -> null, czechByDefault());
+
+        assertThatThrownBy(() -> unanswered.doFilter(new MockHttpServletRequest("GET", "/api/content/home"), new MockHttpServletResponse(), failingWith(wait)))
+                .isSameAs(wait);
+    }
+
+    @Test
     @DisplayName("Given a client without Accept-Language, when its database wait in a filter runs out, then the handlers answer in the site's locale")
     void should_resolve_in_site_locale_when_wait_runs_out_given_no_accept_language() throws Exception {
         filter.doFilter(new MockHttpServletRequest("GET", "/api/content/home"), new MockHttpServletResponse(),
