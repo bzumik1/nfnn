@@ -2,6 +2,12 @@ import { Locator, Page } from '@playwright/test';
 import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
+  donorWithDonations,
+  mockAdministration,
+  PETR_DETAIL_PATH,
+  rememberedSession,
+} from './baseline/screen-mocks';
+import {
   administrator,
   bankAccountItem,
   donationItem,
@@ -645,4 +651,98 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       );
     expect(overflowing).toEqual([]);
   });
+});
+
+async function wordsBrokenInside(element: Locator): Promise<string[]> {
+  return element.evaluate((root) => {
+    const broken: string[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      for (const word of (node.textContent ?? '').matchAll(/[^\s-]+-?/g)) {
+        const range = document.createRange();
+        range.setStart(node, word.index);
+        range.setEnd(node, word.index + word[0].length);
+        const tops = new Set(
+          Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+        );
+        if (tops.size > 1) {
+          broken.push(word[0]);
+        }
+      }
+    }
+    return broken;
+  });
+}
+
+test.describe('Given an administrator on a phone 320 pt wide with the text at 200 % on a page of cards', () => {
+  test.use({ viewport: { width: 320, height: 568 } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = 'html { font-size: 200%; }';
+        document.head.append(style);
+      });
+    });
+    await mockDonorApi(page, donorWithDonations);
+    await mockAdministration(page);
+    await rememberedSession(page);
+  });
+
+  for (const { path, heading, cards } of [
+    { path: '/sprava/upozorneni', heading: 'Upozornění', cards: 'main' },
+    { path: '/sprava/zalohy/historie', heading: 'Všechny zálohy', cards: 'main' },
+    { path: '/sprava/prehledy/2026-09', heading: 'Přehled za září 2026', cards: 'main' },
+    { path: PETR_DETAIL_PATH, heading: 'Petr Svoboda', cards: 'main nav.card-rows' },
+  ]) {
+    test(`when they open ${path}, then every card title and row breaks only between words or after a hyphen and no card reaches past the screen`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      const scope = page.locator(cards);
+      const texts = scope.locator(
+        ':is(.ui-card__title, .ui-card__subtitle, .ui-list__title, .ui-list__meta, .ui-list__value)',
+      );
+      await expect(texts.first()).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const text of await texts.all()) {
+        expect(await wordsBrokenInside(text)).toEqual([]);
+      }
+      expect(await scope.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(
+        await scope.evaluate((element) => element.clientWidth),
+      );
+      expect(
+        await scope.evaluate((element) => Math.round(element.getBoundingClientRect().right)),
+      ).toBeLessThanOrEqual(320);
+      const overflowing = await scope
+        .locator('.ui-list__row > .ui-list__value')
+        .evaluateAll((values) =>
+          values
+            .filter((value) => {
+              const row = value.parentElement!;
+              const content =
+                row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight);
+              return value.getBoundingClientRect().right > content + 0.5;
+            })
+            .map((value) => value.textContent?.trim() || value.getAttribute('role')),
+        );
+      expect(overflowing).toEqual([]);
+      const switchesUnderTheirText = await scope
+        .locator('.ui-list__row > .ui-switch')
+        .evaluateAll((switches) =>
+          switches
+            .filter((control) => {
+              const title = control.parentElement!.querySelector('.ui-list__title')!;
+              return (
+                control.getBoundingClientRect().left < title.getBoundingClientRect().right - 0.5
+              );
+            })
+            .map((control) => control.getAttribute('aria-describedby')),
+        );
+      expect(switchesUnderTheirText).toEqual([]);
+    });
+  }
 });

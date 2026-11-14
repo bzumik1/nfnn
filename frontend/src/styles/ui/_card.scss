@@ -91,6 +91,22 @@
   color: var(--color-text-soft);
 }
 
+.ui-card__group + .ui-card__group {
+  border-top: 1px solid var(--color-separator);
+}
+
+.ui-card__bar + .ui-card__footer {
+  border-top: 0;
+}
+
+.ui-card__footer--status {
+  color: var(--color-success);
+}
+
+.ui-card__footer--alert {
+  color: var(--color-danger);
+}
+
 .ui-data-list {
   dt {
     font-size: var(--text-xs);

@@ -48,42 +48,45 @@
         Co v přehledu stálo, když odešel e-mailem. Nejnovější odeslání je nahoře.
       </p>
       @for (block of blocks(); track block.key; let index = $index) {
-        <section class="delivery" [attr.aria-labelledby]="'delivery-' + index">
-          <h2 class="delivery-title" [id]="'delivery-' + index">{{ block.heading }}</h2>
-          @if (block.meta; as meta) {
-            <p class="delivery-meta">{{ meta }}</p>
-          }
-          @if (block.recomputed) {
-            <p
-              class="ui-callout ui-callout--warning recomputed-note"
-              i18n="@@admin.sentReport.recomputed"
-            >
-              Spočteno z dnešních dat, odeslaný e-mail se mohl lišit. Web tehdy ještě neukládal, co
-              přesně odešlo, proto chybí i stav stahování z banky.
-            </p>
-          }
-          <div class="ui-groups">
-            @for (group of block.groups; track group.title; let groupIndex = $index) {
-              <section [attr.aria-labelledby]="'delivery-' + index + '-group-' + groupIndex">
-                <h3 class="ui-group-title" [id]="'delivery-' + index + '-group-' + groupIndex">
-                  {{ group.title }}
-                </h3>
-                <ul class="ui-list ui-list--inset">
-                  @for (row of group.rows; track row.title) {
-                    <li>
-                      <div class="ui-list__row">
-                        <span class="ui-list__title">{{ row.title }}</span>
-                        @if (row.meta; as meta) {
-                          <span class="ui-list__meta">{{ meta }}</span>
-                        }
-                        <span class="ui-list__value">{{ row.value }}</span>
-                      </div>
-                    </li>
-                  }
-                </ul>
-              </section>
+        <section class="ui-card delivery" [attr.aria-labelledby]="'delivery-' + index">
+          <div class="ui-card__bar">
+            <h2 class="ui-card__title" [id]="'delivery-' + index">{{ block.heading }}</h2>
+            @if (block.meta; as meta) {
+              <p class="ui-card__intro delivery-meta">{{ meta }}</p>
+            }
+            @if (block.recomputed) {
+              <p
+                class="ui-callout ui-callout--warning recomputed-note"
+                i18n="@@admin.sentReport.recomputed"
+              >
+                Spočteno z dnešních dat, odeslaný e-mail se mohl lišit. Web tehdy ještě neukládal,
+                co přesně odešlo, proto chybí i stav stahování z banky.
+              </p>
             }
           </div>
+          @for (group of block.groups; track group.title; let groupIndex = $index) {
+            <section
+              class="ui-card__group"
+              [attr.aria-labelledby]="'delivery-' + index + '-group-' + groupIndex"
+            >
+              <h3 class="ui-card__subtitle" [id]="'delivery-' + index + '-group-' + groupIndex">
+                {{ group.title }}
+              </h3>
+              <ul class="ui-list">
+                @for (row of group.rows; track row.title) {
+                  <li>
+                    <div class="ui-list__row">
+                      <span class="ui-list__title">{{ row.title }}</span>
+                      @if (row.meta; as meta) {
+                        <span class="ui-list__meta">{{ meta }}</span>
+                      }
+                      <span class="ui-list__value">{{ row.value }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
         </section>
       }
     }

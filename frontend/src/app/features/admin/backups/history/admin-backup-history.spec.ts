@@ -117,6 +117,22 @@ describe('Given an administrator on the history of backups', () => {
     expect(texts('button.ui-list__row .ui-list__value')).toEqual(['2 kB', '8,3 MB', '2 kB']);
   });
 
+  it('when the backups arrive, then each day is a card that holds its heading over plain rows of its backups', async () => {
+    await respond(backupsView({ backups: BACKUPS }));
+
+    const days: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('section[aria-labelledby]'),
+    );
+    expect(days.map((day) => day.querySelectorAll('button.ui-list__row').length)).toEqual([1, 2]);
+    for (const day of days) {
+      const heading = day.querySelector(`#${day.getAttribute('aria-labelledby')}`);
+      expect(day.classList).toContain('ui-card');
+      expect(heading?.tagName).toBe('H2');
+      expect(heading?.classList).toContain('ui-card__title');
+      expect(day.querySelector('.ui-list--inset')).toBeNull();
+    }
+  });
+
   it('when there is no backup yet, then the page says so', async () => {
     await respond(backupsView({ backups: [] }));
 

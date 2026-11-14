@@ -1,5 +1,3 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: block;
 }
@@ -8,33 +6,24 @@
   max-width: 900px;
 }
 
-.watched {
-  container: alerts-watched / inline-size;
-}
+.device-lead {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
 
-@include bp.container-down(alerts-watched, tabs) {
-  .watched .ui-list__row {
-    grid-template-areas:
-      'title chevron'
-      'meta chevron'
-      'value chevron';
-    grid-template-columns: minmax(0, 1fr) auto;
-
-    > .ui-list__title,
-    > .ui-list__meta {
-      grid-column: auto;
-    }
+  > .ui-callout {
+    margin-top: 0;
   }
 
-  .watched .ui-list__value {
-    justify-self: start;
-    margin-inline-start: 0;
+  > .ui-button {
+    max-width: 100%;
+    white-space: normal;
   }
 }
 
-.again,
-.turn-off {
-  margin-top: var(--space-5);
+.others-none {
+  padding-top: var(--space-5);
 }
 
 .other-switches {
