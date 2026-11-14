@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { MANAGED_LABELS, REBASE_LABEL, decide, sizeLabelOf, sweep, syncLabels, syncSizeLabel } from './pr-labels.mjs';
+import { MANAGED_LABELS, REBASE_LABEL, clearSettledRebase, decide, sizeLabelOf, sweep, syncLabels, syncSizeLabel } from './pr-labels.mjs';
 
 const NOW = Date.parse('2026-11-12T12:00:00Z');
 const quiet = { info() {}, notice() {}, warning() {} };
@@ -14,12 +14,14 @@ const openPr = ({ number = 7, labels = [], mergeable = 'CONFLICTING' } = {}) => 
   labels: { nodes: labels.map((name) => ({ name })) },
 });
 
-const fakeGithub = ({ pages = [[]], labelsOnIssue = [], existingLabels = {}, prFiles = [] } = {}) => {
+const fakeGithub = ({ pages = [[]], labelsOnIssue = [], existingLabels = {}, prFiles = [], mergeable = [true] } = {}) => {
   const writes = [];
   let listed = 0;
+  let fetched = 0;
   return {
     writes,
     listed: () => listed,
+    fetched: () => fetched,
     async graphql() {
       const nodes = pages[Math.min(listed, pages.length - 1)];
       listed += 1;
@@ -41,6 +43,11 @@ const fakeGithub = ({ pages = [[]], labelsOnIssue = [], existingLabels = {}, prF
       },
       pulls: {
         listFiles: async () => ({ data: prFiles }),
+        get: async () => {
+          const value = mergeable[Math.min(fetched, mergeable.length - 1)];
+          fetched += 1;
+          return { data: { mergeable: value } };
+        },
       },
     },
   };
@@ -83,6 +90,43 @@ describe('Given the size label of a pull request', () => {
   it('when it already matches, then nothing is written', async () => {
     const github = fakeGithub({ labelsOnIssue: ['size:XS'], prFiles: [{ filename: 'a.ts', additions: 1, deletions: 0 }] });
     await syncSizeLabel({ ...options(github), context: event });
+    assert.deepEqual(github.writes, []);
+  });
+});
+
+describe('Given a push to a pull request that carries the rebase label', () => {
+  const event = { ...context, payload: { pull_request: { number: 12 } } };
+
+  it('when GitHub finds it merges cleanly, then the label goes at once', async () => {
+    const github = fakeGithub({ labelsOnIssue: [REBASE_LABEL, 'size:S'], mergeable: [true] });
+    await clearSettledRebase({ ...options(github), context: event });
+    assert.deepEqual(github.writes, [['unlabel', 12, REBASE_LABEL]]);
+  });
+
+  it('when GitHub is still computing, then it asks again and clears the label once it merges cleanly', async () => {
+    const github = fakeGithub({ labelsOnIssue: [REBASE_LABEL], mergeable: [null, null, true] });
+    await clearSettledRebase({ ...options(github), context: event });
+    assert.equal(github.fetched(), 3);
+    assert.deepEqual(github.writes, [['unlabel', 12, REBASE_LABEL]]);
+  });
+
+  it('when it still conflicts, then the label stays', async () => {
+    const github = fakeGithub({ labelsOnIssue: [REBASE_LABEL], mergeable: [false] });
+    await clearSettledRebase({ ...options(github), context: event });
+    assert.deepEqual(github.writes, []);
+  });
+
+  it('when GitHub never settles, then it gives up after a bounded number of reads and leaves the label for the sweep', async () => {
+    const github = fakeGithub({ labelsOnIssue: [REBASE_LABEL], mergeable: [null] });
+    await clearSettledRebase({ ...options(github), context: event });
+    assert.equal(github.fetched(), 6);
+    assert.deepEqual(github.writes, []);
+  });
+
+  it('when the label is not there, then nothing is read or written', async () => {
+    const github = fakeGithub({ labelsOnIssue: ['size:S'], mergeable: [true] });
+    await clearSettledRebase({ ...options(github), context: event });
+    assert.equal(github.fetched(), 0);
     assert.deepEqual(github.writes, []);
   });
 });
