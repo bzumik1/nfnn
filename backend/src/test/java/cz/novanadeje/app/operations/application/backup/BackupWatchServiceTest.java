@@ -3,11 +3,11 @@ package cz.novanadeje.app.operations.application.backup;
 import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupHealth;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
-import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -81,6 +81,7 @@ class BackupWatchServiceTest {
 
         verify(states).save(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED, BackupProblem.TEST_RESTORE_STALE), NOW));
         verify(events).publishEvent(any(BackupProblemsDetected.class));
+        verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
     }
 
     @Test
