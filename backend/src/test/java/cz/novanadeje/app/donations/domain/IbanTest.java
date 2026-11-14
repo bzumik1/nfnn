@@ -1,4 +1,4 @@
-package cz.novanadeje.app.shared.domain;
+package cz.novanadeje.app.donations.domain;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

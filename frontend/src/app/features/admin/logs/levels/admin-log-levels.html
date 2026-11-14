@@ -28,17 +28,17 @@
       </div>
     }
     @case ('ready') {
-      <div class="ui-groups groups">
+      <div class="cards">
         @if (overrides().length > 0) {
-          <section class="overrides" aria-labelledby="levels-overrides-title">
+          <section class="ui-card overrides" aria-labelledby="levels-overrides-title">
             <h2
               id="levels-overrides-title"
-              class="ui-group-title"
+              class="ui-card__title"
               i18n="@@admin.logs.level.overrides"
             >
               Dočasně změněno
             </h2>
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               @for (entry of overrides(); track entry.logger) {
                 <li>
                   <div class="ui-list__row">
@@ -67,11 +67,11 @@
           </section>
         }
 
-        <section class="watched" aria-labelledby="levels-watched-title">
-          <h2 id="levels-watched-title" class="ui-group-title" i18n="@@admin.logs.level.watched">
+        <section class="ui-card watched" aria-labelledby="levels-watched-title">
+          <h2 id="levels-watched-title" class="ui-card__title" i18n="@@admin.logs.level.watched">
             Sledované loggery
           </h2>
-          <ul class="ui-list ui-list--inset">
+          <ul class="ui-list">
             @for (entry of loggers(); track entry.logger) {
               <li>
                 <button
@@ -118,9 +118,22 @@
                 class="ui-list__row ui-list__row--action"
                 aria-haspopup="dialog"
                 (click)="edit(null)"
-                i18n="@@admin.logs.level.other"
               >
-                Jiný logger…
+                <span class="ui-list__title" i18n="@@admin.logs.level.other">Jiný logger…</span>
+                <svg
+                  class="ui-list__chevron"
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
               </button>
             </li>
           </ul>

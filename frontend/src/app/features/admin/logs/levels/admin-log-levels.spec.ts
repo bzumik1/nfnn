@@ -78,6 +78,14 @@ describe('Given an administrator on the log levels page', () => {
     expect(page.has('.overrides')).toBe(false);
   });
 
+  it('when a level is raised, then the raised and the watched loggers are cards with their heading inside, above their rows', async () => {
+    await load(RAISED);
+
+    for (const heading of ['Dočasně změněno', 'Sledované loggery']) {
+      expect(page.cardTitled(heading).querySelector('.ui-list .ui-list__row')).not.toBeNull();
+    }
+  });
+
   it('when they tap a logger, choose a level and a time, then the level is put and the sheet closes', async () => {
     await load();
 

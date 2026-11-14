@@ -33,13 +33,13 @@
       } @else if (groups().length === 0) {
         <p class="empty" i18n="@@admin.logs.files.older.none">Starší soubory zatím nejsou.</p>
       } @else {
-        <div class="ui-groups groups">
+        <div class="cards">
           @for (group of groups(); track group.series) {
-            <section [attr.aria-labelledby]="'older-' + $index">
-              <h2 class="ui-group-title" [id]="'older-' + $index">
+            <section class="ui-card" [attr.aria-labelledby]="'older-' + $index">
+              <h2 class="ui-card__title" [id]="'older-' + $index">
                 {{ groupTitle(group.series) }}
               </h2>
-              <ul class="ui-list ui-list--inset">
+              <ul class="ui-list">
                 @for (file of group.files; track file.name) {
                   <li>
                     <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">

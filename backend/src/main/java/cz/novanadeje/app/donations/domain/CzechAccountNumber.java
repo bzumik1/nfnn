@@ -1,7 +1,5 @@
 package cz.novanadeje.app.donations.domain;
 
-import cz.novanadeje.app.shared.domain.Iban;
-
 import java.math.BigInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

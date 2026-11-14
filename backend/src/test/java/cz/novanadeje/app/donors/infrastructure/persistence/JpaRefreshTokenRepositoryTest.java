@@ -152,6 +152,21 @@ class JpaRefreshTokenRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a revoked unused token, when it is marked used, then it is refused and its use time stays empty, so a revoked token is never spent")
+    void should_refuse_to_mark_used_when_marked_given_revoked_token() {
+        RefreshTokenSecret secret = RefreshTokenSecret.generate();
+        RefreshToken token = RefreshToken.issue(secret, jana, device, NOW, TTL, false);
+        refreshTokens.save(token);
+        flushAndClear();
+        assertThat(refreshTokens.revokeIfUnused(token.id(), NOW.plusSeconds(30))).isTrue();
+        flushAndClear();
+
+        assertThat(refreshTokens.markUsed(token.id(), NOW.plusSeconds(60))).isFalse();
+
+        assertThat(refreshTokens.findBySecretHash(secret.hash()).orElseThrow().usedAt()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a token, when it is found by hash for an update, then it is the stored token")
     void should_find_the_stored_token_when_found_for_update_given_a_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();

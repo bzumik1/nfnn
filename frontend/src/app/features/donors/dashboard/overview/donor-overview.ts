@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject } from
 import { RouterLink } from '@angular/router';
 import { AdminAccessRefusal } from '../../../../core/auth/admin-access-refusal';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { splitBeforeBankCode } from '../../../donations/czech-account';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatDonationDate } from '../../../donations/donation-date';
 import { DonationStatus } from '../../../donations/donations-api';
@@ -46,6 +47,7 @@ export class DonorOverview {
   protected readonly donor = inject(AuthStore).donor;
   private readonly refusal = inject(AdminAccessRefusal);
   protected readonly adminRefusal = this.refusal.reason;
+  protected readonly accountParts = splitBeforeBankCode;
 
   protected readonly recent = computed(() =>
     this.donations.items().slice(0, RECENT_DONATIONS_SHOWN),

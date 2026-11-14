@@ -9,4 +9,9 @@ record PasskeySignInOptionsResponse(String challenge, String rpId, long timeout,
     static PasskeySignInOptionsResponse of(PasskeySignInOptions options) {
         return new PasskeySignInOptionsResponse(options.challenge(), options.relyingPartyId(), options.timeout().toMillis(), "required", List.of());
     }
+
+    @Override
+    public String toString() {
+        return "PasskeySignInOptionsResponse[challenge=***, rpId=" + rpId + ", timeout=" + timeout + "]";
+    }
 }

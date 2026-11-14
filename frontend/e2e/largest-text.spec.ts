@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
   administrator,
@@ -293,7 +294,7 @@ for (const { width, height } of [
       }
     });
 
-    test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row', async ({
+    test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice', async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -320,10 +321,75 @@ for (const { width, height } of [
       await page.setViewportSize({ width: 1280, height: 900 });
       await signIn(page);
       await page.setViewportSize({ width, height });
-      const row = page.locator('.overview-question .ui-list__row');
-      await expect(row).toContainText('Odpovědět');
+      const notice = page.locator('.overview-question');
+      await expect(notice).toContainText('Odpovědět');
 
-      await expect.poll(() => contentPastTheSides(row)).toEqual([]);
+      await expect.poll(() => contentPastTheSides(notice)).toEqual([]);
+    });
+
+    test('when a signed-in donor without a gift opens Můj přehled, then Přidat účet, ze kterého jste platili and Zkontrolovat nové platby stay whole within the card Jak poslat první dar', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const card = page.locator('section[aria-labelledby="first-gift-title"]');
+      await expect(
+        card.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }),
+      ).toBeVisible();
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        await expect.poll(() => contentPastTheSides(card), textSize).toEqual([]);
+      }
+    });
+
+    test('when a signed-in donor with gifts opens Můj přehled and Moje dary, then the card Poslední dar and the bar of Všechny dary keep the bank check and its status within them', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, {
+        summary: {
+          ...noDonations.summary,
+          totalAmountMinor: 50000,
+          count: 1,
+          lastReceivedAt: '2026-03-15',
+          byYear: [{ year: 2026, count: 1, totalAmountMinor: 50000 }],
+        },
+        list: {
+          items: [donationItem({ id: 'd-1' })],
+          totalAmountMinor: 50000,
+          currency: 'CZK',
+          count: 1,
+        },
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
+      await expect(
+        lastGift.getByRole('button', { name: 'Zkontrolovat nové platby' }),
+      ).toBeVisible();
+
+      await expect.poll(() => contentPastTheSides(lastGift), 'largest').toEqual([]);
+      const double = await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+      await expect.poll(() => contentPastTheSides(lastGift), 'double').toEqual([]);
+      await double.evaluate((style) => style.remove());
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await openDonorSection(page, 'Moje dary');
+      await page.setViewportSize({ width, height });
+      const bar = page.locator('.payments-card > .ui-card__bar');
+      await expect(bar.getByRole('button', { name: 'Zkontrolovat nové platby' })).toBeVisible();
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        await expect.poll(() => contentPastTheSides(bar), textSize).toEqual([]);
+      }
     });
 
     test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
@@ -492,4 +558,91 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       );
     });
   }
+
+  test('when they open /sprava/logy with a level raised and errors today, then every row title that is not a file name breaks only between words and the page never pans sideways', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    await page.route(
+      (url) => url.pathname === DIAGNOSTICS,
+      (route) =>
+        route.fulfill({
+          json: {
+            ...(logsApi()['diagnostics'] as object),
+            logLevelOverrides: [
+              { logger: 'cz.novanadeje.app', level: 'DEBUG', until: '2026-10-23T10:30:00Z' },
+            ],
+          },
+        }),
+    );
+    await page.goto('/sprava/logy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Úrovně logování 1 dočasně/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Fio refused the request/ })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const split = await page
+      .getByRole('main')
+      .locator('.ui-list__title:not(.problem-message, .ui-mono)')
+      .evaluateAll((lines) =>
+        lines.flatMap((line) => {
+          const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+          const broken: string[] = [];
+          for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
+            for (const word of (text.textContent ?? '').matchAll(/\S+/g)) {
+              const range = document.createRange();
+              range.setStart(text, word.index);
+              range.setEnd(text, word.index + word[0].length);
+              const tops = new Set(
+                Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+              );
+              if (tops.size > 1) {
+                broken.push(word[0]);
+              }
+            }
+          }
+          return broken;
+        }),
+      );
+    expect(split).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
+  });
+
+  test('when they open /sprava/logy/stav with long values, then every value wraps within its row and never runs into the padding of its card', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    const diagnostics = logsApi()['diagnostics'] as { database: object };
+    await page.route(
+      (url) => url.pathname === DIAGNOSTICS,
+      (route) =>
+        route.fulfill({
+          json: {
+            ...diagnostics,
+            database: { ...diagnostics.database, activeConnections: 123456789 },
+          },
+        }),
+    );
+    await page.goto('/sprava/logy/stav');
+    await expect(page.getByRole('heading', { level: 1, name: 'Stav serveru' })).toBeVisible();
+    await expect(page.getByText('123456789 v práci')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const overflowing = await page
+      .getByRole('main')
+      .locator('.ui-list__row > .ui-list__value')
+      .evaluateAll((values) =>
+        values
+          .filter((value) => {
+            const row = value.parentElement!;
+            const content =
+              row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight);
+            return value.getBoundingClientRect().right > content + 0.5;
+          })
+          .map((value) => value.textContent?.trim()),
+      );
+    expect(overflowing).toEqual([]);
+  });
 });

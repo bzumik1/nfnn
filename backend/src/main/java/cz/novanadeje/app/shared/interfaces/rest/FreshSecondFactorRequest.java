@@ -16,6 +16,11 @@ public record FreshSecondFactorRequest(@Size(max = DIGITS) @Pattern(regexp = COD
     public static final String CODE_SHAPE = "^[0-9]{" + DIGITS + "}$";
 
     public record Passkey(@NotBlank @Size(max = 43) String challenge, @NotNull @Valid Credential credential) {
+
+        @Override
+        public String toString() {
+            return "Passkey[challenge=***, credential=***]";
+        }
     }
 
     public record Credential(@NotBlank @Size(max = 1366) String id, @NotNull @Valid Response response) {
@@ -27,6 +32,11 @@ public record FreshSecondFactorRequest(@Size(max = DIGITS) @Pattern(regexp = COD
             @NotBlank @Size(max = 1024) String signature,
             @NotBlank @Size(max = 128) String userHandle
     ) {
+
+        @Override
+        public String toString() {
+            return "Response[***]";
+        }
     }
 
     public FreshSecondFactorProof toProof() {

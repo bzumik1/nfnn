@@ -19,6 +19,13 @@ public record FirstReceiptYear(Year year) {
         return !candidate.isBefore(year);
     }
 
+    public void requireYearlyReceiptFor(Year covered, LocalDate today) {
+        if (!admits(covered)) {
+            throw new ReceiptBeforeFirstYear(this);
+        }
+        ReceiptCalendar.requireCompleted(covered, today);
+    }
+
     @Override
     public String toString() {
         return year.toString();

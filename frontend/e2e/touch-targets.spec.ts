@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
+import { donationItem, mockDonorApi, noDonations, rememberedDonorSession } from './donor-session';
 import { expect, test } from './fixtures';
 
 const FINGER_PX = 44;
@@ -42,6 +43,28 @@ async function expectFingerSized(control: Locator): Promise<void> {
   await expect(control).toBeVisible();
   expect(await missedEdges(control), await control.innerText()).toEqual([]);
 }
+
+const twoGifts = {
+  summary: {
+    ...noDonations.summary,
+    totalAmountMinor: 150000,
+    count: 2,
+    lastReceivedAt: '2026-03-15',
+    byYear: [
+      { year: 2026, count: 1, totalAmountMinor: 50000 },
+      { year: 2025, count: 1, totalAmountMinor: 100000 },
+    ],
+  },
+  list: {
+    items: [
+      donationItem({ id: 'd-1' }),
+      donationItem({ id: 'd-2', receivedAt: '2025-11-02', amountMinor: 100000 }),
+    ],
+    totalAmountMinor: 150000,
+    currency: 'CZK',
+    count: 2,
+  },
+};
 
 async function articleServed(page: Page): Promise<void> {
   await page.route(
@@ -94,5 +117,29 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     await expectFingerSized(dialog.getByRole('button', { name: 'Přihlášení', exact: true }));
     await expectFingerSized(dialog.getByRole('button', { name: 'Registrace', exact: true }));
     await expectFingerSized(dialog.getByRole('button', { name: 'Zapomněli jste heslo?' }));
+  });
+
+  test('when a signed-in donor taps near the edges of Zkontrolovat nové platby and Všechny dary on Můj přehled, then a finger-sized area around each still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/prehled');
+    const main = page.getByRole('main');
+
+    await expectFingerSized(main.getByRole('button', { name: 'Zkontrolovat nové platby' }));
+    await expectFingerSized(main.getByRole('link', { name: 'Všechny dary' }));
+  });
+
+  test('when a signed-in donor taps near the edge of Zkontrolovat nové platby on Moje dary, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/dary');
+
+    await expectFingerSized(
+      page.getByRole('main').getByRole('button', { name: 'Zkontrolovat nové platby' }),
+    );
   });
 });

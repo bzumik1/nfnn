@@ -144,15 +144,16 @@ public class AuthorizationServerService {
     public OAuthTokens refresh(String presentedSecret, String presentedClientId) {
         Instant now = clock.instant();
         ClientId clientId;
-        RefreshToken token;
+        String secretHash;
         try {
             clientId = new ClientId(presentedClientId);
-            token = refreshTokens.findBySecretHash(RefreshTokenSecret.fromValue(presentedSecret).hash())
-                    .orElseThrow(() -> new InvalidGrant("unknown refresh token"));
+            secretHash = RefreshTokenSecret.fromValue(presentedSecret).hash();
         } catch (IllegalArgumentException malformed) {
             throw new InvalidGrant("the refresh token or the client is malformed");
         }
-        refreshTokens.lockSessionsOf(token.donorId());
+        DonorId donorId = refreshTokens.findDonorOfSecretHash(secretHash).orElseThrow(() -> new InvalidGrant("unknown refresh token"));
+        refreshTokens.lockSessionsOf(donorId);
+        RefreshToken token = refreshTokens.findBySecretHashForUpdate(secretHash).orElseThrow(() -> new InvalidGrant("unknown refresh token"));
         if (token.isUsed()) {
             signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
             log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
@@ -163,8 +164,7 @@ public class AuthorizationServerService {
         }
         Donor donor = donors.findById(token.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         if (!donor.isAdministrator()) {
-            token.revoke(now);
-            refreshTokens.save(token);
+            refreshTokens.revokeIfUnused(token.id(), now);
             log.info("Donor {} is no administrator any more; the connection of client {} ends", donor.id(), clientId.host());
             throw new InvalidGrant("the donor is no administrator any more");
         }

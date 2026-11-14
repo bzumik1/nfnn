@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then the last gift and the bank check are rows of one list under the heading Poslední dar",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the overview opens > then Poslední dar is one card with its heading inside, its amount, date and state, then Zkontrolovat nové platby",
+    "reason": "PR #852 (#818, part of #630; Můj přehled goes back into the donor cards, Jakub 2026-11-14): the last gift and Zkontrolovat nové platby are again a padded card with its title inside, not rows of an inset list under a group title",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 320 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 320 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice",
+    "reason": "PR #852 (#818, part of #630; Můj přehled goes back into the donor cards, Jakub 2026-11-14): the question about an account is again an amber callout, not a row, and the same check measures the callout",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 320 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row #2",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 320 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice #2",
+    "reason": "PR #852 (#818, part of #630; Můj přehled goes back into the donor cards, Jakub 2026-11-14): the question about an account is again an amber callout, not a row, and the same check measures the callout",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 375 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 375 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice",
+    "reason": "PR #852 (#818, part of #630; Můj přehled goes back into the donor cards, Jakub 2026-11-14): the question about an account is again an amber callout, not a row, and the same check measures the callout",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 375 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row #2",
+    "replacement": "e2e/largest-text.spec.ts > Given a visitor on an iPhone 375 pt wide whose installed app shows the largest accessibility text > when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice #2",
+    "reason": "PR #852 (#818, part of #630; Můj přehled goes back into the donor cards, Jakub 2026-11-14): the question about an account is again an amber callout, not a row, and the same check measures the callout",
+    "contract": "docs/frontend-overview.md"
+  }
+]

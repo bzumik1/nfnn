@@ -84,6 +84,7 @@ class JpaDonationReceiptRepositoryTest {
 
     private static final Optional<SenderAccount> ACCOUNT = Optional.of(new SenderAccount("2900233333", "2010"));
     private static final LocalDate ISSUED_ON = LocalDate.of(2026, 10, 17);
+    private static final LocalDate YEARLY_ISSUED_ON = LocalDate.of(2027, 1, 15);
     private static final Year YEAR_2025 = Year.of(2025);
     private static final Year YEAR_2026 = Year.of(2026);
     private static final ReceiptFingerprint FINGERPRINT = new ReceiptFingerprint("0123456789abcdef".repeat(4));
@@ -947,7 +948,7 @@ class JpaDonationReceiptRepositoryTest {
 
     private static ReceiptDocument yearlyDocument(Year year, String number, Optional<ReplacedReceipt> replaces) {
         Money amount = Money.czk(50000);
-        return new ReceiptDocument(ReceiptKind.YEARLY, new ReceiptNumber(number), ISSUED_ON, LocaleCode.CS, FOUNDATION, JANA_PARTY,
+        return new ReceiptDocument(ReceiptKind.YEARLY, new ReceiptNumber(number), YEARLY_ISSUED_ON, LocaleCode.CS, FOUNDATION, JANA_PARTY,
                 List.of(new ReceiptLine(DonationId.newId(NOW), year.atDay(1), amount, DonationSource.BANK_TRANSFER)), amount, Optional.of(year),
                 SIGNATORY, replaces);
     }

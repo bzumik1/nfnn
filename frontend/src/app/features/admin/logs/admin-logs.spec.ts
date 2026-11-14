@@ -93,6 +93,14 @@ describe('Given an administrator on the logs hub', () => {
     ]);
   });
 
+  it('when the hub opens, then each block is a card with its heading inside, above its rows', async () => {
+    await load();
+
+    for (const heading of ['Stav serveru', 'Varování a chyby dnes', 'Soubory logu', 'Nástroje']) {
+      expect(page.cardTitled(heading).querySelector('.ui-list .ui-list__row')).not.toBeNull();
+    }
+  });
+
   it('when warnings and errors were written today, then the card counts each message once, leads to its surroundings and to all of them', async () => {
     const at = (time: string, level: string, logger: string, message: string) =>
       `2026-10-23T${time}.000+02:00 ${level.padStart(5)} 1 --- [nova-nadeje] [scheduling-1] ${logger} : ${message}`;

@@ -86,6 +86,13 @@ describe('Given an administrator reading a log file', () => {
     expect(page.element('.ui-segmented button').getAttribute('aria-checked')).toBe('true');
   });
 
+  it('when the reader opens, then each day is a card with its date inside, above its entries', async () => {
+    await openTail();
+
+    expect(page.cardTitled('10. 11. 2026').querySelectorAll('.ui-list .entry')).toHaveLength(2);
+    expect(page.cardTitled('9. 11. 2026').querySelectorAll('.ui-list .entry')).toHaveLength(1);
+  });
+
   it('when the reader opens at a line, then the window around it loads and its entry takes the focus', async () => {
     page = await LogPageHarness.open(
       `/sprava/logy/soubor?nazev=backend.log&od=${FAILED_AT}`,

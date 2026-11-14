@@ -12,6 +12,12 @@ public final class ReceiptCalendar {
         return year.getValue() < today.getYear();
     }
 
+    public static void requireCompleted(Year year, LocalDate today) {
+        if (!isCompleted(year, today)) {
+            throw new YearNotYetCompleted(year);
+        }
+    }
+
     public static Year lastCompleted(LocalDate today) {
         return Year.of(today.getYear() - 1);
     }

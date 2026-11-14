@@ -148,20 +148,23 @@
           }
         </p>
       } @else {
-        <div class="ui-groups days">
+        <div class="days">
           @for (day of days(); track day.day + $index) {
-            <section [attr.aria-labelledby]="day.title ? 'log-day-' + $index : null">
+            <section
+              class="ui-card"
+              [attr.aria-labelledby]="day.title ? 'log-day-' + $index : null"
+            >
               @if (day.title) {
-                <h2 class="ui-group-title day-title" [id]="'log-day-' + $index">
+                <h2 class="ui-card__title day-title" [id]="'log-day-' + $index">
                   {{ day.title }}
                 </h2>
               }
-              <ul class="ui-list ui-list--inset">
+              <ul class="ui-list">
                 @for (entry of day.entries; track entry.offset) {
                   <li>
                     <button
                       type="button"
-                      class="entry"
+                      class="ui-list__row entry"
                       [class.level-error]="entry.level === 'ERROR'"
                       [class.level-warn]="entry.level === 'WARN'"
                       [class.level-quiet]="entry.level === 'DEBUG' || entry.level === 'TRACE'"

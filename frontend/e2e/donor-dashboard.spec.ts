@@ -72,7 +72,7 @@ test.describe('Given a signed-in donor', () => {
 
     await expect(
       page.locator('.last-gift').locator('.last-gift-amount, .last-gift-date, .last-gift-status'),
-    ).toHaveText(['15. 3. 2026', 'Přijato', '500 Kč']);
+    ).toHaveText(['500 Kč', '15. 3. 2026', 'Přijato']);
     await expect(page.locator('.stat-value')).toHaveText(['1 750 Kč', '3', '1 500 Kč']);
     await expect(page.locator('.recent-card tbody tr')).toHaveCount(4);
 

@@ -23,13 +23,15 @@
     }
     @case ('ready') {
       @if (diagnostics(); as diagnostics) {
-        <div class="ui-groups groups">
+        <div class="cards">
           @if (health(); as health) {
-            <section class="verdict" aria-labelledby="state-verdict-title">
-              <ul class="ui-list ui-list--inset">
+            <section class="ui-card verdict" aria-labelledby="state-verdict-title">
+              <ul class="ui-list">
                 <li>
                   <div class="ui-list__row">
-                    <span class="ui-list__lead"><app-health-icon [kind]="health.kind" /></span>
+                    <span class="ui-list__lead ui-list__glyph"
+                      ><app-health-icon [kind]="health.kind"
+                    /></span>
                     <h2 id="state-verdict-title" class="ui-list__title">
                       {{ verdict(health.kind) }}
                     </h2>
@@ -46,7 +48,7 @@
                   </div>
                 </li>
               </ul>
-              <div class="refresh">
+              <div class="ui-card__body refresh">
                 <button
                   appNeedsConnection
                   type="button"
@@ -77,15 +79,15 @@
             </section>
           }
 
-          <section class="application" aria-labelledby="state-application-title">
+          <section class="ui-card application" aria-labelledby="state-application-title">
             <h2
               id="state-application-title"
-              class="ui-group-title"
+              class="ui-card__title"
               i18n="@@admin.logs.state.application"
             >
               Aplikace
             </h2>
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               @if (release(); as release) {
                 <li id="vydani" class="release" tabindex="-1">
                   <div class="ui-list__row">
@@ -183,15 +185,15 @@
             </ul>
           </section>
 
-          <section class="database" aria-labelledby="state-database-title">
+          <section class="ui-card database" aria-labelledby="state-database-title">
             <h2
               id="state-database-title"
-              class="ui-group-title"
+              class="ui-card__title"
               i18n="@@admin.logs.diagnostics.database"
             >
               Databáze
             </h2>
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               <li>
                 <div class="ui-list__row">
                   <span class="ui-list__title" i18n="@@admin.logs.state.database.answers"
@@ -236,11 +238,11 @@
             </ul>
           </section>
 
-          <section class="disks" aria-labelledby="state-disks-title">
-            <h2 id="state-disks-title" class="ui-group-title" i18n="@@admin.logs.diagnostics.disks">
+          <section class="ui-card disks" aria-labelledby="state-disks-title">
+            <h2 id="state-disks-title" class="ui-card__title" i18n="@@admin.logs.diagnostics.disks">
               Složky
             </h2>
-            <ul class="ui-list ui-list--inset">
+            <ul class="ui-list">
               @for (disk of diagnostics.disks; track disk.path) {
                 <li>
                   <div class="ui-list__row">
@@ -264,15 +266,15 @@
           </section>
 
           @if (diagnostics.logLevelOverrides.length > 0) {
-            <section class="overrides" aria-labelledby="state-overrides-title">
+            <section class="ui-card overrides" aria-labelledby="state-overrides-title">
               <h2
                 id="state-overrides-title"
-                class="ui-group-title"
+                class="ui-card__title"
                 i18n="@@admin.logs.diagnostics.overrides"
               >
                 Dočasné úrovně
               </h2>
-              <ul class="ui-list ui-list--inset">
+              <ul class="ui-list">
                 @for (override of diagnostics.logLevelOverrides; track override.logger) {
                   <li>
                     <div class="ui-list__row">

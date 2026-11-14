@@ -21,7 +21,7 @@ public record ReceiptDocument(ReceiptKind kind, ReceiptNumber number, LocalDate 
         if (lines.isEmpty()) {
             throw new IllegalArgumentException("A receipt document certifies at least one donation");
         }
-        requireShapeOfKind(kind, lines, year);
+        requireShapeOfKind(kind, lines, year, issuedOn);
         Money sum = lines.stream().map(ReceiptLine::amount).reduce(Money.zero(total.currency()), Money::plus);
         if (!sum.equals(total)) {
             throw new IllegalArgumentException("The total does not add up the lines");
@@ -32,7 +32,7 @@ public record ReceiptDocument(ReceiptKind kind, ReceiptNumber number, LocalDate 
         return lines.size();
     }
 
-    private static void requireShapeOfKind(ReceiptKind kind, List<ReceiptLine> lines, Optional<Year> year) {
+    private static void requireShapeOfKind(ReceiptKind kind, List<ReceiptLine> lines, Optional<Year> year, LocalDate issuedOn) {
         if (kind == ReceiptKind.SINGLE && (lines.size() != 1 || year.isPresent())) {
             throw new IllegalArgumentException("A single receipt has one line and no year");
         }
@@ -41,6 +41,7 @@ public record ReceiptDocument(ReceiptKind kind, ReceiptNumber number, LocalDate 
             if (lines.stream().anyMatch(line -> !Year.from(line.receivedOn()).equals(covered))) {
                 throw new IllegalArgumentException("A yearly receipt lists only donations received in " + covered);
             }
+            ReceiptCalendar.requireCompleted(covered, issuedOn);
         }
     }
 }

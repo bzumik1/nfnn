@@ -1,4 +1,4 @@
-package cz.novanadeje.app.shared.domain;
+package cz.novanadeje.app.donations.domain;
 
 import java.util.Locale;
 import java.util.regex.Pattern;
