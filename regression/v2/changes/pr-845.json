@@ -1,0 +1,58 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given three follow-ups since the tick, when a fourth is reported, then it is not scheduled and a warning says the scheduler waits for the hourly run",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given three follow-ups since the scheduled run, when a fourth is reported, then it does not run and a warning says the import waits for the hourly run",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given a pending follow-up and an exhausted follow-up budget, when the scheduler ticks, then the pending follow-up is cancelled and three new follow-ups are allowed again",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the cancelled follow-up and the restart before the import stay in the scheduler test \"Given a pending follow-up, when the scheduler ticks, then the pending follow-up is cancelled and the follow-ups start counting again before the import runs\"",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given the follow-ups used up, when the next scheduled run starts, then three follow-ups are allowed again",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given three history follow-ups in a row, when the bank refuses a fourth time, then no follow-up is scheduled, a warning says so and the run is abandoned",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given three history follow-ups in a row, when the bank holds the run back a fourth time, then it ends as rate limited now and a warning says it waits to be requested again",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given a history run held back twice, when the hourly import ticks between its follow-ups, then the tick leaves its budget alone and the fourth refusal still abandons it",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given a history run held back twice, when the next scheduled run starts between its follow-ups, then the history run keeps its count and the fourth refusal still ends it",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given a run that used up its follow-ups but one, when a new run is requested, then the new run gets all three follow-ups again and the pending one is cancelled",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the cancelled follow-up stays in the scheduler test \"Given a history follow-up waiting, when a newer run is requested, then the waiting follow-up is cancelled and the newer run is scheduled at its time\"",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given a run that used up its follow-ups but one, when a newer run is held back, then the newer run gets all three follow-ups",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given another import still running when the history run is due, when it fires, then it is put off by the bank's 30 seconds without using up a follow-up and runs then",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the put-off itself stays in the scheduler test \"Given another import still running when the history run is due, when it fires, then it is put off until the time the follow-ups give without asking them for a follow-up, and runs then\"",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given another import holding the thread, when a history run is put off, then it runs again after the bank's cooldown without using up a follow-up",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given a run replaced while it was running, when the bank holds the old one back, then no follow-up is scheduled for it",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the scheduler test \"Given a history run the bank held back, when the follow-ups give it no next time, then no follow-up is scheduled for it\" keeps the wiring",
+    "replacement": "donations.application.importing.ImportFollowUpsTest > Given a history run replaced by a newer one, when the bank held the old one back, then it gets no follow-up and its outcome stays",
+    "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
+  }
+]
