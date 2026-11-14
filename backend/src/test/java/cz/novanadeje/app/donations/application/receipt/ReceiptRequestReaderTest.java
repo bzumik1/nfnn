@@ -10,11 +10,13 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocumentFactory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotAvailable;
 import cz.novanadeje.app.donations.domain.receipt.VerificationWithoutReceipt;
+import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptNotAvailable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 
@@ -198,5 +200,27 @@ class ReceiptRequestReaderTest {
         when(donorRecords.findById(JANA)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> reader.forYear(JANA, YEAR_2026, TODAY)).isInstanceOf(YearlyReceiptNotAvailable.class);
+    }
+
+    @Test
+    @DisplayName("Given gifts in the running year 2026, when its yearly receipt request is read on 31 December 2026, then the year is not completed yet")
+    void should_refuse_when_read_given_running_year_with_gifts() {
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(JUNE_2026, MARCH_2026));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThatThrownBy(() -> reader.forYear(JANA, YEAR_2026, LocalDate.of(2026, 12, 31)))
+                .isInstanceOf(YearNotYetCompleted.class)
+                .extracting("code").isEqualTo("donations/year-not-yet-completed");
+    }
+
+    @Test
+    @DisplayName("Given receipts from 2026 and gifts in 2025, when the yearly receipt request of 2025 is read, then it is before the first receipt year")
+    void should_refuse_when_read_given_year_with_gifts_before_first_receipt_year() {
+        when(donations.findByDonorNewestFirst(JANA)).thenReturn(List.of(NEW_YEARS_EVE_2025, DECEMBER_2025));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThatThrownBy(() -> reader.forYear(JANA, Year.of(2025), TODAY))
+                .isInstanceOf(ReceiptBeforeFirstYear.class)
+                .extracting("code").isEqualTo("donations/receipt-before-first-year");
     }
 }

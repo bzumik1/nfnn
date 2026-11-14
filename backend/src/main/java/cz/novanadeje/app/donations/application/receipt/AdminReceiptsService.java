@@ -52,7 +52,7 @@ public class AdminReceiptsService {
 
     public DonationReceipt issueForYear(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        firstYear.requireYearlyReceiptFor(year, today);
         return issuer.issueForYearByAdministrator(adminId, channel, donor, year, today);
     }
 
