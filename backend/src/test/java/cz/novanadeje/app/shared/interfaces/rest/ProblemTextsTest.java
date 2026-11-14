@@ -77,9 +77,9 @@ class ProblemTextsTest {
 
     private static final Map<String, Supplier<Exception>> FAILURES = Map.ofEntries(
             Map.entry("illegal-argument", () -> new IllegalArgumentException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
-            Map.entry("rule-without-texts", () -> new RuleViolation("donors/probe-without-texts", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
-            Map.entry("not-found-without-texts", () -> new NotFound("donors/probe-not-found", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
-            Map.entry("rule-with-texts", () -> new RuleViolation("donors/invalid-target", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
+            Map.entry("rule-without-texts", () -> new ProbeRuleViolation("donors/probe-without-texts", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
+            Map.entry("not-found-without-texts", () -> new ProbeNotFound("donors/probe-not-found", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
+            Map.entry("rule-with-texts", () -> new ProbeRuleViolation("donors/invalid-target", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
             Map.entry("method", () -> new HttpRequestMethodNotSupportedException(CLIENT_METHOD, List.of("GET"))),
             Map.entry("media-type", () -> new HttpMediaTypeNotSupportedException(new MediaType("text", CLIENT_VALUE),
                     List.of(MediaType.APPLICATION_JSON), HttpMethod.POST)),
@@ -335,5 +335,19 @@ class ProblemTextsTest {
 
     private static String bodyOf(MvcResult result) throws Exception {
         return result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    static final class ProbeRuleViolation extends RuleViolation {
+
+        ProbeRuleViolation(String code, String message) {
+            super(code, message);
+        }
+    }
+
+    static final class ProbeNotFound extends NotFound {
+
+        ProbeNotFound(String code, String message) {
+            super(code, message);
+        }
     }
 }

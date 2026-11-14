@@ -4,7 +4,7 @@ import cz.novanadeje.app.shared.domain.error.RuleViolation;
 
 public class PasswordTooWeak extends RuleViolation {
 
-    public PasswordTooWeak(String code, String message) {
+    private PasswordTooWeak(String code, String message) {
         super(code, message);
     }
 
