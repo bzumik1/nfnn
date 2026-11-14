@@ -359,7 +359,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await page.route(
-      (url) => url.pathname === '/api/content/news',
+      (url) => url.pathname === '/api/content/news' && url.searchParams.get('page') === '1',
       (route) => route.fulfill({ status: 503, body: '' }),
       { times: 1 },
     );
