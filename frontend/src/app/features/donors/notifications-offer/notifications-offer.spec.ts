@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ChangeDetectionStrategy, Component, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { throwError } from 'rxjs';
+import { Subject, throwError } from 'rxjs';
 
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../core/auth/auth-store';
@@ -20,7 +20,7 @@ import {
 } from '../../../core/push/service-worker-push';
 import { DonorDonationsRepository } from '../../donations/device-copy/donor-donations-repository';
 import { PaymentHandOffs } from '../../donations/payment-panel/payment-hand-offs';
-import { DonorPushApi } from '../../operations/donor-push-api';
+import { DonorPushApi, DonorPushResponse } from '../../operations/donor-push-api';
 import { FakeDonorPushApi } from '../../operations/testing/donor-push-fixtures';
 import { NOTIFICATIONS_OFFER_HIDDEN_KEY, NotificationsOffer } from './notifications-offer';
 
@@ -64,7 +64,7 @@ describe('Given a donor in the app on the home screen', () => {
   let gifts: WritableSignal<{ items: readonly unknown[] } | null>;
   let api: FakeDonorPushApi;
 
-  async function configure(jar: SessionJar = APP_JAR): Promise<void> {
+  async function configure(jar: SessionJar = APP_JAR, roles = ['DONOR']): Promise<void> {
     await TestBed.configureTestingModule({
       imports: [NotificationsOffer],
       providers: [
@@ -80,7 +80,7 @@ describe('Given a donor in the app on the home screen', () => {
     http = TestBed.inject(HttpTestingController);
     api = TestBed.inject(DonorPushApi) as unknown as FakeDonorPushApi;
     TestBed.inject(AuthStore).login('jana@example.cz', 'correct horse battery').subscribe();
-    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor()));
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1', sampleDonor({ roles })));
   }
 
   async function settle(): Promise<void> {
@@ -112,11 +112,13 @@ describe('Given a donor in the app on the home screen', () => {
     localStorage.clear();
     fixture = null;
     push = fakePush();
+    push.unsubscribe = vi.fn(() => Promise.resolve());
     offline = signal(false);
     gifts = signal({ items: [{ id: 'gift-1' }] });
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     fixture?.destroy();
     Reflect.deleteProperty(window, 'PushManager');
     Reflect.deleteProperty(window, 'Notification');
@@ -143,6 +145,7 @@ describe('Given a donor in the app on the home screen', () => {
     });
     expect(test).toHaveBeenCalledTimes(1);
     expect(sheetText()).toContain('Upozornění jsou zapnutá');
+    expect(localStorage.getItem(NOTIFICATIONS_OFFER_HIDDEN_KEY)).not.toBeNull();
   });
 
   it('when the donor puts the offer off, then it hides for thirty days and is not shown again', async () => {
@@ -196,11 +199,89 @@ describe('Given a donor in the app on the home screen', () => {
 
     expect(sheetText()).toContain('Upozornění se nepodařilo zapnout.');
     expect(button('Zkusit znovu')).toBeTruthy();
+    expect(push.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the server refuses the device of an administrator whose alerts this browser carries, then the browser keeps its subscription', async () => {
+    withPushApi();
+    await configure(APP_JAR, ['DONOR', 'ADMIN']);
+    vi.spyOn(api, 'subscribe').mockReturnValue(throwError(() => new Error('refused')));
+    await start();
+
+    button('Zapnout')!.click();
+    await settle();
+    (await vi.waitFor(() => http.expectOne('/api/admin/operations/push'))).flush({
+      publicKey: `B${'E'.repeat(86)}`,
+      deviceSession: true,
+      subscriptions: [{ id: 'push-this-phone', current: true }],
+      openAlerts: [],
+    });
+    await settle();
+
+    expect(sheetText()).toContain('Upozornění se nepodařilo zapnout.');
+    expect(push.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('when the donor signs out while the sheet is open, then the sheet closes', async () => {
+    withPushApi();
+    await configure();
+    await start();
+    expect(sheetText()).toContain('Chcete vědět, až dar dorazí?');
+
+    TestBed.inject(AuthStore).logout().subscribe();
+    (await vi.waitFor(() => http.expectOne('/api/donors/auth/logout'))).flush(null);
+    await settle();
+
+    expect(document.querySelector('dialog')).toBeNull();
+  });
+
+  it('when the donor moves to the administration before the server answers, then nothing is offered there', async () => {
+    withPushApi();
+    await configure();
+    const answer = new Subject<DonorPushResponse>();
+    vi.spyOn(api, 'view').mockReturnValue(answer);
+    await start();
+
+    await TestBed.inject(Router).navigateByUrl('/sprava');
+    answer.next(api.answer);
+    answer.complete();
+    await settle();
+
+    expect(document.querySelector('dialog')).toBeNull();
+  });
+
+  it('when the donor comes back more than two hours after handing a payment over, then nothing is offered', async () => {
+    withPushApi();
+    gifts.set({ items: [] });
+    await configure();
+    await start();
+    const now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now - 2 * 60 * 60 * 1000 - 1);
+    TestBed.inject(PaymentHandOffs).note();
+    clock.mockReturnValue(now);
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle();
+    clock.mockRestore();
+
+    expect(document.querySelector('dialog')).toBeNull();
+  });
+
+  it('when the storage of the device cannot be read, then nothing is offered', async () => {
+    withPushApi();
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    await configure();
+    await start();
+
+    expect(document.querySelector('dialog')).toBeNull();
   });
 
   it.each([
     ['in a browser tab', BROWSER_JAR, '/darce/prehled', null],
     ['in the administration', APP_JAR, '/sprava', null],
+    ['on Údaje a zabezpečení, where the notifications card is', APP_JAR, '/darce/udaje', null],
     ['when this phone already gets them', APP_JAR, '/darce/prehled', 'device'],
   ])('when the app opens %s, then nothing is offered', async (_, jar, url, device) => {
     withPushApi();

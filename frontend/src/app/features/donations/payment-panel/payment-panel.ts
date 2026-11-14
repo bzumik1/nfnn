@@ -431,6 +431,9 @@ export class PaymentPanel {
     this.handoffStep.set(deviceShares(file) ? 'sharing' : 'opening');
     try {
       const handoff = await handOver(file, this.shareTitle, openLocally);
+      if (handoff === 'dismissed' || handoff === 'refused') {
+        this.handOffs.clear();
+      }
       if (this.payment() === payment) {
         this.handoffNotice.set(notice(handoff));
       }

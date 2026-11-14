@@ -38,7 +38,7 @@ export const NOTIFICATIONS_OFFER_HIDDEN_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HAND_OFF_COUNTS_MS = 2 * 60 * 60 * 1000;
 const SUBSCRIPTION_LIMIT = 'operations/push-subscription-limit';
-const ADMINISTRATION = '/sprava';
+const PAGES_WITHOUT_OFFER = ['/sprava', '/darce/udaje'];
 
 @Component({
   selector: 'app-notifications-offer',
@@ -77,6 +77,14 @@ export class NotificationsOffer {
   private checking = false;
 
   constructor() {
+    let shownTo = this.auth.donor()?.id ?? null;
+    effect(() => {
+      const donor = this.auth.donor()?.id ?? null;
+      if (donor !== shownTo) {
+        shownTo = donor;
+        untracked(() => this.forgetDonor());
+      }
+    });
     effect(() => {
       const gifts = this.donations.held()?.items.length ?? 0;
       if (this.ready() && gifts > 0 && !this.offeredOnStart) {
@@ -131,6 +139,13 @@ export class NotificationsOffer {
     this.step.set(null);
   }
 
+  private forgetDonor(): void {
+    this.step.set(null);
+    this.offeredOnStart = false;
+    this.checking = false;
+    this.handOffs.clear();
+  }
+
   private ready(): boolean {
     return (
       this.jar.installed &&
@@ -156,20 +171,26 @@ export class NotificationsOffer {
     if (
       this.checking ||
       this.step() !== null ||
-      this.router.url.startsWith(ADMINISTRATION) ||
-      this.hidden() ||
+      !this.offerFits() ||
       pushAvailability(this.window, this.push) !== 'available'
     ) {
       return;
     }
     this.checking = true;
+    const donor = this.auth.donor()?.id;
     this.api
       .view()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (view) => {
           this.checking = false;
-          if (view.deviceSession === true && view.device === null) {
+          if (
+            view.deviceSession === true &&
+            view.device === null &&
+            this.auth.donor()?.id === donor &&
+            this.ready() &&
+            this.offerFits()
+          ) {
             this.publicKey = view.publicKey;
             this.show('offer');
           }
@@ -178,6 +199,10 @@ export class NotificationsOffer {
           this.checking = false;
         },
       });
+  }
+
+  private offerFits(): boolean {
+    return !PAGES_WITHOUT_OFFER.some((page) => this.router.url.startsWith(page)) && !this.hidden();
   }
 
   private register(endpoint: string, p256dh: string, auth: string): void {
@@ -208,15 +233,15 @@ export class NotificationsOffer {
       .test()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (result) => {
-          this.testSent.set(result.delivered > 0);
-          this.show('on');
-        },
-        error: () => {
-          this.testSent.set(false);
-          this.show('on');
-        },
+        next: (result) => this.turnedOn(result.delivered > 0),
+        error: () => this.turnedOn(false),
       });
+  }
+
+  private turnedOn(testSent: boolean): void {
+    this.hide();
+    this.testSent.set(testSent);
+    this.show('on');
   }
 
   private show(step: OfferStep): void {

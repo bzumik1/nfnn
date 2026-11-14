@@ -13,6 +13,7 @@ import { GIFT_FEED } from '../gift-arrival/gift-feed';
 import { FakeGiftFeed, giftItem } from '../gift-arrival/testing/gift-feed-fixtures';
 import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-details-fixtures';
 import { LocalPaymentRoute } from './local-payment-route';
+import { PaymentHandOffs } from './payment-hand-offs';
 import { PaymentPanel } from './payment-panel';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
@@ -288,6 +289,23 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));
     expect(downloads).toEqual([]);
     expect(handoffStatus()).toBe('');
+  });
+
+  it('when the visitor hands the payment to an app, then the hand-off is noted for the return to the site', async () => {
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+
+    expect(TestBed.inject(PaymentHandOffs).handedOffAt()).not.toBeNull();
+  });
+
+  it('when the visitor closes the share offer without picking an app, then no hand-off is left noted', async () => {
+    shareRefusal = new DOMException('Share canceled', 'AbortError');
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+
+    expect(TestBed.inject(PaymentHandOffs).handedOffAt()).toBeNull();
   });
 
   it('when the phone offers the QR image, then a line says the offer is opening until it closes', async () => {
