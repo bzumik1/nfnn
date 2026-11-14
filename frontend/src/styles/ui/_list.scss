@@ -169,10 +169,6 @@ div.ui-list__row {
   padding-inline: var(--list-row-padding-inline);
 }
 
-.ui-card__group + .ui-card__group {
-  border-top: 1px solid var(--color-separator);
-}
-
 .ui-card__group > .ui-card__subtitle {
   margin: 0;
   padding: var(--space-4) var(--list-row-padding-inline) var(--space-1);

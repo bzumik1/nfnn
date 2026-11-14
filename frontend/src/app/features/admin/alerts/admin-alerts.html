@@ -94,7 +94,40 @@
           </h2>
         </div>
         @if (current(); as device) {
-          <ul class="ui-list">
+          @if (currentLost()) {
+            <div class="ui-card__body device-lead">
+              @if (availability() === 'denied') {
+                <p class="ui-callout ui-callout--warning" i18n="@@admin.alerts.device.lostDenied">
+                  Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je
+                  v nastavení prohlížeče u tohoto webu (obvykle ikona vedle adresy, Oprávnění,
+                  Oznámení) a stránku načtěte znovu.
+                </p>
+              } @else {
+                <p class="ui-callout ui-callout--warning" i18n="@@admin.alerts.device.lost">
+                  Prohlížeč ale upozornění od tohoto webu už nepřijímá (například po smazání dat
+                  webu), takže žádné nedorazí. Zapněte je prosím znovu.
+                </p>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  [disabled]="subscribing()"
+                  (click)="turnOn()"
+                >
+                  @if (subscribing()) {
+                    <ng-container i18n="@@admin.alerts.device.turningOn"
+                      >Zapínáme upozornění…</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.alerts.device.turnOnAgain"
+                      >Zapnout znovu</ng-container
+                    >
+                  }
+                </button>
+              }
+            </div>
+          }
+          <ul class="ui-list device-rows">
             @for (area of areas; track area) {
               <li>
                 <label class="ui-list__row">
@@ -113,65 +146,6 @@
                     (change)="changeAlert(device, area, deviceSwitch)"
                   />
                 </label>
-              </li>
-            }
-          </ul>
-          <div class="ui-card__footer">
-            <p>
-              <span i18n="@@admin.alerts.device.on"
-                >Upozornění máte na tomto zařízení zapnutá ({{ serviceName(device) }}, od
-                {{ since(device) }}).</span
-              >
-              &ngsp;
-              @if (lastDelivery(device); as delivered) {
-                <span i18n="@@admin.alerts.device.lastDelivered"
-                  >Naposledy doručeno {{ delivered }}.</span
-                >
-              } @else {
-                <span i18n="@@admin.alerts.device.neverDelivered">Zatím nic nedoručeno.</span>
-              }
-              @if (device.failuresInARow > 0) {
-                &ngsp;
-                <span i18n="@@admin.alerts.device.failures"
-                  >Nedoručeno {{ device.failuresInARow }}× po sobě.</span
-                >
-              }
-            </p>
-            @if (currentLost()) {
-              @if (availability() === 'denied') {
-                <p class="device-warning" i18n="@@admin.alerts.device.lostDenied">
-                  Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je
-                  v nastavení prohlížeče u tohoto webu (obvykle ikona vedle adresy, Oprávnění,
-                  Oznámení) a stránku načtěte znovu.
-                </p>
-              } @else {
-                <p class="device-warning" i18n="@@admin.alerts.device.lost">
-                  Prohlížeč ale upozornění od tohoto webu už nepřijímá (například po smazání dat
-                  webu), takže žádné nedorazí. Zapněte je prosím znovu.
-                </p>
-              }
-            }
-          </div>
-          <ul class="ui-list device-actions">
-            @if (currentLost() && availability() !== 'denied') {
-              <li>
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-list__row ui-list__row--action"
-                  [disabled]="subscribing()"
-                  (click)="turnOn()"
-                >
-                  @if (subscribing()) {
-                    <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
-                      >Zapínáme upozornění…</span
-                    >
-                  } @else {
-                    <span class="ui-list__title" i18n="@@admin.alerts.device.turnOnAgain"
-                      >Zapnout znovu</span
-                    >
-                  }
-                </button>
               </li>
             }
             <li>
@@ -202,28 +176,26 @@
         } @else {
           @switch (availability()) {
             @case ('available') {
-              <ul class="ui-list">
-                <li>
-                  <button
-                    appNeedsConnection
-                    type="button"
-                    class="ui-list__row ui-list__row--action"
-                    aria-describedby="alerts-device-offer"
-                    [disabled]="subscribing()"
-                    (click)="turnOn()"
-                  >
-                    @if (subscribing()) {
-                      <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
-                        >Zapínáme upozornění…</span
-                      >
-                    } @else {
-                      <span class="ui-list__title" i18n="@@admin.alerts.device.turnOn"
-                        >Zapnout upozornění na tomto zařízení</span
-                      >
-                    }
-                  </button>
-                </li>
-              </ul>
+              <div class="ui-card__body device-lead">
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-button ui-button--primary"
+                  aria-describedby="alerts-device-offer"
+                  [disabled]="subscribing()"
+                  (click)="turnOn()"
+                >
+                  @if (subscribing()) {
+                    <ng-container i18n="@@admin.alerts.device.turningOn"
+                      >Zapínáme upozornění…</ng-container
+                    >
+                  } @else {
+                    <ng-container i18n="@@admin.alerts.device.turnOn"
+                      >Zapnout upozornění na tomto zařízení</ng-container
+                    >
+                  }
+                </button>
+              </div>
               <p
                 id="alerts-device-offer"
                 class="ui-card__footer"
@@ -263,6 +235,28 @@
           }
         }
         <app-live-notice look="footer" [notice]="deviceNotice()" />
+        @if (current(); as device) {
+          <p class="ui-card__footer">
+            <span i18n="@@admin.alerts.device.on"
+              >Upozornění máte na tomto zařízení zapnutá ({{ serviceName(device) }}, od
+              {{ since(device) }}).</span
+            >
+            &ngsp;
+            @if (lastDelivery(device); as delivered) {
+              <span i18n="@@admin.alerts.device.lastDelivered"
+                >Naposledy doručeno {{ delivered }}.</span
+              >
+            } @else {
+              <span i18n="@@admin.alerts.device.neverDelivered">Zatím nic nedoručeno.</span>
+            }
+            @if (device.failuresInARow > 0) {
+              &ngsp;
+              <span i18n="@@admin.alerts.device.failures"
+                >Nedoručeno {{ device.failuresInARow }}× po sobě.</span
+              >
+            }
+          </p>
+        }
       </section>
 
       @if (hasDevices()) {
@@ -315,7 +309,7 @@
           </h2>
         </div>
         @if (others().length === 0) {
-          <p class="ui-card__footer others-none" i18n="@@admin.alerts.others.none">
+          <p class="ui-card__empty others-none" i18n="@@admin.alerts.others.none">
             Na jiném zařízení upozornění zapnutá nemáte.
           </p>
         } @else {
