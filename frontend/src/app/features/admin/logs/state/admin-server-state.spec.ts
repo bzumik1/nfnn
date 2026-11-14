@@ -92,6 +92,19 @@ describe('Given an administrator on the server state page', () => {
     expect(page.has('.overrides')).toBe(false);
   });
 
+  it('when the state loads, then the verdict, the application, the database, the folders and the raised levels are cards with their heading inside, the verdict with its refresh', async () => {
+    page.http.expectOne(DIAGNOSTICS_URL).flush({ ...STATE, logLevelOverrides: [logOverride()] });
+    page.http.expectOne(RELEASE_URL).flush(releaseView());
+    await page.settle();
+
+    expect(page.cardTitled('Porucha').querySelector('button')?.textContent?.trim()).toBe(
+      'Obnovit stav',
+    );
+    for (const heading of ['Aplikace', 'Databáze', 'Složky', 'Dočasné úrovně']) {
+      expect(page.cardTitled(heading).querySelector('.ui-list .ui-list__row')).not.toBeNull();
+    }
+  });
+
   it('when a level is raised for a while, then it is listed with its end', async () => {
     page.http.expectOne(DIAGNOSTICS_URL).flush({ ...STATE, logLevelOverrides: [logOverride()] });
     await page.settle();

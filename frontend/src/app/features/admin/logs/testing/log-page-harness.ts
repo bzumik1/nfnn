@@ -75,6 +75,20 @@ export class LogPageHarness {
     ).map((node) => readable(node));
   }
 
+  cardTitled(heading: string): HTMLElement {
+    const title = Array.from(
+      this.fixture.nativeElement.querySelectorAll('h2') as NodeListOf<HTMLElement>,
+    ).find((candidate) => readable(candidate) === heading);
+    if (title === undefined) {
+      throw new Error(`No heading ${heading}`);
+    }
+    const card = title.closest<HTMLElement>('.ui-card');
+    if (card === null || card.getAttribute('aria-labelledby') !== title.id) {
+      throw new Error(`The heading ${heading} does not title its own card`);
+    }
+    return card;
+  }
+
   links(selector = 'a'): { text: string; href: string }[] {
     return Array.from(
       this.fixture.nativeElement.querySelectorAll(selector) as NodeListOf<HTMLAnchorElement>,

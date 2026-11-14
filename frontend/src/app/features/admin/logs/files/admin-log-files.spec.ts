@@ -58,6 +58,21 @@ describe('Given an administrator on the older log files page', () => {
     ]);
   });
 
+  it('when the files load, then each group is a card with its heading inside, above its files', async () => {
+    page.http.expectOne(LOGS_URL).flush({
+      available: true,
+      files: [
+        logFile({ name: 'backend.log.2026-11-06.0.gz', compressed: true }),
+        logFile({ name: 'mcp.log.2026-11-06.gz', compressed: true }),
+      ],
+    });
+    await page.settle();
+
+    for (const heading of ['Aplikace', 'Konektor']) {
+      expect(page.cardTitled(heading).querySelectorAll('.ui-list a.ui-list__row')).toHaveLength(1);
+    }
+  });
+
   it('when there is no older file, then the page says so', async () => {
     page.http.expectOne(LOGS_URL).flush({ available: true, files: [logFile()] });
     await page.settle();

@@ -62,7 +62,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-4);
 
   .load-more {
     margin-bottom: 0;
@@ -80,7 +79,7 @@
   align-items: start;
   width: 100%;
   min-height: var(--list-row-min-height);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-6);
   border: 0;
   background: transparent;
   color: var(--color-text);
@@ -104,7 +103,7 @@
 .entry.level-error,
 .entry.level-warn {
   border-inline-start: var(--space-0-75) solid var(--color-log-warn);
-  padding-inline-start: calc(var(--space-4) - var(--space-0-75));
+  padding-inline-start: calc(var(--space-6) - var(--space-0-75));
 }
 
 .entry.level-error {

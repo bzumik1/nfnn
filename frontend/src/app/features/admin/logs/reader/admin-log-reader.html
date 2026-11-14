@@ -1,4 +1,4 @@
-<div class="ui-page container">
+<div class="ui-page ui-grouped container">
   <h1 #title class="ui-page-title file-title ui-mono" tabindex="-1">{{ file }}</h1>
   <p class="ui-page-intro" i18n="@@admin.logs.reader.intro">
     Nejnovější záznamy jsou nahoře, časy jsou pražské. Klepnutím na záznam ho zobrazíte celý.
@@ -148,15 +148,18 @@
           }
         </p>
       } @else {
-        <div class="ui-groups days">
+        <div class="days">
           @for (day of days(); track day.day + $index) {
-            <section [attr.aria-labelledby]="day.title ? 'log-day-' + $index : null">
+            <section
+              class="ui-card"
+              [attr.aria-labelledby]="day.title ? 'log-day-' + $index : null"
+            >
               @if (day.title) {
-                <h2 class="ui-group-title day-title" [id]="'log-day-' + $index">
+                <h2 class="ui-card__title day-title" [id]="'log-day-' + $index">
                   {{ day.title }}
                 </h2>
               }
-              <ul class="ui-list ui-list--inset">
+              <ul class="ui-list">
                 @for (entry of day.entries; track entry.offset) {
                   <li>
                     <button
