@@ -111,6 +111,7 @@
 @include bp.container-down(account, tabs) {
   .account > .account-row {
     grid-template-columns: minmax(0, 1fr);
+    padding-inline: var(--space-4);
     grid-template-areas:
       'lead'
       'title'
