@@ -265,7 +265,7 @@ tr.is-verification td.amount {
 }
 
 @include bp.container-down(donations-table, pair) {
-  .donation-rows.ui-list--inset .ui-list__row {
+  .donation-rows .ui-list__row {
     > :is(.ui-list__title, .ui-list__value, .ui-list__meta, .ui-list__state) {
       grid-column: 1 / -1;
       justify-self: start;
@@ -290,7 +290,7 @@ tr.is-verification td.amount {
     }
   }
 
-  .donation-rows.ui-list--inset .pairing-tag {
+  .donation-rows .pairing-tag {
     overflow-wrap: normal;
   }
 }
