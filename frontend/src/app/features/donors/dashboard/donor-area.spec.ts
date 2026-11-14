@@ -1755,15 +1755,14 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
-    it('then "Všechny dary" is the title inside its card, at the default size of a card title', async () => {
+    it('then "Všechny dary" is the h2 title inside its own card', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
       const title = element('#payments-title')!;
       expect(normalized(title.textContent ?? '')).toBe('Všechny dary');
+      expect(title.tagName).toBe('H2');
       expect(title.closest('.ui-card')).toBe(element('.payments-card'));
-      expect(title.classList).toContain('ui-card__title');
-      expect(title.classList).not.toContain('ui-card__title--large');
     });
 
     for (const phone of [true, false]) {
