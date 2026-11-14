@@ -40,7 +40,7 @@ class AdminDonorsSyncController {
     ResponseEntity<AdminDonorsSyncManifestResponse> manifest(@AuthenticationPrincipal Jwt jwt) {
         rateLimiter.check(jwt.getSubject());
         AdminAccountsSyncSnapshot snapshot = sync.snapshotFor(DonorId.of(jwt.getSubject()));
-        return notStored(AdminDonorsSyncManifestResponse.from(snapshot, projection.chunksOf(snapshot)));
+        return notStored(AdminDonorsSyncManifestResponse.from(snapshot, projection.entriesOf(snapshot)));
     }
 
     @GetMapping("/chunks")
@@ -52,7 +52,7 @@ class AdminDonorsSyncController {
     ) {
         rateLimiter.check(jwt.getSubject());
         AdminAccountsSyncSnapshot snapshot = sync.snapshotFor(DonorId.of(jwt.getSubject()));
-        SyncChunk.Asked asked = SyncChunk.asked(projection.chunksOf(snapshot), ids);
+        SyncChunk.Asked asked = SyncChunk.asked(projection.chunksOf(snapshot, ids), ids);
         return notStored(new AdminDonorsSyncChunksResponse(snapshot.subject().value(), snapshot.administrator(), asked.chunks(), asked.missing()));
     }
 
