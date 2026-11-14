@@ -19,6 +19,11 @@ export function formatBankTime(isoInstant: string): string {
   return `${Number(parts['day'])}. ${Number(parts['month'])}. ${parts['year']} ${Number(parts['hour'])}:${parts['minute']}`;
 }
 
+export function formatPragueClock(isoInstant: string): string {
+  const parts = pragueParts(isoInstant);
+  return `${Number(parts['hour'])}:${parts['minute']}`;
+}
+
 export function pragueDay(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
   return `${parts['year']}-${parts['month']}-${parts['day']}`;

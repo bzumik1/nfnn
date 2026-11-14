@@ -148,7 +148,7 @@ describe('Given the privacy policy page', () => {
       'Po přihlášení si portál do vašeho prohlížeče uloží zašifrovanou kopii údajů o vašich darech, potvrzeních a bankovních účtech. Klíč k ní zná jen vaše zařízení. Když jste se přihlásili heslem, zůstane kopie po odhlášení zamčená tímto heslem; po přihlášení přístupovým klíčem zůstane jen tehdy, když to klíč umí, jinak se odhlášením smaže. Smazat ji můžete kdykoli v dárcovském portálu v části Údaje a zabezpečení tlačítkem „Smazat data z tohoto zařízení“; údaje na serveru tím nezměníte. Když zařízení odhlásíte na dálku z jiného zařízení nebo vaše údaje vymažeme, zařízení kopii zpravidla smaže, jakmile se na něm web příště spojí se serverem; zařízení, které se už nepřipojí, ji dál drží zašifrovanou.',
     ]);
     expect(sectionText('Cookies')).toContain(
-      'a po přihlášení zašifrovanou kopii vašich údajů, viz níže.',
+      '; po přihlášení pak zašifrovanou kopii vašich údajů, viz níže.',
     );
   });
 
@@ -184,7 +184,10 @@ describe('Given the privacy policy page', () => {
     const cookies = sectionText('Cookies');
 
     expect(cookies).toContain('veřejné klíče fondu');
-    expect(cookies).toContain('nenesou žádné osobní údaje');
+    expect(cookies).toContain(
+      'údaj o tom, který fotoaparát zařízení naposledy použilo ke čtení kódu',
+    );
+    expect(cookies).toContain('ani jedno nenese osobní údaje');
   });
 
   it('when it renders, then it says a company ID fills the name and seat from ARES, which gets only the ID', () => {

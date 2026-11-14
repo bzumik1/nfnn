@@ -40,6 +40,24 @@ export function proof(name: string): VerificationProof {
 export const SINGLE_RECEIPT = proof('a single receipt of one gift');
 export const YEARLY_RECEIPT = proof('a yearly receipt of 12 gifts');
 export const CHANGED_AMOUNT = proof('an amount changed');
+export const SINGLE_RECEIPT_ROW = {
+  id: '01980000-0000-7000-8000-000000000042',
+  donorId: '01980000-0000-7000-8000-00000000d001',
+  status: 'ACTIVE',
+  kind: 'SINGLE',
+  number: '2026-000042',
+  donationId: '01980000-0000-7000-8000-0000000000a1',
+  year: null,
+  issuedOn: '2026-11-05',
+  issuedAt: '2026-11-05T09:00:00Z',
+  supersededAt: null,
+  withdrawnAt: null,
+  withdrawalReason: null,
+  locale: 'cs',
+  giftCount: 1,
+  totalAmountMinor: 250_000,
+};
+export const LARGEST_RECEIPT = proof('the largest yearly receipt one symbol holds: 553 gifts');
 
 const TEST_KEY = {
   keyId: '21fe31df',

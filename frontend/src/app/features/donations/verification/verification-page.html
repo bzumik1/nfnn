@@ -1,5 +1,9 @@
 <div class="container" [class.container--compact]="compact()">
-  <app-page-title i18n="@@donor.verify.empty.title">Ověření potvrzení o daru</app-page-title>
+  @if (administration) {
+    <app-page-title i18n="@@admin.verify.empty.title">Ověřit potvrzení</app-page-title>
+  } @else {
+    <app-page-title i18n="@@donor.verify.empty.title">Ověření potvrzení o daru</app-page-title>
+  }
   @switch (page().state) {
     @case ('checking') {
       <section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
@@ -40,10 +44,18 @@
       </section>
     }
     @case ('empty') {
-      <p class="verify-intro" i18n="@@donor.verify.empty.intro">
-        Každé potvrzení od fondu nese QR kód. Načtěte ho a uvidíte, co v něm fond podepsal, a
-        porovnejte to s papírem. Kód čteme jen ve vašem zařízení.
-      </p>
+      @if (administration) {
+        <p class="verify-intro" i18n="@@admin.verify.empty.text">
+          Načtěte QR kód z potvrzení o daru tady na stránce. Ukážeme, jaké údaje v něm fond
+          podepsal, a pod tím, jak potvrzení vedou údaje správy v tomto zařízení, i bez připojení.
+          Kód čteme jen v tomto zařízení.
+        </p>
+      } @else {
+        <p class="verify-intro" i18n="@@donor.verify.empty.intro">
+          Každé potvrzení od fondu nese QR kód. Načtěte ho a uvidíte, co v něm fond podepsal, a
+          porovnejte to s papírem. Kód čteme jen ve vašem zařízení.
+        </p>
+      }
       <app-proof-input (found)="verifyProof($event)" />
     }
     @default {
@@ -82,8 +94,10 @@
       }
     }
   }
-  <p class="ui-group-note verify-domain" i18n="@@donor.verify.domain">
-    Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
-    prohlížeče.
-  </p>
+  @if (!administration) {
+    <p class="ui-group-note verify-domain" i18n="@@donor.verify.domain">
+      Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku
+      prohlížeče.
+    </p>
+  }
 </div>

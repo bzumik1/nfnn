@@ -32,3 +32,10 @@
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
 }
+
+:host(.verify-embedded) {
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 0;
+  background: none;
+}

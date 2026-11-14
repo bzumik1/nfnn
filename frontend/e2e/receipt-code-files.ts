@@ -60,8 +60,12 @@ function qrCodeLuma(qrText: string, pixelsPerModule: number): QrCodeLuma {
   return { side, luma };
 }
 
-export function qrCodeY4m(qrText: string, width = 640, height = 480): Buffer {
-  const pixelsPerModule = Math.max(1, Math.floor((height - 40) / qrCodeLuma(qrText, 1).side));
+export function qrCodeY4m(
+  qrText: string,
+  width = 640,
+  height = 480,
+  pixelsPerModule = Math.max(1, Math.floor((height - 40) / qrCodeLuma(qrText, 1).side)),
+): Buffer {
   const { side, luma } = qrCodeLuma(qrText, pixelsPerModule);
   if (side > width || side > height) {
     throw new Error(

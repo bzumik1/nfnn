@@ -1,6 +1,7 @@
 import {
   formatBankTime,
   formatDonationDate,
+  formatPragueClock,
   pragueDay,
   pragueHour,
   pragueTime,
@@ -41,6 +42,11 @@ describe('Given an instant the API sends', () => {
   it('when its Prague hour is asked for, then it counts in Prague summer and winter time', () => {
     expect(pragueHour('2026-10-01T05:00:00Z')).toBe(7);
     expect(pragueHour('2026-11-01T06:00:00Z')).toBe(7);
+  });
+
+  it('when its Prague time of day is asked for, then it comes on a 24-hour clock without a leading zero in the hour', () => {
+    expect(formatPragueClock('2026-11-06T02:35:00Z')).toBe('3:35');
+    expect(formatPragueClock('2026-07-01T21:05:00Z')).toBe('23:05');
   });
 
   it('when its Prague time of day is asked for, then it reads with seconds and no leading zero in the hour', () => {
