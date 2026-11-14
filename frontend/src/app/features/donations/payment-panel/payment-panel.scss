@@ -319,6 +319,28 @@
   @include stacked-bank-rows;
 }
 
+@include bp.container-down(payment-panel, pair) {
+  .bank-values {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bank-figure {
+    flex: none;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    &.ui-figures--groups {
+      overflow-wrap: normal;
+    }
+
+    &.ui-figures--groups > * {
+      white-space: normal;
+    }
+  }
+}
+
 @mixin qr-above-caption {
   .qr {
     flex-direction: column;
