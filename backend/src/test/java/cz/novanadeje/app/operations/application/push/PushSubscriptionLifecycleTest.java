@@ -6,9 +6,6 @@ import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
-import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
-import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
-import cz.novanadeje.app.shared.application.event.DonorErased;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +32,7 @@ class PushSubscriptionLifecycleTest {
         subscribed(JANA, "jana");
         PushSubscription petr = subscribed(PETR, "petr");
 
-        lifecycle.on(new AdministrationRevoked(JANA, NOW));
+        lifecycle.deleteAllOfFormerAdministrator(JANA);
 
         assertThat(subscriptions.all()).containsExactly(petr);
     }
@@ -46,7 +43,7 @@ class PushSubscriptionLifecycleTest {
         subscribed(JANA, "jana");
         PushSubscription petr = subscribed(PETR, "petr");
 
-        lifecycle.on(new DonorErased(JANA, NOW));
+        lifecycle.deleteAllOfErasedDonor(JANA);
 
         assertThat(subscriptions.all()).containsExactly(petr);
     }
@@ -58,7 +55,7 @@ class PushSubscriptionLifecycleTest {
         subscribed(JANA, telefon, "jana-telefon");
         PushSubscription pocitac = subscribed(JANA, UUID.randomUUID(), "jana-pocitac");
 
-        lifecycle.on(new DeviceSignedOut(JANA, telefon, NOW));
+        lifecycle.deleteAllOfSignedOutDevice(telefon);
 
         assertThat(subscriptions.all()).containsExactly(pocitac);
     }
@@ -68,7 +65,7 @@ class PushSubscriptionLifecycleTest {
     void should_keep_donor_notifications_when_role_revoked_given_administrator_who_donates() {
         DonorPushSubscription jana = subscribedAsDonor(JANA, UUID.randomUUID(), "jana-darce");
 
-        lifecycle.on(new AdministrationRevoked(JANA, NOW));
+        lifecycle.deleteAllOfFormerAdministrator(JANA);
 
         assertThat(donorSubscriptions.all()).containsExactly(jana);
     }
@@ -80,7 +77,7 @@ class PushSubscriptionLifecycleTest {
         subscribedAsDonor(JANA, UUID.randomUUID(), "jana-pocitac");
         DonorPushSubscription petr = subscribedAsDonor(PETR, UUID.randomUUID(), "petr");
 
-        lifecycle.on(new DonorErased(JANA, NOW));
+        lifecycle.deleteAllOfErasedDonor(JANA);
 
         assertThat(donorSubscriptions.all()).containsExactly(petr);
     }
@@ -93,7 +90,7 @@ class PushSubscriptionLifecycleTest {
         subscribedAsDonor(JANA, telefon, "jana-telefon");
         DonorPushSubscription pocitac = subscribedAsDonor(JANA, UUID.randomUUID(), "jana-pocitac");
 
-        lifecycle.on(new DeviceSignedOut(JANA, telefon, NOW));
+        lifecycle.deleteAllOfSignedOutDevice(telefon);
 
         assertThat(subscriptions.all()).isEmpty();
         assertThat(donorSubscriptions.all()).containsExactly(pocitac);

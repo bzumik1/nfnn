@@ -2,8 +2,6 @@ package cz.novanadeje.app.operations.application.alerts;
 
 import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
-import cz.novanadeje.app.shared.application.event.MailDeliveryFailed;
-import cz.novanadeje.app.shared.application.event.MailDeliverySucceeded;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -33,7 +31,7 @@ class MailWatchTest {
     @Test
     @DisplayName("Given working mail, when a send fails, then the mail alert opens in a transaction of its own, so a refused send that rolls back its caller still counts")
     void should_open_alert_in_own_transaction_when_send_fails_given_working_mail() {
-        watch.on(new MailDeliveryFailed(NOW));
+        watch.failed(NOW);
 
         assertThat(published).containsExactly(new OperationalAlertChanged(MonitoredArea.MAIL, true, 1, 1, NOW));
         verify(transactions, atLeastOnce()).getTransaction(argThat(definition ->
@@ -43,10 +41,10 @@ class MailWatchTest {
     @Test
     @DisplayName("Given an open mail alert, when a send fails again and then one succeeds, then only the success changes it, back to working")
     void should_resolve_only_on_success_when_sent_given_open_alert() {
-        watch.on(new MailDeliveryFailed(NOW));
-        watch.on(new MailDeliveryFailed(NOW.plusSeconds(30)));
-        watch.on(new MailDeliverySucceeded(NOW.plusSeconds(60)));
-        watch.on(new MailDeliverySucceeded(NOW.plusSeconds(90)));
+        watch.failed(NOW);
+        watch.failed(NOW.plusSeconds(30));
+        watch.succeeded(NOW.plusSeconds(60));
+        watch.succeeded(NOW.plusSeconds(90));
 
         assertThat(published).containsExactly(new OperationalAlertChanged(MonitoredArea.MAIL, true, 1, 1, NOW),
                 new OperationalAlertChanged(MonitoredArea.MAIL, false, 2, 0, NOW.plusSeconds(60)));
@@ -55,7 +53,7 @@ class MailWatchTest {
     @Test
     @DisplayName("Given working mail, when a send succeeds, then nothing is written")
     void should_write_nothing_when_sent_given_working_mail() {
-        watch.on(new MailDeliverySucceeded(NOW));
+        watch.succeeded(NOW);
 
         assertThat(alerts.find(MonitoredArea.MAIL)).isEmpty();
         assertThat(alerts.locks()).isZero();
@@ -68,8 +66,8 @@ class MailWatchTest {
         when(transactions.getTransaction(argThat(definition -> true))).thenThrow(new IllegalStateException("no connection"));
 
         assertThatCode(() -> {
-            watch.on(new MailDeliveryFailed(NOW));
-            watch.on(new MailDeliverySucceeded(NOW));
+            watch.failed(NOW);
+            watch.succeeded(NOW);
         }).doesNotThrowAnyException();
         assertThat(published).isEmpty();
     }
