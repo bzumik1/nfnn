@@ -2204,6 +2204,38 @@ describe('Given an administrator connected with the writing permission', () => {
     expect(textOf(none)).toContain('404 operations/log-override-not-found');
   });
 
+  it.each(['..', '.', '.hidden', 'a/b', '%2e%2e', 'cz.novanadeje.app?x=1', ' ROOT', 'ROOT\n'])(
+    'when a log level is set or reset for the logger named %j, then it is refused and no backend call is made',
+    async (logger) => {
+      const before = stack.backend.requests.length;
+
+      const set = await client.callTool({
+        name: 'nfnn_set_log_level',
+        arguments: { logger, level: 'DEBUG' },
+      });
+      const reset = await client.callTool({
+        name: 'nfnn_reset_log_level',
+        arguments: { logger },
+      });
+
+      expect(set.isError).toBe(true);
+      expect(reset.isError).toBe(true);
+      expect(stack.backend.requests.length).toBe(before);
+    },
+  );
+
+  it('when a log level is set for ROOT and for a class name with a dollar and an underscore, then each call reaches the administration', async () => {
+    for (const logger of ['ROOT', 'cz.novanadeje.app.Outer$Inner_1']) {
+      await client.callTool({
+        name: 'nfnn_set_log_level',
+        arguments: { logger, level: 'INFO' },
+      });
+      expect(stack.backend.requests.at(-1)?.path).toBe(
+        `/api/admin/operations/loggers/${encodeURIComponent(logger)}`,
+      );
+    }
+  });
+
   it('when a photo is uploaded from an address, then its bytes reach the administration as a file and the id comes back for the cover', async () => {
     const result = await client.callTool({
       name: 'nfnn_upload_photo',

@@ -22,6 +22,10 @@ const WRITING = {
   openWorldHint: false,
 };
 const UUID = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+const LOGGER_NAME = z
+  .string()
+  .max(200)
+  .regex(/^[A-Za-z0-9_$][A-Za-z0-9_$.]*$/);
 
 const PERSON = {
   name: z.string().min(1).max(100).describe('First and last name, as the site shows it.'),
@@ -1079,7 +1083,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       description:
         'Sets a logger (ROOT or a dotted package or class name, e.g. cz.novanadeje.app, io.github.bzumik1.fio, org.hibernate.SQL) to TRACE, DEBUG, INFO, WARN, ERROR or OFF for `minutes` (30 by default, at most 1440); the level goes back by itself when the time is up. Loggers that would write SQL values, bodies, raw requests, request lines with their query strings or client addresses (org.hibernate.orm.jdbc.bind, org.apache.coyote, org.springframework.security.web.FilterChainProxy, org.springframework.web.servlet.DispatcherServlet, org.postgresql and the like) keep their level and are refused, and TRACE is refused for every logger outside cz.novanadeje.app (use DEBUG there). Audited as CHANGE_LOG_LEVEL. Read the result with nfnn_log or nfnn_log_search.',
       inputSchema: z.object({
-        logger: z.string().min(1).max(200),
+        logger: LOGGER_NAME,
         level: z.enum(['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']),
         minutes: z.number().int().min(1).max(1440).optional(),
       }),
@@ -1149,7 +1153,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
       title: 'Vrátit úroveň logování',
       description:
         'Ends the temporary level of a logger now, so it goes back to what the configuration says; audited as RESET_LOG_LEVEL.',
-      inputSchema: z.object({ logger: z.string().min(1).max(200) }),
+      inputSchema: z.object({ logger: LOGGER_NAME }),
       annotations: WRITING,
     },
     async ({ logger }, ctx) =>
