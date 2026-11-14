@@ -1,6 +1,7 @@
 package cz.novanadeje.app.contact.cucumber;
 
 import cz.novanadeje.app.cucumber.ApiClient;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
@@ -27,17 +28,24 @@ public class ContactMessageStepDefinitions {
     private final ApiClient api;
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
+    private final AsyncTaskTracker asyncTasks;
     private long messagesBefore;
 
-    public ContactMessageStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc) {
+    public ContactMessageStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc, AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
+        this.asyncTasks = asyncTasks;
     }
 
     @Given("the email server accepts messages")
     public void theEmailServerAcceptsMessages() {
         mailSender.clear();
+    }
+
+    @Given("the email server takes {int} ms to accept a message")
+    public void theEmailServerTakesToAcceptAMessage(int milliseconds) {
+        mailSender.acceptAfter(Duration.ofMillis(milliseconds));
     }
 
     @Given("the visitor already sent {int} contact messages within the last hour")
@@ -95,8 +103,8 @@ public class ContactMessageStepDefinitions {
     }
 
     @Then("no email is sent")
-    public void noEmailIsSent() throws InterruptedException {
-        Thread.sleep(300);
+    public void noEmailIsSent() {
+        asyncTasks.awaitIdleAfter("no email is sent");
         assertThat(mailSender.sent()).isEmpty();
     }
 
