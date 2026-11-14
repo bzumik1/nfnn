@@ -6,7 +6,7 @@ import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.support.FakeMailServerProbe;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class SettingsStepDefinitions {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final String SETUP = "/api/operations/setup";
     private static final String SETTINGS = "/api/admin/operations/settings";

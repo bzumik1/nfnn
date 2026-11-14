@@ -8,7 +8,7 @@ import cz.novanadeje.app.donors.cucumber.DonorPasskeyStepDefinitions;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeys;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class BackupKeyStepDefinitions {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final String KEY = "/api/admin/operations/backups/key";
     private static final String SETUP_KEY = "/api/operations/setup/backup-key";

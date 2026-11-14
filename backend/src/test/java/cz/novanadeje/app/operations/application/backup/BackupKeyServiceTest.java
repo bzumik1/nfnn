@@ -9,7 +9,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupKeyRevealPaused;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyUnavailable;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordCheck;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.operations.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
@@ -62,7 +62,7 @@ class BackupKeyServiceTest {
     private final BackupKeyWordChallenges challenges = new BackupKeyWordChallenges(new Random(20261029));
 
     private BackupKeyService service(Optional<BackupKey> key) {
-        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, refusals, challenges, BackupKeyWordList.czech(), events, clock);
+        return new BackupKeyService(() -> key, confirmations, freshSecondFactor, refusals, challenges, CzechBackupKeyWords.WORDLIST, events, clock);
     }
 
     private static List<BackupKeyWordCheck> wordsAt(BackupKeyWordPositions positions) {

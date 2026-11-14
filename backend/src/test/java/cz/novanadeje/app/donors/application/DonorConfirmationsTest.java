@@ -15,7 +15,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.WrongPassword;
-import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -69,7 +69,7 @@ class DonorConfirmationsTest {
 
     @BeforeEach
     void setUp() {
-        confirmations = new DonorConfirmations(passwordHasher, CommonPasswordList.policy(), passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
+        confirmations = new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
     @Test

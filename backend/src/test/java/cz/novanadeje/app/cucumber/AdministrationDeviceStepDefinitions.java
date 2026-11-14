@@ -4,7 +4,7 @@ import cz.novanadeje.app.donors.application.AdminActionFacts;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
@@ -48,7 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class AdministrationDeviceStepDefinitions {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final Set<String> AREAS = Set.of("donations", "donors", "content", "operations");
     private static final List<String> PAYMENT_FIELDS = List.of("id", "bankTransactionId", "bookedOn", "amountMinor", "currency", "variableSymbol",

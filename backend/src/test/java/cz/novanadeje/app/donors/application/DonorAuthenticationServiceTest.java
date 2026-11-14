@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -98,7 +98,7 @@ class DonorAuthenticationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorAuthenticationService(donors, passwordHasher, CommonPasswordList.policy(), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), secondFactors, challenges,
+        service = new DonorAuthenticationService(donors, passwordHasher, CommonPasswords.POLICY, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), secondFactors, challenges,
                 new DonorSecondFactorProperties(CHALLENGE_TTL, CHALLENGE_ATTEMPTS, "Nová naděje", Duration.ofDays(14)), new SecondFactorCodes(secondFactors, wrongCodes), transactions, Clock.fixed(NOW, ZoneOffset.UTC));
         donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, "Stavby Novák s.r.o.", new CompanyIdentifier("45274649"),
                 new PostalAddress("Průmyslová 5", "Teplice", "415 01"), EMAIL, HASH, new VariableSymbol("1234567890"), LocaleCode.CS, NOW);

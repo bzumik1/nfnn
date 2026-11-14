@@ -52,6 +52,7 @@ class PasswordHashingRulesTest {
     private static final Set<String> COMMITTED_REFUSAL_RUNS = Set.of("execute", "run");
     private static final String APPLICATION_CODE = "cz.novanadeje.app.";
     private static final String CONSTRUCTOR = "<init>";
+    private static final String COMMON_PASSWORD_LIST = "cz.novanadeje.app.donors.infrastructure.config.CommonPasswordList";
 
     private static final DescribedPredicate<JavaAccess<?>> A_PASSWORD_HASHING = callsOrReferences("", PasswordHasher.class, HASHING::contains)
             .or(callsOrReferences("", CONFIRMATIONS, CONFIRMING::equals))
@@ -76,6 +77,62 @@ class PasswordHashingRulesTest {
             .should().accessTargetWhere(describe("build a RawPassword",
                     access -> access.getTargetOwner().isEquivalentTo(RawPassword.class) && CONSTRUCTOR.equals(access.getName())))
             .because("security.md, Credentials: every password a client gives is checked against the common passwords, which only PasswordPolicy holds");
+
+    @ArchTest
+    static final ArchRule only_the_common_password_list_builds_a_password_policy = noClasses()
+            .that().doNotHaveFullyQualifiedName(COMMON_PASSWORD_LIST)
+            .should().accessTargetWhere(describe("build a PasswordPolicy",
+                    access -> access.getTargetOwner().isEquivalentTo(PasswordPolicy.class) && CONSTRUCTOR.equals(access.getName())))
+            .because("security.md, Credentials: the policy holds the common passwords read at startup, so no other class may build one with another list or none");
+
+    @Test
+    @DisplayName("Given a planted service that builds a password policy by its constructor and by a constructor reference, and a planted loader of the common passwords, when the rule checks them, then both of the service are reported and the loader is not")
+    void should_report_every_password_policy_built_outside_the_loader_when_checked_given_a_planted_service(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.donors.application.PlantedEmptyPolicies", """
+                        package cz.novanadeje.app.donors.application;
+
+                        import cz.novanadeje.app.donors.domain.PasswordPolicy;
+                        import java.util.Set;
+                        import java.util.function.Function;
+
+                        class PlantedEmptyPolicies {
+
+                            PasswordPolicy built() {
+                                return new PasswordPolicy(Set.of());
+                            }
+
+                            Function<Set<String>, PasswordPolicy> referenced() {
+                                return PasswordPolicy::new;
+                            }
+                        }
+                        """,
+                COMMON_PASSWORD_LIST, """
+                        package cz.novanadeje.app.donors.infrastructure.config;
+
+                        import cz.novanadeje.app.donors.domain.PasswordPolicy;
+                        import java.util.Set;
+
+                        final class CommonPasswordList {
+
+                            static PasswordPolicy policy() {
+                                return new PasswordPolicy(Set.of("q1w2e3r4t5y6"));
+                            }
+                        }
+                        """));
+
+        assertThat(only_the_common_password_list_builds_a_password_policy.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedEmptyPolicies.built()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedEmptyPolicies.referenced()"))
+                .noneSatisfy(detail -> assertThat(detail).contains("CommonPasswordList"));
+    }
+
+    @Test
+    @DisplayName("Given the loader of the common passwords the policy rule exempts, when it is looked up by its name, then it is a class, so the rule exempts no name that is gone")
+    void should_find_the_exempted_loader_when_looked_up_given_its_name() throws ClassNotFoundException {
+        assertThat(Class.forName(COMMON_PASSWORD_LIST)).isNotNull();
+    }
 
     @Test
     @DisplayName("Given a planted service that builds a password by its constructor and by a constructor reference, when the rule checks it, then both are reported")

@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.application.DonorSessionProperties;
 import cz.novanadeje.app.donors.application.OAuthProperties;
 import cz.novanadeje.app.donors.application.PasskeyProperties;
 import cz.novanadeje.app.donors.application.RegistrationReminderProperties;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,5 +55,10 @@ public class DonorsApplicationConfiguration {
     @Bean
     PasskeyProperties passkeyProperties(DonorsApplicationProperties properties) {
         return properties.passkeys();
+    }
+
+    @Bean
+    PasswordPolicy passwordPolicy() {
+        return CommonPasswordList.policy();
     }
 }

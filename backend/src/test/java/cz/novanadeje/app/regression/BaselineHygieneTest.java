@@ -2,7 +2,7 @@ package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class BaselineHygieneTest {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final String FIXTURE_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_QQ";
     private static final String TEST_BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";

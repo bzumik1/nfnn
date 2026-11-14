@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DevelopmentBackupKeyPolicyTest {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final BackupKey SERVER_KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");
 

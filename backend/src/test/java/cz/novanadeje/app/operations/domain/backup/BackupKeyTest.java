@@ -1,6 +1,6 @@
 package cz.novanadeje.app.operations.domain.backup;
 
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,7 +16,7 @@ class BackupKeyTest {
 
     static final String AGE_KEYGEN_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
     static final String OTHER_AGE_KEYGEN_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     @ParameterizedTest
     @ValueSource(strings = {AGE_KEYGEN_KEY, OTHER_AGE_KEYGEN_KEY, "AGE-SECRET-KEY-16EE9SQK4P76QTFJDUKNZN2W04PSXA8P5PKD7HWU5W6KYHAQQNVZSRMUG2S"})

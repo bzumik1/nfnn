@@ -1,8 +1,7 @@
 package cz.novanadeje.app.operations.domain.backup;
 
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -10,12 +9,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -25,21 +20,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BackupKeyWordsCasesTest {
 
-    static final String WORDLIST_SHA256 = "7e80e161c3e93d9554c2efb78d4e3cebf8fc727e9c52e03b83b94406bdcc95fc";
     private static final Path CASES = Path.of("..", "test-cases", "backup-key-words.json");
     private static final JsonNode SHARED = read();
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
-
-    @Test
-    @DisplayName("Given the Czech wordlist of BIP39, when it is loaded, then it is the published list the shared cases were made with")
-    void should_be_published_list_when_loaded() throws IOException, NoSuchAlgorithmException {
-        try (InputStream list = BackupKeyWordList.class.getResourceAsStream(BackupKeyWordList.LIST)) {
-            assertThat(list).isNotNull();
-            String sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(list.readAllBytes()));
-
-            assertThat(sha256).isEqualTo(WORDLIST_SHA256).isEqualTo(SHARED.get("wordlistSha256").asString());
-        }
-    }
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("keys")

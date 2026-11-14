@@ -16,7 +16,7 @@ import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
-import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -79,7 +79,7 @@ class DonorPasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorPasswordResetService(donors, tokens, passwordHasher, CommonPasswordList.policy(), new DonorPasswordResetProperties(TTL, 3),
+        service = new DonorPasswordResetService(donors, tokens, passwordHasher, CommonPasswords.POLICY, new DonorPasswordResetProperties(TTL, 3),
                 Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts, new SecondFactorHoldings(secondFactors, passkeys), transactions);
     }
 

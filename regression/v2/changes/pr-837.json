@@ -3,7 +3,7 @@
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donors.domain.RawPasswordTest > Given a common password in any case, when it is created, then it is rejected as too common",
-    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
+    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (donors/infrastructure/config/CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
     "replacement": "donors.domain.PasswordPolicyTest > Given a common password in any case, when the policy accepts it, then it is rejected as too common",
     "contract": "docs/security-overview.md, Passwords; .claude/rules/backend.md, Contexts and layers"
   },
@@ -11,32 +11,32 @@
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donors.domain.RawPasswordTest > [1] common = \"1qaz2wsx3edc\"",
-    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
-    "replacement": "donors.infrastructure.security.CommonPasswordListTest > [1] common = \"1qaz2wsx3edc\"",
+    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (donors/infrastructure/config/CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
+    "replacement": "donors.infrastructure.config.CommonPasswordListTest > [1] common = \"1qaz2wsx3edc\"",
     "contract": "docs/security-overview.md, Passwords; .claude/rules/backend.md, Contexts and layers"
   },
   {
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donors.domain.RawPasswordTest > [2] common = \"Q1W2E3R4T5Y6\"",
-    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
-    "replacement": "donors.infrastructure.security.CommonPasswordListTest > [2] common = \"Q1W2E3R4T5Y6\"",
+    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (donors/infrastructure/config/CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
+    "replacement": "donors.infrastructure.config.CommonPasswordListTest > [2] common = \"Q1W2E3R4T5Y6\"",
     "contract": "docs/security-overview.md, Passwords; .claude/rules/backend.md, Contexts and layers"
   },
   {
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donors.domain.RawPasswordTest > [3] common = \"justinbieber\"",
-    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
-    "replacement": "donors.infrastructure.security.CommonPasswordListTest > [3] common = \"justinbieber\"",
+    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (donors/infrastructure/config/CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
+    "replacement": "donors.infrastructure.config.CommonPasswordListTest > [3] common = \"justinbieber\"",
     "contract": "docs/security-overview.md, Passwords; .claude/rules/backend.md, Contexts and layers"
   },
   {
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donors.domain.RawPasswordTest > [4] common = \"heslo1234567\"",
-    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
-    "replacement": "donors.infrastructure.security.CommonPasswordListTest > [4] common = \"heslo1234567\"",
+    "reason": "Architecture audit #621 (R3-D8, #833): the common passwords moved out of RawPassword into the domain's PasswordPolicy, which infrastructure (donors/infrastructure/config/CommonPasswordList) loads at startup, so the refusal of a common password is tested there with the same values",
+    "replacement": "donors.infrastructure.config.CommonPasswordListTest > [4] common = \"heslo1234567\"",
     "contract": "docs/security-overview.md, Passwords; .claude/rules/backend.md, Contexts and layers"
   },
   {
@@ -46,5 +46,13 @@
     "reason": "Architecture audit #621 (R3-D8, #833): the domain allow-list no longer admits InputStream and IOException, so the planted domain classes also read a stream and the test names it",
     "replacement": "architecture.DddLayeringRulesTest$GivenPlantedViolations > when the domain rule checks domain classes on a logger, JDBC, concurrency, reflection, a socket and a stream, then each is reported",
     "contract": ".claude/rules/backend.md, Contexts and layers"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.domain.backup.BackupKeyWordsCasesTest > Given the Czech wordlist of BIP39, when it is loaded, then it is the published list the shared cases were made with",
+    "reason": "Architecture audit #621 (R3-D8, #833): the word list's SHA-256 is now checked at startup by infrastructure (BackupKeyWordList), so the test that its pin is the shared cases' moved beside that loader, out of the domain package",
+    "replacement": "operations.infrastructure.backup.BackupKeyWordListTest > Given the Czech wordlist of BIP39, when it is loaded, then it is the published list the shared cases were made with",
+    "contract": "docs/security-overview.md, Backups and restores; .claude/rules/backend.md, Contexts and layers"
   }
 ]

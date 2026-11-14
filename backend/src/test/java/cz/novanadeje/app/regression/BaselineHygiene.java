@@ -3,7 +3,7 @@ package cz.novanadeje.app.regression;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
 import cz.novanadeje.app.operations.domain.settings.SetupCode;
-import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -31,7 +31,7 @@ import java.util.stream.Stream;
 
 final class BaselineHygiene {
 
-    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final Pattern UUID_TEXT = Pattern.compile("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\b");
     private static final Pattern BASE64URL_ID_FIELD = Pattern.compile("\"(?:userHandle|id)\"\\s*:\\s*\"([A-Za-z0-9_-]{22})\"");
