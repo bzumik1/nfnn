@@ -70,7 +70,7 @@ test.describe('Given a donor on Údaje a zabezpečení of a browser that can rec
     await card.getByRole('button', { name: 'Zapnout na tomto zařízení' }).click();
 
     await expect(card.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
-      'Upozornění jsme na tomto zařízení zapnuli a poslali zkušební upozornění.',
+      'Upozornění jsme na tomto zařízení zapnuli. Zkušební upozornění jsme předali k doručení.',
     );
     await expect(card.getByRole('switch', { name: 'Dar dorazil' })).toBeChecked();
     await expect(page.locator('.devices .device-notified')).toHaveText(['dostává upozornění']);

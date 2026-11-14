@@ -21,7 +21,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { ListChanges } from '../../../core/kept/list-changes';
-import { BrowserPushHolders } from '../../../core/push/browser-push-holders';
+import { BrowserPushHolders } from '../../operations/browser-push-holders';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { PushAvailability, pushAvailability } from '../../../core/push/push-availability';
 import {

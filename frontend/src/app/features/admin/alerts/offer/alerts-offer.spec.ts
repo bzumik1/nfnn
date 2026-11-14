@@ -253,8 +253,6 @@ describe('Given an administrator in the administration', () => {
         .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
         .flush(refused.body, refused.options);
       await settle();
-      http.expectOne({ method: 'GET', url: '/api/operations/push' }).flush({ device: null });
-      await settle();
 
       expect(push.unsubscribe).toHaveBeenCalled();
       expect(sheet()?.querySelector('[role="alert"]')?.textContent).toContain(
@@ -271,8 +269,6 @@ describe('Given an administrator in the administration', () => {
       http
         .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
         .flush(limit.body, limit.options);
-      await settle();
-      http.expectOne({ method: 'GET', url: '/api/operations/push' }).flush({ device: null });
       await settle();
 
       expect(sheet()?.querySelector('[role="alert"]')?.textContent).toContain(

@@ -22,7 +22,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { SESSION_JAR } from '../../../../core/auth/session-jar';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
-import { BrowserPushHolders } from '../../../../core/push/browser-push-holders';
+import { BrowserPushHolders } from '../../../operations/browser-push-holders';
 import { pushAvailability } from '../../../../core/push/push-availability';
 import {
   DevicePushSubscription,

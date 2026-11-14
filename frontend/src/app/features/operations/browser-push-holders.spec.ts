@@ -2,8 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { AuthStore } from '../auth/auth-store';
-import { authResponse, sampleDonor } from '../auth/testing/donor-fixtures';
+import { AuthStore } from '../../core/auth/auth-store';
+import { authResponse, sampleDonor } from '../../core/auth/testing/donor-fixtures';
+import { DonorPushApi } from './donor-push-api';
 import { BrowserPushHolders } from './browser-push-holders';
 
 describe('Given one push subscription of this browser shared by the donor notifications and the administration alerts', () => {
@@ -17,7 +18,11 @@ describe('Given one push subscription of this browser shared by the donor notifi
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: DonorPushApi, useClass: DonorPushApi },
+      ],
     });
     holders = TestBed.inject(BrowserPushHolders);
     http = TestBed.inject(HttpTestingController);
@@ -40,7 +45,7 @@ describe('Given one push subscription of this browser shared by the donor notifi
     async (subscriptions, held) => {
       signIn(['DONOR', 'ADMIN']);
       const answer = holders.administrationAlertsHere();
-      http.expectOne('/api/admin/operations/push').flush({ subscriptions });
+      await vi.waitFor(() => http.expectOne('/api/admin/operations/push').flush({ subscriptions }));
 
       expect(await answer).toBe(held);
     },
@@ -62,7 +67,9 @@ describe('Given one push subscription of this browser shared by the donor notifi
   it('when either question fails, then the browser is kept, so nothing of the other side is lost', async () => {
     signIn(['DONOR', 'ADMIN']);
     const administration = holders.administrationAlertsHere();
-    http.expectOne('/api/admin/operations/push').flush(null, { status: 503, statusText: 'Busy' });
+    await vi.waitFor(() =>
+      http.expectOne('/api/admin/operations/push').flush(null, { status: 503, statusText: 'Busy' }),
+    );
     const donor = holders.donorNotificationsHere();
     http.expectOne('/api/operations/push').flush(null, { status: 503, statusText: 'Busy' });
 

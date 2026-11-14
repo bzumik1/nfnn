@@ -16,7 +16,11 @@ import {
   ServiceWorkerPush,
 } from '../../../../core/push/service-worker-push';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
-import { DonorPushApi, DonorPushDevice, DonorPushResponse } from '../../../operations/donor-push-api';
+import {
+  DonorPushApi,
+  DonorPushDevice,
+  DonorPushResponse,
+} from '../../../operations/donor-push-api';
 import { NotificationsCard } from './notifications-card';
 
 const PUSH_URL = '/api/operations/push';
@@ -83,6 +87,7 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
 
   async function open(answer: DonorPushResponse = pushView()): Promise<void> {
     fixture = TestBed.createComponent(NotificationsCard);
+    document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
     http.expectOne({ method: 'GET', url: PUSH_URL }).flush(answer);
     await settle();
@@ -147,6 +152,7 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
   });
 
   afterEach(() => {
+    fixture?.nativeElement.remove();
     Reflect.deleteProperty(window, 'PushManager');
     Reflect.deleteProperty(window, 'Notification');
     http.verify();
@@ -187,8 +193,9 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
       await settle();
 
       expect(status()).toContain(
-        'Upozornění jsme na tomto zařízení zapnuli a poslali zkušební upozornění.',
+        'Upozornění jsme na tomto zařízení zapnuli. Zkušební upozornění jsme předali k doručení.',
       );
+      expect(document.activeElement?.textContent?.trim()).toBe('Upozornění');
       expect(switchNamed('Dar dorazil').checked).toBe(true);
       expect(switchNamed('Roční potvrzení').checked).toBe(true);
       expect(TestBed.inject(DonorNotifiedDevices).ids()).toEqual(
@@ -263,19 +270,158 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
     await settle();
     http.expectOne({ method: 'DELETE', url: `${PUSH_URL}/device` }).flush(null);
     await settle();
-    http
-      .expectOne({ method: 'GET', url: ADMIN_PUSH_URL })
-      .flush({
+    await vi.waitFor(() =>
+      http.expectOne({ method: 'GET', url: ADMIN_PUSH_URL }).flush({
         publicKey: PUBLIC_KEY,
         deviceSession: true,
         subscriptions: [{ id: 'a', current: true }],
         openAlerts: [],
-      });
+      }),
+    );
     await settle();
     http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
     await settle();
 
     expect(push.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  describe('when a remembered sign-in subscribes and something goes wrong', () => {
+    beforeEach(async () => {
+      withPushApi();
+      await signIn('REMEMBERED');
+      await open();
+    });
+
+    it('then the eleventh device is refused with what to do and the browser lets the subscription go', async () => {
+      button('Zapnout na tomto zařízení')!.click();
+      await settle();
+      http.expectOne({ method: 'PUT', url: `${PUSH_URL}/device` }).flush(
+        {
+          type: 'https://nfnn.cz/problems/operations/push-subscription-limit',
+          title: 'Příliš mnoho zařízení',
+          status: 409,
+        },
+        {
+          status: 409,
+          statusText: 'Conflict',
+          headers: { 'Content-Type': 'application/problem+json' },
+        },
+      );
+      await settle();
+
+      expect(alerts()).toContain('Upozornění můžete mít zapnutá nejvýš na 10 zařízeních.');
+      expect(push.unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('then a second tap while the first runs asks the browser only once', async () => {
+      button('Zapnout na tomto zařízení')!.click();
+      button('Zapnout na tomto zařízení')?.click();
+      await settle();
+
+      expect(push.requestPermission).toHaveBeenCalledTimes(1);
+      http.expectOne({ method: 'PUT', url: `${PUSH_URL}/device` }).flush(device());
+      await settle();
+      http
+        .expectOne({ method: 'POST', url: `${PUSH_URL}/test` })
+        .flush({ delivered: 0, failed: 1, removed: 0 });
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView({ device: device() }));
+      await settle();
+
+      expect(status()).toContain('Zkušební upozornění se na toto zařízení nepodařilo předat.');
+    });
+  });
+
+  describe('when a switch of this device cannot be saved', () => {
+    beforeEach(async () => {
+      withPushApi('granted');
+      await signIn('APP');
+      await open(pushView({ device: device(), devices: ['device-here'] }));
+    });
+
+    it('then the switch goes back and the reason is shown', async () => {
+      const gifts = switchNamed('Dar dorazil');
+      gifts.checked = false;
+      gifts.dispatchEvent(new Event('change'));
+      await settle();
+      http
+        .expectOne({ method: 'PUT', url: `${PUSH_URL}/device/notifications` })
+        .flush(null, { status: 500, statusText: 'Error' });
+      await settle();
+
+      expect(switchNamed('Dar dorazil').checked).toBe(true);
+      expect(alerts()).toContain('Změnu se nepodařilo uložit.');
+    });
+
+    it('then a device turned off meanwhile elsewhere is read again', async () => {
+      const gifts = switchNamed('Dar dorazil');
+      gifts.checked = false;
+      gifts.dispatchEvent(new Event('change'));
+      await settle();
+      http.expectOne({ method: 'PUT', url: `${PUSH_URL}/device/notifications` }).flush(
+        {
+          type: 'https://nfnn.cz/problems/operations/push-subscription-not-found',
+          title: 'Zařízení nenalezeno',
+          status: 404,
+        },
+        {
+          status: 404,
+          statusText: 'Not Found',
+          headers: { 'Content-Type': 'application/problem+json' },
+        },
+      );
+      await settle();
+      http.expectOne({ method: 'GET', url: PUSH_URL }).flush(pushView());
+      await settle();
+
+      expect(button('Zapnout na tomto zařízení')).toBeTruthy();
+    });
+  });
+
+  it('when the server lists this device but the browser lost its subscription, then the card says so and offers turning on again', async () => {
+    withPushApi('granted');
+    push.browserSubscription = () =>
+      Promise.resolve<BrowserPushSubscriptionState>('not-subscribed');
+    await signIn('APP');
+    await open(pushView({ device: device(), devices: ['device-here'] }));
+
+    expect(text()).toContain('Prohlížeč ale upozornění od tohoto webu už nepřijímá');
+    expect(button('Zapnout znovu')).toBeTruthy();
+  });
+
+  it('when the sign-in names no device, then the card says why and offers nothing', async () => {
+    withPushApi();
+    await signIn('REMEMBERED');
+    await open(pushView({ deviceSession: false }));
+
+    expect(text()).toContain('Toto přihlášení je starší, než web začal rozlišovat zařízení.');
+    expect(button('Zapnout na tomto zařízení')).toBeUndefined();
+  });
+
+  it('when the session has ended, then the card hands the donor to the sign-in', async () => {
+    withPushApi();
+    await signIn('REMEMBERED');
+    fixture = TestBed.createComponent(NotificationsCard);
+    let ended = 0;
+    fixture.componentInstance.sessionEnded.subscribe(() => ended++);
+    fixture.detectChanges();
+    http.expectOne({ method: 'GET', url: PUSH_URL }).flush(
+      {
+        type: 'https://nfnn.cz/problems/auth/unauthenticated',
+        title: 'Nepřihlášeno',
+        status: 401,
+      },
+      {
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: { 'Content-Type': 'application/problem+json' },
+      },
+    );
+    await settle();
+    http
+      .match(() => true)
+      .forEach((request) => request.flush(null, { status: 401, statusText: 'Unauthorized' }));
+
+    expect(ended).toBeGreaterThan(0);
   });
 
   it.each([
