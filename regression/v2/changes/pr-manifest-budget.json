@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.interfaces.rest.DonorDeviceSyncTest > Given a donor with a thousand gifts, when the device asks for the manifest, then the backend answers within 50 ms",
+    "reason": "#800, Jakub 2026-11-14: the manifest budget counts the statements and measures the request thread's CPU time instead of wall time, as the backlog pairing budget of #838 does, so a loaded machine does not fail it",
+    "replacement": "donations.interfaces.rest.DonorDeviceSyncTest > Given a donor with a thousand gifts, when the device asks for the manifest, then the backend reads it with as many statements as for a donor with two gifts, nine in all, within 50 ms of CPU time, the median of 21 requests",
+    "contract": "docs/system-overview.md, Donations"
+  }
+]
