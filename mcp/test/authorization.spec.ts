@@ -174,3 +174,29 @@ describe('Given the backend down while the connector reads its metadata', () => 
     await outcome;
   });
 });
+
+describe('Given the connector bounding each metadata read with a timer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('when a read succeeds, then its timer is cleared', async () => {
+    vi.useFakeTimers();
+    const site = { issuer: 'https://nfnn.cz', up: true, reads: 0 };
+    const discovery = new AuthorizationServerDiscovery(BACKEND, siteAt(site), silent, () => 0);
+
+    await discovery.discover();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('when a read fails, then its timer is cleared', async () => {
+    vi.useFakeTimers();
+    const site = { issuer: 'https://nfnn.cz', up: false, reads: 0 };
+    const discovery = new AuthorizationServerDiscovery(BACKEND, siteAt(site), silent, () => 0);
+
+    await expect(discovery.discover()).rejects.toThrow('connection refused');
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
