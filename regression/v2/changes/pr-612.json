@@ -1,30 +1,30 @@
 [
   {
-    "scenario": "donations/admin_receipt_signature: Without an upload the receipts carry only the line and the signatory's name",
+    "scenario": "donations/admin_receipt_signature: Without an upload the receipts carry only the line and the signatory's name*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An uploaded scan is shown to administrators, audited and printed on receipts issued afterwards",
+    "scenario": "donations/admin_receipt_signature: An uploaded scan is shown to administrators, audited and printed on receipts issued afterwards*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: A removed signature leaves the next receipts with the line and the name",
+    "scenario": "donations/admin_receipt_signature: A removed signature leaves the next receipts with the line and the name*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: A file that is not a JPEG, PNG or WebP image is refused and the signature stays",
+    "scenario": "donations/admin_receipt_signature: A file that is not a JPEG, PNG or WebP image is refused and the signature stays*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: A donor without the administrator role and a visitor without a token are refused",
+    "scenario": "donations/admin_receipt_signature: A donor without the administrator role and a visitor without a token are refused*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
@@ -1005,73 +1005,73 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An uploaded vector signature is kept as filled paths, shown to administrators as paths and audited",
+    "scenario": "donations/admin_receipt_signature: An uploaded vector signature is kept as filled paths, shown to administrators as paths and audited*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: A receipt issued with a vector signature keeps its digest, and only its donor gets the canonical JSON it names",
+    "scenario": "donations/admin_receipt_signature: A receipt issued with a vector signature keeps its digest, and only its donor gets the canonical JSON it names*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a script \\| Soubor obsahuje nepovolený prvek.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a script * Soubor obsahuje nepovolený prvek.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [an external entity \\| Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [an external entity * Soubor obsahuje deklaraci DOCTYPE nebo entity, ty SVG podpisu mít nesmí.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a link \\| Soubor obsahuje nepovolený atribut.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a link * Soubor obsahuje nepovolený atribut.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a style \\| Soubor obsahuje nepovolený atribut.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a style * Soubor obsahuje nepovolený atribut.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a filter \\| Soubor obsahuje nepovolený prvek.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [a filter * Soubor obsahuje nepovolený prvek.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [an element of another namespace \\| Soubor obsahuje prvek z jiného jmenného prostoru (xmlns) než SVG.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [an element of another namespace * Soubor obsahuje prvek z jiného jmenného prostoru (xmlns) než SVG.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [more than 200 kB \\| Soubor je větší než 200 kB.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [more than 200 kB * Soubor je větší než 200 kB.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [path data that grows past 256 kB once absolute \\| Podpis má příliš mnoho tvarů, bodů nebo vnořených skupin.]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [path data that grows past 256 kB once absolute * Podpis má příliš mnoho tvarů, bodů nebo vnořených skupin.]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [malformed path data \\| Tvar má neplatný zápis cesty (atribut d).]",
+    "scenario": "donations/admin_receipt_signature: An SVG with anything but filled paths is refused naming the problem, and the signature stays [malformed path data * Tvar má neplatný zápis cesty (atribut d).]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/admin_receipt_signature: A donor without the administrator role and a visitor without a token cannot upload a vector signature",
+    "scenario": "donations/admin_receipt_signature: A donor without the administrator role and a visitor without a token cannot upload a vector signature*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
@@ -1152,7 +1152,7 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "scenario": "donations/admin_receipt_signature: Removing a person of the foundation deletes their receipt signature in the same step",
+    "scenario": "donations/admin_receipt_signature: Removing a person of the foundation deletes their receipt signature in the same step*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
@@ -1666,7 +1666,7 @@
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donations/donation_receipts_frozen: A vector signature is frozen by its digest and served to the donor whose receipt shows it as its canonical JSON",
+    "scenario": "donations/donation_receipts_frozen: A vector signature is frozen by its digest and served to the donor whose receipt shows it as its canonical JSON*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
@@ -2213,19 +2213,19 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [POST \\| /api/admin/donations/receipt-signatures/{id}]",
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [POST * /api/admin/donations/receipt-signatures/{id}]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [DELETE \\| /api/admin/donations/receipt-signatures/{id}]",
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [DELETE * /api/admin/donations/receipt-signatures/{id}]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [GET \\| /api/admin/donations/receipt-signatures/{id}]",
+    "scenario": "donors/connected_apps: A dangerous or irreversible change is refused to a connected application even with the writing permission [GET * /api/admin/donations/receipt-signatures/{id}]*",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: the receipt signature upload is gone (one signature per person, set at the people of the foundation), so its scenarios go; the scenarios of the one signature are in content/manage_people and donations/admin_receipt_signature",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
