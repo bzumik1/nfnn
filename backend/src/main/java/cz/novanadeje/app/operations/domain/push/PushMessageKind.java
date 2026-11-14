@@ -3,41 +3,48 @@ package cz.novanadeje.app.operations.domain.push;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
 public enum PushMessageKind {
-    TEST("test", Optional.empty(), false),
-    BANK_IMPORT_OUTAGE("bank-import-outage", Optional.of(MonitoredArea.BANK_IMPORT), true),
-    BANK_IMPORT_RECOVERED("bank-import-recovered", Optional.of(MonitoredArea.BANK_IMPORT), false),
-    BACKUPS_OUTAGE("backups-outage", Optional.of(MonitoredArea.BACKUPS), true),
-    BACKUPS_RECOVERED("backups-recovered", Optional.of(MonitoredArea.BACKUPS), false),
-    MAIL_OUTAGE("mail-outage", Optional.of(MonitoredArea.MAIL), true),
-    MAIL_RECOVERED("mail-recovered", Optional.of(MonitoredArea.MAIL), false),
-    DONOR_TEST("donor-test"),
-    GIFT_ARRIVED("gift-arrived"),
-    YEARLY_RECEIPT_READY("yearly-receipt-ready");
+    TEST("test", Audience.ADMINISTRATORS),
+    BANK_IMPORT_OUTAGE("bank-import-outage", MonitoredArea.BANK_IMPORT, true),
+    BANK_IMPORT_RECOVERED("bank-import-recovered", MonitoredArea.BANK_IMPORT, false),
+    BACKUPS_OUTAGE("backups-outage", MonitoredArea.BACKUPS, true),
+    BACKUPS_RECOVERED("backups-recovered", MonitoredArea.BACKUPS, false),
+    MAIL_OUTAGE("mail-outage", MonitoredArea.MAIL, true),
+    MAIL_RECOVERED("mail-recovered", MonitoredArea.MAIL, false),
+    DONOR_TEST("donor-test", Audience.DONORS),
+    GIFT_ARRIVED("gift-arrived", Audience.DONORS),
+    YEARLY_RECEIPT_READY("yearly-receipt-ready", Audience.DONORS);
+
+    private enum Audience {
+        ADMINISTRATORS,
+        DONORS
+    }
 
     private final String token;
-    private final Optional<MonitoredArea> area;
+    private final MonitoredArea area;
     private final boolean outage;
-    private final boolean toDonors;
+    private final Audience audience;
 
-    PushMessageKind(String token, Optional<MonitoredArea> area, boolean outage) {
+    PushMessageKind(String token, MonitoredArea area, boolean outage) {
         this.token = token;
         this.area = area;
         this.outage = outage;
-        this.toDonors = false;
+        this.audience = Audience.ADMINISTRATORS;
     }
 
-    PushMessageKind(String token) {
+    PushMessageKind(String token, Audience audience) {
         this.token = token;
-        this.area = Optional.empty();
+        this.area = null;
         this.outage = false;
-        this.toDonors = true;
+        this.audience = audience;
     }
 
     public static PushMessageKind of(MonitoredArea area, boolean opened) {
-        return Arrays.stream(values()).filter(kind -> kind.area.equals(Optional.of(area)) && kind.outage == opened).findFirst().orElseThrow();
+        Objects.requireNonNull(area, "area");
+        return Arrays.stream(values()).filter(kind -> kind.area == area && kind.outage == opened).findFirst().orElseThrow();
     }
 
     public String token() {
@@ -45,10 +52,10 @@ public enum PushMessageKind {
     }
 
     public Optional<MonitoredArea> area() {
-        return area;
+        return Optional.ofNullable(area);
     }
 
     public boolean carriesOpenAlertCount() {
-        return !toDonors;
+        return audience == Audience.ADMINISTRATORS;
     }
 }
