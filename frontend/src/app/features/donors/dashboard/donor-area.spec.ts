@@ -1193,16 +1193,23 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
-    it('then the last gift and the bank check are rows of one list under the heading Poslední dar', async () => {
+    it('then Poslední dar is one card with its heading inside, its amount, date and state, then Zkontrolovat nové platby', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const group = element('section[aria-labelledby="last-gift-title"]');
-      expect(normalized(group?.querySelector('h2')?.textContent ?? '')).toBe('Poslední dar');
-      const rows = [...(group?.querySelectorAll('ul > li') ?? [])].map((row) =>
-        normalized(row.textContent ?? ''),
+      const card = element('section[aria-labelledby="last-gift-title"]')!;
+      expect(card.classList).toContain('ui-card');
+      const title = element('#last-gift-title')!;
+      expect(title.tagName).toBe('H2');
+      expect(title.closest('.ui-card')).toBe(card);
+      expect(normalized(title.textContent ?? '')).toBe('Poslední dar');
+      expect(normalized(card.querySelector('.last-gift-main')?.textContent ?? '')).toBe(
+        '500 Kč 15. 3. 2026 Přijato',
       );
-      expect(rows).toEqual(['15. 3. 2026 Přijato 500 Kč', 'Zkontrolovat nové platby']);
+      const check = card.querySelector<HTMLButtonElement>('button.bank-check-btn')!;
+      expect(normalized(check.textContent ?? '')).toBe('Zkontrolovat nové platby');
+      expect(check.classList).toContain('ui-button');
+      expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
     });
 
     it('then a payment that verified an account never becomes the last gift: the newest gift does', async () => {
@@ -1286,9 +1293,18 @@ describe('Given a signed-in donor in the donor area', () => {
         'Máme na vás otázku k platbám z účtu 19-2000145399/0800. Odpovědět',
       ]);
       expect(element('.overview-question a')?.getAttribute('href')).toBe('/darce/ucty');
-      expect(text('.overview-question a')).toBe(
-        'Máme na vás otázku k platbám z účtu 19-2000145399/0800. Odpovědět',
+      expect(text('.overview-question a')).toBe('Odpovědět');
+      expect(element('.overview-question')?.classList).toContain('ui-callout--warning');
+      expect(element('.overview-question')?.closest('.ui-list')).toBeNull();
+      const sentence = document.getElementById(
+        element('.overview-question a')?.getAttribute('aria-describedby') ?? '',
       );
+      expect(normalized(sentence?.textContent ?? '')).toBe(
+        'Máme na vás otázku k platbám z účtu 19-2000145399/0800.',
+      );
+      expect(
+        element('.overview-question .overview-account wbr')?.previousSibling?.textContent,
+      ).toBe('19-2000145399/');
     });
 
     it('then no question is announced while no bank account carries one', async () => {
@@ -1433,6 +1449,29 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(all.getAttribute('href')).toBe('/darce/dary');
     });
 
+    for (const phone of [true, false]) {
+      it(`when the screen is ${phone ? 'a phone' : 'wide'}, then Poslední dary is one card with its title and Všechny dary inside, over the recent gifts`, async () => {
+        compact.set(phone);
+        await open('/darce/prehled');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const card = element('section[aria-labelledby="recent-title"]')!;
+        expect(card.classList).toContain('ui-card');
+        const title = element('#recent-title')!;
+        expect(title.tagName).toBe('H2');
+        expect(normalized(title.textContent ?? '')).toBe('Poslední dary');
+        expect(title.closest('.ui-card')).toBe(card);
+        const all = card.querySelector('a[href="/darce/dary"]')!;
+        expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
+        expect(card.querySelector('app-donations-table')?.closest('.ui-card')).toBe(card);
+        expect(
+          card.querySelector(
+            '.ui-list--inset, .ui-group-title, .ui-group-head, .ui-group-aside, .ui-card .ui-card',
+          ),
+        ).toBeNull();
+      });
+    }
+
     it('then a donor with no donations yet reads how to send the first gift instead of zeros', async () => {
       await open('/darce/prehled');
       await respond(emptySummary(), emptyDonations());
@@ -1466,6 +1505,23 @@ describe('Given a signed-in donor in the donor area', () => {
         (node) => (node.tagName === 'H2' ? 'H2' : node.className),
       );
       expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
+    });
+
+    it('then Jak poslat první dar is one card with its heading inside that ends with Zkontrolovat nové platby and the note on bank delays', async () => {
+      await open('/darce/prehled');
+      await respond(emptySummary(), emptyDonations());
+
+      const card = element('section[aria-labelledby="first-gift-title"]')!;
+      expect(card.classList).toContain('ui-card');
+      const title = element('#first-gift-title')!;
+      expect(title.tagName).toBe('H2');
+      expect(normalized(title.textContent ?? '')).toBe('Jak poslat první dar');
+      expect(title.closest('.ui-card')).toBe(card);
+      expect(normalized(card.querySelector('.bank-check-btn')?.textContent ?? '')).toBe(
+        'Zkontrolovat nové platby',
+      );
+      expect(card.querySelector('.recent-hint')).not.toBeNull();
+      expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
     });
 
     it('then a donor with gifts can still open the standing order guide in the card Poslat dar', async () => {
@@ -1768,6 +1824,23 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(normalized(title.textContent ?? '')).toBe('Všechny dary');
       expect(title.tagName).toBe('H2');
       expect(title.closest('.ui-card')).toBe(element('.payments-card'));
+    });
+
+    it('then Zkontrolovat nové platby and its status stand beside the title in the bar of the card Všechny dary', async () => {
+      await open('/darce/dary');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const bar = element('.payments-card > .ui-card__bar')!;
+      const check = bar.querySelector('app-bank-check')!;
+      expect(normalized(check.querySelector('.bank-check-btn')?.textContent ?? '')).toBe(
+        'Zkontrolovat nové platby',
+      );
+      expect(check.querySelector('[role="status"]')).not.toBeNull();
+      expect(check.querySelector('.ui-list, .ui-group-note')).toBeNull();
+      expect(
+        bar.querySelector('#payments-title')!.compareDocumentPosition(check) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
 
     for (const phone of [true, false]) {

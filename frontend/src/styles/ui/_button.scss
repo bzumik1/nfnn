@@ -23,6 +23,10 @@
   @include pressed.when-pressed {
     @include pressed.darkens;
   }
+
+  @media (forced-colors: active) {
+    border: 1px solid ButtonText;
+  }
 }
 
 .ui-button--primary {

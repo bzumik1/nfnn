@@ -45,6 +45,10 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   white-space: nowrap;
+
+  @media (forced-colors: active) {
+    border: 1px solid CanvasText;
+  }
 }
 
 .ui-badge--success {
