@@ -16,11 +16,7 @@ public record ProjectView(ProjectId id, String slug, String title, int year, Pro
                           Optional<MediaId> coverImage, Optional<String> coverImageAlt, Optional<FocalPoint> coverFocalPoint, Optional<LocalDate> publishedOn,
                           boolean live, Instant createdAt, Instant updatedAt) {
 
-    public static List<MediaId> coverImagesOf(List<Project> projects) {
-        return projects.stream().flatMap(project -> project.content().coverImage().stream()).toList();
-    }
-
-    public static List<ProjectView> all(List<Project> projects, LocalDate today, Map<MediaId, FocalPoint> focalPoints) {
+    static List<ProjectView> all(List<Project> projects, LocalDate today, Map<MediaId, FocalPoint> focalPoints) {
         return projects.stream().map(project -> from(project, today, focalPoints)).toList();
     }
 

@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.people;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
+import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.people.PeopleOrder;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonDetails;
@@ -27,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -175,12 +178,11 @@ public class PeopleAdminService {
     }
 
     private PersonView view(Person person) {
-        return PersonView.of(person, imageOf(person.details().portrait()), imageOf(person.webSignature()),
-                emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount));
-    }
-
-    private Optional<PersonImageView> imageOf(Optional<MediaId> image) {
-        return image.flatMap(id -> media.findSize(id).map(size -> PersonImageView.of(id, size)));
+        boolean linkedToAccount = emailsOf(person).anyMatch(accounts::belongsToVerifiedAccount);
+        Map<MediaId, MediaSize> sizes = new HashMap<>();
+        Stream.concat(person.details().portrait().stream(), person.webSignature().stream())
+                .forEach(image -> media.findSize(image).ifPresent(size -> sizes.put(image, size)));
+        return PersonView.of(person, sizes, linkedToAccount);
     }
 
     private static Stream<EmailAddress> emailsOf(Person person) {

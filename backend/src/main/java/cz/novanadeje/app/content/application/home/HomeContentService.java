@@ -4,10 +4,8 @@ import cz.novanadeje.app.content.application.about.AboutService;
 import cz.novanadeje.app.content.application.donateband.DonateBandService;
 import cz.novanadeje.app.content.application.news.NewsSigners;
 import cz.novanadeje.app.content.application.people.PublicPeopleService;
-import cz.novanadeje.app.content.application.project.ProjectView;
-import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.application.project.ProjectViews;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
-import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.content.domain.project.ProjectRepository;
 import cz.novanadeje.app.shared.domain.FoundationZone;
@@ -16,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -32,11 +29,11 @@ public class HomeContentService {
     private final AboutService about;
     private final DonateBandService donateBand;
     private final PublicPeopleService people;
-    private final MediaImageRepository media;
+    private final ProjectViews projectViews;
     private final Clock clock;
 
     public HomeContentService(NewsArticleRepository news, NewsSigners signers, ProjectRepository projects, ProjectOrderRepository projectOrders, AboutService about,
-                              DonateBandService donateBand, PublicPeopleService people, MediaImageRepository media, Clock clock) {
+                              DonateBandService donateBand, PublicPeopleService people, ProjectViews projectViews, Clock clock) {
         this.news = news;
         this.signers = signers;
         this.projects = projects;
@@ -44,7 +41,7 @@ public class HomeContentService {
         this.about = about;
         this.donateBand = donateBand;
         this.people = people;
-        this.media = media;
+        this.projectViews = projectViews;
         this.clock = clock;
     }
 
@@ -52,13 +49,9 @@ public class HomeContentService {
         LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
         return new HomeContent(
                 signers.views(news.findVisibleNewestFirst(today, 0, NEWS_ON_HOME), today),
-                projectViews(projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME), today),
+                projectViews.of(projects.findVisible(today, projectOrders.current(), 0, PROJECTS_ON_HOME), today),
                 about.read(),
                 donateBand.read(),
                 people.read());
-    }
-
-    private List<ProjectView> projectViews(List<Project> shown, LocalDate today) {
-        return ProjectView.all(shown, today, media.findFocalPoints(ProjectView.coverImagesOf(shown)));
     }
 }

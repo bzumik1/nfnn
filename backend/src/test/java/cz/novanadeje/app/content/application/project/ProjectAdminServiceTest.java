@@ -68,7 +68,7 @@ class ProjectAdminServiceTest {
     }
 
     private ProjectAdminService service(Instant now) {
-        return new ProjectAdminService(projects, orders, media, formerSlugs, new ContentVersions(RowVersionsFixture.canonical()), events, Clock.fixed(now, ZoneOffset.UTC));
+        return new ProjectAdminService(projects, orders, media, new ProjectViews(media), formerSlugs, new ContentVersions(RowVersionsFixture.canonical()), events, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @Test
@@ -186,7 +186,7 @@ class ProjectAdminServiceTest {
         Clock clock = mock(Clock.class);
         when(clock.instant()).thenReturn(NOW);
 
-        new ProjectAdminService(projects, orders, media, formerSlugs, new ContentVersions(RowVersionsFixture.canonical()), events, clock).publish(ADMIN, project.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none());
+        new ProjectAdminService(projects, orders, media, new ProjectViews(media), formerSlugs, new ContentVersions(RowVersionsFixture.canonical()), events, clock).publish(ADMIN, project.id(), LocalDate.parse("2026-10-23"), ExpectedVersion.none());
 
         InOrder order = inOrder(projects, clock);
         order.verify(projects).findByIdForUpdate(project.id());
