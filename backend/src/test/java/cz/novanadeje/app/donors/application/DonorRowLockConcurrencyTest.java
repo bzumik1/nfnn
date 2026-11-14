@@ -124,12 +124,12 @@ class DonorRowLockConcurrencyTest {
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(DonorAlreadyErased.class);
         assertThat(jdbc.sql("select erased_at is not null from donor where id = ?").param(petr.id().value()).query(Boolean.class).single()).isTrue();
-        assertThat(column("name")).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(column("name")).isEqualTo(ErasedPersonalData.NAME.value());
         assertThat(column("street")).isEqualTo(ErasedPersonalData.ADDRESS.street());
         assertThat(column("email")).isEqualTo(ErasedPersonalData.emailFor(petr.id().value()).value());
         assertThat(column("password_hash")).isNull();
         assertThat(jdbc.sql("select name from donor_record where donor_id = ?").param(petr.id().value()).query(String.class).single())
-                .isEqualTo(ErasedPersonalData.NAME);
+                .isEqualTo(ErasedPersonalData.NAME.value());
         assertThat(jdbc.sql("select street from donor_record where donor_id = ?").param(petr.id().value()).query(String.class).single())
                 .isEqualTo(ErasedPersonalData.ADDRESS.street());
     }

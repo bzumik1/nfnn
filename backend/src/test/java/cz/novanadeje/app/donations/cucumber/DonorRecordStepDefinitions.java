@@ -112,7 +112,7 @@ public class DonorRecordStepDefinitions {
     public void donationsKnowsWithTypeNameAddressAndLocale(String alias, String type, String name, String address, String locale) {
         DonorRecord record = recordOf(alias);
         assertThat(record.type()).isEqualTo(DonorType.valueOf(type));
-        assertThat(record.name()).isEqualTo(name);
+        assertThat(record.name()).isEqualTo(new DonorName(name));
         assertThat(record.address().singleLine()).isEqualTo(address);
         assertThat(record.preferredLocale()).isEqualTo(LocaleCode.fromTag(locale));
     }
