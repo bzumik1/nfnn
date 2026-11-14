@@ -2,13 +2,21 @@ package cz.novanadeje.app.donations.application.pairing;
 
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.support.DatabaseCleaner;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,41 +34,73 @@ class UnpairedBacklogPairingTest {
     private static final int SHARED_ACCOUNTS = 100;
     private static final int WARM_UP_RUNS = 1;
     private static final int TIMED_RUNS = 3;
-    private static final long PAIRING_BUDGET_MILLIS = 5_000;
+    private static final long STATEMENTS_PER_PAIRING = 1 + 1 + UNKNOWN_SYMBOLS + SENDER_ACCOUNTS + 2L * SHARED_ACCOUNTS + 1;
+    private static final long MANAGED_ENTITIES_BUDGET = 2L * 2 * SHARED_ACCOUNTS;
+    private static final long PAIRING_CPU_BUDGET_MILLIS = 5_000;
 
     @Autowired
     private PaymentPairingService pairing;
     @Autowired
     private JdbcClient jdbc;
+    @Autowired
+    private TransactionTemplate transactions;
+    @Autowired
+    private EntityManager entityManager;
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
+
+    private Statistics statistics;
 
     @BeforeEach
     void startFromEmptyTables() {
         new DatabaseCleaner(jdbc).emptyAllTables();
+        statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
     }
 
     @AfterEach
     void leaveEmptyTables() {
+        statistics.setStatisticsEnabled(false);
+        statistics.clear();
         new DatabaseCleaner(jdbc).emptyAllTables();
     }
 
     @Test
-    @DisplayName("Given twenty thousand unpaired payments from four thousand senders, half of them with one of three thousand symbols nobody has, and a hundred accounts two donors share, when the import pairs the unpaired payments, then it leaves them all unpaired within 5 s")
-    void should_leave_the_backlog_unpaired_within_5_s_when_the_import_pairs_given_twenty_thousand_unpairable_payments() {
+    @DisplayName("Given twenty thousand unpaired payments from four thousand senders, half of them with one of three thousand symbols nobody has, and a hundred accounts two donors share, when the import pairs the unpaired payments, then it leaves them all unpaired with one statement per symbol and account it looks up, at most four hundred entities held and within 5 s of CPU time")
+    void should_leave_the_backlog_unpaired_with_counted_statements_entities_and_cpu_when_the_import_pairs_given_twenty_thousand_unpairable_payments() {
         storeUnpairableBacklog();
         for (int run = 0; run < WARM_UP_RUNS; run++) {
             assertThat(pairing.pairUnpaired(NOW)).isEqualTo(new PairingOutcome(0, 0, 0, 0, PAYMENTS));
         }
-        long[] millis = new long[TIMED_RUNS];
+        Measured[] runs = new Measured[TIMED_RUNS];
         for (int run = 0; run < TIMED_RUNS; run++) {
-            long start = System.nanoTime();
-            PairingOutcome outcome = pairing.pairUnpaired(NOW);
-            millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
-            assertThat(outcome).isEqualTo(new PairingOutcome(0, 0, 0, 0, PAYMENTS));
+            runs[run] = measuredPairing();
+            assertThat(runs[run].outcome()).isEqualTo(new PairingOutcome(0, 0, 0, 0, PAYMENTS));
         }
-        Arrays.sort(millis);
-        assertThat(millis[0]).as("the fastest of %d pairings over %d unpaired payments, in ms: %s", TIMED_RUNS, PAYMENTS, Arrays.toString(millis))
-                .isLessThan(PAIRING_BUDGET_MILLIS);
+        long[] cpuMillis = Arrays.stream(runs).mapToLong(Measured::cpuMillis).sorted().toArray();
+        long[] wallMillis = Arrays.stream(runs).mapToLong(Measured::wallMillis).sorted().toArray();
+        String measured = "%d pairings over %d unpaired payments, CPU of the calling thread in ms: %s, wall time in ms: %s"
+                .formatted(TIMED_RUNS, PAYMENTS, Arrays.toString(cpuMillis), Arrays.toString(wallMillis));
+        assertThat(runs).as(measured).allSatisfy(run -> {
+            assertThat(run.statements()).as("statements of one pairing").isEqualTo(STATEMENTS_PER_PAIRING);
+            assertThat(run.managedEntities()).as("entities the persistence context holds at the end of a pairing").isLessThanOrEqualTo(MANAGED_ENTITIES_BUDGET);
+        });
+        assertThat(cpuMillis[0]).as("the fastest of %s", measured).isLessThan(PAIRING_CPU_BUDGET_MILLIS);
         assertThat(jdbc.sql("select count(*) from donation").query(Long.class).single()).isZero();
+    }
+
+    private Measured measuredPairing() {
+        ThreadMXBean threads = ManagementFactory.getThreadMXBean();
+        statistics.clear();
+        long cpuStart = threads.getCurrentThreadCpuTime();
+        long wallStart = System.nanoTime();
+        Measured measured = transactions.execute(status -> {
+            PairingOutcome outcome = pairing.pairUnpaired(NOW);
+            long managedEntities = entityManager.unwrap(Session.class).getStatistics().getEntityCount();
+            return new Measured(outcome, statistics.getPrepareStatementCount(), managedEntities, 0, 0);
+        });
+        return new Measured(measured.outcome(), measured.statements(), measured.managedEntities(),
+                Duration.ofNanos(threads.getCurrentThreadCpuTime() - cpuStart).toMillis(), Duration.ofNanos(System.nanoTime() - wallStart).toMillis());
     }
 
     private void storeUnpairableBacklog() {
@@ -92,5 +132,8 @@ class UnpairedBacklogPairingTest {
                 .param("shared", SHARED_ACCOUNTS)
                 .param("at", Timestamp.from(NOW))
                 .update();
+    }
+
+    private record Measured(PairingOutcome outcome, long statements, long managedEntities, long cpuMillis, long wallMillis) {
     }
 }
