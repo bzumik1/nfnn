@@ -1321,7 +1321,7 @@
     "contract": "docs/api-contract.md, Receipt signatory and signatures"
   },
   {
-    "path": "GET /api/admin/donations/receipt-images/6afbb84e84e5afbc1aaf0e6975c9d8f2e684c43fc0c0d3c5e8fa6f7383e6210d",
+    "path": "GET /api/admin/donations/receipt-images/*",
     "scenario": "donations/admin_receipts: *",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: a person of the foundation has one signature, shown under the founders' note and printed on the receipts they sign; the person's webSignature is now signature, POST/DELETE /api/admin/content/people/{id}/web-signature are now /signature, GET /api/admin/donations/receipt-signatory drops signatures, and /api/admin/donations/receipt-signatures/{personId} is gone",
@@ -1659,7 +1659,7 @@
     "contract": "docs/api-contract.md, Receipt signatory and signatures"
   },
   {
-    "path": "GET /api/donations/me/receipt-images/6afbb84e84e5afbc1aaf0e6975c9d8f2e684c43fc0c0d3c5e8fa6f7383e6210d",
+    "path": "GET /api/donations/me/receipt-images/*",
     "scenario": "donations/donation_receipts_frozen: *",
     "kind": "removed",
     "reason": "PR #612, Jakub 2026-11-12: a person of the foundation has one signature, shown under the founders' note and printed on the receipts they sign; the person's webSignature is now signature, POST/DELETE /api/admin/content/people/{id}/web-signature are now /signature, GET /api/admin/donations/receipt-signatory drops signatures, and /api/admin/donations/receipt-signatures/{personId} is gone",
