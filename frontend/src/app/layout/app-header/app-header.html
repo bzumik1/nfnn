@@ -33,18 +33,13 @@
     }
     @if (showsLogo()) {
       <a class="brand" routerLink="/">
-        <picture>
-          @if (!onDark()) {
-            <source media="(prefers-color-scheme: dark)" srcset="/images/logo-on-dark.svg" />
-          }
-          <img
-            [src]="onDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
-            alt="Nová naděje – nadační fond"
-            i18n-alt="@@layout.header.logoAlt"
-            width="115"
-            height="40"
-          />
-        </picture>
+        <img
+          [src]="logoOnDark() ? '/images/logo-on-dark.svg' : '/images/logo.svg'"
+          alt="Nová naděje – nadační fond"
+          i18n-alt="@@layout.header.logoAlt"
+          width="115"
+          height="40"
+        />
       </a>
     }
     @if (auth.signedIn()) {

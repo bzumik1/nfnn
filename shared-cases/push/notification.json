@@ -91,6 +91,16 @@
         "tag": "nfnn-gifts",
         "url": "/darce/dary"
       }
+    },
+    {
+      "name": "the yearly-receipt-ready notification",
+      "input": {
+        "kind": "yearly-receipt-ready"
+      },
+      "expected": {
+        "tag": "nfnn-receipts",
+        "url": "/darce/potvrzeni"
+      }
     }
   ]
 }

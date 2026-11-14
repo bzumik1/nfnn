@@ -1,16 +1,8 @@
 .register {
-  display: grid;
-  gap: var(--space-2);
-  margin-block: var(--space-5);
-  padding-block: var(--space-5);
-  border-block: 1px solid var(--color-border);
+  margin-top: var(--space-5);
 }
 
-.register__title {
-  margin: 0;
-  font-size: var(--text-lg);
-}
-
+.register__body,
 .register__state {
   display: grid;
   gap: var(--space-2);
@@ -22,18 +14,19 @@
 }
 
 .register__text {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   line-height: var(--leading-normal);
+  color: var(--color-text-soft);
 }
 
 .register__as-of {
-  color: var(--color-text-soft);
+  color: var(--color-text-subtle);
   font-size: var(--text-sm);
 }
 
 .register__donor {
   justify-self: start;
   color: var(--color-accent);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
 }

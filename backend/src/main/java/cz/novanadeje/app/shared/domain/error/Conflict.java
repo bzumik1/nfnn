@@ -1,8 +1,8 @@
 package cz.novanadeje.app.shared.domain.error;
 
-public non-sealed class Conflict extends DomainException {
+public abstract non-sealed class Conflict extends DomainException {
 
-    public Conflict(String code, String message) {
+    protected Conflict(String code, String message) {
         super(code, message);
     }
 }

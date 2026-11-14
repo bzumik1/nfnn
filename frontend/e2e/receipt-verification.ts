@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import type { RouteTarget } from './fixtures';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,6 +19,10 @@ const STORAGE_KEY = 'nfnn.receipt-keys';
 export interface VerificationProof {
   readonly fragment: string;
   readonly statusSha256: string;
+}
+
+export function verdictHeading(page: Page): Locator {
+  return page.getByRole('main').getByRole('heading', { level: 2 }).first();
 }
 
 export function proof(name: string): VerificationProof {

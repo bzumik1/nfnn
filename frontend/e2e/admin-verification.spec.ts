@@ -2,7 +2,13 @@ import { Page } from '@playwright/test';
 import { mockAdministrationCopy } from './administration-copy';
 import { administrator, mockDonorApi, session } from './donor-session';
 import { expect, test } from './fixtures';
-import { keyList, scanFragment, serveReceiptApi, YEARLY_RECEIPT } from './receipt-verification';
+import {
+  keyList,
+  scanFragment,
+  serveReceiptApi,
+  verdictHeading,
+  YEARLY_RECEIPT,
+} from './receipt-verification';
 
 const YEARLY_ROW = {
   id: '01980000-0000-7000-8000-000000000123',
@@ -61,9 +67,7 @@ test.describe('Given an administrator whose device holds the administration copy
 
     await scanFragment(page, YEARLY_RECEIPT.fragment);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Fond toto potvrzení nahradil novějším',
-    );
+    await expect(verdictHeading(page)).toHaveText('Fond toto potvrzení nahradil novějším');
     await expect(page.getByText('Platí to novější; najdete ho na kartě dárce.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'info@nfnn.cz' })).toHaveCount(0);
     await expect(register(page)).toContainText('Nahrazené');
@@ -101,9 +105,7 @@ test.describe('Given an administrator whose device holds the administration copy
       .fill(`https://nfnn.cz/overit#${YEARLY_RECEIPT.fragment}`);
     await page.getByRole('button', { name: 'Ověřit odkaz' }).click();
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Podepsáno fondem Nová naděje',
-    );
+    await expect(verdictHeading(page)).toHaveText('Podepsáno fondem Nová naděje');
     await expect(page.getByText('Bez připojení se fondu nezeptáme.')).toBeVisible();
     await expect(register(page)).toContainText('Nahrazené');
     await expect(register(page)).toContainText('Platí to novější; najdete ho na kartě dárce.');
@@ -118,9 +120,7 @@ test.describe('Given an administrator whose device holds the administration copy
     await page.goto('/sprava/overit');
     await scanFragment(page, YEARLY_RECEIPT.fragment);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Fond toto potvrzení nahradil novějším',
-    );
+    await expect(verdictHeading(page)).toHaveText('Fond toto potvrzení nahradil novějším');
     await expect(register(page)).toContainText('Starší údaje');
     await expect(register(page)).toContainText('Platí odpověď fondu.');
     await expect(register(page)).not.toContainText('Platné');
@@ -151,9 +151,7 @@ test.describe('Given a visitor on the public verification page', () => {
     await page.goto('/overit');
     await scanFragment(page, YEARLY_RECEIPT.fragment);
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Podepsáno fondem Nová naděje',
-    );
+    await expect(verdictHeading(page)).toHaveText('Podepsáno fondem Nová naděje');
     await expect(page.getByText('V evidenci fondu')).toHaveCount(0);
     await expect(page.getByText('Fond ověřuje potvrzení jen na adrese')).toBeVisible();
   });

@@ -198,6 +198,12 @@ describe('Given the ways to read a receipt code on the verification page', () =>
     );
   });
 
+  it('when it shows, then the link field, the last field of its form, names its return key go', async () => {
+    await render();
+
+    expect(element().querySelector('#proof-link')?.getAttribute('enterkeyhint')).toBe('go');
+  });
+
   it('when the browser cannot use a camera, then the camera part is left out', async () => {
     device.camera = false;
     await render();

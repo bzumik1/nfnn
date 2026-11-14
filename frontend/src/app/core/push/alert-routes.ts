@@ -12,6 +12,7 @@ const ROUTE_OF_KIND: Readonly<Record<string, string>> = {
   'mail-recovered': '/sprava/nastaveni',
   'donor-test': '/darce/udaje',
   'gift-arrived': '/darce/dary',
+  'yearly-receipt-ready': '/darce/potvrzeni',
 };
 
 export function routeOfAlert(data: unknown): string {

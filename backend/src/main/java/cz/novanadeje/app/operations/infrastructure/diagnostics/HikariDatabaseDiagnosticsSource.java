@@ -2,8 +2,8 @@ package cz.novanadeje.app.operations.infrastructure.diagnostics;
 
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import cz.novanadeje.app.operations.application.diagnostics.DatabaseDiagnostics;
 import cz.novanadeje.app.operations.application.diagnostics.DatabaseDiagnosticsSource;
-import cz.novanadeje.app.operations.domain.diagnostics.DatabaseDiagnostics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

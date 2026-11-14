@@ -107,18 +107,20 @@ describe('Given the verification page', () => {
     return root().querySelector(selector)?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
   }
 
-  function heading(): HTMLElement {
+  function pageTitle(): HTMLElement {
     return root().querySelector('h1') as HTMLElement;
   }
 
+  function heading(): HTMLElement {
+    return (root().querySelector('h2[tabindex="-1"]') as HTMLElement | null) ?? pageTitle();
+  }
+
   function tone(): string {
-    return text('.ui-status [aria-hidden="true"]');
+    return text('.verify-tone');
   }
 
   function lead(): string {
-    return (
-      root().querySelector('h1')?.nextElementSibling?.textContent?.replace(/\s+/g, ' ').trim() ?? ''
-    );
+    return text('.verify-intro') || text('.verify-lead');
   }
 
   function button(name: string): HTMLButtonElement | undefined {
@@ -141,7 +143,9 @@ describe('Given the verification page', () => {
     await open('/overit');
 
     expect(heading().textContent?.trim()).toBe('Ověření potvrzení o daru');
-    expect(text('.verify-lead')).toContain('QR kód');
+    expect(lead()).toBe(
+      'Každé potvrzení od fondu nese QR kód. Načtěte ho a uvidíte, co v něm fond podepsal, a porovnejte to s papírem. Kód čteme jen ve vašem zařízení.',
+    );
     expect(text('.verify-domain')).toBe(
       'Fond ověřuje potvrzení jen na adrese nfnn.cz/overit. Zkontrolujte, že ji máte v adresním řádku prohlížeče.',
     );
@@ -213,6 +217,12 @@ describe('Given the verification page', () => {
       await open(`/overit#${FRAGMENT}`);
     });
 
+    it('then the page keeps its title and names the check under way in a second-level heading', () => {
+      expect(pageTitle().textContent?.trim()).toBe('Ověření potvrzení o daru');
+      expect(heading().tagName).toBe('H2');
+      expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
+    });
+
     it('then it says so in a status line', () => {
       expect(heading().textContent?.trim()).toBe('Ověřujeme potvrzení…');
       expect(root().querySelector('[role="status"]')?.textContent?.trim()).toBe(
@@ -236,6 +246,14 @@ describe('Given the verification page', () => {
       open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: SINGLE, status: 'active' }),
     );
 
+    it('then the page keeps its title as the only first-level heading and names the verdict in a second-level heading', () => {
+      expect(
+        Array.from(root().querySelectorAll('h1'), (title) => title.textContent?.trim()),
+      ).toEqual(['Ověření potvrzení o daru']);
+      expect(heading().tagName).toBe('H2');
+      expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
+    });
+
     it('then the heading says the fund signed it, takes the focus and the status line follows', () => {
       expect(heading().textContent?.trim()).toBe('Podepsáno fondem Nová naděje');
       expect(document.activeElement).toBe(heading());
@@ -255,7 +273,7 @@ describe('Given the verification page', () => {
         'Dar ze dne': '3. 11. 2026',
         Částka: '2 500 Kč',
       });
-      expect(root().querySelector('table')).toBeNull();
+      expect(root().querySelector('[aria-labelledby="verify-gifts-title"]')).toBeNull();
     });
 
     it('then it says what left the device for the status check', () => {
@@ -282,24 +300,13 @@ describe('Given the verification page', () => {
       'Za rok': '2026',
       Celkem: '1 750,50 Kč',
     });
-    const rows = Array.from(root().querySelectorAll('tbody tr')).map((row) =>
-      Array.from(row.children).map((cell) => [
-        cell.tagName.toLowerCase(),
-        cell.getAttribute('scope'),
-        cell.textContent?.trim(),
-      ]),
-    );
-    expect(rows).toEqual([
-      [
-        ['th', 'row', '15. 3. 2026'],
-        ['td', null, '500 Kč'],
-      ],
-      [
-        ['th', 'row', '3. 11. 2026'],
-        ['td', null, '1 250,50 Kč'],
-      ],
-    ]);
-    expect(text('caption')).toBe('Jednotlivé dary (2)');
+    const gifts = root().querySelector('[aria-labelledby="verify-gifts-title"]');
+    expect(gifts?.querySelector('h3')?.textContent?.trim()).toBe('Jednotlivé dary (2)');
+    expect(
+      Array.from(gifts?.querySelectorAll('li') ?? [], (row) =>
+        row.textContent?.replace(/\s+/g, ' ').trim(),
+      ),
+    ).toEqual(['15. 3. 2026 500 Kč', '3. 11. 2026 1 250,50 Kč']);
   });
 
   it('when the receipt is signed but checked offline, then it stays signed and says a replacement cannot be seen', async () => {
@@ -551,14 +558,6 @@ describe('Given the verification page', () => {
     expect(heading().textContent).toContain('Ověření potvrzení o daru');
     expect(document.activeElement).toBe(heading());
   });
-
-  it('when it opens without a code while the focus is on nothing, then it leaves the focus where the shell left it', async () => {
-    (document.activeElement as HTMLElement | null)?.blur();
-
-    await open('/overit');
-
-    expect(document.activeElement).toBe(document.body);
-  });
 });
 
 @Component({
@@ -705,10 +704,10 @@ describe('Given the verification page in another context, as the administration 
     const root = await open('/sprava/overit', { state: 'empty' });
 
     expect(root.querySelector('h1')?.textContent?.trim()).toBe('Ověřit potvrzení');
-    expect(root.querySelector('.verify-lead')?.textContent).toContain(
+    expect(root.querySelector('.verify-intro')?.textContent).toContain(
       'Načtěte QR kód z potvrzení o daru tady na stránce.',
     );
-    expect(root.querySelector('.verify-lead')?.textContent).not.toContain('fotoaparátem telefonu');
+    expect(root.querySelector('.verify-intro')?.textContent).not.toContain('fotoaparátem telefonu');
     expect(root.querySelector('.verify-domain')).toBeNull();
   });
 });

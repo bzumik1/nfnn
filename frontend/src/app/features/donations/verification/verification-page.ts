@@ -13,6 +13,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
+import { PageTitle } from '../../donors/dashboard/page-title/page-title';
 import { type FoundProof, ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
 import { VERIFICATION_CONTEXT } from './verification-context';
@@ -22,9 +24,10 @@ type PageState = { readonly state: 'checking' } | { readonly state: 'empty' } | 
 
 @Component({
   selector: 'app-verification-page',
-  imports: [ProofInput, VerificationResult],
+  imports: [PageTitle, ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
-  styleUrl: './verification-page.scss',
+  styleUrls: ['./verification-page.scss', './verdict-card.scss'],
+  host: { class: 'ui-grouped', '[class.verify-embedded]': 'administration' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationPage {
@@ -35,8 +38,10 @@ export class VerificationPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
   protected readonly context = inject(VERIFICATION_CONTEXT);
+  protected readonly administration = this.context.audience === 'administration';
   private fragment: string | null = null;
   protected readonly scanned = signal(false);
+  protected readonly compact = inject(CompactLayout).isCompact;
   private run = 0;
 
   protected readonly page = signal<PageState>({ state: 'checking' });
@@ -110,8 +115,14 @@ export class VerificationPage {
   }
 
   private focusHeading(): void {
-    afterNextRender(() => this.host.nativeElement.querySelector('h1')?.focus(), {
-      injector: this.injector,
-    });
+    afterNextRender(
+      () => {
+        const page = this.host.nativeElement;
+        const heading =
+          page.querySelector<HTMLElement>('#verify-title') ?? page.querySelector('h1');
+        heading?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 }

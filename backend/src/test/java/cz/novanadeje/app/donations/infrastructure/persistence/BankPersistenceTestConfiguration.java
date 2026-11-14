@@ -13,7 +13,7 @@ import java.time.ZoneId;
 @Import({JpaBankPaymentRepository.class, JpaBankImportStateRepository.class, JpaDonorRecordRepository.class,
         JpaDonationRepository.class, JpaDonationReceiptRepository.class, JpaReceiptImageRepository.class, JpaMonthlyReportLog.class, JpaReportDeliveries.class,
         JpaSymbolClaimRepository.class, JpaReportSettingsRepository.class, JpaReceiptSignatureRepository.class, JpaReceiptSignatoryRepository.class, JpaImportAlertRepository.class, PostgresPairingLock.class,
-        JpaReceiptSigningKeyRepository.class, JpaBankCodeRepository.class, JpaBankLogoRepository.class})
+        JpaReceiptSigningKeyRepository.class, JpaBankCodeRepository.class, JpaBankLogoRepository.class, JpaYearlyReceiptAnnouncementRepository.class})
 public class BankPersistenceTestConfiguration {
 
     static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");

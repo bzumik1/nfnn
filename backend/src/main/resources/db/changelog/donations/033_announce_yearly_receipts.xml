@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="033-announce-yearly-receipts" author="nfnn">
+        <createTable tableName="donation_yearly_receipt_announcement">
+            <column name="receipt_year" type="integer">
+                <constraints primaryKey="true" primaryKeyName="pk_donation_yearly_receipt_announcement" nullable="false"/>
+            </column>
+            <column name="announced_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

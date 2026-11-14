@@ -3,9 +3,19 @@ package cz.novanadeje.app.donors.infrastructure.security;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import org.junit.jupiter.api.DisplayName;
+import cz.novanadeje.app.shared.infrastructure.busy.CpuSlots;
+import cz.novanadeje.app.shared.infrastructure.busy.CpuSlotsFull;
+import cz.novanadeje.app.shared.infrastructure.busy.CpuWork;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BCryptPasswordHasherTest {
 
@@ -43,5 +53,39 @@ class BCryptPasswordHasherTest {
 
         assertThat(hasher.matches(new RawPassword(firstSeventyTwoBytes + "ends another"), hash)).isFalse();
         assertThat(hasher.matches(new RawPassword(firstSeventyTwoBytes + "ends one way"), hash)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given the default hasher, when its slots are read, then there is one per processor the JVM sees, waited for at most two seconds")
+    void should_bound_by_processors_and_two_seconds_when_made_by_default() {
+        assertThat(BCryptPasswordHasher.SLOT_WAIT).isEqualTo(Duration.ofSeconds(2));
+        assertThat(hasher.slotCount()).isEqualTo(Runtime.getRuntime().availableProcessors());
+    }
+
+    @Test
+    @DisplayName("Given every hashing slot taken, when a password is hashed or checked, then both are refused as CPU slots full")
+    void should_refuse_hash_and_check_when_every_slot_taken() throws Exception {
+        CpuSlots slots = new CpuSlots(CpuWork.PASSWORD_HASHING, 1, Duration.ofMillis(50));
+        BCryptPasswordHasher bounded = new BCryptPasswordHasher(slots);
+        PasswordHash hash = hasher.hash(new RawPassword("correct horse battery"));
+        CountDownLatch holding = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(() -> slots.run(() -> {
+                holding.countDown();
+                try {
+                    return release.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }));
+            assertThat(holding.await(5, TimeUnit.SECONDS)).isTrue();
+
+            assertThatThrownBy(() -> bounded.hash(new RawPassword("correct horse battery"))).isInstanceOf(CpuSlotsFull.class);
+            assertThatThrownBy(() -> bounded.matches(new RawPassword("correct horse battery"), hash)).isInstanceOf(CpuSlotsFull.class);
+            release.countDown();
+        }
+        assertThat(bounded.matches(new RawPassword("correct horse battery"), hash)).isTrue();
     }
 }

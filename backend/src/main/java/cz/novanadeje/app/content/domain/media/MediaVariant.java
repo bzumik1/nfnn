@@ -1,5 +1,7 @@
 package cz.novanadeje.app.content.domain.media;
 
+import java.util.Arrays;
+
 public record MediaVariant(int width, int height, byte[] webp) {
 
     public MediaVariant {
@@ -19,5 +21,20 @@ public record MediaVariant(int width, int height, byte[] webp) {
 
     public int size() {
         return webp.length;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof MediaVariant variant && width == variant.width && height == variant.height && Arrays.equals(webp, variant.webp);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * (31 * Arrays.hashCode(webp) + width) + height;
+    }
+
+    @Override
+    public String toString() {
+        return "MediaVariant[" + width + "x" + height + ", " + webp.length + " bytes]";
     }
 }

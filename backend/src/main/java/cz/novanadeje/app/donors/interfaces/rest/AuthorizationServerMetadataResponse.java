@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-record AuthorizationServerMetadata(
+record AuthorizationServerMetadataResponse(
         String issuer,
         @JsonProperty("authorization_endpoint") String authorizationEndpoint,
         @JsonProperty("token_endpoint") String tokenEndpoint,

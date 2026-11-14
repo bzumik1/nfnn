@@ -65,6 +65,28 @@ class LiveControllerTest {
     }
 
     @Test
+    @DisplayName("Given a hub that finds the token's session ended, when a stream is asked for, then the answer is 401 with the expired token's problem in Czech and English, refused where the web answers it")
+    void should_answer_401_expired_token_when_stream_requested_given_session_ended() {
+        LiveStreamHub hub = mock(LiveStreamHub.class);
+        when(hub.open(any(), any())).thenReturn(new LiveOpening.SessionEnded<>());
+        Jwt token = Jwt.withTokenValue("token").header("alg", "HS256").subject(UUID.randomUUID().toString())
+                .issuedAt(NOW).expiresAt(NOW.plusSeconds(900)).build();
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("i18n/messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+
+        ErrorResponseException refused = catchThrowableOfType(ErrorResponseException.class, () -> new LiveController(hub).stream(token, CurrentDevice.none()));
+
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(refused.getBody().getType()).hasToString("https://nfnn.cz/problems/auth/expired-token");
+        assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getTitle()).isEqualTo("Platnost přihlášení vypršela");
+        assertThat(refused.updateAndGetBody(messages, Locale.forLanguageTag("cs")).getDetail()).isEqualTo("Přihlaste se prosím znovu.");
+        assertThat(refused.updateAndGetBody(messages, Locale.ENGLISH).getTitle()).isEqualTo("Your sign-in has expired");
+        assertThat(refused.updateAndGetBody(messages, Locale.ENGLISH).getDetail()).isEqualTo("Please sign in again.");
+    }
+
+    @Test
     @DisplayName("Given a browser token of a signed-in device, when a stream is asked for, then the hub is handed the donor, the device and the token's times, so signing that device out closes the stream")
     void should_hand_device_to_hub_when_stream_requested_given_token_with_session() {
         LiveStreamHub hub = mock(LiveStreamHub.class);
