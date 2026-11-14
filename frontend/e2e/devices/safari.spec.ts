@@ -1,6 +1,15 @@
 import type { TestInfo } from '@playwright/test';
 import { expect, NO_SERVER_PAYMENT, routeApiDefaults, testWithoutBrowser } from '../fixtures';
 import { checksFrom, collectFindings, type Findings, LIMITS } from './layout-checks';
+import {
+  LANDING_MOVES_GLOBAL,
+  LANDING_VIEW,
+  type LandingView,
+  RECORD_MOVES,
+  scrollKeys,
+  swipe,
+  UNTIL_STILL,
+} from './landing-still';
 import type { SafariPose } from './poses';
 import { BLANK_PATH, ERRORS_GLOBAL, EVENTS_GLOBAL, RouteHost } from './route-host';
 import {
@@ -137,4 +146,96 @@ test.describe('Given the site in Safari on an iPhone, an iPad or a Mac', () => {
       await runStep(step, safariPage, testInfo);
     });
   }
+});
+
+async function tryToScroll(driver: WebDriver, pose: SafariPose, view: LandingView): Promise<void> {
+  const across = view.width / 2;
+  const gestures =
+    pose.platform === 'iOS'
+      ? [
+          swipe(across, view.height * 0.75, view.height * 0.25),
+          swipe(across, view.height * 0.3, view.height * 0.8),
+          swipe(across, view.height * 0.75, view.height * 0.2),
+        ]
+      : [scrollKeys()];
+  for (const gesture of gestures) {
+    await driver.command('POST', '/actions', gesture);
+    await driver.command('DELETE', '/actions');
+    await driver.executeAsync(UNTIL_STILL);
+  }
+}
+
+const stillParts = ({ scrollY, height, photo, marks }: LandingView) => ({
+  scrollY,
+  height,
+  photo,
+  marks,
+});
+
+test.describe('Given the landing page in Safari on an iPhone, an iPad or a Mac', () => {
+  test('when the visitor swipes or presses keys to scroll it, then the photo keeps covering the whole screen and nothing moves, unless enlarged text no longer fits one screen', async ({
+    safariPage,
+    safari,
+  }, testInfo) => {
+    const { driver, pose } = safari;
+    await testInfo.attach('step', {
+      body: JSON.stringify({ id: 'home-still', order: STEPS.length, device: driver.device }),
+      contentType: 'application/json',
+    });
+    await safariPage.ui.goto('/');
+    await safariPage.ui.waitVisible({ css: '#uvod h1' });
+    await safariPage.settle();
+    if (pose.platform === 'mac') {
+      await safariPage.ui.click({ css: '#uvod h1' });
+    }
+    await driver.executeAsync(UNTIL_STILL);
+    const loaded = await driver.execute<LandingView>(LANDING_VIEW, LANDING_MOVES_GLOBAL);
+    await testInfo.attach('screen after loading', {
+      body: await driver.screenshot(),
+      contentType: 'image/png',
+    });
+
+    await driver.execute(RECORD_MOVES, LANDING_MOVES_GLOBAL);
+    await tryToScroll(driver, pose, loaded);
+    const after = await driver.execute<LandingView>(LANDING_VIEW, LANDING_MOVES_GLOBAL);
+    await testInfo.attach('screen', { body: await driver.screenshot(), contentType: 'image/png' });
+    await testInfo.attach('views', {
+      body: JSON.stringify({ loaded, after }, null, 2),
+      contentType: 'application/json',
+    });
+
+    if (!loaded.staged) {
+      expect(pose.textScale, 'the landing page scrolls at the default text size').toBeDefined();
+      expect(loaded.heroHeight, 'the landing page scrolls although it fits').toBeGreaterThan(
+        loaded.height,
+      );
+      expect(after.scrollY, 'the landing page that no longer fits does not scroll').toBeGreaterThan(
+        loaded.scrollY,
+      );
+      return;
+    }
+    expect(
+      loaded.restingScroll > 0,
+      'the photo reaches under the status bar and the toolbar only in a Safari tab of iOS',
+    ).toBe(pose.platform === 'iOS');
+    expect(loaded.scrollY, 'the landing page rests past the room above it').toBe(
+      loaded.restingScroll,
+    );
+    const photo = loaded.photo;
+    expect(photo, 'the landing page has no photo').not.toBeNull();
+    expect(
+      photo && {
+        aboveTheTop: photo.top <= -loaded.restingScroll,
+        belowTheBottom: photo.bottom >= loaded.height + loaded.bleedBottom,
+        fromTheLeft: photo.left <= 0,
+        toTheRight: photo.right >= loaded.width,
+      },
+      `the photo ${JSON.stringify(photo)} leaves part of the screen uncovered`,
+    ).toEqual({ aboveTheTop: true, belowTheBottom: true, fromTheLeft: true, toTheRight: true });
+    expect(
+      after.moves.filter((scrollY) => scrollY !== loaded.restingScroll),
+      'the page moved under the gesture',
+    ).toEqual([]);
+    expect(stillParts(after), 'something moved').toEqual(stillParts(loaded));
+  });
 });

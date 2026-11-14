@@ -58,6 +58,26 @@ html:has(app-root app-landing) {
   overscroll-behavior: none;
 }
 
+html.landing-stage {
+  overflow: hidden;
+  scroll-behavior: auto;
+}
+
+html.landing-stage body {
+  overflow: hidden;
+  padding-top: var(--page-resting-scroll);
+  padding-bottom: var(--page-bleed-bottom);
+}
+
+@media not (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    html.landing-stage {
+      --page-resting-scroll: var(--landing-bleed-top);
+      --page-bleed-bottom: var(--landing-bleed-bottom);
+    }
+  }
+}
+
 html:has(app-root .ui-grouped) body {
   background: var(--color-surface-grouped);
 }
