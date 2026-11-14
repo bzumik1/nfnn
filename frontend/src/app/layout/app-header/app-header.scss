@@ -198,17 +198,17 @@
   width: var(--back-button-size);
   height: var(--back-button-size);
   padding: 0;
-  border: 1px solid var(--color-tab-bar-rim);
   border-radius: var(--radius-pill);
-  background: var(--color-tab-bar);
-  backdrop-filter: blur(var(--blur-bar));
-  box-shadow: var(--shadow-tab-bar);
-  color: var(--color-on-tab-bar);
   cursor: pointer;
 
   &:focus-visible {
     outline: 3px solid var(--color-tab-focus-ring);
     outline-offset: -3px;
+  }
+
+  svg {
+    width: var(--back-icon-size);
+    height: var(--back-icon-size);
   }
 }
 
@@ -216,19 +216,19 @@
   flex: none;
   max-width: 60%;
   text-align: center;
-  border: 1px solid var(--color-tab-bar-rim);
   border-radius: var(--radius-pill);
-  background: var(--color-tab-bar);
-  backdrop-filter: blur(var(--blur-bar));
-  color: var(--color-on-tab-bar);
   padding: var(--space-2-25) var(--space-4-5);
   font-family: var(--font-sans);
   font-size: var(--text-header-action);
   white-space: nowrap;
   font-weight: var(--weight-semibold);
-  box-shadow: var(--shadow-tab-bar);
   cursor: pointer;
   @include touch-target.reaches-finger-size;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-tab-focus-ring);
+    outline-offset: -3px;
+  }
 }
 
 .account-button {
@@ -237,16 +237,19 @@
   width: var(--back-button-size);
   height: var(--back-button-size);
   padding: 0;
-  border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-accent-fill);
-  color: var(--color-on-accent);
+  color: var(--color-tab-active);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-wide);
   cursor: pointer;
   position: relative;
+
+  &:focus-visible {
+    outline: 3px solid var(--color-tab-focus-ring);
+    outline-offset: -3px;
+  }
 }
 
 .account-portrait {
@@ -272,10 +275,6 @@
   letter-spacing: normal;
   text-align: center;
   font-variant-numeric: var(--numeric-figures);
-}
-
-.app-header--on-dark .account-button {
-  border: 1px solid var(--color-tab-bar-rim);
 }
 
 @include bp.down(tablet) {

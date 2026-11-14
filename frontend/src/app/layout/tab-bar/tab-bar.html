@@ -1,6 +1,7 @@
 <nav
   #bar
-  class="tab-bar"
+  class="tab-bar ui-glass"
+  [class.ui-glass--on-dark]="onDark()"
   [class.tab-bar--under-keyboard]="keyboard.isOpen()"
   [class.tab-bar--dragging]="dragging()"
   [attr.aria-label]="label"

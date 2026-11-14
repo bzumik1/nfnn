@@ -57,22 +57,30 @@ export function receiptTokensOutsideRoot(source) {
   return [...outside].sort();
 }
 
-const TAB_BAR = '--color-tab-bar';
-const TAB_PILL = '--color-tab-pill';
+const BAR_VARIANTS = ['', '-on-dark'];
+const variantsOf = (name) => BAR_VARIANTS.map((suffix) => `${name}${suffix}`);
 const TAB_BAR_TOKENS = [
-  TAB_BAR,
-  TAB_PILL,
+  '--color-tab-bar',
+  '--color-tab-pill',
   '--color-tab-active',
   '--color-on-tab-bar',
   '--color-tab-focus-ring',
-];
-const TAB_BAR_PAIRS = [
-  { text: '--color-on-tab-bar', under: [TAB_BAR], minimum: 4.5 },
-  { text: '--color-tab-active', under: [TAB_PILL, TAB_BAR], minimum: 4.5 },
-  { text: '--color-tab-focus-ring', under: [TAB_BAR], minimum: 3 },
-  { text: '--color-tab-focus-ring', under: [TAB_PILL, TAB_BAR], minimum: 3 },
-];
-const SOLID_BAR_PAIRS = [{ top: TAB_PILL, under: [TAB_BAR], minimum: 3 }];
+].flatMap(variantsOf);
+const TAB_BAR_PAIRS = BAR_VARIANTS.flatMap((suffix) => {
+  const bar = `--color-tab-bar${suffix}`;
+  const pill = `--color-tab-pill${suffix}`;
+  return [
+    { text: `--color-on-tab-bar${suffix}`, under: [bar], minimum: 4.5 },
+    { text: `--color-tab-active${suffix}`, under: [pill, bar], minimum: 4.5 },
+    { text: `--color-tab-focus-ring${suffix}`, under: [bar], minimum: 3 },
+    { text: `--color-tab-focus-ring${suffix}`, under: [pill, bar], minimum: 3 },
+  ];
+});
+const SOLID_BAR_PAIRS = BAR_VARIANTS.map((suffix) => ({
+  top: `--color-tab-pill${suffix}`,
+  under: [`--color-tab-bar${suffix}`],
+  minimum: 3,
+}));
 const PAGES = [
   { name: 'white', rgb: [255, 255, 255] },
   { name: 'black', rgb: [0, 0, 0] },
@@ -796,6 +804,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   console.log(
-    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable on their pages, grouped pages, sheets, tints, badges and icon tiles in the light and the dark appearance, with and without more contrast, keep the tab bar readable over a white and a black page, its solid pill apart from the bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
+    `${themes.size} themes set all ${needed.size} tokens the styles and the receipt use, and carry content-named receipt fonts, literal receipt colours and readable receipt text, set only in their top-level :root, keep text, controls and focus rings readable on their pages, grouped pages, sheets, tints, badges and icon tiles in the light and the dark appearance, with and without more contrast, keep the tab bar's light and dark glass readable over a white and a black page, each solid pill apart from its bar, serve the same theme files and a web app manifest in their colours with the icons it names and the home screen name of src/index.html, and a launch icon the launch images can draw, with no tile behind the star.`,
   );
 }

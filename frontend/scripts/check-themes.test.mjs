@@ -76,6 +76,11 @@ const BARS = `
     --color-tab-active: #93c5fd;
     --color-on-tab-bar: #ffffff;
     --color-tab-focus-ring: #ffffff;
+    --color-tab-bar-on-dark: color-mix(in srgb, #0f172a 66%, transparent);
+    --color-tab-pill-on-dark: color-mix(in srgb, #0f172a 88%, transparent);
+    --color-tab-active-on-dark: #93c5fd;
+    --color-on-tab-bar-on-dark: #ffffff;
+    --color-tab-focus-ring-on-dark: #ffffff;
   }
 `;
 
@@ -181,6 +186,25 @@ describe('Given the colours of the tab bar over the page', () => {
     assert.deepEqual(barContrastProblems('hidden', hidden), [
       'theme hidden sets --color-tab-bar under @supports (backdrop-filter: blur(1px)) > :root, where its contrast is not checked; set it in the top-level :root or a @media block of :root',
       'theme hidden sets --color-tab-pill under :root:not([data-x]), where its contrast is not checked; set it in the top-level :root or a @media block of :root',
+    ]);
+  });
+
+  it('when the dark glass for photos and dark heads is too light for its labels over a white page, then its contrast is reported apart from the light glass', () => {
+    const onDark = BARS.replace(
+      '--color-tab-bar-on-dark: color-mix(in srgb, #0f172a 66%, transparent);',
+      '--color-tab-bar-on-dark: color-mix(in srgb, #6b7080 90%, transparent);',
+    );
+
+    assert.deepEqual(barContrastProblems('photo', onDark), [
+      'theme photo: --color-on-tab-bar-on-dark on --color-tab-bar-on-dark over a white page is 4.03:1, below 4.5:1',
+    ]);
+  });
+
+  it('when a colour of the dark glass is missing, then it is reported', () => {
+    const missing = BARS.replace('--color-tab-active-on-dark: #93c5fd;', '');
+
+    assert.deepEqual(barContrastProblems('missing', missing), [
+      'theme missing does not set --color-tab-active-on-dark in its top-level :root',
     ]);
   });
 

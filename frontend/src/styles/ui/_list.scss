@@ -111,6 +111,8 @@ div.ui-list__row {
 
 .ui-list__chevron {
   grid-area: chevron;
+  width: var(--list-chevron-size);
+  height: var(--list-chevron-size);
   margin-inline-start: var(--space-3);
   color: var(--color-text-subtle);
 }

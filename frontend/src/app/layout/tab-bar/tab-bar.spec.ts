@@ -21,7 +21,18 @@ describe('Given the tab bar', () => {
     await TestBed.configureTestingModule({
       imports: [TabBar],
       providers: [
-        provideRouter([{ path: '**', component: Blank }]),
+        provideRouter([
+          {
+            path: '',
+            pathMatch: 'full',
+            component: Blank,
+            data: { head: 'photo', landing: true, darkThroughout: true },
+          },
+          { path: 'o-nas', component: Blank, data: { head: 'light' } },
+          { path: 'aktuality', component: Blank, data: { head: 'light' } },
+          { path: 'overit', component: Blank, data: { darkThroughout: true } },
+          { path: '**', component: Blank },
+        ]),
         provideFakeSoftKeyboard(keyboard),
       ],
     }).compileComponents();
@@ -146,6 +157,35 @@ describe('Given the tab bar', () => {
     const click = press(tab('Aktuality'), { ctrlKey: true });
 
     expect(click.defaultPrevented).toBe(false);
+  });
+
+  function bar(): HTMLElement {
+    return (fixture.nativeElement as HTMLElement).querySelector('nav')!;
+  }
+
+  it('when a page with a light head is open, then the bar is the light glass of the chrome', async () => {
+    await visit('/o-nas');
+
+    expect(bar().classList).toContain('ui-glass');
+    expect(bar().classList).not.toContain('ui-glass--on-dark');
+  });
+
+  it('when the landing photo or a page dark all the way down is open, then the bar turns to the dark glass over it', async () => {
+    await visit('/');
+    expect(bar().classList).toContain('ui-glass--on-dark');
+
+    await visit('/aktuality');
+    expect(bar().classList).not.toContain('ui-glass--on-dark');
+
+    await visit('/overit');
+    expect(bar().classList).toContain('ui-glass--on-dark');
+  });
+
+  it('when a story opens under a dark head, then the bar stays the light glass, because it floats over the white body of the page', async () => {
+    await visit('/aktuality/zahrada-pro-deti');
+
+    expect(bar().classList).toContain('ui-glass');
+    expect(bar().classList).not.toContain('ui-glass--on-dark');
   });
 
   describe('when the on-screen keyboard opens for a text field', () => {
