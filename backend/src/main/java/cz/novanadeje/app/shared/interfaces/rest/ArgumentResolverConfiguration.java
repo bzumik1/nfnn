@@ -14,5 +14,6 @@ class ArgumentResolverConfiguration implements WebMvcConfigurer {
         resolvers.add(new ExpectedVersionArgumentResolver());
         resolvers.add(new WritePreconditionArgumentResolver());
         resolvers.add(new AdministrationChannelArgumentResolver());
+        resolvers.add(new ConnectedClientArgumentResolver());
     }
 }
