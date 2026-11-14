@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.ApplicationLayerRulesTest > the_after_commit_helper_serves_only_the_receipt_signatory_and_signature_services_until_pr_612",
+    "replacement": "architecture.ApplicationLayerRulesTest > application_must_not_depend_on_adapter_technology",
+    "reason": "PR #888 (#886, part of #621; architecture audit, deferred until #612): the receipt signatory service logs its choice through the AfterCommitWork port, the AfterCommit helper is gone, and with it the rule that fenced the helper; the layer rule now holds with no exception",
+    "contract": "docs/api-contract.md, architecture rules (ApplicationLayerRulesTest)"
+  }
+]
