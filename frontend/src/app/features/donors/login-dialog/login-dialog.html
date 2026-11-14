@@ -1,5 +1,8 @@
 <app-dialog
   labelledBy="login-dialog-title"
+  [presentation]="presentation()"
+  [tall]="true"
+  [grouped]="true"
   [wide]="step() === 'register'"
   [pushesHistory]="false"
   (dismissed)="closeDialog()"
@@ -17,7 +20,7 @@
   </h2>
 
   @if (atCrossroads() && !offlineAtCrossroads()) {
-    <div class="tab-switch">
+    <div class="segmented tab-switch">
       <button
         type="button"
         [class.is-active]="mode() === 'login'"
@@ -61,7 +64,7 @@
       </p>
       <button
         type="button"
-        class="ui-button ui-button--primary ui-button--block offline-entry-try-again"
+        class="ui-button ui-button--primary ui-button--block ui-button--grouped offline-entry-try-again"
         [attr.aria-disabled]="offlineRetry() === 'trying' ? 'true' : null"
         (click)="tryConnectionAgain()"
       >
@@ -210,27 +213,29 @@
           (ngSubmit)="submitCode(codeForm)"
           novalidate
         >
-          <app-form-field
-            label="Kód z aplikace"
-            i18n-label="@@donor.login.secondFactor.code"
-            [hint]="codeHint"
-            [messages]="codeMessages"
-          >
-            <input
-              appFormControl
-              id="login-code"
-              enterkeyhint="go"
-              autofocus
-              name="code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              [(ngModel)]="code"
-              required
-              pattern="\s*\d{6}\s*"
-              maxlength="8"
-            />
-          </app-form-field>
+          <div class="ui-field-group">
+            <app-form-field
+              label="Kód z aplikace"
+              i18n-label="@@donor.login.secondFactor.code"
+              [hint]="codeHint"
+              [messages]="codeMessages"
+            >
+              <input
+                appFormControl
+                id="login-code"
+                enterkeyhint="go"
+                autofocus
+                name="code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                [(ngModel)]="code"
+                required
+                pattern="\s*\d{6}\s*"
+                maxlength="8"
+              />
+            </app-form-field>
+          </div>
 
           @if (error()) {
             <p class="ui-field-error" role="alert">{{ error() }}</p>
@@ -239,7 +244,7 @@
           <button
             appNeedsConnection
             type="submit"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             [disabled]="loading()"
           >
             @if (loading()) {
@@ -280,44 +285,46 @@
           (ngSubmit)="submitLogin(login)"
           novalidate
         >
-          <app-form-field
-            label="E-mail"
-            i18n-label="@@donor.login.email"
-            [messages]="emailMessages"
-          >
-            <input
-              appFormControl
-              id="login-email"
-              enterkeyhint="next"
-              autofocus
-              name="email"
-              type="email"
-              autocomplete="email"
-              placeholder="vas@email.cz"
-              i18n-placeholder="@@donor.login.emailPlaceholder"
-              [(ngModel)]="email"
-              required
-              email
-            />
-          </app-form-field>
-          <app-form-field
-            label="Heslo"
-            i18n-label="@@donor.login.password"
-            [messages]="signInPasswordMessages"
-          >
-            <app-password-reveal>
+          <div class="ui-field-group">
+            <app-form-field
+              label="E-mail"
+              i18n-label="@@donor.login.email"
+              [messages]="emailMessages"
+            >
               <input
                 appFormControl
-                id="login-password"
-                enterkeyhint="go"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                [(ngModel)]="password"
+                id="login-email"
+                enterkeyhint="next"
+                autofocus
+                name="email"
+                type="email"
+                autocomplete="email"
+                placeholder="vas@email.cz"
+                i18n-placeholder="@@donor.login.emailPlaceholder"
+                [(ngModel)]="email"
                 required
+                email
               />
-            </app-password-reveal>
-          </app-form-field>
+            </app-form-field>
+            <app-form-field
+              label="Heslo"
+              i18n-label="@@donor.login.password"
+              [messages]="signInPasswordMessages"
+            >
+              <app-password-reveal>
+                <input
+                  appFormControl
+                  id="login-password"
+                  enterkeyhint="go"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  [(ngModel)]="password"
+                  required
+                />
+              </app-password-reveal>
+            </app-form-field>
+          </div>
           <p class="forgot">
             <button
               type="button"
@@ -401,7 +408,7 @@
           <button
             appNeedsConnection
             type="submit"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             [disabled]="loading()"
           >
             @if (loading()) {
@@ -417,7 +424,7 @@
           <button
             appNeedsConnection
             type="button"
-            class="passkey-btn"
+            class="ui-button ui-button--grouped passkey-btn"
             [disabled]="loading()"
             (click)="signInWithPasskey(login)"
           >
@@ -472,7 +479,7 @@
             <button
               appNeedsConnection
               type="button"
-              class="ui-button ui-button--block registration-resend"
+              class="ui-button ui-button--block ui-button--grouped registration-resend"
               [disabled]="loading()"
               (click)="resendRegistrationLink()"
             >
@@ -484,7 +491,7 @@
             </button>
             <button
               type="button"
-              class="ui-button ui-button--block registration-edit"
+              class="ui-button ui-button--block ui-button--grouped registration-edit"
               (click)="editRegistration()"
               i18n="@@donor.register.editEmail"
             >
@@ -503,7 +510,7 @@
           }
           <button
             type="button"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             (click)="backToLogin()"
             i18n="@@donor.login.reset.back"
           >
@@ -533,7 +540,7 @@
           <p id="register-type-label" class="register-label" i18n="@@donor.register.type">
             Registruji se jako
           </p>
-          <div class="ui-segmented type-switch" appRadioGroup aria-labelledby="register-type-label">
+          <div class="segmented type-switch" appRadioGroup aria-labelledby="register-type-label">
             <button
               type="button"
               role="radio"
@@ -559,27 +566,29 @@
           </div>
 
           @if (donorType() === 'COMPANY') {
-            <app-form-field
-              label="IČO"
-              i18n-label="@@donor.register.companyIdentifier"
-              [hint]="companyIdentifierHint"
-              [messages]="companyIdentifierMessages"
-            >
-              <input
-                appFormControl
-                appCompanyIdentifier
-                id="register-company-identifier"
-                enterkeyhint="next"
-                autofocus
-                name="companyIdentifier"
-                type="text"
-                inputmode="numeric"
-                [(ngModel)]="registration.companyIdentifier"
-                (ngModelChange)="lookUpCompany($event)"
-                required
-                pattern="\s*(\d\s*){8}"
-              />
-            </app-form-field>
+            <div class="ui-field-group">
+              <app-form-field
+                label="IČO"
+                i18n-label="@@donor.register.companyIdentifier"
+                [hint]="companyIdentifierHint"
+                [messages]="companyIdentifierMessages"
+              >
+                <input
+                  appFormControl
+                  appCompanyIdentifier
+                  id="register-company-identifier"
+                  enterkeyhint="next"
+                  autofocus
+                  name="companyIdentifier"
+                  type="text"
+                  inputmode="numeric"
+                  [(ngModel)]="registration.companyIdentifier"
+                  (ngModelChange)="lookUpCompany($event)"
+                  required
+                  pattern="\s*(\d\s*){8}"
+                />
+              </app-form-field>
+            </div>
             <div role="status" class="company-lookup">
               @if (filledFromRegister()) {
                 <p class="form-status company-lookup-status" i18n="@@donor.register.companyFilled">
@@ -587,142 +596,148 @@
                 </p>
               }
             </div>
-
-            <app-form-field
-              label="Název firmy"
-              i18n-label="@@donor.register.companyName"
-              [messages]="companyNameMessages"
-            >
-              <input
-                appFormControl
-                id="register-name"
-                enterkeyhint="next"
-                name="name"
-                type="text"
-                autocomplete="organization"
-                [(ngModel)]="registration.name"
-                appPrintableOnReceipt
-                required
-                maxlength="160"
-              />
-            </app-form-field>
-
-            <app-form-field
-              label="Sídlo – ulice a číslo"
-              i18n-label="@@donor.register.companyStreet"
-              [messages]="streetMessages"
-            >
-              <input
-                appFormControl
-                id="register-street"
-                enterkeyhint="next"
-                name="street"
-                type="text"
-                autocomplete="street-address"
-                [(ngModel)]="registration.street"
-                appPrintableOnReceipt
-                required
-                maxlength="200"
-              />
-            </app-form-field>
-          } @else {
-            <app-form-field
-              label="Jméno a příjmení"
-              i18n-label="@@donor.login.name"
-              [messages]="personNameMessages"
-            >
-              <input
-                appFormControl
-                id="register-name"
-                enterkeyhint="next"
-                autofocus
-                name="name"
-                type="text"
-                autocomplete="name"
-                [(ngModel)]="registration.name"
-                appPrintableOnReceipt
-                required
-                maxlength="160"
-              />
-            </app-form-field>
-
-            <app-form-field
-              label="Ulice a číslo"
-              i18n-label="@@donor.register.street"
-              [messages]="streetMessages"
-            >
-              <input
-                appFormControl
-                id="register-street"
-                enterkeyhint="next"
-                name="street"
-                type="text"
-                autocomplete="street-address"
-                [(ngModel)]="registration.street"
-                appPrintableOnReceipt
-                required
-                maxlength="200"
-              />
-            </app-form-field>
           }
 
-          <div class="field-row">
+          <div class="ui-field-group">
+            @if (donorType() === 'COMPANY') {
+              <app-form-field
+                label="Název firmy"
+                i18n-label="@@donor.register.companyName"
+                [messages]="companyNameMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-name"
+                  enterkeyhint="next"
+                  name="name"
+                  type="text"
+                  autocomplete="organization"
+                  [(ngModel)]="registration.name"
+                  appPrintableOnReceipt
+                  required
+                  maxlength="160"
+                />
+              </app-form-field>
+
+              <app-form-field
+                label="Sídlo – ulice a číslo"
+                i18n-label="@@donor.register.companyStreet"
+                [messages]="streetMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-street"
+                  enterkeyhint="next"
+                  name="street"
+                  type="text"
+                  autocomplete="street-address"
+                  [(ngModel)]="registration.street"
+                  appPrintableOnReceipt
+                  required
+                  maxlength="200"
+                />
+              </app-form-field>
+            } @else {
+              <app-form-field
+                label="Jméno a příjmení"
+                i18n-label="@@donor.login.name"
+                [messages]="personNameMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-name"
+                  enterkeyhint="next"
+                  autofocus
+                  name="name"
+                  type="text"
+                  autocomplete="name"
+                  [(ngModel)]="registration.name"
+                  appPrintableOnReceipt
+                  required
+                  maxlength="160"
+                />
+              </app-form-field>
+
+              <app-form-field
+                label="Ulice a číslo"
+                i18n-label="@@donor.register.street"
+                [messages]="streetMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-street"
+                  enterkeyhint="next"
+                  name="street"
+                  type="text"
+                  autocomplete="street-address"
+                  [(ngModel)]="registration.street"
+                  appPrintableOnReceipt
+                  required
+                  maxlength="200"
+                />
+              </app-form-field>
+            }
+
+            <div class="field-row">
+              <app-form-field
+                label="PSČ"
+                i18n-label="@@donor.register.postalCode"
+                [messages]="postalCodeMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-postal-code"
+                  enterkeyhint="next"
+                  name="postalCode"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="postal-code"
+                  [(ngModel)]="registration.postalCode"
+                  required
+                  pattern="\s*\d{3}\s*\d{2}\s*"
+                />
+              </app-form-field>
+              <app-form-field
+                label="Město"
+                i18n-label="@@donor.register.city"
+                [messages]="cityMessages"
+              >
+                <input
+                  appFormControl
+                  id="register-city"
+                  enterkeyhint="next"
+                  name="city"
+                  type="text"
+                  autocomplete="address-level2"
+                  [(ngModel)]="registration.city"
+                  appPrintableOnReceipt
+                  required
+                  maxlength="120"
+                />
+              </app-form-field>
+            </div>
+          </div>
+
+          <div class="ui-field-group">
             <app-form-field
-              label="PSČ"
-              i18n-label="@@donor.register.postalCode"
-              [messages]="postalCodeMessages"
+              label="E-mail"
+              i18n-label="@@donor.login.email"
+              [messages]="emailMessages"
             >
               <input
                 appFormControl
-                id="register-postal-code"
-                enterkeyhint="next"
-                name="postalCode"
-                type="text"
-                inputmode="numeric"
-                autocomplete="postal-code"
-                [(ngModel)]="registration.postalCode"
+                id="register-email"
+                [attr.enterkeyhint]="signInMethod() === 'password' ? 'next' : 'go'"
+                name="email"
+                type="email"
+                autocomplete="email"
+                [(ngModel)]="registration.email"
                 required
-                pattern="\s*\d{3}\s*\d{2}\s*"
-              />
-            </app-form-field>
-            <app-form-field
-              label="Město"
-              i18n-label="@@donor.register.city"
-              [messages]="cityMessages"
-            >
-              <input
-                appFormControl
-                id="register-city"
-                enterkeyhint="next"
-                name="city"
-                type="text"
-                autocomplete="address-level2"
-                [(ngModel)]="registration.city"
-                appPrintableOnReceipt
-                required
-                maxlength="120"
+                email
+                maxlength="254"
               />
             </app-form-field>
           </div>
-
-          <app-form-field
-            label="E-mail"
-            i18n-label="@@donor.login.email"
-            [messages]="emailMessages"
-          >
-            <input
-              appFormControl
-              id="register-email"
-              [attr.enterkeyhint]="signInMethod() === 'password' ? 'next' : 'go'"
-              name="email"
-              type="email"
-              autocomplete="email"
-              [(ngModel)]="registration.email"
-              required
-              email
-              maxlength="254"
-            />
-          </app-form-field>
 
           @if (passkeysSupported) {
             <p
@@ -741,7 +756,7 @@
               bez hesla. Když si nejste jistí, zvolte heslo.
             </p>
             <div
-              class="ui-segmented type-switch"
+              class="segmented type-switch"
               appRadioGroup
               aria-labelledby="register-method-label"
               aria-describedby="register-method-hint"
@@ -772,27 +787,29 @@
           }
 
           @if (signInMethod() === 'password') {
-            <app-form-field
-              label="Heslo"
-              i18n-label="@@donor.login.password"
-              [hint]="newPasswordHint"
-              [messages]="newPasswordMessages"
-            >
-              <app-password-reveal>
-                <input
-                  appFormControl
-                  id="register-password"
-                  enterkeyhint="go"
-                  name="password"
-                  type="password"
-                  autocomplete="new-password"
-                  [(ngModel)]="registration.password"
-                  required
-                  [minlength]="passwordMinLength"
-                  maxlength="128"
-                />
-              </app-password-reveal>
-            </app-form-field>
+            <div class="ui-field-group">
+              <app-form-field
+                label="Heslo"
+                i18n-label="@@donor.login.password"
+                [hint]="newPasswordHint"
+                [messages]="newPasswordMessages"
+              >
+                <app-password-reveal>
+                  <input
+                    appFormControl
+                    id="register-password"
+                    enterkeyhint="go"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    [(ngModel)]="registration.password"
+                    required
+                    [minlength]="passwordMinLength"
+                    maxlength="128"
+                  />
+                </app-password-reveal>
+              </app-form-field>
+            </div>
           } @else {
             <p class="register-hint passkey-later" i18n="@@donor.register.passkeyHint">
               Klíč (otisk prstu, obličej nebo zámek obrazovky) vytvoříte hned po potvrzení e-mailu.
@@ -817,7 +834,7 @@
           <button
             appNeedsConnection
             type="submit"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             [disabled]="loading()"
           >
             @if (loading()) {
@@ -859,7 +876,7 @@
           <button
             appNeedsConnection
             type="button"
-            class="ui-button ui-button--block reset-resend"
+            class="ui-button ui-button--block ui-button--grouped reset-resend"
             [disabled]="loading()"
             (click)="resendReset()"
           >
@@ -881,7 +898,7 @@
           }
           <button
             type="button"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             (click)="backToLogin()"
             i18n="@@donor.login.reset.back"
           >
@@ -909,27 +926,29 @@
           (ngSubmit)="submitReset(reset)"
           novalidate
         >
-          <app-form-field
-            label="E-mail"
-            i18n-label="@@donor.login.email"
-            [messages]="emailMessages"
-          >
-            <input
-              appFormControl
-              id="reset-email"
-              enterkeyhint="send"
-              autofocus
-              name="resetEmail"
-              type="email"
-              autocomplete="email"
-              placeholder="vas@email.cz"
-              i18n-placeholder="@@donor.login.emailPlaceholder"
-              [(ngModel)]="resetEmail"
-              required
-              email
-              maxlength="254"
-            />
-          </app-form-field>
+          <div class="ui-field-group">
+            <app-form-field
+              label="E-mail"
+              i18n-label="@@donor.login.email"
+              [messages]="emailMessages"
+            >
+              <input
+                appFormControl
+                id="reset-email"
+                enterkeyhint="send"
+                autofocus
+                name="resetEmail"
+                type="email"
+                autocomplete="email"
+                placeholder="vas@email.cz"
+                i18n-placeholder="@@donor.login.emailPlaceholder"
+                [(ngModel)]="resetEmail"
+                required
+                email
+                maxlength="254"
+              />
+            </app-form-field>
+          </div>
 
           @if (error()) {
             <p class="ui-field-error" role="alert">{{ error() }}</p>
@@ -938,7 +957,7 @@
           <button
             appNeedsConnection
             type="submit"
-            class="ui-button ui-button--primary ui-button--block"
+            class="ui-button ui-button--primary ui-button--block ui-button--grouped"
             [disabled]="loading()"
           >
             @if (loading()) {
