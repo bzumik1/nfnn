@@ -82,7 +82,9 @@ class EventListenerRulesTest {
             "take a parameter that is or holds " + SHARED_EVENT.getDescription() + ", or hand out a function of one",
             codeUnit -> Stream.concat(
                             codeUnit.getParameters().stream().flatMap(parameter -> parameter.getType().getAllInvolvedRawTypes().stream()),
-                            typeArgumentsOf(codeUnit.getReturnType()))
+                            codeUnit.getRawReturnType().isAnnotatedWith(FunctionalInterface.class)
+                                    ? typeArgumentsOf(codeUnit.getReturnType())
+                                    : Stream.empty())
                     .anyMatch(SHARED_EVENT));
 
     private static final DescribedPredicate<JavaField> HOLDING_A_SHARED_EVENT = DescribedPredicate.describe(
@@ -99,6 +101,7 @@ class EventListenerRulesTest {
     @ArchTest
     static final ArchRule application_code_takes_no_shared_event = noCodeUnits()
             .that().areDeclaredInClassesThat().resideInAPackage("..application..")
+            .and().arePublic()
             .should(ArchCondition.from(TAKING_A_SHARED_EVENT))
             .because("backend.md, Contexts and layers: the adapter that hears a cross-context event calls the application with the event's values, "
                     + "so no application API takes a shared event");
@@ -125,7 +128,7 @@ class EventListenerRulesTest {
             .orShould().callCodeUnitWhere(DescribedPredicate.describe("it takes an ApplicationListener",
                     call -> call.getTarget().getRawParameterTypes().stream()
                             .map(type -> type.isArray() ? type.getComponentType() : type)
-                            .anyMatch(type -> type.isAssignableTo(ApplicationListener.class))))
+                            .anyMatch(type -> type.isInterface() && type.isAssignableTo(ApplicationListener.class))))
             .because("backend.md, Contexts and layers: a listener registered in code (an ApplicationListener bean, a forPayload listener or a "
                     + "lambda added to the context) carries no annotation, so neither its placement nor its transaction phase could be checked");
 
@@ -222,7 +225,7 @@ class EventListenerRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted listeners that name a shared event in @EventListener's value or classes or as a payload's type argument, when the plain rule checks them, then each plain one is reported and a transactional one is not")
+    @DisplayName("Given planted listeners that name a shared event in @EventListener's value or classes or as a payload's type argument, and one that names only framework events, when the plain rule checks them, then each plain one of a shared event is reported and the others are not")
     void should_report_a_plain_listener_naming_a_shared_event_in_its_annotation_or_payload_when_checked_given_planted_listeners(@TempDir Path folder)
             throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.infrastructure.events.PlantedNamingListener", """
@@ -230,7 +233,10 @@ class EventListenerRulesTest {
 
                 import cz.novanadeje.app.shared.application.event.DonorErased;
                 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+                import org.springframework.context.ApplicationEvent;
                 import org.springframework.context.PayloadApplicationEvent;
+                import org.springframework.context.event.ContextClosedEvent;
+                import org.springframework.context.event.ContextRefreshedEvent;
                 import org.springframework.context.event.EventListener;
                 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -251,6 +257,10 @@ class EventListenerRulesTest {
                     @TransactionalEventListener(classes = DonorErased.class)
                     void transactionally() {
                     }
+
+                    @EventListener({ContextRefreshedEvent.class, ContextClosedEvent.class})
+                    void framework(ApplicationEvent event) {
+                    }
                 }
                 """));
 
@@ -262,7 +272,7 @@ class EventListenerRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted application listeners that name a shared event in the annotation's value or classes, after another listener annotation, on a custom listener annotation, through a single-class alias, as a payload's type argument or through a type every shared event is, when the placement rule checks them, then each is reported")
+    @DisplayName("Given planted application listeners that name a shared event in the annotation's value or classes, after another listener annotation, on a custom listener annotation, through a single-class alias, as a payload's type argument or through a type every shared event is, and one that names only other events, when the placement rule checks them, then each but the last is reported")
     void should_report_an_application_listener_naming_a_shared_event_in_its_annotation_or_payload_when_checked_given_planted_listeners(@TempDir Path folder)
             throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.application.OnErasure", """
@@ -297,10 +307,12 @@ class EventListenerRulesTest {
                 """, "cz.novanadeje.app.planteda.application.PlantedNamingService", """
                 package cz.novanadeje.app.planteda.application;
 
+                import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
                 import cz.novanadeje.app.shared.application.event.DonorErased;
                 import cz.novanadeje.app.shared.application.event.DonorRegistered;
                 import org.springframework.context.ApplicationEvent;
                 import org.springframework.context.PayloadApplicationEvent;
+                import org.springframework.context.event.ContextRefreshedEvent;
                 import org.springframework.context.event.EventListener;
                 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -350,6 +362,10 @@ class EventListenerRulesTest {
                     @EventListener(Record.class)
                     public void anyRecord() {
                     }
+
+                    @EventListener({ContextRefreshedEvent.class, OperationalAlertChanged.class})
+                    public void namedOwnEvents(Object event) {
+                    }
                 }
                 """));
 
@@ -368,7 +384,7 @@ class EventListenerRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted application methods that take a shared event, a list of them, a context's own event, a shared kind and plain values, a constructor that takes one, a method handing out a function of one and one returning one, a helper beside the shared events that takes one, and an adapter that takes a shared event, when the application API rule checks them, then only the application code taking a shared event or handing out a function of one is reported")
+    @DisplayName("Given planted application methods that take a shared event, a list of them, a context's own event, a shared kind and plain values, a constructor that takes one, a method handing out a function of one, publishers returning one or a list or optional of them, a private helper taking one, a helper beside the shared events that takes one, and an adapter that takes a shared event, when the application API rule checks them, then only the public application code taking a shared event or handing out a function of one is reported")
     void should_report_application_code_taking_a_shared_event_when_checked_given_planted_classes(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.application.PlantedRecoveryService", """
@@ -381,6 +397,7 @@ class EventListenerRulesTest {
                         import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 
                         import java.util.List;
+                        import java.util.Optional;
                         import java.util.UUID;
                         import java.util.function.Consumer;
 
@@ -408,6 +425,17 @@ class EventListenerRulesTest {
 
                             public DonorErased erasureOf(UUID donorId) {
                                 return null;
+                            }
+
+                            public List<DonorErased> erasuresToPublish() {
+                                return List.of();
+                            }
+
+                            public Optional<DonorErased> erasureIfDue(UUID donorId) {
+                                return Optional.empty();
+                            }
+
+                            private void audit(DonorErased erased) {
                             }
                         }
                         """,
@@ -522,7 +550,7 @@ class EventListenerRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted listeners registered in code (an ApplicationListener bean, ApplicationListener.forPayload, TransactionalApplicationListener.forPayload, a lambda added to the context), an annotated listener and a user of a scheduler that is a listener itself, when the rule checks them, then only the four registered in code are reported")
+    @DisplayName("Given planted listeners registered in code (an ApplicationListener bean, ApplicationListener.forPayload, TransactionalApplicationListener.forPayload, a lambda added to the context), an annotated listener and a user of a scheduler that is a listener itself, passing it to a helper, when the rule checks them, then only the four registered in code are reported")
     void should_report_a_listener_registered_in_code_when_checked_given_planted_listeners(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
                 "cz.novanadeje.app.planteda.infrastructure.events.PlantedErasureBean", """
@@ -591,6 +619,11 @@ class EventListenerRulesTest {
                             ThreadPoolTaskScheduler scheduler() {
                                 ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
                                 scheduler.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
+                                return bounded(scheduler);
+                            }
+
+                            private ThreadPoolTaskScheduler bounded(ThreadPoolTaskScheduler scheduler) {
+                                scheduler.setPoolSize(1);
                                 return scheduler;
                             }
                         }
@@ -620,8 +653,8 @@ class EventListenerRulesTest {
     }
 
     private static boolean listensToASharedEvent(JavaMethod method) {
-        return Stream.concat(eventsNamedByListenerAnnotations(method.getAnnotations(), new HashSet<>()), eventsTakenAsParameters(method))
-                .anyMatch(HEARING_A_SHARED_EVENT);
+        Set<JavaClass> named = eventsNamedByListenerAnnotations(method.getAnnotations(), new HashSet<>()).collect(Collectors.toSet());
+        return (named.isEmpty() ? eventsTakenAsParameters(method) : named.stream()).anyMatch(HEARING_A_SHARED_EVENT);
     }
 
     private static Stream<JavaClass> eventsNamedByListenerAnnotations(Set<? extends JavaAnnotation<?>> annotations, Set<String> visited) {
