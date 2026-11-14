@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.application.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyCheckMismatch;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationRepository;
@@ -38,16 +39,18 @@ public class BackupKeyService {
     private final FreshSecondFactor freshSecondFactor;
     private final BackupKeyRevealRefusals refusals;
     private final BackupKeyWordChallenges challenges;
+    private final BackupKeyWords wordlist;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BackupKeyService(BackupKeySource keys, BackupKeyConfirmationRepository confirmations, FreshSecondFactor freshSecondFactor,
-                            BackupKeyRevealRefusals refusals, BackupKeyWordChallenges challenges, ApplicationEventPublisher events, Clock clock) {
+                            BackupKeyRevealRefusals refusals, BackupKeyWordChallenges challenges, BackupKeyWords wordlist, ApplicationEventPublisher events, Clock clock) {
         this.keys = keys;
         this.confirmations = confirmations;
         this.freshSecondFactor = freshSecondFactor;
         this.refusals = refusals;
         this.challenges = challenges;
+        this.wordlist = wordlist;
         this.events = events;
         this.clock = clock;
     }
@@ -119,9 +122,9 @@ public class BackupKeyService {
         log.info("The backup key was confirmed as saved in the first setup");
     }
 
-    private static void requireWords(BackupKey key, List<BackupKeyWordCheck> words, Optional<BackupKeyWordPositions> asked) {
+    private void requireWords(BackupKey key, List<BackupKeyWordCheck> words, Optional<BackupKeyWordPositions> asked) {
         BackupKeyWordPositions typed = BackupKeyWordPositions.of(words);
-        if (asked.filter(positions -> !positions.equals(typed)).isPresent() || !key.matches(words)) {
+        if (asked.filter(positions -> !positions.equals(typed)).isPresent() || !key.matches(words, wordlist)) {
             throw new BackupKeyCheckMismatch();
         }
     }

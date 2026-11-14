@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.domain.backup;
 
+import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,6 +16,7 @@ class BackupKeyTest {
 
     static final String AGE_KEYGEN_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
     static final String OTHER_AGE_KEYGEN_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
+    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
 
     @ParameterizedTest
     @ValueSource(strings = {AGE_KEYGEN_KEY, OTHER_AGE_KEYGEN_KEY, "AGE-SECRET-KEY-16EE9SQK4P76QTFJDUKNZN2W04PSXA8P5PKD7HWU5W6KYHAQQNVZSRMUG2S"})
@@ -56,8 +58,8 @@ class BackupKeyTest {
     void should_match_words_when_checked_given_words_of_key() {
         BackupKey key = new BackupKey(AGE_KEYGEN_KEY);
 
-        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "MOTI"), new BackupKeyWordCheck(24, " studna ")))).isTrue();
-        assertThat(key.words()).hasSize(24).startsWith("divoch", "komora").endsWith("moudrost", "studna");
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "MOTI"), new BackupKeyWordCheck(24, " studna ")), WORDLIST)).isTrue();
+        assertThat(key.words(WORDLIST)).hasSize(24).startsWith("divoch", "komora").endsWith("moudrost", "studna");
     }
 
     @Test
@@ -65,30 +67,30 @@ class BackupKeyTest {
     void should_not_match_words_when_checked_given_wrong_word() {
         BackupKey key = new BackupKey(AGE_KEYGEN_KEY);
 
-        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "moudrost")))).isFalse();
-        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komoda"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")))).isFalse();
-        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "kom"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")))).isFalse();
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komora"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "moudrost")), WORDLIST)).isFalse();
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "komoda"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")), WORDLIST)).isFalse();
+        assertThat(key.matches(List.of(new BackupKeyWordCheck(2, "kom"), new BackupKeyWordCheck(13, "motivace"), new BackupKeyWordCheck(24, "studna")), WORDLIST)).isFalse();
     }
 
     @Test
     @DisplayName("Given no checked words, when they are checked, then they do not match")
     void should_not_match_words_when_checked_given_none() {
-        assertThat(new BackupKey(AGE_KEYGEN_KEY).matches(List.of())).isFalse();
+        assertThat(new BackupKey(AGE_KEYGEN_KEY).matches(List.of(), WORDLIST)).isFalse();
     }
 
     @Test
     @DisplayName("Given a key, when it is read from its 24 words, then it is the same key")
     void should_read_key_when_parsed_given_its_words() {
         assertThat(BackupKey.parse("divoch komora probudit najednou dekl komando nikl odebrat biograf bytovka dodnes mikrofon "
-                + "motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna")).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
-        assertThat(BackupKey.parse(AGE_KEYGEN_KEY.toLowerCase())).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
+                + "motivace naivita zdaleka ekonomie jeseter azyl atlas obyvatel glazura vytesat moudrost studna", WORDLIST)).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
+        assertThat(BackupKey.parse(AGE_KEYGEN_KEY.toLowerCase(), WORDLIST)).isEqualTo(new BackupKey(AGE_KEYGEN_KEY));
     }
 
     @Test
     @DisplayName("Given no text, when it is parsed, then it is refused")
     void should_refuse_text_when_parsed_given_null() {
-        assertThatThrownBy(() -> BackupKey.parse(null)).isInstanceOf(InvalidBackupKey.class);
-        assertThatThrownBy(() -> BackupKey.parse("slovo ".repeat(BackupKey.MAX_PARSED_LENGTH))).isInstanceOf(InvalidBackupKey.class);
+        assertThatThrownBy(() -> BackupKey.parse(null, WORDLIST)).isInstanceOf(InvalidBackupKey.class);
+        assertThatThrownBy(() -> BackupKey.parse("slovo ".repeat(BackupKey.MAX_PARSED_LENGTH), WORDLIST)).isInstanceOf(InvalidBackupKey.class);
     }
 
     @ParameterizedTest

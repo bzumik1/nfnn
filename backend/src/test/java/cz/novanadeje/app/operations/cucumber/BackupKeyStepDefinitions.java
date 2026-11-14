@@ -7,6 +7,8 @@ import cz.novanadeje.app.cucumber.TotpCodes;
 import cz.novanadeje.app.donors.cucumber.DonorPasskeyStepDefinitions;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
+import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.settings.PublicDevelopmentKeys;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
@@ -24,6 +26,8 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class BackupKeyStepDefinitions {
+
+    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
 
     private static final String KEY = "/api/admin/operations/backups/key";
     private static final String SETUP_KEY = "/api/operations/setup/backup-key";
@@ -117,13 +121,13 @@ public class BackupKeyStepDefinitions {
 
     @When("{string} confirms the backup key with the asked words")
     public void confirmsTheBackupKeyWithTheAskedWords(String alias) {
-        List<String> words = serverKey().words();
+        List<String> words = serverKey().words(WORDLIST);
         confirmsTheBackupKeyWith(alias, askedPositions.stream().map(position -> word(position, words.get(position - 1).toUpperCase())).toList());
     }
 
     @When("{string} confirms the backup key with the asked words in the wrong order")
     public void confirmsTheBackupKeyWithTheAskedWordsInTheWrongOrder(String alias) {
-        List<String> words = serverKey().words();
+        List<String> words = serverKey().words(WORDLIST);
         List<Integer> shifted = List.of(askedPositions.get(1), askedPositions.get(2), askedPositions.getFirst());
         confirmsTheBackupKeyWith(alias, List.of(word(askedPositions.get(0), words.get(shifted.get(0) - 1)),
                 word(askedPositions.get(1), words.get(shifted.get(1) - 1)), word(askedPositions.get(2), words.get(shifted.get(2) - 1))));
@@ -193,7 +197,7 @@ public class BackupKeyStepDefinitions {
 
     @When("an encrypted backup is uploaded in the first setup with the 24 words of the public development backup key")
     public void anEncryptedBackupIsUploadedWithTheWordsOfThePublicDevelopmentKey() {
-        anEncryptedBackupIsUploadedWithTheKey(String.join(" ", developmentKey().words()));
+        anEncryptedBackupIsUploadedWithTheKey(String.join(" ", developmentKey().words(WORDLIST)));
     }
 
     @Then("the uploaded backup waits in the restore folder beside the public development backup key")

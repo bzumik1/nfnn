@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.SessionEnded;
@@ -105,7 +106,7 @@ class DonorSecondFactorServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
+        service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, CommonPasswordList.policy(), passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
                 new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts,
                 new SecondFactorCodes(secondFactors, wrongCodes), transactions);

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.domain.backup;
 
+import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,11 +28,12 @@ class BackupKeyWordsCasesTest {
     static final String WORDLIST_SHA256 = "7e80e161c3e93d9554c2efb78d4e3cebf8fc727e9c52e03b83b94406bdcc95fc";
     private static final Path CASES = Path.of("..", "test-cases", "backup-key-words.json");
     private static final JsonNode SHARED = read();
+    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
 
     @Test
     @DisplayName("Given the Czech wordlist of BIP39, when it is loaded, then it is the published list the shared cases were made with")
     void should_be_published_list_when_loaded() throws IOException, NoSuchAlgorithmException {
-        try (InputStream list = BackupKeyWords.class.getResourceAsStream("bip39-czech.txt")) {
+        try (InputStream list = BackupKeyWordList.class.getResourceAsStream(BackupKeyWordList.LIST)) {
             assertThat(list).isNotNull();
             String sha256 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(list.readAllBytes()));
 
@@ -43,21 +45,21 @@ class BackupKeyWordsCasesTest {
     @MethodSource("keys")
     @DisplayName("Given a key of the shared cases, when it is written as words, then it gives the 24 words of the case")
     void should_give_case_words_when_written_as_words(String key, List<String> words) {
-        assertThat(new BackupKey(key).words()).containsExactlyElementsOf(words);
+        assertThat(new BackupKey(key).words(WORDLIST)).containsExactlyElementsOf(words);
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("keys")
     @DisplayName("Given the 24 words of a shared case, when they are read as a key, then they give the key of the case")
     void should_give_case_key_when_words_read(String key, List<String> words) {
-        assertThat(BackupKey.parse(String.join(" ", words))).isEqualTo(new BackupKey(key));
+        assertThat(BackupKey.parse(String.join(" ", words), WORDLIST)).isEqualTo(new BackupKey(key));
     }
 
     @ParameterizedTest(name = "\"{0}\"")
     @MethodSource("typedWords")
     @DisplayName("Given a word typed as in the shared cases, when it is read, then it is the word of the case or none")
     void should_give_case_word_when_typed_word_read(String typed, Optional<String> word) {
-        assertThat(BackupKeyWords.canonical(typed)).isEqualTo(word);
+        assertThat(WORDLIST.canonical(typed)).isEqualTo(word);
     }
 
     @ParameterizedTest(name = "\"{0}\"")
@@ -65,9 +67,9 @@ class BackupKeyWordsCasesTest {
     @DisplayName("Given a key or words pasted as in the shared cases, when they are read, then they give the key of the case or are refused")
     void should_give_case_key_or_refuse_when_pasted_text_read(String input, Optional<String> key) {
         if (key.isPresent()) {
-            assertThat(BackupKey.parse(input)).isEqualTo(new BackupKey(key.get()));
+            assertThat(BackupKey.parse(input, WORDLIST)).isEqualTo(new BackupKey(key.get()));
         } else {
-            assertThatThrownBy(() -> BackupKey.parse(input)).isInstanceOf(InvalidBackupKey.class);
+            assertThatThrownBy(() -> BackupKey.parse(input, WORDLIST)).isInstanceOf(InvalidBackupKey.class);
         }
     }
 

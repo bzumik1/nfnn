@@ -12,6 +12,7 @@ import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasskeyUserHandle;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
@@ -27,15 +28,17 @@ import java.util.Optional;
 public class DonorConfirmations {
 
     private final PasswordHasher passwordHasher;
+    private final PasswordPolicy passwordPolicy;
     private final PasskeyRepository passkeys;
     private final PasskeyChallengeRepository challenges;
     private final PasskeyCeremonies ceremonies;
     private final CommittedRefusals passkeyConfirmations;
     private final Clock clock;
 
-    public DonorConfirmations(PasswordHasher passwordHasher, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
+    public DonorConfirmations(PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
                               PasskeyCeremonies ceremonies, PlatformTransactionManager transactions, Clock clock) {
         this.passwordHasher = passwordHasher;
+        this.passwordPolicy = passwordPolicy;
         this.passkeys = passkeys;
         this.challenges = challenges;
         this.ceremonies = ceremonies;
@@ -62,7 +65,7 @@ public class DonorConfirmations {
         PasswordHash hash = donor.passwordHash().orElseThrow(WrongPassword::new);
         RawPassword rawPassword;
         try {
-            rawPassword = new RawPassword(password);
+            rawPassword = passwordPolicy.accept(password);
         } catch (RuleViolation weak) {
             throw new WrongPassword();
         }

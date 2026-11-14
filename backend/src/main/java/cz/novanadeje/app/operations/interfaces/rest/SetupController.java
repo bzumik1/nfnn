@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.settings.SetupAccess;
 import cz.novanadeje.app.operations.application.settings.SetupService;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -36,12 +37,15 @@ class SetupController {
     private final HomeNetworkRequests homeNetwork;
     private final SetupRateLimiter rateLimiter;
     private final TestEmailRateLimiter testEmailRateLimiter;
+    private final BackupKeyWords wordlist;
 
-    SetupController(SetupService setup, HomeNetworkRequests homeNetwork, SetupRateLimiter rateLimiter, TestEmailRateLimiter testEmailRateLimiter) {
+    SetupController(SetupService setup, HomeNetworkRequests homeNetwork, SetupRateLimiter rateLimiter, TestEmailRateLimiter testEmailRateLimiter,
+                    BackupKeyWords wordlist) {
         this.setup = setup;
         this.homeNetwork = homeNetwork;
         this.rateLimiter = rateLimiter;
         this.testEmailRateLimiter = testEmailRateLimiter;
+        this.wordlist = wordlist;
     }
 
     @GetMapping
@@ -83,7 +87,7 @@ class SetupController {
                                    @RequestHeader(name = BACKUP_KEY_HEADER, required = false) @Size(max = BackupKey.MAX_PARSED_LENGTH) String backupKey)
             throws IOException {
         rateLimiter.check(http.getRemoteAddr());
-        Optional<BackupKey> key = Optional.ofNullable(backupKey).filter(value -> !value.isBlank()).map(BackupKey::parse);
+        Optional<BackupKey> key = Optional.ofNullable(backupKey).filter(value -> !value.isBlank()).map(value -> BackupKey.parse(value, wordlist));
         return RestoreRequestResponse.from(setup.restoreUpload(access(http, code), http.getInputStream(), key));
     }
 

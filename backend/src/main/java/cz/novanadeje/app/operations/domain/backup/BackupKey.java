@@ -25,14 +25,14 @@ public record BackupKey(String value) {
         }
     }
 
-    public static BackupKey parse(String text) {
+    public static BackupKey parse(String text, BackupKeyWords wordlist) {
         if (text == null || text.length() > MAX_PARSED_LENGTH) {
             throw new InvalidBackupKey();
         }
         if (looksLikeOne(text)) {
             return new BackupKey(text);
         }
-        return BackupKeyWords.keyOf(text)
+        return wordlist.keyOf(text)
                 .map(bytes -> new BackupKey(Bech32.encode(HUMAN_READABLE_PART, bytes)))
                 .orElseThrow(InvalidBackupKey::new);
     }
@@ -41,16 +41,16 @@ public record BackupKey(String value) {
         return value != null && value.strip().toLowerCase(Locale.ROOT).startsWith(PREFIX);
     }
 
-    public List<String> words() {
-        return BackupKeyWords.of(Bech32.decode(value, HUMAN_READABLE_PART, KEY_BYTES).orElseThrow(InvalidBackupKey::new));
+    public List<String> words(BackupKeyWords wordlist) {
+        return wordlist.of(Bech32.decode(value, HUMAN_READABLE_PART, KEY_BYTES).orElseThrow(InvalidBackupKey::new));
     }
 
-    public boolean matches(List<BackupKeyWordCheck> checks) {
+    public boolean matches(List<BackupKeyWordCheck> checks, BackupKeyWords wordlist) {
         if (checks.isEmpty()) {
             return false;
         }
-        List<String> words = words();
-        return checks.stream().allMatch(check -> BackupKeyWords.canonical(check.word())
+        List<String> words = words(wordlist);
+        return checks.stream().allMatch(check -> wordlist.canonical(check.word())
                 .filter(word -> word.equals(words.get(check.position() - 1)))
                 .isPresent());
     }

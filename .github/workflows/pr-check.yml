@@ -996,7 +996,7 @@ jobs:
           [ "$backup_key" = "$(sudo grep -m 1 '^AGE-SECRET-KEY-' "$secrets/backup-key")" ] || { echo "::error::the setup must show the generated backup key"; exit 1; }
           echo "::add-mask::$backup_key"
           [ "$(jq -c '.checkPositions | length' "$RUNNER_TEMP/backup-key.json")" = 3 ] || { echo "::error::the setup must ask for three words of the backup key"; exit 1; }
-          key_words=$(BACKUP_KEY_TEXT="$backup_key" CHECK_POSITIONS="$(jq -c '.checkPositions' "$RUNNER_TEMP/backup-key.json")" python3 - backend/src/main/resources/cz/novanadeje/app/operations/domain/backup/bip39-czech.txt <<'PY'
+          key_words=$(BACKUP_KEY_TEXT="$backup_key" CHECK_POSITIONS="$(jq -c '.checkPositions' "$RUNNER_TEMP/backup-key.json")" python3 - backend/src/main/resources/cz/novanadeje/app/operations/infrastructure/backup/bip39-czech.txt <<'PY'
           import hashlib, json, os, sys
           alphabet = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
           text = os.environ['BACKUP_KEY_TEXT'].lower()

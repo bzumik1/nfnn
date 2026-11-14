@@ -14,6 +14,8 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
+import cz.novanadeje.app.donors.domain.RawPassword;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,6 +33,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
 import static cz.novanadeje.app.architecture.MethodAccesses.callsOrReferences;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +51,7 @@ class PasswordHashingRulesTest {
     private static final Set<String> TEMPLATE_RUNS = Set.of("execute", "executeWithoutResult");
     private static final Set<String> COMMITTED_REFUSAL_RUNS = Set.of("execute", "run");
     private static final String APPLICATION_CODE = "cz.novanadeje.app.";
+    private static final String CONSTRUCTOR = "<init>";
 
     private static final DescribedPredicate<JavaAccess<?>> A_PASSWORD_HASHING = callsOrReferences("", PasswordHasher.class, HASHING::contains)
             .or(callsOrReferences("", CONFIRMATIONS, CONFIRMING::equals))
@@ -66,6 +70,41 @@ class PasswordHashingRulesTest {
             .because("a BCrypt hash at cost 12 takes about 0.3 s of CPU and must not hold a pooled connection or a row lock "
                     + "(database.md, Connections and waits; backend.md, Application)");
 
+    @ArchTest
+    static final ArchRule only_the_password_policy_builds_a_raw_password = noClasses()
+            .that().doNotBelongToAnyOf(PasswordPolicy.class)
+            .should().accessTargetWhere(describe("build a RawPassword",
+                    access -> access.getTargetOwner().isEquivalentTo(RawPassword.class) && CONSTRUCTOR.equals(access.getName())))
+            .because("security.md, Credentials: every password a client gives is checked against the common passwords, which only PasswordPolicy holds");
+
+    @Test
+    @DisplayName("Given a planted service that builds a password by its constructor and by a constructor reference, when the rule checks it, then both are reported")
+    void should_report_every_raw_password_built_outside_the_policy_when_checked_given_a_planted_service(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.donors.application.PlantedUncheckedPasswords", """
+                        package cz.novanadeje.app.donors.application;
+
+                        import cz.novanadeje.app.donors.domain.RawPassword;
+                        import java.util.function.Function;
+
+                        class PlantedUncheckedPasswords {
+
+                            RawPassword built(String password) {
+                                return new RawPassword(password);
+                            }
+
+                            Function<String, RawPassword> referenced() {
+                                return RawPassword::new;
+                            }
+                        }
+                        """));
+
+        assertThat(only_the_password_policy_builds_a_raw_password.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("built(java.lang.String)"))
+                .anySatisfy(detail -> assertThat(detail).contains("referenced()"));
+    }
+
     @Test
     @DisplayName("Given the guarded names, when the hasher and the confirmations are read, then each is a method there, so the rule watches no name that is gone")
     void should_find_every_guarded_name_when_read_given_hasher_and_confirmations() throws ClassNotFoundException {
@@ -83,6 +122,8 @@ class PasswordHashingRulesTest {
                         import cz.novanadeje.app.donors.domain.Donor;
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
+import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
                         import java.util.function.Function;
                         import org.springframework.transaction.annotation.Transactional;
@@ -152,6 +193,8 @@ class PasswordHashingRulesTest {
 
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
+import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
                         import org.springframework.transaction.annotation.Transactional;
 
@@ -170,6 +213,8 @@ class PasswordHashingRulesTest {
 
                         import cz.novanadeje.app.donors.domain.PasswordHash;
                         import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
+import cz.novanadeje.app.donors.domain.RawPassword;
                         import cz.novanadeje.app.donors.domain.RawPassword;
 
                         class PlantedHashingCollaborator {

@@ -13,6 +13,7 @@ import cz.novanadeje.app.donors.domain.InvalidSecondFactorCode;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorChallenge;
@@ -40,6 +41,7 @@ public class DonorAuthenticationService {
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
+    private final PasswordPolicy passwordPolicy;
     private final DonorSessionService sessions;
     private final DonorViews views;
     private final SecondFactorRepository secondFactors;
@@ -50,12 +52,13 @@ public class DonorAuthenticationService {
     private final TransactionTemplate writes;
     private final Clock clock;
 
-    public DonorAuthenticationService(DonorRepository donors, PasswordHasher passwordHasher, DonorSessionService sessions, DonorViews views,
+    public DonorAuthenticationService(DonorRepository donors, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorSessionService sessions, DonorViews views,
                                       SecondFactorRepository secondFactors, SecondFactorChallengeRepository challenges,
                                       DonorSecondFactorProperties secondFactorProperties, SecondFactorCodes codes,
                                       PlatformTransactionManager transactions, Clock clock) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
+        this.passwordPolicy = passwordPolicy;
         this.sessions = sessions;
         this.views = views;
         this.secondFactors = secondFactors;
@@ -74,7 +77,7 @@ public class DonorAuthenticationService {
         }
         RawPassword rawPassword;
         try {
-            rawPassword = new RawPassword(password);
+            rawPassword = passwordPolicy.accept(password);
         } catch (RuleViolation weak) {
             throw new InvalidCredentials();
         }

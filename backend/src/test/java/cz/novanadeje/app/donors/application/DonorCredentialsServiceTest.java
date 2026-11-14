@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.SessionEnded;
@@ -103,8 +104,8 @@ class DonorCredentialsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorCredentialsService(donors, passwordHasher,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), emailVerification, events,
+        service = new DonorCredentialsService(donors, passwordHasher, CommonPasswordList.policy(),
+                new DonorConfirmations(passwordHasher, CommonPasswordList.policy(), passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), emailVerification, events,
                 Clock.fixed(NOW, ZoneOffset.UTC), signOuts, transactions);
     }
 

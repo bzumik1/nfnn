@@ -5,6 +5,8 @@ import cz.novanadeje.app.cucumber.DonorSessions;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.operations.application.backup.BackupKeySource;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
+import cz.novanadeje.app.operations.infrastructure.backup.BackupKeyWordList;
 import cz.novanadeje.app.support.FakeMailServerProbe;
 import cz.novanadeje.app.support.RecordingApplicationRestarter;
 import cz.novanadeje.app.support.RecordingSetupCodeAnnouncer;
@@ -25,6 +27,8 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SettingsStepDefinitions {
+
+    private static final BackupKeyWords WORDLIST = BackupKeyWordList.czech();
 
     private static final String SETUP = "/api/operations/setup";
     private static final String SETTINGS = "/api/admin/operations/settings";
@@ -108,7 +112,7 @@ public class SettingsStepDefinitions {
 
     @When("the first setup is completed with wrong backup key words and:")
     public void theFirstSetupIsCompletedWithWrongBackupKeyWords(DataTable settings) {
-        List<String> words = serverKey().words();
+        List<String> words = serverKey().words(WORDLIST);
         api.post(SETUP, Map.of("settings", values(settings), "backupKeyWords",
                 List.of(word(1, words.get(1)), word(2, words.get(2)), word(3, words.get(0)))));
     }
@@ -298,7 +302,7 @@ public class SettingsStepDefinitions {
     }
 
     private List<Map<String, Object>> backupKeyWords() {
-        List<String> words = serverKey().words();
+        List<String> words = serverKey().words(WORDLIST);
         return List.of(word(4, words.get(3)), word(11, words.get(10).substring(0, 4)), word(24, words.get(23).toUpperCase()));
     }
 

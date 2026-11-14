@@ -18,6 +18,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorCodeRequired;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
+import cz.novanadeje.app.donors.infrastructure.security.CommonPasswordList;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -82,7 +83,7 @@ class DonorPasskeyRecoveryServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         DonorPasskeyService passkeyService = new DonorPasskeyService(donors, passkeys, challenges,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, new OpenTransactions(), clock), ceremonies,
+                new DonorConfirmations(passwordHasher, CommonPasswordList.policy(), passkeys, challenges, ceremonies, new OpenTransactions(), clock), ceremonies,
                 new PasskeyProperties(Duration.ofMinutes(5), 10, "Nová naděje"), new SecondFactorSessionGuard(secondFactors, passkeys), events,
                 clock, new OpenTransactions());
         service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts, new SecondFactorCodes(secondFactors, wrongCodes));

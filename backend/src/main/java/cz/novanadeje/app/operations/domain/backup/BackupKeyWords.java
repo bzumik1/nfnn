@@ -2,10 +2,6 @@ package cz.novanadeje.app.operations.domain.backup;
 
 import cz.novanadeje.app.shared.domain.Sha256;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,13 +24,19 @@ public final class BackupKeyWords {
     private static final Pattern MARKS = Pattern.compile("\\p{M}+");
     private static final Pattern LETTERS = Pattern.compile("[a-z]+");
     private static final Pattern NOT_LETTERS = Pattern.compile("[^a-z]+");
-    private static final List<String> WORDS = load();
-    private static final Map<String, Integer> INDEX_BY_PREFIX = indexByPrefix();
 
-    private BackupKeyWords() {
+    private final List<String> words;
+    private final Map<String, Integer> indexByPrefix;
+
+    public BackupKeyWords(List<String> words) {
+        if (words == null || words.size() != WORDLIST_SIZE) {
+            throw new IllegalStateException("The Czech BIP39 wordlist must hold " + WORDLIST_SIZE + " words");
+        }
+        this.words = List.copyOf(words);
+        this.indexByPrefix = indexByPrefix(this.words);
     }
 
-    public static Optional<String> canonical(String typed) {
+    public Optional<String> canonical(String typed) {
         if (typed == null) {
             return Optional.empty();
         }
@@ -42,25 +44,25 @@ public final class BackupKeyWords {
         if (plain.length() < UNIQUE_PREFIX || plain.length() > MAX_WORD_LENGTH || !LETTERS.matcher(plain).matches()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(INDEX_BY_PREFIX.get(plain.substring(0, UNIQUE_PREFIX)))
-                .map(WORDS::get)
+        return Optional.ofNullable(indexByPrefix.get(plain.substring(0, UNIQUE_PREFIX)))
+                .map(words::get)
                 .filter(word -> word.startsWith(plain));
     }
 
-    static List<String> of(byte[] key) {
+    List<String> of(byte[] key) {
         byte[] bits = withChecksum(key);
-        List<String> words = new ArrayList<>(COUNT);
+        List<String> written = new ArrayList<>(COUNT);
         for (int word = 0; word < COUNT; word++) {
             int index = 0;
             for (int bit = 0; bit < BITS_PER_WORD; bit++) {
                 index = (index << 1) | bitAt(bits, word * BITS_PER_WORD + bit);
             }
-            words.add(WORDS.get(index));
+            written.add(words.get(index));
         }
-        return List.copyOf(words);
+        return List.copyOf(written);
     }
 
-    static Optional<byte[]> keyOf(String text) {
+    Optional<byte[]> keyOf(String text) {
         List<String> typed = Arrays.stream(NOT_LETTERS.split(plain(text))).filter(token -> !token.isEmpty()).toList();
         if (typed.size() != COUNT) {
             return Optional.empty();
@@ -71,7 +73,7 @@ public final class BackupKeyWords {
             if (canonical.isEmpty()) {
                 return Optional.empty();
             }
-            int index = INDEX_BY_PREFIX.get(canonical.get().substring(0, UNIQUE_PREFIX));
+            int index = indexByPrefix.get(canonical.get().substring(0, UNIQUE_PREFIX));
             for (int bit = 0; bit < BITS_PER_WORD; bit++) {
                 if (((index >>> (BITS_PER_WORD - 1 - bit)) & 1) == 1) {
                     int position = word * BITS_PER_WORD + bit;
@@ -97,25 +99,10 @@ public final class BackupKeyWords {
         return MARKS.matcher(Normalizer.normalize(text, Normalizer.Form.NFKD)).replaceAll("").toLowerCase(Locale.ROOT);
     }
 
-    private static List<String> load() {
-        try (InputStream list = BackupKeyWords.class.getResourceAsStream("bip39-czech.txt")) {
-            if (list == null) {
-                throw new IllegalStateException("The Czech BIP39 wordlist is missing from the classpath");
-            }
-            List<String> words = new String(list.readAllBytes(), StandardCharsets.US_ASCII).lines().toList();
-            if (words.size() != WORDLIST_SIZE) {
-                throw new IllegalStateException("The Czech BIP39 wordlist must hold " + WORDLIST_SIZE + " words");
-            }
-            return words;
-        } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
-        }
-    }
-
-    private static Map<String, Integer> indexByPrefix() {
+    private static Map<String, Integer> indexByPrefix(List<String> words) {
         Map<String, Integer> index = new HashMap<>();
-        for (int i = 0; i < WORDS.size(); i++) {
-            if (index.put(WORDS.get(i).substring(0, UNIQUE_PREFIX), i) != null) {
+        for (int i = 0; i < words.size(); i++) {
+            if (index.put(words.get(i).substring(0, UNIQUE_PREFIX), i) != null) {
                 throw new IllegalStateException("Every word of the BIP39 list starts with its own four letters");
             }
         }
