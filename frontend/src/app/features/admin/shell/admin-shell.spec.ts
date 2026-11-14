@@ -4,7 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { provideRouter, Router } from '@angular/router';
-import { APP_DEPTH_KEY } from '../../../core/navigation/back-target';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
@@ -388,9 +388,10 @@ describe('Given an administrator who opened the administration on a phone over a
       ],
     }).compileComponents();
     router = TestBed.inject(Router);
+    TestBed.inject(BackTarget);
     await router.navigateByUrl('/aktuality');
-    fixture = TestBed.createComponent(AdminShell);
     await router.navigateByUrl('/sprava', { replaceUrl: true, state: { [APP_DEPTH_KEY]: 4 } });
+    fixture = TestBed.createComponent(AdminShell);
     await fixture.whenStable();
     fixture.detectChanges();
   });

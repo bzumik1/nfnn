@@ -63,13 +63,18 @@ export class AdminShell {
   private wasLocked = false;
 
   constructor() {
-    const entry = this.router.events
-      .pipe(
-        filter((event) => event instanceof NavigationEnd),
-        take(1),
-      )
-      .subscribe(() => (this.entryDepth = depthOf(this.location.getState())));
-    inject(DestroyRef).onDestroy(() => entry.unsubscribe());
+    const arriving = untracked(this.router.currentNavigation);
+    if (arriving === null) {
+      this.entryDepth = depthOf(this.location.getState());
+    } else {
+      const entry = this.router.events
+        .pipe(
+          filter((event) => event instanceof NavigationEnd && event.id === arriving.id),
+          take(1),
+        )
+        .subscribe(() => (this.entryDepth = depthOf(this.location.getState())));
+      inject(DestroyRef).onDestroy(() => entry.unsubscribe());
+    }
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));

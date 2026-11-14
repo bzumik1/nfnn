@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone and an administrator who opened the administration from the account sheet over the news > when a finger drags the administration back, then the news lies under it without the sheet while the round back button stands still, and on letting go the news returns",
+    "reason": "Jakub 2026-11-13 (#638, variant A): on a phone the administration stands in a sheet whose head holds its own ‹, which moves with the sheet, so the app header's round back button that stood still is no longer there",
+    "replacement": "e2e/back-swipe.spec.ts > Given the app on the home screen of a phone and an administrator who opened the administration from the account sheet over the news > when a finger drags the administration sheet back, then the news lies under it without the account sheet, and on letting go the news returns",
+    "contract": "docs/frontend-overview.md, Administration as a sheet on phones"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > and the window is a phone, then the header stays, so the administrator can still leave",
+    "reason": "Jakub 2026-11-13 (#638, variant A): on a phone the administration stands in a sheet without the app header; its head with Zavřít stays while locked, so the administrator can still leave",
+    "replacement": "src/app/features/admin/shell/admin-shell.spec.ts > Given an administrator anywhere in the administration > when the administration is locked > and the window is a phone, then the head of the sheet stays with Zavřít, so the administrator can still leave",
+    "contract": "docs/frontend-overview.md, Administration as a sheet on phones"
+  }
+]
