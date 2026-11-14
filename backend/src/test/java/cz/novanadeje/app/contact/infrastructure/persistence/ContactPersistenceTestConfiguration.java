@@ -1,10 +1,9 @@
 package cz.novanadeje.app.contact.infrastructure.persistence;
 
-import cz.novanadeje.app.TestcontainersConfiguration;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 
 @TestConfiguration(proxyBeanMethods = false)
-@Import({TestcontainersConfiguration.class, JpaContactMessageRepository.class})
-class ContactPersistenceTestConfiguration {
+@Import(JpaContactMessageRepository.class)
+public class ContactPersistenceTestConfiguration {
 }

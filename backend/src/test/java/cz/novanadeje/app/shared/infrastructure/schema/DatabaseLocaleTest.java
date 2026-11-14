@@ -1,14 +1,12 @@
 package cz.novanadeje.app.shared.infrastructure.schema;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.TestcontainersConfiguration;
 import cz.novanadeje.app.shared.infrastructure.search.CzechCollation;
 import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.io.IOException;
@@ -21,9 +19,7 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestcontainersConfiguration.class)
+@PersistenceTest
 class DatabaseLocaleTest {
 
     private static final List<String> BUILT_IN_LOCALE = List.of("--locale-provider=builtin", "--builtin-locale=C.UTF-8");

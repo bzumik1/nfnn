@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlert;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlertRepository;
@@ -7,9 +8,6 @@ import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -22,9 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(OperationsPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaOperationalAlertRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-11-05T10:00:00Z");
