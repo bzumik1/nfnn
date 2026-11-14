@@ -9,7 +9,6 @@ import { PublicPhotoFetcher } from './photos.js';
 import { TokenExchangeVerifier, type Logger } from './token-exchange.js';
 
 const config = configFromEnv(process.env);
-const version = process.env['APP_REVISION'] || 'dev';
 const logger: Logger = createLogger({
   ...(config.logFile ? { file: config.logFile } : {}),
   console: (line) => console.log(line),
@@ -21,7 +20,7 @@ const app = createApp({
   backend: new BackendClient(config.backendUrl, fetch),
   photos: new PublicPhotoFetcher(),
   logger,
-  version,
+  version: config.version,
 });
 
 const server = createServer(
@@ -29,7 +28,7 @@ const server = createServer(
 );
 server.listen(config.port, '0.0.0.0', () => {
   logger.info(
-    `MCP connector revision ${version} listening on ${config.port}, backend ${config.backendUrl}`,
+    `MCP connector revision ${config.revision}, release ${config.version} listening on ${config.port}, backend ${config.backendUrl}`,
   );
 });
 

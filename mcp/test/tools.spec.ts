@@ -288,11 +288,12 @@ describe('Given an administrator connected with the reading permission only', ()
     expect(description).toContain('CATEGORY_THEN_YEAR');
   });
 
-  it('when the status is asked, then the version, the import state and the last backup come as compact JSON with Prague offsets', async () => {
+  it('when the status is asked, then the revision, the release, the import state and the last backup come as compact JSON with Prague offsets', async () => {
     const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
     expect(text).toContain('"revision":"abc1234"');
+    expect(text).toContain('"version":"2026.11.3"');
     expect(text).toContain('"health":"UP"');
     expect(text).toContain('"lastSucceededAt":"2026-10-23T07:00:00+02:00"');
     expect(text).toContain('"outcome":"OK"');

@@ -23,11 +23,11 @@ public class BuildRevision implements InfoContributor {
 
     @Override
     public void contribute(Info.Builder builder) {
-        builder.withDetail("build", Map.of("revision", properties.revision()));
+        builder.withDetail("build", Map.of("revision", properties.revision(), "version", properties.version()));
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void logRevision() {
-        log.info("Backend revision {} is ready", properties.revision());
+        log.info("Backend revision {} is ready, release {}", properties.revision(), properties.version());
     }
 }

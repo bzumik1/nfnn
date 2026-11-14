@@ -10,8 +10,9 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:26-alpine
 ARG REVISION=dev
+ARG VERSION=dev
 RUN apk add --no-cache su-exec
-ENV NODE_ENV=production APP_REVISION=$REVISION PORT=8081 BACKEND_URL=http://backend:8080 LOG_FILE=/logs/mcp.log
+ENV NODE_ENV=production APP_REVISION=$REVISION APP_VERSION=$VERSION PORT=8081 BACKEND_URL=http://backend:8080 LOG_FILE=/logs/mcp.log
 WORKDIR /app
 COPY --from=build /workspace/node_modules ./node_modules
 COPY --from=build /workspace/dist ./dist

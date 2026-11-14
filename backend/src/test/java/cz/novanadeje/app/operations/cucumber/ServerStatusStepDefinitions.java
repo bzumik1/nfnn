@@ -35,4 +35,9 @@ public class ServerStatusStepDefinitions {
     public void theInfoNamesTheRevision(String revision) {
         assertThat(api.lastResponseJson().path("build").path("revision").asString()).isEqualTo(revision);
     }
+
+    @Then("the info names the release {string}")
+    public void theInfoNamesTheRelease(String release) {
+        assertThat(api.lastResponseJson().path("build").path("version").asString()).isEqualTo(release);
+    }
 }

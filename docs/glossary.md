@@ -337,6 +337,11 @@ UI „klíč k zálohám“ (24 Czech words) · Code: `BackupKey`, `BackupKeyWor
 The key the server generated to encrypt every backup, shown only as 24 words with a fresh second factor and needed to restore on another server.\
 _Avoid_: „klíč“ alone
 
+**Release**\
+UI „vydání“ (`2026.11.3`) · Code: `app.build.version` (`APP_VERSION`), `build.version` of `/actuator/info`, the git tag, GitHub Release and image tag `YYYY.M.N`, `scripts/release-version.mjs`.\
+One publication of the five images by `images.yml`, numbered by year, month and its order in the Prague month; the revision is the commit it was built from.\
+_Avoid_: „verze“ for a release (in the roadmap a version is a block of work: v1, v2, v3)
+
 ## Content
 
 **News article**\

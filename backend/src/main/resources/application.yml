@@ -96,6 +96,7 @@ app:
       lock-timeout: PT2M
   build:
     revision: ${APP_REVISION:dev}
+    version: ${APP_VERSION:dev}
   site:
     public-url: ${PUBLIC_URL:https://nfnn.cz}
   mail:

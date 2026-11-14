@@ -1,6 +1,6 @@
 # Roadmapa
 
-Co web umí po verzích a co čeká v zásobníku. Verze je ucelený blok práce, aplikace sama číslo verze nenese (nasazuje se podle commitu). Podrobnosti hotových funkcí jsou v `requirements.md` (rozhodnutí klienta) a v přehledech `system-overview.md`, `frontend-overview.md` a `security-overview.md`.
+Co web umí po verzích a co čeká v zásobníku. Verze je ucelený blok práce; nasazuje se po vydáních (glosář „vydání“, třeba `2026.11.3`), která čísluje zveřejnění obrazů po každém merge kódu. Podrobnosti hotových funkcí jsou v `requirements.md` (rozhodnutí klienta) a v přehledech `system-overview.md`, `frontend-overview.md` a `security-overview.md`.
 
 Udržuje se v každém PR, který funkci dokončí nebo o ní rozhodne, i v PR jen s dokumentací, které kontrola v CI nehlídá: hotová funkce se přesune z backlogu nebo z části „Rozpracováno“ do tabulky aktuální verze nebo do jejího řádku „Mimo očíslované úkoly“, rozhodnutí o nápadu ji přesune mezi částmi backlogu. Číslo PR se doplní dalším commitem po otevření PR. Oprava, aktualizace závislostí nebo úprava uvnitř hotové funkce do roadmapy nepatří; takový PR má v popisu řádek `Roadmapa: beze změny`. Další verzi vybírá Jakub z části „Schváleno“; v3 vybral 29. 10. 2026.
 
@@ -152,6 +152,7 @@ Fáze 2 (až po lednových potvrzeních, včetně dat v zařízení):
 - Načtení starších plateb z banky ve správě (Jakub 5. 11. 2026; hotovo v kroku 2.33, aby hluboký import za rok 2026 nepotřeboval restart v ZimaOS): karta importu na přehledu správy má „Načíst starší platby“ s dnem, od kterého se má stahovat (předvyplněný 1. leden nebo „Stáhnout platby od data“ z nastavení), a návodem k odemčení historie ve Fio. Import se spustí hned (nebo za 30 s, kdy banka dovolí další dotaz), bez restartu, jde opakovat (už stažené platby se nezdvojí, takže doplní i mezeru) a výsledek ukáže na kartě: kolik plateb přibylo, nebo že historie nebyla odemčená. Zapíše se do historie změn; umí to i konektor (`nfnn_import_history`). Start webu dál stahuje od „Stáhnout platby od data“.
 - Zůstatek účtu ve správě (Jakub 12. 11. 2026; hotovo v #582, server a konektor, a v kroku s řádkem v kartě „Stav stahování plateb z banky“ na přehledu správy): zůstatek z odpovědi Fio, kterou hodinové stahování stejně dostává, uložený s časem, kdy ho banka sdělila; při poruše stahování zůstává poslední známý. Vidí ho správci a konektor (`nfnn_status`), ne měsíční e-mail.
 - Otevření odeslaného měsíčního přehledu (Jakub 10. 11. 2026, varianta C; hotovo v #553 a #557): řádek v „Odeslaných přehledech“ jde otevřít a ukáže, co v přehledu bylo, u každého odeslání včetně ručních; přehledy odeslané před uložením odeslání se spočítají z dnešních dat s popiskem a bez části Banka.
+- Číslování vydání (Jakub 14. 11. 2026; hotovo v #821): každé zveřejnění obrazů po merge kódu je vydání `rok.měsíc.pořadí` (třeba `2026.11.3`) s git tagem, stránkou v GitHub Releases se seznamem změn a stejným tagem obrazů vedle `latest` a commitu; pondělní přestavba dostane číslo jen při nové základní image. Server ho hlásí v `nfnn_status` a návrat na předchozí verzi jde podle tagu vydání. Běžící vydání a připomínka novějšího ve správě: #810, rozpracováno.
 
 ## Backlog
 

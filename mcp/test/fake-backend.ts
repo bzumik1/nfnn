@@ -127,7 +127,7 @@ export class FakeBackend {
       return tokenExchange(new URLSearchParams(body));
     }
     if (url.pathname === '/actuator/info') {
-      return [200, { build: { revision: 'abc1234' } }];
+      return [200, { build: { revision: 'abc1234', version: '2026.11.3' } }];
     }
     if (url.pathname === '/actuator/health') {
       return [200, { status: 'UP' }];
