@@ -717,6 +717,32 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       expect(
         await scope.evaluate((element) => Math.round(element.getBoundingClientRect().right)),
       ).toBeLessThanOrEqual(320);
+      const overflowing = await scope
+        .locator('.ui-list__row > .ui-list__value')
+        .evaluateAll((values) =>
+          values
+            .filter((value) => {
+              const row = value.parentElement!;
+              const content =
+                row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight);
+              return value.getBoundingClientRect().right > content + 0.5;
+            })
+            .map((value) => value.textContent?.trim() || value.getAttribute('role')),
+        );
+      expect(overflowing).toEqual([]);
+      const switchesUnderTheirText = await scope
+        .locator('.ui-list__row > .ui-switch')
+        .evaluateAll((switches) =>
+          switches
+            .filter((control) => {
+              const title = control.parentElement!.querySelector('.ui-list__title')!;
+              return (
+                control.getBoundingClientRect().left < title.getBoundingClientRect().right - 0.5
+              );
+            })
+            .map((control) => control.getAttribute('aria-describedby')),
+        );
+      expect(switchesUnderTheirText).toEqual([]);
     });
   }
 });

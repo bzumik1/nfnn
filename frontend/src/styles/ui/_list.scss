@@ -213,27 +213,6 @@ div.ui-list__row {
   }
 }
 
-@include bp.container-down(list-card, tabs) {
-  .ui-list--stacks-narrow .ui-list__row {
-    grid-template-areas:
-      'title chevron'
-      'meta chevron'
-      'value chevron';
-    grid-template-columns: minmax(0, 1fr) auto;
-
-    > .ui-list__title,
-    > .ui-list__meta {
-      grid-column: auto;
-    }
-  }
-
-  .ui-list--stacks-narrow .ui-list__value {
-    justify-self: start;
-    margin-inline-start: 0;
-    text-align: start;
-  }
-}
-
 .ui-list__lead--blank {
   width: var(--list-lead-size);
 }

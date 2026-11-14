@@ -72,7 +72,7 @@
               <h3 class="ui-card__subtitle" [id]="'delivery-' + index + '-group-' + groupIndex">
                 {{ group.title }}
               </h3>
-              <ul class="ui-list ui-list--stacks-narrow">
+              <ul class="ui-list">
                 @for (row of group.rows; track row.title) {
                   <li>
                     <div class="ui-list__row">
