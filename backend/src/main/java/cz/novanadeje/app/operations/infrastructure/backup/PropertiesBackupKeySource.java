@@ -14,15 +14,15 @@ class PropertiesBackupKeySource implements BackupKeySource {
 
     private static final Logger log = LoggerFactory.getLogger(PropertiesBackupKeySource.class);
 
-    private final Optional<BackupKey> key;
+    private final BackupKey key;
 
     PropertiesBackupKeySource(BackupKeyProperties properties) {
-        this.key = parse(properties.value());
+        this.key = parse(properties.value()).orElse(null);
     }
 
     @Override
     public Optional<BackupKey> current() {
-        return key;
+        return Optional.ofNullable(key);
     }
 
     private static Optional<BackupKey> parse(String value) {

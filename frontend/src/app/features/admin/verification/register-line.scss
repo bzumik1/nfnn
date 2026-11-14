@@ -1,5 +1,9 @@
-.register {
-  margin-top: var(--space-5);
+:host {
+  display: block;
+}
+
+.register__body {
+  margin-top: var(--space-4);
 }
 
 .register__body,

@@ -7,6 +7,7 @@ import {
   openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
+import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
 
 const WCAG_TEXT_SPACING =
   '* { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }';
@@ -57,6 +58,27 @@ async function settledOverlapWithBar(page: Page): Promise<number> {
     )
     .toBe(true);
   return previous!;
+}
+
+async function valuesTouchingTheirTitle(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll('.ui-list__row'))
+      .map((row) => [row.querySelector('.ui-list__title'), row.querySelector('.ui-list__value')])
+      .filter(([title, value]) => {
+        if (!title || !value) {
+          return false;
+        }
+        const range = document.createRange();
+        range.selectNodeContents(title);
+        const lines = Array.from(range.getClientRects());
+        const end = lines[lines.length - 1];
+        range.selectNodeContents(value);
+        const start = range.getClientRects()[0];
+        const sameLine = start.top < end.bottom && end.top < start.bottom;
+        return sameLine && start.left - end.right < 4;
+      })
+      .map(([title, value]) => `${title!.textContent!.trim()}|${value!.textContent!.trim()}`),
+  );
 }
 
 async function widerThanScreen(page: Page): Promise<number> {
@@ -533,6 +555,44 @@ test.describe('Given a visitor who zooms to 400 % or sets wider text spacing', (
       expect(await clippedTexts(page)).toEqual([]);
       expect(await widerThanScreen(page)).toBeLessThanOrEqual(0);
     });
+  }
+
+  for (const { name, address, heading } of [
+    { name: 'without a code', address: '/overit', heading: 'Vložit odkaz' },
+    {
+      name: 'with the code of a yearly receipt',
+      address: `/overit#${YEARLY_RECEIPT.fragment}`,
+      heading: 'Jednotlivé dary (12)',
+    },
+  ]) {
+    for (const textSize of ['100 %', '200 %']) {
+      test(`when they verify a receipt ${name} 320 px wide with the text at ${textSize}, then nothing runs off the screen, no text is cut off and no amount touches its title with wider spacing`, async ({
+        page,
+      }) => {
+        if (textSize === '200 %') {
+          await page.addInitScript(() => {
+            document.addEventListener('DOMContentLoaded', () => {
+              const style = document.createElement('style');
+              style.textContent = 'html { font-size: 200%; }';
+              document.head.append(style);
+            });
+          });
+        }
+        await serveReceiptKeys(page);
+        await serveReceiptStatus(page, 'active');
+        await page.setViewportSize({ width: 320, height: 640 });
+        await page.goto(address);
+        await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+        await page.evaluate(() => document.fonts.ready);
+
+        expect(await widerThanScreen(page)).toBeLessThanOrEqual(0);
+        expect(await valuesTouchingTheirTitle(page)).toEqual([]);
+        await page.addStyleTag({ content: WCAG_TEXT_SPACING });
+        expect(await clippedTexts(page)).toEqual([]);
+        expect(await valuesTouchingTheirTitle(page)).toEqual([]);
+        expect(await widerThanScreen(page)).toBeLessThanOrEqual(0);
+      });
+    }
   }
 
   test('when a signed-in donor opens each section 320 px wide, then nothing runs off the screen and no text is cut off with wider spacing', async ({
