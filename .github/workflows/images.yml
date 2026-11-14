@@ -101,27 +101,43 @@ jobs:
           set -euo pipefail
           prefix=ghcr.io/${GITHUB_REPOSITORY,,}
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          for image in backend:backend frontend:frontend backup:deploy/backup postgres:deploy/postgres mcp:mcp; do
+          images="backend:backend frontend:frontend backup:deploy/backup postgres:deploy/postgres mcp:mcp"
+          for image in $images; do
             app=${image%%:*}
-            context=${image#*:}
             if docker manifest inspect "$prefix-$app:$RELEASE" > /dev/null 2>&1; then
               echo "::error::$prefix-$app:$RELEASE is already published, and a release tag is never overwritten"
               exit 1
             fi
-            context_tree=$(git rev-parse "HEAD:$context")
-            if [ "$app" = backup ] || [ "$app" = postgres ]; then
-              previous_tree=
-              if docker pull -q "$prefix-$app:latest" > /dev/null 2>&1; then
-                previous_tree=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.context"}}' "$prefix-$app:latest")
-              fi
-              if [ "$context_tree" = "$previous_tree" ]; then
-                previous=$(docker inspect -f '{{index .RepoDigests 0}}' "$prefix-$app:latest")
-                echo "$previous" | grep -qxE "$prefix-$app@sha256:[0-9a-f]{64}" || { echo "::error::$prefix-$app:latest has no readable digest (got $previous)" >&2; exit 1; }
-                docker buildx imagetools create --prefer-index=false -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$previous"
-                echo "::notice::$context is unchanged since $prefix-$app:latest, so its image ${previous#*@} only gets the tags ${GITHUB_SHA::7} and $RELEASE and the server keeps its container"
-                continue
-              fi
+          done
+          reused=
+          for image in backup:deploy/backup postgres:deploy/postgres; do
+            app=${image%%:*}
+            context=${image#*:}
+            if ! docker pull -q "$prefix-$app:latest" > /dev/null 2>&1; then
+              echo "::notice::$prefix-$app:latest cannot be pulled, so $context is built"
+              continue
             fi
+            previous_tree=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.context"}}' "$prefix-$app:latest")
+            if [ -z "$previous_tree" ]; then
+              echo "::notice::$prefix-$app:latest carries no cz.novanadeje.build.context label, so $context is built"
+              continue
+            fi
+            if [ "$previous_tree" != "$(git rev-parse "HEAD:$context")" ]; then
+              echo "::notice::$context changed since $prefix-$app:latest, so it is built"
+              continue
+            fi
+            previous=$(docker inspect -f '{{index .RepoDigests 0}}' "$prefix-$app:latest")
+            echo "$previous" | grep -qxE "$prefix-$app@sha256:[0-9a-f]{64}" || { echo "::error::$prefix-$app:latest has no readable digest (got $previous)" >&2; exit 1; }
+            docker buildx imagetools create --prefer-index=false -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$previous"
+            echo "::notice::$context is unchanged since $prefix-$app:latest, so its image ${previous#*@} only gets the tags ${GITHUB_SHA::7} and $RELEASE and the server keeps its container"
+            reused="$reused $app"
+          done
+          for image in $images; do
+            app=${image%%:*}
+            context=${image#*:}
+            case " $reused " in
+              *" $app "*) continue ;;
+            esac
             docker build \
               --build-arg REVISION="${GITHUB_SHA::7}" \
               --build-arg VERSION="$RELEASE" \
@@ -129,7 +145,7 @@ jobs:
               --label org.opencontainers.image.revision="$GITHUB_SHA" \
               --label org.opencontainers.image.version="$RELEASE" \
               --label cz.novanadeje.build.inputs="$INPUTS" \
-              --label cz.novanadeje.build.context="$context_tree" \
+              --label cz.novanadeje.build.context="$(git rev-parse "HEAD:$context")" \
               -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$context"
             docker push --all-tags "$prefix-$app"
           done
