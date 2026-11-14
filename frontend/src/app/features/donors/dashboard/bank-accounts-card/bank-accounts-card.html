@@ -1,9 +1,9 @@
-<section class="accounts-card" aria-labelledby="bank-accounts-title">
-  <div class="ui-group-head accounts-head">
+<section class="ui-card accounts-card" aria-labelledby="bank-accounts-title">
+  <div class="accounts-head">
     <h2
       #title
       id="bank-accounts-title"
-      class="ui-group-title accounts-title"
+      class="ui-card__title accounts-title"
       tabindex="-1"
       i18n="@@donor.bankAccounts.title"
     >
@@ -12,7 +12,7 @@
     <button
       #helpToggle
       type="button"
-      class="ui-group-aside accounts-help"
+      class="accounts-help"
       aria-controls="accounts-help-panel"
       [attr.aria-expanded]="helpOpen()"
       (click)="toggleHelp()"
@@ -24,12 +24,13 @@
   </div>
 
   <app-pairing-help
+    class="accounts-inset"
     [variableSymbol]="variableSymbol()"
     [open]="helpOpen()"
     (closeRequested)="closeHelp()"
   />
 
-  <ul class="ui-list ui-list--inset accounts-list">
+  <ul class="ui-list accounts-list">
     @if (state() === 'ready') {
       @for (account of accounts(); track account.id) {
         <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">
@@ -228,7 +229,7 @@
 
   @switch (state()) {
     @case ('loading') {
-      <p class="ui-group-note accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
+      <p class="accounts-inset accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
         Načítáme vaše účty…
       </p>
     }
@@ -249,50 +250,40 @@
     @case ('ready') {
       @if (accounts().length > 0) {
         @if (nudgesStandingOrder()) {
-          <p class="ui-group-note accounts-nudge" i18n="@@donor.bankAccounts.nudge.list">
+          <p class="ui-card__footer accounts-nudge" i18n="@@donor.bankAccounts.nudge.list">
             Posíláte trvalým příkazem se starším symbolem? Ověřte platbou 1&nbsp;Kč ze stejného účtu
             a uvidíte i dřívější dary.
           </p>
         }
       } @else {
-        <p class="ui-group-note accounts-empty" i18n="@@donor.bankAccounts.empty">
-          Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. Poslali
-          jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? Přidejte účet, ze
-          kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle přiřadíme
-          také.
-        </p>
-        @if (variableSymbol(); as symbol) {
-          <p class="ui-group-note accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
-            Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu variabilní
-            symbol na <strong class="ui-figures">{{ symbol }}</strong
-            >. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
+        <div class="ui-card__footer accounts-footer">
+          <p class="accounts-empty" i18n="@@donor.bankAccounts.empty">
+            Účet se tu objeví sám, jakmile z něj pošlete dar s vaším variabilním symbolem. Poslali
+            jste dar bez symbolu, s jiným symbolem nebo ještě před založením účtu? Přidejte účet, ze
+            kterého jste platili, tlačítkem „Přidat účet“ a dřívější dary z něj vám obvykle
+            přiřadíme také.
           </p>
-        } @else {
-          <p
-            class="ui-group-note accounts-nudge"
-            i18n="@@donor.bankAccounts.nudge.emptyWithoutNumber"
-          >
-            Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu variabilní
-            symbol na váš. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
-          </p>
-        }
+          @if (variableSymbol(); as symbol) {
+            <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.empty">
+              Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu
+              variabilní symbol na <strong class="ui-figures">{{ symbol }}</strong
+              >. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
+            </p>
+          } @else {
+            <p class="accounts-nudge" i18n="@@donor.bankAccounts.nudge.emptyWithoutNumber">
+              Posíláte trvalým příkazem s jiným symbolem? Nejjednodušší je změnit v příkazu
+              variabilní symbol na váš. Jinak pošlete 1&nbsp;Kč přes „Přidat účet“.
+            </p>
+          }
+        </div>
       }
     }
   }
 
   @if (actionError()) {
-    <p class="ui-group-note ui-group-note--alert accounts-error" role="alert">
-      {{ actionError() }}
-    </p>
+    <p class="ui-callout ui-callout--danger accounts-error" role="alert">{{ actionError() }}</p>
   }
-  <p
-    class="accounts-status"
-    role="status"
-    [class.ui-group-note]="actionDone()"
-    [class.ui-group-note--status]="actionDone()"
-  >
-    {{ actionDone() }}
-  </p>
+  <p class="accounts-status" role="status">{{ actionDone() }}</p>
 </section>
 
 <ng-template #warning let-text>

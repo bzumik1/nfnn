@@ -410,6 +410,32 @@ describe('Given the bank accounts card in the overview', () => {
     expect(normalized(rows.at(-1)?.textContent ?? '')).toBe('Přidat účet');
   });
 
+  it('when accounts arrive, then the card holds its title and lists the accounts as plain rows edge to edge, with no group title or group note around them', async () => {
+    await respond([bankAccount()]);
+
+    const card = element('section');
+    expect(card?.classList).toContain('ui-card');
+    expect(card?.classList).not.toContain('ui-card--padded');
+    expect(card?.querySelector('h2')?.classList).toContain('ui-card__title');
+    expect(card?.querySelector('h2')?.classList).not.toContain('ui-card__title--large');
+    const list = element('ul:has(> li.account)');
+    expect(list?.classList).toContain('ui-list');
+    expect(list?.classList).not.toContain('ui-list--inset');
+    expect(element('.ui-group-title, .ui-group-head, .ui-group-aside, .ui-group-note')).toBeNull();
+  });
+
+  it('when the donor has no known account, then the card explains it in its footer under Přidat účet', async () => {
+    await respond([]);
+
+    const footer = element('.accounts-empty')?.closest('.ui-card__footer');
+    expect(footer).not.toBeNull();
+    expect(footer?.querySelector('.accounts-nudge')).not.toBeNull();
+    expect(
+      (element('.accounts-add') as HTMLElement).compareDocumentPosition(footer as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('when a verified account arrives, then its number and its state read as words apart and the number may break only before its bank code', async () => {
     await respond([bankAccount()]);
 

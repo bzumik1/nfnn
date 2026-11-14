@@ -1,13 +1,57 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
+@use 'touch-target';
 
 :host {
   display: block;
 }
 
+.accounts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5) var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+
+.accounts-title {
+  padding: 0;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 4px;
+  }
+}
+
 .accounts-help {
+  @include touch-target.reaches-finger-size;
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
+  min-height: var(--space-6);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-align: start;
+  cursor: pointer;
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
+}
+
+.accounts-inset {
+  display: block;
+  padding-inline: var(--space-6);
 }
 
 .accounts-help-icon {
@@ -40,10 +84,28 @@
 
 .accounts-list {
   --list-lead-size: var(--space-10);
+
+  border-top: 1px solid var(--color-divider);
+}
+
+.accounts-add {
+  color: var(--color-accent);
 }
 
 .accounts-add:disabled .ui-list__glyph {
   color: inherit;
+}
+
+.accounts-loading {
+  padding-block: var(--space-4) var(--space-5);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
+
+.accounts-load-error,
+.accounts-error {
+  margin: var(--space-4) var(--space-6) var(--space-5);
 }
 
 .accounts-load-error {
@@ -157,6 +219,10 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-md);
   color: var(--color-warning);
 }
 
@@ -165,8 +231,18 @@
   margin-top: var(--space-0-75);
 }
 
+.accounts-footer > p + p {
+  margin-top: var(--space-2-5);
+}
+
 .accounts-nudge strong {
   color: var(--color-text);
+}
+
+.accounts-status:not(:empty) {
+  padding: 0 var(--space-6) var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-success);
 }
 
 .account--disconnected .account-number {
@@ -181,6 +257,13 @@
 
 .account-action--apart {
   margin-top: var(--space-2-5);
+}
+
+.account-confirm {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .account-confirm-text {
