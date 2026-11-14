@@ -18,6 +18,7 @@ import org.springframework.scheduling.TaskScheduler;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
@@ -70,7 +72,9 @@ class ConcurrencyRulesTest {
     private static final DescribedPredicate<JavaAccess<?>> A_SHARED_POOL_TASK = codeUnitOf(Collection.class, "parallelStream"::equals)
             .or(codeUnitOf(BaseStream.class, "parallel"::equals))
             .or(codeUnitOf(CompletionStage.class, name -> name.endsWith("Async")))
-            .as("a parallel stream or a CompletableFuture or CompletionStage method ending in Async");
+            .or(codeUnitOf(Arrays.class, name -> name.startsWith("parallel")))
+            .or(codeUnitOf(ForkJoinTask.class, Set.of("fork", "invoke", "invokeAll")::contains))
+            .as("a parallel stream, an Arrays.parallel… call, a forked ForkJoinTask or a CompletableFuture or CompletionStage method ending in Async");
 
     @ArchTest
     static final ArchRule application_and_domain_leave_threads_to_adapters = noClasses()
@@ -123,11 +127,6 @@ class ConcurrencyRulesTest {
                         """),
                 planted("application", "PlantedPause", """
                         import java.util.concurrent.locks.LockSupport;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.BaseStream;
-import java.util.stream.Collectors;
 
                         class PlantedPause {
 
@@ -138,7 +137,6 @@ import java.util.stream.Collectors;
                         """),
                 planted("application", "PlantedHandOff", """
                         import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.TaskScheduler;
 
                         class PlantedHandOff {
 
@@ -148,7 +146,6 @@ import org.springframework.scheduling.TaskScheduler;
                         """),
                 planted("domain", "PlantedFactory", """
                         import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
                         class PlantedFactory {
 
@@ -251,8 +248,7 @@ import java.util.concurrent.TimeUnit;
                         }
                         """),
                 planted("application", "PlantedParallelStream", """
-                        import java.util.Collection;
-import java.util.List;
+                        import java.util.List;
 
                         class PlantedParallelStream {
 
@@ -261,9 +257,28 @@ import java.util.List;
                             }
                         }
                         """),
+                planted("domain", "PlantedParallelSort", """
+                        import java.util.Arrays;
+
+                        class PlantedParallelSort {
+
+                            void sort(long[] amounts) {
+                                Arrays.parallelSort(amounts);
+                            }
+                        }
+                        """),
+                planted("application", "PlantedForkedTask", """
+                        import java.util.concurrent.RecursiveTask;
+
+                        class PlantedForkedTask {
+
+                            Long total(RecursiveTask<Long> sum) {
+                                return sum.fork().join();
+                            }
+                        }
+                        """),
                 planted("domain", "PlantedParallelOnStream", """
-                        import java.util.Collection;
-import java.util.List;
+                        import java.util.List;
 
                         class PlantedParallelOnStream {
 
@@ -301,8 +316,7 @@ import java.util.List;
                         }
                         """),
                 planted("application", "PlantedSequentialWork", """
-                        import java.util.Collection;
-import java.util.List;
+                        import java.util.List;
                         import java.util.concurrent.CompletableFuture;
                         import java.util.concurrent.TimeUnit;
 
@@ -319,11 +333,9 @@ import java.util.List;
                         """),
                 planted("infrastructure", "PlantedAdapter", """
                         import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.TaskScheduler;
                         import org.springframework.scheduling.TaskScheduler;
 
-                        import java.util.Collection;
-import java.util.List;
+                        import java.util.List;
                         import java.util.Timer;
                         import java.util.concurrent.CompletableFuture;
                         import java.util.concurrent.Executor;
@@ -332,11 +344,6 @@ import java.util.List;
                         import java.util.concurrent.Semaphore;
                         import java.util.concurrent.TimeUnit;
                         import java.util.concurrent.locks.LockSupport;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.BaseStream;
-import java.util.stream.Collectors;
 
                         class PlantedAdapter {
 
@@ -368,7 +375,8 @@ import java.util.stream.Collectors;
                 .containsExactlyInAnyOrder("PlantedExecutor", "PlantedExecutors", "PlantedPacing", "PlantedPause", "PlantedHandOff", "PlantedFactory",
                         "PlantedBuilderParameter", "PlantedTimer", "PlantedScheduler", "PlantedVirtualBuilder", "PlantedPlatformBuilder",
                         "PlantedVirtualStart", "PlantedThreadCreation", "PlantedThreadReference", "PlantedThreadSubclass", "PlantedThreadSleep",
-                        "PlantedTimeUnitSleep", "PlantedParallelStream", "PlantedParallelOnStream", "PlantedRunAsync", "PlantedSupplyAsync");
+                        "PlantedTimeUnitSleep", "PlantedParallelStream", "PlantedParallelOnStream", "PlantedRunAsync", "PlantedSupplyAsync",
+                        "PlantedParallelSort", "PlantedForkedTask");
     }
 
     private static Map.Entry<String, String> planted(String layer, String simpleName, String body) {

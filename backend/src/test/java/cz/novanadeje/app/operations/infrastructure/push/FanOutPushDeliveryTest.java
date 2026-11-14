@@ -140,6 +140,41 @@ class FanOutPushDeliveryTest {
     }
 
     @Test
+    @DisplayName("Given two paced rounds of eight slow sends started at once from two callers, when they run, then at most eight sends run at once across both and every send is delivered, so the cap is one for the whole server")
+    void should_cap_sends_across_rounds_when_paced_given_two_rounds_at_once() throws InterruptedException {
+        AtomicInteger running = new AtomicInteger();
+        AtomicInteger mostAtOnce = new AtomicInteger();
+        FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> {
+            mostAtOnce.accumulateAndGet(running.incrementAndGet(), Math::max);
+            LockSupport.parkNanos(Duration.ofMillis(100).toNanos());
+            running.decrementAndGet();
+            return PushOutcome.DELIVERED;
+        }, Duration.ZERO);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Map<PushSubscriptionId, PushOutcome>> outcomes = new java.util.concurrent.CopyOnWriteArrayList<>();
+        List<Thread> callers = IntStream.range(0, 2).mapToObj(caller -> Thread.ofVirtual().start(() -> {
+            List<DonorPushSubscription> round = IntStream.range(0, FanOutPushDelivery.PACED_SENDS_AT_ONCE)
+                    .mapToObj(index -> donorDevice("caller-" + caller + "-" + index)).toList();
+            try {
+                start.await();
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            outcomes.add(delivery.deliver(round, DONOR_TEST, KEYS, PushPace.PACED));
+        })).toList();
+
+        start.countDown();
+        for (Thread caller : callers) {
+            assertThat(caller.join(Duration.ofSeconds(10))).as("a round ended").isTrue();
+        }
+
+        assertThat(outcomes).hasSize(2).allSatisfy(round -> assertThat(round).hasSize(FanOutPushDelivery.PACED_SENDS_AT_ONCE)
+                .allSatisfy((id, outcome) -> assertThat(outcome).isEqualTo(PushOutcome.DELIVERED)));
+        assertThat(mostAtOnce.get()).isBetween(1, FanOutPushDelivery.PACED_SENDS_AT_ONCE);
+    }
+
+    @Test
     @DisplayName("Given a paced round whose sends throw and whose caller is interrupted part-way, when a second paced round of eight sends follows, then all eight run at once, so every slot came back")
     void should_run_eight_at_once_when_paced_again_given_round_that_threw_and_was_interrupted() {
         Thread caller = Thread.currentThread();
