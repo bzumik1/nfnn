@@ -153,6 +153,9 @@ app:
         key: ${RECEIPT_SIGNING_KEY:}
         withdrawn-key-ids: ${RECEIPT_SIGNING_KEYS_WITHDRAWN:}
   operations:
+    releases:
+      source: https://api.github.com/repos/bzumik1/nfnn/releases/latest
+      cron: "0 10 6 * * *"
     backups:
       directory: /backups
       restore-directory: /restore

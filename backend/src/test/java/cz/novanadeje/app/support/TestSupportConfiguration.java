@@ -55,6 +55,18 @@ public class TestSupportConfiguration {
 
     @Bean
     @Primary
+    public FakeLatestReleaseSource fakeLatestReleaseSource() {
+        return new FakeLatestReleaseSource();
+    }
+
+    @Bean
+    @Primary
+    public ResettableReleaseChecks resettableReleaseChecks() {
+        return new ResettableReleaseChecks();
+    }
+
+    @Bean
+    @Primary
     public FakeBankLogoSource fakeBankLogoSource() {
         return new FakeBankLogoSource();
     }

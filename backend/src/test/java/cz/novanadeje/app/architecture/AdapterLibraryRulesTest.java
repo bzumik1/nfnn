@@ -55,7 +55,7 @@ class AdapterLibraryRulesTest {
     private static final String[] OUTBOUND_ADAPTERS = {
             "cz.novanadeje.app.donors.infrastructure.ares..", "cz.novanadeje.app.donors.infrastructure.oauth..",
             "cz.novanadeje.app.donations.infrastructure.banklogo..", "cz.novanadeje.app.donations.infrastructure.cnb..",
-            "cz.novanadeje.app.operations.infrastructure.push.."};
+            "cz.novanadeje.app.operations.infrastructure.github..", "cz.novanadeje.app.operations.infrastructure.push.."};
     private static final String[] MAIL_ADAPTERS = {
             "cz.novanadeje.app.shared.infrastructure.mail..", "cz.novanadeje.app.contact.infrastructure.mail..",
             "cz.novanadeje.app.donors.infrastructure.mail..", "cz.novanadeje.app.donations.infrastructure.report..",
