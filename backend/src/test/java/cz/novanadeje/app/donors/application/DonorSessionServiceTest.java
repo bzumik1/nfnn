@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceBrowser;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -199,8 +200,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given an already used token, when the session is refreshed, then every session is revoked")
     void should_revoke_every_session_when_refreshed_given_already_used_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
-        used.markUsed(NOW.minus(Duration.ofHours(1)));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false), NOW.minus(Duration.ofHours(1)));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
 
         assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
@@ -214,8 +214,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a revoked token, when the session is refreshed, then it is refused without ending other sessions")
     void should_refuse_without_ending_other_sessions_when_refreshed_given_revoked_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken revoked = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false);
-        revoked.revoke(NOW.minus(Duration.ofHours(1)));
+        RefreshToken revoked = SpentCredentials.revoked(RefreshToken.issue(secret, DONOR, DEVICE, NOW.minus(Duration.ofDays(1)), REFRESH_TTL, false), NOW.minus(Duration.ofHours(1)));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(revoked));
 
         assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
@@ -279,8 +278,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token the reuse grace superseded, when it is presented, then every session of the donor ends, because two holders of the session exist")
     void should_revoke_every_session_when_presented_given_a_token_superseded_by_the_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken superseded = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false);
-        superseded.supersede(NOW.minusSeconds(20));
+        RefreshToken superseded = SpentCredentials.superseded(RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false), NOW.minusSeconds(20));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
         assertThatThrownBy(() -> service.refresh(secret.value(), SessionCookie.BROWSER, DeviceDescription.UNKNOWN))
@@ -294,8 +292,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token the reuse grace superseded, when the session is closed with it, then every session of the donor ends, because two holders of the session exist")
     void should_revoke_every_session_when_closed_given_a_token_superseded_by_the_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken superseded = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false);
-        superseded.supersede(NOW.minusSeconds(20));
+        RefreshToken superseded = SpentCredentials.superseded(RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false), NOW.minusSeconds(20));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
         service.close(secret.value());
@@ -308,8 +305,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token the reuse grace superseded, when it is presented, then the donor's sessions are locked before the token is locked again and every session ends, so the replay never holds a token while it waits for them")
     void should_lock_sessions_before_the_token_when_presented_given_a_superseded_token() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken superseded = RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false);
-        superseded.supersede(NOW.minusSeconds(20));
+        RefreshToken superseded = SpentCredentials.superseded(RefreshToken.issue(secret, DONOR, DEVICE, NOW.minusSeconds(30), REFRESH_TTL, false), NOW.minusSeconds(20));
         when(refreshTokens.findDonorOfSecretHash(secret.hash())).thenReturn(Optional.of(DONOR));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(superseded));
 
@@ -591,8 +587,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token used within the reuse grace whose device was signed out elsewhere meanwhile, when it is presented again, then it is refused without ending the donor's other sessions")
     void should_refuse_without_ending_other_sessions_when_presented_again_given_device_signed_out_within_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false);
-        used.revoke(NOW.minusSeconds(10));
+        RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false), NOW.minusSeconds(10));
         DonorDevice ended = signedInDevice();
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
@@ -609,8 +604,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token superseded by the reuse grace whose device was signed out elsewhere, when it is presented, then every session ends as a replay")
     void should_end_every_session_when_presented_given_superseded_token_of_ended_device() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken superseded = rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false);
-        superseded.supersede(NOW.minusSeconds(20));
+        RefreshToken superseded = SpentCredentials.superseded(rotated(secret, NOW.minusSeconds(30), UUID.randomUUID(), false), NOW.minusSeconds(20));
         DonorDevice ended = signedInDevice();
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
@@ -625,8 +619,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token used exactly the reuse grace ago whose device was signed out elsewhere, when it is presented again, then every session ends as a replay")
     void should_end_every_session_when_presented_again_given_used_token_of_ended_device_at_the_end_of_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE), UUID.randomUUID(), false);
-        used.revoke(NOW.minusSeconds(10));
+        RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE), UUID.randomUUID(), false), NOW.minusSeconds(10));
         DonorDevice ended = signedInDevice();
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
@@ -641,8 +634,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token used just within the reuse grace whose device was signed out elsewhere, when it is presented again, then it is refused without ending the donor's other sessions")
     void should_refuse_without_ending_other_sessions_when_presented_again_given_used_token_of_ended_device_just_within_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE).plusMillis(1), UUID.randomUUID(), false);
-        used.revoke(NOW.minusSeconds(10));
+        RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minus(RefreshToken.REUSE_GRACE).plusMillis(1), UUID.randomUUID(), false), NOW.minusSeconds(10));
         DonorDevice ended = signedInDevice();
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));
@@ -657,8 +649,7 @@ class DonorSessionServiceTest {
     @DisplayName("Given a token used more than the reuse grace ago whose device was signed out elsewhere, when it is presented again, then every session ends as a replay")
     void should_end_every_session_when_presented_again_given_used_token_of_ended_device_after_the_reuse_grace() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = rotated(secret, NOW.minusSeconds(61), UUID.randomUUID(), false);
-        used.revoke(NOW.minusSeconds(10));
+        RefreshToken used = SpentCredentials.revoked(rotated(secret, NOW.minusSeconds(61), UUID.randomUUID(), false), NOW.minusSeconds(10));
         DonorDevice ended = signedInDevice();
         ended.end(DeviceSignOutReason.REMOTE_SIGN_OUT, NOW.minusSeconds(10));
         lenient().when(devices.findById(DEVICE)).thenReturn(Optional.of(ended));

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
@@ -216,8 +217,7 @@ class DonorPasswordResetServiceTest {
     @DisplayName("Given a used token, when a reset is confirmed, then it is invalid and nothing changes")
     void should_be_invalid_when_confirmed_given_used_token() {
         LinkSecret secret = LinkSecret.generate();
-        PasswordResetToken used = PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
-        used.markUsed(NOW.minusSeconds(30));
+        PasswordResetToken used = SpentCredentials.used(PasswordResetToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL), NOW.minusSeconds(30));
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(used));
 
         assertThatThrownBy(() -> service.confirmReset(secret.value(), NEW_PASSWORD)).isInstanceOf(InvalidPasswordResetToken.class);

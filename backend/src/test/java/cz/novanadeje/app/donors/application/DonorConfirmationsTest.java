@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.ConfirmationRequired;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -154,8 +155,7 @@ class DonorConfirmationsTest {
     @DisplayName("Given a spent, unknown or malformed challenge or a signature that does not verify, when a passkey confirms a change, then it is rejected")
     void should_reject_when_change_confirmed_given_unusable_challenge_or_bad_signature() {
         LinkSecret spent = LinkSecret.generate();
-        PasskeyChallenge used = PasskeyChallenge.forSignIn(spent, NOW.minusSeconds(30), Duration.ofMinutes(5));
-        used.markUsed(NOW.minusSeconds(10));
+        PasskeyChallenge used = SpentCredentials.used(PasskeyChallenge.forSignIn(spent, NOW.minusSeconds(30), Duration.ofMinutes(5)), NOW.minusSeconds(10));
         when(challenges.findByChallengeHash(spent.hash())).thenReturn(Optional.of(used));
         LinkSecret live = LinkSecret.generate();
         Passkey passkey = passkeyOf(DONOR);
