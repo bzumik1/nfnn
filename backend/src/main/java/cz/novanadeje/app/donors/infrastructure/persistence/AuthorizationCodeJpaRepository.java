@@ -18,6 +18,10 @@ interface AuthorizationCodeJpaRepository extends JpaRepository<AuthorizationCode
     int markUsed(@Param("id") UUID id, @Param("at") Instant at);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update AuthorizationCodeJpaEntity c set c.usedAt = :at where c.donorId = :donorId and c.usedAt is null")
+    int spendUnusedOf(@Param("donorId") UUID donorId, @Param("at") Instant at);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from AuthorizationCodeJpaEntity c where c.expiresAt < :cutoff")
     int deleteExpiredBefore(@Param("cutoff") Instant cutoff);
 

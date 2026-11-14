@@ -34,6 +34,11 @@ class JpaAuthorizationCodeRepository implements AuthorizationCodeRepository {
     }
 
     @Override
+    public int spendUnusedOf(DonorId donorId, Instant at) {
+        return jpa.spendUnusedOf(donorId.value(), at);
+    }
+
+    @Override
     public int deleteExpiredBefore(Instant cutoff) {
         return jpa.deleteExpiredBefore(cutoff);
     }

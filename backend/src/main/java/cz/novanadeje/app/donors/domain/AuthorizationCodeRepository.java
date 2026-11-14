@@ -12,6 +12,8 @@ public interface AuthorizationCodeRepository {
 
     boolean markUsed(UUID codeId, Instant at);
 
+    int spendUnusedOf(DonorId donorId, Instant at);
+
     int deleteExpiredBefore(Instant cutoff);
 
     void deleteAllOfWithoutWaiting(DonorId donorId);

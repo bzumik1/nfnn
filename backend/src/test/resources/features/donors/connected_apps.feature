@@ -341,6 +341,32 @@ Feature: An administrator connects an application such as Claude to the administ
     Then the response status is 400
     And the token error is "unsupported_grant_type"
 
+  Scenario: A code approved before every session of the administrator ended gives no connection
+    Given "Jana" approved the connection for "https://claude.ai/.well-known/oauth-client"
+    When "Jana" changes the password to "a much longer horse battery"
+    Then the response status is 200
+    When the application exchanges the code with the right verifier
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When "Jana" lists the connected applications
+    Then the response status is 200
+    And no application is connected
+
+  Scenario: A code approved before the administrator lost the role gives no connection, even once the role is granted back
+    Given "Jana" approved the connection for "https://claude.ai/.well-known/oauth-client"
+    And "Petr" is an administrator
+    When "Petr" removes "Jana" from the administrators
+    Then the response status is 204
+    When "Petr" makes "Jana" an administrator
+    Then the response status is 201
+    When the application exchanges the code with the right verifier
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When "Jana" signs in again
+    And "Jana" lists the connected applications
+    Then the response status is 200
+    And no application is connected
+
   Scenario: The application refreshes its tokens and a replayed refresh token ends every session of the administrator
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
     And the application keeps its refresh token aside
