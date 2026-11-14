@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
@@ -150,11 +151,12 @@ class YearlyReceiptsServiceTest {
     void should_list_live_donors_with_gifts_and_receipt_and_count_erased_when_listed_given_last_completed_year() {
         DonorRecord erased = acme();
         erased.erase(NOW);
-        DonationReceipt janasReceipt = yearlyReceiptOf(JANA, YEAR_2026);
+        DonationReceipt issued = yearlyReceiptOf(JANA, YEAR_2026);
+        ActiveYearlyReceipt janasReceipt = new ActiveYearlyReceipt(JANA, issued.id(), issued.number(), issued.issuedAt());
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(
                 receivedFromJana(LocalDate.of(2026, 3, 1), 100000), receivedFromJana(LocalDate.of(2026, 5, 1), 25000),
                 refundedToJana(LocalDate.of(2026, 6, 1), 5000), receivedFromAcme(LocalDate.of(2026, 7, 1), 70000)));
-        when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of(janasReceipt));
+        when(receipts.findActiveYearlyOfEveryDonor(YEAR_2026)).thenReturn(List.of(janasReceipt));
         when(donorRecords.findByIds(any())).thenReturn(List.of(erased, jana()));
 
         YearlyReceiptCandidates candidates = service.candidatesOfLastCompletedYear();
@@ -171,7 +173,7 @@ class YearlyReceiptsServiceTest {
     void should_list_donors_in_order_of_first_gift_when_listed_given_records_in_other_order() {
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(
                 receivedFromAcme(LocalDate.of(2026, 2, 1), 70000), receivedFromJana(LocalDate.of(2026, 3, 1), 100000)));
-        when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of());
+        when(receipts.findActiveYearlyOfEveryDonor(YEAR_2026)).thenReturn(List.of());
         when(donorRecords.findByIds(any())).thenReturn(List.of(jana(), acme()));
 
         assertThat(service.candidates(YEAR_2026).donors()).extracting(YearlyReceiptCandidate::donor).containsExactly(ACME, JANA);
@@ -182,7 +184,7 @@ class YearlyReceiptsServiceTest {
     void should_list_donor_of_earliest_gift_first_when_listed_given_gifts_out_of_date_order() {
         when(donations.findReceivedOnBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).thenReturn(List.of(
                 receivedFromJana(LocalDate.of(2026, 3, 1), 100000), receivedFromAcme(LocalDate.of(2026, 2, 1), 70000)));
-        when(receipts.findActiveForYearOfEveryDonor(YEAR_2026)).thenReturn(List.of());
+        when(receipts.findActiveYearlyOfEveryDonor(YEAR_2026)).thenReturn(List.of());
         when(donorRecords.findByIds(any())).thenReturn(List.of(jana(), acme()));
 
         assertThat(service.candidates(YEAR_2026).donors()).extracting(YearlyReceiptCandidate::donor).containsExactly(ACME, JANA);

@@ -126,7 +126,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given the donor already downloaded the yearly receipt of the payment's year, when paired by hand, then the result names that year")
     void should_name_changed_yearly_receipt_when_paired_given_issued_yearly_receipt() {
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
+        when(receipts.existsActiveForYear(janaId, Year.of(2026))).thenReturn(true);
 
         ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none());
 
@@ -136,7 +136,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given a payment from before the first receipt year, when paired by hand, then no yearly receipt is reported even if one exists")
     void should_report_no_changed_receipt_when_paired_given_payment_before_first_receipt_year() {
-        when(receipts.findActiveForYear(janaId, Year.of(2025))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2025))));
+        when(receipts.existsActiveForYear(janaId, Year.of(2025))).thenReturn(true);
 
         ManualPairingResult result = service.pair(ADMIN, lastYear.id(), janaId, ExpectedVersion.none());
 

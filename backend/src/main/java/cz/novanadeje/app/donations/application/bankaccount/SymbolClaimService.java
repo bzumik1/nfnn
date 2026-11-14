@@ -66,7 +66,7 @@ public class SymbolClaimService {
         ConfirmedSymbolPairing paired = pairing.pairConfirmedSymbol(claim, claim.answeredAt());
         List<Year> changedYearlyReceipts = paired.years().stream()
                 .filter(firstYear::admits)
-                .filter(year -> receipts.findActiveForYear(donor, year).isPresent())
+                .filter(year -> receipts.existsActiveForYear(donor, year))
                 .sorted()
                 .toList();
         log.info("Donor {} confirmed symbol claim {} at sender account link {}: {} payments paired", donor, claim.id(), linkId, paired.count());

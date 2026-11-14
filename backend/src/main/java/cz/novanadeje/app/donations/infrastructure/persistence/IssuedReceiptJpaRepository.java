@@ -38,7 +38,13 @@ interface IssuedReceiptJpaRepository extends JpaRepository<IssuedReceiptJpaEntit
 
     Optional<IssuedReceiptJpaEntity> findByDonorIdAndReceiptYearAndStatus(UUID donorId, Integer receiptYear, ReceiptStatus status);
 
-    List<IssuedReceiptJpaEntity> findByReceiptYearAndStatus(Integer receiptYear, ReceiptStatus status);
+    @Query("""
+            select new cz.novanadeje.app.donations.infrastructure.persistence.ActiveYearlyReceiptRow(r.donorId, r.id, r.number, r.issuedAt)
+            from IssuedReceiptJpaEntity r
+            where r.receiptYear = :receiptYear and r.status = cz.novanadeje.app.donations.domain.receipt.ReceiptStatus.ACTIVE""")
+    List<ActiveYearlyReceiptRow> findActiveRowsByReceiptYear(@Param("receiptYear") Integer receiptYear);
+
+    boolean existsByDonorIdAndReceiptYearAndStatus(UUID donorId, Integer receiptYear, ReceiptStatus status);
 
     Optional<IssuedReceiptJpaEntity> findFirstByDonorIdAndReceiptYearAndStatusAndWithdrawalReasonOrderByIssuedAtDescNumberDesc(UUID donorId,
             Integer receiptYear, ReceiptStatus status, ReceiptWithdrawalReason withdrawalReason);

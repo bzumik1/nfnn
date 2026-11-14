@@ -22,6 +22,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.DynamicUpdate;
 
+import tools.jackson.databind.JsonNode;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
@@ -159,7 +161,8 @@ class IssuedReceiptJpaEntity {
     }
 
     DonationReceipt toDomain() {
-        FrozenReceipt frozenReceipt = new FrozenReceipt(FrozenReceiptColumn.document(frozen), FrozenReceiptColumn.texts(frozen),
+        JsonNode column = FrozenReceiptColumn.read(frozen);
+        FrozenReceipt frozenReceipt = new FrozenReceipt(FrozenReceiptColumn.document(column), FrozenReceiptColumn.textSet(column),
                 Optional.ofNullable(signatureImageSha256).map(ContentDigest::new), Optional.ofNullable(portraitImageSha256).map(ContentDigest::new),
                 new ReceiptVerification(new ReceiptSigningKeyId(signingKeyId), proof()));
         DonationReceipt receipt = DonationReceipt.reconstitute(
