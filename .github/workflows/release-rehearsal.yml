@@ -39,11 +39,20 @@ jobs:
               exit 0
             fi
           fi
+          full_revision=
           for image in backend frontend backup postgres mcp; do
             docker pull -q "ghcr.io/bzumik1/nfnn-$image:$revision" > /dev/null || { echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision is not published: the $SERVER revision must name a commit of main that images.yml published"; exit 1; }
             labelled=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "ghcr.io/bzumik1/nfnn-$image:$revision")
-            case "$labelled" in
-              "$revision"*) ;;
+            case "$image:$labelled" in
+              backend:"$revision"*) full_revision=$labelled ;;
+              *:"$revision"*) ;;
+              backup:* | postgres:*)
+                context_tree=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.context"}}' "ghcr.io/bzumik1/nfnn-$image:$revision")
+                echo "$full_revision" | grep -qxE '[0-9a-f]{40}' || { echo "::error::the full commit of $revision is unknown, so ghcr.io/bzumik1/nfnn-$image:$revision labelled $labelled cannot be checked"; exit 1; }
+                [ -n "$context_tree" ] || { echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision is labelled with revision $labelled and carries no cz.novanadeje.build.context label"; exit 1; }
+                git cat-file -e "$full_revision^{commit}" 2> /dev/null || git fetch -q --depth=1 --no-tags origin "$full_revision"
+                [ "$context_tree" = "$(git rev-parse "$full_revision:deploy/$image")" ] || { echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision, built at $labelled, was built from another deploy/$image than $revision holds"; exit 1; }
+                echo "ghcr.io/bzumik1/nfnn-$image:$revision is the image built at ${labelled::7}, from the same deploy/$image as $revision" ;;
               *) echo "::error::ghcr.io/bzumik1/nfnn-$image:$revision is labelled with revision $labelled"; exit 1 ;;
             esac
           done
