@@ -72,6 +72,25 @@ Feature: The backups are encrypted with a key that an administrator sees only af
     When "Jana" reveals the backup key with the passkey "iPhone"
     Then the answer carries the backup key of this server and no cache keeps it
 
+  Scenario: A passkey of another account does not show the key and spends its challenge
+    Given "Jana" added a passkey named "iPhone"
+    And a person "Petr" is registered
+    And "Petr" added a passkey named "Klíč"
+    When "Jana" reveals the backup key with the passkey "Klíč" of "Petr"
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+    When "Jana" reveals the backup key with the passkey "iPhone" answering the challenge refused before
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+
+  Scenario: Wrong codes for the key count toward the pause of every code of the administrator
+    Given "Jana" tried to reveal the backup key with a wrong code 4 times
+    When "Jana" unlocks the administration on this device with her password and the code "000000" 6 times, each from another client address
+    And the following requests come from another client address
+    And "Jana" unlocks the administration on this device with her password and a fresh code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+
   Scenario: A donor without the administrator role and a visitor without a token never see the key
     Given a person "Petr" is registered
     When "Petr" reveals the backup key with the code "123456"

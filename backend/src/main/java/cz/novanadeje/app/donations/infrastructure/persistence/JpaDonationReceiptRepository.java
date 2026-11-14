@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -67,8 +68,13 @@ class JpaDonationReceiptRepository implements DonationReceiptRepository {
     }
 
     @Override
-    public List<DonationReceipt> findActiveForYearOfEveryDonor(Year year) {
-        return jpa.findByReceiptYearAndStatus(year.getValue(), ReceiptStatus.ACTIVE).stream().map(IssuedReceiptJpaEntity::toDomain).toList();
+    public List<ActiveYearlyReceipt> findActiveYearlyOfEveryDonor(Year year) {
+        return jpa.findActiveRowsByReceiptYear(year.getValue()).stream().map(ActiveYearlyReceiptRow::toDomain).toList();
+    }
+
+    @Override
+    public boolean existsActiveForYear(DonorReference donor, Year year) {
+        return jpa.existsByDonorIdAndReceiptYearAndStatus(donor.value(), year.getValue(), ReceiptStatus.ACTIVE);
     }
 
     @Override

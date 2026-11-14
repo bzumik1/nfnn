@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
@@ -18,9 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
@@ -29,9 +27,7 @@ import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersist
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BankPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaSymbolClaimRepositoryTest {
 
     private static final SenderAccount ACCOUNT = new SenderAccount("1234567", "0800");

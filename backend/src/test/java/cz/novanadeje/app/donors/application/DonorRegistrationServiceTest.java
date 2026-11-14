@@ -34,6 +34,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -57,11 +58,12 @@ class DonorRegistrationServiceTest {
     @Mock
     private ApplicationEventPublisher events;
 
+    private final OpenTransactions transactions = new OpenTransactions();
     private DonorRegistrationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorRegistrationService(donors, passwordHasher, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonorRegistrationService(donors, passwordHasher, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC), transactions);
     }
 
     @Test
@@ -89,6 +91,23 @@ class DonorRegistrationServiceTest {
         verify(donors, org.mockito.Mockito.times(2)).existsByVariableSymbol(any(VariableSymbol.class));
         verify(donors, never()).delete(any());
         verifyNoInteractions(events);
+    }
+
+    @Test
+    @DisplayName("Given a free email, when a person registers, then the password is hashed with no transaction open and the donor is stored in one")
+    void should_hash_outside_transaction_and_store_inside_when_registered_given_free_email() {
+        when(donors.findByEmailForUpdate(EMAIL)).thenReturn(Optional.empty());
+        when(donors.existsByVariableSymbol(any())).thenReturn(false);
+        when(passwordHasher.hash(new RawPassword("correct horse battery"))).thenAnswer(invocation -> transactions.recordingHashing(new PasswordHash("$hash")));
+        doAnswer(invocation -> {
+            assertThat(transactions.open()).isEqualTo(1);
+            return null;
+        }).when(donors).save(any());
+
+        service.register(personCommand("jana@example.cz", "correct horse battery"));
+
+        assertThat(transactions.openWhenHashing()).containsExactly(0);
+        assertThat(transactions.committed()).isEqualTo(1);
     }
 
     @Test

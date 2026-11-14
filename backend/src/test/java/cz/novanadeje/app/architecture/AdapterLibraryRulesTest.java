@@ -26,9 +26,16 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import static com.tngtech.archunit.base.DescribedPredicate.not;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
@@ -80,6 +87,18 @@ class AdapterLibraryRulesTest {
             "org.springframework.orm..", "org.springframework.jdbc..", "org.hibernate..").and(not(resideInAPackage("org.hibernate.validator..")))
             .as("JPA, Spring Data, Spring ORM, Spring JDBC or Hibernate");
 
+    private static final DescribedPredicate<JavaClass> CRYPTOGRAPHY = resideInAnyPackage("java.security..", "javax.crypto..")
+            .and(not(belongToAnyOf(MessageDigest.class, SecureRandom.class, Mac.class, SecretKeySpec.class)))
+            .and(not(assignableTo(GeneralSecurityException.class)))
+            .as("a cipher, signature, key agreement, key derivation, key or key generator of the JCA (anything but MessageDigest, SecureRandom, "
+                    + "the Mac and SecretKeySpec of a TOTP code and the security exceptions)");
+
+    private static final Map<String, String> LIBRARY_STUBS = Map.of(
+            "org.apache.pdfbox.pdmodel.PDDocument", "package org.apache.pdfbox.pdmodel;\npublic class PDDocument {}\n",
+            "com.google.zxing.BarcodeFormat", "package com.google.zxing;\npublic class BarcodeFormat {}\n",
+            "com.openhtmltopdf.pdfboxout.PdfRendererBuilder", "package com.openhtmltopdf.pdfboxout;\npublic class PdfRendererBuilder {}\n",
+            "io.github.openhtmltopdf.pdfboxout.PdfRendererBuilder", "package io.github.openhtmltopdf.pdfboxout;\npublic class PdfRendererBuilder {}\n");
+
     private static JavaClasses planted;
 
     @ArchTest
@@ -102,7 +121,7 @@ class AdapterLibraryRulesTest {
             .that().resideOutsideOfPackages("cz.novanadeje.app.content.infrastructure.media..", "cz.novanadeje.app.donations.infrastructure.signature..",
                     "cz.novanadeje.app.donations.infrastructure.banklogo..")
             .should().dependOnClassesThat()
-            .resideInAnyPackage("io.github.darkxanter..", "com.luciad.imageio.webp..", "javax.imageio..", "java.awt..");
+            .resideInAnyPackage("com.luciad.imageio.webp..", "javax.imageio..", "java.awt..");
 
     @ArchTest
     static final ArchRule xml_parsers_are_used_only_by_the_receipt_signature_adapter = noClasses()
@@ -163,13 +182,22 @@ class AdapterLibraryRulesTest {
             .should().dependOnClassesThat().resideInAnyPackage("jakarta.mail..", "org.springframework.mail..");
 
     @ArchTest
+    static final ArchRule cryptography_is_used_only_by_infrastructure_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure..")
+            .should().dependOnClassesThat(CRYPTOGRAPHY)
+            .because("security.md: JCA signing stays in donations/infrastructure/signing, and every cipher, key and signature is a technology "
+                    + "behind a port (RecordSeals, ReceiptSigner, the push adapters); the domain keeps only digests, random values and a TOTP code's HMAC");
+
+    @ArchTest
     static final ArchRule json_and_security_libraries_stay_out_of_the_domain_and_the_use_cases = noClasses()
             .that().resideInAnyPackage("..domain..", "..application..")
             .should().dependOnClassesThat().resideInAnyPackage("tools.jackson..", "com.fasterxml.jackson..", "org.springframework.security..");
 
     @BeforeAll
     static void plantLibraryUses(@TempDir Path folder) throws IOException {
-        planted = PlantedClasses.compiled(folder, plantedUses().collect(Collectors.toMap(PlantedUse::className, PlantedUse::source)));
+        Map<String, String> sources = new HashMap<>(LIBRARY_STUBS);
+        sources.putAll(plantedUses().collect(Collectors.toMap(PlantedUse::className, PlantedUse::source)));
+        planted = PlantedClasses.compiled(folder, sources);
     }
 
     @ParameterizedTest(name = "{0} reports {1}")
@@ -203,6 +231,34 @@ class AdapterLibraryRulesTest {
                         "com.fasterxml.jackson.annotation.JsonProperty"),
                 planted("json_and_security_libraries_stay_out_of_the_domain_and_the_use_cases", "donors.application.PlantedAuthentication",
                         "org.springframework.security.core.Authentication"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donors.domain.PlantedCipher", "javax.crypto.Cipher"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donations.application.PlantedSignature", "java.security.Signature"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "operations.interfaces.rest.PlantedKeyPairs", "java.security.KeyPairGenerator"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "shared.domain.PlantedKeyAgreement", "javax.crypto.KeyAgreement"),
+                planted("cryptography_is_used_only_by_infrastructure_adapters", "donors.application.PlantedPrivateKey", "java.security.PrivateKey"),
+                planted("no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both", "donations.infrastructure.receipt.PlantedPdf",
+                        "org.apache.pdfbox.pdmodel.PDDocument"),
+                planted("no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both", "donations.infrastructure.receipt.PlantedQr", "com.google.zxing.BarcodeFormat"),
+                planted("no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both", "donations.infrastructure.receipt.PlantedHtmlToPdf",
+                        "com.openhtmltopdf.pdfboxout.PdfRendererBuilder"),
+                planted("no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both", "donations.infrastructure.receipt.PlantedNewHtmlToPdf",
+                        "io.github.openhtmltopdf.pdfboxout.PdfRendererBuilder"),
+                planted("fio_client_library_is_used_only_by_the_donations_fio_adapter", "donations.application.PlantedFioStatement", "io.github.bzumik1.fio.AccountStatement"),
+                planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "content.domain.PlantedWebp",
+                        "com.luciad.imageio.webp.WebPReadParam"),
+                planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "donors.infrastructure.mail.PlantedImageIo",
+                        "javax.imageio.ImageReader"),
+                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedXmlParser", "javax.xml.parsers.DocumentBuilder"),
+                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedSax", "org.xml.sax.XMLReader"),
+                planted("xml_parsers_are_used_only_by_the_receipt_signature_adapter", "content.infrastructure.media.PlantedDom", "org.w3c.dom.Document"),
+                planted("logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters", "donations.infrastructure.report.PlantedLoggingSystem",
+                        "org.springframework.boot.logging.LoggingSystem"),
+                planted("logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters", "shared.infrastructure.persistence.PlantedPool",
+                        "com.zaxxer.hikari.HikariDataSource"),
+                planted("logging_system_pool_and_jvm_management_are_used_only_by_the_operations_adapters", "operations.application.PlantedMemory",
+                        "java.lang.management.MemoryMXBean"),
+                planted("webauthn_library_is_used_only_by_the_donors_webauthn_adapter", "donors.infrastructure.security.PlantedWebAuthn", "com.webauthn4j.WebAuthnManager"),
+                planted("cache_library_is_used_only_by_infrastructure_adapters", "donors.application.PlantedCache", "com.github.benmanes.caffeine.cache.Cache<String, String>"),
                 planted("template_library_is_used_only_by_the_shared_mail_adapter", "donors.infrastructure.mail.PlantedTemplates", "org.thymeleaf.TemplateEngine"),
                 planted("image_libraries_are_used_only_by_the_content_media_receipt_signature_and_bank_logo_adapters", "content.infrastructure.persistence.PlantedDrawing",
                         "java.awt.Graphics2D"),

@@ -24,7 +24,7 @@ public record ReceiptDocument(ReceiptKind kind, ReceiptNumber number, LocalDate 
         requireShapeOfKind(kind, lines, year);
         Money sum = lines.stream().map(ReceiptLine::amount).reduce(Money.zero(total.currency()), Money::plus);
         if (!sum.equals(total)) {
-            throw new IllegalArgumentException("The total " + total + " does not add up the lines " + sum);
+            throw new IllegalArgumentException("The total does not add up the lines");
         }
     }
 

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
@@ -29,9 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -41,9 +39,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(DonorsPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaDonorDeviceRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-11-05T10:00:00Z");

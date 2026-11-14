@@ -20,10 +20,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,8 +72,7 @@ class PublicPeopleServiceTest {
         when(people.findAllInOrder()).thenReturn(List.of(eva, adam, hana));
         when(notes.find()).thenReturn(Optional.of(new FoundersNote(Optional.of("Děkujeme."), NOW)));
         when(footnotes.find()).thenReturn(Optional.of(new PeopleFootnote(Optional.of("Web zajišťuje Petr Vzor."), NOW)));
-        when(media.findSize(PORTRAIT)).thenReturn(Optional.of(new MediaSize(640, 640)));
-        when(media.findSize(SIGNATURE)).thenReturn(Optional.of(new MediaSize(600, 180)));
+        when(media.findSizes(Set.of(PORTRAIT, SIGNATURE))).thenReturn(Map.of(PORTRAIT, new MediaSize(640, 640), SIGNATURE, new MediaSize(600, 180)));
 
         PublicPeopleView view = service().read().orElseThrow();
 
@@ -89,13 +96,35 @@ class PublicPeopleServiceTest {
         when(people.findAllInOrder()).thenReturn(List.of(eva));
         when(notes.find()).thenReturn(Optional.of(FoundersNote.empty(NOW)));
         when(footnotes.find()).thenReturn(Optional.empty());
-        lenient().when(media.findSize(SIGNATURE)).thenReturn(Optional.of(new MediaSize(600, 180)));
+        lenient().when(media.findSizes(Set.of(SIGNATURE))).thenReturn(Map.of(SIGNATURE, new MediaSize(600, 180)));
 
         PublicPeopleView view = service().read().orElseThrow();
 
         assertThat(view.note()).isEmpty();
         assertThat(view.board()).isEmpty();
         assertThat(view.footnote()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given eight featured people each with a portrait and a web signature, when the public view is read, then every image's size comes from one read")
+    void should_read_every_image_size_at_once_when_read_given_eight_featured_people_with_images() {
+        List<Person> featured = IntStream.range(0, 8)
+                .mapToObj(index -> person("Osoba " + index, true, false, Optional.empty(), Optional.of(MediaId.newId(NOW.plusSeconds(10 + index))), index)
+                        .signWith(MediaId.newId(NOW.plusSeconds(20 + index)), NOW))
+                .toList();
+        Set<MediaId> images = featured.stream().flatMap(person -> Stream.of(person.details().portrait().orElseThrow(), person.webSignature().orElseThrow()))
+                .collect(Collectors.toSet());
+        when(people.findAllInOrder()).thenReturn(featured);
+        when(notes.find()).thenReturn(Optional.of(new FoundersNote(Optional.of("Děkujeme."), NOW)));
+        when(footnotes.find()).thenReturn(Optional.empty());
+        when(media.findSizes(images)).thenReturn(images.stream().collect(Collectors.toMap(Function.identity(), image -> new MediaSize(600, 400))));
+
+        PublicPeopleView view = service().read().orElseThrow();
+
+        assertThat(view.featured()).allSatisfy(card -> assertThat(card.portrait()).isPresent());
+        assertThat(view.note().orElseThrow().signatures()).hasSize(8).allSatisfy(signature -> assertThat(signature.portrait()).isPresent());
+        verify(media).findSizes(images);
+        verifyNoMoreInteractions(media);
     }
 
     private static Person person(String name, boolean featured, boolean onBoard, Optional<String> boardNote, Optional<MediaId> portrait, int position) {

@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -19,9 +20,6 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +36,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(DonorsPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaDonorRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-18T10:00:00Z");
@@ -194,7 +190,7 @@ class JpaDonorRepositoryTest {
     void should_find_whole_donor_when_read_for_update_given_saved_administrator() {
         Donor jana = donor("jana@example.cz", "4821937580");
         jana.verifyEmail(NOW);
-        jana.grantAdministration();
+        jana.grantAdministration(true);
         donors.save(jana);
         donors.save(donor("petr@example.cz", "4821937581"));
         flushAndClear();
@@ -215,11 +211,11 @@ class JpaDonorRepositoryTest {
         Donor zdena = donor("zdena@example.cz", "4821937570");
         zdena.updateProfile("Zdeňka Horáčková", zdena.address(), zdena.preferredLocale());
         zdena.verifyEmail(NOW);
-        zdena.grantAdministration();
+        zdena.grantAdministration(true);
         Donor andrea = donor("andrea@example.cz", "4821937571");
         andrea.updateProfile("Andrea Horáčková", andrea.address(), andrea.preferredLocale());
         andrea.verifyEmail(NOW);
-        andrea.grantAdministration();
+        andrea.grantAdministration(true);
         Donor plain = donor("jana@example.cz", "4821937572");
         donors.save(zdena);
         donors.save(andrea);
@@ -235,7 +231,7 @@ class JpaDonorRepositoryTest {
     void should_list_every_donor_once_by_id_when_all_listed_given_administrator_among_them() {
         Donor admin = donor("andrea@example.cz", "4821937590");
         admin.verifyEmail(NOW);
-        admin.grantAdministration();
+        admin.grantAdministration(true);
         Donor jana = donor("jana@example.cz", "4821937591");
         Donor petr = donor("petr@example.cz", "4821937592");
         donors.save(jana);
@@ -320,7 +316,7 @@ class JpaDonorRepositoryTest {
             Donor donor = donor("darce" + index + "@example.cz", Long.toString(4_800_000_000L + index));
             donor.updateProfile(stored.get(index), donor.address(), donor.preferredLocale());
             donor.verifyEmail(NOW);
-            donor.grantAdministration();
+            donor.grantAdministration(true);
             donors.save(donor);
         }
         flushAndClear();

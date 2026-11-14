@@ -70,4 +70,12 @@ class EmailAddressTest {
 
         assertThat(Pattern.compile(EmailAddress.SHAPE_REGEX).matcher(address).matches()).isFalse();
     }
+
+    @Test
+    @DisplayName("Given an address that is not valid, when it is created, then the message names the rule without any part of the address")
+    void should_name_the_rule_without_the_address_when_created_given_an_invalid_address() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new EmailAddress("jana.novakova.example.cz"))
+                .withMessage("Email address is not valid")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("jana", "novakova", "example"));
+    }
 }

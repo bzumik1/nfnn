@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.settings.SettingsService;
 import cz.novanadeje.app.operations.domain.settings.SecretSettingsInBrowserOnly;
 import cz.novanadeje.app.operations.domain.settings.SettingChange;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -24,8 +25,6 @@ import java.util.UUID;
 @RequestMapping("/api/admin/operations/settings")
 class AdminSettingsController {
 
-    private static final String SCOPE_CLAIM = "scope";
-
     private final SettingsService settings;
     private final TestEmailRateLimiter testEmailRateLimiter;
 
@@ -41,18 +40,20 @@ class AdminSettingsController {
 
     @PutMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    SettingsSavedResponse change(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsChangeRequest request, ExpectedVersion expected) {
+    SettingsSavedResponse change(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @Valid @RequestBody SettingsChangeRequest request,
+                                 ExpectedVersion expected) {
         List<SettingChange> changes = SettingValueRequest.toChanges(request.changes());
-        if (jwt.hasClaim(SCOPE_CLAIM) && changes.stream().anyMatch(change -> change.setting().changesOnlyInBrowser())) {
+        if (channel.isConnectedApplication() && changes.stream().anyMatch(change -> change.setting().changesOnlyInBrowser())) {
             throw new SecretSettingsInBrowserOnly();
         }
         return SettingsSavedResponse.of(settings.change(UUID.fromString(jwt.getSubject()), changes, expected));
     }
 
     @PostMapping("/test-email")
-    TestEmailResponse sendTestEmail(HttpServletRequest http, @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AdminTestEmailRequest request) {
+    TestEmailResponse sendTestEmail(HttpServletRequest http, @AuthenticationPrincipal Jwt jwt, AdministrationChannel channel,
+                                    @Valid @RequestBody AdminTestEmailRequest request) {
         testEmailRateLimiter.check(http.getRemoteAddr());
-        if (jwt.hasClaim(SCOPE_CLAIM) && request.typesPassword()) {
+        if (channel.isConnectedApplication() && request.typesPassword()) {
             throw new SecretSettingsInBrowserOnly();
         }
         return TestEmailResponse.from(settings.sendTestEmail(UUID.fromString(jwt.getSubject()), request.toServer(), request.sender()));

@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -9,6 +8,7 @@ import cz.novanadeje.app.donors.domain.FreshSecondFactorRequired;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeRejected;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.shared.domain.error.DomainException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,12 +32,12 @@ public class FreshSecondFactorCheck {
         this.clock = clock;
     }
 
-    @Transactional(noRollbackFor = {SecondFactorCodeRejected.class, SecondFactorCodesPaused.class})
+    @Transactional(noRollbackFor = DomainException.class)
     public void require(DonorId donorId, SecondFactorProof proof) {
         Optional<PasskeyProof> passkey = proof.givenPasskey();
         if (passkey.isPresent()) {
             Donor donor = donors.findById(donorId).orElseThrow(() -> new DonorNotFound(donorId));
-            confirmations.confirm(donor, Confirmation.withPasskey(passkey.get()));
+            confirmations.confirmPasskey(donor, Confirmation.withPasskey(passkey.get()));
             return;
         }
         String code = proof.givenCode().orElseThrow(FreshSecondFactorRequired::new);

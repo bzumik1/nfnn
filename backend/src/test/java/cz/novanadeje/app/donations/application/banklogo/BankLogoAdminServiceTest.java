@@ -16,6 +16,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class BankLogoAdminServiceTest {
     void should_fetch_outside_transaction_and_store_when_set_given_new_code() {
         images.answer(NEW_WEBP);
 
-        BankLogoAdminRow row = service.set(ADMIN, ARTWORK, BankLogoPrecondition.absent());
+        BankLogoAdminRow row = service.set(ADMIN, ARTWORK, WritePrecondition.absent());
 
         assertThat(images.fetchedInsideTransaction()).containsExactly(false);
         BankLogo stored = logos.find(CSAS).orElseThrow();
@@ -85,7 +86,7 @@ class BankLogoAdminServiceTest {
         BankLogo old = storeOldLogo();
         images.answer(NEW_WEBP);
 
-        BankLogoAdminRow row = service.set(ADMIN, SITE, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(old))));
+        BankLogoAdminRow row = service.set(ADMIN, SITE, WritePrecondition.matching(ExpectedVersion.of(versions.of(old))));
         assertThat(transactions.readOnlyFlags()).containsExactly(true, false);
 
         service.refresh(ADMIN, CSAS);
@@ -99,7 +100,7 @@ class BankLogoAdminServiceTest {
         storeOldLogo();
         images.failWith(BankLogoFailure.REDIRECTED);
 
-        assertThatThrownBy(() -> service.set(ADMIN, SITE, BankLogoPrecondition.anything()))
+        assertThatThrownBy(() -> service.set(ADMIN, SITE, WritePrecondition.anything()))
                 .isInstanceOfSatisfying(BankLogoUnavailable.class, unavailable -> assertThat(unavailable.failure()).isEqualTo(BankLogoFailure.REDIRECTED));
 
         assertThat(logos.find(CSAS).orElseThrow().source()).isEqualTo(ARTWORK);
@@ -113,7 +114,7 @@ class BankLogoAdminServiceTest {
         BankLogo old = storeOldLogo();
         images.answer(NEW_WEBP);
 
-        service.set(ADMIN, SITE, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(old))));
+        service.set(ADMIN, SITE, WritePrecondition.matching(ExpectedVersion.of(versions.of(old))));
 
         BankLogo stored = logos.find(CSAS).orElseThrow();
         assertThat(stored.source()).isEqualTo(SITE);
@@ -127,7 +128,7 @@ class BankLogoAdminServiceTest {
         BankLogo old = storeOldLogo();
         images.answer(NEW_WEBP);
 
-        for (BankLogoPrecondition stale : List.of(BankLogoPrecondition.matching(ExpectedVersion.of("0123456789abcdef")), BankLogoPrecondition.absent())) {
+        for (WritePrecondition stale : List.of(WritePrecondition.matching(ExpectedVersion.of("0123456789abcdef")), WritePrecondition.absent())) {
             assertThatThrownBy(() -> service.set(ADMIN, SITE, stale)).isInstanceOfSatisfying(ChangedMeanwhile.class, refused -> {
                 assertThat(refused.extensions()).containsEntry("version", versions.of(old));
                 assertThat(refused.extensions().get("current")).isInstanceOf(BankLogoAdminRow.class);
@@ -154,7 +155,7 @@ class BankLogoAdminServiceTest {
                 new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
         images.answer(NEW_WEBP);
 
-        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, BankLogoPrecondition.absent())).isInstanceOf(ChangedMeanwhile.class);
+        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, WritePrecondition.absent())).isInstanceOf(ChangedMeanwhile.class);
 
         assertThat(racing.find(CSAS)).contains(theirs);
         assertThat(events).isEmpty();
@@ -173,7 +174,7 @@ class BankLogoAdminServiceTest {
                 new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
         images.answer(NEW_WEBP);
 
-        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, BankLogoPrecondition.absent()))
+        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, WritePrecondition.absent()))
                 .isInstanceOfSatisfying(ChangedMeanwhile.class, refused -> assertThat(refused.extensions()).isEmpty());
 
         assertThat(racing.find(CSAS)).isEmpty();
@@ -188,7 +189,7 @@ class BankLogoAdminServiceTest {
         images.answer(NEW_WEBP);
         images.whileFetching(() -> logos.delete(CSAS));
 
-        assertThatThrownBy(() -> service.set(ADMIN, SITE, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(old)))))
+        assertThatThrownBy(() -> service.set(ADMIN, SITE, WritePrecondition.matching(ExpectedVersion.of(versions.of(old)))))
                 .isInstanceOf(BankLogoNotFound.class);
 
         assertThat(logos.find(CSAS)).isEmpty();
@@ -216,7 +217,7 @@ class BankLogoAdminServiceTest {
     @Test
     @DisplayName("Given no logo of a bank, when a version is named for it, then it is not found and nothing is fetched")
     void should_be_not_found_when_set_given_version_of_absent_logo() {
-        assertThatThrownBy(() -> service.set(ADMIN, ARTWORK, BankLogoPrecondition.matching(ExpectedVersion.of("0123456789abcdef"))))
+        assertThatThrownBy(() -> service.set(ADMIN, ARTWORK, WritePrecondition.matching(ExpectedVersion.of("0123456789abcdef"))))
                 .isInstanceOf(BankLogoNotFound.class);
 
         assertThat(images.fetchedInsideTransaction()).isEmpty();
@@ -229,7 +230,7 @@ class BankLogoAdminServiceTest {
         storeOldLogo();
         images.answer(NEW_WEBP);
 
-        service.set(ADMIN, SITE, BankLogoPrecondition.anything());
+        service.set(ADMIN, SITE, WritePrecondition.anything());
 
         assertThat(logos.find(CSAS).orElseThrow().source()).isEqualTo(SITE);
     }
@@ -298,7 +299,7 @@ class BankLogoAdminServiceTest {
             assertThat(row.sourceAllowed()).isFalse();
             assertThat(row.sourceUrl()).isEqualTo(OFF_LIST.url());
         });
-        BankLogoAdminRow replaced = service.set(ADMIN, ARTWORK, BankLogoPrecondition.matching(ExpectedVersion.of(versions.of(offList))));
+        BankLogoAdminRow replaced = service.set(ADMIN, ARTWORK, WritePrecondition.matching(ExpectedVersion.of(versions.of(offList))));
         assertThat(replaced.sourceAllowed()).isTrue();
 
         service.remove(ADMIN, CSAS, ExpectedVersion.of(replaced.version()));

@@ -56,4 +56,21 @@ class CzechAccountNumberTest {
     void should_refuse_when_created_given_no_text() {
         assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber(null));
     }
+
+    @Test
+    @DisplayName("Given an account number refused by each rule, when it is created, then the message names the rule without the account number")
+    void should_name_the_rule_without_the_account_number_when_created_given_a_refused_number() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber("2000145399-0800"))
+                .withMessage("Account number must look like [prefix-]number/bank code")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("2000145399"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber("18-2000145399/0800"))
+                .withMessage("Account number prefix fails the modulo 11 check")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("18-", "2000145399", "0800"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber("2000145398/0800"))
+                .withMessage("Account number fails the modulo 11 check")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("2000145398", "0800"));
+        assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber("000/0800"))
+                .withMessage("Account number must not be zero")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("000/", "0800"));
+    }
 }

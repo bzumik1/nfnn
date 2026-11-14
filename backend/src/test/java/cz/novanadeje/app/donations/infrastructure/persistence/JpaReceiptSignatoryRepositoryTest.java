@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donations.domain.receipt.PersonReference;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
@@ -8,9 +9,6 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.transaction.TestTransaction;
@@ -27,9 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BankPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaReceiptSignatoryRepositoryTest {
 
     private static final UUID FIRST = UUID.fromString("019a3a00-0000-7000-8000-00000000d001");

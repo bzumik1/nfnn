@@ -20,7 +20,7 @@ public record SpaydText(String value) {
             throw new IllegalArgumentException("SPAYD text is required");
         }
         if (value.length() > MESSAGE_LENGTH || !FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("SPAYD text is up to " + MESSAGE_LENGTH + " characters of 0-9, A-Z, $ + - . / : and single spaces: " + value);
+            throw new IllegalArgumentException("SPAYD text is up to " + MESSAGE_LENGTH + " characters of 0-9, A-Z, $ + - . / : and single spaces");
         }
     }
 

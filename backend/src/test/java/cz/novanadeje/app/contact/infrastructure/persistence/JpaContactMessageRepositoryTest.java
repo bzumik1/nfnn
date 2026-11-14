@@ -1,5 +1,6 @@
 package cz.novanadeje.app.contact.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.contact.domain.ContactMessage;
 import cz.novanadeje.app.contact.domain.ContactMessageRepository;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -7,17 +8,12 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(ContactPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaContactMessageRepositoryTest {
 
     private static final Instant CUTOFF = Instant.parse("2025-10-23T10:00:00Z");

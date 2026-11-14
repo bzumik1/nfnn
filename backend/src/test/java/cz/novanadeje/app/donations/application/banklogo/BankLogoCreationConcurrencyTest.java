@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoImageId;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoRepository;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
+import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeBankLogoSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,7 +87,7 @@ class BankLogoCreationConcurrencyTest {
             }));
             assertThat(inserted.await(30, TimeUnit.SECONDS)).isTrue();
 
-            Future<BankLogoAdminRow> mine = callers.submit(() -> service.set(ADMIN, MINE, BankLogoPrecondition.absent()));
+            Future<BankLogoAdminRow> mine = callers.submit(() -> service.set(ADMIN, MINE, WritePrecondition.absent()));
             await().until(() -> waitingForLocks() >= 1);
             release.countDown();
             theirs.get(30, TimeUnit.SECONDS);

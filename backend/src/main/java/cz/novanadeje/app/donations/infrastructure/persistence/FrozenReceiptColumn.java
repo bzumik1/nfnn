@@ -90,8 +90,11 @@ final class FrozenReceiptColumn {
         return JSON.writeValueAsString(root);
     }
 
-    static ReceiptDocument document(String column) {
-        JsonNode root = JSON.readTree(column);
+    static JsonNode read(String column) {
+        return JSON.readTree(column);
+    }
+
+    static ReceiptDocument document(JsonNode root) {
         if (root.get("schemaVersion").asInt() != FrozenReceipt.SCHEMA_VERSION) {
             throw new IllegalStateException("A frozen receipt of schema version " + root.get("schemaVersion") + " is not readable here");
         }
@@ -124,8 +127,8 @@ final class FrozenReceiptColumn {
                         LocalDate.parse(replaces.get("issuedOn").asString()))));
     }
 
-    static ReceiptTextSet texts(String column) {
-        JsonNode texts = JSON.readTree(column).get("texts");
+    static ReceiptTextSet textSet(JsonNode root) {
+        JsonNode texts = root.get("texts");
         JsonNode english = texts.get("en");
         return new ReceiptTextSet(texts(texts.get("cs")), english.isNull() ? Optional.empty() : Optional.of(texts(english)));
     }

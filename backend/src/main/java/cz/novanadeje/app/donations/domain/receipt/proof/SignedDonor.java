@@ -22,7 +22,7 @@ public record SignedDonor(DonorType type, String name, String street, String cit
             throw new IllegalArgumentException("A company and only a company has a company identifier");
         }
         if (companyIdentifier.filter(identifier -> !COMPANY_IDENTIFIER.matcher(identifier).matches()).isPresent()) {
-            throw new IllegalArgumentException("A company identifier is eight digits: " + companyIdentifier.get());
+            throw new IllegalArgumentException("A company identifier is eight digits");
         }
     }
 

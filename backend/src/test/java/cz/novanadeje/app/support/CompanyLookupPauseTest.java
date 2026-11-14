@@ -1,10 +1,11 @@
 package cz.novanadeje.app.support;
 
-import cz.novanadeje.app.donors.application.CompanyLookupService;
 import cz.novanadeje.app.donors.application.CompanyRegistry;
+import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
+import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -29,21 +30,29 @@ class CompanyLookupPauseTest {
         CompanyRegistry registry = identifier -> {
             asked.incrementAndGet();
             if (down.get()) {
-                throw new CompanyRegistryUnavailable("down");
+                throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNREACHABLE);
             }
             return Optional.of(new RegisteredCompany(identifier, "Stavby Novák s.r.o.", Optional.empty()));
         };
-        CompanyLookupService lookup = new CompanyLookupService(registry, Clock.fixed(Instant.parse("2026-11-04T09:00:00Z"), ZoneOffset.UTC));
+        CompanyRegistryBreaker lookup = new CompanyRegistryBreaker(registry, Clock.fixed(Instant.parse("2026-11-04T09:00:00Z"), ZoneOffset.UTC));
         for (int attempt = 0; attempt < 3; attempt++) {
-            lookup.lookUp(COMPANY);
+            lookUpIgnoringFailure(lookup);
         }
         down.set(false);
-        assertThat(lookup.lookUp(COMPANY)).isEmpty();
+        assertThat(lookUpIgnoringFailure(lookup)).isEmpty();
         assertThat(asked).hasValue(3);
 
         CompanyLookupPause.reset(lookup);
 
-        assertThat(lookup.lookUp(COMPANY)).isPresent();
+        assertThat(lookUpIgnoringFailure(lookup)).isPresent();
         assertThat(asked).hasValue(4);
+    }
+
+    private static Optional<RegisteredCompany> lookUpIgnoringFailure(CompanyRegistryBreaker lookup) {
+        try {
+            return lookup.find(COMPANY);
+        } catch (CompanyRegistryUnavailable unavailable) {
+            return Optional.empty();
+        }
     }
 }

@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.application.report;
 
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
 import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows.ReportSettingsRow;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;

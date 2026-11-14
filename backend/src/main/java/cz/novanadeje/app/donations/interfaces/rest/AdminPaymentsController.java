@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.donations.application.admin.AdminPaymentsService;
 import cz.novanadeje.app.donations.application.admin.PaymentFilter;
 import cz.novanadeje.app.donations.application.pairing.ManualPairingService;
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
@@ -35,7 +35,6 @@ class AdminPaymentsController {
 
     static final String UNPAIRED = "unpaired";
     static final String PAIRED = "paired";
-    private static final String SCOPE_CLAIM = "scope";
     private static final int FIRST_FOUR_DIGIT_YEAR = 1000;
     private static final int LAST_FOUR_DIGIT_YEAR = 9999;
 
@@ -49,7 +48,7 @@ class AdminPaymentsController {
 
     @GetMapping("/payments")
     AdminPaymentListResponse payments(
-            @AuthenticationPrincipal Jwt jwt,
+            AdministrationChannel channel,
             @RequestParam(defaultValue = UNPAIRED) @Pattern(regexp = UNPAIRED + "|" + PAIRED) String pairing,
             @RequestParam(required = false) @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year,
             @RequestParam(required = false) @Size(max = PaymentFilter.MAX_TEXT_LENGTH) String query,
@@ -61,7 +60,7 @@ class AdminPaymentsController {
     ) {
         PaymentFilter filter = new PaymentFilter(query, from, to, donorId == null ? null : new DonorReference(donorId), offset, limit);
         if (PAIRED.equals(pairing)) {
-            return AdminPaymentListResponse.from(adminPayments.listPaired(Optional.ofNullable(year).map(Year::of), filter, channelOf(jwt)));
+            return AdminPaymentListResponse.from(adminPayments.listPaired(Optional.ofNullable(year).map(Year::of), filter, channel));
         }
         return AdminPaymentListResponse.from(adminPayments.listUnpaired(filter));
     }
@@ -78,12 +77,8 @@ class AdminPaymentsController {
     }
 
     @PostMapping("/payments/{id}/unpair")
-    UnpairPaymentResponse unpair(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, ExpectedVersion expected) {
-        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), channelOf(jwt), new BankPaymentId(id), expected));
-    }
-
-    private static AdministrationChannel channelOf(Jwt jwt) {
-        return jwt.hasClaim(SCOPE_CLAIM) ? AdministrationChannel.CONNECTED_APPLICATION : AdministrationChannel.BROWSER;
+    UnpairPaymentResponse unpair(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @PathVariable UUID id, ExpectedVersion expected) {
+        return UnpairPaymentResponse.from(manualPairing.unpair(admin(jwt), channel, new BankPaymentId(id), expected));
     }
 
     private static UUID admin(Jwt jwt) {

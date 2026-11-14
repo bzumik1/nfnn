@@ -1,0 +1,18 @@
+[
+  {
+    "path": "POST /api/donors/auth/password-reset/confirm",
+    "scenario": "donors/donor_password_reset: A malformed token or a blank field is a validation error*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "#732: every text of a request body carries @Size (security.md, Input), so a token longer than its 43 characters is refused for its length beside its shape: two field errors instead of one, the status and the problem type unchanged",
+    "contract": "docs/api-contract.md, validation errors (errors[{field,message}])"
+  },
+  {
+    "path": "POST /api/donors/auth/email-verification/confirm",
+    "scenario": "donors/donor_email_verification: A malformed token is a validation error*",
+    "kind": "body",
+    "field": "$.errors",
+    "reason": "#732: every text of a request body carries @Size (security.md, Input), so a token longer than its 43 characters is refused for its length beside its shape: two field errors instead of one, the status and the problem type unchanged",
+    "contract": "docs/api-contract.md, validation errors (errors[{field,message}])"
+  }
+]

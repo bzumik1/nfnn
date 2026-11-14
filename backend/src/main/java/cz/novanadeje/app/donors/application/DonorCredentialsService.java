@@ -7,9 +7,8 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.EmailUnchanged;
-import cz.novanadeje.app.donors.domain.LastSignInMethod;
-import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
+import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -17,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -37,10 +38,12 @@ public class DonorCredentialsService {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
+    private final TransactionTemplate reads;
+    private final TransactionTemplate writes;
 
     public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, DonorConfirmations confirmations, PasskeyRepository passkeys,
                                    DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
-                                   ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+                                   ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts, PlatformTransactionManager transactions) {
         this.signOuts = signOuts;
         this.donors = donors;
         this.passwordHasher = passwordHasher;
@@ -51,48 +54,54 @@ public class DonorCredentialsService {
         this.emailVerification = emailVerification;
         this.events = events;
         this.clock = clock;
+        this.reads = new TransactionTemplate(transactions);
+        this.reads.setReadOnly(true);
+        this.writes = new TransactionTemplate(transactions);
     }
 
-    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword,
                                              RequestingDevice device) {
-        Donor donor = lock(donorId);
-        confirmations.confirm(donor, confirmation);
-        RawPassword rawPassword = new RawPassword(newPassword);
-        sessions.requireLasting(donor, device);
-        Instant now = clock.instant();
-        donor.changePassword(passwordHasher.hash(rawPassword));
-        donors.save(donor);
-        signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
-        events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
-        log.info("Password of donor {} changed, every session revoked", donor.id());
-        return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
+        ConfirmedCredentials confirmed = confirmations.confirm(read(donorId), confirmation);
+        PasswordHash newHash = passwordHasher.hash(new RawPassword(newPassword));
+        return writes.execute(status -> {
+            Donor donor = lock(donorId);
+            confirmed.requireUnchangedIn(donor);
+            sessions.requireLasting(donor, device);
+            Instant now = clock.instant();
+            donor.changePassword(newHash);
+            donors.save(donor);
+            signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+            events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
+            log.info("Password of donor {} changed, every session revoked", donor.id());
+            return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
+        });
     }
 
-    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public AuthenticatedDonor removePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, RequestingDevice device) {
-        Donor donor = lock(donorId);
-        confirmations.confirm(donor, confirmation);
-        if (passkeys.countByDonor(donorId) == 0) {
-            throw new LastSignInMethod(donorId);
-        }
-        sessions.requireLasting(donor, device);
-        Instant now = clock.instant();
-        donor.removePassword();
-        donors.save(donor);
-        signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
-        log.info("Password of donor {} removed, every session revoked", donor.id());
-        return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
+        ConfirmedCredentials confirmed = confirmations.confirm(read(donorId), confirmation);
+        return writes.execute(status -> {
+            Donor donor = lock(donorId);
+            confirmed.requireUnchangedIn(donor);
+            donor.removePassword(passkeys.countByDonor(donorId));
+            sessions.requireLasting(donor, device);
+            Instant now = clock.instant();
+            donors.save(donor);
+            signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+            log.info("Password of donor {} removed, every session revoked", donor.id());
+            return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
+        });
     }
 
-    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public void requestEmailChange(DonorId donorId, Confirmation confirmation, EmailAddress newEmail) {
-        Donor donor = load(donorId);
-        confirmations.confirm(donor, confirmation);
-        if (newEmail.equals(donor.email())) {
-            throw new EmailUnchanged();
-        }
-        emailVerification.issueChangeLink(donor, newEmail);
+        ConfirmedCredentials confirmed = confirmations.confirm(read(donorId), confirmation);
+        writes.executeWithoutResult(status -> {
+            Donor donor = load(donorId);
+            confirmed.requireUnchangedIn(donor);
+            if (newEmail.equals(donor.email())) {
+                throw new EmailUnchanged();
+            }
+            emailVerification.issueChangeLink(donor, newEmail);
+        });
     }
 
     @Transactional
@@ -103,6 +112,10 @@ public class DonorCredentialsService {
     @Transactional
     public void cancelEmailChange(DonorId donorId) {
         emailVerification.cancelChange(load(donorId));
+    }
+
+    private Donor read(DonorId donorId) {
+        return reads.execute(status -> load(donorId));
     }
 
     private Donor load(DonorId donorId) {

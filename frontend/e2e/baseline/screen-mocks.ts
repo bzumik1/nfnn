@@ -326,6 +326,7 @@ const adminAnswers: Record<string, unknown> = {
     reportedOutage: null,
     historyImport: null,
     defaultHistoryFrom: '2026-01-01',
+    balance: { amountMinor: 48_215_050, readAt: '2026-10-28T08:00:00Z' },
   },
   '/api/admin/donations/overview': overview,
   '/api/admin/operations/backups': backups,

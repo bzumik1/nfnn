@@ -89,6 +89,26 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
     And the backend is not restarted for a new receipt signing seed
     And no email is sent
 
+  Scenario: A passkey of another account does not confirm the withdrawal and spends its challenge
+    Given "Jana" added a passkey named "iPhone"
+    And a person "Petr" is registered
+    And "Petr" added a passkey named "Klíč"
+    When "Jana" withdraws the receipt signing key "21fe31df" with the passkey "Klíč" of "Petr"
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+    When "Jana" withdraws the receipt signing key "21fe31df" with the passkey "iPhone" answering the challenge refused before
+    Then the response status is 400
+    And the problem type ends with "donors/passkey-confirmation-rejected"
+    And the backend is not restarted for a new receipt signing seed
+
+  Scenario: Wrong codes of a withdrawal count toward the pause of every code of the administrator
+    Given "Jana" tried to withdraw the receipt signing key "21fe31df" with a wrong code 5 times
+    When "Jana" unlocks the administration on this device with her password and the code "000000" 5 times, each from another client address
+    And the following requests come from another client address
+    And "Jana" unlocks the administration on this device with her password and a fresh code
+    Then the response status is 409
+    And the problem type ends with "donors/second-factor-codes-paused"
+
   Scenario: A key already withdrawn, an unknown key, a key that is not published and a malformed id are refused
     Given a row for the receipt signing key "39f713d0" was added in the database with the seal of "21fe31df"
     When "Jana" withdraws the receipt signing key "dac073e0" with a fresh code

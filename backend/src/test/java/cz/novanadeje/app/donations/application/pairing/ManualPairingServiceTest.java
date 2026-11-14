@@ -1,6 +1,6 @@
 package cz.novanadeje.app.donations.application.pairing;
 
-import cz.novanadeje.app.donations.application.receipt.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentAlreadyPaired;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.PaymentToErasedDonor;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -125,7 +126,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given the donor already downloaded the yearly receipt of the payment's year, when paired by hand, then the result names that year")
     void should_name_changed_yearly_receipt_when_paired_given_issued_yearly_receipt() {
-        when(receipts.findActiveForYear(janaId, Year.of(2026))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2026))));
+        when(receipts.existsActiveForYear(janaId, Year.of(2026))).thenReturn(true);
 
         ManualPairingResult result = service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none());
 
@@ -135,7 +136,7 @@ class ManualPairingServiceTest {
     @Test
     @DisplayName("Given a payment from before the first receipt year, when paired by hand, then no yearly receipt is reported even if one exists")
     void should_report_no_changed_receipt_when_paired_given_payment_before_first_receipt_year() {
-        when(receipts.findActiveForYear(janaId, Year.of(2025))).thenReturn(Optional.of(yearlyReceiptOf(janaId, Year.of(2025))));
+        when(receipts.existsActiveForYear(janaId, Year.of(2025))).thenReturn(true);
 
         ManualPairingResult result = service.pair(ADMIN, lastYear.id(), janaId, ExpectedVersion.none());
 
@@ -171,6 +172,18 @@ class ManualPairingServiceTest {
         assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), unknown, ExpectedVersion.none())).isInstanceOf(DonorRecordNotFound.class);
 
         verify(donations, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Given an erased donor, when a payment is paired with them by hand, then it is refused before the donor lock and nothing is stored or audited")
+    void should_refuse_when_paired_given_erased_donor() {
+        janaRecord.erase(NOW);
+
+        assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.none())).isInstanceOf(PaymentToErasedDonor.class);
+
+        verify(receipts, never()).lockDonor(any());
+        verify(donations, never()).save(any());
+        verify(events, never()).publishEvent(any());
     }
 
     @Test

@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Size;
 record SecondFactorDisableRequest(
         @Size(max = RawPassword.MAX_LENGTH) String password,
         @Valid PasskeySignInRequest passkey,
-        @NotBlank @Pattern(regexp = Totp.CODE_SHAPE) String code
+        @NotBlank @Size(max = Totp.DIGITS) @Pattern(regexp = Totp.CODE_SHAPE) String code
 ) {
 
     Confirmation confirmation() {

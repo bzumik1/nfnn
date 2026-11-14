@@ -2,7 +2,7 @@ package cz.novanadeje.app.donors.domain;
 
 public record CompanyIdentifier(String value) {
 
-    private static final int LENGTH = 8;
+    public static final int LENGTH = 8;
     private static final int[] WEIGHTS = {8, 7, 6, 5, 4, 3, 2};
 
     public CompanyIdentifier {
@@ -11,7 +11,7 @@ public record CompanyIdentifier(String value) {
         }
         value = value.replace(" ", "").trim();
         if (!hasValidCheckDigit(value)) {
-            throw new IllegalArgumentException("Company identifier is not valid: " + value);
+            throw new IllegalArgumentException("Company identifier is not valid");
         }
     }
 
@@ -20,7 +20,7 @@ public record CompanyIdentifier(String value) {
     }
 
     private static boolean hasValidCheckDigit(String digits) {
-        if (digits.length() != LENGTH || !digits.chars().allMatch(Character::isDigit)) {
+        if (digits.length() != LENGTH || !digits.chars().allMatch(CompanyIdentifier::isAsciiDigit)) {
             return false;
         }
         int sum = 0;
@@ -29,6 +29,10 @@ public record CompanyIdentifier(String value) {
         }
         int expected = (11 - (sum % 11)) % 10;
         return Character.digit(digits.charAt(LENGTH - 1), 10) == expected;
+    }
+
+    private static boolean isAsciiDigit(int character) {
+        return character >= '0' && character <= '9';
     }
 
     @Override

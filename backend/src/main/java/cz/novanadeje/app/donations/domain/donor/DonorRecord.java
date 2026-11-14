@@ -97,6 +97,12 @@ public final class DonorRecord {
         return erasedAt != null;
     }
 
+    public void requireOpenToPairing() {
+        if (erasedAt != null) {
+            throw new PaymentToErasedDonor(id);
+        }
+    }
+
     public Optional<Instant> erasedAt() {
         return Optional.ofNullable(erasedAt);
     }
@@ -265,7 +271,7 @@ public final class DonorRecord {
             return null;
         }
         if (companyIdentifier == null || !COMPANY_IDENTIFIER.matcher(companyIdentifier.trim()).matches()) {
-            throw new IllegalArgumentException("A company identification number is eight digits: " + companyIdentifier);
+            throw new IllegalArgumentException("A company identification number is eight digits");
         }
         return companyIdentifier.trim();
     }

@@ -5,7 +5,7 @@ import { articleReady } from './detail/article-ready';
 import { oldSectionRedirect } from './landing/old-section-redirect';
 import { NOT_FOUND_TITLE } from './not-found/not-found';
 
-const LANDING: RouteChromeData = { head: 'photo', landing: true };
+const LANDING: RouteChromeData = { head: 'photo', landing: true, darkThroughout: true };
 const LIGHT_HEAD: RouteChromeData = { head: 'light' };
 
 export const contentRoutes: Routes = [

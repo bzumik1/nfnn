@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.RuntimeConventionRulesTest > Given planted classes that make a random UUID, read the environment, take @Value, exit, build an unbounded cache and clients without timeouts or with redirects, when the rules check them, then each is reported and the bounded, timed ones are not",
+    "reason": "#762: the planted runtime test also plants a system property read, a Spring environment read outside an adapter, a cache from a specification and a default HTTP client, so its name lists them",
+    "replacement": "architecture.RuntimeConventionRulesTest > Given planted classes that make a random UUID, read the environment or a system property, take @Value or the Spring environment outside an adapter, exit, build an unbounded cache, a cache from a specification, a default client and clients without timeouts or with redirects, when the rules check them, then each is reported and the bounded, timed ones are not",
+    "contract": ".claude/rules/backend.md, Configuration and operations (RuntimeConventionRulesTest)"
+  }
+]

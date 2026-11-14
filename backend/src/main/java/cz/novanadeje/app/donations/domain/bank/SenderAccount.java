@@ -15,10 +15,10 @@ public record SenderAccount(String accountNumber, String bankCode) {
 
     public SenderAccount {
         if (accountNumber == null || !CANONICAL_NUMBER.matcher(accountNumber).matches()) {
-            throw new IllegalArgumentException("Not a canonical Czech account number: " + accountNumber);
+            throw new IllegalArgumentException("Not a canonical Czech account number");
         }
         if (bankCode == null || !BANK_CODE.matcher(bankCode).matches()) {
-            throw new IllegalArgumentException("Not a Czech bank code: " + bankCode);
+            throw new IllegalArgumentException("Not a Czech bank code");
         }
     }
 

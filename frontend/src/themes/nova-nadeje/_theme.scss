@@ -140,16 +140,23 @@
   --color-paper-muted: #f1f3f5;
   --color-logo: #005dab;
   --color-logo-fill: #ffffff;
-  --color-tab-bar: color-mix(in srgb, #0f172a 66%, transparent);
-  --color-tab-bar-rim: color-mix(in srgb, #ffffff 35%, transparent);
-  --color-tab-pill: color-mix(in srgb, #0f172a 88%, transparent);
+  --color-tab-bar: color-mix(in srgb, #ffffff 94%, transparent);
+  --color-tab-bar-rim: color-mix(in srgb, #0f172a 10%, transparent);
+  --color-tab-pill: color-mix(in srgb, #1d5fc9 10%, transparent);
   --color-tab-pill-rim: transparent;
-  --color-tab-active: #93c5fd;
-  --color-on-tab-bar: #ffffff;
-  --color-tab-focus-ring: #ffffff;
+  --color-tab-active: #1d5fc9;
+  --color-on-tab-bar: #1a1a2e;
+  --color-tab-focus-ring: #1d5fc9;
+  --color-tab-bar-on-dark: color-mix(in srgb, #1b2130 90%, transparent);
+  --color-tab-bar-rim-on-dark: color-mix(in srgb, #ffffff 12%, transparent);
+  --color-tab-pill-on-dark: color-mix(in srgb, #ffffff 8%, transparent);
+  --color-tab-pill-rim-on-dark: transparent;
+  --color-tab-active-on-dark: #93c5fd;
+  --color-on-tab-bar-on-dark: #e6e8ee;
+  --color-tab-focus-ring-on-dark: #ffffff;
   --color-sheet-grabber: var(--color-border-rule);
-  --color-sheet-close: var(--color-surface);
-  --color-on-sheet-close: var(--color-text);
+  --color-sheet-close: var(--color-tab-bar);
+  --color-on-sheet-close: var(--color-on-tab-bar);
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
   --color-group-cell: var(--color-surface);
@@ -157,7 +164,7 @@
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
   --color-sheet-chevron: var(--color-text-subtle);
-  --shadow-sheet-close: 0 1px 6px rgb(0 0 0 / 0.12);
+  --shadow-sheet-close: 0 0 0 1px var(--color-tab-bar-rim), var(--shadow-tab-bar);
 
   --font-serif: 'Playfair Display', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
@@ -284,18 +291,19 @@
   --shadow-media: 0 12px 36px rgb(0 0 0 / 0.25);
   --shadow-dialog: 0 24px 80px rgb(0 0 0 / 0.2);
   --shadow-sheet: 0 -8px 40px rgb(0 0 0 / 0.16);
-  --shadow-tab-bar: 0 8px 24px rgb(15 23 42 / 0.25);
+  --shadow-tab-bar: 0 6px 24px rgb(15 23 42 / 0.12);
+  --shadow-tab-bar-on-dark: 0 6px 24px rgb(0 0 0 / 0.4);
   --shadow-header: 0 2px 20px rgb(0 0 0 / 0.08);
   --shadow-menu: 0 8px 24px rgb(0 0 0 / 0.1);
   --shadow-action-bar: 0 6px 28px rgb(0 0 0 / 0.14);
   --shadow-text-on-image: 0 1px 4px rgb(0 0 0 / 0.4);
-  --shadow-cta: 0 8px 28px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
-  --shadow-cta-hero: 0 8px 28px color-mix(in srgb, var(--color-accent-fill) 50%, transparent);
-  --shadow-cta-nav: 0 4px 14px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
-  --shadow-button: 0 6px 20px color-mix(in srgb, var(--color-accent-fill) 35%, transparent);
-  --shadow-button-sm: 0 4px 14px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
-  --shadow-tab: 0 4px 12px color-mix(in srgb, var(--color-accent-fill) 30%, transparent);
-  --shadow-qr: 0 4px 20px color-mix(in srgb, var(--color-accent-fill) 13%, transparent);
+  --shadow-cta: none;
+  --shadow-cta-hero: 0 4px 16px rgb(0 0 0 / 0.25);
+  --shadow-cta-nav: none;
+  --shadow-button: none;
+  --shadow-button-sm: none;
+  --shadow-tab: none;
+  --shadow-qr: 0 2px 12px rgb(15 23 42 / 0.08);
   --shadow-nav-active: inset 3px 0 0 var(--color-accent);
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
 
@@ -317,7 +325,8 @@
   --dialog-close-size: 32px;
   --text-dialog-close: min(var(--text-4xl), var(--dialog-close-size));
   --blur-backdrop: 6px;
-  --blur-bar: 22px;
+  --blur-bar: 24px;
+  --bar-saturate: 180%;
   --filter-ink: none;
   --blend-ink: normal;
   --sheet-max-width: 600px;
@@ -335,7 +344,7 @@
   --sheet-profile-padding: 13.5px 18px;
   --sheet-avatar-size: 50px;
   --sheet-logo-height: 36px;
-  --sheet-chevron-size: 20px;
+  --sheet-chevron-size: 1.25rem;
   --text-sheet-body: 1rem;
   --text-sheet-subtitle: 0.882rem;
   --text-sheet-footnote: 0.765rem;
@@ -350,6 +359,9 @@
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 1.5rem;
   --text-tab-label: min(var(--text-2xs), (100cqi - 40px) / 19);
+  --back-icon-size: min(1.375rem, var(--back-button-size) * 0.68);
+  --list-chevron-size: 1rem;
+  --sheet-close-icon-size: min(1.25rem, var(--sheet-close-size) * 0.6);
   --launch-icon-size: 128px;
   --tab-bar-rendered-height: var(--tab-bar-height);
   --tab-bar-clearance: calc(
@@ -361,6 +373,11 @@
   --window-controls-inset-inline: 0px;
   --window-controls-inset-block: 0px;
   --home-screen-top-clearance: 16px;
+  --landing-bleed-top: 120px;
+  --landing-bleed-bottom: 160px;
+  --page-resting-scroll: 0px;
+  --page-bleed-bottom: 0px;
+  --hero-top-shade-height: 160px;
   --safe-area-top: env(safe-area-inset-top);
   --full-screen-height: 100svh;
   --scroll-edge-fade: 24px;
@@ -418,9 +435,10 @@
 
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --color-tab-bar: #616672;
-    --color-tab-pill: #0f172a;
+    --color-tab-bar: #ffffff;
+    --color-tab-bar-on-dark: #1a2232;
     --blur-bar: 0px;
+    --bar-saturate: 100%;
   }
 }
 
@@ -429,8 +447,13 @@
     color-scheme: dark;
     --color-sheet-grouped: var(--color-surface);
     --color-sheet-group: var(--color-surface-muted);
-    --color-sheet-close: var(--color-border);
-    --shadow-sheet-close: none;
+    --color-tab-bar: color-mix(in srgb, #1b2130 90%, transparent);
+    --color-tab-bar-rim: color-mix(in srgb, #ffffff 12%, transparent);
+    --color-tab-pill: color-mix(in srgb, #ffffff 8%, transparent);
+    --color-tab-active: #93c5fd;
+    --color-on-tab-bar: #e6e8ee;
+    --color-tab-focus-ring: #ffffff;
+    --shadow-tab-bar: 0 6px 24px rgb(0 0 0 / 0.4);
     --color-accent: #6ea8ff;
     --color-accent-soft: #162a4d;
     --color-accent-bg: #121d33;
@@ -484,6 +507,16 @@
 
     --filter-ink: invert(1) hue-rotate(180deg);
     --blend-ink: screen;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce) {
+  :root {
+    --color-tab-bar: #1a2232;
+    --color-tab-pill: color-mix(in srgb, #ffffff 8%, transparent);
+    --color-tab-active: #93c5fd;
+    --color-on-tab-bar: #e6e8ee;
+    --color-tab-focus-ring: #ffffff;
   }
 }
 

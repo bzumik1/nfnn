@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeRefresh;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeRefreshService;
+import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceFailure;
 import cz.novanadeje.app.donations.application.bankcode.BankCodeSourceUnavailable;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.AfterEach;
@@ -116,7 +117,7 @@ class BankCodeSchedulerTest {
     @DisplayName("Given a refresh is due and the source fails, when the daily check runs, then it warns with the reason only and survives")
     void should_warn_with_reason_when_daily_check_runs_given_failing_source() {
         when(service.isDue()).thenReturn(true);
-        when(service.refresh()).thenThrow(new BankCodeSourceUnavailable("refused list"));
+        when(service.refresh()).thenThrow(new BankCodeSourceUnavailable(BankCodeSourceFailure.REFUSED_LIST));
 
         scheduler.refresh();
 

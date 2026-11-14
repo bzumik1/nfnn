@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorCredentialsServiceTest > Given a session that has ended, when the password is changed or removed, then it is refused as ended before anything is hashed, stored, signed out or announced",
+    "reason": "#722: the new password is hashed outside the transaction before the write checks the session, so an ended session is still refused before anything is stored, signed out or announced, but no longer before the hash",
+    "replacement": "donors.application.DonorCredentialsServiceTest > Given a session that has ended, when the password is changed or removed, then it is refused as ended before anything is stored, signed out or announced",
+    "contract": "docs/system-overview.md, donors (Password work outside transactions)"
+  }
+]

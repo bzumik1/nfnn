@@ -27,7 +27,7 @@
         color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
         transparent 100%
       )
-      top / 100% 160px no-repeat;
+      top / 100% var(--hero-top-shade-height) no-repeat;
   z-index: 1;
 }
 
@@ -134,4 +134,41 @@
   --floating-room: calc(
     var(--floating-notice-height) + var(--offline-pill-height) + var(--space-3) + var(--space-3)
   );
+}
+
+:host-context(.landing-stage) {
+  .hero {
+    min-height: max(var(--full-screen-height), 100dvh);
+    overflow: visible;
+  }
+
+  .hero-img {
+    top: calc(-1 * var(--page-resting-scroll));
+    height: calc(100% + var(--page-resting-scroll) + var(--page-bleed-bottom));
+  }
+
+  .hero-overlay {
+    bottom: calc(-1 * var(--page-bleed-bottom));
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--color-image-shade) 85%, transparent) 0,
+      color-mix(in srgb, var(--color-image-shade) 85%, transparent) var(--page-bleed-bottom),
+      color-mix(in srgb, var(--color-image-shade) 30%, transparent)
+        calc(var(--page-bleed-bottom) + (100% - var(--page-bleed-bottom)) / 2),
+      transparent 100%
+    );
+  }
+
+  .hero-top-shade {
+    top: calc(-1 * var(--page-resting-scroll));
+    background:
+      var(--hero-top-scrim),
+      linear-gradient(
+          to bottom,
+          color-mix(in srgb, var(--color-image-shade) 55%, transparent) 0%,
+          color-mix(in srgb, var(--color-image-shade) 55%, transparent) var(--page-resting-scroll),
+          transparent 100%
+        )
+        top / 100% calc(var(--hero-top-shade-height) + var(--page-resting-scroll)) no-repeat;
+  }
 }

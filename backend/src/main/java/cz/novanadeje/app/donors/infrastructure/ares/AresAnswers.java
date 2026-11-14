@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.ares;
 
+import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
@@ -11,8 +12,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.Optional;
 
 final class AresAnswers {
-
-    static final String UNEXPECTED = "unexpected response";
 
     private static final String CZECHIA = "CZ";
     private static final int REGISTRATION_NUMBER = 2;
@@ -26,16 +25,16 @@ final class AresAnswers {
         try {
             root = mapper.readTree(answer);
         } catch (JacksonException malformed) {
-            throw new CompanyRegistryUnavailable(UNEXPECTED);
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNEXPECTED_RESPONSE);
         }
         if (root == null || !root.isObject() || !identifier.value().equals(text(root, "ico").orElse(""))) {
-            throw new CompanyRegistryUnavailable(UNEXPECTED);
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNEXPECTED_RESPONSE);
         }
-        String name = text(root, "obchodniJmeno").orElseThrow(() -> new CompanyRegistryUnavailable(UNEXPECTED));
+        String name = text(root, "obchodniJmeno").orElseThrow(() -> new CompanyRegistryUnavailable(CompanyRegistryFailure.UNEXPECTED_RESPONSE));
         try {
             return new RegisteredCompany(identifier, name, seat(root.get("sidlo")));
         } catch (IllegalArgumentException invalid) {
-            throw new CompanyRegistryUnavailable(UNEXPECTED);
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNEXPECTED_RESPONSE);
         }
     }
 

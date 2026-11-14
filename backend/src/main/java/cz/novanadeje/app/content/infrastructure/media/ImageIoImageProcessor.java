@@ -52,8 +52,7 @@ class ImageIoImageProcessor implements ImageProcessor {
     }
 
     private static ProcessedImage processAlone(byte[] upload) {
-        BufferedImage decoded = decode(upload);
-        BufferedImage upright = Orientation.apply(decoded, ExifOrientation.of(upload));
+        BufferedImage upright = toRgb(Orientation.apply(decode(upload), ExifOrientation.of(upload)));
         List<MediaVariant> variants = new ArrayList<>();
         for (int width : variantWidths(upright.getWidth())) {
             BufferedImage scaled = scaleToWidth(upright, width);

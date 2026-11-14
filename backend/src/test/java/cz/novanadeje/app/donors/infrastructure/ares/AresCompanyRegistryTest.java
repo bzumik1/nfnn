@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.ares;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
@@ -167,8 +168,7 @@ class AresCompanyRegistryTest {
     void should_be_unavailable_with_status_when_found_given_error_status() {
         for (int status : new int[]{500, 503, 429, 400, 302}) {
             answers.put(MINISTRY.value(), Answer.json(status, "{}"));
-            assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class)
-                    .hasMessage("status " + status);
+            assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.outcome()).isEqualTo("status " + status));
         }
     }
 
@@ -180,8 +180,7 @@ class AresCompanyRegistryTest {
                 Answer.json(200, "{\"ico\":\"00006947\",\"obchodniJmeno\":\"" + "x".repeat(200) + "\"}"),
                 new Answer(200, "text/html", MINISTRY_JSON, Duration.ZERO)}) {
             answers.put(MINISTRY.value(), answer);
-            assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class)
-                    .hasMessage("unexpected response");
+            assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.UNEXPECTED_RESPONSE));
         }
     }
 
@@ -190,7 +189,7 @@ class AresCompanyRegistryTest {
     void should_be_unavailable_when_found_given_oversized_answer() {
         answers.put(MINISTRY.value(), Answer.json(200, "{\"ico\":\"00006947\",\"obchodniJmeno\":\"" + "x".repeat(70_000) + "\"}"));
 
-        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("too large");
+        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TOO_LARGE));
     }
 
     @Test
@@ -202,8 +201,8 @@ class AresCompanyRegistryTest {
         AresCompanyRegistry impatient = localRegistry(STALL_TIMEOUT);
         long started = System.nanoTime();
 
-        assertThatThrownBy(() -> impatient.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
-        assertThatThrownBy(() -> impatient.find(silent)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("timeout");
+        assertThatThrownBy(() -> impatient.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
+        assertThatThrownBy(() -> impatient.find(silent)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
 
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(5_500));
     }
@@ -213,7 +212,7 @@ class AresCompanyRegistryTest {
     void should_be_unavailable_when_found_given_unreachable_register() {
         server.stop(0);
 
-        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("unreachable");
+        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.UNREACHABLE));
     }
 
     @Test
@@ -224,8 +223,8 @@ class AresCompanyRegistryTest {
         AresCompanyRegistry plain = new AresCompanyRegistry(HttpClient.newHttpClient(), URI.create("http://ares.gov.cz/ekonomicke-subjekty/"),
                 false, Duration.ofMillis(500), clock);
 
-        assertThatThrownBy(() -> strict.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("non-public address");
-        assertThatThrownBy(() -> plain.find(MINISTRY)).isInstanceOf(CompanyRegistryUnavailable.class).hasMessage("not https");
+        assertThatThrownBy(() -> strict.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NON_PUBLIC_ADDRESS));
+        assertThatThrownBy(() -> plain.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NOT_HTTPS));
         assertThat(requests.get()).isZero();
     }
 

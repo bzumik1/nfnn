@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
+import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
@@ -15,6 +16,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryNeedsRenaming;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryUnprintable;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.error.DomainException;
 import org.springframework.context.ApplicationEventPublisher;
@@ -117,8 +119,8 @@ public class YearlyReceiptsService {
                 .filter(Donation::isReceived)
                 .sorted(Comparator.comparing(Donation::receivedOn).thenComparing(gift -> gift.id().value()))
                 .collect(Collectors.groupingBy(Donation::donor, LinkedHashMap::new, Collectors.toList()));
-        Map<DonorReference, DonationReceipt> active = receipts.findActiveForYearOfEveryDonor(year).stream()
-                .collect(Collectors.toMap(DonationReceipt::donor, Function.identity()));
+        Map<DonorReference, ActiveYearlyReceipt> active = receipts.findActiveYearlyOfEveryDonor(year).stream()
+                .collect(Collectors.toMap(ActiveYearlyReceipt::donor, Function.identity()));
         List<DonorRecord> records = donorRecords.findByIds(gifts.keySet());
         Map<DonorReference, DonorRecord> recordsById = records.stream().collect(Collectors.toMap(DonorRecord::id, Function.identity()));
         List<YearlyReceiptCandidate> candidates = gifts.keySet().stream()
@@ -130,7 +132,7 @@ public class YearlyReceiptsService {
                 (int) records.stream().filter(DonorRecord::isErased).count());
     }
 
-    private static YearlyReceiptCandidate candidate(DonorRecord record, Collection<Donation> gifts, Optional<DonationReceipt> receipt) {
+    private static YearlyReceiptCandidate candidate(DonorRecord record, Collection<Donation> gifts, Optional<ActiveYearlyReceipt> receipt) {
         return new YearlyReceiptCandidate(record.id(), record.name(), record.type(), gifts.size(),
                 gifts.stream().mapToLong(gift -> gift.amount().amountMinor()).sum(), receipt);
     }

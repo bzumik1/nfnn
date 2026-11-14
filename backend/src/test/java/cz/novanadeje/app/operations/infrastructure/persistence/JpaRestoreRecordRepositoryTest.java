@@ -1,20 +1,16 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.operations.domain.backup.RestoreRecordRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(OperationsPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaRestoreRecordRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-23T19:30:00Z");

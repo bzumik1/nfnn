@@ -57,6 +57,15 @@ class JpaMediaImageRepository implements MediaImageRepository {
     }
 
     @Override
+    public Map<MediaId, MediaSize> findSizes(Collection<MediaId> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return jpa.findSizes(ids.stream().map(MediaId::value).distinct().toList()).stream()
+                .collect(Collectors.toUnmodifiableMap(row -> new MediaId(row.getId()), row -> new MediaSize(row.getWidth(), row.getHeight())));
+    }
+
+    @Override
     public boolean exists(MediaId id) {
         return jpa.existsById(id.value());
     }

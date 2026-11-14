@@ -17,10 +17,10 @@ public record Iban(String value) {
         }
         value = value.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
         if (!SHAPE.matcher(value).matches()) {
-            throw new IllegalArgumentException("IBAN is not well formed: " + value);
+            throw new IllegalArgumentException("IBAN is not well formed");
         }
         if (remainder(value) != VALID_REMAINDER) {
-            throw new IllegalArgumentException("IBAN check digits do not match: " + value);
+            throw new IllegalArgumentException("IBAN check digits do not match");
         }
     }
 

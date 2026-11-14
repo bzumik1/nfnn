@@ -6,23 +6,24 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
-import cz.novanadeje.app.donors.domain.LastSignInMethod;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.Passkey;
 import cz.novanadeje.app.donors.domain.PasskeyChallenge;
 import cz.novanadeje.app.donors.domain.PasskeyChallengeRepository;
-import cz.novanadeje.app.donors.domain.PasskeyConfirmationRejected;
+import cz.novanadeje.app.donors.domain.ConfirmationRequired;
 import cz.novanadeje.app.donors.domain.PasskeyId;
-import cz.novanadeje.app.donors.domain.PasskeyLimitReached;
 import cz.novanadeje.app.donors.domain.PasskeyNotFound;
 import cz.novanadeje.app.donors.domain.PasskeyRejected;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasskeyUserHandle;
+import cz.novanadeje.app.donors.domain.SignInMethods;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -42,10 +43,13 @@ public class DonorPasskeyService {
     private final SecondFactorSessionGuard sessionGuard;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final TransactionTemplate reads;
+    private final TransactionTemplate writes;
 
     public DonorPasskeyService(DonorRepository donors, PasskeyRepository passkeys, PasskeyChallengeRepository challenges,
                                DonorConfirmations confirmations, PasskeyCeremonies ceremonies, PasskeyProperties properties,
-                               SecondFactorSessionGuard sessionGuard, ApplicationEventPublisher events, Clock clock) {
+                               SecondFactorSessionGuard sessionGuard, ApplicationEventPublisher events, Clock clock,
+                               PlatformTransactionManager transactions) {
         this.donors = donors;
         this.passkeys = passkeys;
         this.challenges = challenges;
@@ -55,16 +59,32 @@ public class DonorPasskeyService {
         this.sessionGuard = sessionGuard;
         this.events = events;
         this.clock = clock;
+        this.reads = new TransactionTemplate(transactions);
+        this.reads.setReadOnly(true);
+        this.writes = new TransactionTemplate(transactions);
     }
 
-    @Transactional(noRollbackFor = PasskeyConfirmationRejected.class)
     public PasskeyCreationOptions creationOptions(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation) {
-        Donor donor = load(donorId);
-        if (!confirmation.isEmpty() || donor.hasPassword() || passkeys.countByDonor(donorId) > 0) {
-            confirmations.confirm(donor, confirmation);
-        }
-        sessionGuard.requireForFactorChange(donor, secondFactorVerified);
-        return optionsFor(donor);
+        Requested requested = reads.execute(status -> {
+            Donor donor = load(donorId);
+            return new Requested(donor, needsConfirmation(donor, confirmation));
+        });
+        ConfirmedCredentials confirmed = requested.needsConfirmation()
+                ? confirmations.confirm(requested.donor(), confirmation)
+                : ConfirmedCredentials.unconfirmed(requested.donor());
+        return writes.execute(status -> {
+            Donor donor = load(donorId);
+            confirmed.requireUnchangedIn(donor);
+            if (confirmed.method() == ConfirmedCredentials.Method.NOTHING && needsConfirmation(donor, confirmation)) {
+                throw new ConfirmationRequired();
+            }
+            sessionGuard.requireForFactorChange(donor, secondFactorVerified);
+            return optionsFor(donor);
+        });
+    }
+
+    private boolean needsConfirmation(Donor donor, Confirmation confirmation) {
+        return !confirmation.isEmpty() || donor.hasPassword() || passkeys.countByDonor(donor.id()) > 0;
     }
 
     PasskeyCreationOptions optionsFor(Donor donor) {
@@ -96,9 +116,7 @@ public class DonorPasskeyService {
         if (!challenges.markUsed(issued.id(), now)) {
             throw new PasskeyRejected();
         }
-        if (passkeys.countByDonor(donorId) >= properties.maxPerDonor()) {
-            throw new PasskeyLimitReached(properties.maxPerDonor());
-        }
+        SignInMethods.of(donor, passkeys.countByDonor(donorId)).withPasskey(properties.maxPerDonor());
         VerifiedPasskey verified = ceremonies.verifyRegistration(attestation, secret);
         if (passkeys.findByCredentialId(verified.credentialId()).isPresent()) {
             throw new PasskeyRejected();
@@ -134,9 +152,7 @@ public class DonorPasskeyService {
                 .filter(found -> found.belongsTo(donorId))
                 .orElseThrow(() -> new PasskeyNotFound(passkeyId));
         sessionGuard.requireForFactorChange(donor, secondFactorVerified);
-        if (!donor.hasPassword() && passkeys.countByDonor(donorId) <= 1) {
-            throw new LastSignInMethod(donorId);
-        }
+        SignInMethods.of(donor, passkeys.countByDonor(donorId)).withoutPasskey();
         passkeys.delete(passkey.id());
         events.publishEvent(new DonorPasskeyRemoved(donorId.value(), donor.email(), donor.preferredLocale(), passkey.name()));
         log.info("Passkey {} removed by donor {}", passkeyId, donorId);
@@ -148,6 +164,9 @@ public class DonorPasskeyService {
         } catch (IllegalArgumentException malformed) {
             throw new PasskeyRejected();
         }
+    }
+
+    private record Requested(Donor donor, boolean needsConfirmation) {
     }
 
     private Donor load(DonorId donorId) {

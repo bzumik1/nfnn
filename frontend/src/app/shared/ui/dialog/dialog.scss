@@ -191,6 +191,8 @@
 
   .dialog--sheet .dialog-close-icon {
     display: block;
+    width: var(--sheet-close-icon-size);
+    height: var(--sheet-close-icon-size);
   }
 
   .dialog--sheet .dialog-close-glyph {

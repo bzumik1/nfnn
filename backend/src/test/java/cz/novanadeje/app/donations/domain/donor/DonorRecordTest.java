@@ -469,6 +469,26 @@ class DonorRecordTest {
     }
 
     @Test
+    @DisplayName("Given a live record, when asked to take a payment paired by hand, then it accepts")
+    void should_accept_when_payment_paired_by_hand_given_live_record() {
+        DonorRecord record = person();
+
+        record.requireOpenToPairing();
+
+        assertThat(record.isErased()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an erased record, when asked to take a payment paired by hand, then it is refused as erased")
+    void should_refuse_when_payment_paired_by_hand_given_erased_record() {
+        DonorRecord record = person();
+        record.erase(LATER);
+
+        assertThatThrownBy(record::requireOpenToPairing).isInstanceOf(PaymentToErasedDonor.class)
+                .hasFieldOrPropertyWithValue("code", "donations/payment-to-erased-donor");
+    }
+
+    @Test
     @DisplayName("Given an erased record, when erased again, then it is refused")
     void should_refuse_when_erased_twice_given_erased_record() {
         DonorRecord record = person();
@@ -525,5 +545,14 @@ class DonorRecordTest {
         return BankPayment.incoming(id, IncomingMovement.of(new BankTransactionId(1001), bookedOn, Money.czk(50000), sender,
                 sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of("Nováková Jana"),
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem"), LATER);
+    }
+
+    @Test
+    @DisplayName("Given a company identifier that is not eight digits, when the record is registered, then the message names the rule without the identifier")
+    void should_name_the_rule_without_the_identifier_when_registered_given_malformed_identifier() {
+        assertThatThrownBy(() -> company("4527464X"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A company identification number is eight digits")
+                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4527464"));
     }
 }

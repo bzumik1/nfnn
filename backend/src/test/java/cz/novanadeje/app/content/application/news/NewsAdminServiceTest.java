@@ -39,7 +39,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -278,7 +280,7 @@ class NewsAdminServiceTest {
         when(news.isSlugTakenByAnother(any(), any())).thenReturn(false);
         when(people.findById(pavel.id())).thenReturn(Optional.of(pavel));
         when(people.findAllInOrder()).thenReturn(List.of(pavel));
-        when(media.findSize(IMAGE)).thenReturn(Optional.of(new MediaSize(600, 800)));
+        when(media.findSizes(Set.of(IMAGE))).thenReturn(Map.of(IMAGE, new MediaSize(600, 800)));
 
         NewsArticleView view = service().create(ADMIN, signed("Dominik", pavel.id())).view();
 

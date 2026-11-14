@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.shared.infrastructure.lock.AdvisoryLock;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import org.junit.jupiter.api.AfterEach;
@@ -9,9 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -25,9 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BankPersistenceTestConfiguration.class)
+@PersistenceTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class IssuedReceiptImmutabilityTest {
 

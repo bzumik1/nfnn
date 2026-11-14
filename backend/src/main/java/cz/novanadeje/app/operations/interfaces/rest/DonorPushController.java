@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 
 import cz.novanadeje.app.operations.application.push.DonorPushService;
 import cz.novanadeje.app.operations.domain.push.PushDeviceRequired;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -33,38 +34,38 @@ class DonorPushController {
     }
 
     @GetMapping
-    DonorPushResponse view(@AuthenticationPrincipal Jwt jwt) {
-        return DonorPushResponse.from(push.view(donor(jwt), SessionDevices.of(jwt)));
+    DonorPushResponse view(@AuthenticationPrincipal Jwt jwt, CurrentDevice device) {
+        return DonorPushResponse.from(push.view(donor(jwt), device.id()));
     }
 
     @PutMapping("/device")
-    DonorPushResponse.Device subscribe(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DonorPushDeviceRequest request) {
-        return DonorPushResponse.Device.from(push.subscribe(donor(jwt), device(jwt), request.toEndpoint(), request.toKeys(), request.toNotifications()));
+    DonorPushResponse.Device subscribe(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DonorPushDeviceRequest request, CurrentDevice device) {
+        return DonorPushResponse.Device.from(push.subscribe(donor(jwt), required(device), request.toEndpoint(), request.toKeys(), request.toNotifications()));
     }
 
     @PutMapping("/device/notifications")
-    DonorPushResponse.Device changeNotifications(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DonorNotificationsRequest request) {
-        return DonorPushResponse.Device.from(push.changeNotifications(donor(jwt), device(jwt), request.toNotifications()));
+    DonorPushResponse.Device changeNotifications(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody DonorNotificationsRequest request, CurrentDevice device) {
+        return DonorPushResponse.Device.from(push.changeNotifications(donor(jwt), required(device), request.toNotifications()));
     }
 
     @DeleteMapping("/device")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void remove(@AuthenticationPrincipal Jwt jwt) {
-        push.remove(donor(jwt), device(jwt));
+    void remove(@AuthenticationPrincipal Jwt jwt, CurrentDevice device) {
+        push.remove(donor(jwt), required(device));
     }
 
     @PostMapping("/test")
-    PushResponse.TestDelivery test(@AuthenticationPrincipal Jwt jwt, HttpServletRequest http) {
-        UUID device = device(jwt);
+    PushResponse.TestDelivery test(@AuthenticationPrincipal Jwt jwt, HttpServletRequest http, CurrentDevice device) {
+        UUID requested = required(device);
         testRateLimiter.check(http.getRemoteAddr());
-        return PushResponse.TestDelivery.from(push.sendTest(donor(jwt), device));
+        return PushResponse.TestDelivery.from(push.sendTest(donor(jwt), requested));
     }
 
     private static UUID donor(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
 
-    private static UUID device(Jwt jwt) {
-        return SessionDevices.of(jwt).orElseThrow(PushDeviceRequired::new);
+    private static UUID required(CurrentDevice device) {
+        return device.id().orElseThrow(PushDeviceRequired::new);
     }
 }

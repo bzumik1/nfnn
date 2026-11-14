@@ -39,7 +39,9 @@ public interface DonationReceiptRepository {
 
     List<DonationReceipt> findByDonorNewestFirst(DonorReference donor);
 
-    List<DonationReceipt> findActiveForYearOfEveryDonor(Year year);
+    List<ActiveYearlyReceipt> findActiveYearlyOfEveryDonor(Year year);
+
+    boolean existsActiveForYear(DonorReference donor, Year year);
 
     List<ReceiptSummary> findAllSummariesNewestFirst();
 

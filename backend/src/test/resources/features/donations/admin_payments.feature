@@ -162,6 +162,26 @@ Feature: An administrator pairs bank payments by hand
     And the problem type ends with "donations/donor-not-found"
     And bank payment 1001 is unpaired
 
+  Scenario: A payment is paired with an erased donor neither in a browser nor by a connected application
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name         | variableSymbol |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr | 1111111111     |
+    And the application starts the import
+    And "Jana" erased the donor "Petr"
+    When "Jana" pairs payment 1001 with "Petr"
+    Then the response status is 409
+    And the problem type ends with "donations/payment-to-erased-donor"
+    And the problem has the title "Dárce je vymazaný"
+    And bank payment 1001 is unpaired
+    And no admin action "PAIR_PAYMENT" is recorded
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token pairs payment 1001 with "Petr"
+    Then the response status is 409
+    And the problem type ends with "donations/payment-to-erased-donor"
+    And bank payment 1001 is unpaired
+    And no admin action "PAIR_PAYMENT" is recorded
+
   Scenario: A pairing request without a donor is refused
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol |

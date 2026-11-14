@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -15,11 +16,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class DonorRegistrationService {
@@ -32,28 +35,43 @@ public class DonorRegistrationService {
     private final DonorEmailVerificationService emailVerification;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final TransactionTemplate writes;
 
     public DonorRegistrationService(DonorRepository donors, PasswordHasher passwordHasher, DonorEmailVerificationService emailVerification,
-                                    ApplicationEventPublisher events, Clock clock) {
+                                    ApplicationEventPublisher events, Clock clock, PlatformTransactionManager transactions) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.emailVerification = emailVerification;
         this.events = events;
         this.clock = clock;
+        this.writes = new TransactionTemplate(transactions);
     }
 
-    @Transactional
     public void register(RegisterDonorCommand command) {
         EmailAddress email = new EmailAddress(command.email());
         Instant now = clock.instant();
+        Optional<CompanyIdentifier> companyIdentifier = command.companyIdentifier() == null || command.companyIdentifier().isBlank()
+                ? Optional.empty()
+                : Optional.of(new CompanyIdentifier(command.companyIdentifier()));
+        PostalAddress address = new PostalAddress(command.street(), command.city(), command.postalCode());
+        Optional<PasswordHash> passwordHash = hashOf(command.password());
+        writes.executeWithoutResult(status -> register(command, email, companyIdentifier, address, passwordHash, now));
+    }
+
+    private Optional<PasswordHash> hashOf(String password) {
+        return Optional.ofNullable(password).map(given -> passwordHasher.hash(new RawPassword(given)));
+    }
+
+    private void register(RegisterDonorCommand command, EmailAddress email, Optional<CompanyIdentifier> companyIdentifier, PostalAddress address,
+                          Optional<PasswordHash> passwordHash, Instant now) {
         Donor donor = Donor.register(
                 DonorId.newId(now),
                 command.type(),
                 command.name(),
-                command.companyIdentifier() == null || command.companyIdentifier().isBlank() ? null : new CompanyIdentifier(command.companyIdentifier()),
-                new PostalAddress(command.street(), command.city(), command.postalCode()),
+                companyIdentifier.orElse(null),
+                address,
                 email,
-                command.password() == null ? null : passwordHasher.hash(new RawPassword(command.password())),
+                passwordHash.orElse(null),
                 unusedVariableSymbol(),
                 LocaleCode.fromTag(command.preferredLocale()),
                 now

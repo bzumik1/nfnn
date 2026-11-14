@@ -2,10 +2,9 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
-import cz.novanadeje.app.donations.application.importing.FollowUp;
 import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
-import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
+import cz.novanadeje.app.donations.application.importing.ImportFollowUps;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
@@ -24,7 +23,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -32,8 +30,6 @@ import java.util.function.Supplier;
 @Component
 @Conditional(FioTokenPresentCondition.class)
 class FioImportScheduler implements BankImportRequests {
-
-    static final int MAX_FOLLOW_UPS_PER_TICK = 3;
 
     private static final Logger log = LoggerFactory.getLogger(FioImportScheduler.class);
     private static final String UNLOCK_HISTORY = "unlock the history in Fio internet banking (Nastavení > API, the lock icon) "
@@ -50,19 +46,17 @@ class FioImportScheduler implements BankImportRequests {
     private final AtomicBoolean onDemandPending = new AtomicBoolean();
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicReference<ScheduledFuture<?>> pendingFollowUp = new AtomicReference<>();
-    private final AtomicInteger followUpsSinceTick = new AtomicInteger();
     private final AtomicReference<HistoryImportRun> pendingHistoryRun = new AtomicReference<>();
     private final AtomicBoolean historyRunQueued = new AtomicBoolean();
     private final AtomicReference<ScheduledFuture<?>> pendingHistoryFollowUp = new AtomicReference<>();
-    private final AtomicInteger historyFollowUps = new AtomicInteger();
-    private final HistoryImportTracker historyImports;
+    private final ImportFollowUps followUps;
 
     FioImportScheduler(ImportBankPaymentsService service, BankImportProperties importProperties, TaskScheduler taskScheduler,
-                       HistoryImportTracker historyImports, Clock clock, ApplicationEventPublisher events) {
+                       ImportFollowUps followUps, Clock clock, ApplicationEventPublisher events) {
         this.service = service;
         this.importProperties = importProperties;
         this.taskScheduler = taskScheduler;
-        this.historyImports = historyImports;
+        this.followUps = followUps;
         this.clock = clock;
         this.events = events;
     }
@@ -70,7 +64,7 @@ class FioImportScheduler implements BankImportRequests {
     @Scheduled(initialDelayString = "${app.donations.fio.initial-delay}", fixedDelayString = "${app.donations.fio.interval}")
     void tick() {
         cancel(pendingFollowUp.getAndSet(null));
-        followUpsSinceTick.set(0);
+        followUps.scheduledRunStarted();
         run(started.compareAndSet(false, true) ? ImportTrigger.STARTUP : ImportTrigger.HOURLY);
     }
 
@@ -102,7 +96,6 @@ class FioImportScheduler implements BankImportRequests {
         if (pendingHistoryRun.accumulateAndGet(run, FioImportScheduler::newer) != run) {
             return;
         }
-        historyFollowUps.set(0);
         cancel(pendingHistoryFollowUp.getAndSet(null));
         if (!historyRunQueued.compareAndSet(false, true)) {
             return;
@@ -133,18 +126,18 @@ class FioImportScheduler implements BankImportRequests {
     }
 
     private void runHistory(HistoryImportRun run) {
-        if (!historyImports.current(run.id())) {
+        if (!followUps.due(run)) {
             return;
         }
         boolean ran;
         try {
             ran = execute(ImportTrigger.HISTORY, () -> Optional.of(service.importHistory(run, importProperties.toSettings())),
-                    report -> scheduleHistoryFollowUp(run, report));
+                    report -> followUps.afterHistory(run, report).ifPresent(at -> scheduleHistoryRun(run, at)));
         } finally {
             importEnded();
         }
         if (!ran) {
-            scheduleHistoryRun(run, clock.instant().plus(importProperties.onDemandCooldown()));
+            scheduleHistoryRun(run, followUps.putOffWhileBusy());
         }
     }
 
@@ -165,7 +158,7 @@ class FioImportScheduler implements BankImportRequests {
         return execute(trigger, importer, this::scheduleFollowUp);
     }
 
-    private boolean execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer, Consumer<ImportReport> followUps) {
+    private boolean execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer, Consumer<ImportReport> next) {
         if (!running.compareAndSet(false, true)) {
             log.warn("Fio import {} skipped, previous import still running", trigger);
             return false;
@@ -173,12 +166,10 @@ class FioImportScheduler implements BankImportRequests {
         try {
             importer.get().ifPresent(report -> {
                 report.failure().ifPresent(kind -> logFailure(report, kind));
-                if (report.followUp().isPresent()) {
-                    followUps.accept(report);
-                }
+                next.accept(report);
             });
         } catch (RuntimeException unexpected) {
-            log.error("Fio import {} failed unexpectedly", trigger, unexpected);
+            log.error("Fio import {} failed unexpectedly: {}", trigger, unexpected.getClass().getName());
         } finally {
             running.set(false);
         }
@@ -186,27 +177,10 @@ class FioImportScheduler implements BankImportRequests {
     }
 
     private void scheduleFollowUp(ImportReport report) {
-        FollowUp followUp = report.followUp().orElseThrow();
-        int followUps = followUpsSinceTick.incrementAndGet();
-        if (followUps > MAX_FOLLOW_UPS_PER_TICK) {
-            log.warn("Fio refused {} follow-ups in a row; waiting for the next hourly run", followUps);
-            return;
-        }
-        ScheduledFuture<?> next = taskScheduler.schedule(() -> run(followUp.trigger()), followUp.at());
-        cancel(pendingFollowUp.getAndSet(next));
-    }
-
-    private void scheduleHistoryFollowUp(HistoryImportRun run, ImportReport report) {
-        if (!historyImports.current(run.id())) {
-            return;
-        }
-        int followUps = historyFollowUps.incrementAndGet();
-        if (followUps > MAX_FOLLOW_UPS_PER_TICK) {
-            log.warn("Fio import HISTORY put off {} times in a row; it waits to be requested again", followUps);
-            historyImports.abandoned(run.id(), ImportFailureKind.RATE_LIMITED, clock.instant());
-            return;
-        }
-        scheduleHistoryRun(run, report.followUp().orElseThrow().at());
+        followUps.after(report).ifPresent(followUp -> {
+            ScheduledFuture<?> next = taskScheduler.schedule(() -> run(followUp.trigger()), followUp.at());
+            cancel(pendingFollowUp.getAndSet(next));
+        });
     }
 
     private void scheduleHistoryRun(HistoryImportRun run, Instant at) {
@@ -214,7 +188,7 @@ class FioImportScheduler implements BankImportRequests {
             cancel(pendingHistoryFollowUp.getAndSet(taskScheduler.schedule(() -> runHistory(run), at)));
         } catch (RuntimeException rejected) {
             log.warn("Fio import HISTORY run {} could not be scheduled again ({}); it ends as failed", run.id(), rejected.getClass().getSimpleName());
-            historyImports.abandoned(run.id(), ImportFailureKind.UNEXPECTED, clock.instant());
+            followUps.notRescheduled(run);
         }
     }
 

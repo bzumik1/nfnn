@@ -115,7 +115,7 @@ public final class Donor {
     public void verifyEmail(Instant at) {
         requireNotErased();
         if (emailVerifiedAt != null) {
-            throw new IllegalStateException("The e-mail of donor " + id + " is already verified");
+            throw new EmailAlreadyConfirmed(id);
         }
         this.emailVerifiedAt = require(at, "Verification time");
     }
@@ -140,7 +140,9 @@ public final class Donor {
         this.passwordHash = require(newPasswordHash, "Password hash");
     }
 
-    public void removePassword() {
+    public void removePassword(int passkeys) {
+        requireNotErased();
+        SignInMethods.of(this, passkeys).withoutPassword();
         this.passwordHash = null;
     }
 
@@ -151,7 +153,7 @@ public final class Donor {
     public void changeEmail(EmailAddress newEmail) {
         requireNotErased();
         if (emailVerifiedAt == null) {
-            throw new IllegalStateException("The e-mail of donor " + id + " is not verified yet");
+            throw new EmailNotConfirmed(id);
         }
         if (require(newEmail, "Email").equals(email)) {
             throw new EmailUnchanged();
@@ -212,11 +214,24 @@ public final class Donor {
         return roles.contains(Role.ADMIN);
     }
 
-    public void grantAdministration() {
+    public void grantAdministration(boolean holdsSecondFactor) {
+        requireGrantable();
+        if (!holdsSecondFactor) {
+            throw new AdministratorWithoutSecondFactor(id);
+        }
+        roles.add(Role.ADMIN);
+    }
+
+    public void grantFirstAdministration() {
+        requireGrantable();
+        roles.add(Role.ADMIN);
+    }
+
+    private void requireGrantable() {
         if (emailVerifiedAt == null) {
             throw new AdministratorEmailNotConfirmed(id);
         }
-        if (!roles.add(Role.ADMIN)) {
+        if (roles.contains(Role.ADMIN)) {
             throw new AlreadyAdministrator(id);
         }
     }

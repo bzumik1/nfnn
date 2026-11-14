@@ -61,6 +61,16 @@ class LiveSessionValidatorTest {
     }
 
     @Test
+    @DisplayName("Given a session claim that parses as a device id but is not spelt the way the server signs it, when it is validated, then it fails as an ended session without asking")
+    void should_fail_as_ended_when_validated_given_a_non_canonical_session_claim() {
+        OAuth2TokenValidatorResult upper = validate(token().claim(JwtProperties.SESSION_CLAIM, LIVE.toString().toUpperCase(java.util.Locale.ROOT)).build());
+        OAuth2TokenValidatorResult short_ = validate(token().claim(JwtProperties.SESSION_CLAIM, "1-1-1-1-1").build());
+
+        assertThat(upper.getErrors()).extracting(error -> error.getDescription()).containsExactly(JwtProperties.SESSION_ENDED);
+        assertThat(short_.getErrors()).extracting(error -> error.getDescription()).containsExactly(JwtProperties.SESSION_ENDED);
+    }
+
+    @Test
     @DisplayName("Given a browser token issued before devices existed, when it is validated, then it passes without asking")
     void should_pass_without_asking_when_validated_given_token_without_session() {
         assertThat(validate(token().build()).hasErrors()).isFalse();

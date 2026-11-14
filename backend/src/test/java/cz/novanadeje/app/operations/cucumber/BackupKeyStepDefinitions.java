@@ -79,6 +79,18 @@ public class BackupKeyStepDefinitions {
         revealsTheBackupKeyWithTheCode(alias, lastCode);
     }
 
+    @When("{string} reveals the backup key with the passkey {string} of {string}")
+    public void revealsTheBackupKeyWithThePasskeyOf(String alias, String name, String owner) {
+        sessions.actAs(alias);
+        api.post(KEY + "/reveal", Map.of("passkey", passkeys.passkeyConfirmation(owner, name)));
+    }
+
+    @When("{string} reveals the backup key with the passkey {string} answering the challenge refused before")
+    public void revealsTheBackupKeyAnsweringTheChallengeRefusedBefore(String alias, String name) {
+        sessions.actAs(alias);
+        api.post(KEY + "/reveal", Map.of("passkey", passkeys.passkeyAnswerToTheLastChallenge(alias, name)));
+    }
+
     @When("{string} reveals the backup key with the passkey {string}")
     public void revealsTheBackupKeyWithThePasskey(String alias, String name) {
         sessions.actAs(alias);

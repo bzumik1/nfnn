@@ -100,14 +100,15 @@ class DonorSecondFactorServiceTest {
     @Mock
     private WrongSecondFactorCodeCount wrongCodes;
 
+    private final OpenTransactions transactions = new OpenTransactions();
     private DonorSecondFactorService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
+        service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
                 new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts,
-                new SecondFactorCodes(secondFactors, wrongCodes));
+                new SecondFactorCodes(secondFactors, wrongCodes), transactions);
     }
 
     @Test
@@ -134,7 +135,7 @@ class DonorSecondFactorServiceTest {
     @DisplayName("Given an administrator with a passkey in a session opened with the password only, when the set-up begins, then it is refused and nothing is stored")
     void should_refuse_setup_when_begun_in_password_session_given_administrator_with_passkey() {
         Donor administrator = donor();
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         when(donors.findById(DONOR)).thenReturn(Optional.of(administrator));
         when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty());
@@ -316,6 +317,51 @@ class DonorSecondFactorServiceTest {
         assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword("wrong horse battery"), codeAt(NOW), DEVICE)).isInstanceOf(WrongPassword.class);
 
         verifyNoInteractions(secondFactors, signOuts, sessions, events);
+    }
+
+    @Test
+    @DisplayName("Given the right password, when the set-up begins or the factor is disabled, then the password is compared with no transaction open and the change is written in one")
+    void should_compare_outside_transaction_when_begun_or_disabled_given_right_password() {
+        Donor donor = donor();
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenAnswer(invocation -> transactions.recordingHashing(true));
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.empty(), Optional.of(enabledFactor()), Optional.empty());
+        when(secondFactors.recordUse(any())).thenReturn(true);
+        when(sessions.continueOn(donor, false, DEVICE)).thenReturn(TOKENS);
+
+        service.begin(DONOR, false, Confirmation.withPassword(PASSWORD));
+        service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE);
+
+        assertThat(transactions.openWhenHashing()).containsExactly(0, 0);
+        assertThat(transactions.open()).isZero();
+        assertThat(transactions.rolledBack()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given an enabled factor and a wrong code, when it is disabled, then the refusal commits, so the wrong code stays counted")
+    void should_commit_refusal_when_disabled_given_wrong_code() {
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+        when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabledFactor()));
+
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), "000000", DEVICE)).isInstanceOf(SecondFactorCodeRejected.class);
+
+        assertThat(transactions.rolledBack()).isZero();
+        assertThat(transactions.committed()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Given a password changed by another request after it was compared, when the set-up begins or the factor is disabled, then it is refused as a wrong password and nothing is written")
+    void should_refuse_and_write_nothing_when_begun_or_disabled_given_hash_changed_since_comparison() {
+        Donor changedMeanwhile = donor();
+        changedMeanwhile.changePassword(new PasswordHash("$meanwhile"));
+        when(donors.findById(DONOR)).thenReturn(Optional.of(donor()), Optional.of(changedMeanwhile), Optional.of(donor()), Optional.of(changedMeanwhile));
+        when(passwordHasher.matches(new RawPassword(PASSWORD), HASH)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.begin(DONOR, false, Confirmation.withPassword(PASSWORD))).isInstanceOf(WrongPassword.class);
+        assertThatThrownBy(() -> service.disable(DONOR, Confirmation.withPassword(PASSWORD), codeAt(NOW), DEVICE)).isInstanceOf(WrongPassword.class);
+
+        verifyNoInteractions(secondFactors, signOuts, sessions, events, wrongCodes);
     }
 
     private static SecondFactor enabledFactor() {

@@ -7,4 +7,5 @@ public enum ProjectCategory {
     OTHER;
 
     public static final String NAMES_PATTERN = "CHILDREN|ADULTS|ANIMALS|OTHER";
+    public static final int MAX_NAME_LENGTH = 8;
 }

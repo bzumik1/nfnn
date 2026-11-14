@@ -3,7 +3,9 @@ package cz.novanadeje.app.donations.infrastructure.fio;
 import com.sun.net.httpserver.HttpServer;
 import cz.novanadeje.app.donations.application.importing.BankImportRequests;
 import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
+import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
+import cz.novanadeje.app.donations.application.importing.ImportFollowUps;
 import cz.novanadeje.app.donations.domain.importing.BankImportOff;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.infrastructure.config.DonationsApplicationConfiguration;
@@ -283,8 +285,8 @@ class FioImportConfigurationTest {
         }
 
         @Bean
-        HistoryImportTracker historyImportTracker() {
-            return new HistoryImportTracker();
+        ImportFollowUps importFollowUps(BankImportProperties importProperties, Clock clock) {
+            return new ImportFollowUps(new HistoryImportTracker(), importProperties, clock);
         }
     }
 }

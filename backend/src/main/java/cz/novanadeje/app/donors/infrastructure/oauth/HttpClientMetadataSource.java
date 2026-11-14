@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.application.ClientMetadataSource;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.ClientMetadata;
 import cz.novanadeje.app.donors.domain.InvalidClient;
+import cz.novanadeje.app.shared.infrastructure.net.TimeBoundedCall;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +17,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,6 +43,7 @@ class HttpClientMetadataSource implements ClientMetadataSource {
     private final boolean privateAddressesAllowed;
     private final Duration timeout;
     private final Cache<ClientId, ClientMetadata> cache;
+    private final HostResolver resolver;
 
     @Autowired
     HttpClientMetadataSource(ClientMetadataDocuments documents, java.time.Clock clock) {
@@ -49,6 +52,12 @@ class HttpClientMetadataSource implements ClientMetadataSource {
 
     HttpClientMetadataSource(HttpClient http, ClientMetadataDocuments documents, boolean privateAddressesAllowed, Duration timeout,
                              java.time.Clock clock) {
+        this(http, documents, privateAddressesAllowed, timeout, clock, InetAddress::getAllByName);
+    }
+
+    HttpClientMetadataSource(HttpClient http, ClientMetadataDocuments documents, boolean privateAddressesAllowed, Duration timeout,
+                             java.time.Clock clock, HostResolver resolver) {
+        this.resolver = resolver;
         this.http = http;
         this.documents = documents;
         this.privateAddressesAllowed = privateAddressesAllowed;
@@ -62,12 +71,18 @@ class HttpClientMetadataSource implements ClientMetadataSource {
 
     @Override
     public ClientMetadata fetch(ClientId clientId) {
-        return cache.get(clientId, id -> fetch(URI.create(id.value()), id));
+        return Optional.ofNullable(cache.getIfPresent(clientId)).orElseGet(() -> fetchAndKeep(clientId));
+    }
+
+    private ClientMetadata fetchAndKeep(ClientId clientId) {
+        ClientMetadata fetched = fetch(URI.create(clientId.value()), clientId);
+        cache.put(clientId, fetched);
+        return fetched;
     }
 
     ClientMetadata fetch(URI documentUri, ClientId clientId) {
         long deadline = System.nanoTime() + timeout.toNanos();
-        requirePublicHost(documentUri);
+        requirePublicHost(documentUri, deadline);
         HttpRequest request = HttpRequest.newBuilder(documentUri)
                 .timeout(timeout)
                 .header("Accept", "application/json")
@@ -88,21 +103,27 @@ class HttpClientMetadataSource implements ClientMetadataSource {
             throw new InvalidClient("the client metadata document answered " + response.statusCode());
         }
         String contentType = response.headers().firstValue("Content-Type").orElse("");
-        if (!contentType.toLowerCase().startsWith("application/json")) {
+        if (!contentType.toLowerCase(Locale.ROOT).startsWith("application/json")) {
             throw new InvalidClient("the client metadata document is not JSON");
         }
         byte[] body = readBounded(response.body(), deadline);
         return documents.parse(body, clientId);
     }
 
-    private void requirePublicHost(URI documentUri) {
+    private void requirePublicHost(URI documentUri, long deadline) {
         if (privateAddressesAllowed) {
             return;
         }
         InetAddress[] addresses;
         try {
-            addresses = InetAddress.getAllByName(documentUri.getHost());
-        } catch (UnknownHostException unknown) {
+            addresses = TimeBoundedCall.within(Duration.ofNanos(deadline - System.nanoTime()), "client-host-lookup",
+                    () -> resolver.resolve(documentUri.getHost()));
+        } catch (ExecutionException unknown) {
+            throw new InvalidClient("the client host is unknown");
+        } catch (TimeoutException slow) {
+            throw new InvalidClient("the client host did not resolve in time");
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
             throw new InvalidClient("the client host is unknown");
         }
         for (InetAddress address : addresses) {

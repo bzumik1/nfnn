@@ -318,7 +318,8 @@ class ReceiptSigningKeyWithdrawalTest {
 
         assertThat(recordedInTransaction).containsExactly(false);
         assertThat(transactions.started).isEqualTo(1);
-        assertThat(transactions.rolledBack).isEqualTo(1);
+        assertThat(transactions.committed).isEqualTo(1);
+        assertThat(transactions.rolledBack).isZero();
     }
 
     @Test
@@ -344,6 +345,7 @@ class ReceiptSigningKeyWithdrawalTest {
         private boolean open;
         private int started;
         private int rolledBack;
+        private int committed;
         private Runnable commit = () -> {
         };
 
@@ -354,6 +356,7 @@ class ReceiptSigningKeyWithdrawalTest {
             try {
                 T result = action.doInTransaction(new SimpleTransactionStatus());
                 commit.run();
+                committed++;
                 return result;
             } catch (RuntimeException failure) {
                 rolledBack++;

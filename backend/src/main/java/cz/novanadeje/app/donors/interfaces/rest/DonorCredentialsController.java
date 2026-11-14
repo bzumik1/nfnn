@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 import cz.novanadeje.app.donors.application.DonorCredentialsService;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -38,20 +39,20 @@ class DonorCredentialsController {
 
     @PutMapping("/password")
     ResponseEntity<AuthResponse> changePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ChangePasswordRequest request,
-                                                HttpServletRequest http) {
+                                                HttpServletRequest http, CurrentDevice device) {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
                 credentials.changePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation(),
-                        request.newPassword(), SessionDevices.requesting(jwt, http)), clock.instant());
+                        request.newPassword(), SessionDevices.requesting(device, http)), clock.instant());
     }
 
     @PostMapping("/password/remove")
     ResponseEntity<AuthResponse> removePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PasswordRemovalRequest request,
-                                                HttpServletRequest http) {
+                                                HttpServletRequest http, CurrentDevice device) {
         passwordLimiter.check(http.getRemoteAddr());
         return SessionResponses.opened(HttpStatus.OK,
                 credentials.removePassword(DonorId.of(jwt.getSubject()), SessionRoles.secondFactorVerified(jwt), request.confirmation(),
-                        SessionDevices.requesting(jwt, http)), clock.instant());
+                        SessionDevices.requesting(device, http)), clock.instant());
     }
 
     @PostMapping("/email-change")

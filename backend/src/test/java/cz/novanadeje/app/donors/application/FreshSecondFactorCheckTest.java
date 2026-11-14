@@ -122,7 +122,7 @@ class FreshSecondFactorCheckTest {
 
         check.require(DONOR, SecondFactorProof.withPasskey(PASSKEY));
 
-        verify(confirmations).confirm(donor, Confirmation.withPasskey(PASSKEY));
+        verify(confirmations).confirmPasskey(donor, Confirmation.withPasskey(PASSKEY));
         verifyNoInteractions(secondFactors);
     }
 
@@ -131,7 +131,7 @@ class FreshSecondFactorCheckTest {
     void should_reject_when_checked_given_passkey_answer_not_confirmed() {
         Donor donor = donor();
         when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
-        doThrow(new PasskeyConfirmationRejected()).when(confirmations).confirm(donor, Confirmation.withPasskey(PASSKEY));
+        doThrow(new PasskeyConfirmationRejected()).when(confirmations).confirmPasskey(donor, Confirmation.withPasskey(PASSKEY));
 
         assertThatThrownBy(() -> check.require(DONOR, SecondFactorProof.withPasskey(PASSKEY))).isInstanceOf(PasskeyConfirmationRejected.class);
     }

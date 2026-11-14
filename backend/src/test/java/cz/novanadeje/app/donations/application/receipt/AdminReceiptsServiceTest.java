@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.BROWSER;
-import static cz.novanadeje.app.donations.application.receipt.AdministrationChannel.CONNECTED_APPLICATION;
+import static cz.novanadeje.app.shared.application.administration.AdministrationChannel.BROWSER;
+import static cz.novanadeje.app.shared.application.administration.AdministrationChannel.CONNECTED_APPLICATION;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.JANA;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.NOW;
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.TODAY;
@@ -100,8 +100,8 @@ class AdminReceiptsServiceTest {
         when(receipts.findById(unknown)).thenReturn(Optional.empty());
         when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
 
-        assertThat(service(NOW).receipt(yearly.id())).isEqualTo(new AdminReceiptView(yearly, false));
-        assertThatThrownBy(() -> service(NOW).receipt(unknown)).isInstanceOf(ReceiptNotFound.class);
+        assertThat(service(NOW).receipt(BROWSER, yearly.id())).isEqualTo(new AdminReceiptView(yearly, false, false));
+        assertThatThrownBy(() -> service(NOW).receipt(BROWSER, unknown)).isInstanceOf(ReceiptNotFound.class);
     }
 
     @Test
@@ -112,7 +112,27 @@ class AdminReceiptsServiceTest {
         when(receipts.findById(yearly.id())).thenReturn(Optional.of(yearly));
         when(donorRecords.findById(JANA)).thenReturn(Optional.of(erased));
 
-        assertThat(service(NOW).receipt(yearly.id())).isEqualTo(new AdminReceiptView(yearly, true));
+        assertThat(service(NOW).receipt(BROWSER, yearly.id())).isEqualTo(new AdminReceiptView(yearly, true, false));
+    }
+
+    @Test
+    @DisplayName("Given a receipt of a donor whose personal data are erased, when a connected application reads it, then the donor's personal data are withheld from it")
+    void should_withhold_donor_when_read_by_connected_application_given_erased_donor_record() {
+        DonorRecord erased = jana();
+        erased.erase(NOW);
+        when(receipts.findById(yearly.id())).thenReturn(Optional.of(yearly));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(erased));
+
+        assertThat(service(NOW).receipt(CONNECTED_APPLICATION, yearly.id())).isEqualTo(new AdminReceiptView(yearly, true, true));
+    }
+
+    @Test
+    @DisplayName("Given a receipt of a donor still on record, when a connected application reads it, then it comes as issued")
+    void should_not_withhold_donor_when_read_by_connected_application_given_donor_on_record() {
+        when(receipts.findById(yearly.id())).thenReturn(Optional.of(yearly));
+        when(donorRecords.findById(JANA)).thenReturn(Optional.of(jana()));
+
+        assertThat(service(NOW).receipt(CONNECTED_APPLICATION, yearly.id())).isEqualTo(new AdminReceiptView(yearly, false, false));
     }
 
     @Test

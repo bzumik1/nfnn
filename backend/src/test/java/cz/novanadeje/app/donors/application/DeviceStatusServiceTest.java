@@ -63,7 +63,7 @@ class DeviceStatusServiceTest {
                 new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
         if (administrator) {
             jana.verifyEmail(NOW);
-            jana.grantAdministration();
+            jana.grantAdministration(true);
         }
         when(donors.findById(JANA)).thenReturn(Optional.of(jana));
     }

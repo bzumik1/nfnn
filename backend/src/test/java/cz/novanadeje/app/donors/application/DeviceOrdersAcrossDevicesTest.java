@@ -176,7 +176,7 @@ class DeviceOrdersAcrossDevicesTest {
             this.petr = new Account(register("Petr Svoboda", "petr@example.cz", "5931048672"));
             this.acting = register("Eva Správcová", "eva@example.cz", "6041159783");
             Donor administrator = donors.findById(acting).orElseThrow();
-            administrator.grantAdministration();
+            administrator.grantAdministration(true);
             donors.save(administrator);
         }
 

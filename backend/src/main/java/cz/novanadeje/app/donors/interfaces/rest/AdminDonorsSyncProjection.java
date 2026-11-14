@@ -4,16 +4,15 @@ import cz.novanadeje.app.donors.application.AdminAccountsSyncSnapshot;
 import cz.novanadeje.app.donors.application.DonorAccountView;
 import cz.novanadeje.app.donors.application.AdminActionView;
 import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
+import cz.novanadeje.app.shared.interfaces.rest.SyncChunkEntry;
+import cz.novanadeje.app.shared.interfaces.rest.SyncChunkRows;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.UUID;
 
 @Component
@@ -34,15 +33,23 @@ class AdminDonorsSyncProjection {
     }
 
     List<SyncChunk> chunksOf(AdminAccountsSyncSnapshot snapshot) {
-        SortedMap<String, List<Object>> chunks = new TreeMap<>();
-        snapshot.accounts().stream().sorted(OLDER_REGISTRATION_FIRST).forEach(account ->
-                rowsOf(chunks, ACCOUNTS + SyncChunk.monthOf(account.donor().registeredAt())).add(DonorAccountResponse.from(account)));
-        snapshot.actions().forEach(action -> rowsOf(chunks, AUDIT + SyncChunk.monthOf(action.performedAt())).add(AuditRow.from(action, summaries.sentenceOnADevice(action))));
-        return SyncChunk.allOf(chunks, json);
+        return rowsOf(snapshot, SyncChunkRows.every()).chunks(json);
     }
 
-    private static List<Object> rowsOf(SortedMap<String, List<Object>> chunks, String id) {
-        return chunks.computeIfAbsent(id, ignored -> new ArrayList<>());
+    List<SyncChunkEntry> entriesOf(AdminAccountsSyncSnapshot snapshot) {
+        return rowsOf(snapshot, SyncChunkRows.every()).entries(json);
+    }
+
+    List<SyncChunk> chunksOf(AdminAccountsSyncSnapshot snapshot, List<String> ids) {
+        return rowsOf(snapshot, SyncChunkRows.only(ids)).chunks(json);
+    }
+
+    private SyncChunkRows rowsOf(AdminAccountsSyncSnapshot snapshot, SyncChunkRows chunks) {
+        snapshot.accounts().stream().sorted(OLDER_REGISTRATION_FIRST).forEach(account ->
+                chunks.add(ACCOUNTS + SyncChunk.monthOf(account.donor().registeredAt()), () -> DonorAccountResponse.from(account)));
+        snapshot.actions().forEach(action -> chunks.add(AUDIT + SyncChunk.monthOf(action.performedAt()),
+                () -> AuditRow.from(action, summaries.sentenceOnADevice(action))));
+        return chunks;
     }
 
     record AuditRow(UUID id, UUID adminId, String action, UUID subjectId, UUID donorId, String summary, Instant performedAt, String client) {

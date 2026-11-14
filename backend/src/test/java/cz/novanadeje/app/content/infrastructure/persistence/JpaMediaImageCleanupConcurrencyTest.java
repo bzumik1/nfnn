@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.content.domain.Slug;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImage;
@@ -20,9 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -43,9 +41,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(ContentPersistenceTestConfiguration.class)
+@PersistenceTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class JpaMediaImageCleanupConcurrencyTest {
 

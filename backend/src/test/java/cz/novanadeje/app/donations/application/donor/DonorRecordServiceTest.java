@@ -4,10 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import cz.novanadeje.app.donations.application.pairing.DonorPaymentsPairing;
 import cz.novanadeje.app.donations.application.pairing.PairingLock;
-import cz.novanadeje.app.donations.application.pairing.PairingOutcome;
-import cz.novanadeje.app.donations.application.pairing.PairingRaceLost;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.Donation;
@@ -79,8 +76,6 @@ class DonorRecordServiceTest {
     @Mock
     private DonationRepository donations;
     @Mock
-    private DonorPaymentsPairing pairing;
-    @Mock
     private PairingLock lock;
 
     private DonorRecordService service;
@@ -89,7 +84,7 @@ class DonorRecordServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorRecordService(donorRecords, claims, donations, pairing, lock, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonorRecordService(donorRecords, claims, donations, lock, Clock.fixed(NOW, ZoneOffset.UTC));
         logger = (Logger) LoggerFactory.getLogger(DonorRecordService.class);
         logs = new ListAppender<>();
         logs.start();
@@ -119,7 +114,6 @@ class DonorRecordServiceTest {
         assertThat(saved.registeredAt()).isEqualTo(REGISTERED_AT);
         assertThat(saved.senderAccounts()).isEmpty();
         verifyNoMoreInteractions(donorRecords);
-        verifyNoInteractions(pairing);
     }
 
     @Test
@@ -151,7 +145,6 @@ class DonorRecordServiceTest {
         assertThat(saved.variableSymbol()).isEqualTo(SYMBOL);
         assertThat(saved.registeredAt()).isEqualTo(REGISTERED_AT);
         assertThat(saved.updatedAt()).isEqualTo(NOW);
-        verifyNoInteractions(pairing);
     }
 
     @Test
@@ -179,40 +172,6 @@ class DonorRecordServiceTest {
 
         verify(donorRecords, never()).save(any());
         assertThat(warnings()).anySatisfy(message -> assertThat(message).contains(DONOR_ID.toString()));
-    }
-
-    @Test
-    @DisplayName("Given a known donor, when payments are paired after the registration, then the loaded record is paired at the clock's time and nothing is written")
-    void should_pair_loaded_record_when_pairing_after_registration_given_known_donor() {
-        when(pairing.pairPaymentsOf(DONOR, NOW)).thenReturn(Optional.of(new PairingOutcome(1, 1, 0, 1, 0)));
-
-        service.pairPaymentsOf(DONOR_ID);
-
-        verify(pairing).pairPaymentsOf(DONOR, NOW);
-        verifyNoInteractions(donorRecords);
-        assertThat(warnings()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("Given a donor unknown to donations, when payments are paired after the registration, then a warning names the donor and nothing is paired")
-    void should_warn_when_pairing_after_registration_given_unknown_donor() {
-        when(pairing.pairPaymentsOf(DONOR, NOW)).thenReturn(Optional.empty());
-
-        service.pairPaymentsOf(DONOR_ID);
-
-        verifyNoInteractions(donorRecords);
-        assertThat(warnings()).anySatisfy(message -> assertThat(message).contains(DONOR_ID.toString()));
-    }
-
-    @Test
-    @DisplayName("Given pairing that loses a race with the import, when payments are paired after the registration, then the lost race is logged and swallowed")
-    void should_swallow_and_warn_when_pairing_after_registration_given_lost_race() {
-        when(pairing.pairPaymentsOf(DONOR, NOW)).thenThrow(new PairingRaceLost(new IllegalStateException("uq_donation_bank_payment")));
-
-        service.pairPaymentsOf(DONOR_ID);
-
-        assertThat(warnings()).singleElement().isEqualTo("pairing after registration of donor " + DONOR_ID
-                + " lost a race with the import; the hourly pass completes it");
     }
 
     @Test
@@ -256,7 +215,6 @@ class DonorRecordServiceTest {
         assertThat(record.address()).isEqualTo(ErasedPersonalData.ADDRESS);
         assertThat(record.variableSymbol()).isEqualTo(SYMBOL);
         assertThat(record.senderAccountLinks()).isEmpty();
-        verifyNoInteractions(pairing);
         assertThat(warnings()).isEmpty();
     }
 

@@ -38,6 +38,11 @@ public class SettingsVersions {
 
     public record StoredSettingRow(String name, String value, boolean sealed, Instant updatedAt) {
 
+        @Override
+        public String toString() {
+            return "StoredSettingRow[" + name + (sealed ? "=sealed" : "=" + value) + ", updatedAt=" + updatedAt + "]";
+        }
+
         static StoredSettingRow of(StoredSetting stored) {
             return new StoredSettingRow(stored.setting().name(), stored.sealed() ? null : stored.value(), stored.sealed(), stored.updatedAt());
         }

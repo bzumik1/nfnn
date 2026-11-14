@@ -1,14 +1,12 @@
 package cz.novanadeje.app.operations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmation;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -16,9 +14,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(OperationsPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaBackupKeyConfirmationRepositoryTest {
 
     private static final BackupKey KEY = new BackupKey("AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH");

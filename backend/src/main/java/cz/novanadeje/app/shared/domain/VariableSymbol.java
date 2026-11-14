@@ -1,17 +1,19 @@
 package cz.novanadeje.app.shared.domain;
 
 import java.util.random.RandomGenerator;
+import java.util.regex.Pattern;
 
 public record VariableSymbol(String value) {
 
     public static final int MAX_LENGTH = 10;
     public static final String FORMAT = "[0-9]{1,10}";
+    private static final Pattern SHAPE = Pattern.compile(FORMAT);
 
     public VariableSymbol {
         if (value == null) {
             throw new IllegalArgumentException("Variable symbol is required");
         }
-        if (!value.matches(FORMAT)) {
+        if (!SHAPE.matcher(value).matches()) {
             throw new IllegalArgumentException("Variable symbol must be one to ten digits: " + value);
         }
     }

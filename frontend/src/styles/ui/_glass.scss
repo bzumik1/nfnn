@@ -1,0 +1,18 @@
+.ui-glass {
+  border: 1px solid var(--color-tab-bar-rim);
+  background: var(--color-tab-bar);
+  backdrop-filter: blur(var(--blur-bar)) saturate(var(--bar-saturate));
+  box-shadow: var(--shadow-tab-bar);
+  color: var(--color-on-tab-bar);
+}
+
+.ui-glass--on-dark {
+  --color-tab-bar: var(--color-tab-bar-on-dark);
+  --color-tab-bar-rim: var(--color-tab-bar-rim-on-dark);
+  --color-tab-pill: var(--color-tab-pill-on-dark);
+  --color-tab-pill-rim: var(--color-tab-pill-rim-on-dark);
+  --color-tab-active: var(--color-tab-active-on-dark);
+  --color-on-tab-bar: var(--color-on-tab-bar-on-dark);
+  --color-tab-focus-ring: var(--color-tab-focus-ring-on-dark);
+  --shadow-tab-bar: var(--shadow-tab-bar-on-dark);
+}

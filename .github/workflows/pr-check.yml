@@ -889,7 +889,7 @@ jobs:
         run: |
           for compose in deploy/compose.yml docker-compose.yml; do
             if [ "$(yq '.services.backend.stop_grace_period' "$compose")" != 75s ]; then
-              echo "::error::$compose must give the backend stop_grace_period 75s: Spring drains requests for up to 30 s and then awaits a running bank import for up to 30 s (spring.task.scheduling.shutdown), and Docker kills after 10 s by default"
+              echo "::error::$compose must give the backend stop_grace_period 75s: Spring drains requests for up to 20 s, waits up to 20 s for running async work (spring.lifecycle.timeout-per-shutdown-phase) and awaits a running bank import for up to 30 s (spring.task.scheduling.shutdown), and Docker kills after 10 s by default"
               exit 1
             fi
           done
@@ -1538,6 +1538,40 @@ jobs:
           grep -q '^outcome=ok$' "$backups/status/test-restore" || { echo "::error::a backup without the planted objects does not restore in a test database"; cat "$backups/status/test-restore"; exit 1; }
           curl -fsS --max-time 10 http://localhost:8089/ | grep -q '<app-root'
 
+      - name: The backend's whole heap fits into its 1 GB container beside what Java keeps outside it, so a full heap never gets the backend killed by the kernel
+        if: matrix.part == 'keys'
+        run: |
+          echo "Started again with its whole heap touched and no swap to spill into, the backend must start and serve without being killed: a full heap ends in Java's own error, never in a kill that leaves no log line"
+          limit=$(yq '.services.backend.deploy.resources.limits.memory' "$RUNNER_TEMP/compose.yml")
+          LIMIT="$limit" yq -i '.services.backend.environment._JAVA_OPTIONS = "-Xms0 -XX:InitialRAMPercentage=100 -XX:+AlwaysPreTouch -Xlog:gc+init" | .services.backend.memswap_limit = strenv(LIMIT)' "$RUNNER_TEMP/compose.yml"
+          docker compose up -d backend
+          state=
+          for _ in $(seq 240); do
+            state=$(docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' nfnn-backend)
+            case "$state" in
+              'false 0 healthy') break ;;
+              true*|'false '[1-9]*) break ;;
+            esac
+            sleep 1
+          done
+          [ "$state" = 'false 0 healthy' ] || { echo "::error::the backend with its whole heap touched did not stay up in its $limit container (OOM-killed, restarts, health: $state): the heap leaves too little room for what Java keeps beside it"; docker logs --tail 20 nfnn-backend 2>&1; exit 1; }
+          heap=$(docker logs nfnn-backend 2>&1 | grep -oE 'Heap (Initial|Max) Capacity: [0-9]+[KMG]' | tail -n 2 | sed 's/.*: //' | sort -u)
+          [ "$(echo "$heap" | wc -l)" = 1 ] && [ -n "$heap" ] || { echo "::error::the probe did not touch the whole heap (initial and maximum capacity differ: $heap)"; exit 1; }
+          echo "The backend holds its whole heap of $heap touched"
+          docker restart nfnn-frontend > /dev/null
+          for _ in $(seq 30); do
+            curl -fsS -o /dev/null --max-time 2 http://localhost:8089/api/content/home 2> /dev/null && break
+            sleep 1
+          done
+          for path in /api/content/home /api/content/news /api/donations/payment-details /api/donations/receipt-keys; do
+            seq 500 | xargs -P 20 -I{} curl -s -o /dev/null --max-time 30 -H 'X-Forwarded-For: 203.0.113.51' "http://localhost:8089$path" || true
+          done
+          state=$(docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}} {{.State.Health.Status}}' nfnn-backend)
+          [ "$state" = 'false 0 healthy' ] || { echo "::error::the backend with its whole heap touched was killed or restarted under 2 000 requests (OOM-killed, restarts, health: $state)"; exit 1; }
+          peak="/sys/fs/cgroup/system.slice/docker-$(docker inspect -f '{{.Id}}' nfnn-backend).scope/memory.peak"
+          [ -r "$peak" ] && echo "Peak memory of the backend's container: $(( $(cat "$peak") / 1024 / 1024 )) MiB of $limit"
+          true
+
       - name: An administrator with the second factor chooses who signs the receipts, with their receipt role, an SVG signature and a portrait, issues a receipt from the donor card, and the donor issues and reads theirs, active and then replaced after moving, while nfnn_status follows the signatory
         if: matrix.part == 'journeys'
         run: |
@@ -1625,6 +1659,32 @@ jobs:
             exit 1
           fi
           rm -f "$seed_spellings"
+
+      - name: An administrator downloads a backup larger than the frontend's temporary space over a slow line, whole and unchanged
+        if: matrix.part == 'journeys'
+        run: |
+          echo "nginx spools what a slow client has not taken into its 64 MB tmpfs, so a larger backup must pass it by"
+          backups="$RUNNER_TEMP/nfnn/backups"
+          name=nfnn-2026-01-01_0000-sonda-stazeni.dump.age
+          sudo sh -c "head -c $((96 * 1024 * 1024)) /dev/urandom > '$backups/$name' && chmod 644 '$backups/$name'"
+          expected_size=$(sudo stat -c %s "$backups/$name")
+          expected_sha=$(sudo sha256sum "$backups/$name" | cut -d' ' -f1)
+          admin=$(node scripts/stack-journey.mjs admin-session --state "$RUNNER_TEMP/journey.json" --client 203.0.113.31) || { echo "$admin"; exit 1; }
+          echo "::add-mask::$admin"
+          downloaded="$RUNNER_TEMP/downloaded-backup"
+          status=$(curl -sS --max-time 120 --limit-rate 8M -o "$downloaded" -D "$RUNNER_TEMP/backup-headers" -w '%{http_code}' -H 'X-Forwarded-For: 203.0.113.31' -H "Authorization: Bearer $admin" "http://localhost:8089/api/admin/operations/backups/$name") || true
+          sudo rm -f "$backups/$name"
+          [ "$status" = 200 ] || { echo "::error::downloading the backup answered $status"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          tr -d '\r' < "$RUNNER_TEMP/backup-headers" | grep -qix 'cloudflare-cdn-cache-control: no-store' || { echo "::error::the backup download must not be kept by Cloudflare"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          tr -d '\r' < "$RUNNER_TEMP/backup-headers" | grep -qix 'cache-control: private, no-store' || { echo "::error::the backup download must not be kept by any cache"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          size=$(stat -c %s "$downloaded")
+          [ "$size" = "$expected_size" ] || { echo "::error::the backup arrived with $size of its $expected_size bytes: nginx spooled it into its temporary space and cut it off when that was full"; docker logs nfnn-frontend 2>&1 | grep -F 'No space left' | tail -n 3; exit 1; }
+          [ "$(sha256sum "$downloaded" | cut -d' ' -f1)" = "$expected_sha" ] || { echo "::error::the downloaded backup differs from the file on the server"; exit 1; }
+          rm -f "$downloaded"
+          if docker logs nfnn-frontend 2>&1 | grep -F 'No space left' > /dev/null; then
+            echo "::error::nginx ran out of temporary space while it served the backup"
+            exit 1
+          fi
 
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         if: matrix.part == 'journeys'

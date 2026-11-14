@@ -68,8 +68,7 @@ public record IncomingMovement(
     static void requireMatching(Optional<String> variableSymbol, Optional<VariableSymbol> matchingVariableSymbol) {
         Optional<VariableSymbol> expected = VariableSymbols.forMatching(variableSymbol.orElse(null));
         if (!expected.equals(require(matchingVariableSymbol, "Matching variable symbol"))) {
-            throw new IllegalArgumentException("Matching variable symbol " + matchingVariableSymbol
-                    + " does not follow from the variable symbol " + variableSymbol);
+            throw new IllegalArgumentException("Matching variable symbol does not follow from the variable symbol");
         }
     }
 

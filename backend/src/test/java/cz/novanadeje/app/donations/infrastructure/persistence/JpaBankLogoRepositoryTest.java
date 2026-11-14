@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donations.domain.bankcode.BankCode;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogo;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
@@ -16,9 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
@@ -28,9 +26,7 @@ import static cz.novanadeje.app.donations.infrastructure.persistence.BankPersist
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BankPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaBankLogoRepositoryTest {
 
     private static final BankCode CSAS = new BankCode("0800");

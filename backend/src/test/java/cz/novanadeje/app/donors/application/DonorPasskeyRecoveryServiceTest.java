@@ -82,9 +82,9 @@ class DonorPasskeyRecoveryServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         DonorPasskeyService passkeyService = new DonorPasskeyService(donors, passkeys, challenges,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, clock), ceremonies,
+                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, new OpenTransactions(), clock), ceremonies,
                 new PasskeyProperties(Duration.ofMinutes(5), 10, "Nová naděje"), new SecondFactorSessionGuard(secondFactors, passkeys), events,
-                clock);
+                clock, new OpenTransactions());
         service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts, new SecondFactorCodes(secondFactors, wrongCodes));
     }
 
@@ -154,7 +154,7 @@ class DonorPasskeyRecoveryServiceTest {
     @DisplayName("Given an administrator's live link, when a new passkey is asked for or added, then it is refused and the link stays unused")
     void should_refuse_when_passkey_recovered_given_administrator() {
         Donor administrator = donor();
-        administrator.grantAdministration();
+        administrator.grantAdministration(true);
         LinkSecret link = liveLinkOf(administrator);
 
         assertThatThrownBy(() -> service.options(link.value(), null)).isInstanceOf(AdministratorRecoveryRefused.class);

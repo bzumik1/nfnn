@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
 import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportCounts;
+import cz.novanadeje.app.donations.application.importing.ImportFollowUps;
 import cz.novanadeje.app.donations.application.importing.ImportReport;
 import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
@@ -78,19 +79,20 @@ class FioImportSchedulerTest {
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private final HistoryImportTracker historyImports = mock(HistoryImportTracker.class);
-    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, historyImports, clock, events);
+    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler,
+            new ImportFollowUps(historyImports, IMPORT_PROPERTIES, clock), clock, events);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void captureLog() {
         log = new ListAppender<>();
         log.start();
-        logger().addAppender(log);
+        loggers().forEach(logger -> logger.addAppender(log));
     }
 
     @AfterEach
     void releaseLog() {
-        logger().detachAppender(log);
+        loggers().forEach(logger -> logger.detachAppender(log));
     }
 
     @Test
@@ -247,7 +249,7 @@ class FioImportSchedulerTest {
     @DisplayName("Given an import that throws, when the scheduler ticks, then nothing escapes, the error is logged once and the next tick runs again")
     void should_log_and_continue_when_ticked_given_import_throws() {
         when(service.importIncomingPayments(any(), any()))
-                .thenThrow(new IllegalStateException("database is down"))
+                .thenThrow(new IllegalStateException("payment from 2000145399/0800 could not be stored"))
                 .thenReturn(completed(HOURLY));
 
         assertThatCode(scheduler::tick).doesNotThrowAnyException();
@@ -255,8 +257,8 @@ class FioImportSchedulerTest {
 
         assertThat(log.list).filteredOn(event -> event.getLevel() == Level.ERROR).singleElement()
                 .satisfies(event -> {
-                    assertThat(event.getFormattedMessage()).isEqualTo("Fio import STARTUP failed unexpectedly");
-                    assertThat(event.getThrowableProxy().getMessage()).isEqualTo("database is down");
+                    assertThat(event.getFormattedMessage()).isEqualTo("Fio import STARTUP failed unexpectedly: java.lang.IllegalStateException");
+                    assertThat(event.getThrowableProxy()).isNull();
                 });
         verify(service).importIncomingPayments(HOURLY, SETTINGS);
     }
@@ -692,7 +694,7 @@ class FioImportSchedulerTest {
                 Optional.of(kind), Optional.of(FAILURE_MESSAGE), Optional.ofNullable(followUp));
     }
 
-    private static Logger logger() {
-        return (Logger) LoggerFactory.getLogger(FioImportScheduler.class);
+    private static List<Logger> loggers() {
+        return List.of((Logger) LoggerFactory.getLogger(FioImportScheduler.class), (Logger) LoggerFactory.getLogger(ImportFollowUps.class));
     }
 }

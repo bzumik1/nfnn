@@ -40,6 +40,12 @@ export interface ImportStateResponse {
   reportedOutage: ImportFailureKind | null;
   historyImport: HistoryImportResponse | null;
   defaultHistoryFrom: string;
+  balance: AccountBalance | null;
+}
+
+export interface AccountBalance {
+  amountMinor: number;
+  readAt: string;
 }
 
 export type HistoryImportStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'HISTORY_LOCKED' | 'FAILED';
