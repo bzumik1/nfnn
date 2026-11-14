@@ -167,7 +167,16 @@ describe('Given an application sent the browser to the connection page', () => {
       );
       expect(element('.scope-hint').textContent).toContain('jen čtení');
       expect(element('.never').textContent).toContain('Nikdy nebude smět');
-      expect(element('.never').textContent).toContain('nic mazat');
+      expect(element('.never').textContent).not.toContain('nic mazat');
+      expect(element('.never').textContent).not.toContain('podpis na potvrzeních');
+      expect(element('.never').textContent).toContain('mazat aktuality, projekty, dárce');
+      expect(bullets('.write-scopes li')).toContain('vystavit dárci první potvrzení o daru');
+      expect(bullets('.write-scopes li')).toContain(
+        'upravit lidi fondu, jejich podpis včetně podpisu na potvrzeních, a lidi i odebrat',
+      );
+      expect(bullets('.write-scopes li')).toContain(
+        'měnit nastavení webu kromě tajných údajů, adresy webu, pošty a příjemců reportu',
+      );
       expect(root().textContent).toContain('v části Údaje a zabezpečení → Připojené aplikace');
       expect(document.activeElement).toBe(element('h1'));
     });
