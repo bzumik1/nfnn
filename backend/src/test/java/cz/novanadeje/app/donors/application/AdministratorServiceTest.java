@@ -237,6 +237,7 @@ class AdministratorServiceTest {
         InOrder order = inOrder(donors);
         order.verify(donors).lockAdministrators();
         order.verify(donors).findByIdForUpdate(PETR);
+        order.verify(donors).findAdministrators();
         verify(donors, never()).save(any());
         verifyNoInteractions(signOuts, events);
     }
@@ -250,11 +251,16 @@ class AdministratorServiceTest {
     }
 
     @Test
-    @DisplayName("Given an administrator, when they revoke their own role, then the request is refused before any lookup")
+    @DisplayName("Given an administrator, when they revoke their own role, then the request is refused, nothing is saved and no session ends")
     void should_refuse_when_revoked_given_own_id() {
+        Donor jana = administrator(JANA, "Jana Nováková", "jana@example.cz");
+        when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(jana));
+        when(donors.findAdministrators()).thenReturn(List.of(jana, administrator(PETR, "Petr Svoboda", PETR_EMAIL.value())));
+
         assertThatThrownBy(() -> service.revoke(JANA, JANA)).isInstanceOf(OwnAdministrationRevoked.class);
 
-        verifyNoInteractions(donors, signOuts, events);
+        verify(donors, never()).save(any());
+        verifyNoInteractions(signOuts, events);
     }
 
     @Test

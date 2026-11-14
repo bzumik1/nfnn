@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.AdministratorServiceTest > Given an administrator, when they revoke their own role, then the request is refused before any lookup",
+    "replacement": "donors.application.AdministratorServiceTest > Given an administrator, when they revoke their own role, then the request is refused, nothing is saved and no session ends",
+    "reason": "PR #880 (#877, part of #621): the own-revocation rule moves into the domain service AdministratorRoster, which checks the loaded donor, so the refusal now comes after the administrators lock and the donor lookup, with the same 400 donors/own-administration",
+    "contract": "docs/system-overview.md"
+  }
+]
