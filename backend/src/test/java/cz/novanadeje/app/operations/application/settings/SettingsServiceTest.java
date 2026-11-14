@@ -82,7 +82,7 @@ class SettingsServiceTest {
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().action()).isEqualTo(SettingsService.CHANGE_ACTION);
         assertThat(audit.getValue().details()).contains("FIO_TOKEN", "RECEIPT_FIRST_YEAR").doesNotContain("secret-token", "2025");
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitOnceAsyncWorkIsDone();
         assertThat(repository.findAll()).hasSize(2);
     }
 

@@ -123,7 +123,7 @@ class SetupServiceTest {
         assertThat(stored).hasSize(ESSENTIALS.size());
         assertThat(repository.findAll()).hasSize(ESSENTIALS.size());
         assertThat(state.completedAt).contains(NOW);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitOnceAsyncWorkIsDone();
         assertThat(setup.status(true)).isEqualTo(new SetupStatusView(false, false, Optional.empty()));
     }
 
@@ -160,7 +160,7 @@ class SetupServiceTest {
         assertThat(repository.findAll()).isEmpty();
         assertThat(state.completedAt).isEmpty();
         assertThat(keyConfirmations.find()).isEmpty();
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
     }
 
     @Test
@@ -169,7 +169,7 @@ class SetupServiceTest {
         assertThatThrownBy(() -> setup.complete(new SetupAccess(true, null), ESSENTIALS.subList(0, 3), KEY_CHECK)).isInstanceOf(SettingsRejected.class);
 
         assertThat(state.completedAt).isEmpty();
-        verify(restarter, never()).restartAfterCommit();
+        verifyNoInteractions(restarter);
     }
 
     @Test
@@ -236,7 +236,7 @@ class SetupServiceTest {
 
         assertThat(request.source()).isEqualTo(RestoreSource.UPLOAD);
         verify(backups).requestRestore(request);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitForRestore();
     }
 
     @Test

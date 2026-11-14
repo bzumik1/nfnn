@@ -54,8 +54,6 @@ class EventListenerRulesTest {
     private static final Map<String, String> PLAIN_LISTENERS = Map.of(
             "cz.novanadeje.app.operations.infrastructure.events.MailDeliveryListener",
             "a send happens inside a transaction that may roll back (the monthly report) or outside any (the @Async senders), and the outage must be kept either way",
-            "cz.novanadeje.app.operations.infrastructure.backup.ReceiptSeedRenewal",
-            "the announcement is published after the withdrawal committed, once the notices are handed over",
             "cz.novanadeje.app.donors.infrastructure.recovery.SecondFactorRecoveryPaymentListener",
             "it turns the factor off in the import's own transaction, so a failure rolls the import back and the next run retries");
 

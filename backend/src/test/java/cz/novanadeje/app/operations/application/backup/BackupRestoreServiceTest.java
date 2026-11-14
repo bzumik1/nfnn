@@ -35,6 +35,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 class BackupRestoreServiceTest {
@@ -64,7 +65,8 @@ class BackupRestoreServiceTest {
         assertThat(request.requestedBy()).contains(ADMIN);
         assertThat(request.requestedAt()).isEqualTo(NOW);
         verify(store).requestRestore(request);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitForRestore();
+        verifyNoMoreInteractions(restarter);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
         assertThat(audit.getValue().action()).isEqualTo("RESTORE_BACKUP");
@@ -111,7 +113,8 @@ class BackupRestoreServiceTest {
         assertThat(request.fileName()).isEqualTo(request.id() + ".upload");
         assertThat(request.requestedBy()).isEmpty();
         verify(store).requestRestore(request);
-        verify(restarter).restartAfterCommit();
+        verify(restarter).restartAfterCommitForRestore();
+        verifyNoMoreInteractions(restarter);
         verifyNoInteractions(events);
     }
 

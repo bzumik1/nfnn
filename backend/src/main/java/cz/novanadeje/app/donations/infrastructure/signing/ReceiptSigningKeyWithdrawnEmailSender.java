@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.infrastructure.signing;
 
-import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawalAnnounced;
 import cz.novanadeje.app.shared.application.event.ReceiptSigningKeyWithdrawn;
 import cz.novanadeje.app.shared.application.account.AdministratorContact;
 import cz.novanadeje.app.shared.application.account.AdministratorContacts;
@@ -11,8 +10,9 @@ import cz.novanadeje.app.shared.infrastructure.mail.MailSenderProperties;
 import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.mail.MailException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -39,19 +39,18 @@ class ReceiptSigningKeyWithdrawnEmailSender {
     private final MessageSource messages;
     private final MailSenderProperties sender;
     private final AdministratorContacts administrators;
-    private final ApplicationEventPublisher events;
 
     ReceiptSigningKeyWithdrawnEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, MailSenderProperties sender,
-                                          AdministratorContacts administrators, ApplicationEventPublisher events) {
+                                          AdministratorContacts administrators) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
         this.sender = sender;
         this.administrators = administrators;
-        this.events = events;
     }
 
     @Async
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendWithdrawnNotice(ReceiptSigningKeyWithdrawn event) {
         try {
@@ -63,8 +62,6 @@ class ReceiptSigningKeyWithdrawnEmailSender {
             recipients.forEach(recipient -> send(recipient, withdrawnBy, event));
         } catch (RuntimeException e) {
             log.error("The notices that admin {} withdrew a receipt signing key could not be prepared: {}", event.adminId(), e.getClass().getSimpleName());
-        } finally {
-            events.publishEvent(new ReceiptSigningKeyWithdrawalAnnounced(event.keyId(), event.current()));
         }
     }
 
