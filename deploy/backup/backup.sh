@@ -194,10 +194,12 @@ wait_for_database() {
 take_backup() {
   b_request=$2
   b_started=$(now_utc)
-  b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump.age"
+  b_stamp=$(date +%Y-%m-%d_%H%M)
+  b_name="nfnn-$b_stamp$1.dump.age"
+  b_count=1
   while [ -e "$BACKUPS/$b_name" ]; do
-    sleep 5
-    b_name="nfnn-$(date +%Y-%m-%d_%H%M)$1.dump.age"
+    b_count=$((b_count + 1))
+    b_name="nfnn-$b_stamp$1-$b_count.dump.age"
   done
   : > "$STATUS/backup.err"
   if valid_key "$KEY_FILE" \

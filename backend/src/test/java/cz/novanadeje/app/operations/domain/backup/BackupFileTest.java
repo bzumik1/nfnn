@@ -20,9 +20,14 @@ class BackupFileTest {
             "nfnn-2026-10-23_0300.dump.age, DAILY",
             "nfnn-2026-10-23_0633-rucni.dump.age, REQUESTED",
             "nfnn-2026-10-23_0634-pred-obnovou.dump.age, BEFORE_RESTORE",
-            "nfnn-2026-10-23_0634-test.dump.age, OTHER"
+            "nfnn-2026-10-23_0634-test.dump.age, OTHER",
+            "nfnn-2026-10-23_0300-2.dump.age, DAILY",
+            "nfnn-2026-10-23_0633-rucni-2.dump.age, REQUESTED",
+            "nfnn-2026-10-23_0633-rucni-13.dump.age, REQUESTED",
+            "nfnn-2026-10-23_0634-pred-obnovou-3.dump.age, BEFORE_RESTORE",
+            "nfnn-2026-10-23_0634-test-2.dump.age, OTHER"
     })
-    @DisplayName("Given a dump name written by the backup script, when the kind is asked for, then the suffix decides it")
+    @DisplayName("Given a dump name written by the backup script, when the kind is asked for, then the suffix decides it, whatever counter follows it")
     void should_tell_kind_when_asked_given_a_script_name(String name, BackupKind kind) {
         assertThat(new BackupFile(name, 1024, CREATED).kind()).isEqualTo(kind);
     }
