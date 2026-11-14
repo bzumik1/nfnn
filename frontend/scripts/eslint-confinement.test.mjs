@@ -36,7 +36,8 @@ function filesOf(scopes) {
   return Object.fromEntries(
     Object.entries(scopeGlobs(scopes)).map(([scope, { files, ignores }]) => {
       const ignored = matching(ignores);
-      return [scope, SOURCES.filter((file) => matching(files).has(file) && !ignored.has(file))];
+      const matched = matching(files);
+      return [scope, SOURCES.filter((file) => matched.has(file) && !ignored.has(file))];
     }),
   );
 }
