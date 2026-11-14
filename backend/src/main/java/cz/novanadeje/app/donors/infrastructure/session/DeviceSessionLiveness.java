@@ -2,8 +2,8 @@ package cz.novanadeje.app.donors.infrastructure.session;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import cz.novanadeje.app.donors.application.SignedInDeviceCheck;
 import cz.novanadeje.app.donors.domain.DeviceId;
-import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.session.SessionLiveness;
 import org.springframework.stereotype.Component;
@@ -21,13 +21,11 @@ class DeviceSessionLiveness implements SessionLiveness {
     static final Duration CACHE_WINDOW = Duration.ofSeconds(30);
     private static final int MAXIMUM_CACHED_SESSIONS = 10_000;
 
-    private final DonorDeviceRepository devices;
-    private final Clock clock;
+    private final SignedInDeviceCheck devices;
     private final Cache<UUID, Boolean> answers;
 
-    DeviceSessionLiveness(DonorDeviceRepository devices, Clock clock) {
+    DeviceSessionLiveness(SignedInDeviceCheck devices, Clock clock) {
         this.devices = devices;
-        this.clock = clock;
         this.answers = Caffeine.newBuilder()
                 .expireAfterWrite(CACHE_WINDOW)
                 .maximumSize(MAXIMUM_CACHED_SESSIONS)
@@ -37,7 +35,7 @@ class DeviceSessionLiveness implements SessionLiveness {
 
     @Override
     public boolean isLive(UUID sessionId) {
-        return answers.get(sessionId, id -> devices.isSignedIn(new DeviceId(id), clock.instant()));
+        return answers.get(sessionId, id -> devices.isSignedIn(new DeviceId(id)));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
