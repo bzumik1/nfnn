@@ -9,6 +9,9 @@ import cz.novanadeje.app.sharedcases.CaseRows;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.MutableClock;
 import cz.novanadeje.app.support.RateLimiterWindows;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -24,6 +27,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -60,7 +65,8 @@ class DonorDeviceSyncTest {
     private static final int TIMED_DONATIONS = 1_000;
     private static final int WARM_UP_RUNS = 5;
     private static final int TIMED_RUNS = 21;
-    private static final long MANIFEST_BUDGET_MILLIS = 50;
+    private static final long MANIFEST_CPU_BUDGET_MILLIS = 50;
+    private static final long MANIFEST_STATEMENTS = 9;
     private static final String MANIFEST = "/api/donations/me/sync";
     private static final String CHUNKS = "/api/donations/me/sync/chunks";
     private static final List<List<String>> ACCOUNTS = List.of(List.of("2900233333", "2010"), List.of("2900244444", "0800"),
@@ -84,6 +90,8 @@ class DonorDeviceSyncTest {
     private DonorSyncRateLimiter syncRateLimiter;
     @Autowired
     private SymbolClaimRepository symbolClaims;
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @AfterEach
     void truncate() {
@@ -171,35 +179,52 @@ class DonorDeviceSyncTest {
     }
 
     @Test
-    @DisplayName("Given a donor with a thousand gifts, when the device asks for the manifest, then the backend answers within 50 ms")
-    void should_answer_within_50_ms_when_the_device_asks_for_the_manifest_given_a_donor_with_a_thousand_gifts() throws Exception {
+    @DisplayName("Given a donor with a thousand gifts, when the device asks for the manifest, then the backend reads it with as many statements as for a donor with two gifts, nine in all, within 50 ms of CPU time, the median of 21 requests")
+    void should_answer_with_the_statements_of_two_gifts_within_50_ms_of_cpu_when_the_device_asks_for_the_manifest_given_a_donor_with_a_thousand_gifts() throws Exception {
         CaseRows rows = CaseRows.fromJson(json.readTree(TWO_DONORS));
         rows.write(jdbc, clock);
         UUID jana = rows.donorId("jana");
-        Random random = new Random(20261105L);
-        for (int gift = 0; gift < TIMED_DONATIONS; gift++) {
-            LocalDate day = LocalDate.of(2016 + random.nextInt(11), 1 + random.nextInt(12), 1 + random.nextInt(28));
-            UUID id = new UUID(random.nextLong(), random.nextLong());
-            if (random.nextBoolean()) {
-                insertBankGift(id, jana, day, 100 + random.nextInt(1_000_000), random.nextLong(1, Long.MAX_VALUE));
-            } else {
-                insertManualGift(id, jana, day, 100 + random.nextInt(1_000_000));
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        try {
+            long statementsOfTwoGifts = measuredManifest(jana, statistics).statements();
+            Random random = new Random(20261105L);
+            for (int gift = 0; gift < TIMED_DONATIONS; gift++) {
+                LocalDate day = LocalDate.of(2016 + random.nextInt(11), 1 + random.nextInt(12), 1 + random.nextInt(28));
+                UUID id = new UUID(random.nextLong(), random.nextLong());
+                if (random.nextBoolean()) {
+                    insertBankGift(id, jana, day, 100 + random.nextInt(1_000_000), random.nextLong(1, Long.MAX_VALUE));
+                } else {
+                    insertManualGift(id, jana, day, 100 + random.nextInt(1_000_000));
+                }
             }
+            for (int run = 0; run < WARM_UP_RUNS; run++) {
+                measuredManifest(jana, statistics);
+            }
+            List<MeasuredManifest> runs = new ArrayList<>();
+            for (int run = 0; run < TIMED_RUNS; run++) {
+                runs.add(measuredManifest(jana, statistics));
+            }
+            assertThat(runs).extracting(MeasuredManifest::statements).as("statements of each manifest over %d gifts", TIMED_DONATIONS)
+                    .containsOnly(statementsOfTwoGifts);
+            assertThat(statementsOfTwoGifts).as("statements of one manifest").isEqualTo(MANIFEST_STATEMENTS);
+            long[] cpuMillis = runs.stream().mapToLong(MeasuredManifest::cpuMillis).sorted().toArray();
+            assertThat(cpuMillis[TIMED_RUNS / 2]).as("the median CPU time of %d manifests over %d gifts, in ms: %s", TIMED_RUNS, TIMED_DONATIONS, Arrays.toString(cpuMillis))
+                    .isLessThan(MANIFEST_CPU_BUDGET_MILLIS);
+        } finally {
+            statistics.setStatisticsEnabled(false);
+            statistics.clear();
         }
-        for (int run = 0; run < WARM_UP_RUNS; run++) {
-            RateLimiterWindows.reset(List.of(syncRateLimiter));
-            answer(jana, get(MANIFEST));
-        }
-        long[] millis = new long[TIMED_RUNS];
-        for (int run = 0; run < TIMED_RUNS; run++) {
-            RateLimiterWindows.reset(List.of(syncRateLimiter));
-            long start = System.nanoTime();
-            answer(jana, get(MANIFEST));
-            millis[run] = Duration.ofNanos(System.nanoTime() - start).toMillis();
-        }
-        Arrays.sort(millis);
-        assertThat(millis[TIMED_RUNS / 2]).as("the median of %d manifests over %d gifts, in ms: %s", TIMED_RUNS, TIMED_DONATIONS, Arrays.toString(millis))
-                .isLessThan(MANIFEST_BUDGET_MILLIS);
+    }
+
+    private MeasuredManifest measuredManifest(UUID donor, Statistics statistics) throws Exception {
+        RateLimiterWindows.reset(List.of(syncRateLimiter));
+        ThreadMXBean threads = ManagementFactory.getThreadMXBean();
+        statistics.clear();
+        long cpuStart = threads.getCurrentThreadCpuTime();
+        answer(donor, get(MANIFEST));
+        long cpuNanos = threads.getCurrentThreadCpuTime() - cpuStart;
+        return new MeasuredManifest(statistics.getPrepareStatementCount(), Duration.ofNanos(cpuNanos).toMillis());
     }
 
     private void converge(int seed, Set<String> exercised) throws Exception {
@@ -483,4 +508,7 @@ class DonorDeviceSyncTest {
              "donations": [{"donor": "jana", "payment": "p1", "receivedOn": "2025-06-30", "amountMinor": 30000, "status": "RECEIVED", "source": "BANK_TRANSFER", "purpose": "GENERAL"},
                            {"donor": "jana", "payment": "p2", "receivedOn": "2026-03-15", "amountMinor": 50000, "status": "RECEIVED", "source": "BANK_TRANSFER", "purpose": "GENERAL"}]}
             """;
+
+    private record MeasuredManifest(long statements, long cpuMillis) {
+    }
 }
