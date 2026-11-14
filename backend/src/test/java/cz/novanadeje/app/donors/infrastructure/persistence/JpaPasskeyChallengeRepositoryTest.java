@@ -41,6 +41,21 @@ class JpaPasskeyChallengeRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a challenge read before it was marked used, when the copy read earlier is saved, then the use stays, so a save never takes a spend back")
+    void should_keep_the_use_when_saved_given_a_copy_read_before_the_use() {
+        LinkSecret secret = LinkSecret.generate();
+        challenges.save(PasskeyChallenge.forSignIn(secret, NOW, LIFETIME));
+        flushAndClear();
+        PasskeyChallenge readBefore = challenges.findByChallengeHash(secret.hash()).orElseThrow();
+        assertThat(challenges.markUsed(readBefore.id(), NOW.plusSeconds(10))).isTrue();
+
+        challenges.save(readBefore);
+        flushAndClear();
+
+        assertThat(challenges.findByChallengeHash(secret.hash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
     @DisplayName("Given challenges that expired before, expire exactly at and expire after now, when the expired ones are deleted, then the one still open stays")
     void should_keep_only_open_challenge_when_expired_are_deleted_given_challenges_around_now() {
         LinkSecret expiredEarlier = LinkSecret.generate();

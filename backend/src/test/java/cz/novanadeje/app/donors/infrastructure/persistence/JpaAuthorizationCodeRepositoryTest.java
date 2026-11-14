@@ -72,6 +72,20 @@ class JpaAuthorizationCodeRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a code read before it was marked used, when the copy read earlier is saved, then the use stays, so a save never takes a spend back")
+    void should_keep_the_use_when_saved_given_a_copy_read_before_the_use() {
+        AuthorizationCode code = issue(jana, NOW);
+        flushAndClear();
+        AuthorizationCode readBefore = codes.findBySecretHash(code.secretHash()).orElseThrow();
+        assertThat(codes.markUsed(code.id(), NOW.plusSeconds(10))).isTrue();
+
+        codes.save(readBefore);
+        flushAndClear();
+
+        assertThat(codes.findBySecretHash(code.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
     @DisplayName("Given a used and an unused code that expired before the cutoff and one that expires after it, when those expired before the cutoff are deleted, then only the later one stays")
     void should_delete_only_codes_expired_before_cutoff_when_deleted() {
         AuthorizationCode used = issue(jana, NOW.minus(Duration.ofDays(31)));

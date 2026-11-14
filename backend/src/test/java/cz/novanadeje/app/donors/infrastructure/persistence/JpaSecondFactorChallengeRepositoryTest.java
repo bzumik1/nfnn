@@ -66,17 +66,17 @@ class JpaSecondFactorChallengeRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a challenge with a counted attempt and a use, when it is saved again, then both survive")
-    void should_keep_attempts_and_use_when_saved_again_given_changed_challenge() {
+    @DisplayName("Given a challenge read before two attempts were reserved and it was marked used, when the copy read earlier is saved, then the attempts and the use stay, so a save never takes a spend back")
+    void should_keep_attempts_and_use_when_saved_given_a_copy_read_before_them() {
         LinkSecret secret = LinkSecret.generate();
         challenges.save(SecondFactorChallenge.issue(secret, jana, NOW, TTL));
         flushAndClear();
-        SecondFactorChallenge challenge = challenges.findBySecretHash(secret.hash()).orElseThrow();
-        challenge.recordFailedAttempt();
-        challenge.recordFailedAttempt();
-        challenge.markUsed(NOW.plusSeconds(90));
+        SecondFactorChallenge readBefore = challenges.findBySecretHash(secret.hash()).orElseThrow();
+        assertThat(challenges.reserveAttempt(readBefore.id(), NOW.plusSeconds(30), 5)).isTrue();
+        assertThat(challenges.reserveAttempt(readBefore.id(), NOW.plusSeconds(60), 5)).isTrue();
+        assertThat(challenges.markUsed(readBefore.id(), NOW.plusSeconds(90))).isTrue();
 
-        challenges.save(challenge);
+        challenges.save(readBefore);
         flushAndClear();
 
         SecondFactorChallenge found = challenges.findBySecretHash(secret.hash()).orElseThrow();
