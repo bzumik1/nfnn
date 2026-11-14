@@ -23,7 +23,7 @@ import { proofFragment } from './proof-link';
 import { ProofLinkValidator } from './proof-link-validator';
 import type { QrImage } from './qr-image';
 import { QrReader, QrReaderOutdated } from './qr-reader';
-import { PictureTooLarge, SCAN_DEVICE } from './scan-device';
+import { type FrameRegion, PictureTooLarge, SCAN_DEVICE } from './scan-device';
 
 export interface FoundProof {
   readonly fragment: string;
@@ -87,6 +87,7 @@ export class ProofInput {
   private frameTimer: ReturnType<typeof setTimeout> | null = null;
   private limitTimer: ReturnType<typeof setTimeout> | null = null;
   private scanRun = 0;
+  private framesRead = 0;
 
   readonly found = output<FoundProof>();
 
@@ -219,7 +220,8 @@ export class ProofInput {
     }
     let codes: readonly string[];
     try {
-      const frame = this.device.frame(video);
+      const region: FrameRegion = this.framesRead++ % 2 === 0 ? 'centre' : 'whole';
+      const frame = this.device.frame(video, region);
       codes = frame === null ? [] : await this.reader.read(frame);
     } catch (failure: unknown) {
       this.endScan(run, failure instanceof QrReaderOutdated ? READER_OUTDATED : CAMERA_FAILED);

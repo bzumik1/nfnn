@@ -27,7 +27,7 @@ What the app contains is in `docs/frontend-overview.md`; the full text of each c
 
 ## i18n
 - Every visible string has `i18n="@@<area>.<page>.<key>"`, the first segment one of `home`, `content`, `donor`, `admin`, `operations`, `layout`, `ui`; attributes `i18n-alt`, `i18n-aria-label`, `i18n-placeholder`; TS text with `$localize\`:@@id:text\``. Ids are stable, never renamed.
-- The source locale is `cs`. Format through the cs-CZ helpers, one place per format, not Angular's locale pipes (`formatMinorUnits`/`formatCrowns`, `formatDonationDate`/`formatBankTime`, `formatMonth`/`formatMonthRange`, `formatReportMonth`); ICU plurals use `one`, `few` and `other` (`=0` only for a sentence of its own); TypeScript picks a form with `pluralCategory(count)`.
+- The source locale is `cs`. Format through the cs-CZ helpers, one place per format, not Angular's locale pipes (`formatMinorUnits`/`formatCrowns`, `formatDonationDate`/`formatBankTime`/`formatPragueClock`, `formatMonth`/`formatMonthRange`, `formatReportMonth`); ICU plurals use `one`, `few` and `other` (`=0` only for a sentence of its own); TypeScript picks a form with `pluralCategory(count)`.
 - Czech copy: no vocative or declension of names; sentence case; the donate action is "Přispět"; amounts from the API through `formatMinorUnits` (crowns typed by a visitor through `formatCrowns`) followed by `&nbsp;Kč` in a template and `\u00a0Kč` in TS; dates `15. 3. 2026` and times `15. 3. 2026 8:05`, no leading zeros except the minutes (ČSN 01 6910, Jakub 2026-11-06), the receipt PDF too; bank times in Prague time; backend titles and details shown as they come.
 
 ## UI (the look)

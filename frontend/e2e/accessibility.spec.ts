@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { routeLogsApi } from './admin-logs-api';
+import { mockAdministrationCopy } from './administration-copy';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
@@ -63,6 +64,7 @@ import {
   breakSha256,
   serveReceiptApi,
   SINGLE_RECEIPT,
+  SINGLE_RECEIPT_ROW,
   verdictHeading,
   YEARLY_RECEIPT,
 } from './receipt-verification';
@@ -1709,6 +1711,36 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       .getByRole('button', { name: 'Vrátit přiřazení darů' })
       .click();
     await expect(page.locator('tbody tr').first()).toContainText('odpověď se změní na Ne');
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when an administrator verifies a receipt against the copy on the device, then the page and its register line break no rule', async ({
+    page,
+  }) => {
+    await mockAdministrationCopy(page, {
+      donations: [
+        {
+          id: 'receipts:2026',
+          rows: [
+            { ...SINGLE_RECEIPT_ROW, status: 'REPLACED', supersededAt: '2026-11-05T10:00:00Z' },
+          ],
+        },
+      ],
+    });
+    await serveReceiptApi(page, { keys: KEY_LIST, status: 'replaced' });
+    await page.route('**/api/donors/auth/refresh', (route) =>
+      route.fulfill(session(200, administrator)),
+    );
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+    await page.goto('/sprava/overit');
+    await expect(page.getByRole('heading', { level: 1, name: 'Ověřit potvrzení' })).toBeFocused();
+
+    expect(await violations(page)).toEqual([]);
+
+    await scanFragment(page, SINGLE_RECEIPT.fragment);
+    await expect(page.getByRole('region', { name: 'V evidenci fondu' })).toContainText('Nahrazené');
 
     expect(await violations(page)).toEqual([]);
   });

@@ -33,3 +33,10 @@
 .verify-another {
   margin-bottom: 0;
 }
+
+:host(.verify-embedded) {
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 0;
+  background: none;
+}

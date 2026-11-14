@@ -49,6 +49,7 @@ const SIGNED_IN_PAGES = [
   '/sprava/platby',
   '/sprava/darci',
   '/sprava/hromadna-potvrzeni',
+  '/sprava/overit',
   '/sprava/spravci',
   '/sprava/starsi-symboly',
   '/sprava/loga-bank',

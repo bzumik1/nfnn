@@ -1,4 +1,4 @@
-import { Location } from '@angular/common';
+import { DOCUMENT, Location } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -17,18 +17,17 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { PageTitle } from '../../donors/dashboard/page-title/page-title';
 import { type FoundProof, ProofInput } from './proof-input';
 import { ReceiptVerifier, type VerificationStep } from './receipt-verifier';
+import { VERIFICATION_CONTEXT } from './verification-context';
 import { type FinalOutcome, VerificationResult } from './verification-result';
 
 type PageState = { readonly state: 'checking' } | { readonly state: 'empty' } | FinalOutcome;
-
-const PAGE_PATH = '/overit';
 
 @Component({
   selector: 'app-verification-page',
   imports: [PageTitle, ProofInput, VerificationResult],
   templateUrl: './verification-page.html',
   styleUrls: ['./verification-page.scss', './verdict-card.scss'],
-  host: { class: 'ui-grouped' },
+  host: { class: 'ui-grouped', '[class.verify-embedded]': 'administration' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerificationPage {
@@ -37,6 +36,9 @@ export class VerificationPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  protected readonly context = inject(VERIFICATION_CONTEXT);
+  protected readonly administration = this.context.audience === 'administration';
   private fragment: string | null = null;
   protected readonly scanned = signal(false);
   protected readonly compact = inject(CompactLayout).isCompact;
@@ -59,7 +61,7 @@ export class VerificationPage {
         this.fragment = fragment;
         this.scanned.set(false);
         if (fragment !== null) {
-          this.location.replaceState(PAGE_PATH, '', this.location.getState());
+          this.location.replaceState(this.context.path, '', this.location.getState());
         }
         this.verify();
       });
@@ -99,11 +101,17 @@ export class VerificationPage {
         if (run !== this.run || this.destroyRef.destroyed) {
           return;
         }
+        const focusOnHeading = this.focusOnHeading();
         this.page.set(outcome);
-        if (outcome.state !== 'empty') {
+        if (outcome.state !== 'empty' || focusOnHeading) {
           this.focusHeading();
         }
       });
+  }
+
+  private focusOnHeading(): boolean {
+    const active = this.document.activeElement;
+    return active instanceof HTMLHeadingElement && this.host.nativeElement.contains(active);
   }
 
   private focusHeading(): void {

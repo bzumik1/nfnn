@@ -63,6 +63,7 @@ export const DIAGNOSTIC_PAGES = [
   '/sprava/logy/vlakna',
   '/sprava/nastaveni',
   '/sprava/o-nas',
+  '/sprava/overit',
   '/sprava/platby',
   '/sprava/prehledy',
   '/sprava/prehledy/:param',
