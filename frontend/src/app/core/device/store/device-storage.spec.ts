@@ -6,6 +6,7 @@ import type { RegistryEntry } from '../crypto/device-registry';
 import { DEVICE_DATABASE, type DeviceStorage, type StoredRecord } from './device-storage';
 import { IdbDeviceStorage, openIdbDeviceStorage } from './idb-device-storage';
 import { MemoryDeviceStorage } from './memory-device-storage';
+import { LostConnections, UnhandledRejections } from './testing/lost-connection';
 
 function entry(copyId: string, lookupTag = `tag-${copyId}`): RegistryEntry {
   return {
@@ -325,5 +326,73 @@ describe('Given the IndexedDB device storage', () => {
     await storage.destroy();
 
     expect(await globalThis.indexedDB.databases()).toEqual([]);
+  });
+});
+
+describe('Given the IndexedDB device storage lost its connection', () => {
+  let connections: LostConnections;
+  let unhandled: UnhandledRejections;
+  let storage: IdbDeviceStorage;
+
+  beforeEach(async () => {
+    const factory = new IDBFactory();
+    globalThis.indexedDB = factory;
+    connections = new LostConnections(factory);
+    unhandled = new UnhandledRejections();
+    storage = await openIdbDeviceStorage();
+    await storage.write({
+      deviceSalt: 'c2FsdA',
+      putEntries: [entry('a')],
+      replaceRecords: { copyId: 'a', records: [record('a', 'r1')] },
+      putDrafts: [record('a', 'd1')],
+    });
+  });
+
+  afterEach(async () => {
+    connections.reopenWorks();
+    await storage.destroy();
+  });
+
+  it('when every kind of read fails with UnknownError, then each reopens once and answers and no rejection is left unhandled', async () => {
+    const reads: [string, () => Promise<unknown>][] = [
+      ['salt', () => storage.deviceSalt()],
+      ['entries', () => storage.entries()],
+      ['session key', () => storage.sessionKey('a')],
+      ['records', () => storage.records('a')],
+      ['drafts', () => storage.drafts('a')],
+    ];
+    const answers: unknown[] = [];
+
+    for (const [, read] of reads) {
+      connections.lose();
+      answers.push(await read());
+    }
+
+    expect(answers).toEqual([
+      'c2FsdA',
+      [entry('a')],
+      null,
+      [record('a', 'r1')],
+      [record('a', 'd1')],
+    ]);
+    expect(connections.opens).toBe(1 + reads.length);
+    expect(await unhandled.settled()).toEqual([]);
+  });
+
+  it('when the connection was closed under it, then the read reopens once and answers', async () => {
+    connections.closeQuietly();
+
+    expect(await storage.entries()).toEqual([entry('a')]);
+    expect(await unhandled.settled()).toEqual([]);
+  });
+
+  it('when the reopen fails too, then the read rejects with the lost connection and no rejection is left unhandled', async () => {
+    connections.lose('fails');
+
+    await expect(storage.entries()).rejects.toMatchObject({ name: 'UnknownError' });
+
+    expect(await unhandled.settled()).toEqual([]);
+    connections.reopenWorks();
+    expect(await storage.entries()).toEqual([entry('a')]);
   });
 });

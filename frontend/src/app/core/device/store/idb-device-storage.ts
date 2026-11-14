@@ -12,6 +12,10 @@ import {
 } from './device-storage';
 
 const DEVICE_SALT = 'device-salt';
+const LOST_CONNECTION_FAILURES: ReadonlySet<string> = new Set([
+  'UnknownError',
+  'InvalidStateError',
+]);
 
 interface DeviceSchema extends DBSchema {
   meta: { key: string; value: string };
@@ -22,7 +26,9 @@ interface DeviceSchema extends DBSchema {
 }
 
 type DeviceDatabase = IDBPDatabase<DeviceSchema>;
-type StoreNames = ('meta' | 'copies' | 'session-keys' | 'records' | 'drafts')[];
+type StoreName = 'meta' | 'copies' | 'session-keys' | 'records' | 'drafts';
+type StoreNames = StoreName[];
+type ReadStore<Name extends StoreName> = IDBPObjectStore<DeviceSchema, [Name], Name, 'readonly'>;
 type RecordStore<Name extends 'records' | 'drafts'> = IDBPObjectStore<
   DeviceSchema,
   StoreNames,
@@ -73,23 +79,23 @@ export class IdbDeviceStorage implements DeviceStorage {
   }
 
   async deviceSalt(): Promise<string | null> {
-    return (await (await this.opened()).get('meta', DEVICE_SALT)) ?? null;
+    return (await this.read('meta', (store) => store.get(DEVICE_SALT))) ?? null;
   }
 
-  async entries(): Promise<readonly RegistryEntry[]> {
-    return (await this.opened()).getAll('copies');
+  entries(): Promise<readonly RegistryEntry[]> {
+    return this.read('copies', (store) => store.getAll());
   }
 
   async sessionKey(copyId: string): Promise<CryptoKey | null> {
-    return (await (await this.opened()).get('session-keys', copyId))?.key ?? null;
+    return (await this.read('session-keys', (store) => store.get(copyId)))?.key ?? null;
   }
 
-  async records(copyId: string): Promise<readonly StoredRecord[]> {
-    return (await this.opened()).getAllFromIndex('records', 'copyId', copyId);
+  records(copyId: string): Promise<readonly StoredRecord[]> {
+    return this.read('records', (store) => store.index('copyId').getAll(copyId));
   }
 
-  async drafts(copyId: string): Promise<readonly StoredRecord[]> {
-    return (await this.opened()).getAllFromIndex('drafts', 'copyId', copyId);
+  drafts(copyId: string): Promise<readonly StoredRecord[]> {
+    return this.read('drafts', (store) => store.index('copyId').getAll(copyId));
   }
 
   async write(change: StorageChange): Promise<void> {
@@ -168,6 +174,21 @@ export class IdbDeviceStorage implements DeviceStorage {
     void database?.then((opened) => opened.close()).catch(() => undefined);
   }
 
+  private async read<Name extends StoreName, Value>(
+    name: Name,
+    request: (store: ReadStore<Name>) => Promise<Value>,
+  ): Promise<Value> {
+    try {
+      return await readOnce(await this.opened(), name, request);
+    } catch (failure: unknown) {
+      if (!isLostConnection(failure)) {
+        throw failure;
+      }
+      this.close();
+      return readOnce(await this.opened(), name, request);
+    }
+  }
+
   private opened(): Promise<DeviceDatabase> {
     if (this.database === null) {
       const raw = openDB<DeviceSchema>(DEVICE_DATABASE, DEVICE_DATABASE_VERSION, {
@@ -205,6 +226,20 @@ export class IdbDeviceStorage implements DeviceStorage {
     }
     return this.database;
   }
+}
+
+async function readOnce<Name extends StoreName, Value>(
+  database: DeviceDatabase,
+  name: Name,
+  request: (store: ReadStore<Name>) => Promise<Value>,
+): Promise<Value> {
+  const transaction = database.transaction(name, 'readonly');
+  const [value] = await Promise.all([request(transaction.store), transaction.done]);
+  return value;
+}
+
+function isLostConnection(failure: unknown): boolean {
+  return failure instanceof DOMException && LOST_CONNECTION_FAILURES.has(failure.name);
 }
 
 async function deleteRecordsOf(
