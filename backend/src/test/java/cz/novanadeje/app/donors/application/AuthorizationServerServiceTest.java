@@ -443,7 +443,7 @@ class AuthorizationServerServiceTest {
         @Test
         @DisplayName("when a superseded token is presented, then every session of the donor ends")
         void should_end_every_session_when_refreshed_given_superseded_token() {
-            token.supersede(NOW.minusSeconds(10));
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(SpentCredentials.superseded(token, NOW.minusSeconds(10))));
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
