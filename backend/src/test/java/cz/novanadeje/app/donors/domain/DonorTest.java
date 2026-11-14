@@ -147,9 +147,9 @@ class DonorTest {
     }
 
     @Test
-    @DisplayName("Given a blank name, when a donor registers, then it is rejected")
-    void should_reject_when_registered_given_blank_name() {
-        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName(" "), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
+    @DisplayName("Given no name, when a donor registers, then it is rejected")
+    void should_reject_when_registered_given_no_name() {
+        assertThatThrownBy(() -> Donor.register(DonorId.newId(NOW), DonorType.PERSON, null, null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

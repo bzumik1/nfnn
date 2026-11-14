@@ -190,5 +190,13 @@
     "reason": "Architecture audit #621 (R3-D4, #844): a blank DonorName cannot be built, so the record refuses a missing name and the blank one is refused by DonorName",
     "replacement": "donations.domain.donor.DonorRecordTest > Given a record, when the profile changes without a name, then it is refused and the profile stays",
     "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.DonorTest > Given a blank name, when a donor registers, then it is rejected",
+    "reason": "Architecture audit #621 (R3-D4, #844): a blank name is refused by DonorName before Donor.register runs (DonorNameTest keeps that case); Donor itself now only refuses a missing name, which the renamed test checks",
+    "replacement": "donors.domain.DonorTest > Given no name, when a donor registers, then it is rejected",
+    "contract": "docs/system-overview.md, shared"
   }
 ]

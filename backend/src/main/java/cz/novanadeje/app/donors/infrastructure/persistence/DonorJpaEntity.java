@@ -44,7 +44,7 @@ class DonorJpaEntity {
     @Column(name = "name", nullable = false, length = DonorName.MAX_LENGTH)
     private String name;
 
-    @Column(name = "company_identifier", length = 8)
+    @Column(name = "company_identifier", length = CompanyIdentifier.LENGTH)
     private String companyIdentifier;
 
     @Column(name = "street", nullable = false, length = PostalAddress.MAX_STREET_LENGTH)
