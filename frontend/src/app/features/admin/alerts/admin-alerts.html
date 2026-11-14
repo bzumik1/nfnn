@@ -33,89 +33,91 @@
       </div>
     }
     @case ('ready') {
-      <div class="ui-groups">
-        <section aria-labelledby="alerts-watched-title">
-          <h2 id="alerts-watched-title" class="ui-group-title" i18n="@@admin.alerts.watched.title">
+      <section class="ui-card" aria-labelledby="alerts-watched-title">
+        <div class="ui-card__bar">
+          <h2 id="alerts-watched-title" class="ui-card__title" i18n="@@admin.alerts.watched.title">
             Co se hlídá
           </h2>
-          <ul class="ui-list ui-list--inset watched">
-            @for (row of rows(); track row.area) {
-              <li>
-                <a class="ui-list__row" [routerLink]="row.route">
-                  <span class="ui-list__title">{{ row.label }}</span>
-                  @if (row.brokenSince; as since) {
-                    <span class="ui-list__meta" i18n="@@admin.alerts.watched.broken"
-                      >Nefunguje od {{ since }}</span
+        </div>
+        <ul class="ui-list ui-list--stacks-narrow watched">
+          @for (row of rows(); track row.area) {
+            <li>
+              <a class="ui-list__row" [routerLink]="row.route">
+                <span class="ui-list__title">{{ row.label }}</span>
+                @if (row.brokenSince; as since) {
+                  <span class="ui-list__meta" i18n="@@admin.alerts.watched.broken"
+                    >Nefunguje od {{ since }}</span
+                  >
+                }
+                <span class="ui-list__value">
+                  @if (row.brokenSince) {
+                    <span
+                      class="ui-badge ui-badge--warning"
+                      i18n="@@admin.alerts.watched.badge.broken"
+                      >Nefunguje</span
+                    >
+                  } @else {
+                    <span class="ui-badge ui-badge--success" i18n="@@admin.alerts.watched.badge.ok"
+                      >Bez poruchy</span
                     >
                   }
-                  <span class="ui-list__value">
-                    @if (row.brokenSince) {
-                      <span
-                        class="ui-badge ui-badge--warning"
-                        i18n="@@admin.alerts.watched.badge.broken"
-                        >Nefunguje</span
-                      >
-                    } @else {
-                      <span
-                        class="ui-badge ui-badge--success"
-                        i18n="@@admin.alerts.watched.badge.ok"
-                        >Bez poruchy</span
-                      >
-                    }
-                  </span>
-                  <svg
-                    class="ui-list__chevron"
-                    aria-hidden="true"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
-                </a>
-              </li>
-            }
-          </ul>
-        </section>
+                </span>
+                <svg
+                  class="ui-list__chevron"
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </a>
+            </li>
+          }
+        </ul>
+      </section>
 
-        <section aria-labelledby="alerts-device-title">
+      <section class="ui-card" aria-labelledby="alerts-device-title">
+        <div class="ui-card__bar">
           <h2
             id="alerts-device-title"
-            class="ui-group-title"
+            class="ui-card__title"
             tabindex="-1"
             i18n="@@admin.alerts.device.title"
           >
             Toto zařízení
           </h2>
-          @if (current(); as device) {
-            <ul class="ui-list ui-list--inset">
-              @for (area of areas; track area) {
-                <li>
-                  <label class="ui-list__row">
-                    <span class="ui-list__title">{{ areaLabels[area] }}</span>
-                    <span class="ui-list__meta" [id]="'alerts-device-' + area">{{
-                      areaDescriptions[area]
-                    }}</span>
-                    <input
-                      #deviceSwitch
-                      class="ui-list__value ui-switch"
-                      type="checkbox"
-                      role="switch"
-                      [checked]="device.alerts[area]"
-                      [attr.aria-describedby]="'alerts-device-' + area"
-                      [attr.aria-disabled]="savingAlerts() !== null ? 'true' : null"
-                      (change)="changeAlert(device, area, deviceSwitch)"
-                    />
-                  </label>
-                </li>
-              }
-            </ul>
-            <p class="ui-group-note">
+        </div>
+        @if (current(); as device) {
+          <ul class="ui-list">
+            @for (area of areas; track area) {
+              <li>
+                <label class="ui-list__row">
+                  <span class="ui-list__title">{{ areaLabels[area] }}</span>
+                  <span class="ui-list__meta" [id]="'alerts-device-' + area">{{
+                    areaDescriptions[area]
+                  }}</span>
+                  <input
+                    #deviceSwitch
+                    class="ui-list__value ui-switch"
+                    type="checkbox"
+                    role="switch"
+                    [checked]="device.alerts[area]"
+                    [attr.aria-describedby]="'alerts-device-' + area"
+                    [attr.aria-disabled]="savingAlerts() !== null ? 'true' : null"
+                    (change)="changeAlert(device, area, deviceSwitch)"
+                  />
+                </label>
+              </li>
+            }
+          </ul>
+          <div class="ui-card__footer">
+            <p>
               <span i18n="@@admin.alerts.device.on"
                 >Upozornění máte na tomto zařízení zapnutá ({{ serviceName(device) }}, od
                 {{ since(device) }}).</span
@@ -137,238 +139,237 @@
             </p>
             @if (currentLost()) {
               @if (availability() === 'denied') {
-                <p
-                  class="ui-group-note ui-group-note--warning"
-                  i18n="@@admin.alerts.device.lostDenied"
-                >
+                <p class="device-warning" i18n="@@admin.alerts.device.lostDenied">
                   Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je
                   v nastavení prohlížeče u tohoto webu (obvykle ikona vedle adresy, Oprávnění,
                   Oznámení) a stránku načtěte znovu.
                 </p>
               } @else {
-                <p class="ui-group-note ui-group-note--warning" i18n="@@admin.alerts.device.lost">
+                <p class="device-warning" i18n="@@admin.alerts.device.lost">
                   Prohlížeč ale upozornění od tohoto webu už nepřijímá (například po smazání dat
                   webu), takže žádné nedorazí. Zapněte je prosím znovu.
                 </p>
-                <ul class="ui-list ui-list--inset again">
-                  <li>
-                    <button
-                      appNeedsConnection
-                      type="button"
-                      class="ui-list__row ui-list__row--action"
-                      [disabled]="subscribing()"
-                      (click)="turnOn()"
-                    >
-                      @if (subscribing()) {
-                        <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
-                          >Zapínáme upozornění…</span
-                        >
-                      } @else {
-                        <span class="ui-list__title" i18n="@@admin.alerts.device.turnOnAgain"
-                          >Zapnout znovu</span
-                        >
-                      }
-                    </button>
-                  </li>
-                </ul>
               }
             }
-            <ul class="ui-list ui-list--inset turn-off">
-              <li>
-                <button
-                  appNeedsConnection
-                  type="button"
-                  class="ui-list__row ui-list__row--danger"
-                  [disabled]="turningOff()"
-                  (click)="turnOff(device)"
-                >
-                  @if (turningOff()) {
-                    <span class="ui-list__title" i18n="@@admin.alerts.device.turningOff"
-                      >Vypínáme…</span
-                    >
-                  } @else {
-                    <span class="ui-list__title" i18n="@@admin.alerts.device.turnOff"
-                      >Vypnout na tomto zařízení</span
-                    >
-                  }
-                </button>
-              </li>
-            </ul>
-          } @else if (!deviceSession()) {
-            <p class="ui-group-note" i18n="@@admin.alerts.device.noDeviceSession">
-              Toto přihlášení je starší, než web začal rozlišovat zařízení, a proto na něm
-              upozornění zapnout nejde. Odhlaste se a znovu se přihlaste, potom je tady zapnete.
-            </p>
-          } @else {
-            @switch (availability()) {
-              @case ('available') {
-                <ul class="ui-list ui-list--inset">
-                  <li>
-                    <button
-                      appNeedsConnection
-                      type="button"
-                      class="ui-list__row ui-list__row--action"
-                      aria-describedby="alerts-device-offer"
-                      [disabled]="subscribing()"
-                      (click)="turnOn()"
-                    >
-                      @if (subscribing()) {
-                        <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
-                          >Zapínáme upozornění…</span
-                        >
-                      } @else {
-                        <span class="ui-list__title" i18n="@@admin.alerts.device.turnOn"
-                          >Zapnout upozornění na tomto zařízení</span
-                        >
-                      }
-                    </button>
-                  </li>
-                </ul>
-                <p
-                  id="alerts-device-offer"
-                  class="ui-group-note"
-                  i18n="@@admin.alerts.device.offer"
-                >
-                  Na tomto zařízení upozornění zatím zapnutá nemáte. Prohlížeč se zeptá, jestli mu
-                  upozornění dovolíte.
-                </p>
-              }
-              @case ('home-screen') {
-                <p class="ui-group-note" i18n="@@admin.alerts.device.homeScreen">
-                  Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte
-                  na Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše, přihlaste se v
-                  něm a na této stránce zapněte upozornění.
-                </p>
-              }
-              @case ('denied') {
-                <p class="ui-group-note" i18n="@@admin.alerts.device.denied">
-                  Upozornění má tento web v prohlížeči zakázaná. Povolte je v nastavení prohlížeče u
-                  tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení) a stránku načtěte
-                  znovu.
-                </p>
-              }
-              @case ('no-push') {
-                <p class="ui-group-note" i18n="@@admin.alerts.device.noPush">
-                  Tento prohlížeč upozornění z webu neumí. Zkuste aktuální Chrome, Edge, Firefox
-                  nebo Safari.
-                </p>
-              }
-              @default {
-                <p class="ui-group-note" i18n="@@admin.alerts.device.noServiceWorker">
-                  Prohlížeč zatím nespustil část webu, která upozornění doručuje. Načtěte stránku
-                  znovu; pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje, například v
-                  anonymním okně.
-                </p>
-              }
-            }
-          }
-          <app-live-notice look="note" [notice]="deviceNotice()" />
-        </section>
-
-        @if (hasDevices()) {
-          <section aria-labelledby="alerts-test-title">
-            <h2 id="alerts-test-title" class="ui-group-title" i18n="@@admin.alerts.test.title">
-              Zkušební upozornění
-            </h2>
-            <ul class="ui-list ui-list--inset">
+          </div>
+          <ul class="ui-list device-actions">
+            @if (currentLost() && availability() !== 'denied') {
               <li>
                 <button
                   appNeedsConnection
                   type="button"
                   class="ui-list__row ui-list__row--action"
-                  aria-describedby="alerts-test-note"
-                  [disabled]="testing()"
-                  (click)="sendTest()"
+                  [disabled]="subscribing()"
+                  (click)="turnOn()"
                 >
-                  @if (testing()) {
-                    <span class="ui-list__title" i18n="@@admin.alerts.test.sending"
-                      >Posíláme zkušební upozornění…</span
+                  @if (subscribing()) {
+                    <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
+                      >Zapínáme upozornění…</span
                     >
                   } @else {
-                    <span class="ui-list__title" i18n="@@admin.alerts.test.sendRow"
-                      >Poslat zkušební upozornění</span
+                    <span class="ui-list__title" i18n="@@admin.alerts.device.turnOnAgain"
+                      >Zapnout znovu</span
                     >
                   }
                 </button>
               </li>
-            </ul>
-            <app-live-notice look="note" [notice]="testNotice()" />
-            <p id="alerts-test-note" class="ui-group-note" i18n="@@admin.alerts.test.note">
-              Přijde na všechna vaše zařízení, na kterých upozornění máte zapnutá. Pokud do minuty
-              nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu
-              Nerušit.
-            </p>
-          </section>
+            }
+            <li>
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-list__row ui-list__row--danger"
+                [disabled]="turningOff()"
+                (click)="turnOff(device)"
+              >
+                @if (turningOff()) {
+                  <span class="ui-list__title" i18n="@@admin.alerts.device.turningOff"
+                    >Vypínáme…</span
+                  >
+                } @else {
+                  <span class="ui-list__title" i18n="@@admin.alerts.device.turnOff"
+                    >Vypnout na tomto zařízení</span
+                  >
+                }
+              </button>
+            </li>
+          </ul>
+        } @else if (!deviceSession()) {
+          <p class="ui-card__footer" i18n="@@admin.alerts.device.noDeviceSession">
+            Toto přihlášení je starší, než web začal rozlišovat zařízení, a proto na něm upozornění
+            zapnout nejde. Odhlaste se a znovu se přihlaste, potom je tady zapnete.
+          </p>
+        } @else {
+          @switch (availability()) {
+            @case ('available') {
+              <ul class="ui-list">
+                <li>
+                  <button
+                    appNeedsConnection
+                    type="button"
+                    class="ui-list__row ui-list__row--action"
+                    aria-describedby="alerts-device-offer"
+                    [disabled]="subscribing()"
+                    (click)="turnOn()"
+                  >
+                    @if (subscribing()) {
+                      <span class="ui-list__title" i18n="@@admin.alerts.device.turningOn"
+                        >Zapínáme upozornění…</span
+                      >
+                    } @else {
+                      <span class="ui-list__title" i18n="@@admin.alerts.device.turnOn"
+                        >Zapnout upozornění na tomto zařízení</span
+                      >
+                    }
+                  </button>
+                </li>
+              </ul>
+              <p
+                id="alerts-device-offer"
+                class="ui-card__footer"
+                i18n="@@admin.alerts.device.offer"
+              >
+                Na tomto zařízení upozornění zatím zapnutá nemáte. Prohlížeč se zeptá, jestli mu
+                upozornění dovolíte.
+              </p>
+            }
+            @case ('home-screen') {
+              <p class="ui-card__footer" i18n="@@admin.alerts.device.homeScreen">
+                Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte
+                na Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše, přihlaste se v
+                něm a na této stránce zapněte upozornění.
+              </p>
+            }
+            @case ('denied') {
+              <p class="ui-card__footer" i18n="@@admin.alerts.device.denied">
+                Upozornění má tento web v prohlížeči zakázaná. Povolte je v nastavení prohlížeče u
+                tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení) a stránku načtěte
+                znovu.
+              </p>
+            }
+            @case ('no-push') {
+              <p class="ui-card__footer" i18n="@@admin.alerts.device.noPush">
+                Tento prohlížeč upozornění z webu neumí. Zkuste aktuální Chrome, Edge, Firefox nebo
+                Safari.
+              </p>
+            }
+            @default {
+              <p class="ui-card__footer" i18n="@@admin.alerts.device.noServiceWorker">
+                Prohlížeč zatím nespustil část webu, která upozornění doručuje. Načtěte stránku
+                znovu; pokud zpráva nezmizí, prohlížeč ji nejspíš nepovoluje, například v anonymním
+                okně.
+              </p>
+            }
+          }
         }
+        <app-live-notice look="footer" [notice]="deviceNotice()" />
+      </section>
 
-        <section aria-labelledby="alerts-others-title">
+      @if (hasDevices()) {
+        <section class="ui-card" aria-labelledby="alerts-test-title">
+          <div class="ui-card__bar">
+            <h2 id="alerts-test-title" class="ui-card__title" i18n="@@admin.alerts.test.title">
+              Zkušební upozornění
+            </h2>
+          </div>
+          <ul class="ui-list">
+            <li>
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-list__row ui-list__row--action"
+                aria-describedby="alerts-test-note"
+                [disabled]="testing()"
+                (click)="sendTest()"
+              >
+                @if (testing()) {
+                  <span class="ui-list__title" i18n="@@admin.alerts.test.sending"
+                    >Posíláme zkušební upozornění…</span
+                  >
+                } @else {
+                  <span class="ui-list__title" i18n="@@admin.alerts.test.sendRow"
+                    >Poslat zkušební upozornění</span
+                  >
+                }
+              </button>
+            </li>
+          </ul>
+          <app-live-notice look="footer" [notice]="testNotice()" />
+          <p id="alerts-test-note" class="ui-card__footer" i18n="@@admin.alerts.test.note">
+            Přijde na všechna vaše zařízení, na kterých upozornění máte zapnutá. Pokud do minuty
+            nedorazí, zkontrolujte, že má zařízení pro tento web povolená oznámení a není v režimu
+            Nerušit.
+          </p>
+        </section>
+      }
+
+      <section class="ui-card" aria-labelledby="alerts-others-title">
+        <div class="ui-card__bar">
           <h2
             id="alerts-others-title"
-            class="ui-group-title"
+            class="ui-card__title"
             tabindex="-1"
             i18n="@@admin.alerts.others.title"
           >
             Další zařízení
           </h2>
-          @if (others().length === 0) {
-            <p class="ui-group-note others-none" i18n="@@admin.alerts.others.none">
-              Na jiném zařízení upozornění zapnutá nemáte.
-            </p>
-          } @else {
-            <ul class="ui-list ui-list--inset">
-              @for (device of others(); track device.id) {
-                <li>
-                  <button
-                    type="button"
-                    class="ui-list__row"
-                    aria-haspopup="dialog"
-                    (click)="openDevice(device)"
+        </div>
+        @if (others().length === 0) {
+          <p class="ui-card__footer others-none" i18n="@@admin.alerts.others.none">
+            Na jiném zařízení upozornění zapnutá nemáte.
+          </p>
+        } @else {
+          <ul class="ui-list ui-list--stacks-narrow others">
+            @for (device of others(); track device.id) {
+              <li>
+                <button
+                  type="button"
+                  class="ui-list__row"
+                  aria-haspopup="dialog"
+                  (click)="openDevice(device)"
+                >
+                  <span class="ui-list__title" i18n="@@admin.alerts.others.legend">
+                    {{ serviceName(device) }}, zapnuto {{ since(device) }}
+                  </span>
+                  <span class="ui-list__meta">
+                    @if (lastDelivery(device); as delivered) {
+                      <span i18n="@@admin.alerts.others.lastDelivered"
+                        >Naposledy doručeno {{ delivered }}.</span
+                      >
+                    } @else {
+                      <span i18n="@@admin.alerts.others.neverDelivered">Zatím nic nedoručeno.</span>
+                    }
+                    @if (device.failuresInARow > 0) {
+                      &ngsp;
+                      <span i18n="@@admin.alerts.others.failures"
+                        >Nedoručeno {{ device.failuresInARow }}× po sobě.</span
+                      >
+                    }
+                  </span>
+                  <span class="ui-list__value" i18n="@@admin.alerts.others.switchesOn"
+                    >{{ switchesOn(device) }} ze {{ areas.length }}</span
                   >
-                    <span class="ui-list__title" i18n="@@admin.alerts.others.legend">
-                      {{ serviceName(device) }}, zapnuto {{ since(device) }}
-                    </span>
-                    <span class="ui-list__meta">
-                      @if (lastDelivery(device); as delivered) {
-                        <span i18n="@@admin.alerts.others.lastDelivered"
-                          >Naposledy doručeno {{ delivered }}.</span
-                        >
-                      } @else {
-                        <span i18n="@@admin.alerts.others.neverDelivered"
-                          >Zatím nic nedoručeno.</span
-                        >
-                      }
-                      @if (device.failuresInARow > 0) {
-                        &ngsp;
-                        <span i18n="@@admin.alerts.others.failures"
-                          >Nedoručeno {{ device.failuresInARow }}× po sobě.</span
-                        >
-                      }
-                    </span>
-                    <span class="ui-list__value" i18n="@@admin.alerts.others.switchesOn"
-                      >{{ switchesOn(device) }} ze {{ areas.length }}</span
-                    >
-                    <svg
-                      class="ui-list__chevron"
-                      aria-hidden="true"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="m9 18 6-6-6-6" />
-                    </svg>
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-          <app-live-notice look="note" [notice]="othersNotice()" />
-        </section>
-      </div>
+                  <svg
+                    class="ui-list__chevron"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        <app-live-notice look="footer" [notice]="othersNotice()" />
+      </section>
 
       @if (openedDevice(); as device) {
         <app-dialog labelledBy="alerts-other-title" (dismissed)="closeDevice()">

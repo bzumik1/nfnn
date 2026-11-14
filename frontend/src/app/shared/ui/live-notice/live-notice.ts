@@ -5,7 +5,19 @@ export interface Notice {
   readonly text: string;
 }
 
-export type NoticeLook = 'block' | 'note';
+export type NoticeLook = 'block' | 'note' | 'footer';
+
+const LOOK_CLASSES: Record<NoticeLook, Record<Notice['kind'], string>> = {
+  block: { status: 'ui-notice ui-notice--status', alert: 'ui-notice ui-notice--alert' },
+  note: {
+    status: 'ui-group-note ui-group-note--status',
+    alert: 'ui-group-note ui-group-note--alert',
+  },
+  footer: {
+    status: 'ui-card__footer ui-card__footer--status',
+    alert: 'ui-card__footer ui-card__footer--alert',
+  },
+};
 
 @Component({
   selector: 'app-live-notice',
@@ -17,10 +29,6 @@ export type NoticeLook = 'block' | 'note';
 export class LiveNotice {
   readonly notice = input<Notice | null>(null);
   readonly look = input<NoticeLook>('block');
-  protected readonly statusClass = computed(() =>
-    this.look() === 'note' ? 'ui-group-note ui-group-note--status' : 'ui-notice ui-notice--status',
-  );
-  protected readonly alertClass = computed(() =>
-    this.look() === 'note' ? 'ui-group-note ui-group-note--alert' : 'ui-notice ui-notice--alert',
-  );
+  protected readonly statusClass = computed(() => LOOK_CLASSES[this.look()].status);
+  protected readonly alertClass = computed(() => LOOK_CLASSES[this.look()].alert);
 }
