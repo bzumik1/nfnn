@@ -26,6 +26,8 @@ class BaselineHygieneTest {
     private static final String OTHER_BACKUP_KEY = "AGE-SECRET-KEY-1ARXU2VF0GAFA8YLTUXNPDZE0UV33WNCJJEUWM3C2RKSR7A829JTS8HRKXT";
     private static final String V2_RECEIPT_TEMPLATE_DIGEST = "7b30974aef2fdaf01f6e4990c8c4b526a0de8d8371452023be783677b69bf7e7";
     private static final JsonMapper RECEIPT_CORPUS_JSON = JsonMapper.builder().build();
+    private static final int LONG_RUN = 20_000;
+    private static final int READS_PER_CHARACTER = 8;
     private static final BaselineHygiene.Fixtures NO_FIXTURES = new BaselineHygiene.Fixtures(Set.of(), Set.of());
 
     @ParameterizedTest
@@ -89,6 +91,37 @@ class BaselineHygieneTest {
                 + "nova-skola-pro-deti-z-o RECEIPT_SIGNATORY_NAME ScenarioTranscriptTest AesGcmSecretSealerTest ContactMessageRetentionSchedulerTest " + FIXTURE_SECRET + " jana3@example.cz Acme@Example.cz secret@photos.example";
 
         assertThat(BaselineHygiene.findings("clean.txt", text, new BaselineHygiene.Fixtures(Set.of("jana@example.cz"), Set.of(FIXTURE_SECRET)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a 20 000 character run of address characters without an @ followed by an address, when its addresses are read, then the address is found reading each character only a few times")
+    void should_find_the_address_reading_each_character_a_few_times_when_read_given_a_long_run_without_an_at_sign() {
+        CountingText text = new CountingText("a".repeat(LONG_RUN) + " jana@example.cz");
+
+        List<String> addresses = BaselineHygiene.addresses(text);
+
+        assertThat(addresses).containsExactly("jana@example.cz");
+        assertThat(text.reads()).isLessThan(READS_PER_CHARACTER * text.length());
+    }
+
+    @Test
+    @DisplayName("Given an address that starts with the character right after the previous address ends, when the addresses are read, then both are found whole")
+    void should_find_both_whole_addresses_when_read_given_an_address_right_after_another() {
+        assertThat(BaselineHygiene.addresses("Jana@example.cz+petr@example.org x%eva@example.net"))
+                .containsExactly("jana@example.cz", "+petr@example.org", "x%eva@example.net");
+    }
+
+    @Test
+    @DisplayName("Given fixtures collected once from a list of test sources, when they are collected again from the same list, then the same fixtures are returned without reading the sources again")
+    void should_return_the_same_fixtures_when_collected_again_given_the_same_test_sources(@TempDir Path testSources) throws IOException {
+        Files.writeString(testSources.resolve("Fixture.java"), "\"jana@example.cz\"");
+        BaselineHygiene.Fixtures first = BaselineHygiene.fixtures(testSources);
+        Files.writeString(testSources.resolve("Later.java"), "\"petr@example.cz\"");
+
+        BaselineHygiene.Fixtures again = BaselineHygiene.fixtures(testSources);
+
+        assertThat(again).isSameAs(first);
+        assertThat(again.addresses()).doesNotContain("petr@example.cz");
     }
 
     @Test
@@ -440,5 +473,40 @@ class BaselineHygieneTest {
 
         assertThat(fixtures.addresses()).contains("info@nfnn.cz").anyMatch(address -> address.endsWith("@example.cz"));
         assertThat(fixtures.values()).contains(FIXTURE_SECRET);
+    }
+
+    private static final class CountingText implements CharSequence {
+
+        private final String text;
+        private long reads;
+
+        private CountingText(String text) {
+            this.text = text;
+        }
+
+        long reads() {
+            return reads;
+        }
+
+        @Override
+        public int length() {
+            return text.length();
+        }
+
+        @Override
+        public char charAt(int index) {
+            reads++;
+            return text.charAt(index);
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return text.subSequence(start, end);
+        }
+
+        @Override
+        public String toString() {
+            return text;
+        }
     }
 }

@@ -13,15 +13,17 @@ import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,8 +39,10 @@ final class BaselineHygiene {
     private static final Pattern LOWERCASE = Pattern.compile("[a-z]");
     private static final Pattern CAMEL_CASE_NAME = Pattern.compile("[a-z]*(?:[A-Z][a-z]+)+");
     private static final Pattern UNMASKED_COOKIE = Pattern.compile("(?i)(refresh_token[a-z_]*)=(?!<secret>)[^;\"\\s]+");
-    private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}");
+    private static final Pattern EMAIL = Pattern.compile("(?:\\G|(?<![A-Za-z0-9._%+-]))[A-Za-z0-9._%+-]++@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}");
     private static final Set<String> FIXTURE_DOMAINS = Set.of("example.cz", "example.com", "example.org", "example.net");
+    private static final Map<List<Path>, Fixtures> COLLECTED_FIXTURES = new ConcurrentHashMap<>();
+    private static final Map<Path, Fixtures> COLLECTED_FIXTURES_PER_SOURCE = new ConcurrentHashMap<>();
     private static final String RESERVED_EXAMPLE_TLD = ".example";
     private static final String JSON_FILE = ".json";
     private static final Set<String> TEXT_FILES = Set.of(".json", ".txt", ".md", ".java", ".feature", ".properties", ".yml", ".yaml", ".html", ".xml", ".sql", ".ts");
@@ -170,9 +174,7 @@ final class BaselineHygiene {
                 findings.add(file + ": not valid JSON, so the secret-setting rule cannot run");
             }
         }
-        Matcher addresses = EMAIL.matcher(text);
-        while (addresses.find()) {
-            String address = addresses.group().toLowerCase(Locale.ROOT);
+        for (String address : addresses(text)) {
             if (DENIED_ADDRESSES.contains(address)) {
                 findings.add(file + ": a denied address " + address);
             } else if (!fixtures.addresses().contains(address) && !isFixtureDomain(address.substring(address.indexOf('@') + 1))) {
@@ -180,6 +182,10 @@ final class BaselineHygiene {
             }
         }
         return findings;
+    }
+
+    static List<String> addresses(CharSequence text) {
+        return EMAIL.matcher(text).results().map(match -> match.group().toLowerCase(Locale.ROOT)).toList();
     }
 
     private static void secretShapes(String file, String text, Fixtures fixtures, boolean baselineCommit, List<String> findings) {
@@ -354,25 +360,56 @@ final class BaselineHygiene {
     }
 
     static Fixtures fixtures(Path... testSources) throws IOException {
-        Set<String> addresses = new TreeSet<>(EXPLICIT_ADDRESSES);
+        List<Path> sources = List.of(testSources);
+        Fixtures collected = COLLECTED_FIXTURES.get(sources);
+        if (collected == null) {
+            Set<String> addresses = new TreeSet<>(EXPLICIT_ADDRESSES);
+            Set<String> values = new TreeSet<>();
+            Set<String> words = new TreeSet<>();
+            for (Path testSource : sources) {
+                Fixtures source = fixturesOf(testSource);
+                addresses.addAll(source.addresses());
+                values.addAll(source.values());
+                words.addAll(source.words());
+            }
+            collected = remembered(sources, unmodifiable(addresses, values, words));
+        }
+        return collected;
+    }
+
+    private static Fixtures fixturesOf(Path testSource) throws IOException {
+        Fixtures collected = COLLECTED_FIXTURES_PER_SOURCE.get(testSource);
+        if (collected != null) {
+            return collected;
+        }
+        Set<String> addresses = new TreeSet<>();
         Set<String> values = new TreeSet<>();
         Set<String> words = new TreeSet<>();
-        for (Path testSource : testSources) {
-            try (Stream<Path> files = Files.walk(testSource)) {
-                for (Path file : files.filter(Files::isRegularFile).filter(BaselineHygiene::isText).toList()) {
-                    String text = Files.readString(file, StandardCharsets.UTF_8);
-                    EMAIL.matcher(text).results().map(match -> match.group().toLowerCase(Locale.ROOT)).forEach(addresses::add);
-                    Stream.of(TOKEN, STANDARD_BASE64, ACCOUNT).flatMap(shape -> shape.matcher(text).results()).map(MatchResult::group).forEach(values::add);
-                    IBAN.matcher(text).results().map(match -> match.group().replace(" ", "")).forEach(values::add);
-                    RECOVERY_CODE.matcher(text).results().map(BaselineHygiene::recoveryCode).forEach(values::add);
-                    if (file.getFileName().toString().endsWith(FEATURE_FILE)) {
-                        FEATURE_WORD.matcher(text).results().map(match -> match.group(1).toLowerCase(Locale.ROOT)).forEach(words::add);
-                        FEATURE_TABLE_ACCOUNT.matcher(text).results().map(match -> match.group(1) + "/" + match.group(2)).forEach(values::add);
-                    }
+        try (Stream<Path> files = Files.walk(testSource)) {
+            for (Path file : files.filter(Files::isRegularFile).filter(BaselineHygiene::isText).toList()) {
+                String text = Files.readString(file, StandardCharsets.UTF_8);
+                addresses.addAll(addresses(text));
+                Stream.of(TOKEN, STANDARD_BASE64, ACCOUNT).flatMap(shape -> shape.matcher(text).results()).map(MatchResult::group).forEach(values::add);
+                IBAN.matcher(text).results().map(match -> match.group().replace(" ", "")).forEach(values::add);
+                RECOVERY_CODE.matcher(text).results().map(BaselineHygiene::recoveryCode).forEach(values::add);
+                if (file.getFileName().toString().endsWith(FEATURE_FILE)) {
+                    FEATURE_WORD.matcher(text).results().map(match -> match.group(1).toLowerCase(Locale.ROOT)).forEach(words::add);
+                    FEATURE_TABLE_ACCOUNT.matcher(text).results().map(match -> match.group(1) + "/" + match.group(2)).forEach(values::add);
                 }
             }
         }
-        return new Fixtures(addresses, values, words);
+        Fixtures read = unmodifiable(addresses, values, words);
+        Fixtures earlier = COLLECTED_FIXTURES_PER_SOURCE.putIfAbsent(testSource, read);
+        return earlier == null ? read : earlier;
+    }
+
+    private static Fixtures remembered(List<Path> sources, Fixtures collected) {
+        Fixtures earlier = COLLECTED_FIXTURES.putIfAbsent(sources, collected);
+        return earlier == null ? collected : earlier;
+    }
+
+    private static Fixtures unmodifiable(Set<String> addresses, Set<String> values, Set<String> words) {
+        return new Fixtures(Collections.unmodifiableSet(addresses), Collections.unmodifiableSet(values), Collections.unmodifiableSet(words));
     }
 
     private static boolean isText(Path file) {
