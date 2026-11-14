@@ -502,7 +502,7 @@ test.describe('Given a visitor who already acted on the page when a new version 
     expect(await sameDocument(page)).toBe(true);
     expect(await marker(page)).toBe('a');
 
-    await page.getByRole('link', { name: 'Zásady ochrany osobních údajů', exact: true }).click();
+    await privacyLinkOfContact(page).click();
 
     await expect.poll(() => sameDocument(page).catch(() => true)).toBe(false);
     await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
