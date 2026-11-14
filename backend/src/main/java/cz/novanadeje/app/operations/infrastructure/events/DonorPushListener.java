@@ -19,13 +19,13 @@ class DonorPushListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    void on(DonationsArrived arrived) {
+    public void on(DonationsArrived arrived) {
         dispatcher.giftsArrived(arrived.donorIds());
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    void on(YearlyReceiptsReady ready) {
+    public void on(YearlyReceiptsReady ready) {
         dispatcher.yearlyReceiptsReady(ready.donorIds());
     }
 }

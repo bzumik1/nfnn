@@ -16,6 +16,6 @@ class SecondFactorRecoveryPaymentListener {
 
     @EventListener
     void onPaid(SecondFactorRecoveryPaid payment) {
-        recoveries.complete(payment);
+        recoveries.complete(payment.donorId(), payment.code(), payment.senderAccount());
     }
 }
