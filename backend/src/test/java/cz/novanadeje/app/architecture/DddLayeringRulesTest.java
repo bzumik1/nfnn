@@ -38,6 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ResourceBundle;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,11 +71,18 @@ class DddLayeringRulesTest {
             "java.text", "java.security", "java.nio", "java.nio.charset", "javax.crypto..", DOMAIN)
             .or(belongToAnyOf(URI.class, URISyntaxException.class, URLEncoder.class, ByteArrayOutputStream.class))
             .as("the JDK's core or a domain package");
-    private static final Set<String> RESOURCE_OWNERS = Set.of(Class.class.getName(), ClassLoader.class.getName(), Module.class.getName());
-    private static final Pattern RESOURCE_READS = Pattern.compile("(get(System)?Resources?(AsStream)?|resources|systemResources)");
+    private static final Pattern CLASSPATH_READS = Pattern.compile("(get(System)?Resources?(AsStream)?|resources|systemResources)");
+    private static final Map<String, Pattern> RESOURCE_READS_BY_OWNER = Map.of(
+            Class.class.getName(), CLASSPATH_READS,
+            ClassLoader.class.getName(), CLASSPATH_READS,
+            Module.class.getName(), CLASSPATH_READS,
+            ResourceBundle.class.getName(), Pattern.compile("getBundle"),
+            ServiceLoader.class.getName(), Pattern.compile("load(Installed)?"));
     private static final DescribedPredicate<JavaAccess<?>> READS_A_CLASSPATH_RESOURCE = DescribedPredicate.describe(
-            "read a classpath resource",
-            access -> RESOURCE_OWNERS.contains(access.getTargetOwner().getName()) && RESOURCE_READS.matcher(access.getName()).matches());
+            "read a classpath resource, a resource bundle or a service loader",
+            access -> Optional.ofNullable(RESOURCE_READS_BY_OWNER.get(access.getTargetOwner().getName()))
+                    .filter(reads -> reads.matcher(access.getName()).matches())
+                    .isPresent());
     private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_IMPLEMENTS = DescribedPredicate.describe(
             "a port that persistence implements",
             type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAPackage("..infrastructure.persistence..")::test));
@@ -215,6 +224,13 @@ class DddLayeringRulesTest {
                                 java.util.function.Function<String, Object> reader() { return ResourceGift.class::getResourceAsStream; }
                             }
                             """),
+                    planted("planteda.domain.BundledGift", """
+                            public class BundledGift {
+                                Object bundle() { return java.util.ResourceBundle.getBundle("gift"); }
+                                Object services() { return java.util.ServiceLoader.load(Runnable.class); }
+                                Object installed() { return java.util.ServiceLoader.loadInstalled(Runnable.class); }
+                            }
+                            """),
                     planted("planteda.application.GiftService", "public class GiftService {}"),
                     planted("planteda.application.GiftPairing", "public interface GiftPairing { void pair(); }"),
                     planted("planteda.application.PairingService", "@org.springframework.stereotype.Service public class PairingService { public void pair() {} }"),
@@ -342,13 +358,16 @@ class DddLayeringRulesTest {
         }
 
         @Test
-        @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader and by a method reference, then each is reported and a class that reads none is not")
+        @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader, by a method reference, as a resource bundle and through a service loader, then each is reported and a class that reads none is not")
         void should_report_every_resource_read_when_checked_given_planted_domain_classes() {
             assertThat(reportOf(domain_must_not_read_classpath_resources))
                     .anySatisfy(detail -> assertThat(detail).contains("StreamedGift.read()").contains("getResourceAsStream"))
                     .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.list()").contains("getResourceAsStream"))
                     .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.loaded()").contains("java.lang.ClassLoader.getResource"))
                     .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.reader()").contains("getResourceAsStream"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.bundle()").contains("java.util.ResourceBundle.getBundle"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.services()").contains("java.util.ServiceLoader.load"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.installed()").contains("java.util.ServiceLoader.loadInstalled"))
                     .noneSatisfy(detail -> assertThat(detail).contains("NetworkGift"));
         }
 
