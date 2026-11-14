@@ -293,7 +293,7 @@ for (const { width, height } of [
       }
     });
 
-    test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their row', async ({
+    test('when a signed-in donor with a question about an account opens Můj přehled, then the question and Odpovědět stay whole within their notice', async ({
       page,
     }) => {
       await mockDonorApi(page);
@@ -320,10 +320,30 @@ for (const { width, height } of [
       await page.setViewportSize({ width: 1280, height: 900 });
       await signIn(page);
       await page.setViewportSize({ width, height });
-      const row = page.locator('.overview-question .ui-list__row');
-      await expect(row).toContainText('Odpovědět');
+      const notice = page.locator('.overview-question');
+      await expect(notice).toContainText('Odpovědět');
 
-      await expect.poll(() => contentPastTheSides(row)).toEqual([]);
+      await expect.poll(() => contentPastTheSides(notice)).toEqual([]);
+    });
+
+    test('when a signed-in donor without a gift opens Můj přehled, then Přidat účet, ze kterého jste platili and Zkontrolovat nové platby stay whole within the card Jak poslat první dar', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const card = page.locator('section[aria-labelledby="first-gift-title"]');
+      await expect(
+        card.getByRole('link', { name: 'Přidat účet, ze kterého jste platili' }),
+      ).toBeVisible();
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        await expect.poll(() => contentPastTheSides(card), textSize).toEqual([]);
+      }
     });
 
     test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
