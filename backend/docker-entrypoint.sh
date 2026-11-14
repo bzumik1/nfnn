@@ -239,4 +239,4 @@ fi
 wait_while_restore_due
 wait_for_database
 
-exec java -XX:+UseSerialGC -XX:MaxRAMPercentage=60 -Xms256m -XX:MetaspaceSize=160m --enable-native-access=ALL-UNNAMED -Djava.library.path=/app/native -Dcom.luciad.imageio.webp.tmpdir=/app/native -jar /app/app.jar
+exec java -XX:+UseSerialGC -XX:MaxRAMPercentage=60 -Xms256m -XX:MetaspaceSize=160m --enable-native-access=ALL-UNNAMED -Djava.library.path=/app/native -Dcom.luciad.imageio.webp.tmpdir=/app/native -XX:AOTCache=/app/app.aot -jar /app/app.jar
