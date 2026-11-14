@@ -132,7 +132,7 @@ The hourly read of new movements from the Fio API with a read-only token, plus t
 _Avoid_: sync (sync is the device copy's download)
 
 **Import outage**\
-UI „porucha stahování z banky“ · Code: `ImportOutage`, `ImportAlert`, `bank_import_state.reported_outage`.\
+UI „porucha stahování z banky“ · Code: `ImportOutage`, `ImportAlert`, `bank_import_state.reported_outage`, the shared event `ImportOutageChanged` that operations records as the `BANK_IMPORT` alert.\
 Three counted import failures in a row or a rejected Fio token, reported once by e-mail and push alert, and once more on recovery.
 
 **Account balance**\
