@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import cz.novanadeje.app.shared.infrastructure.busy.CpuSlotsFull;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,16 @@ class ServerBusyHandler {
     ResponseEntity<ProblemDetail> handleDatabaseWait(Exception ex, HttpServletRequest request) {
         log.warn("Database wait ran out ({}) answered as 503 at {} {}", ex.getClass().getSimpleName(), UnhandledExceptionHandler.method(request),
                 UnhandledExceptionHandler.pattern(request));
+        return busy();
+    }
+
+    @ExceptionHandler(CpuSlotsFull.class)
+    ResponseEntity<ProblemDetail> handleCpuSlotsFull(CpuSlotsFull ex, HttpServletRequest request) {
+        log.warn("CPU slots of {} full, answered as 503 at {} {}", ex.work().label(), UnhandledExceptionHandler.method(request), UnhandledExceptionHandler.pattern(request));
+        return busy();
+    }
+
+    private ResponseEntity<ProblemDetail> busy() {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.SERVICE_UNAVAILABLE);
         problem.setType(ProblemTypes.SERVER_BUSY);
         problem.setTitle(texts.text("problem." + CODE + ".title"));
