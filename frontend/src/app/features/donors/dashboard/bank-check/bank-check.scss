@@ -2,6 +2,8 @@
 
 :host {
   display: block;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .bank-check {
@@ -9,6 +11,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
+
+  > * {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 .bank-check-status {
@@ -19,6 +26,11 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   color: var(--color-text-soft);
+
+  > * {
+    min-width: 0;
+    max-width: 100%;
+  }
 }
 
 .bank-check-outcome {
@@ -31,6 +43,7 @@
 
   max-width: 100%;
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .bank-check-error {
