@@ -74,7 +74,11 @@
           </li>
         }
         <li>
-          <a class="ui-list__row" [routerLink]="filePath" [queryParams]="allQuery">
+          <a
+            class="ui-list__row ui-list__row--action"
+            [routerLink]="filePath"
+            [queryParams]="allQuery"
+          >
             <span class="ui-list__lead ui-list__glyph" aria-hidden="true">
               <svg
                 width="20"

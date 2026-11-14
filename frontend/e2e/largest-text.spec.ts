@@ -1,4 +1,5 @@
 import { Locator, Page } from '@playwright/test';
+import { DIAGNOSTICS, logsApi, routeLogsApi } from './admin-logs-api';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
   administrator,
@@ -492,4 +493,55 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       );
     });
   }
+
+  test('when they open /sprava/logy with a level raised and errors today, then every row title that is not a file name breaks only between words and the page never pans sideways', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    await page.route(
+      (url) => url.pathname === DIAGNOSTICS,
+      (route) =>
+        route.fulfill({
+          json: {
+            ...(logsApi()['diagnostics'] as object),
+            logLevelOverrides: [
+              { logger: 'cz.novanadeje.app', level: 'DEBUG', until: '2026-10-23T10:30:00Z' },
+            ],
+          },
+        }),
+    );
+    await page.goto('/sprava/logy');
+    await expect(page.getByRole('heading', { level: 1, name: 'Logy a diagnostika' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Úrovně logování 1 dočasně/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Fio refused the request/ })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const split = await page
+      .getByRole('main')
+      .locator('.ui-list__title:not(.problem-message, .ui-mono)')
+      .evaluateAll((lines) =>
+        lines.flatMap((line) => {
+          const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+          const broken: string[] = [];
+          for (let text = walker.nextNode(); text !== null; text = walker.nextNode()) {
+            for (const word of (text.textContent ?? '').matchAll(/\S+/g)) {
+              const range = document.createRange();
+              range.setStart(text, word.index);
+              range.setEnd(text, word.index + word[0].length);
+              const tops = new Set(
+                Array.from(range.getClientRects()).map((rect) => Math.round(rect.top)),
+              );
+              if (tops.size > 1) {
+                broken.push(word[0]);
+              }
+            }
+          }
+          return broken;
+        }),
+      );
+    expect(split).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
+  });
 });

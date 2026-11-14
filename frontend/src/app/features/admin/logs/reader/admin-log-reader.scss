@@ -78,8 +78,9 @@
   gap: var(--space-1) var(--space-3);
   align-items: start;
   width: 100%;
+  position: relative;
   min-height: var(--list-row-min-height);
-  padding: var(--space-3) var(--space-6);
+  padding-block: var(--space-3);
   border: 0;
   background: transparent;
   color: var(--color-text);
@@ -100,15 +101,21 @@
   }
 }
 
-.entry.level-error,
-.entry.level-warn {
+.entry.level-error::before,
+.entry.level-warn::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
   border-inline-start: var(--space-0-75) solid var(--color-log-warn);
-  padding-inline-start: calc(var(--space-6) - var(--space-0-75));
 }
 
 .entry.level-error {
-  border-inline-start-color: var(--color-danger);
   background: var(--color-danger-bg);
+}
+
+.entry.level-error::before {
+  border-inline-start-color: var(--color-danger);
 }
 
 @media (hover: hover) {
@@ -196,12 +203,12 @@
 }
 
 @media (forced-colors: active) {
-  .entry.level-error,
-  .entry.level-warn {
+  .entry.level-error::before,
+  .entry.level-warn::before {
     border-inline-start-color: CanvasText;
   }
 
-  .entry.level-error {
+  .entry.level-error::before {
     border-inline-start-style: double;
     border-inline-start-width: var(--space-1-5);
   }
