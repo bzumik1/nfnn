@@ -37,7 +37,7 @@ class DigestRulesTest {
             .because("one Sha256 of the shared kernel gives every digest the site stores or compares, so a copy cannot drift in its encoding");
 
     @Test
-    @DisplayName("Given a planted class that takes a digest from the JDK, by a call and by a method reference, when the rule checks it, then both are reported and a comparison with isEqual is not")
+    @DisplayName("Given a planted class that takes a digest from the JDK by a call, in a lambda and by a method reference, when the rule checks it, then each is reported and a comparison with isEqual is not")
     void should_report_every_digest_instance_when_checked_given_a_planted_class(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.domain.PlantedSecret", """
                 package cz.novanadeje.app.planteda.domain;
@@ -48,12 +48,20 @@ class DigestRulesTest {
 
                 class PlantedSecret {
 
+                    interface Digests {
+                        MessageDigest of(String algorithm) throws NoSuchAlgorithmException;
+                    }
+
                     byte[] hash(byte[] value) throws NoSuchAlgorithmException {
                         return MessageDigest.getInstance("SHA-256").digest(value);
                     }
 
                     Callable<MessageDigest> digests() {
                         return () -> MessageDigest.getInstance("SHA-512");
+                    }
+
+                    Digests byReference() {
+                        return MessageDigest::getInstance;
                     }
 
                     boolean same(byte[] first, byte[] second) {
@@ -63,9 +71,10 @@ class DigestRulesTest {
                 """));
 
         assertThat(digests_come_only_from_the_shared_sha256.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(2)
+                .hasSize(3)
                 .anySatisfy(detail -> assertThat(detail).contains("hash"))
                 .anySatisfy(detail -> assertThat(detail).contains("digests"))
+                .anySatisfy(detail -> assertThat(detail).contains("byReference"))
                 .noneSatisfy(detail -> assertThat(detail).contains("same"));
     }
 }
