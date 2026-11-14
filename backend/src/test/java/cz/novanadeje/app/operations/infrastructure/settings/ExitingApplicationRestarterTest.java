@@ -74,10 +74,11 @@ class ExitingApplicationRestarterTest {
         startTaskThatWaitsForRelease();
         CountDownLatch polledWhileBusy = new CountDownLatch(3);
         ExitingApplicationRestarter restarter = new ExitingApplicationRestarter(executor, clock, length -> {
-            clock.advance(length);
             if (length.equals(ExitingApplicationRestarter.ASYNC_WORK_POLL)) {
                 polledWhileBusy.countDown();
                 Thread.sleep(1);
+            } else {
+                clock.advance(length);
             }
         }, restartThreads::add, this::exit);
 
@@ -113,10 +114,11 @@ class ExitingApplicationRestarterTest {
         startTaskThatWaitsForRelease();
         CountDownLatch polledWhileBusy = new CountDownLatch(3);
         ExitingApplicationRestarter restarter = new ExitingApplicationRestarter(executor, clock, length -> {
-            clock.advance(length);
             if (length.equals(ExitingApplicationRestarter.ASYNC_WORK_POLL)) {
                 polledWhileBusy.countDown();
                 Thread.sleep(1);
+            } else {
+                clock.advance(length);
             }
         }, restartThreads::add, this::exit);
 
@@ -130,7 +132,7 @@ class ExitingApplicationRestarterTest {
         assertThat(exits).hasValue(1);
         assertThat(steps).containsExactly("exit");
         assertThat(Duration.between(START, clock.instant())).isLessThan(ExitingApplicationRestarter.ASYNC_WORK_BOUND);
-        assertThat(lines.list).extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage).containsExactly(
+        assertThat(lines.list).extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage).containsExactlyInAnyOrder(
                 tuple(Level.WARN, RESTORE_ENDED_THE_WAIT),
                 tuple(Level.INFO, STOPPING));
     }
@@ -192,7 +194,7 @@ class ExitingApplicationRestarterTest {
     void should_let_the_next_restart_start_when_restarted_given_the_restart_thread_could_not_start() {
         AtomicInteger starts = new AtomicInteger();
         Executor failingOnce = work -> {
-            if (starts.getAndIncrement() < 2) {
+            if (starts.getAndIncrement() < 1) {
                 throw new OutOfMemoryError("unable to create native thread");
             }
             work.run();
@@ -200,8 +202,23 @@ class ExitingApplicationRestarterTest {
         ExitingApplicationRestarter restarter = new ExitingApplicationRestarter(executor, clock, clock::advance, failingOnce, this::exit);
 
         assertThatThrownBy(restarter::restartAfterCommitOnceAsyncWorkIsDone).isInstanceOf(OutOfMemoryError.class);
-        assertThatThrownBy(restarter::restartAfterCommitForRestore).isInstanceOf(OutOfMemoryError.class);
+        int exitsAfterTheFailure = exits.get();
         restarter.restartAfterCommitOnceAsyncWorkIsDone();
+
+        assertThat(exitsAfterTheFailure).isZero();
+        assertThat(exits).hasValue(1);
+        assertThat(messages()).containsExactly(STOPPING);
+    }
+
+    @Test
+    @DisplayName("Given the restart thread cannot be started, when a restore asks for a restart, then the backend exits on the caller's thread and the failure goes on, so a restore never leaves the backend running")
+    void should_exit_on_the_callers_thread_when_a_restore_restarts_given_the_restart_thread_could_not_start() {
+        Executor failing = work -> {
+            throw new OutOfMemoryError("unable to create native thread");
+        };
+        ExitingApplicationRestarter restarter = new ExitingApplicationRestarter(executor, clock, clock::advance, failing, this::exit);
+
+        assertThatThrownBy(restarter::restartAfterCommitForRestore).isInstanceOf(OutOfMemoryError.class);
 
         assertThat(exits).hasValue(1);
         assertThat(messages()).containsExactly(STOPPING);

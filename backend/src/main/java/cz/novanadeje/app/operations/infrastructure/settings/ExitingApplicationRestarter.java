@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Component
@@ -58,6 +59,7 @@ class ExitingApplicationRestarter implements ApplicationRestarter {
     private final ApplicationExecutorIdleWait.Pause pause;
     private final Executor restartThread;
     private final Exit exit;
+    private final AtomicBoolean exited = new AtomicBoolean();
 
     @Autowired
     ExitingApplicationRestarter(ConfigurableApplicationContext context, @Qualifier("applicationTaskExecutor") ThreadPoolTaskExecutor executor, Clock clock) {
@@ -125,6 +127,9 @@ class ExitingApplicationRestarter implements ApplicationRestarter {
         try {
             restartThread.execute(work);
         } catch (RuntimeException | Error failure) {
+            if (pending.get().phase() == Phase.EXITING) {
+                exitNow();
+            }
             pending.set(Pending.NONE);
             throw failure;
         }
@@ -166,7 +171,9 @@ class ExitingApplicationRestarter implements ApplicationRestarter {
 
     private void exitNow() {
         pending.set(Pending.EXITING);
-        log.info("Stopping the backend to apply the changed settings; Docker starts it again");
-        exit.exit();
+        if (exited.compareAndSet(false, true)) {
+            log.info("Stopping the backend to apply the changed settings; Docker starts it again");
+            exit.exit();
+        }
     }
 }
