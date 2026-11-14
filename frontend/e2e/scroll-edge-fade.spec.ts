@@ -19,6 +19,28 @@ const FINE_STRIPES = `
   main { min-height: 300vh; }
 `;
 
+const ARTICLE = {
+  id: '0199f3e0-0000-7000-8000-00000000c634',
+  slug: 'clanek-pod-okrajem',
+  title: 'Ohlédnutí za rokem',
+  tag: 'Výroční ohlédnutí',
+  perex: 'Co všechno se letos podařilo.',
+  body: Array.from(
+    { length: 20 },
+    () => 'Díky vašim darům jsme letos mohli pomoci dětem, které potřebují rehabilitaci.',
+  ).join('\n\n'),
+  coverImage: null,
+  publishedOn: '2026-10-20',
+  createdAt: '2026-10-19T09:00:00Z',
+  updatedAt: '2026-10-20T07:30:00Z',
+};
+
+const PAGES = [
+  { name: 'O nás', path: '/o-nas' },
+  { name: 'Aktuality', path: '/aktuality' },
+  { name: 'an article with the back button', path: `/aktuality/${ARTICLE.slug}` },
+];
+
 async function sharpnessByRow(context: BrowserContext, png: Buffer): Promise<number[]> {
   const reader = await context.newPage();
   try {
@@ -60,6 +82,10 @@ function softness(sharpness: number[]): { full: number; rows: number } {
 }
 
 async function scrolledUnderTheEdge(page: Page, path: string): Promise<number> {
+  await page.route(
+    (url) => url.pathname === `/api/content/news/${ARTICLE.slug}`,
+    (route) => route.fulfill({ json: ARTICLE }),
+  );
   await page.goto(path);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.addStyleTag({ content: HOME_SCREEN_TOP + FINE_STRIPES });
@@ -79,10 +105,7 @@ async function scrolledUnderTheEdge(page: Page, path: string): Promise<number> {
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  for (const { name, path } of [
-    { name: 'O nás', path: '/o-nas' },
-    { name: 'Aktuality', path: '/aktuality' },
-  ]) {
+  for (const { name, path } of PAGES) {
     test.describe(`Given ${name} in the app opened from an iPhone's home screen, in the ${colorScheme} appearance`, () => {
       test.use({ colorScheme, viewport: { width: WIDTH, height: 844 } });
 
