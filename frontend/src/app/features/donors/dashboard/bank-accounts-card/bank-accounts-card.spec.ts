@@ -626,6 +626,13 @@ describe('Given the bank accounts card in the overview', () => {
       expect(helpPanel().hidden).toBe(true);
     });
 
+    it('then the title and the button share the bar of the card, the button styled as an aside of the card', () => {
+      const bar = element('.ui-card > .ui-card__bar') as HTMLElement;
+      expect(bar.querySelector(':scope > h2.ui-card__title')).not.toBeNull();
+      expect(bar.querySelector(':scope > .ui-card__aside')).toBe(helpButton());
+      expect(element('.ui-group-aside')).toBeNull();
+    });
+
     it("and presses the help button, then the labelled panel opens under the head with the donor's symbol", async () => {
       await click('.accounts-help');
 

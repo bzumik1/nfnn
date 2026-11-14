@@ -8,11 +8,7 @@
 
 @if (donations.state() === 'ready') {
   <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
-    <h2
-      id="yearly-title"
-      class="ui-card__title ui-card__title--large"
-      i18n="@@donor.dashboard.yearly.title"
-    >
+    <h2 id="yearly-title" class="ui-card__title" i18n="@@donor.dashboard.yearly.title">
       Roční potvrzení o darech
     </h2>
     <p class="yearly-sub" i18n="@@donor.receipts.yearly.sub">
@@ -102,11 +98,7 @@
   </section>
 
   <section class="ui-card ui-card--padded single-card" aria-labelledby="single-title">
-    <h2
-      id="single-title"
-      class="ui-card__title ui-card__title--large"
-      i18n="@@donor.receipts.single.title"
-    >
+    <h2 id="single-title" class="ui-card__title" i18n="@@donor.receipts.single.title">
       Potvrzení k jednotlivému daru
     </h2>
     @if (runningYearGifts().length > 0) {
@@ -142,11 +134,7 @@
 }
 
 <section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
-  <h2
-    id="verify-title"
-    class="ui-card__title ui-card__title--large"
-    i18n="@@donor.receipts.verify.title"
-  >
+  <h2 id="verify-title" class="ui-card__title" i18n="@@donor.receipts.verify.title">
     Ověřit potvrzení
   </h2>
   <p class="yearly-sub" i18n="@@donor.receipts.verify.text">

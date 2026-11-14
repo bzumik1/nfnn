@@ -2537,6 +2537,21 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(link?.getAttribute('href')).toBe('/overit');
     });
 
+    it('then its three cards carry the one card title size of every donor card', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const titles = [...document.querySelectorAll<HTMLElement>('.ui-card > h2')];
+      expect(titles.map((title) => title.textContent?.trim())).toEqual([
+        'Roční potvrzení o darech',
+        'Potvrzení k jednotlivému daru',
+        'Ověřit potvrzení',
+      ]);
+      for (const title of titles) {
+        expect(title.className).toBe('ui-card__title');
+      }
+    });
+
     it('then the card to verify a receipt is there even while the donations load', async () => {
       await open('/darce/potvrzeni');
 

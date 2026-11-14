@@ -128,11 +128,6 @@
     cursor: progress;
   }
 
-  &.ui-pill-button--tinted {
-    background: var(--color-accent-soft);
-    border-color: transparent;
-  }
-
   &.ui-pill-button--done {
     color: var(--color-success);
     border-color: var(--color-success);
