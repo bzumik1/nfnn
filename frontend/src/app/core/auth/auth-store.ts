@@ -65,6 +65,7 @@ import {
 export type AuthStatus = 'unknown' | 'anonymous' | 'signed-in';
 
 export const SESSION_HINT_KEY = BROWSER_JAR.hintKey;
+export const SIGN_OUT_PENDING_KEY = BROWSER_JAR.signOutPendingKey;
 export const CONNECTION_CHECK_AFTER_MS = 1_000;
 export const OFFLINE_OPEN_WAIT_MS = 3_000;
 
@@ -86,6 +87,8 @@ export class AuthStore {
   private readonly currentSession = signal<SessionKind | null>(null);
   private readonly fromCopy = signal(false);
   private readonly acceptedAt = signal<string | null>(null);
+  private readonly pendingSignOut = signal(hasPendingSignOut(this.jar));
+  private finishingSignOut = false;
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
   private restoring: Promise<void> | null = null;
@@ -101,6 +104,7 @@ export class AuthStore {
   readonly storesNothing = computed(() => this.currentSession() === 'PUBLIC');
   readonly fromDevice = this.fromCopy.asReadonly();
   readonly sessionAcceptedAt = this.acceptedAt.asReadonly();
+  readonly signOutPending = this.pendingSignOut.asReadonly();
   readonly installed = this.jar.installed;
 
   constructor() {
@@ -109,8 +113,17 @@ export class AuthStore {
         this.adoptAnnounced(event.data.response);
       } else if (isSignedOut(event.data)) {
         this.forget();
+        this.pendingSignOut.set(hasPendingSignOut(this.jar));
         this.device.signedOutElsewhere();
       }
+    });
+    effect(() => {
+      const online = !this.connectivity.offline();
+      untracked(() => {
+        if (online && this.pendingSignOut()) {
+          this.finishSignOut();
+        }
+      });
     });
     inject(DestroyRef).onDestroy(() => this.channel?.close());
     effect(() => {
@@ -219,7 +232,7 @@ export class AuthStore {
     if (this.restoring !== null) {
       return this.restoring;
     }
-    if (!hasSessionHint(this.jar)) {
+    if (!hasSessionHint(this.jar) || this.pendingSignOut()) {
       this.restoring = Promise.resolve(this.forgetWithoutSession());
       return this.restoring;
     }
@@ -240,16 +253,13 @@ export class AuthStore {
   }
 
   logout(): Observable<void> {
-    const signOut = () =>
-      this.api.logout().pipe(
-        timeout(REFRESH_REQUEST_TIMEOUT_MS),
-        catchError(() => of(undefined)),
-      );
+    const signOut = () => this.sendSignOut();
     const donor = this.currentDonor();
     return this.underRefreshLock(signOut).pipe(
       catchError(() => signOut()),
-      tap(() => {
+      tap((heard) => {
         this.forget();
+        this.markSignOutPending(!heard);
         this.announce(signedOut());
         if (donor !== null) {
           void this.device.signedOut(deviceAccountOf(donor));
@@ -337,6 +347,33 @@ export class AuthStore {
 
   disableSecondFactor(request: SecondFactorDisableRequest): Observable<Donor> {
     return this.api.disableSecondFactor(request).pipe(map((response) => this.adopt(response)));
+  }
+
+  private sendSignOut(): Observable<boolean> {
+    return this.api.logout().pipe(
+      timeout(REFRESH_REQUEST_TIMEOUT_MS),
+      map(() => true),
+      catchError((failure: unknown) => of(isRefusal(failure))),
+    );
+  }
+
+  private finishSignOut(): void {
+    if (this.finishingSignOut) {
+      return;
+    }
+    this.finishingSignOut = true;
+    this.sendSignOut()
+      .pipe(finalize(() => (this.finishingSignOut = false)))
+      .subscribe((heard) => {
+        if (heard) {
+          this.markSignOutPending(false);
+        }
+      });
+  }
+
+  private markSignOutPending(pending: boolean): void {
+    writeFlag(() => localStorage, this.jar.signOutPendingKey, pending);
+    this.pendingSignOut.set(pending);
   }
 
   private requestRefresh(): Observable<string> {
@@ -462,6 +499,7 @@ export class AuthStore {
 
   private adoptSignIn(response: AuthResponse, secret: SignInSecret): Donor {
     const donor = this.adopt(response);
+    this.markSignOutPending(false);
     this.administrationAccess.signedIn();
     void this.device.signedIn(
       deviceAccountOf(donor),
@@ -587,11 +625,23 @@ function forgetSession(jar: SessionJar): void {
 }
 
 function writeHint(storage: () => Storage, jar: SessionJar, present: boolean): void {
+  writeFlag(storage, jar.hintKey, present);
+}
+
+function hasPendingSignOut(jar: SessionJar): boolean {
+  try {
+    return localStorage.getItem(jar.signOutPendingKey) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(storage: () => Storage, key: string, present: boolean): void {
   try {
     if (present) {
-      storage().setItem(jar.hintKey, '1');
+      storage().setItem(key, '1');
     } else {
-      storage().removeItem(jar.hintKey);
+      storage().removeItem(key);
     }
   } catch {
     return;

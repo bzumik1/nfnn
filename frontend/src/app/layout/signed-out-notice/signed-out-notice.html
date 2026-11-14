@@ -1,13 +1,21 @@
 <div role="status">
   @if (notice.shown()) {
     <div #bar class="ui-notice ui-notice--status ui-notice--floating">
-      @if (notice.reason() === 'device-data-deleted') {
-        <p class="ui-notice__text" i18n="@@layout.signedOut.deviceDataDeleted">
-          Data z tohoto zařízení jsme smazali a odhlásili jsme vás.
-        </p>
-      } @else {
-        <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
-      }
+      <div class="ui-notice__text">
+        @if (notice.reason() === 'device-data-deleted') {
+          <p class="ui-notice__text" i18n="@@layout.signedOut.deviceDataDeleted">
+            Data z tohoto zařízení jsme smazali a odhlásili jsme vás.
+          </p>
+        } @else {
+          <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
+        }
+        @if (auth.signOutPending()) {
+          <p class="ui-notice__text" i18n="@@layout.signedOut.pending">
+            Server se o odhlášení zatím nedozvěděl, dokončíme ho, jakmile bude spojení. Na cizím
+            počítači raději zavřete prohlížeč.
+          </p>
+        }
+      </div>
       <button
         type="button"
         class="ui-button ui-button--small signed-out-close"

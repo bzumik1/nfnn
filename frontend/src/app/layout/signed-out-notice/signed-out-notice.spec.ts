@@ -68,6 +68,27 @@ describe('Given the notice shown after signing out', () => {
     expect(status().textContent).not.toContain('Odhlásili jste se.');
   });
 
+  it('when the server did not hear the sign-out, then the notice says it will be finished once connected and to close the browser on a borrowed computer', async () => {
+    const auth = TestBed.inject(AuthStore);
+    auth.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    auth.logout().subscribe(() => state.show());
+    http.expectOne('/api/donors/auth/logout').flush(null, { status: 503, statusText: 'Busy' });
+    await settle();
+
+    const text = status().textContent?.replace(/\s+/g, ' ').trim();
+    expect(text).toContain('Odhlásili jste se.');
+    expect(text).toContain('Server se o odhlášení zatím nedozvěděl');
+    expect(text).toContain('zavřete prohlížeč');
+  });
+
+  it('when the server heard the sign-out, then the notice says nothing about finishing it', async () => {
+    state.show();
+    await settle();
+
+    expect(status().textContent).not.toContain('nedozvěděl');
+  });
+
   it('when a plain sign-out follows a deletion notice, then the notice says only that the donor signed out', async () => {
     state.show('device-data-deleted');
     state.dismiss();

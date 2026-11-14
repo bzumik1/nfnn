@@ -230,6 +230,36 @@ test.describe('Given a visitor who wants a donor account', () => {
     await expect(page.getByText('Odhlásili jste se.')).toHaveCount(0);
   });
 
+  test('when they sign out while the server cannot hear it, then the notice says the sign-out finishes once there is a connection', async ({
+    page,
+  }) => {
+    const signOuts: string[] = [];
+    await page.route('**/api/donors/auth/login', (route) => route.fulfill(session(200)));
+    await page.route('**/api/donors/auth/logout', (route) => {
+      signOuts.push(route.request().method());
+      return route.fulfill({ status: 503 });
+    });
+    await mockDonorApi(page);
+
+    await openSignInDialog(page);
+    await page.locator('#login-email').fill('jana@example.cz');
+    await page.locator('#login-password').fill('correct horse battery');
+    await page.getByRole('dialog').locator('.ui-button--block').click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Odhlásit se' }).click();
+
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }),
+    ).toBeVisible();
+    await expect(page.getByText('Server se o odhlášení zatím nedozvěděl')).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem('nfnn.sign-out-pending')))
+      .toBe('1');
+    expect(signOuts.length).toBeGreaterThan(0);
+  });
+
   test('when they go back to the home page from the overview, then they stay signed in and can return to it', async ({
     page,
   }) => {

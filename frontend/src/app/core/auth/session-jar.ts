@@ -12,6 +12,7 @@ export interface SessionJar {
   readonly lockName: string;
   readonly channelName: string;
   readonly hintKey: string;
+  readonly signOutPendingKey: string;
 }
 
 export const BROWSER_JAR: SessionJar = {
@@ -19,6 +20,7 @@ export const BROWSER_JAR: SessionJar = {
   lockName: 'nfnn-refresh',
   channelName: 'nfnn-session',
   hintKey: 'nfnn.donor-session',
+  signOutPendingKey: 'nfnn.sign-out-pending',
 };
 
 export const APP_JAR: SessionJar = {
@@ -26,6 +28,7 @@ export const APP_JAR: SessionJar = {
   lockName: 'nfnn-refresh-app',
   channelName: 'nfnn-session-app',
   hintKey: 'nfnn.donor-session-app',
+  signOutPendingKey: 'nfnn.sign-out-pending-app',
 };
 
 export const SESSION_JAR = new InjectionToken<SessionJar>('SESSION_JAR', {
