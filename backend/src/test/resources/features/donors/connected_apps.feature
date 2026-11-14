@@ -406,6 +406,53 @@ Feature: An administrator connects an application such as Claude to the administ
     Then the response status is 401
     And the problem type ends with "auth/invalid-refresh-token"
 
+  Scenario: A refresh repeated within 60 seconds after the administrator disconnected the application ends every session of the administrator
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    When the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When "Jana" disconnects the application of "Jana"
+    Then the response status is 204
+    When 10 seconds pass
+    And the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: A refresh repeated within 60 seconds after the administrator lost the role is refused and leaves no session
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    And "Petr" is an administrator
+    When the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When "Petr" removes "Jana" from the administrators
+    Then the response status is 204
+    When 10 seconds pass
+    And the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the application refreshes its tokens with the refresh token of the lost answer
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: Another client presenting the token of a lost answer within 60 seconds ends every session of the administrator
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    When the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When 10 seconds pass
+    And the application refreshes its tokens as the client "https://claude.ai/oauth/claude-code-client-metadata"
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
   Scenario: A refresh token is tied to its client and the connector's refresh token is no browser session
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
     When the application refreshes its tokens as the client "https://claude.ai/oauth/claude-code-client-metadata"

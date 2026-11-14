@@ -448,6 +448,8 @@ class AuthorizationServerServiceTest {
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
             verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+            verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
         }
 
         private RefreshToken usedWithSuccessor(Instant usedAt) {
