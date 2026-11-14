@@ -24,7 +24,7 @@ class SecondFactorRecoveryJpaEntity {
     @Column(name = "code_hash", nullable = false, length = 64, unique = true)
     private String codeHash;
 
-    @Column(name = "code", length = SecondFactorRecoveryCode.LENGTH)
+    @Column(name = "code", length = SecondFactorRecoveryCode.LENGTH, updatable = false)
     private String code;
 
     @Column(name = "created_at", nullable = false)
@@ -33,7 +33,7 @@ class SecondFactorRecoveryJpaEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "used_at")
+    @Column(name = "used_at", updatable = false)
     private Instant usedAt;
 
     protected SecondFactorRecoveryJpaEntity() {

@@ -1,14 +1,13 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.AdministratorRoster;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
-import cz.novanadeje.app.donors.domain.LastAdministratorRevoked;
 import cz.novanadeje.app.donors.domain.EmailNotRegistered;
 import cz.novanadeje.app.donors.domain.NoPasskeys;
-import cz.novanadeje.app.donors.domain.OwnAdministrationRevoked;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.application.event.DonorPasskeysRemoved;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorReset;
@@ -89,15 +88,9 @@ public class AdministratorService {
 
     @Transactional
     public void revoke(DonorId adminId, DonorId donorId) {
-        if (adminId.equals(donorId)) {
-            throw new OwnAdministrationRevoked();
-        }
         donors.lockAdministrators();
         Donor donor = donors.findByIdForUpdate(donorId).orElseThrow(() -> new DonorNotFound(donorId));
-        donor.revokeAdministration();
-        if (donors.findAdministrators().stream().noneMatch(other -> !other.id().equals(donorId))) {
-            throw new LastAdministratorRevoked();
-        }
+        AdministratorRoster.revoke(donor, donors.findAdministrators(), adminId);
         donors.save(donor);
         Instant now = clock.instant();
         signOuts.endForRoleRemoval(donorId, now);
@@ -145,19 +138,16 @@ public class AdministratorService {
             return StartupGrant.NOT_REGISTERED;
         }
         Donor donor = found.get();
-        if (donor.isAdministrator()) {
-            return StartupGrant.ALREADY_ADMINISTRATOR;
-        }
-        if (!donors.findAdministrators().isEmpty()) {
-            return StartupGrant.SITE_HAS_ADMINISTRATOR;
-        }
-        if (!donor.isEmailVerified()) {
-            return StartupGrant.NOT_CONFIRMED;
-        }
-        donor.grantFirstAdministration();
-        donors.save(donor);
-        log.info("Administrator role granted at startup to donor {}", donor.id());
-        return StartupGrant.GRANTED;
+        return switch (AdministratorRoster.grantFirst(donor, donors.findAdministrators())) {
+            case GRANTED -> {
+                donors.save(donor);
+                log.info("Administrator role granted at startup to donor {}", donor.id());
+                yield StartupGrant.GRANTED;
+            }
+            case ALREADY_ADMINISTRATOR -> StartupGrant.ALREADY_ADMINISTRATOR;
+            case SITE_HAS_ADMINISTRATOR -> StartupGrant.SITE_HAS_ADMINISTRATOR;
+            case NOT_CONFIRMED -> StartupGrant.NOT_CONFIRMED;
+        };
     }
 
     private AdministratorView view(Donor donor) {

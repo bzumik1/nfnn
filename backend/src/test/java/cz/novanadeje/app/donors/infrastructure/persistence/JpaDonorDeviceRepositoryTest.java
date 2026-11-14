@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.PersistenceTest;
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
@@ -152,8 +153,7 @@ class JpaDonorDeviceRepositoryTest {
     void should_stay_signed_in_when_asked_given_rotated_token() {
         DonorDevice phone = DonorDevice.signIn(jana, IPHONE_SAFARI, SessionKind.REMEMBERED, NOW);
         devices.save(phone);
-        RefreshToken first = RefreshToken.issue(RefreshTokenSecret.generate(), jana, phone.id(), NOW, TTL, false);
-        first.markUsed(NOW.plusSeconds(60));
+        RefreshToken first = SpentCredentials.used(RefreshToken.issue(RefreshTokenSecret.generate(), jana, phone.id(), NOW, TTL, false), NOW.plusSeconds(60));
         refreshTokens.save(first);
         refreshTokens.save(RefreshToken.issue(RefreshTokenSecret.generate(), jana, phone.id(), NOW.plusSeconds(60), TTL, false));
         flushAndClear();
@@ -426,14 +426,9 @@ class JpaDonorDeviceRepositoryTest {
 
     private RefreshTokenSecret token(DonorDevice device, Instant issuedAt, Instant usedAt, Instant revokedAt) {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken token = RefreshToken.issue(secret, device.donorId(), device.id(), issuedAt, TTL, false);
-        if (usedAt != null) {
-            token.markUsed(usedAt);
-        }
-        if (revokedAt != null) {
-            token.revoke(revokedAt);
-        }
-        refreshTokens.save(token);
+        RefreshToken issued = RefreshToken.issue(secret, device.donorId(), device.id(), issuedAt, TTL, false);
+        refreshTokens.save(RefreshToken.reconstitute(issued.id(), issued.donorId(), issued.secretHash(), issued.issuedAt(), issued.expiresAt(), false,
+                null, Set.of(), issued.grantedAt(), usedAt, revokedAt, null, null, device.id()));
         return secret;
     }
 

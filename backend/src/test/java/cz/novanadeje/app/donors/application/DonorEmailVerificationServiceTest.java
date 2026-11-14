@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
@@ -254,8 +255,7 @@ class DonorEmailVerificationServiceTest {
     @DisplayName("Given a used token, when the e-mail is confirmed, then it is invalid and nothing changes")
     void should_be_invalid_when_confirmed_given_used_token() {
         LinkSecret secret = LinkSecret.generate();
-        EmailVerificationToken used = EmailVerificationToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL);
-        used.markUsed(NOW.minusSeconds(30));
+        EmailVerificationToken used = SpentCredentials.used(EmailVerificationToken.issue(secret, DONOR, NOW.minusSeconds(60), TTL), NOW.minusSeconds(30));
         when(tokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(used));
 
         assertThatThrownBy(() -> service.confirm(secret.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidEmailVerificationToken.class);

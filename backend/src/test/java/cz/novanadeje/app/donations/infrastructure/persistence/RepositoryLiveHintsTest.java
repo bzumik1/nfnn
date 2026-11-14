@@ -17,7 +17,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -67,8 +67,8 @@ class RepositoryLiveHintsTest {
         donations.save(donation);
         donations.delete(donation.id());
 
-        StoredDataChanged gifts = StoredDataChanged.ofDonor(LiveFeed.DONATIONS, jana.value());
-        StoredDataChanged pairings = StoredDataChanged.of(LiveFeed.PAYMENTS);
+        StoredDataChanged gifts = StoredDataChanged.ofDonor(DonationLiveFeeds.DONATIONS, jana.value());
+        StoredDataChanged pairings = StoredDataChanged.of(DonationLiveFeeds.PAYMENTS);
         assertThat(hints()).containsExactly(gifts, pairings, gifts, pairings);
     }
 
@@ -79,7 +79,7 @@ class RepositoryLiveHintsTest {
         payments.saveAll(List.of(payment(2001, LocalDate.of(2026, 10, 15), Money.czk(100), ACCOUNT, null),
                 payment(2002, LocalDate.of(2026, 10, 15), Money.czk(200), ACCOUNT, null)));
 
-        assertThat(hints()).containsExactly(StoredDataChanged.of(LiveFeed.PAYMENTS));
+        assertThat(hints()).containsExactly(StoredDataChanged.of(DonationLiveFeeds.PAYMENTS));
     }
 
     @Test
@@ -95,7 +95,7 @@ class RepositoryLiveHintsTest {
         donorRecords.deleteSenderAccountLink(jana, link.id());
         claims.saveIfAbsent(claim);
 
-        StoredDataChanged accounts = StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, jana.value());
+        StoredDataChanged accounts = StoredDataChanged.ofDonor(DonationLiveFeeds.BANK_ACCOUNTS, jana.value());
         assertThat(hints()).containsExactly(accounts, accounts, accounts);
     }
 
@@ -121,7 +121,7 @@ class RepositoryLiveHintsTest {
 
         assertThat(duplicateSaved).isFalse();
         assertThat(answeredAgain).isFalse();
-        StoredDataChanged accounts = StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, jana.value());
+        StoredDataChanged accounts = StoredDataChanged.ofDonor(DonationLiveFeeds.BANK_ACCOUNTS, jana.value());
         assertThat(hints()).containsExactly(accounts, accounts, accounts, accounts);
     }
 

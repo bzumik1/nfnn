@@ -16,7 +16,7 @@ public final class SecondFactorRecovery {
     private final SecondFactorRecoveryCode code;
     private final Instant createdAt;
     private final Instant expiresAt;
-    private Instant usedAt;
+    private final Instant usedAt;
 
     private SecondFactorRecovery(UUID id, DonorId donorId, String codeHash, SecondFactorRecoveryCode code, Instant createdAt, Instant expiresAt,
                                  Instant usedAt) {
@@ -40,10 +40,6 @@ public final class SecondFactorRecovery {
 
     public boolean isOpenAt(Instant now) {
         return usedAt == null && now.isBefore(expiresAt);
-    }
-
-    public void markUsed(Instant at) {
-        usedAt = at;
     }
 
     public UUID id() {

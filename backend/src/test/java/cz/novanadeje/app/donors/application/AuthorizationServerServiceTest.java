@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRequired;
 import cz.novanadeje.app.donors.domain.AuthorizationCode;
@@ -358,7 +359,7 @@ class AuthorizationServerServiceTest {
         @Test
         @DisplayName("when a used token is replayed, then every session of the donor ends")
         void should_end_every_session_when_refreshed_given_used_token() {
-            token.markUsed(NOW.minusSeconds(10));
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(SpentCredentials.used(token, NOW.minusSeconds(10))));
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
@@ -368,7 +369,7 @@ class AuthorizationServerServiceTest {
         @Test
         @DisplayName("when a disconnected token is presented, then the grant is invalid and no other session ends")
         void should_refuse_without_ending_other_sessions_when_refreshed_given_revoked_token() {
-            token.revoke(NOW.minusSeconds(10));
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(SpentCredentials.revoked(token, NOW.minusSeconds(10))));
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 

@@ -7,7 +7,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
@@ -67,8 +67,8 @@ class JpaDonationRepository implements DonationRepository {
     }
 
     private void changed(DonorReference donor) {
-        events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, donor.value()));
-        events.publishEvent(StoredDataChanged.of(LiveFeed.PAYMENTS));
+        events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.DONATIONS, donor.value()));
+        events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.PAYMENTS));
     }
 
     @Override

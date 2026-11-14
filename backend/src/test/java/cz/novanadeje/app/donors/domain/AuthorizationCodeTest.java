@@ -43,10 +43,11 @@ class AuthorizationCodeTest {
         assertThat(code.isUsableAt(NOW.plus(Duration.ofMinutes(4)))).isTrue();
         assertThat(code.isUsableAt(NOW.plus(Duration.ofMinutes(5)))).isFalse();
 
-        code.markUsed(NOW.plusSeconds(30));
+        AuthorizationCode used = AuthorizationCode.reconstitute(code.id(), code.secretHash(), DONOR, CLIENT, REDIRECT, CHALLENGE, code.scopes(),
+                code.resource(), true, NOW, code.expiresAt(), NOW.plusSeconds(30));
 
-        assertThat(code.usedAt()).contains(NOW.plusSeconds(30));
-        assertThat(code.isUsableAt(NOW.plusSeconds(31))).isFalse();
+        assertThat(used.usedAt()).contains(NOW.plusSeconds(30));
+        assertThat(used.isUsableAt(NOW.plusSeconds(31))).isFalse();
     }
 
     @Test

@@ -21,10 +21,10 @@ public final class RefreshToken {
     private final ClientId clientId;
     private final Set<OAuthScope> scopes;
     private final Instant grantedAt;
-    private Instant usedAt;
-    private Instant revokedAt;
+    private final Instant usedAt;
+    private final Instant revokedAt;
     private final UUID successorId;
-    private Instant supersededAt;
+    private final Instant supersededAt;
     private final DeviceId deviceId;
 
     private RefreshToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, boolean secondFactorVerified,
@@ -101,31 +101,12 @@ public final class RefreshToken {
         return usedAt != null;
     }
 
-    public void markUsed(Instant at) {
-        if (usedAt == null) {
-            usedAt = at;
-        }
-    }
-
     public boolean isSuperseded() {
         return supersededAt != null;
     }
 
-    public void supersede(Instant at) {
-        revoke(at);
-        if (supersededAt == null) {
-            supersededAt = at;
-        }
-    }
-
     public boolean isRevoked() {
         return revokedAt != null;
-    }
-
-    public void revoke(Instant at) {
-        if (revokedAt == null) {
-            revokedAt = at;
-        }
     }
 
     public UUID id() {

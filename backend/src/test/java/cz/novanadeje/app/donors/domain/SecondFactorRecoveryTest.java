@@ -54,9 +54,8 @@ class SecondFactorRecoveryTest {
     @DisplayName("Given a recovery, when its lifetime passed or it was used, then it is not open any more")
     void should_be_closed_when_expired_or_used() {
         SecondFactorRecovery expired = SecondFactorRecovery.open(DonorId.newId(NOW), CODE, NOW, TTL);
-        SecondFactorRecovery used = SecondFactorRecovery.open(DonorId.newId(NOW), CODE, NOW, TTL);
-
-        used.markUsed(NOW.plusSeconds(60));
+        SecondFactorRecovery used = SecondFactorRecovery.reconstitute(UUID.fromString("0192b3c4-0000-7000-8000-000000000002"), DonorId.newId(NOW),
+                CODE.hash(), NULL_CODE, NOW, NOW.plus(TTL), NOW.plusSeconds(60));
 
         assertThat(expired.isOpenAt(NOW.plus(TTL))).isFalse();
         assertThat(used.isOpenAt(NOW.plusSeconds(61))).isFalse();

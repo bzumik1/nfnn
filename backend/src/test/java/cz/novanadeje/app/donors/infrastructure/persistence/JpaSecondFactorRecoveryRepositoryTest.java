@@ -151,6 +151,22 @@ class JpaSecondFactorRecoveryRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a recovery read before it was marked used, when the copy read earlier is stored again, then the use stays and the readable code stays forgotten")
+    void should_keep_the_use_and_forget_the_code_when_stored_again_given_a_copy_read_before_the_use() {
+        recoveries.replaceOpenOf(jana, SecondFactorRecovery.open(jana, FIRST, NOW, TTL));
+        flushAndClear();
+        SecondFactorRecovery readBefore = recoveries.findByCodeHash(FIRST.hash()).orElseThrow();
+        assertThat(recoveries.markUsed(readBefore.id(), NOW.plusSeconds(10))).isTrue();
+
+        recoveries.replaceOpenOf(jana, readBefore);
+        flushAndClear();
+
+        SecondFactorRecovery found = recoveries.findByCodeHash(FIRST.hash()).orElseThrow();
+        assertThat(found.usedAt()).contains(NOW.plusSeconds(10));
+        assertThat(found.code()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Given a used recovery that still holds its code, an expired one and an open one, when the codes of closed recoveries are forgotten, then only the open one keeps its code")
     void should_keep_only_the_open_code_when_closed_codes_forgotten() {
         insert(jana, new SecondFactorRecoveryCode("QRST2345"), NOW.minus(TTL), NOW.plusSeconds(60), NOW.minusSeconds(60));

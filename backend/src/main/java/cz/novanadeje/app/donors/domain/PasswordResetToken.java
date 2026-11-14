@@ -14,7 +14,7 @@ public final class PasswordResetToken {
     private final String secretHash;
     private final Instant issuedAt;
     private final Instant expiresAt;
-    private Instant usedAt;
+    private final Instant usedAt;
 
     private PasswordResetToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, Instant usedAt) {
         this.id = id;
@@ -35,13 +35,6 @@ public final class PasswordResetToken {
 
     public boolean isUsableAt(Instant now) {
         return usedAt == null && now.isBefore(expiresAt);
-    }
-
-    public void markUsed(Instant at) {
-        if (usedAt != null) {
-            throw new IllegalStateException("Password reset token " + id + " is already used");
-        }
-        usedAt = at;
     }
 
     public UUID id() {

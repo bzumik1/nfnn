@@ -33,7 +33,7 @@ class EmailVerificationTokenJpaEntity {
     @Column(name = "new_email", length = 254)
     private String newEmail;
 
-    @Column(name = "used_at")
+    @Column(name = "used_at", updatable = false)
     private Instant usedAt;
 
     protected EmailVerificationTokenJpaEntity() {

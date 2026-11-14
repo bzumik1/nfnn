@@ -6,7 +6,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
@@ -75,7 +75,7 @@ class JpaSymbolClaimRepository implements SymbolClaimRepository {
     }
 
     private void changed(DonorReference donor) {
-        events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, donor.value()));
+        events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.BANK_ACCOUNTS, donor.value()));
     }
 
     private static List<SymbolClaim> toDomain(List<SymbolClaimJpaEntity> entities) {

@@ -124,6 +124,20 @@ class JpaPasswordResetTokenRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a token read before it was marked used, when the copy read earlier is saved, then the use stays, so a save never takes a spend back")
+    void should_keep_the_use_when_saved_given_a_copy_read_before_the_use() {
+        PasswordResetToken token = issue(jana, NOW);
+        flushAndClear();
+        PasswordResetToken readBefore = tokens.findBySecretHash(token.secretHash()).orElseThrow();
+        assertThat(tokens.markUsed(token.id(), NOW.plusSeconds(10))).isTrue();
+
+        tokens.save(readBefore);
+        flushAndClear();
+
+        assertThat(tokens.findBySecretHash(token.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
     @DisplayName("Given three tokens of a donor and one of another, when the others of one token are deleted, then only it and the other donor's stay")
     void should_keep_only_kept_token_when_others_deleted_given_three_tokens() {
         PasswordResetToken kept = issue(jana, NOW);

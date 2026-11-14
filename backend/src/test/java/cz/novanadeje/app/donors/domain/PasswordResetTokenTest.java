@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 class PasswordResetTokenTest {
 
@@ -50,22 +49,12 @@ class PasswordResetTokenTest {
     @Test
     @DisplayName("Given a used token, when checked before its expiry, then it is not usable and remembers when it was used")
     void should_not_be_usable_when_checked_given_used() {
-        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
+        PasswordResetToken issued = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
 
-        token.markUsed(NOW.plusSeconds(60));
+        PasswordResetToken token = PasswordResetToken.reconstitute(issued.id(), DONOR, issued.secretHash(), NOW, issued.expiresAt(), NOW.plusSeconds(60));
 
         assertThat(token.usedAt()).contains(NOW.plusSeconds(60));
         assertThat(token.isUsableAt(NOW.plusSeconds(120))).isFalse();
-    }
-
-    @Test
-    @DisplayName("Given a used token, when it is marked used again, then it refuses")
-    void should_refuse_when_marked_used_twice_given_used_token() {
-        PasswordResetToken token = PasswordResetToken.issue(LinkSecret.generate(), DONOR, NOW, LIFETIME);
-        token.markUsed(NOW.plusSeconds(60));
-
-        assertThatIllegalStateException().isThrownBy(() -> token.markUsed(NOW.plusSeconds(120)));
-        assertThat(token.usedAt()).contains(NOW.plusSeconds(60));
     }
 
     @Test

@@ -34,20 +34,16 @@ class RefreshTokenTest {
     @Test
     @DisplayName("Given a revoked token, when it is checked, then it is not usable")
     void should_not_be_usable_when_checked_given_revoked() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
-
-        token.revoke(NOW.plusSeconds(10));
+        RefreshToken token = stored(null, NOW.plusSeconds(10), null);
 
         assertThat(token.isRevoked()).isTrue();
         assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
     }
 
     @Test
-    @DisplayName("Given a rotation, when the token is marked used, then it is used but not revoked")
-    void should_be_used_but_not_revoked_when_marked_used_given_rotation() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
-
-        token.markUsed(NOW.plusSeconds(10));
+    @DisplayName("Given a token its rotation used, when it is checked, then it is used but not revoked")
+    void should_be_used_but_not_revoked_when_checked_given_a_token_its_rotation_used() {
+        RefreshToken token = stored(NOW.plusSeconds(10), null, null);
 
         assertThat(token.isUsed()).isTrue();
         assertThat(token.usedAt()).contains(NOW.plusSeconds(10));
@@ -56,11 +52,9 @@ class RefreshTokenTest {
     }
 
     @Test
-    @DisplayName("Given a sign-out or a password change, when the token is revoked, then it does not count as used")
-    void should_not_count_as_used_when_revoked_given_sign_out_or_password_change() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
-
-        token.revoke(NOW.plusSeconds(10));
+    @DisplayName("Given a token a sign-out or a password change revoked, when it is checked, then it does not count as used")
+    void should_not_count_as_used_when_checked_given_a_token_a_sign_out_or_password_change_revoked() {
+        RefreshToken token = stored(null, NOW.plusSeconds(10), null);
 
         assertThat(token.isUsed()).isFalse();
         assertThat(token.usedAt()).isEmpty();
@@ -164,16 +158,20 @@ class RefreshTokenTest {
     }
 
     @Test
-    @DisplayName("Given an unused token, when the grace supersedes it, then it is revoked and remembered as superseded")
-    void should_revoke_and_mark_superseded_when_superseded_given_an_unused_token() {
-        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
+    @DisplayName("Given an unused token and one the grace superseded, when they are checked, then only the superseded one is revoked and remembered as superseded")
+    void should_be_revoked_and_superseded_when_checked_given_a_token_the_grace_superseded() {
+        RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW), NOW, Duration.ofDays(14), false);
+        RefreshToken token = stored(null, NOW.plusSeconds(10), NOW.plusSeconds(10));
 
-        assertThat(token.isSuperseded()).isFalse();
-        token.supersede(NOW.plusSeconds(10));
-
+        assertThat(unused.isSuperseded()).isFalse();
         assertThat(token.isSuperseded()).isTrue();
         assertThat(token.revokedAt()).contains(NOW.plusSeconds(10));
         assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
+    }
+
+    private static RefreshToken stored(Instant usedAt, Instant revokedAt, Instant supersededAt) {
+        return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), NOW, NOW.plus(Duration.ofDays(14)), false,
+                null, Set.of(), NOW, usedAt, revokedAt, null, supersededAt, DeviceId.newId(NOW));
     }
 
     private static RefreshToken rotated(ClientId client, Instant usedAt, Instant revokedAt, UUID successor) {

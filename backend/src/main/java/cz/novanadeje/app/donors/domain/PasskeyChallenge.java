@@ -15,7 +15,7 @@ public final class PasskeyChallenge {
     private final String challengeHash;
     private final Instant issuedAt;
     private final Instant expiresAt;
-    private Instant usedAt;
+    private final Instant usedAt;
 
     private PasskeyChallenge(UUID id, PasskeyCeremony ceremony, DonorId donorId, String challengeHash, Instant issuedAt, Instant expiresAt,
                              Instant usedAt) {
@@ -55,10 +55,6 @@ public final class PasskeyChallenge {
 
     public boolean isUsableForSignInAt(Instant now) {
         return ceremony == PasskeyCeremony.SIGN_IN && isOpenAt(now);
-    }
-
-    public void markUsed(Instant at) {
-        usedAt = at;
     }
 
     private boolean isOpenAt(Instant now) {
