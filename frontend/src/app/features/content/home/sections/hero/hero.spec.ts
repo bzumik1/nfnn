@@ -51,13 +51,14 @@ describe('Given the hero', () => {
     expect(action.getAttribute('href')).toBe('/projekty');
   });
 
-  it('when the layout is compact, then it shows no actions, because the tab bar under it offers Přispět and Pomáháme', async () => {
+  it('when the layout is compact, then it shows Přispět alone, because the tab bar under it offers Pomáháme', async () => {
     compact.set(true);
     await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
+    const links = (fixture.nativeElement as HTMLElement).querySelectorAll('a');
 
-    expect(host.querySelectorAll('a')).toHaveLength(0);
-    expect(host.querySelector('h1')?.textContent?.trim()).toBe('Nová naděje');
+    expect(links).toHaveLength(1);
+    expect(links[0].textContent?.trim()).toBe('Přispět');
+    expect(links[0].getAttribute('href')).toBe('/prispet');
   });
 
   it('when a wide phone lies on its side, so the window is short, then it shows no actions either, because the tab bar under it offers them and they would not fit', async () => {

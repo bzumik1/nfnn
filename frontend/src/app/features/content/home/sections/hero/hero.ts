@@ -13,5 +13,6 @@ import { ShortViewport } from '../../../../../core/layout/short-viewport';
 export class Hero {
   private readonly compact = inject(CompactLayout).isCompact;
   private readonly short = inject(ShortViewport).isShort;
-  protected readonly showsActions = computed(() => !this.compact() && !this.short());
+  protected readonly showsDonate = computed(() => !this.short());
+  protected readonly showsWhereWeHelp = computed(() => !this.compact() && !this.short());
 }

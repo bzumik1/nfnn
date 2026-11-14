@@ -92,10 +92,15 @@
     padding-bottom: calc(var(--tab-bar-clearance) + var(--floating-room) + var(--space-6));
     padding-left: max(var(--space-5), env(safe-area-inset-left));
   }
+}
 
+@include bp.down(phone) {
   .hero-btns {
     flex-direction: column;
-    gap: var(--space-3);
+  }
+
+  .hero-btns .ui-cta {
+    text-align: center;
   }
 }
 
