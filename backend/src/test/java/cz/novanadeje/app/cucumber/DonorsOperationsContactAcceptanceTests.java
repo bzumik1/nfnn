@@ -12,9 +12,9 @@ import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
 @Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
-@IncludeTags("donors")
+@IncludeTags({"donors", "operations", "contact"})
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "cz.novanadeje.app")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, summary")
 @ConfigurationParameter(key = "junit.platform.suite.fail-if-no-tests", value = "false")
-public class DonorsAcceptanceTests {
+public class DonorsOperationsContactAcceptanceTests {
 }
