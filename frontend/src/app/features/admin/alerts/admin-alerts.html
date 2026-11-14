@@ -39,7 +39,7 @@
             Co se hlídá
           </h2>
         </div>
-        <ul class="ui-list ui-list--stacks-narrow watched">
+        <ul class="ui-list watched">
           @for (row of rows(); track row.area) {
             <li>
               <a class="ui-list__row" [routerLink]="row.route">
@@ -313,7 +313,7 @@
             Na jiném zařízení upozornění zapnutá nemáte.
           </p>
         } @else {
-          <ul class="ui-list ui-list--stacks-narrow others">
+          <ul class="ui-list others">
             @for (device of others(); track device.id) {
               <li>
                 <button
