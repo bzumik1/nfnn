@@ -77,8 +77,9 @@ async function sharpnessByRow(context: BrowserContext, png: Buffer): Promise<num
 function softness(sharpness: number[]): { full: number; rows: number } {
   const below = sharpness.slice(SHARP_FROM_ROW).sort((a, b) => a - b);
   const full = below[Math.floor(below.length / 2)]!;
-  const firstRow = (share: number) => sharpness.findIndex((value) => value >= full * share);
-  return { full, rows: firstRow(0.9) - firstRow(0.1) };
+  const sharp = sharpness.findIndex((value) => value >= full * 0.9);
+  const lastBlurred = sharpness.slice(0, sharp).findLastIndex((value) => value < full * 0.1);
+  return { full, rows: sharp - lastBlurred };
 }
 
 async function scrolledUnderTheEdge(page: Page, path: string): Promise<number> {
