@@ -1602,7 +1602,7 @@ describe('Given a signed-in donor in the donor area', () => {
       await settle();
 
       expect(savedFiles).toEqual([{ fileName: 'potvrzeni-o-darech-2025.pdf', href: OBJECT_URL }]);
-      expect(text(`${yearSection(2025)} .yearly-receipt-progress`)).toBe(
+      expect(text(`${yearSection(2025)} .gift-year-head .receipt-saved`)).toBe(
         'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
       );
     });
@@ -1611,7 +1611,7 @@ describe('Given a signed-in donor in the donor area', () => {
       receiptEnvironment.autoDraw = false;
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
-      const yearlyLine = `${yearSection(2025)} .yearly-receipt-progress`;
+      const yearlyLine = `${yearSection(2025)} .gift-year-head .receipt-saved`;
       const singleLine = `${yearSection(2026)} tbody tr:nth-child(2) .receipt-saved`;
 
       await click(`${yearSection(2025)} .yearly-pdf`);
@@ -1680,10 +1680,8 @@ describe('Given a signed-in donor in the donor area', () => {
       );
       await settleBlobFailure();
 
-      expect(text(`${yearSection(2025)} .year-receipt-error[role="alert"]`)).toBe(
-        'Za rok 2025 nic',
-      );
-      expect(element('.payments-card > [role="alert"]')).toBeNull();
+      expect(text(`${yearSection(2025)} .gift-year-head [role="alert"]`)).toBe('Za rok 2025 nic');
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
     });
 
     it('then a year before the first receipt year offers no yearly receipt at its heading', async () => {
@@ -1757,81 +1755,71 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
-    it('then on a phone the yearly receipt of a completed year is the last row of that year', async () => {
-      compact.set(true);
+    it('then "Všechny dary" is the title inside its card, at the default size of a card title', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const rows = [
-        ...root().querySelectorAll<HTMLElement>(`${yearSection(2025)} .donation-rows > li`),
-      ];
-      expect(rows).toHaveLength(3);
-      expect(normalized(rows[2].querySelector('button')?.textContent ?? '')).toBe(
-        'Stáhnout potvrzení za rok 2025 (PDF)',
-      );
-      expect(element(`${yearSection(2026)} .donation-rows .yearly-pdf`)).toBeNull();
+      const title = element('#payments-title')!;
+      expect(normalized(title.textContent ?? '')).toBe('Všechny dary');
+      expect(title.closest('.ui-card')).toBe(element('.payments-card'));
+      expect(title.classList).toContain('ui-card__title');
+      expect(title.classList).not.toContain('ui-card__title--large');
     });
 
-    it('then on a phone a yearly receipt being prepared says so in its row and marks the row busy and unavailable', async () => {
+    for (const phone of [true, false]) {
+      it(`when the screen is ${phone ? 'a phone' : 'wide'}, then the yearly receipt of a completed year stands at the heading of that year, before its gifts`, async () => {
+        compact.set(phone);
+        await open('/darce/dary');
+        await respond(twoYearSummary(), twoYearDonations());
+
+        const yearly = element(`${yearSection(2025)} .gift-year-head .yearly-pdf`)!;
+        expect(normalized(yearly.textContent ?? '')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
+        const gifts = element(`${yearSection(2025)} app-donations-table`)!;
+        expect(
+          yearly.compareDocumentPosition(gifts) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(gifts.querySelector('.yearly-pdf')).toBeNull();
+        expect(element(`${yearSection(2026)} .yearly-pdf`)).toBeNull();
+      });
+    }
+
+    it('then a yearly receipt being prepared says so on its button and marks the button busy and unavailable', async () => {
       compact.set(true);
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      await click(`${yearSection(2025)} .donation-rows .yearly-pdf`);
+      await click(`${yearSection(2025)} .yearly-pdf`);
 
-      const row = button(`${yearSection(2025)} .donation-rows .yearly-pdf`);
-      expect(normalized(row.textContent ?? '')).toBe('Připravujeme PDF…');
-      expect(row.getAttribute('aria-busy')).toBe('true');
-      expect(row.getAttribute('aria-disabled')).toBe('true');
+      const yearly = button(`${yearSection(2025)} .yearly-pdf`);
+      expect(normalized(yearly.textContent ?? '')).toBe('Připravujeme PDF…');
+      expect(yearly.getAttribute('aria-busy')).toBe('true');
+      expect(yearly.getAttribute('aria-disabled')).toBe('true');
       receiptRequest({ year: 2025 }).flush(issuedYearly(2025));
       await settle();
     });
 
-    it('then on a wide screen the yearly receipt is a row of its own list under the table of its year', async () => {
+    it('then the note of a year that is not over stands at the heading of that year, before its gifts', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const table = element(`${yearSection(2025)} table`)!;
-      const yearlyRow = element(`${yearSection(2025)} ul > li .yearly-pdf`);
-      expect(normalized(yearlyRow?.textContent ?? '')).toBe('Stáhnout potvrzení za rok 2025 (PDF)');
-      expect(
-        table.compareDocumentPosition(yearlyRow!) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    });
-
-    it('then the note of a year that is not over follows the gifts of that year', async () => {
-      await open('/darce/dary');
-      await respond(twoYearSummary(), twoYearDonations());
-
+      const note = element(`${yearSection(2026)} .gift-year-head .gift-year-note`)!;
+      expect(normalized(note.textContent ?? '')).toContain('Roční potvrzení za rok 2026 stáhnete');
       const table = element(`${yearSection(2026)} table`)!;
-      const note = element(`${yearSection(2026)} .gift-year-note`)!;
-      expect(table.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(note.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it('then the note about checking the bank follows the bank check, before the years', async () => {
+    it('then the note about checking the bank and the standing order guide close the card, after the years', async () => {
       await open('/darce/dary');
       await respond(twoYearSummary(), twoYearDonations());
 
-      const hint = element('.bank-hint')!;
-      expect(element('.payments-card .bank-hint')).toBeNull();
-      expect(
-        element('app-bank-check')!.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      expect(
-        hint.compareDocumentPosition(element('.payments-card')!) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-    });
-
-    it('then the standing order guide is a disclosure row at the end of the page', async () => {
-      await open('/darce/dary');
-      await respond(twoYearSummary(), twoYearDonations());
-
-      const toggle = element('.payments-card app-standing-order button[aria-expanded]')!;
+      const footer = element('.payments-card > .ui-card__footer')!;
+      expect(footer.querySelector('.bank-hint')).not.toBeNull();
+      const toggle = footer.querySelector<HTMLElement>('app-standing-order button[aria-expanded]')!;
+      expect(normalized(toggle.textContent ?? '')).toBe('Jak nastavit trvalý příkaz');
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
-      expect(toggle.querySelector('svg')).not.toBeNull();
       const lastYear = element(yearSection(2025))!;
       expect(
-        lastYear.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
+        lastYear.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });
 
@@ -2288,7 +2276,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(
         text(`${yearSection(2026)} tbody tr:nth-child(2) app-diagnostics-download button`),
       ).toBe('Stáhnout diagnostický soubor');
-      expect(element('.payments-card > app-diagnostics-download')).toBeNull();
+      expect(element('.payments-card > .ui-card__bar app-diagnostics-download')).toBeNull();
     });
 
     it('then a receipt no longer available shows the problem title in its row and loads the payments again', async () => {
@@ -2318,7 +2306,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení k tomuto daru nelze vystavit',
       );
-      expect(element('.payments-card > [role="alert"]')).toBeNull();
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
       expect(text('.payments-card tbody tr:nth-child(2)')).toContain('Vráceno');
       expect(element(secondRowButton)).toBeNull();
     });
@@ -2341,7 +2329,7 @@ describe('Given a signed-in donor in the donor area', () => {
       without.items.splice(1, 1);
       await respond(twoYearSummary(), without);
 
-      expect(text('.payments-card > [role="alert"]')).toBe(
+      expect(text('.payments-card > .ui-card__bar [role="alert"]')).toBe(
         'Potvrzení k tomuto daru nelze vystavit',
       );
       expect(element('.payments-card tbody [role="alert"]')).toBeNull();
@@ -2419,7 +2407,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text(`${yearSection(2026)} tbody tr:nth-child(2) [role="alert"]`)).toBe(
         'Potvrzení se nepodařilo stáhnout. Zkuste to prosím znovu.',
       );
-      expect(element('.payments-card > [role="alert"]')).toBeNull();
+      expect(element('.payments-card > .ui-card__bar [role="alert"]')).toBeNull();
       expect(scrolled).toEqual([]);
       Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
 
