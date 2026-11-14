@@ -1626,6 +1626,32 @@ jobs:
           fi
           rm -f "$seed_spellings"
 
+      - name: An administrator downloads a backup larger than the frontend's temporary space over a slow line, whole and unchanged
+        if: matrix.part == 'journeys'
+        run: |
+          echo "nginx spools what a slow client has not taken into its 64 MB tmpfs, so a larger backup must pass it by"
+          backups="$RUNNER_TEMP/nfnn/backups"
+          name=nfnn-2026-01-01_0000-sonda-stazeni.dump.age
+          sudo sh -c "head -c $((96 * 1024 * 1024)) /dev/urandom > '$backups/$name' && chmod 644 '$backups/$name'"
+          expected_size=$(sudo stat -c %s "$backups/$name")
+          expected_sha=$(sudo sha256sum "$backups/$name" | cut -d' ' -f1)
+          admin=$(node scripts/stack-journey.mjs admin-session --state "$RUNNER_TEMP/journey.json" --client 203.0.113.31) || { echo "$admin"; exit 1; }
+          echo "::add-mask::$admin"
+          downloaded="$RUNNER_TEMP/downloaded-backup"
+          status=$(curl -sS --max-time 120 --limit-rate 8M -o "$downloaded" -D "$RUNNER_TEMP/backup-headers" -w '%{http_code}' -H 'X-Forwarded-For: 203.0.113.31' -H "Authorization: Bearer $admin" "http://localhost:8089/api/admin/operations/backups/$name") || true
+          sudo rm -f "$backups/$name"
+          [ "$status" = 200 ] || { echo "::error::downloading the backup answered $status"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          tr -d '\r' < "$RUNNER_TEMP/backup-headers" | grep -qix 'cloudflare-cdn-cache-control: no-store' || { echo "::error::the backup download must not be kept by Cloudflare"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          tr -d '\r' < "$RUNNER_TEMP/backup-headers" | grep -qix 'cache-control: private, no-store' || { echo "::error::the backup download must not be kept by any cache"; cat "$RUNNER_TEMP/backup-headers"; exit 1; }
+          size=$(stat -c %s "$downloaded")
+          [ "$size" = "$expected_size" ] || { echo "::error::the backup arrived with $size of its $expected_size bytes: nginx spooled it into its temporary space and cut it off when that was full"; docker logs nfnn-frontend 2>&1 | grep -F 'No space left' | tail -n 3; exit 1; }
+          [ "$(sha256sum "$downloaded" | cut -d' ' -f1)" = "$expected_sha" ] || { echo "::error::the downloaded backup differs from the file on the server"; exit 1; }
+          rm -f "$downloaded"
+          if docker logs nfnn-frontend 2>&1 | grep -F 'No space left' > /dev/null; then
+            echo "::error::nginx ran out of temporary space while it served the backup"
+            exit 1
+          fi
+
       - name: Hashed bundles are cached for good and a missing file answers 404, never the app
         if: matrix.part == 'journeys'
         run: |

@@ -30,6 +30,11 @@ const API_ANSWERS = [
     path: '/api/donations/bank-logos/images/0192f4d2-1a6b-7c3d-9e8f-001122334455',
   },
   ...RECEIPT_IMAGES.map(({ path }) => ({ status: 401, method: 'GET', path })),
+  {
+    status: 401,
+    method: 'GET',
+    path: '/api/admin/operations/backups/nfnn-2026-01-01_0000.dump.age',
+  },
   { status: 401, method: 'GET', path: '/api/live' },
 ];
 const LIVE_PATH = '/api/live';
