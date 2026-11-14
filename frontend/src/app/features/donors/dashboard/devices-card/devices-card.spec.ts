@@ -5,6 +5,7 @@ import { authInterceptor } from '../../../../core/auth/auth-interceptor';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { Donor, SignedInDevice } from '../../../../core/auth/donor';
 import { authResponse, problem, sampleDonor } from '../../../../core/auth/testing/donor-fixtures';
+import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
 import { DevicesCard } from './devices-card';
 
 const DEVICES_URL = '/api/donors/me/devices';
@@ -141,6 +142,17 @@ describe("Given a donor's signed-in devices card", () => {
         'přihlášeno 1. 11. 2026 · zapamatované přihlášení',
         'přihlášeno 30. 10. 2026 · zapamatované přihlášení',
         'přihlášeno 29. 10. 2026 · do zavření prohlížeče',
+      ]);
+    });
+
+    it('then the devices that get push notifications say so in words, and the others say nothing of it', async () => {
+      TestBed.inject(DonorNotifiedDevices).accept([IPHONE.id]);
+      await settle();
+
+      expect(rows().map((row) => text(row.querySelector('.device-notified')))).toEqual([
+        '',
+        'dostává upozornění',
+        '',
       ]);
     });
 

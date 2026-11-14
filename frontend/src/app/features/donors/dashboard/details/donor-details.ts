@@ -4,6 +4,7 @@ import { AccountCard } from '../account-card/account-card';
 import { ConnectedAppsCard } from '../connected-apps-card/connected-apps-card';
 import { DeviceDataCard } from '../device-data-card/device-data-card';
 import { DevicesCard } from '../devices-card/devices-card';
+import { NotificationsCard } from '../notifications-card/notifications-card';
 import { DonorDonations } from '../donor-donations';
 import { PageTitle } from '../page-title/page-title';
 import { ProfileCard } from '../profile-card/profile-card';
@@ -15,6 +16,7 @@ import { DiagnosticsDownload } from '../../../../shared/ui/diagnostics-download/
     PageTitle,
     ProfileCard,
     AccountCard,
+    NotificationsCard,
     DevicesCard,
     DeviceDataCard,
     DiagnosticsDownload,

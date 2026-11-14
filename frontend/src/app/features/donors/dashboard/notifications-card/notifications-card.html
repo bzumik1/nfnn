@@ -1,0 +1,172 @@
+<section class="ui-card notifications" aria-labelledby="notifications-title">
+  <h2 id="notifications-title" class="ui-card__title" i18n="@@donor.notifications.title">
+    Upozornění
+  </h2>
+  <p class="ui-card__intro notifications-inset" i18n="@@donor.notifications.intro">
+    Krátká upozornění na toto zařízení, když dorazí váš dar nebo když je připravené roční potvrzení.
+    Upozornění neříkají jména ani částky.
+  </p>
+
+  @switch (state()) {
+    @case ('loading') {
+      <p class="notifications-note notifications-inset" i18n="@@donor.notifications.loading">
+        Načítáme…
+      </p>
+    }
+    @case ('error') {
+      <div class="notifications-inset">
+        <p class="ui-field-error" role="alert">{{ loadError() }}</p>
+        <button
+          appNeedsConnection
+          type="button"
+          class="ui-button"
+          (click)="load()"
+          i18n="@@donor.notifications.retry"
+        >
+          Načíst znovu
+        </button>
+      </div>
+    }
+    @case ('unavailable') {
+      <p class="notifications-inset" i18n="@@donor.notifications.unavailable">
+        Upozornění teď na webu zapnout nejde. Zkuste to prosím později.
+      </p>
+    }
+    @default {
+      @if (device(); as here) {
+        <ul class="ui-list">
+          @for (kind of kinds; track kind) {
+            <li>
+              <label class="ui-list__row">
+                <span class="ui-list__title">{{ kindLabels[kind] }}</span>
+                <span class="ui-list__meta" [id]="'notifications-' + kind">{{
+                  kindDescriptions[kind]
+                }}</span>
+                <input
+                  #kindSwitch
+                  class="ui-list__value ui-switch"
+                  type="checkbox"
+                  role="switch"
+                  [checked]="here.notifications[kind]"
+                  [attr.aria-describedby]="'notifications-' + kind"
+                  [attr.aria-disabled]="saving() ? 'true' : null"
+                  (change)="change(kind, kindSwitch)"
+                />
+              </label>
+            </li>
+          }
+          <li>
+            <button
+              appNeedsConnection
+              type="button"
+              class="ui-list__row ui-list__row--danger"
+              [disabled]="turningOff()"
+              (click)="turnOff()"
+            >
+              @if (turningOff()) {
+                <span class="ui-list__title" i18n="@@donor.notifications.turningOff"
+                  >Vypínáme…</span
+                >
+              } @else {
+                <span class="ui-list__title" i18n="@@donor.notifications.turnOff"
+                  >Vypnout na tomto zařízení</span
+                >
+              }
+            </button>
+          </li>
+        </ul>
+        <p class="notifications-note notifications-inset">
+          @if (lastDelivery(here); as delivered) {
+            <span i18n="@@donor.notifications.lastDelivered"
+              >Naposledy doručeno {{ delivered }}.</span
+            >
+          } @else {
+            <span i18n="@@donor.notifications.neverDelivered">Zatím nic nedoručeno.</span>
+          }
+          @if (offer() === 'denied') {
+            &ngsp;<span i18n="@@donor.notifications.lostDenied"
+              >Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je v
+              nastavení prohlížeče u tohoto webu.</span
+            >
+          }
+        </p>
+      } @else {
+        @switch (offer()) {
+          @case ('available') {
+            <ul class="ui-list">
+              <li>
+                <button
+                  appNeedsConnection
+                  type="button"
+                  class="ui-list__row ui-list__row--action"
+                  aria-describedby="notifications-offer"
+                  [disabled]="turningOn()"
+                  (click)="turnOn()"
+                >
+                  @if (turningOn()) {
+                    <span class="ui-list__title" i18n="@@donor.notifications.turningOn"
+                      >Zapínáme upozornění…</span
+                    >
+                  } @else {
+                    <span class="ui-list__title" i18n="@@donor.notifications.turnOn"
+                      >Zapnout na tomto zařízení</span
+                    >
+                  }
+                </button>
+              </li>
+            </ul>
+            <p
+              id="notifications-offer"
+              class="notifications-note notifications-inset"
+              i18n="@@donor.notifications.offer"
+            >
+              Prohlížeč se zeptá, jestli mu upozornění dovolíte. Potom přijde zkušební upozornění.
+            </p>
+          }
+          @case ('public') {
+            <p class="notifications-inset" i18n="@@donor.notifications.public">
+              Na cizím počítači upozornění zapnout nejdou.
+            </p>
+          }
+          @case ('browser') {
+            <p class="notifications-inset" i18n="@@donor.notifications.browser">
+              Upozornění jdou zapnout jen v aplikaci na ploše nebo po přihlášení se zaškrtnutým
+              Zapamatovat si mě.
+            </p>
+          }
+          @case ('device-session') {
+            <p class="notifications-inset" i18n="@@donor.notifications.deviceSession">
+              Toto přihlášení je starší, než web začal rozlišovat zařízení. Odhlaste se a znovu se
+              přihlaste, potom tady upozornění zapnete.
+            </p>
+          }
+          @case ('home-screen') {
+            <p class="notifications-inset" i18n="@@donor.notifications.homeScreen">
+              Na iPhonu a iPadu chodí upozornění jen webu přidanému na plochu. V Safari klepněte na
+              Sdílet, zvolte Přidat na plochu, otevřete web z ikony na ploše a upozornění zapněte
+              tady.
+            </p>
+          }
+          @case ('denied') {
+            <p class="notifications-inset" i18n="@@donor.notifications.denied">
+              Upozornění má tento web v prohlížeči zakázaná. Povolte je v nastavení prohlížeče u
+              tohoto webu (obvykle ikona vedle adresy, Oprávnění, Oznámení) a stránku načtěte znovu.
+            </p>
+          }
+          @case ('no-push') {
+            <p class="notifications-inset" i18n="@@donor.notifications.noPush">
+              Tento prohlížeč upozornění z webu neumí. Zkuste aktuální Chrome, Edge, Firefox nebo
+              Safari.
+            </p>
+          }
+          @default {
+            <p class="notifications-inset" i18n="@@donor.notifications.noServiceWorker">
+              Prohlížeč zatím nespustil část webu, která upozornění doručuje. Načtěte stránku znovu.
+            </p>
+          }
+        }
+      }
+    }
+  }
+  <app-live-notice look="note" [notice]="notice()" />
+</section>

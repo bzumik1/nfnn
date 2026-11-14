@@ -959,6 +959,37 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor has notifications on this device, then the notifications card with its switches breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/operations/push',
+      (route) =>
+        route.fulfill({
+          json: {
+            publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
+            device: {
+              service: 'apple',
+              notifications: { gifts: true, yearlyReceipts: false },
+              createdAt: '2026-11-12T09:00:00Z',
+              lastDeliveredAt: '2026-11-13T08:05:00Z',
+              failuresInARow: 0,
+            },
+            devices: ['019a5a3c-0000-7000-8000-000000000001'],
+          },
+        }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(
+      page.locator('.notifications').getByRole('switch', { name: 'Dar dorazil' }),
+    ).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor opens the older sign-ins, then the device card with the folded and the opened rows breaks no rule', async ({
     page,
   }) => {
