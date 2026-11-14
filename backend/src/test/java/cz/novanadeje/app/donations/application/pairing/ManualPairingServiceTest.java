@@ -17,6 +17,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ErasedDonorUnpairingInBrowserOnly;
 import cz.novanadeje.app.donations.domain.donor.PaymentToErasedDonor;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
@@ -254,6 +255,34 @@ class ManualPairingServiceTest {
         verify(donations, never()).delete(any());
         verify(payments, never()).save(any());
         verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a donation of an erased donor that no receipt lists, when a connected application unpairs it, then it is refused as browser-only and nothing changes")
+    void should_refuse_when_connected_application_unpairs_given_erased_giver() {
+        janaRecord.erase(NOW);
+        when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
+
+        assertThatThrownBy(() -> service.unpair(ADMIN, AdministrationChannel.CONNECTED_APPLICATION, unknownSymbol.id(), ExpectedVersion.none()))
+                .isInstanceOf(ErasedDonorUnpairingInBrowserOnly.class);
+
+        verify(receipts, never()).save(any());
+        verify(donations, never()).delete(any());
+        verify(payments, never()).save(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("Given a donation of an erased donor that no receipt lists, when unpaired in the browser, then it is unpaired and audited as for any donor")
+    void should_unpair_when_unpaired_in_browser_given_erased_giver() {
+        janaRecord.erase(NOW);
+        when(donations.findByBankPayment(unknownSymbol.id())).thenReturn(Optional.of(paired));
+
+        assertThat(service.unpair(ADMIN, AdministrationChannel.BROWSER, unknownSymbol.id(), ExpectedVersion.none())).isEmpty();
+
+        verify(donations).delete(paired.id());
+        verify(payments).save(any());
+        verify(events).publishEvent(any(AdminActionPerformed.class));
     }
 
     @Test

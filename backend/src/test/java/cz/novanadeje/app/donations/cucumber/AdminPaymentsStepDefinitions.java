@@ -138,6 +138,12 @@ public class AdminPaymentsStepDefinitions {
         api.authorize(exchangedApiToken);
     }
 
+    @When("the exchanged API token asks for the unpaired payments")
+    public void theExchangedApiTokenAsksForTheUnpairedPayments() {
+        actAsTheExchangedApiToken();
+        api.get(PAYMENTS_PATH + "?pairing=unpaired");
+    }
+
     @When("the exchanged API token asks for the paired payments of {int}")
     public void theExchangedApiTokenAsksForThePairedPaymentsOf(int year) {
         actAsTheExchangedApiToken();

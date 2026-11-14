@@ -49,6 +49,27 @@ Feature: An administrator pairs bank payments by hand
     Then the response status is 200
     And the listed payments are none
 
+  Scenario: An erased donor's gift is unpaired only in a browser, never by a connected application, which would then read the payer
+    Given the bank account has these movements:
+      | id   | date       | amount | account    | bankCode | name         | variableSymbol | message      |
+      | 1001 | 2026-10-10 | 500.00 | 2900233333 | 2010     | Svoboda Petr | {Petr}         | Dar pro fond |
+    And the application starts the import
+    And "Jana" erased the donor "Petr"
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token unpairs payment 1001
+    Then the response status is 403
+    And the problem type ends with "donations/erased-donor-unpairing-in-browser-only"
+    And the problem has the title "Zrušit přiřazení daru vymazaného dárce jde jen v prohlížeči"
+    And bank payment 1001 is paired with "Petr"
+    And no admin action "UNPAIR_PAYMENT" is recorded
+    When the exchanged API token asks for the unpaired payments
+    Then the response status is 200
+    And the unpaired payments are none
+    When "Jana" unpairs payment 1001
+    Then the response status is 200
+    And bank payment 1001 is unpaired
+
   Scenario: An unpaired 1 Kč account verification is marked as one in the list
     Given the bank account has these movements:
       | id   | date       | amount | account    | bankCode | name          | variableSymbol | message                               |

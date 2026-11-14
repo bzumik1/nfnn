@@ -173,7 +173,7 @@ export function registerWritingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Zrušit spárování platby',
       description:
-        "Removes the donation of a paired payment, so the payment is unpaired again; audited as UNPAIR_PAYMENT. Refused while a single receipt certifies the donation (409 donations/donation-has-receipt), and refused to a connection while the donor's active yearly receipt lists the donation (403 donations/receipt-withdrawal-in-browser-only), because unpairing it withdraws that receipt, which an administrator does only on the web at /sprava/platby.",
+        "Removes the donation of a paired payment, so the payment is unpaired again; audited as UNPAIR_PAYMENT. Refused while a single receipt certifies the donation (409 donations/donation-has-receipt), and refused to a connection while the donor's active yearly receipt lists the donation (403 donations/receipt-withdrawal-in-browser-only), because unpairing it withdraws that receipt, which an administrator does only on the web at /sprava/platby. A gift of an erased donor is unpaired only on the web too (403 donations/erased-donor-unpairing-in-browser-only).",
       inputSchema: z.object({ paymentId: UUID, expectedVersion: EXPECTED_VERSION }),
       annotations: { ...WRITING, destructiveHint: true },
     },

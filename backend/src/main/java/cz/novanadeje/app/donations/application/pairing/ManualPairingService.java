@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
+import cz.novanadeje.app.donations.domain.donor.ErasedDonorUnpairingInBrowserOnly;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
@@ -101,6 +102,9 @@ public class ManualPairingService {
         requireUnchanged(payment, expected);
         Donation donation = donations.findByBankPayment(paymentId).orElseThrow(() -> new BankPaymentNotPaired(paymentId));
         receipts.lockDonor(donation.donor());
+        if (channel.isConnectedApplication() && givenByErasedDonor(donation)) {
+            throw new ErasedDonorUnpairingInBrowserOnly(donation.donor());
+        }
         if (receipts.existsForDonation(donation.id())) {
             throw new DonationHasReceipt(donation.id());
         }
@@ -131,6 +135,10 @@ public class ManualPairingService {
             DonationRow gift = donations.findByBankPayment(payment.id()).map(DonationRow::from).orElse(null);
             throw new ChangedMeanwhile(current.version(), new PaymentWithGift(current, gift));
         }
+    }
+
+    private boolean givenByErasedDonor(Donation donation) {
+        return donorRecords.findById(donation.donor()).map(DonorRecord::isErased).orElse(false);
     }
 
     private List<Year> changedYearlyReceipts(DonorReference donor, Year year) {
