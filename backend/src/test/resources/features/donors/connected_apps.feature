@@ -343,15 +343,63 @@ Feature: An administrator connects an application such as Claude to the administ
 
   Scenario: The application refreshes its tokens and a replayed refresh token ends every session of the administrator
     Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    And the application keeps its refresh token aside
     When 10 minutes pass
     And the application refreshes its tokens
     Then the response status is 200
     And the token response carries a bearer token for 15 minutes, a refresh token and the scope "admin:read"
     And the refresh token differs from the previous one
-    When the application refreshes its tokens with the previous refresh token
+    When the application refreshes its tokens
+    Then the response status is 200
+    And the token response carries a bearer token for 15 minutes, a refresh token and the scope "admin:read"
+    When the application refreshes its tokens with the kept refresh token
     Then the response status is 400
     And the token error is "invalid_grant"
     When the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: A refresh whose answer the application lost is repeated within 60 seconds and keeps every session
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    When 10 minutes pass
+    And the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When 30 seconds pass
+    And the application refreshes its tokens
+    Then the response status is 200
+    And the token response carries a bearer token for 15 minutes, a refresh token and the scope "admin:read"
+    When the application refreshes its tokens
+    Then the response status is 200
+    And the token response carries a bearer token for 15 minutes, a refresh token and the scope "admin:read"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 200
+
+  Scenario: The refresh token of a lost answer, presented after the grace replaced it, ends every session of the administrator
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    When the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When 30 seconds pass
+    And the application refreshes its tokens
+    Then the response status is 200
+    When the application refreshes its tokens with the refresh token of the lost answer
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the browser session of "Jana" is refreshed
+    Then the response status is 401
+    And the problem type ends with "auth/invalid-refresh-token"
+
+  Scenario: A refresh repeated 61 seconds after its lost answer ends every session of the administrator
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client"
+    When the application refreshes its tokens but the answer is lost
+    Then the response status is 200
+    When 61 seconds pass
+    And the application refreshes its tokens
+    Then the response status is 400
+    And the token error is "invalid_grant"
+    When the application refreshes its tokens with the refresh token of the lost answer
     Then the response status is 400
     And the token error is "invalid_grant"
     When the browser session of "Jana" is refreshed
