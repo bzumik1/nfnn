@@ -10,6 +10,7 @@ import { FileButton } from './file-button';
       accept="image/png"
       describedBy="photo-hint"
       [disabled]="busy()"
+      [look]="look()"
       (chosen)="files.push($event)"
       >Nahrát fotku</app-file-button
     >
@@ -17,6 +18,7 @@ import { FileButton } from './file-button';
 })
 class Host {
   readonly busy = signal(false);
+  readonly look = signal<'button' | 'row'>('button');
   readonly files: File[] = [];
 }
 
@@ -59,5 +61,16 @@ describe('Given a file button', () => {
     await fixture.whenStable();
 
     expect(input().disabled).toBe(true);
+  });
+
+  it('when it asks for the row look, then the file field is still named by the visible text and its label is a list row', async () => {
+    fixture.componentInstance.look.set('row');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const label = fixture.nativeElement.querySelector(`label[for="photo"]`) as HTMLLabelElement;
+
+    expect(label.textContent?.trim()).toBe('Nahrát fotku');
+    expect(label.classList).toContain('ui-list__row');
+    expect(label.classList).not.toContain('ui-button');
   });
 });

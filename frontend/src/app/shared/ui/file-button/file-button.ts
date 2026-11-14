@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   selector: 'app-file-button',
   templateUrl: './file-button.html',
   styleUrl: './file-button.scss',
+  host: { '[class.file-button--row]': "look() === 'row'" },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FileButton {
@@ -11,6 +12,7 @@ export class FileButton {
   readonly accept = input('');
   readonly describedBy = input<string | null>(null);
   readonly disabled = input(false);
+  readonly look = input<'button' | 'row'>('button');
   readonly chosen = output<File>();
 
   protected choose(event: Event): void {

@@ -1,367 +1,401 @@
-<div class="ui-status">
-  <div class="ui-status__icon ui-status__icon--{{ tone() }}" aria-hidden="true">{{ icon() }}</div>
+<section class="ui-card ui-card--padded verify-card" aria-labelledby="verify-title">
+  <span class="ui-list__tile ui-list__tile--{{ tile() }} verify-tone" aria-hidden="true">{{
+    icon()
+  }}</span>
   @switch (kind()) {
     @case ('signed') {
-      <h1
-        id="verify-title"
-        class="ui-panel__title"
-        tabindex="-1"
-        i18n="@@donor.verify.signed.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.signed.title">
         Podepsáno fondem Nová naděje
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signed.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.signed.text">
         Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení. Porovnejte je s papírem.
       </p>
     }
     @case ('signed-no-answer') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.signedNoAnswer.title"
       >
         Podpis sedí, ale fond teď neodpověděl, zda potvrzení vede
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.signedNoAnswer.text">
         Údaje v tomto kódu podepsal fond Nová naděje ke dni vystavení, fond ale teď neodpověděl, zda
         potvrzení vede jako platné. Dokud neodpoví, nevíte, zda ho nenahradil novějším nebo
         nezrušil. Zkuste to za chvíli znovu.
       </p>
     }
     @case ('replaced') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.replaced.title"
       >
         Fond toto potvrzení nahradil novějším
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.replaced.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.replaced.text">
         Údaje v tomto kódu fond podepsal ke dni vystavení, později je ale nahradil novým potvrzením.
         Platí to novější. Pokud ho nemáte, napište na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
       </p>
     }
     @case ('withdrawn') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.withdrawn.title"
       >
         Fond toto potvrzení zrušil
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.withdrawn.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.withdrawn.text">
         Údaje v tomto kódu fond podepsal, potvrzení ale později zrušil, například když se dar
         vracel. Nepovažujte ho za platné. Máte-li pochybnost, napište na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
     @case ('outdated') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.outdated.title"
       >
         Potvrzení platilo ke dni vystavení
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.outdated.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.outdated.text">
         Fond ho vystavil podle darů, které v tu chvíli evidoval. Od té doby se dary dárce změnily,
         proto platí jen novější potvrzení. Pokud ho nemáte, napište na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem tohoto potvrzení.
       </p>
     }
     @case ('unrecorded') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unrecorded.title"
       >
         Fond toto potvrzení ve své evidenci nevede
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unrecorded.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.unrecorded.text">
         Kód nese podpis fondu, fond ale potvrzení s těmito údaji ve své evidenci nemá. Nepovažujte
         ho za ověřené a napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
         potvrzení.
       </p>
     }
     @case ('invalid') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.invalid.title"
       >
         Neověřeno: podpis neodpovídá údajům
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.invalid.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.invalid.text">
         Tento kód fond nepodepsal, nebo v něm někdo údaje změnil. Potvrzení nepovažujte za ověřené.
         Máte-li pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
         potvrzení.
       </p>
     }
     @case ('revoked') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.revoked.title"
       >
         Neověřeno: fond tento klíč zneplatnil
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.revoked.write">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.revoked.write">
         Kód je podepsaný klíčem, který fond přestal používat, protože se mohl dostat do cizích
         rukou. Potvrzení nepovažujte za ověřené a napište fondu na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
     @case ('unknown-key-online') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.onlineTitle"
       >
         Neověřeno: kód podepsal klíč, který fond nezveřejnil
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.onlineText">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.unknownKey.onlineText">
         Fond takový klíč mezi svými klíči nemá. Potvrzení nepovažujte za ověřené. Máte-li
         pochybnost, napište na <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem
         potvrzení.
       </p>
     }
     @case ('unknown-key-offline') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.offlineTitle"
       >
         Neověřeno: tento podpis zatím neumíme ověřit
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.offlineText">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.unknownKey.offlineText">
         Kód podepsal klíč, který tato stránka zatím nezná. Připojte se k internetu a zkuste to
         znovu.
       </p>
     }
     @case ('unknown-key-no-answer') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.unknownKey.noAnswerTitle"
       >
         Neověřeno: tento podpis zatím neumíme ověřit
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.unknownKey.noAnswerText">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.unknownKey.noAnswerText">
         Kód podepsal klíč, který tato stránka zatím nezná, a fond teď neposlal svůj seznam klíčů.
         Zkuste to za chvíli znovu.
       </p>
     }
     @case ('no-connection') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.noConnection.title"
       >
         Nelze ověřit bez připojení
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.noConnection.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.noConnection.text">
         Stránka potřebuje načíst klíče fondu, a to jde jen s připojením. Připojte se k internetu a
         zkuste to znovu.
       </p>
     }
     @case ('no-answer') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.noAnswer.title"
       >
         Ověření teď nejde dokončit
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.noAnswer.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.noAnswer.text">
         Stránka teď nedostala od fondu klíče k ověření podpisu. Zkuste to za chvíli znovu.
       </p>
     }
     @case ('keys-refused') {
-      <h1
+      <h2
         id="verify-title"
-        class="ui-panel__title"
+        class="ui-card__title"
         tabindex="-1"
         i18n="@@donor.verify.keysRefused.title"
       >
         Neověřeno: seznam klíčů fondu teď nejde použít
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.keysRefused.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.keysRefused.text">
         Fond poslal seznam klíčů, se kterým tato stránka neumí pracovat, takže podpis teď ověřit
         nejde. Potvrzení zatím nepovažujte za ověřené a napište prosím na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a> s číslem potvrzení.
       </p>
     }
     @case ('broken') {
-      <h1
-        id="verify-title"
-        class="ui-panel__title"
-        tabindex="-1"
-        i18n="@@donor.verify.broken.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.broken.title">
         Odkaz je neúplný
-      </h1>
+      </h2>
       @if (scanned()) {
-        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.broken.text">
+        <p class="verify-lead" i18n="@@donor.verify.broken.text">
           Kód se nepřečetl celý, nebo je adresa opsaná s chybou. Naskenujte ho znovu, blíž a se
           světlem.
         </p>
       } @else {
-        <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.broken.link">
+        <p class="verify-lead" i18n="@@donor.verify.broken.link">
           Kód v odkazu není celý, nebo je adresa opsaná s chybou. Otevřete odkaz z PDF potvrzení
           znovu, nebo načtěte jeho QR kód.
         </p>
       }
     }
     @case ('newer') {
-      <h1 id="verify-title" class="ui-panel__title" tabindex="-1" i18n="@@donor.verify.newer.title">
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.newer.title">
         Tento kód je novější než stránka
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.newer.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.newer.text">
         Načtěte stránku znovu s připojením a naskenujte kód ještě jednou. Když to nepomůže, napište
         na
         <a href="mailto:info@nfnn.cz">info&#64;nfnn.cz</a>.
       </p>
     }
     @case ('failed') {
-      <h1
-        id="verify-title"
-        class="ui-panel__title"
-        tabindex="-1"
-        i18n="@@donor.verify.failed.title"
-      >
+      <h2 id="verify-title" class="ui-card__title" tabindex="-1" i18n="@@donor.verify.failed.title">
         Ověření se nepodařilo
-      </h1>
-      <p class="ui-panel__lead verify-lead" i18n="@@donor.verify.failed.text">
+      </h2>
+      <p class="verify-lead" i18n="@@donor.verify.failed.text">
         Tento prohlížeč podpis nedokázal zkontrolovat. Zkuste to znovu, případně v jiném prohlížeči.
       </p>
     }
   }
-</div>
-
-@if (kind() === 'signed') {
-  <p class="verify-status verify-status--{{ status() }}">
-    @switch (status()) {
-      @case ('active') {
-        <ng-container i18n="@@donor.verify.status.active"
-          >Fond toto potvrzení vede jako platné.</ng-container
+  @if (kind() === 'signed') {
+    <p class="verify-status verify-status--{{ status() }}">
+      @if (status() === 'active') {
+        <svg
+          class="verify-status__glyph"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         >
-      }
-      @default {
-        <ng-container i18n="@@donor.verify.status.offline"
-          >Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo
-          nezrušil.</ng-container
+          <path d="m5 12.5 4.5 4.5L19 7.5" />
+        </svg>
+      } @else {
+        <svg
+          class="verify-status__glyph"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
         >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v5M12 8h.01" />
+        </svg>
       }
-    }
-  </p>
-}
+      <span>
+        @switch (status()) {
+          @case ('active') {
+            <ng-container i18n="@@donor.verify.status.active"
+              >Fond toto potvrzení vede jako platné.</ng-container
+            >
+          }
+          @default {
+            <ng-container i18n="@@donor.verify.status.offline"
+              >Bez připojení nelze zjistit, zda fond potvrzení později nenahradil novějším nebo
+              nezrušil.</ng-container
+            >
+          }
+        }
+      </span>
+    </p>
+  }
 
-@if (retriable()) {
-  <button
-    type="button"
-    class="ui-button ui-button--primary ui-button--block verify-retry"
-    (click)="retry.emit()"
-    i18n="@@donor.verify.retry"
-  >
-    Zkusit znovu
-  </button>
-}
+  @if (retriable()) {
+    <button
+      type="button"
+      class="ui-button ui-button--primary ui-button--block verify-retry"
+      (click)="retry.emit()"
+      i18n="@@donor.verify.retry"
+    >
+      Zkusit znovu
+    </button>
+  }
+</section>
 
 @if (receipt(); as data) {
-  <h2 class="verify-data-title" i18n="@@donor.verify.data.title">Údaje v kódu</h2>
-  <dl class="ui-data-list verify-data">
-    <div>
-      <dt i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
-      <dd class="ui-figures">{{ data.number }}</dd>
-    </div>
-    <div>
-      <dt i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
-      <dd>{{ data.issuedOn }}</dd>
-    </div>
-    @if (data.replaces; as replaced) {
-      <div>
-        <dt i18n="@@donor.verify.data.replaces">Nahrazuje potvrzení</dt>
-        <dd i18n="@@donor.verify.data.replacesValue">
-          {{ replaced.number }} ze dne {{ replaced.issuedOn }}
+  <section class="verify-data-group" aria-labelledby="verify-data-title">
+    <h2 id="verify-data-title" class="ui-group-title" i18n="@@donor.verify.data.title">
+      Údaje v kódu
+    </h2>
+    <dl class="ui-list ui-list--inset ui-list--fields verify-data">
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value ui-figures">{{ data.number }}</span>
         </dd>
       </div>
-    }
-    <div>
-      <dt i18n="@@donor.verify.data.donor">Dárce</dt>
-      <dd>{{ data.donorName }}</dd>
-    </div>
-    @if (data.donorIdentifier) {
-      <div>
-        <dt i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
-        <dd>{{ data.donorIdentifier }}</dd>
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.issuedOn }}</span>
+        </dd>
       </div>
-    }
-    <div>
-      <dt i18n="@@donor.verify.data.address">Adresa</dt>
-      <dd>{{ data.donorAddress }}</dd>
-    </div>
-    @if (data.year === null) {
-      <div>
-        <dt i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
-        <dd>{{ data.gifts[0].receivedOn }}</dd>
+      @if (data.replaces; as replaced) {
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.replaces">
+            Nahrazuje potvrzení
+          </dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value" i18n="@@donor.verify.data.replacesValue"
+              >{{ replaced.number }} ze dne {{ replaced.issuedOn }}</span
+            >
+          </dd>
+        </div>
+      }
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.donor">Dárce</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.donorName }}</span>
+        </dd>
       </div>
-      <div>
-        <dt i18n="@@donor.verify.data.amount">Částka</dt>
-        <dd class="ui-figures">{{ data.total }}</dd>
+      @if (data.donorIdentifier) {
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.donorIdentifier }}</span>
+          </dd>
+        </div>
+      }
+      <div class="ui-list__row ui-list__item ui-list__field">
+        <dt class="ui-list__field-label" i18n="@@donor.verify.data.address">Adresa</dt>
+        <dd class="ui-list__field-body">
+          <span class="ui-list__field-value">{{ data.donorAddress }}</span>
+        </dd>
       </div>
-    } @else {
-      <div>
-        <dt i18n="@@donor.verify.data.year">Za rok</dt>
-        <dd>{{ data.year }}</dd>
-      </div>
-      <div>
-        <dt i18n="@@donor.verify.data.total">Celkem</dt>
-        <dd class="ui-figures">{{ data.total }}</dd>
-      </div>
-    }
-  </dl>
+      @if (data.year === null) {
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.gifts[0].receivedOn }}</span>
+          </dd>
+        </div>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.amount">Částka</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
+          </dd>
+        </div>
+      } @else {
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.year">Za rok</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value">{{ data.year }}</span>
+          </dd>
+        </div>
+        <div class="ui-list__row ui-list__item ui-list__field">
+          <dt class="ui-list__field-label" i18n="@@donor.verify.data.total">Celkem</dt>
+          <dd class="ui-list__field-body">
+            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
+          </dd>
+        </div>
+      }
+    </dl>
+  </section>
   @if (data.year !== null) {
-    <table class="verify-gifts">
-      <caption i18n="@@donor.verify.data.gifts">
-        Jednotlivé dary ({{
-          data.gifts.length
-        }})
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col" i18n="@@donor.verify.data.receivedOn">Přijato</th>
-          <th scope="col" class="verify-gifts__amount" i18n="@@donor.verify.data.giftAmount">
-            Částka
-          </th>
-        </tr>
-      </thead>
-      <tbody>
+    <section class="verify-gifts" aria-labelledby="verify-gifts-title">
+      <h3 id="verify-gifts-title" class="ui-group-title" i18n="@@donor.verify.data.gifts">
+        Jednotlivé dary ({{ data.gifts.length }})
+      </h3>
+      <ul class="ui-list ui-list--inset">
         @for (gift of data.gifts; track $index) {
-          <tr>
-            <th scope="row">{{ gift.receivedOn }}</th>
-            <td class="verify-gifts__amount ui-figures">{{ gift.amount }}</td>
-          </tr>
+          <li>
+            <div class="ui-list__row">
+              <span class="ui-list__title">{{ gift.receivedOn }}</span
+              >&ngsp;<span class="ui-list__value ui-figures">{{ gift.amount }}</span>
+            </div>
+          </li>
         }
-      </tbody>
-    </table>
+      </ul>
+    </section>
   }
 }
 
 @if (checked()) {
-  <p class="verify-local">
+  <p class="ui-group-note verify-local">
     @if (statusAnswered()) {
       <ng-container i18n="@@donor.verify.local.withStatus"
         >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby

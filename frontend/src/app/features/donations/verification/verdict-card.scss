@@ -1,0 +1,27 @@
+.verify-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-3);
+
+  > :not(.verify-tone, .ui-card__title) {
+    grid-column: 1 / -1;
+  }
+}
+
+.verify-tone {
+  display: flex;
+  align-items: center;
+  font-weight: var(--weight-bold);
+}
+
+.verify-lead {
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+
+  a {
+    color: var(--color-accent);
+  }
+}

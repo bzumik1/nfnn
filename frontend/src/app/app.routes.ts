@@ -59,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'overit',
-        data: { parent: '/', darkThroughout: true } satisfies RouteChromeData,
+        data: { head: 'light', parent: '/' } satisfies RouteChromeData,
         title: $localize`:@@donor.verify.pageTitle:Ověření potvrzení o daru | Nová naděje – nadační fond`,
         loadComponent: () =>
           import('./features/donations/verification/verification-page').then(

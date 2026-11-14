@@ -9,6 +9,7 @@ import {
   serveReceiptKeys,
   serveReceiptStatus,
   SINGLE_RECEIPT,
+  verdictHeading,
   YEARLY_RECEIPT,
 } from './receipt-verification';
 import {
@@ -196,7 +197,7 @@ test.describe('Given the site built with another theme', () => {
       await serveReceiptKeys(page);
       await serveReceiptStatus(page, 'active');
       await page.goto(`/overit#${YEARLY_RECEIPT.fragment}`);
-      const heading = page.getByRole('heading', { level: 1 });
+      const heading = verdictHeading(page);
       await expect(heading).toHaveText('Podepsáno fondem Nová naděje');
       expect(await lookOfTheReferenceTheme(page), 'signed').toEqual([]);
 
