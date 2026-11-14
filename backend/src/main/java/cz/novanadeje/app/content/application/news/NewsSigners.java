@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.news;
 import cz.novanadeje.app.content.domain.media.FocalPoint;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.media.MediaImageRepository;
+import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.people.Person;
 import cz.novanadeje.app.content.domain.people.PersonId;
@@ -52,7 +53,8 @@ public class NewsSigners {
         if (wanted.isEmpty()) {
             return Map.of();
         }
-        return people.findAllInOrder().stream().filter(person -> wanted.contains(person.id()))
-                .collect(Collectors.toMap(Person::id, person -> NewsSignerView.of(person, media)));
+        List<Person> signers = people.findAllInOrder().stream().filter(person -> wanted.contains(person.id())).toList();
+        Map<MediaId, MediaSize> sizes = media.findSizes(signers.stream().flatMap(person -> person.details().portrait().stream()).collect(Collectors.toSet()));
+        return signers.stream().collect(Collectors.toMap(Person::id, person -> NewsSignerView.of(person, sizes)));
     }
 }

@@ -42,6 +42,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -260,6 +261,20 @@ class JpaMediaImageRepositoryTest {
 
         assertThat(media.findSize(portrait.id())).contains(new MediaSize(1413, 1884));
         assertThat(media.findSize(MediaId.newId(NOW))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given two stored images and an unknown id, when their sizes are read together, then each image answers its original size and the unknown id is left out")
+    void should_read_every_original_size_at_once_when_asked_given_two_stored_images() {
+        MediaImage portrait = image(1413, 1884, 480, 960, 1440);
+        MediaImage signature = image(600, 180, 480);
+        media.save(portrait);
+        media.save(signature);
+        flushAndClear();
+
+        assertThat(media.findSizes(List.of(portrait.id(), signature.id(), MediaId.newId(NOW), portrait.id())))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(portrait.id(), new MediaSize(1413, 1884), signature.id(), new MediaSize(600, 180)));
+        assertThat(media.findSizes(List.of())).isEmpty();
     }
 
     @Test

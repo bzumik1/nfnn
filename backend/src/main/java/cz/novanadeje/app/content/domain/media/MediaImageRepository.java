@@ -17,6 +17,8 @@ public interface MediaImageRepository {
 
     Optional<MediaSize> findSize(MediaId id);
 
+    Map<MediaId, MediaSize> findSizes(Collection<MediaId> ids);
+
     boolean exists(MediaId id);
 
     void lockForUse(MediaId id);
