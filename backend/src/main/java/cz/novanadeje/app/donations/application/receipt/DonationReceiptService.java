@@ -5,9 +5,6 @@ import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptBeforeFirstYear;
-import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
-import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -33,16 +30,7 @@ public class DonationReceiptService {
 
     public DonationReceipt issueForYear(DonorReference donor, Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        requireCompletedYear(firstYear, year, today);
+        firstYear.requireYearlyReceiptFor(year, today);
         return issuer.issueForYear(donor, year, today);
-    }
-
-    static void requireCompletedYear(FirstReceiptYear firstYear, Year year, LocalDate today) {
-        if (!firstYear.admits(year)) {
-            throw new ReceiptBeforeFirstYear(firstYear);
-        }
-        if (!ReceiptCalendar.isCompleted(year, today)) {
-            throw new YearNotYetCompleted(year);
-        }
     }
 }

@@ -51,6 +51,7 @@ public class ReceiptRequestReader {
     }
 
     public ReceiptRequest forYear(DonorReference donor, Year year, LocalDate today) {
+        firstYear.requireYearlyReceiptFor(year, today);
         List<Donation> received = donations.findByDonorNewestFirst(donor).stream()
                 .filter(Donation::isReceived)
                 .filter(donation -> donation.receivedIn(year))

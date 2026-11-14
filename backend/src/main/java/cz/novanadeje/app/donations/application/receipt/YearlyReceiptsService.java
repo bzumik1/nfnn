@@ -69,7 +69,7 @@ public class YearlyReceiptsService {
     @Transactional(readOnly = true)
     public YearlyReceiptCandidates candidates(Year year) {
         LocalDate today = FoundationCalendar.today(clock);
-        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        firstYear.requireYearlyReceiptFor(year, today);
         return candidatesOf(year, today);
     }
 
@@ -80,7 +80,7 @@ public class YearlyReceiptsService {
 
     public YearlyReceiptsRun issue(UUID adminId, AdministrationChannel channel, Year year, List<DonorReference> donors) {
         LocalDate today = FoundationCalendar.today(clock);
-        DonationReceiptService.requireCompletedYear(firstYear, year, today);
+        firstYear.requireYearlyReceiptFor(year, today);
         List<YearlyReceiptResult> results = new ArrayList<>();
         try {
             for (DonorReference donor : donors) {
