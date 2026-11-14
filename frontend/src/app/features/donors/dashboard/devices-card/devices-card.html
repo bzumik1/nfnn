@@ -180,6 +180,11 @@
             &ngsp;·&nbsp;<span class="device-kind">{{ sessionKind }}</span>
           }
         </span>
+        @if (notified(device)) {
+          <span class="device-notified" i18n="@@donor.account.devices.notified"
+            >dostává upozornění</span
+          >
+        }
       </span>
       <span class="ui-list__value device-action">
         @if (device.current) {

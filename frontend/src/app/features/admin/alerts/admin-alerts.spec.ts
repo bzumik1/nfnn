@@ -574,9 +574,12 @@ describe('Given an administrator on the alerts page', () => {
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-this-device` })
         .flush(null, { status: 204, statusText: 'No Content' });
       await settle();
+      await vi.waitFor(async () => {
+        await settle();
+        expect(status()).toContain('Upozornění jsme na tomto zařízení vypnuli.');
+      });
 
       expect(push.unsubscribe).toHaveBeenCalled();
-      expect(status()).toContain('Upozornění jsme na tomto zařízení vypnuli.');
       expect(await TestBed.inject(DeviceAlertMarks).ownedBy(sampleDonor().id)).toBe(false);
       expect(button('Zapnout upozornění na tomto zařízení')).toBeTruthy();
       expect(document.activeElement?.textContent?.trim()).toBe('Toto zařízení');

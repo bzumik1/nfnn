@@ -3488,6 +3488,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlášení a zabezpečení',
+        'Upozornění',
         'Přihlášená zařízení',
         'Data v tomto zařízení',
         'Když web nefunguje',

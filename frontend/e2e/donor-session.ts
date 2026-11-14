@@ -248,6 +248,13 @@ export async function mockDonorApi(
     (url) => url.pathname === '/api/donors/me/devices',
     (route) => route.fulfill({ json: { items: signedInDevices } }),
   );
+  await page.route(
+    (url) => url.pathname === '/api/operations/push',
+    (route) =>
+      route.fulfill({
+        json: { publicKey: `B${'E'.repeat(86)}`, deviceSession: true, device: null, devices: [] },
+      }),
+  );
   await mockDonorSync(page, donations.sync ?? emptyDonorSync);
 }
 

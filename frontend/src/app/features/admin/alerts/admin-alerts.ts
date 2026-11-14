@@ -21,6 +21,7 @@ import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { ListChanges } from '../../../core/kept/list-changes';
+import { BrowserPushHolders } from '../../operations/browser-push-holders';
 import { OpenAlerts } from '../../../core/push/open-alerts';
 import { PushAvailability, pushAvailability } from '../../../core/push/push-availability';
 import {
@@ -104,6 +105,7 @@ export class AdminAlerts {
   private readonly push = inject(SERVICE_WORKER_PUSH);
   private readonly openAlerts = inject(OpenAlerts);
   private readonly marks = inject(DeviceAlertMarks);
+  private readonly holders = inject(BrowserPushHolders);
   private readonly window = inject(DOCUMENT).defaultView;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -324,7 +326,7 @@ export class AdminAlerts {
       .subscribe({
         next: () => {
           this.marks.clearOwner();
-          void this.push.unsubscribe().then(() => {
+          void this.releaseBrowser().then(() => {
             this.turningOff.set(false);
             this.browserState.set('unknown');
             this.replaceSubscriptions((items) => items.filter((other) => other.id !== item.id));
@@ -465,7 +467,7 @@ export class AdminAlerts {
         error: (failure: unknown) => {
           this.subscribing.set(false);
           this.changes.changed();
-          void this.push.unsubscribe();
+          void this.releaseBrowser();
           this.deviceNotice.set({
             kind: 'alert',
             text: problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)
@@ -477,6 +479,12 @@ export class AdminAlerts {
           });
         },
       });
+  }
+
+  private async releaseBrowser(): Promise<void> {
+    if (!(await this.holders.donorNotificationsHere())) {
+      await this.push.unsubscribe();
+    }
   }
 
   private browserRefused(): void {
