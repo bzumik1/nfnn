@@ -29,6 +29,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 class FanOutPushDeliveryTest {
 
@@ -139,7 +140,43 @@ class FanOutPushDeliveryTest {
     }
 
     @Test
-    @DisplayName("Given a thread interrupted while it waits, when a message is delivered at once, then no outcome it could not read is reported and the interruption stays")
+    @DisplayName("Given a paced round whose sends throw and whose caller is interrupted part-way, when a second paced round of eight sends follows, then all eight run at once, so every slot came back")
+    void should_run_eight_at_once_when_paced_again_given_round_that_threw_and_was_interrupted() {
+        Thread caller = Thread.currentThread();
+        AtomicInteger failedSends = new AtomicInteger();
+        CountDownLatch eightRunning = new CountDownLatch(FanOutPushDelivery.PACED_SENDS_AT_ONCE);
+        AtomicInteger round = new AtomicInteger(1);
+        FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> {
+            if (round.get() == 1) {
+                if (failedSends.incrementAndGet() == 4) {
+                    caller.interrupt();
+                }
+                throw new IllegalStateException("The push service could not be reached");
+            }
+            eightRunning.countDown();
+            try {
+                return eightRunning.await(5, TimeUnit.SECONDS) ? PushOutcome.DELIVERED : PushOutcome.FAILED;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return PushOutcome.FAILED;
+            }
+        }, Duration.ZERO);
+        List<DonorPushSubscription> firstRound = IntStream.range(0, 20).mapToObj(index -> donorDevice("jana-" + index)).toList();
+        delivery.deliver(firstRound, DONOR_TEST, KEYS, PushPace.PACED);
+        assertThat(Thread.interrupted()).as("the first round's interruption").isTrue();
+        assertThat(failedSends.get()).as("sends of the first round").isBetween(4, firstRound.size() - 1);
+        round.set(2);
+        List<DonorPushSubscription> secondRound = IntStream.range(0, FanOutPushDelivery.PACED_SENDS_AT_ONCE).mapToObj(index -> donorDevice("petr-" + index))
+                .toList();
+
+        Map<PushSubscriptionId, PushOutcome> outcomes = assertTimeoutPreemptively(Duration.ofSeconds(20),
+                () -> delivery.deliver(secondRound, DONOR_TEST, KEYS, PushPace.PACED), "a slot of the first round never came back");
+
+        assertThat(outcomes).hasSize(FanOutPushDelivery.PACED_SENDS_AT_ONCE).allSatisfy((id, outcome) -> assertThat(outcome).isEqualTo(PushOutcome.DELIVERED));
+    }
+
+    @Test
+    @DisplayName("Given a thread interrupted before the call, when a message is delivered at once, then no outcome it could not read is reported and the interruption stays")
     void should_report_no_unread_outcome_when_delivered_at_once_given_interrupted_thread() {
         CountDownLatch neverAnswered = new CountDownLatch(1);
         FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> {
