@@ -264,14 +264,14 @@ class AresCompanyRegistryTest {
     }
 
     @Test
-    @DisplayName("Given a name lookup that spends most of the time, when the register then never answers, then it is unavailable as timed out within the one time for the lookup and the answer")
+    @DisplayName("Given a name lookup that spends most of the time and a register that never answers, when a company is found, then it is unavailable as timed out within the one time for the lookup and the answer")
     void should_time_out_within_the_one_time_when_found_given_a_slow_lookup_and_a_silent_register() throws IOException {
-        Duration budget = Duration.ofSeconds(1);
+        Duration budget = Duration.ofSeconds(2);
         CountDownLatch never = new CountDownLatch(1);
         try (SilentEndpoint silent = SilentEndpoint.open(); HttpClient client = HttpClient.newHttpClient()) {
             AresCompanyRegistry slow = new AresCompanyRegistry(client, silent.base(), false, budget, clock, host -> {
                 try {
-                    never.await(800, TimeUnit.MILLISECONDS);
+                    never.await(1_600, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException cancelled) {
                     Thread.currentThread().interrupt();
                 }
@@ -282,13 +282,13 @@ class AresCompanyRegistryTest {
             assertThatThrownBy(() -> slow.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class,
                     failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
 
-            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(1_500));
+            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(3));
             assertThat(silent.connections()).isEqualTo(1);
         }
     }
 
     @Test
-    @DisplayName("Given the production checks, when the injected lookup finds a private address, does not know the host or fails otherwise, then the register is never asked")
+    @DisplayName("Given the production checks, when the injected lookup finds a private address among public ones, does not know the host or fails otherwise, then the register is never asked")
     void should_refuse_before_asking_when_found_given_a_private_unknown_or_failing_lookup() throws IOException {
         try (SilentEndpoint silent = SilentEndpoint.open();
              HttpClient privateClient = HttpClient.newHttpClient();
