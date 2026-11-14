@@ -23,6 +23,7 @@ import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,8 +50,11 @@ class ApplicationLayerRulesTest {
 
     private static final Set<String> EXCEPTION_MESSAGES = Set.of("getMessage", "getLocalizedMessage");
 
+    private static final List<String> PERSISTENCE_TECHNOLOGY = List.of(
+            "org.springframework.data", "jakarta.persistence", "org.springframework.jdbc", "org.springframework.orm", "org.hibernate", "java.sql");
+
     private static final DescribedPredicate<JavaClass> PERSISTENCE_PORT = DescribedPredicate.describe(
-            "a type of the site named …Repository, annotated @Repository or implemented by a class annotated @Repository",
+            "a type of the site named …Repository, or a persistence adapter (annotated @Repository or on Spring Data, JPA or JDBC) or a port one implements",
             type -> type.getPackageName().startsWith("cz.novanadeje.app")
                     && (type.getSimpleName().endsWith("Repository") || isPersistenceAdapter(type)
                     || type.getAllSubclasses().stream().anyMatch(ApplicationLayerRulesTest::isPersistenceAdapter)));
@@ -91,8 +95,8 @@ class ApplicationLayerRulesTest {
     static final ArchRule application_and_domain_code_takes_no_repository_parameter = noCodeUnits()
             .that().areDeclaredInClassesThat().resideInAnyPackage("cz.novanadeje.app..application..", "cz.novanadeje.app..domain..")
             .and().areDeclaredInClassesThat(DescribedPredicate.describe("are not a repository of the site", type -> !REPOSITORY.test(type)))
-            .and(DescribedPredicate.describe("are methods or constructors of a class Spring does not inject",
-                    codeUnit -> codeUnit.isMethod() || !isSpringBean(codeUnit.getOwner())))
+            .and(DescribedPredicate.describe("are methods, or constructors of a record or of a class Spring does not inject",
+                    codeUnit -> codeUnit.isMethod() || codeUnit.getOwner().isRecord() || !isSpringBean(codeUnit.getOwner())))
             .should(takeARepository())
             .because("backend.md, Application: a method that reads or writes through a repository it is handed hides a dependency and keeps a rule "
                     + "outside the aggregate or a domain service; a rule over loaded data goes to the domain or the view, a read or write to an injected collaborator");
@@ -114,7 +118,9 @@ class ApplicationLayerRulesTest {
     }
 
     private static boolean isPersistenceAdapter(JavaClass type) {
-        return type.isAnnotatedWith(Repository.class);
+        return type.isAnnotatedWith(Repository.class) || type.getDirectDependenciesFromSelf().stream()
+                .map(dependency -> dependency.getTargetClass().getPackageName())
+                .anyMatch(target -> PERSISTENCE_TECHNOLOGY.stream().anyMatch(target::startsWith));
     }
 
     @BeforeAll
@@ -205,7 +211,13 @@ class ApplicationLayerRulesTest {
                 planted(REPOSITORY_PARAMETER, "donations.application.PlantedLedgerEntry",
                         "public class PlantedLedgerEntry { void record(cz.novanadeje.app.donations.domain.PlantedLedger ledger) { } }"),
                 planted(REPOSITORY_PARAMETER, "content.application.PlantedViewOnMedia",
-                        "public record PlantedViewOnMedia(cz.novanadeje.app.content.domain.media.MediaImageRepository media) { }"));
+                        "public record PlantedViewOnMedia(cz.novanadeje.app.content.domain.media.MediaImageRepository media) { }"),
+                planted(REPOSITORY_PARAMETER, "content.application.PlantedComponentRecord",
+                        "@org.springframework.stereotype.Component public record PlantedComponentRecord("
+                                + "cz.novanadeje.app.content.domain.media.MediaImageRepository media) { }"),
+                planted(REPOSITORY_PARAMETER, "shared.application.PlantedTrailRead",
+                        "public final class PlantedTrailRead { static boolean withdrawn(cz.novanadeje.app.shared.application.PlantedTrail trail) { "
+                                + "return false; } }"));
     }
 
     static Stream<PlantedClass> allowedClasses() {
@@ -225,7 +237,11 @@ class ApplicationLayerRulesTest {
         return Stream.of(
                 planted(REPOSITORY_PARAMETER, "donations.domain.PlantedLedger", "public interface PlantedLedger { }"),
                 planted(REPOSITORY_PARAMETER, "donations.infrastructure.persistence.PlantedJpaLedger",
-                        "@org.springframework.stereotype.Repository class PlantedJpaLedger implements cz.novanadeje.app.donations.domain.PlantedLedger { }"));
+                        "@org.springframework.stereotype.Repository class PlantedJpaLedger implements cz.novanadeje.app.donations.domain.PlantedLedger { }"),
+                planted(REPOSITORY_PARAMETER, "shared.application.PlantedTrail", "public interface PlantedTrail { }"),
+                planted(REPOSITORY_PARAMETER, "shared.infrastructure.audit.PlantedJpaTrail",
+                        "@org.springframework.stereotype.Component class PlantedJpaTrail implements cz.novanadeje.app.shared.application.PlantedTrail { "
+                                + "org.springframework.data.domain.Limit limit() { return org.springframework.data.domain.Limit.of(1); } }"));
     }
 
     private static PlantedClass planted(String rule, String relativeName, String body) {
