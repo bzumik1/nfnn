@@ -141,7 +141,15 @@ class FanOutPushDeliveryTest {
     @Test
     @DisplayName("Given a thread interrupted while it waits, when a message is delivered at once, then no outcome it could not read is reported and the interruption stays")
     void should_report_no_unread_outcome_when_delivered_at_once_given_interrupted_thread() {
-        FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> PushOutcome.DELIVERED, Duration.ZERO);
+        CountDownLatch neverAnswered = new CountDownLatch(1);
+        FanOutPushDelivery delivery = new FanOutPushDelivery((recipient, message, keys) -> {
+            try {
+                neverAnswered.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException stopped) {
+                Thread.currentThread().interrupt();
+            }
+            return PushOutcome.DELIVERED;
+        }, Duration.ZERO);
         Thread.currentThread().interrupt();
 
         Map<PushSubscriptionId, PushOutcome> outcomes = delivery.deliver(List.of(administratorDevice("first"), administratorDevice("second")), TEST, KEYS,
