@@ -50,8 +50,18 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
       },
     );
     await openReceiptsAfterSignIn(page);
-    const idleButton = await yearlyButton(page).boundingBox();
-    const idleLine = await yearlyLine(page).boundingBox();
+    const buttonBox = () =>
+      yearlyButton(page).evaluate((button) => {
+        const box = button.getBoundingClientRect();
+        return { x: box.x, y: box.y + scrollY, width: box.width, height: box.height };
+      });
+    const lineRoom = () =>
+      yearlyLine(page).evaluate((line) => {
+        const box = line.getBoundingClientRect();
+        return { y: box.y + scrollY, height: box.height };
+      });
+    const idleButton = await buttonBox();
+    const idleLine = await lineRoom();
 
     await yearlyButton(page).focus();
     await page.keyboard.press('Enter');
@@ -62,8 +72,8 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await expect(yearlyButton(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(yearlyButton(page)).toHaveCSS('opacity', '1');
     await expect(yearlyButton(page)).toBeFocused();
-    expect(await yearlyButton(page).boundingBox()).toEqual(idleButton);
-    expect(await yearlyLine(page).boundingBox()).toEqual(idleLine);
+    expect(await buttonBox()).toEqual(idleButton);
+    expect(await lineRoom()).toEqual(idleLine);
 
     const download = page.waitForEvent('download');
     release();
@@ -75,7 +85,8 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     );
     await expect(yearlyButton(page).locator('.pdf-button__download')).toBeVisible();
     await expect(yearlyButton(page)).toBeFocused();
-    expect(await yearlyButton(page).boundingBox()).toEqual(idleButton);
+    expect(await buttonBox()).toEqual(idleButton);
+    expect(await lineRoom()).toEqual(idleLine);
     const pdf = await readPdf(await savedPdf(saved));
     expect(pdf.pages).toHaveLength(1);
     expect(pdf.pages[0].text).toContain('2026-000001');
