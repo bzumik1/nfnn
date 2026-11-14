@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "mcp-vitest",
+    "test": "test/authorization.spec.ts > Given the connector discovering the site whose address can change in its settings > when the site is restarting, then the last known server stays and the next request asks again",
+    "reason": "#895: a failed metadata read is remembered for 5 s, so the next request within that window no longer reads again; the test now asks again after the failure memory",
+    "replacement": "test/authorization.spec.ts > Given the connector discovering the site whose address can change in its settings > when the site is restarting, then the last known server stays and a request after the failure memory asks again",
+    "contract": "docs/api-contract.md, MCP connector"
+  }
+]
