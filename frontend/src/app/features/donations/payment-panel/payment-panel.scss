@@ -1,5 +1,4 @@
 @use 'breakpoints' as bp;
-@use 'pressed';
 @use 'touch-target';
 
 :host {
@@ -7,7 +6,7 @@
   container: payment-panel / inline-size;
 }
 
-.bank-box {
+.bank {
   background: var(--color-surface-accent);
   border-radius: var(--radius-media);
   padding: var(--space-6) var(--space-7);
@@ -43,7 +42,7 @@
   gap: var(--space-2-5);
 }
 
-.amount-pill {
+.amount-option {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
@@ -72,6 +71,15 @@
     border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
+  }
+
+  @media (forced-colors: active) {
+    &.active {
+      forced-color-adjust: none;
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
   }
 }
 
@@ -118,24 +126,24 @@
   color: var(--color-danger);
 }
 
-.bank-grid {
+.bank-rows {
   display: grid;
   gap: var(--space-2-5);
 }
 
-.bank-line {
+.bank-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-4);
 }
 
-.bank-label {
+.bank-key {
   color: var(--color-text-muted);
   font-size: var(--text-md);
 }
 
-.bank-figure {
+.bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
   font-size: var(--text-md);
@@ -276,7 +284,7 @@
   }
 }
 
-.bank-values {
+.bank-value-wrap {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -289,21 +297,21 @@
     align-items: flex-start;
   }
 
-  .bank-box {
+  .bank {
     padding: var(--space-5);
   }
 
-  .bank-line {
+  .bank-row {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-1);
   }
 
-  .bank-values {
+  .bank-value-wrap {
     justify-content: space-between;
   }
 
-  .bank-figure {
+  .bank-value {
     flex: 1 1 0;
   }
 
@@ -318,6 +326,33 @@
 
 @include bp.container-down(payment-panel, phone) {
   @include stacked-bank-rows;
+}
+
+@include bp.container-down(payment-panel, pair) {
+  .bank {
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-2);
+  }
+
+  .bank-value-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bank-value {
+    flex: none;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    &.ui-figures--groups {
+      overflow-wrap: normal;
+    }
+
+    &.ui-figures--groups > * {
+      white-space: normal;
+    }
+  }
 }
 
 @mixin qr-above-caption {
@@ -401,18 +436,15 @@
   justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  text-align: start;
-  cursor: pointer;
-}
-
-.other-device-box {
   margin-top: var(--space-5);
   padding: var(--space-4) var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-media);
   background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  text-align: start;
+  cursor: pointer;
 }
 
 .other-device-text {
@@ -436,6 +468,10 @@
   height: 1.25rem;
   color: var(--color-text-soft);
   transition: transform var(--duration-base);
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
 }
 
 .qr[role='region'] .qr-image,
@@ -454,83 +490,4 @@
   color: var(--color-text-soft);
   line-height: var(--leading-relaxed);
   text-align: center;
-}
-
-:host(.is-grouped) {
-  .amount {
-    margin-bottom: var(--space-5);
-    padding: var(--space-3) var(--space-4) var(--space-4);
-  }
-
-  .amount-options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2);
-  }
-
-  .bank-note {
-    margin-top: var(--space-2);
-  }
-
-  .other-device-title {
-    font-weight: var(--weight-list-inset-title);
-  }
-
-  .qr {
-    padding: var(--space-4);
-  }
-
-  .other-device + .qr {
-    padding-top: 0;
-  }
-}
-
-.amount-label {
-  margin-bottom: var(--space-3);
-  font-weight: var(--weight-list-inset-title);
-}
-
-.amount-chip {
-  min-height: var(--list-inset-row-min-height);
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-fill);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-
-  &.active {
-    background: var(--color-accent-fill);
-    color: var(--color-on-accent);
-  }
-
-  @include pressed.when-pressed {
-    @include pressed.tints;
-  }
-
-  @media (forced-colors: active) {
-    border: 1px solid ButtonText;
-
-    &.active {
-      forced-color-adjust: none;
-      border-color: Highlight;
-      background: Highlight;
-      color: HighlightText;
-    }
-  }
-}
-
-@include bp.container-up(payment-panel, cards) {
-  :host(.is-grouped) .amount-options {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@include bp.container-down(payment-panel, pair) {
-  :host(.is-grouped) .amount-options {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

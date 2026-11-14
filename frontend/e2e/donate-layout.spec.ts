@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { mockDonorApi, rememberedDonorSession } from './donor-session';
 
 interface Box {
   left: number;
@@ -111,6 +112,54 @@ test.describe('Given the photo beside the bank details on a tablet or a computer
       }, FACE_IN_DONATE_PHOTO);
 
       expect(overlaps(card, face)).toBe(false);
+    });
+  }
+});
+
+async function openPrispet(page: Page): Promise<void> {
+  await page.goto('/prispet');
+}
+
+async function openSendGift(page: Page): Promise<void> {
+  await mockDonorApi(page);
+  await rememberedDonorSession(page);
+  await page.goto('/darce/prehled');
+}
+
+test.describe('Given forced colours', () => {
+  test.use({ forcedColors: 'active' });
+
+  for (const [place, open] of [
+    ['Přispět', openPrispet],
+    ['Poslat dar', openSendGift],
+  ] as const) {
+    test(`when ${place} shows the amounts, then the chosen one stands out in the highlight colours`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await open(page);
+      const chosen = page.getByRole('button', { name: '500 Kč', pressed: true });
+      const other = page.getByRole('button', { name: '1 000 Kč', pressed: false });
+      await expect(chosen).toBeVisible();
+
+      const coloursOf = (button: typeof chosen) =>
+        button.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return { background: style.backgroundColor, text: style.color };
+        });
+      const highlight = await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.cssText =
+          'forced-color-adjust: none; background: Highlight; color: HighlightText';
+        document.body.append(probe);
+        const style = getComputedStyle(probe);
+        const colours = { background: style.backgroundColor, text: style.color };
+        probe.remove();
+        return colours;
+      });
+
+      expect(await coloursOf(chosen)).toEqual(highlight);
+      expect((await coloursOf(other)).background).not.toBe(highlight.background);
     });
   }
 });
