@@ -70,6 +70,29 @@ describe('Given an administrator opening a sent monthly report', () => {
     expect(page.has('.recomputed-note')).toBe(false);
   });
 
+  it('when a sending is shown, then it is one card with its heading inside and each section a subheading over plain rows', async () => {
+    await open();
+    page.http.expectOne(SENT_URL).flush(sentReport());
+    await page.settle();
+
+    const delivery = page.fixture.debugElement.nativeElement.querySelector(
+      '.delivery',
+    ) as HTMLElement;
+    const heading = delivery.querySelector(`#${delivery.getAttribute('aria-labelledby')}`);
+    expect(delivery.classList).toContain('ui-card');
+    expect(heading?.tagName).toBe('H2');
+    expect(heading?.classList).toContain('ui-card__title');
+    const sections: HTMLElement[] = Array.from(delivery.querySelectorAll('section'));
+    expect(sections.length).toBeGreaterThan(0);
+    for (const section of sections) {
+      const subheading = section.querySelector(`#${section.getAttribute('aria-labelledby')}`);
+      expect(subheading?.tagName).toBe('H3');
+      expect(subheading?.classList).toContain('ui-card__subtitle');
+      expect(section.querySelectorAll('ul.ui-list').length).toBe(1);
+    }
+    expect(delivery.querySelector('.ui-list--inset')).toBeNull();
+  });
+
   it('when the bank import never succeeded before the sending, then the bank says so', async () => {
     await open();
     page.http.expectOne(SENT_URL).flush(
