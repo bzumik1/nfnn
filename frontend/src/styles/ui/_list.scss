@@ -155,9 +155,46 @@ a.ui-list__row--action {
   font-weight: var(--weight-semibold);
 }
 
+.ui-card > .ui-list {
+  container: list-card / inline-size;
+}
+
 .ui-card .ui-list__row,
 .ui-card .ui-list__group-title {
-  padding-inline: var(--space-6);
+  --list-row-inline: var(--space-6);
+
+  padding-inline: var(--list-row-inline);
+}
+
+@include bp.container-down(list-card, pair) {
+  .ui-card .ui-list__row,
+  .ui-card .ui-list__group-title {
+    --list-row-inline: var(--space-4);
+  }
+}
+
+.ui-list__lead--blank {
+  width: var(--list-lead-size);
+}
+
+.ui-list:not(.ui-list--inset) > li:has(> .ui-list__row > .ui-list__lead--blank) {
+  border-top-color: transparent;
+}
+
+.ui-list:not(.ui-list--inset) > li + li > .ui-list__row:has(> .ui-list__lead--blank) {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: -1px;
+    inset-inline: calc(
+        var(--list-row-inline, var(--space-4)) + var(--list-lead-size) + var(--space-3)
+      )
+      0;
+    border-top: 1px solid var(--color-divider);
+    pointer-events: none;
+  }
 }
 
 .ui-card .ui-list__row:focus-visible {

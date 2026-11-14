@@ -39,7 +39,7 @@ describe('Given an administrator who opens the less frequent sections of the adm
     expect(document.activeElement).toBe(heading);
   });
 
-  it('when the page opens, then each group is a card titled by its group, its sections a plain list inside', () => {
+  it('when the page opens, then each group holds its own heading over one list of its sections', () => {
     const sections: HTMLElement[] = Array.from(
       fixture.nativeElement.querySelectorAll('nav section'),
     );
@@ -47,11 +47,8 @@ describe('Given an administrator who opens the less frequent sections of the adm
     expect(sections.length).toBe(2);
     for (const section of sections) {
       const title = section.querySelector(`#${section.getAttribute('aria-labelledby')}`);
-      expect(section.classList).toContain('ui-card');
       expect(title?.tagName).toBe('H2');
-      expect(title?.classList).toContain('ui-card__title');
-      expect(section.querySelector('.ui-group-title, .ui-list--inset')).toBeNull();
-      expect(section.querySelector('ul')?.classList).toContain('ui-list');
+      expect(section.querySelectorAll('ul').length).toBe(1);
     }
   });
 

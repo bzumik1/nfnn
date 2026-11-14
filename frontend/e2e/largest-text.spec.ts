@@ -1,11 +1,13 @@
 import { Locator, Page } from '@playwright/test';
 import { LOGO_IMAGE_ID, mockBankLogos } from './bank-logos';
 import {
+  administrator,
   bankAccountItem,
   donationItem,
   mockDonorApi,
   noDonations,
   openDonorSection,
+  rememberedDonorSession,
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
@@ -34,10 +36,14 @@ async function linesOf(control: Locator): Promise<number> {
   });
 }
 
-async function wordsSplitAcrossLines(element: Locator): Promise<string[]> {
-  return element.evaluate((heading) => {
+async function wordsSplitAcrossLines(
+  element: Locator,
+  word: 'between-spaces' | 'between-spaces-and-hyphens' = 'between-spaces',
+): Promise<string[]> {
+  return element.evaluate((heading, kind) => {
     const text = heading.firstChild!;
-    return Array.from((text.textContent ?? '').matchAll(/\S+/g))
+    const pattern = kind === 'between-spaces' ? /\S+/g : /[^\s-]+-?/g;
+    return Array.from((text.textContent ?? '').matchAll(pattern))
       .filter((word) => {
         const range = document.createRange();
         range.setStart(text, word.index);
@@ -47,7 +53,7 @@ async function wordsSplitAcrossLines(element: Locator): Promise<string[]> {
         );
       })
       .map((word) => word[0]);
-  });
+  }, word);
 }
 
 async function linesOfTheBankCode(value: Locator): Promise<number> {
@@ -432,3 +438,58 @@ for (const { width, height } of [
     });
   });
 }
+
+test.describe('Given an administrator on a phone 320 pt wide with the text at 200 %', () => {
+  test.use({ viewport: { width: 320, height: 568 } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = 'html { font-size: 200%; }';
+        document.head.append(style);
+      });
+    });
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/admin/donations/import-state',
+      (route) =>
+        route.fulfill({
+          json: {
+            coveredFrom: '2026-07-20',
+            coveredTo: '2026-10-17',
+            lastAttemptedAt: '2026-10-17T10:00:00Z',
+            lastSucceededAt: '2026-10-17T10:00:00Z',
+            lastFailure: null,
+            consecutiveFailures: 0,
+            reportedOutage: null,
+            historyImport: null,
+            defaultHistoryFrom: '2026-01-01',
+          },
+        }),
+    );
+    await rememberedDonorSession(page, { user: administrator });
+  });
+
+  for (const { path, heading, nav } of [
+    { path: '/sprava', heading: 'Správa', nav: 'Sekce správy' },
+    { path: '/sprava/vice', heading: 'Občas a pro technika', nav: 'Další sekce správy' },
+  ]) {
+    test(`when they open ${path}, then every section row breaks only between words or after a hyphen and the page never pans sideways`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      const titles = page.getByRole('navigation', { name: nav }).locator('.ui-list__title');
+      await expect(titles.first()).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      for (const title of await titles.all()) {
+        expect(await wordsSplitAcrossLines(title, 'between-spaces-and-hyphens')).toEqual([]);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        320,
+      );
+    });
+  }
+});

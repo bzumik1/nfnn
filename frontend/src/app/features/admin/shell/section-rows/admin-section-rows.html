@@ -1,7 +1,9 @@
 <nav [attr.aria-label]="label()">
   @for (group of groups(); track group.id) {
-    <section class="ui-card section-group" [attr.aria-labelledby]="group.id">
-      <h2 class="ui-card__title" [id]="group.id">{{ group.label }}</h2>
+    <section class="ui-card" [attr.aria-labelledby]="group.id">
+      <div class="ui-card__bar">
+        <h2 class="ui-card__title" [id]="group.id">{{ group.label }}</h2>
+      </div>
       <ul class="ui-list">
         @for (row of group.rows; track row.path) {
           <li>

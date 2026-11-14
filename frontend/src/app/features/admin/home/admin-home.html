@@ -380,9 +380,11 @@
 
 <ng-template #attentionBlock>
   <section class="ui-card attention" aria-labelledby="admin-attention-title">
-    <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
-      Co potřebuje vaši pozornost
-    </h2>
+    <div class="ui-card__bar">
+      <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
+        Co potřebuje vaši pozornost
+      </h2>
+    </div>
     <ul class="ui-list attention-list">
       @if (attentionLoading()) {
         <li>
@@ -536,6 +538,8 @@
         }
       </svg>
     </span>
+  } @else {
+    <span class="ui-list__lead ui-list__lead--blank" aria-hidden="true"></span>
   }
   <span class="ui-list__title">
     @if (toneLabels[row.tone]; as label) {
