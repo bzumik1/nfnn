@@ -50,15 +50,15 @@ class SignedInDeviceCheckTest {
     }
 
     @Test
-    @DisplayName("Given a signed-in device of the donor, when it is held, then the donor's sessions lock is taken before the device is read and the device is answered")
-    void should_lock_sessions_first_and_answer_the_device_when_held_given_a_signed_in_device() {
+    @DisplayName("Given a signed-in device of the donor, when it is held, then the donor's sessions lock is taken before the device is read and its session kind is answered")
+    void should_lock_sessions_first_and_answer_the_session_kind_when_held_given_a_signed_in_device() {
         DonorDevice phone = deviceOf(JANA, SessionKind.PUBLIC);
         when(devices.findById(phone.id())).thenReturn(Optional.of(phone));
         when(devices.isSignedIn(phone.id(), NOW)).thenReturn(true);
 
-        Optional<DonorDevice> held = check().hold(JANA, phone.id());
+        Optional<SessionKind> held = check().hold(JANA, phone.id());
 
-        assertThat(held).contains(phone);
+        assertThat(held).contains(SessionKind.PUBLIC);
         InOrder order = inOrder(refreshTokens, devices);
         order.verify(refreshTokens).lockSessionsOf(JANA);
         order.verify(devices).findById(phone.id());

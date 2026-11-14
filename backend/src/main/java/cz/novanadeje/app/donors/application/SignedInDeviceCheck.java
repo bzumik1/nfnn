@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
+import cz.novanadeje.app.donors.domain.SessionKind;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,11 +34,12 @@ public class SignedInDeviceCheck {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public Optional<DonorDevice> hold(DonorId donorId, DeviceId deviceId) {
+    public Optional<SessionKind> hold(DonorId donorId, DeviceId deviceId) {
         refreshTokens.lockSessionsOf(donorId);
         return devices.findById(deviceId)
                 .filter(device -> device.belongsTo(donorId))
-                .filter(device -> devices.isSignedIn(deviceId, clock.instant()));
+                .filter(device -> devices.isSignedIn(deviceId, clock.instant()))
+                .map(DonorDevice::kind);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

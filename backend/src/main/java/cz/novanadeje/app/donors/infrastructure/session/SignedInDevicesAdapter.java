@@ -14,17 +14,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
-class LockedSignedInDevices implements SignedInDevices {
+class SignedInDevicesAdapter implements SignedInDevices {
 
     private final SignedInDeviceCheck check;
 
-    LockedSignedInDevices(SignedInDeviceCheck check) {
+    SignedInDevicesAdapter(SignedInDeviceCheck check) {
         this.check = check;
     }
 
     @Override
     public Optional<SignedInDevice> holdSignedIn(UUID donorId, UUID deviceId) {
-        return check.hold(new DonorId(donorId), new DeviceId(deviceId)).map(device -> new SignedInDevice(device.kind().keepsNothing()));
+        return check.hold(new DonorId(donorId), new DeviceId(deviceId)).map(kind -> new SignedInDevice(kind.keepsNothing()));
     }
 
     @Override
