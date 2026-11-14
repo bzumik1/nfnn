@@ -23,4 +23,12 @@ class InfoEndpointTests {
 				.andExpect(jsonPath("$.build.revision").value("f00ba12"));
 	}
 
+	@Test
+	@DisplayName("Given no release, when an anonymous client asks for info, then it names the dev release")
+	void should_report_dev_release_when_info_is_asked_given_no_release() throws Exception {
+		mockMvc.perform(get("/actuator/info"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.build.version").value("dev"));
+	}
+
 }

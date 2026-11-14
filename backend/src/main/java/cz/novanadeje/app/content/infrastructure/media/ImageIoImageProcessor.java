@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.ImageWriteParam;
@@ -16,9 +17,11 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,6 +39,7 @@ class ImageIoImageProcessor implements ImageProcessor {
     static final int MAX_SIDE = 8000;
     static final long MAX_PIXELS = 48_000_000L;
     private static final int MAX_BITS_PER_SAMPLE = 8;
+    static final int READ_WHOLE_UP_TO = 4 * MediaImage.VARIANT_WIDTHS.getLast();
     private static final Semaphore ONE_AT_A_TIME = new Semaphore(1, true);
     private static final float QUALITY = 0.82f;
     private static final String WEBP = "webp";
@@ -52,13 +56,15 @@ class ImageIoImageProcessor implements ImageProcessor {
     }
 
     private static ProcessedImage processAlone(byte[] upload) {
-        BufferedImage upright = toRgb(Orientation.apply(decode(upload), ExifOrientation.of(upload)));
+        int orientation = ExifOrientation.of(upload);
+        Decoded decoded = decode(upload, orientation);
+        BufferedImage upright = toRgb(Orientation.apply(decoded.pixels(), orientation));
         List<MediaVariant> variants = new ArrayList<>();
         for (int width : variantWidths(upright.getWidth())) {
             BufferedImage scaled = scaleToWidth(upright, width);
             variants.add(new MediaVariant(scaled.getWidth(), scaled.getHeight(), encode(scaled)));
         }
-        return new ProcessedImage(upright.getWidth(), upright.getHeight(), variants);
+        return new ProcessedImage(decoded.width(), decoded.height(), variants);
     }
 
     private static List<Integer> variantWidths(int originalWidth) {
@@ -70,7 +76,10 @@ class ImageIoImageProcessor implements ImageProcessor {
         return widths;
     }
 
-    private static BufferedImage decode(byte[] upload) {
+    record Decoded(BufferedImage pixels, int width, int height) {
+    }
+
+    static Decoded decode(byte[] upload, int orientation) {
         try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(upload))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) {
@@ -78,7 +87,8 @@ class ImageIoImageProcessor implements ImageProcessor {
             }
             ImageReader reader = readers.next();
             try {
-                if (!ACCEPTED_FORMATS.contains(reader.getFormatName().toLowerCase(Locale.ROOT))) {
+                String format = reader.getFormatName().toLowerCase(Locale.ROOT);
+                if (!ACCEPTED_FORMATS.contains(format)) {
                     throw new UnsupportedImage("it is not a JPEG, PNG or WebP image");
                 }
                 reader.setInput(input, true, true);
@@ -91,7 +101,13 @@ class ImageIoImageProcessor implements ImageProcessor {
                 if (bitsPerSample(reader) > MAX_BITS_PER_SAMPLE) {
                     throw new UnsupportedImage("it has more than 8 bits per sample");
                 }
-                return reader.read(0);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                boolean turned = Orientation.swapsSides(orientation);
+                int uprightWidth = turned ? height : width;
+                boolean halved = uprightWidth > READ_WHOLE_UP_TO && !WEBP.equals(format);
+                BufferedImage pixels = halved ? readHalved(reader, width, height) : reader.read(0);
+                return turned ? new Decoded(pixels, height, width) : new Decoded(pixels, width, height);
             } finally {
                 reader.dispose();
             }
@@ -100,6 +116,51 @@ class ImageIoImageProcessor implements ImageProcessor {
         } catch (IOException | RuntimeException unreadable) {
             throw new UnsupportedImage("it could not be decoded");
         }
+    }
+
+    private static BufferedImage readHalved(ImageReader reader, int width, int height) throws IOException {
+        int halfWidth = width / 2;
+        int halfHeight = height / 2;
+        BufferedImage halved = new BufferedImage(halfWidth, halfHeight, BufferedImage.TYPE_INT_RGB);
+        int[] sums = pixelsOf(halved);
+        for (int offsetY = 0; offsetY < 2; offsetY++) {
+            for (int offsetX = 0; offsetX < 2; offsetX++) {
+                BufferedImage phase = toRgb(reader.read(0, everySecondPixel(reader, offsetX, offsetY, halfWidth, halfHeight)));
+                if (phase.getWidth() != halfWidth || phase.getHeight() != halfHeight) {
+                    throw new UnsupportedImage("it could not be decoded");
+                }
+                int[] pixels = pixelsOf(phase);
+                for (int i = 0; i < sums.length; i++) {
+                    sums[i] += packed(pixels[i]);
+                }
+            }
+        }
+        for (int i = 0; i < sums.length; i++) {
+            sums[i] = averageOfFour(sums[i]);
+        }
+        return halved;
+    }
+
+    private static int[] pixelsOf(BufferedImage rgb) {
+        return ((DataBufferInt) rgb.getRaster().getDataBuffer()).getData();
+    }
+
+    private static ImageReadParam everySecondPixel(ImageReader reader, int offsetX, int offsetY, int halfWidth, int halfHeight) {
+        ImageReadParam param = reader.getDefaultReadParam();
+        param.setSourceRegion(new Rectangle(0, 0, halfWidth * 2, halfHeight * 2));
+        param.setSourceSubsampling(2, 2, offsetX, offsetY);
+        return param;
+    }
+
+    private static int packed(int rgb) {
+        return (rgb >> 16 & 0xFF) << 20 | (rgb >> 8 & 0xFF) << 10 | rgb & 0xFF;
+    }
+
+    private static int averageOfFour(int packed) {
+        int red = ((packed >> 20) & 0x3FF) + 2 >> 2;
+        int green = ((packed >> 10) & 0x3FF) + 2 >> 2;
+        int blue = (packed & 0x3FF) + 2 >> 2;
+        return red << 16 | green << 8 | blue;
     }
 
     private static int bitsPerSample(ImageReader reader) throws IOException {
@@ -111,7 +172,7 @@ class ImageIoImageProcessor implements ImageProcessor {
         return raw == null ? 0 : Arrays.stream(raw.getSampleModel().getSampleSize()).max().orElse(0);
     }
 
-    private static BufferedImage scaleToWidth(BufferedImage source, int width) {
+    static BufferedImage scaleToWidth(BufferedImage source, int width) {
         if (width >= source.getWidth()) {
             return toRgb(source);
         }
@@ -133,7 +194,7 @@ class ImageIoImageProcessor implements ImageProcessor {
         return target;
     }
 
-    private static BufferedImage toRgb(BufferedImage source) {
+    static BufferedImage toRgb(BufferedImage source) {
         if (source.getType() == BufferedImage.TYPE_INT_RGB) {
             return source;
         }
@@ -174,13 +235,17 @@ class ImageIoImageProcessor implements ImageProcessor {
         private Orientation() {
         }
 
+        static boolean swapsSides(int orientation) {
+            return orientation >= 5;
+        }
+
         static BufferedImage apply(BufferedImage image, int orientation) {
             if (orientation == ExifOrientation.NORMAL) {
                 return image;
             }
             int width = image.getWidth();
             int height = image.getHeight();
-            boolean rotated = orientation >= 5;
+            boolean rotated = swapsSides(orientation);
             AffineTransform transform = new AffineTransform();
             switch (orientation) {
                 case 2 -> transform.concatenate(flipHorizontal(width));

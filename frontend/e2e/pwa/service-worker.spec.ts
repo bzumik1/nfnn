@@ -77,6 +77,20 @@ async function sameDocument(page: Page): Promise<boolean> {
   return page.evaluate(() => document.documentElement.dataset['pwaSameDocument'] === 'yes');
 }
 
+async function goIntoTheBackground(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
+async function comeBack(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 async function cachedBodiesHolding(page: Page, text: string): Promise<readonly string[]> {
   return page.evaluate(async (wanted) => {
     const found: string[] = [];
@@ -469,6 +483,29 @@ test.describe('Given a visitor who already acted on the page when a new version 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect.poll(() => sameDocument(page)).toBe(false);
     await expect(page).toHaveURL(/\/o-nas#kontakt$/);
+    expect(await marker(page)).toBe('b');
+  });
+
+  test('when version B is ready and the visitor puts the app into the background and comes back, then nothing reloads, since they may have gone to another app for this page, and the next page they open loads B', async ({
+    page,
+    site,
+  }) => {
+    expect(await marker(page)).toBe('a');
+    await markThisDocument(page);
+    site.switchTo('b');
+    expect(await checkForUpdate(page)).toEqual({ result: true });
+
+    await goIntoTheBackground(page);
+    await comeBack(page);
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
+
+    expect(await sameDocument(page)).toBe(true);
+    expect(await marker(page)).toBe('a');
+
+    await privacyLinkOfContact(page).click();
+
+    await expect.poll(() => sameDocument(page).catch(() => true)).toBe(false);
+    await expect(page).toHaveURL(new RegExp(`${POLICY}$`));
     expect(await marker(page)).toBe('b');
   });
 

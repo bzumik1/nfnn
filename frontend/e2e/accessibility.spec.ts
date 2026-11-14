@@ -41,7 +41,9 @@ import {
   signIn,
   session,
   openUnlockedAdministrationPage,
+  rememberedDonorSession,
 } from './donor-session';
+import { comeBack, leaveTheApp } from './page-visibility';
 import {
   chunkLoadNotice,
   chunkLoadPageHeading,
@@ -49,7 +51,6 @@ import {
   openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
-import { serveNewerApiGeneration, updateNotice } from './app-update';
 import { fakePushDevice } from './push-device';
 import {
   CHANGED_AMOUNT,
@@ -488,16 +489,6 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await openAboutThenLoseNewChunks(page);
     await openPolicyFromContact(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
-
-    expect(await violations(page)).toEqual([]);
-  });
-
-  test('when the server speaks a newer API and the bar asks to load the new version, then nothing breaks the rules', async ({
-    page,
-  }) => {
-    await serveNewerApiGeneration(page);
-    await page.goto('/o-nas');
-    await expect(updateNotice(page)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -968,6 +959,37 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when a signed-in donor has notifications on this device, then the notifications card with its switches breaks no rule', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname === '/api/operations/push',
+      (route) =>
+        route.fulfill({
+          json: {
+            publicKey: `B${'E'.repeat(86)}`,
+            deviceSession: true,
+            device: {
+              service: 'apple',
+              notifications: { gifts: true, yearlyReceipts: false },
+              createdAt: '2026-11-12T09:00:00Z',
+              lastDeliveredAt: '2026-11-13T08:05:00Z',
+              failuresInARow: 0,
+            },
+            devices: ['019a5a3c-0000-7000-8000-000000000001'],
+          },
+        }),
+    );
+    await signIn(page);
+    await openDonorSection(page, 'Údaje a zabezpečení');
+    await expect(
+      page.locator('.notifications').getByRole('switch', { name: 'Dar dorazil' }),
+    ).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });
@@ -2331,6 +2353,48 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.goto('/sprava/vice');
 
     const offer = page.getByRole('dialog', { name: 'Zapnout upozornění?' });
+    await expect(offer).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+
+    await offer.getByRole('button', { name: 'Zapnout' }).click();
+    await expect(page.getByRole('dialog', { name: 'Upozornění jsou zapnutá' })).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
+  test('when the installed app offers a donor back from their bank app to turn the notifications on, then the sheet and its outcome break no rule', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
+      Object.defineProperty(navigator, 'canShare', { value: () => false, configurable: true });
+    });
+    await fakePushDevice(page, { permission: 'default', permissionAnswer: 'granted' });
+    await mockDonorApi(page);
+    await page.route(
+      (url) => url.pathname.startsWith('/api/operations/push/'),
+      (route) =>
+        new URL(route.request().url()).pathname.endsWith('/test')
+          ? route.fulfill({ json: { delivered: 1, failed: 0, removed: 0 } })
+          : route.fulfill({
+              json: {
+                service: 'apple',
+                notifications: { gifts: true, yearlyReceipts: true },
+                createdAt: '2026-11-14T09:00:00Z',
+                lastDeliveredAt: null,
+                failuresInARow: 0,
+              },
+            }),
+    );
+    await rememberedDonorSession(page, { installed: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/darce/prehled');
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Otevřít v aplikaci banky' }).click();
+    await download;
+    await leaveTheApp(page);
+    await comeBack(page);
+
+    const offer = page.getByRole('dialog', { name: 'Chcete vědět, až dar dorazí?' });
     await expect(offer).toBeVisible();
     expect(await violations(page)).toEqual([]);
 

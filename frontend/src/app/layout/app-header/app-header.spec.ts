@@ -11,6 +11,8 @@ import { sampleDonor } from '../../core/auth/testing/donor-fixtures';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { AccountBadges } from '../../core/layout/account-badges';
+import { OpenAlerts } from '../../core/push/open-alerts';
+import { OpenAlert } from '../../core/push/open-alerts-api';
 import { AppHeader } from './app-header';
 
 @Component({ template: '' })
@@ -19,6 +21,7 @@ class Blank {}
 describe('Given the header of the app', () => {
   const donor = signal<Donor | null>(null);
   const admin = signal(false);
+  const openAlerts = signal<readonly OpenAlert[] | null>(null);
   const compact = signal(true);
   const loginOpen = vi.fn();
   const back = vi.fn();
@@ -27,6 +30,7 @@ describe('Given the header of the app', () => {
   beforeEach(async () => {
     donor.set(null);
     admin.set(false);
+    openAlerts.set(null);
     compact.set(true);
     loginOpen.mockClear();
     back.mockClear();
@@ -46,8 +50,10 @@ describe('Given the header of the app', () => {
             data: { head: 'light', parent: '/', backOnWide: false },
           },
           { path: 'darce/ucty', component: Blank, data: { head: 'light', parent: '/' } },
+          { path: 'sprava/upozorneni', component: Blank, data: { head: 'light' } },
         ]),
         { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+        { provide: OpenAlerts, useValue: { alerts: openAlerts.asReadonly() } },
         { provide: LoginDialogService, useValue: { open: loginOpen } },
         { provide: BackTarget, useValue: { back } },
         {
@@ -92,6 +98,40 @@ describe('Given the header of the app', () => {
 
     expect(account.querySelector('.account-badge')).toBeNull();
     expect(account.textContent).not.toContain('otázka');
+  });
+
+  it('when an administrator has open faults, then the account button counts only them, as a warning, on every page and beside a waiting question', async () => {
+    donor.set(sampleDonor({ name: 'Jana Nováková', roles: ['DONOR', 'ADMIN'] }));
+    admin.set(true);
+    openAlerts.set([{ area: 'backups', since: '2026-11-14T02:00:05Z' }]);
+    TestBed.inject(AccountBadges).show('/darce/ucty', {
+      count: 1,
+      description: '1 otázka čeká na odpověď',
+    });
+
+    const header = await openAt('/o-nas');
+    TestBed.inject(HttpTestingController)
+      .expectOne('/api/admin/content/people/me')
+      .flush({ member: null });
+    fixture.detectChanges();
+    const account = header.querySelector('button.account-button')!;
+    const badge = (): Element | null => account.querySelector('.account-badge');
+
+    expect(badge()?.textContent?.trim()).toBe('1');
+    expect(badge()?.classList.contains('account-badge--fault')).toBe(true);
+    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet 1 porucha');
+    expect(account.textContent).not.toContain('otázka');
+
+    await TestBed.inject(Router).navigateByUrl('/sprava/upozorneni');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(badge()?.textContent?.trim()).toBe('1');
+
+    openAlerts.set([]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(badge()?.classList.contains('account-badge--fault')).toBe(false);
+    expect(account.textContent).toContain('1 otázka čeká na odpověď');
   });
 
   it('when nobody is signed in, then the logo leads home and Přihlásit se opens the sign-in', async () => {

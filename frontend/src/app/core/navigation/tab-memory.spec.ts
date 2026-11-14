@@ -12,6 +12,7 @@ import {
 import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
+import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
 import { TabMemory } from './tab-memory';
 
 @Component({ template: '' })
@@ -85,6 +86,48 @@ describe('Given the memory of the tabs', () => {
 
     expect(memory.currentTab()).toBeNull();
     expect(memory.urlFor(about)).toBe('/o-nas');
+  });
+});
+
+describe('Given the app loads a new version by itself', () => {
+  afterEach(() => sessionStorage.removeItem(RELOAD_PLACE_KEY));
+
+  function startTabs(): { readonly router: Router; readonly memory: TabMemory } {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: '**', component: Blank }])],
+    });
+    return { router: TestBed.inject(Router), memory: TestBed.inject(TabMemory) };
+  }
+
+  it('when it reloads, then it keeps the page each tab showed', async () => {
+    const { router } = startTabs();
+    await router.navigateByUrl('/aktuality/novy-clanek');
+    await router.navigateByUrl('/projekty/sofinka');
+
+    TestBed.inject(ReloadPlace).keep('/projekty/sofinka');
+
+    expect(JSON.parse(sessionStorage.getItem(RELOAD_PLACE_KEY) ?? '{}').tabs).toEqual({
+      news: '/aktuality/novy-clanek',
+      projects: '/projekty/sofinka',
+    });
+  });
+
+  it('when it has started again, then each tab returns to the page it showed before', async () => {
+    sessionStorage.setItem(
+      RELOAD_PLACE_KEY,
+      JSON.stringify({
+        address: '/prispet',
+        top: null,
+        tabs: { news: '/aktuality/novy-clanek' },
+        at: Date.now(),
+      }),
+    );
+    const { router, memory } = startTabs();
+
+    await router.navigateByUrl('/prispet');
+
+    expect(memory.urlFor(news)).toBe('/aktuality/novy-clanek');
+    expect(memory.urlFor(projects)).toBe('/projekty');
   });
 });
 

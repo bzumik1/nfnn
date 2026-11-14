@@ -1,25 +1,10 @@
-<div
-  class="amount"
-  role="group"
-  [class.ui-list]="grouped()"
-  [class.ui-list--inset]="grouped()"
-  [attr.aria-labelledby]="amountLabelId()"
->
-  <p
-    [class.panel-label]="!grouped()"
-    [class.amount-label]="grouped()"
-    [id]="amountLabelId()"
-    i18n="@@home.donate.amount.label"
-  >
-    Zvolte částku
-  </p>
+<div class="amount" role="group" [attr.aria-labelledby]="amountLabelId()">
+  <p class="panel-label" [id]="amountLabelId()" i18n="@@home.donate.amount.label">Zvolte částku</p>
   <div class="amount-options">
     @for (preset of presets; track preset.amount) {
       <button
         type="button"
         class="amount-option"
-        [class.amount-pill]="!grouped()"
-        [class.amount-chip]="grouped()"
         [class.active]="!customChosen() && presetAmount() === preset.amount"
         [attr.aria-pressed]="!customChosen() && presetAmount() === preset.amount"
         (click)="choosePreset(preset.amount)"
@@ -30,8 +15,6 @@
     <button
       type="button"
       class="amount-option"
-      [class.amount-pill]="!grouped()"
-      [class.amount-chip]="grouped()"
       [class.active]="customChosen()"
       [attr.aria-pressed]="customChosen()"
       (click)="chooseCustomAmount()"
@@ -81,23 +64,15 @@
 <ng-content />
 
 @if (bankAccount(); as account) {
-  <div class="bank" [class.bank-box]="!grouped()">
-    <p
-      #bankLabel
-      [class.panel-label]="!grouped()"
-      [class.ui-group-title]="grouped()"
-      tabindex="-1"
-      i18n="@@home.donate.bank.label"
-    >
+  <div class="bank">
+    <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
       Bankovní spojení
     </p>
-    <div class="bank-rows" [class]="look().rows">
-      <div class="bank-row" [class]="look().row">
-        <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.account"
-          >Číslo účtu</span
-        >&ngsp;
-        <span class="bank-value-wrap" [class]="look().values">
-          <span class="bank-value ui-figures" [class]="look().value"
+    <div class="bank-rows">
+      <div class="bank-row">
+        <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
+        <span class="bank-value-wrap">
+          <span class="bank-value ui-figures"
             >{{ accountParts(account.number).head }}<wbr />{{
               accountParts(account.number).bankCode
             }}</span
@@ -105,18 +80,16 @@
           <app-copy-button
             [value]="account.number"
             what="číslo účtu"
-            [tone]="grouped() ? 'tinted' : 'light'"
             (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyAccount"
           />
         </span>
       </div>
       @if (amount(); as chosen) {
-        <div class="bank-row" [class]="look().row">
-          <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.amount">Částka</span
-          >&ngsp;
-          <span class="bank-value-wrap" [class]="look().values">
-            <span class="bank-value ui-figures" [class]="look().value"
+        <div class="bank-row">
+          <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
+          <span class="bank-value-wrap">
+            <span class="bank-value ui-figures"
               >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                 >Kč</ng-container
               ></span
@@ -124,7 +97,6 @@
             <app-copy-button
               [value]="'' + chosen"
               what="částku"
-              [tone]="grouped() ? 'tinted' : 'light'"
               (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyAmount"
             />
@@ -132,33 +104,29 @@
         </div>
       }
       @if (variableSymbol(); as symbol) {
-        <div class="bank-row" [class]="look().row">
-          <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.vs"
-            >Variabilní symbol</span
-          >&ngsp;
-          <span class="bank-value-wrap" [class]="look().values">
-            <span class="bank-value ui-figures" [class]="look().value">{{ symbol }}</span>
+        <div class="bank-row">
+          <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
+          <span class="bank-value-wrap">
+            <span class="bank-value ui-figures">{{ symbol }}</span>
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
-              [tone]="grouped() ? 'tinted' : 'light'"
               (copied)="noteIntentToPay()"
               i18n-what="@@home.donate.bank.copyVs"
             />
           </span>
         </div>
       }
-      <div class="bank-row" [class]="look().row">
-        <span class="bank-key" [class]="look().key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
-        <span class="bank-value-wrap" [class]="look().values">
-          <span class="bank-value ui-figures ui-figures--groups" [class]="look().value"
+      <div class="bank-row">
+        <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
+        <span class="bank-value-wrap">
+          <span class="bank-value ui-figures ui-figures--groups"
             ><span class="iban-half">{{ ibanLines()[0] }}</span
             >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
           >
           <app-copy-button
             [value]="account.iban"
             what="IBAN"
-            [tone]="grouped() ? 'tinted' : 'light'"
             (copied)="noteIntentToPay()"
             i18n-what="@@home.donate.bank.copyIban"
           />
@@ -167,21 +135,11 @@
     </div>
     @if (detailsAge(); as age) {
       @if (age.day; as day) {
-        <p
-          class="bank-note"
-          [class.ui-group-note]="grouped()"
-          role="note"
-          i18n="@@home.donate.bank.keptNote"
-        >
+        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNote">
           Údaje účtu z {{ day }} · nemusí být aktuální
         </p>
       } @else {
-        <p
-          class="bank-note"
-          [class.ui-group-note]="grouped()"
-          role="note"
-          i18n="@@home.donate.bank.keptNoteUndated"
-        >
+        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNoteUndated">
           Údaje účtu nemusí být aktuální
         </p>
       }
@@ -325,9 +283,42 @@
         <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
       }
     </button>
-    @if (!grouped()) {
-      <ng-container [ngTemplateOutlet]="otherDeviceToggle" />
-    }
+    <button
+      type="button"
+      class="other-device"
+      [attr.aria-controls]="qrRegionId()"
+      [attr.aria-expanded]="qrShown()"
+      (click)="toggleQr()"
+    >
+      <span class="other-device-text">
+        <span
+          class="other-device-title"
+          [id]="otherDeviceId()"
+          i18n="@@home.donate.otherDevice.title"
+          >Platíte z jiného zařízení?</span
+        >&ngsp;
+        <span class="other-device-hint">
+          @if (qrShown()) {
+            <span i18n="@@home.donate.otherDevice.scan">Naskenujte kód aplikací banky</span>
+          } @else {
+            <span i18n="@@home.donate.otherDevice.show">Zobrazit QR kód ke skenování</span>
+          }
+        </span>
+      </span>
+      <svg
+        class="other-device-chevron"
+        [class.is-open]="qrShown()"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
   </div>
 }
 
@@ -345,129 +336,74 @@
   }
 </ng-template>
 
-@if (grouped()) {
-  <div class="payment-qr ui-list ui-list--inset">
-    @if (compact()) {
-      <ng-container [ngTemplateOutlet]="otherDeviceToggle" />
-    }
-    <ng-container [ngTemplateOutlet]="qrBlock" />
-  </div>
-} @else {
-  <ng-container [ngTemplateOutlet]="qrBlock" />
-}
-
-<ng-template #otherDeviceToggle>
-  <button
-    type="button"
-    class="other-device"
-    [class.other-device-box]="!grouped()"
-    [class.ui-list__row]="grouped()"
-    [attr.aria-controls]="qrRegionId()"
-    [attr.aria-expanded]="qrShown()"
-    (click)="toggleQr()"
-  >
-    <span class="other-device-text">
-      <span class="other-device-title" [id]="otherDeviceId()" i18n="@@home.donate.otherDevice.title"
-        >Platíte z jiného zařízení?</span
-      >&ngsp;
-      <span class="other-device-hint">
-        @if (qrShown()) {
-          <span i18n="@@home.donate.otherDevice.scan">Naskenujte kód aplikací banky</span>
-        } @else {
-          <span i18n="@@home.donate.otherDevice.show">Zobrazit QR kód ke skenování</span>
-        }
-      </span>
-    </span>
-    <svg
-      [class.other-device-chevron]="!grouped()"
-      [class.ui-list__chevron]="grouped()"
-      [class.ui-list__chevron--open]="qrShown()"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  </button>
-</ng-template>
-
-<ng-template #qrBlock>
-  <div
-    class="qr"
-    [id]="qrRegionId()"
-    [attr.role]="compact() ? 'region' : null"
-    [attr.aria-labelledby]="compact() ? otherDeviceId() : null"
-    [hidden]="compact() && !qrShown()"
-  >
-    <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
-      @if (qrMatrix(); as matrix) {
-        <app-zoomable [content]="zoomedQr()!">
-          <app-qr-code
-            class="qr-image"
-            [class.qr-image-stale]="redrawing()"
-            [matrix]="matrix"
-            [label]="qrLabel"
-          />
-        </app-zoomable>
-      } @else {
-        <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
-          @switch (state().kind) {
-            @case ('loading') {
-              <span i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
-            }
-            @case ('amountInvalid') {
-              <span i18n="@@home.donate.qr.amountMissing">Nejprve zadejte částku</span>
-            }
-          }
-        </div>
-      }
-    </div>
-    @if (compact()) {
-      @if (qrMatrix()) {
-        <p class="qr-caption">
-          <ng-container i18n="@@home.donate.qr.caption"
-            >QR platba na účet Nadačního fondu Nová naděje,
-            {{ drawnCrowns() }}&nbsp;Kč.</ng-container
-          >
-        </p>
-      }
+<div
+  class="qr"
+  [id]="qrRegionId()"
+  [attr.role]="compact() ? 'region' : null"
+  [attr.aria-labelledby]="compact() ? otherDeviceId() : null"
+  [hidden]="compact() && !qrShown()"
+>
+  <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
+    @if (qrMatrix(); as matrix) {
+      <app-zoomable [content]="zoomedQr()!">
+        <app-qr-code
+          class="qr-image"
+          [class.qr-image-stale]="redrawing()"
+          [matrix]="matrix"
+          [label]="qrLabel"
+        />
+      </app-zoomable>
     } @else {
-      <div class="qr-text">
-        <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
-        <p class="qr-desc" i18n="@@home.donate.qr.desc">
-          Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
-          fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
-        </p>
-        @if (qrMatrix()) {
-          <button
-            type="button"
-            class="qr-save"
-            [disabled]="saving() || redrawing()"
-            (click)="saveQr()"
-          >
-            @if (saving()) {
-              <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
-            } @else {
-              <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
-            }
-          </button>
-        }
-        <p class="ui-form-status qr-saved" role="status">
-          @if (savedQrText(); as saved) {
-            <span>{{ saved }}</span>
+      <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
+        @switch (state().kind) {
+          @case ('loading') {
+            <span i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
           }
-        </p>
-        <ng-container [ngTemplateOutlet]="failureNotice" />
+          @case ('amountInvalid') {
+            <span i18n="@@home.donate.qr.amountMissing">Nejprve zadejte částku</span>
+          }
+        }
       </div>
     }
   </div>
-</ng-template>
+  @if (compact()) {
+    @if (qrMatrix()) {
+      <p class="qr-caption">
+        <ng-container i18n="@@home.donate.qr.caption"
+          >QR platba na účet Nadačního fondu Nová naděje, {{ drawnCrowns() }}&nbsp;Kč.</ng-container
+        >
+      </p>
+    }
+  } @else {
+    <div class="qr-text">
+      <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
+      <p class="qr-desc" i18n="@@home.donate.qr.desc">
+        Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
+        Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
+      </p>
+      @if (qrMatrix()) {
+        <button
+          type="button"
+          class="qr-save"
+          [disabled]="saving() || redrawing()"
+          (click)="saveQr()"
+        >
+          @if (saving()) {
+            <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
+          } @else {
+            <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
+          }
+        </button>
+      }
+      <p class="ui-form-status qr-saved" role="status">
+        @if (savedQrText(); as saved) {
+          <span>{{ saved }}</span>
+        }
+      </p>
+      <ng-container [ngTemplateOutlet]="failureNotice" />
+    </div>
+  }
+</div>
 
 <p class="visually-hidden qr-announcement" role="status">
   @if (announcedAmount(); as announced) {

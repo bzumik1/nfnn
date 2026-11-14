@@ -6,6 +6,7 @@ import {
   PasskeyCeremonyError,
   toBase64Url,
 } from './passkey-authenticator';
+import { RunningWork } from '../updates/running-work';
 import { passkeyCreationOptions, passkeySignInOptions } from './testing/donor-fixtures';
 
 function bytes(...values: number[]): ArrayBuffer {
@@ -29,6 +30,22 @@ function authenticatorIn(window: Window): PasskeyAuthenticator {
 }
 
 describe('Given the passkey authenticator', () => {
+  it('when a ceremony runs, then it counts as work a reload would break until the browser answers', async () => {
+    let answer: (credential: Credential | null) => void = () => undefined;
+    const get = vi.fn(() => new Promise<Credential | null>((resolve) => (answer = resolve)));
+    const authenticator = authenticatorIn(fakeWindow({ get, create: vi.fn() }));
+    const work = TestBed.inject(RunningWork);
+
+    const ceremony = authenticator.get(passkeySignInOptions());
+
+    expect(work.any()).toBe(true);
+
+    answer(null);
+
+    await expect(ceremony).rejects.toEqual(new PasskeyCeremonyError('cancelled'));
+    expect(work.any()).toBe(false);
+  });
+
   it('when bytes go to base64url and back, then nothing changes and no padding or unsafe characters appear', () => {
     const encoded = toBase64Url(bytes(251, 255, 191, 0, 1));
 

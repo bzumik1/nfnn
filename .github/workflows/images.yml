@@ -9,6 +9,7 @@ on:
       - "deploy/backup/**"
       - "deploy/postgres/**"
       - "mcp/**"
+      - "scripts/release-version.mjs"
       - ".github/workflows/images.yml"
   schedule:
     - cron: "17 3 * * 1"
@@ -19,8 +20,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  images:
+  version:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release: ${{ steps.number.outputs.release }}
+      inputs: ${{ steps.inputs.outputs.inputs }}
+      code-changed: ${{ steps.inputs.outputs.code-changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare what the images are built from with the latest release
+        id: inputs
+        run: |
+          set -euo pipefail
+          bases=$(node scripts/release-version.mjs bases backend/Dockerfile frontend/Dockerfile mcp/Dockerfile deploy/backup/Dockerfile deploy/postgres/Dockerfile)
+          digests=$(while read -r image; do
+            digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest)
+            echo "$digest" | grep -qxE 'sha256:[0-9a-f]{64}' || { echo "::error::the base image $image has no readable digest (got $digest)" >&2; exit 1; }
+            echo "$image $digest"
+          done <<< "$bases")
+          echo "$digests"
+          inputs=$(printf '%s\n%s\n' "$GITHUB_SHA" "$digests" | sha256sum | cut -d ' ' -f 1)
+          latest="ghcr.io/${GITHUB_REPOSITORY,,}-mcp:latest"
+          previous_inputs=
+          previous_revision=
+          if docker pull -q "$latest" > /dev/null; then
+            previous_inputs=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.inputs"}}' "$latest")
+            previous_revision=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$latest")
+          fi
+          if [ "$inputs" = "$previous_inputs" ]; then
+            echo "::notice::the commit and every base image are those of the latest release, so nothing is published"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "inputs=$inputs" >> "$GITHUB_OUTPUT"
+          if [ "$previous_revision" = "$GITHUB_SHA" ]; then
+            echo "code-changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "code-changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reserve the release number as a tag
+        id: number
+        if: steps.inputs.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release=$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY" | node scripts/release-version.mjs next)
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$release" -f sha="$GITHUB_SHA" > /dev/null
+          echo "::notice::release $release of $GITHUB_SHA"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  images:
+    needs: version
+    if: needs.version.outputs.release != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -34,17 +95,52 @@ jobs:
       - name: Build and push images
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE: ${{ needs.version.outputs.release }}
+          INPUTS: ${{ needs.version.outputs.inputs }}
         run: |
+          set -euo pipefail
           prefix=ghcr.io/${GITHUB_REPOSITORY,,}
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           for image in backend:backend frontend:frontend backup:deploy/backup postgres:deploy/postgres mcp:mcp; do
             app=${image%%:*}
             context=${image#*:}
+            if docker manifest inspect "$prefix-$app:$RELEASE" > /dev/null 2>&1; then
+              echo "::error::$prefix-$app:$RELEASE is already published, and a release tag is never overwritten"
+              exit 1
+            fi
             docker build \
               --build-arg REVISION="${GITHUB_SHA::7}" \
+              --build-arg VERSION="$RELEASE" \
               --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" \
               --label org.opencontainers.image.revision="$GITHUB_SHA" \
-              -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" "$context"
+              --label org.opencontainers.image.version="$RELEASE" \
+              --label cz.novanadeje.build.inputs="$INPUTS" \
+              -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$context"
             docker push --all-tags "$prefix-$app"
           done
 
+  release:
+    needs: [version, images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE: ${{ needs.version.outputs.release }}
+          CODE_CHANGED: ${{ needs.version.outputs.code-changed }}
+        run: |
+          set -euo pipefail
+          previous=$(gh release view --json tagName --jq .tagName 2> /dev/null || true)
+          if [ -z "$previous" ]; then
+            gh release create "$RELEASE" --verify-tag --latest --title "$RELEASE" \
+              --notes "První číslované vydání. Dřívější verze mají obrazy jen pod zkráceným commitem."
+          elif [ "$CODE_CHANGED" = false ]; then
+            gh release create "$RELEASE" --verify-tag --latest --title "$RELEASE" \
+              --notes "Stejný kód jako $previous, obrazy jsou znovu sestavené na aktualizovaných základních obrazech (bezpečnostní opravy)."
+          else
+            gh release create "$RELEASE" --verify-tag --latest --title "$RELEASE" --generate-notes --notes-start-tag "$previous"
+          fi

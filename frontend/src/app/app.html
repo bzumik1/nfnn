@@ -2,9 +2,11 @@
 
 <app-chunk-load-notice />
 
-<app-update-notice />
-
 <app-offline-status />
+
+@if (notificationsOffer(); as offer) {
+  <ng-container *ngComponentOutlet="offer" />
+}
 
 @if (loginDialog.isOpen()) {
   <app-login-dialog />

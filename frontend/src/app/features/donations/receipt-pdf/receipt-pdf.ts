@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
 import { ErrorKind, ErrorName, errorNameOf } from '../../../core/errors/error-vocabulary';
+import { RunningWork } from '../../../core/updates/running-work';
 import { DownloadedFile } from '../donations-api';
 import { ReceiptArt, receiptArt } from './receipt-art';
 import { receiptCaptions } from './receipt-captions';
@@ -124,8 +125,17 @@ function bundleSubject(receipts: number): string {
 export class ReceiptPdf {
   private readonly environment = inject(RECEIPT_PDF_ENVIRONMENT);
   private readonly reporter = inject(ErrorReporter);
+  private readonly runningWork = inject(RunningWork);
 
   draw(source: ReceiptSource): Observable<ReceiptPdfEvent> {
+    return this.runningWork.during(this.drawing(source));
+  }
+
+  drawBundle(source: ReceiptBundleSource): Observable<ReceiptBundleEvent> {
+    return this.runningWork.during(this.bundleDrawing(source));
+  }
+
+  private drawing(source: ReceiptSource): Observable<ReceiptPdfEvent> {
     return new Observable<ReceiptPdfEvent>((subscriber) => {
       let worker: ReceiptWorker | null = null;
       subscriber.next({ kind: 'phase', phase: 'data', page: 0, pages: 0 });
@@ -186,7 +196,7 @@ export class ReceiptPdf {
     );
   }
 
-  drawBundle(source: ReceiptBundleSource): Observable<ReceiptBundleEvent> {
+  private bundleDrawing(source: ReceiptBundleSource): Observable<ReceiptBundleEvent> {
     return new Observable<ReceiptBundleEvent>((subscriber) => {
       let worker: ReceiptWorker | null = null;
       const digests = [

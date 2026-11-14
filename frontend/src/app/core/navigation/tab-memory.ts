@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { NavigationEnd, NavigationStart, Router, Scroll } from '@angular/router';
 import { AppTab, AppTabId, pathOf, tabOf } from './app-tabs';
+import { ReloadPlace } from '../reload/reload-place';
 import { KeptTabPages } from './kept-tab-pages';
 import { NavigationPreview } from './navigation-preview';
 
@@ -20,7 +21,8 @@ export class TabMemory {
   private readonly keptPages = inject(KeptTabPages);
   private readonly preview = inject(NavigationPreview);
   private readonly window = inject(DOCUMENT).defaultView;
-  private readonly lastUrls = new Map<AppTabId, string>();
+  private readonly reloadPlace = inject(ReloadPlace);
+  private readonly lastUrls = new Map<AppTabId, string>(this.reloadPlace.keptTabs());
   private readonly current = signal<AppTab | null>(tabOf(this.router.url));
   readonly currentTab = this.current.asReadonly();
   private readonly path = signal(pathOf(this.router.url));
@@ -29,6 +31,7 @@ export class TabMemory {
   private placements = 0;
 
   constructor() {
+    this.reloadPlace.followTabs(() => this.lastUrls);
     const navigations = this.router.events.subscribe((event) => {
       if (this.preview.drives()) {
         return;

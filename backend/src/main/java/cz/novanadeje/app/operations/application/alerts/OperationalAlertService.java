@@ -4,13 +4,10 @@ import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlert;
 import cz.novanadeje.app.operations.domain.alerts.OperationalAlertRepository;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Instant;
 import java.util.List;
@@ -25,11 +22,6 @@ public class OperationalAlertService {
     public OperationalAlertService(OperationalAlertRepository alerts, ApplicationEventPublisher events) {
         this.alerts = alerts;
         this.events = events;
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void on(OperationalAlertRaised raised) {
-        record(areaOf(raised.area()), raised.change() == OperationalAlertRaised.Change.OPENED, raised.at());
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -57,13 +49,5 @@ public class OperationalAlertService {
     @Transactional(readOnly = true)
     public boolean open(MonitoredArea area) {
         return alerts.find(area).map(OperationalAlert::open).orElse(false);
-    }
-
-    private static MonitoredArea areaOf(OperationalAlertRaised.Area area) {
-        return switch (area) {
-            case BANK_IMPORT -> MonitoredArea.BANK_IMPORT;
-            case BACKUPS -> MonitoredArea.BACKUPS;
-            case MAIL -> MonitoredArea.MAIL;
-        };
     }
 }

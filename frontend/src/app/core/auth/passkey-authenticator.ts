@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { inject, Injectable } from '@angular/core';
 import { prfReadingOf, type PrfReading } from '../device/crypto/prf';
+import { RunningWork } from '../updates/running-work';
 import {
   PasskeyAssertionCredential,
   PasskeyCreationOptions,
@@ -25,6 +26,7 @@ export class PasskeyCeremonyError extends Error {
 @Injectable({ providedIn: 'root' })
 export class PasskeyAuthenticator {
   private readonly window = inject(DOCUMENT).defaultView;
+  private readonly runningWork = inject(RunningWork);
 
   supported(): boolean {
     return (
@@ -141,7 +143,7 @@ export class PasskeyAuthenticator {
   private async run(ceremony: () => Promise<Credential | null>): Promise<PublicKeyCredential> {
     let credential: Credential | null;
     try {
-      credential = await ceremony();
+      credential = await this.runningWork.until(ceremony());
     } catch (failure: unknown) {
       throw new PasskeyCeremonyError(reasonOf(failure));
     }

@@ -1026,6 +1026,20 @@ describe('Given a signed-in donor in the donor area', () => {
       );
     });
 
+    it('then Poslat dar is one padded card with its title inside, like the other donor cards', async () => {
+      await open('/darce/prehled');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const card = element('.send-gift') as HTMLElement;
+      expect(card.classList).toContain('ui-card');
+      expect(card.classList).toContain('ui-card--padded');
+      const title = card.querySelector('h2') as HTMLElement;
+      expect(title.classList).toContain('ui-card__title');
+      expect(title.classList).not.toContain('ui-card__title--large');
+      expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
+      expect(card.getAttribute('aria-labelledby')).toBe(title.id);
+    });
+
     it('then a card Poslat dar offers the amounts, the account, the variable symbol and the IBAN with copy buttons and a QR carrying the symbol', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
@@ -3488,6 +3502,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(texts('h2')).toEqual([
         'Údaje na potvrzení o daru',
         'Přihlášení a zabezpečení',
+        'Upozornění',
         'Přihlášená zařízení',
         'Data v tomto zařízení',
         'Když web nefunguje',

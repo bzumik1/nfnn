@@ -32,6 +32,7 @@ import { formatCrowns } from '../donation-amount';
 import { GiftArrivalWatch } from '../gift-arrival/gift-arrival-watch';
 import { whenLeft } from '../../../core/navigation/kept-tab-pages';
 import { giftArrivalText } from '../gift-arrival/gift-arrival-text';
+import { PaymentHandOffs } from './payment-hand-offs';
 import { RepositoryGiftFeed } from '../gift-arrival/repository-gift-feed';
 import { ibanHalves } from '../iban-format';
 import { PaymentAccount, PaymentDetails } from '../payment-details-api';
@@ -52,23 +53,6 @@ import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
-
-const BANK_ROWS_LOOK = {
-  public: {
-    rows: 'bank-grid',
-    row: 'bank-line',
-    key: 'bank-label',
-    values: 'bank-values',
-    value: 'bank-figure',
-  },
-  grouped: {
-    rows: 'ui-list ui-list--inset ui-list--fields',
-    row: 'ui-list__row ui-list__item ui-list__field',
-    key: 'ui-list__field-label',
-    values: 'ui-list__field-body',
-    value: 'ui-list__field-value',
-  },
-} as const;
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
@@ -116,7 +100,6 @@ export type PaymentAccountState =
   providers: [GiftArrivalWatch, RepositoryGiftFeed],
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
-  host: { '[class.is-grouped]': 'grouped()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PaymentPanel {
@@ -126,6 +109,7 @@ export class PaymentPanel {
   private readonly chosenAmount = inject(ChosenAmountStore);
   private readonly localPaymentRoute = inject(LocalPaymentRoute);
   private readonly giftArrival = inject(GiftArrivalWatch);
+  private readonly handOffs = inject(PaymentHandOffs);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
@@ -139,10 +123,6 @@ export class PaymentPanel {
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
-  readonly grouped = input(false);
-  protected readonly look = computed(() =>
-    this.grouped() ? BANK_ROWS_LOOK.grouped : BANK_ROWS_LOOK.public,
-  );
 
   protected readonly presets: readonly AmountPreset[] = [
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
@@ -421,6 +401,7 @@ export class PaymentPanel {
       return;
     }
     this.noteIntentToPay();
+    this.handOffs.note();
     const png = this.opensWithImage ? (this.preparedImage()?.png ?? null) : null;
     if (png !== null) {
       await this.handOverPayment(payment, imageFile(png, sharedImageName(payment)), imageNotice);
@@ -450,6 +431,9 @@ export class PaymentPanel {
     this.handoffStep.set(deviceShares(file) ? 'sharing' : 'opening');
     try {
       const handoff = await handOver(file, this.shareTitle, openLocally);
+      if (handoff === 'dismissed' || handoff === 'refused') {
+        this.handOffs.clear();
+      }
       if (this.payment() === payment) {
         this.handoffNotice.set(notice(handoff));
       }

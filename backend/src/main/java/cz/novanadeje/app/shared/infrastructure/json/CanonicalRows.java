@@ -1,12 +1,11 @@
 package cz.novanadeje.app.shared.infrastructure.json;
 
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import tools.jackson.databind.JsonNode;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
@@ -19,11 +18,7 @@ public final class CanonicalRows {
     }
 
     public static String sha256(JsonNode rows) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical(rows).getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return Sha256.hex(canonical(rows).getBytes(StandardCharsets.UTF_8));
     }
 
     public static String canonical(JsonNode rows) {

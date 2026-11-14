@@ -1,12 +1,11 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.util.UUID;
 
 @Component
 public class AdministratorBootstrap {
@@ -39,11 +38,9 @@ public class AdministratorBootstrap {
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void onRegistered(DonorRegistered registered) {
-        if (properties.addresses().contains(registered.email())
-                && administrators.grantAtStartup(registered.email()) == StartupGrant.GRANTED) {
-            log.info("Configured administrator {} received the role on confirming the address", registered.donorId());
+    public void grantOnConfirmation(UUID donorId, EmailAddress email) {
+        if (properties.addresses().contains(email) && administrators.grantAtStartup(email) == StartupGrant.GRANTED) {
+            log.info("Configured administrator {} received the role on confirming the address", donorId);
         }
     }
 }

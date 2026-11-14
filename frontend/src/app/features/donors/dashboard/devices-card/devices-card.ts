@@ -23,6 +23,7 @@ import { formatBankTime, formatDonationDate, pragueDay } from '../../../donation
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
+import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
 import { groupDevices } from './device-groups';
 import { deviceName, sessionKindName } from './device-labels';
 
@@ -54,6 +55,7 @@ export class DevicesCard {
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);
+  private readonly notifiedDevices = inject(DonorNotifiedDevices);
   private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
@@ -146,6 +148,10 @@ export class DevicesCard {
 
   toggleOlder(): void {
     this.olderShown.update((shown) => !shown);
+  }
+
+  protected notified(device: SignedInDevice): boolean {
+    return this.notifiedDevices.ids().has(device.id);
   }
 
   protected name(device: SignedInDevice): string {

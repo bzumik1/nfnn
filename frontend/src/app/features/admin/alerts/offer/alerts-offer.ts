@@ -22,6 +22,7 @@ import { describeProblem, problemTypeEndsWith } from '../../../../core/auth/api-
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { SESSION_JAR } from '../../../../core/auth/session-jar';
 import { Connectivity } from '../../../../core/connectivity/connectivity';
+import { BrowserPushHolders } from '../../../operations/browser-push-holders';
 import { pushAvailability } from '../../../../core/push/push-availability';
 import {
   DevicePushSubscription,
@@ -42,7 +43,6 @@ const ALERTS_PAGE = '/sprava/upozorneni';
   selector: 'app-alerts-offer',
   imports: [Dialog, NeedsConnection, RouterLink],
   templateUrl: './alerts-offer.html',
-  styleUrl: './alerts-offer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertsOffer {
@@ -50,6 +50,7 @@ export class AlertsOffer {
   private readonly lock = inject(ADMINISTRATION_LOCK);
   private readonly connectivity = inject(Connectivity);
   private readonly push = inject(SERVICE_WORKER_PUSH);
+  private readonly holders = inject(BrowserPushHolders);
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthStore);
   private readonly marks = inject(DeviceAlertMarks);
@@ -177,7 +178,9 @@ export class AlertsOffer {
           }
         },
         error: (failure: unknown) => {
-          void this.push.unsubscribe();
+          void this.holders
+            .donorNotificationsHere()
+            .then((held) => (held ? undefined : this.push.unsubscribe()));
           if (asked) {
             this.failure.set(
               problemTypeEndsWith(failure, SUBSCRIPTION_LIMIT)

@@ -1,4 +1,4 @@
-.alerts-offer {
+.ui-offer-sheet {
   text-align: center;
 
   .ui-dialog__title {
@@ -7,7 +7,7 @@
   }
 }
 
-.alerts-offer__icon {
+.ui-offer-sheet__icon {
   display: grid;
   place-items: center;
   width: var(--sheet-avatar-size);
@@ -18,12 +18,12 @@
   color: var(--color-on-accent);
 }
 
-.alerts-offer__icon--on {
+.ui-offer-sheet__icon--on {
   background: var(--color-success-bg);
   color: var(--color-success);
 }
 
-.alerts-offer__actions {
+.ui-offer-sheet__actions {
   flex-direction: column;
 
   .ui-button {

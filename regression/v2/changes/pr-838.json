@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.pairing.UnpairedBacklogPairingTest > Given twenty thousand unpaired payments from four thousand senders, half of them with one of three thousand symbols nobody has, and a hundred accounts two donors share, when the import pairs the unpaired payments, then it leaves them all unpaired within 5 s",
+    "reason": "#737, Jakub 2026-11-14: the backlog pairing budget counts the statements and the entities the persistence context holds, and its timed part measures the calling thread's CPU time, so a loaded machine does not fail it and the #451 regression fails it on the entity count alone",
+    "replacement": "donations.application.pairing.UnpairedBacklogPairingTest > Given twenty thousand unpaired payments from four thousand senders, half of them with one of three thousand symbols nobody has, and a hundred accounts two donors share, when the import pairs the unpaired payments, then it leaves them all unpaired with one statement per symbol and account it looks up, at most four hundred entities held and within 5 s of CPU time",
+    "contract": ".claude/rules/database.md, Testing database changes"
+  }
+]

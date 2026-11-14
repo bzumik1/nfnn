@@ -13,6 +13,7 @@ import { GIFT_FEED } from '../gift-arrival/gift-feed';
 import { FakeGiftFeed, giftItem } from '../gift-arrival/testing/gift-feed-fixtures';
 import { foundationPaymentDetails, paymentQrCase } from '../testing/payment-details-fixtures';
 import { LocalPaymentRoute } from './local-payment-route';
+import { PaymentHandOffs } from './payment-hand-offs';
 import { PaymentPanel } from './payment-panel';
 
 const PAYMENT_DETAILS_URL = '/api/donations/payment-details';
@@ -207,18 +208,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(qrRegion().classList.contains('qr')).toBe(true);
   });
 
-  it('when it stands on a grouped page, then Platíte z jiného zařízení? leaves the bank app buttons and heads the QR it unfolds', async () => {
-    panel().componentRef.setInput('grouped', true);
-    await openWithQr();
-
-    expect(otherDevice().closest('.bank-app')).toBeNull();
-    expect(otherDevice().nextElementSibling).toBe(qrRegion());
-    expect(otherDevice().getAttribute('aria-expanded')).toBe('false');
-    expect(qrRegion().hidden).toBe(true);
-  });
-
-  it('when it stands on a grouped page, then Bankovní spojení heads the bank details and still takes the focus', async () => {
-    panel().componentRef.setInput('grouped', true);
+  it('when it opens, then Bankovní spojení heads the bank details and still takes the focus', async () => {
     await openWithQr();
 
     const label = Array.from(
@@ -228,7 +218,7 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(label?.nextElementSibling?.textContent).toContain('Číslo účtu');
   });
 
-  it('when it stands outside a grouped page, then Platíte z jiného zařízení? stays with the bank app buttons', async () => {
+  it('when it opens, then Platíte z jiného zařízení? stays with the bank app buttons', async () => {
     await openWithQr();
 
     expect(otherDevice().closest('.bank-app')).not.toBeNull();
@@ -299,6 +289,23 @@ describe('Given the payment panel on a phone or a tablet', () => {
     expect(await readText(file)).toBe(pngTextOf(QR_OF_500.spayd));
     expect(downloads).toEqual([]);
     expect(handoffStatus()).toBe('');
+  });
+
+  it('when the visitor hands the payment to an app, then the hand-off is noted for the return to the site', async () => {
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+
+    expect(TestBed.inject(PaymentHandOffs).handedOffAt()).not.toBeNull();
+  });
+
+  it('when the visitor closes the share offer without picking an app, then no hand-off is left noted', async () => {
+    shareRefusal = new DOMException('Share canceled', 'AbortError');
+    await openWithQr();
+
+    await tap('Otevřít v aplikaci banky');
+
+    expect(TestBed.inject(PaymentHandOffs).handedOffAt()).toBeNull();
   });
 
   it('when the phone offers the QR image, then a line says the offer is opening until it closes', async () => {

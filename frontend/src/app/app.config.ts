@@ -52,6 +52,7 @@ import { inputModalityAtStart } from './core/input/input-modality';
 import { appearanceAtStart } from './core/appearance/appearance';
 import { AppUpdates } from './core/updates/app-updates';
 import { provideAppServiceWorker } from './core/updates/angular-service-worker';
+import { runningWritesInterceptor } from './core/updates/running-writes';
 import { serviceWorkerBypassInterceptor } from './core/updates/service-worker-bypass';
 import { versionInterceptor } from './core/version/version-interceptor';
 import { heldRecordRetryInterceptor } from './core/version/held-record-retry';
@@ -95,6 +96,7 @@ export const keptTabPages: Provider[] = [
 export const appHttpClient: EnvironmentProviders = provideHttpClient(
   withXhr(),
   withInterceptors([
+    runningWritesInterceptor,
     keptPublicAnswersInterceptor,
     heldRecordRetryInterceptor,
     authInterceptor,

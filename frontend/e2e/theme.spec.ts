@@ -19,7 +19,6 @@ import {
   openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
-import { serveNewerApiGeneration, updateNotice } from './app-update';
 
 const THEME = process.env.E2E_THEME;
 const REFERENCE_THEME = 'nova-nadeje';
@@ -230,16 +229,6 @@ test.describe('Given the site built with another theme', () => {
     await openAboutThenLoseNewChunks(page);
     await openPolicyFromContact(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
-
-    expect(await lookOfTheReferenceTheme(page)).toEqual([]);
-  });
-
-  test('when the server speaks a newer API, then the bar that asks to load the new version shows no colour or font of the default theme', async ({
-    page,
-  }) => {
-    await serveNewerApiGeneration(page);
-    await page.goto('/o-nas');
-    await expect(updateNotice(page)).toBeVisible();
 
     expect(await lookOfTheReferenceTheme(page)).toEqual([]);
   });

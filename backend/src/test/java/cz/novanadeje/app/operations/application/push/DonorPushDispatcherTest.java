@@ -9,8 +9,6 @@ import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
-import cz.novanadeje.app.shared.application.event.DonationsArrived;
-import cz.novanadeje.app.shared.application.event.YearlyReceiptsReady;
 import cz.novanadeje.app.shared.application.session.SignedInDevice;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.junit.jupiter.api.AfterEach;
@@ -73,7 +71,7 @@ class DonorPushDispatcherTest {
         subscribed(PETR, "petr-telefon", true);
         subscribed(UUID.randomUUID(), "eva-telefon", true);
 
-        dispatcher.on(new DonationsArrived(Set.of(JANA, PETR), NOW));
+        dispatcher.giftsArrived(Set.of(JANA, PETR));
 
         assertThat(sent).containsExactlyInAnyOrder("jana-telefon gift-arrived", "petr-telefon gift-arrived");
         assertThat(timer.scheduled()).isEmpty();
@@ -86,7 +84,7 @@ class DonorPushDispatcherTest {
         DonorPushSubscription notebook = subscribed(JANA, "jana-notebook", true);
         subscriptions.changeNotifications(JANA, notebook.deviceId(), new DonorNotifications(true, false));
 
-        dispatcher.on(new YearlyReceiptsReady(Set.of(JANA), NOW));
+        dispatcher.yearlyReceiptsReady(Set.of(JANA));
 
         assertThat(sent).containsExactly("jana-telefon yearly-receipt-ready");
     }
@@ -98,7 +96,7 @@ class DonorPushDispatcherTest {
         DonorPushSubscription leftover = subscribed(JANA, "jana-stary", true);
         signedIn.remove(leftover.deviceId());
 
-        dispatcher.on(new DonationsArrived(Set.of(JANA), NOW));
+        dispatcher.giftsArrived(Set.of(JANA));
 
         assertThat(sent).containsExactly("jana-telefon gift-arrived");
         assertThat(subscriptions.all()).extracting(DonorPushSubscription::id).containsExactly(telefon.id());
@@ -111,7 +109,7 @@ class DonorPushDispatcherTest {
         subscribed(JANA, "jana-notebook", true);
         failing.add(new PushEndpoint("https://fcm.googleapis.com/fcm/send/jana-notebook"));
 
-        dispatcher.on(new DonationsArrived(Set.of(JANA), NOW));
+        dispatcher.giftsArrived(Set.of(JANA));
         List<Duration> delays = new ArrayList<>();
         while (!timer.scheduled().isEmpty()) {
             delays.add(Duration.between(NOW, timer.scheduled().getFirst().when()));
@@ -136,7 +134,7 @@ class DonorPushDispatcherTest {
             throw new IllegalStateException("The executor has stopped");
         });
 
-        stopping.on(new DonationsArrived(Set.of(JANA), NOW));
+        stopping.giftsArrived(Set.of(JANA));
         timer.fireNext();
 
         assertThat(sent).containsExactly("jana-notebook gift-arrived");

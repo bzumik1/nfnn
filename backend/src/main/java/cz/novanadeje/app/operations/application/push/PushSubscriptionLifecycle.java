@@ -2,12 +2,11 @@ package cz.novanadeje.app.operations.application.push;
 
 import cz.novanadeje.app.operations.domain.push.DonorPushSubscriptionRepository;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
-import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
-import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
-import cz.novanadeje.app.shared.application.event.DonorErased;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Component
 public class PushSubscriptionLifecycle {
@@ -20,20 +19,20 @@ public class PushSubscriptionLifecycle {
         this.donorSubscriptions = donorSubscriptions;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void on(AdministrationRevoked revoked) {
-        subscriptions.deleteAllOf(revoked.donorId());
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deleteAllOfFormerAdministrator(UUID donorId) {
+        subscriptions.deleteAllOf(donorId);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void on(DonorErased erased) {
-        subscriptions.deleteAllOf(erased.donorId());
-        donorSubscriptions.deleteAllOf(erased.donorId());
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deleteAllOfErasedDonor(UUID donorId) {
+        subscriptions.deleteAllOf(donorId);
+        donorSubscriptions.deleteAllOf(donorId);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    public void on(DeviceSignedOut signedOut) {
-        subscriptions.deleteAllOfDevice(signedOut.deviceId());
-        donorSubscriptions.deleteAllOfDevice(signedOut.deviceId());
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deleteAllOfSignedOutDevice(UUID deviceId) {
+        subscriptions.deleteAllOfDevice(deviceId);
+        donorSubscriptions.deleteAllOfDevice(deviceId);
     }
 }

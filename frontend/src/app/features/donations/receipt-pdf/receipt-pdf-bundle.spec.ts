@@ -12,6 +12,7 @@ import { FakeReceiptPdfEnvironment } from './testing/fake-receipt-worker';
 import { frozenCase, SINGLE_PERSON_CS, YEARLY_BILINGUAL } from './testing/receipt-fixtures';
 import { SYNTHETIC_SIGNATURE_JSON } from './testing/synthetic-art';
 import { recordClientErrors } from '../../../core/errors/testing/client-error-reports';
+import { RunningWork } from '../../../core/updates/running-work';
 
 const SIGNATURE_BYTES = new TextEncoder().encode(SYNTHETIC_SIGNATURE_JSON);
 
@@ -101,6 +102,18 @@ describe('Given receipts of one year to print together', () => {
       await Promise.resolve();
     }
   }
+
+  it('when they are being drawn, then the drawing counts as work a reload would break until it is left', () => {
+    const work = TestBed.inject(RunningWork);
+
+    draw();
+
+    expect(work.any()).toBe(true);
+
+    subscription.unsubscribe();
+
+    expect(work.any()).toBe(false);
+  });
 
   describe('when they are drawn', () => {
     beforeEach(async () => {

@@ -95,6 +95,19 @@ describe('Given the privacy policy page', () => {
     ]);
   });
 
+  it('when it renders, then it says what push notifications keep, who delivers them, what they never carry and when they are deleted', () => {
+    const page = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+
+    expect(page).toContain(
+      'adresu, na kterou je služba vašeho prohlížeče doručuje, klíče prohlížeče',
+    );
+    expect(page).toContain('smažeme je, když upozornění vypnete, zařízení odhlásíte');
+    expect(page).toContain(
+      'Dostane jen zašifrovanou zprávu stejné délky a ví, kdy jsme ji poslali',
+    );
+    expect(page).toContain('Upozornění neobsahují jméno, částku ani jiné údaje o vás.');
+  });
+
   it('when it renders, then it explains each processing purpose on its own', () => {
     expect(texts('h3')).toEqual([
       'Dárcovský účet',

@@ -338,6 +338,7 @@ for (const { width, height } of [
         if (textSize === 'double') {
           await page.addStyleTag({ content: 'html { font-size: 32px; }' });
         }
+        await expect.poll(() => contentPastTheSides(card.locator('.bank')), textSize).toEqual([]);
         for (const row of [...(await rows.all()), ...(await guideRows.all())]) {
           await expect.poll(() => contentPastTheSides(row), textSize).toEqual([]);
         }

@@ -56,4 +56,10 @@ class SecondFactorRecoveryCodeTest {
         assertThat(code.hash()).isNotEqualTo(new SecondFactorRecoveryCode("ABCD2346").hash());
         assertThat(code.toString()).doesNotContain("ABCD2345");
     }
+
+    @Test
+    @DisplayName("Given a code, when it is hashed, then the hash is the hex SHA-256 of its ASCII value")
+    void should_be_sha256_of_value_when_hashed_given_code() {
+        assertThat(new SecondFactorRecoveryCode("ABCD2345").hash()).isEqualTo("a00d76646eba91b057841554d5c8334f498dc592ed744bce404f21fe271cd36e");
+    }
 }

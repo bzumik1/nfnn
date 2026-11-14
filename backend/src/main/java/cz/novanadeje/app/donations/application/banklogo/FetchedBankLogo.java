@@ -1,9 +1,8 @@
 package cz.novanadeje.app.donations.application.banklogo;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.util.Arrays;
-import java.util.HexFormat;
 
 public record FetchedBankLogo(byte[] webp, String sha256) {
 
@@ -17,7 +16,7 @@ public record FetchedBankLogo(byte[] webp, String sha256) {
     }
 
     public static FetchedBankLogo of(byte[] webp) {
-        return new FetchedBankLogo(webp, sha256Of(webp));
+        return new FetchedBankLogo(webp, Sha256.hex(webp));
     }
 
     @Override
@@ -38,13 +37,5 @@ public record FetchedBankLogo(byte[] webp, String sha256) {
     @Override
     public String toString() {
         return "FetchedBankLogo[" + webp.length + " bytes, sha256 " + sha256 + "]";
-    }
-
-    private static String sha256Of(byte[] content) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
     }
 }

@@ -944,6 +944,8 @@ jobs:
           done
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/compose.yml"
+          echo "The backend starts with -XX:AOTMode=on, so a JVM that cannot use the image's AOT cache refuses to start instead of starting slower"
+          yq -i '.services.backend.environment._JAVA_OPTIONS = "-XX:AOTMode=on"' "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"
 
       - name: Start the production stack
@@ -953,6 +955,9 @@ jobs:
             restarts=$(docker inspect -f '{{.RestartCount}}' "$container")
             [ "$restarts" = 0 ] || { echo "::error::$container restarted $restarts times while a fresh install started: the backend waits until the database accepts connections, so nothing restarts"; exit 1; }
           done
+          tr '\0' ' ' < <(docker exec nfnn-backend cat /proc/1/cmdline) | grep -q -- ' -XX:AOTCache=/app/app.aot ' || { echo "::error::the backend's java line must read the image's AOT cache /app/app.aot (backend/docker-entrypoint.sh)"; exit 1; }
+          docker logs nfnn-backend 2>&1 | grep -q '^Picked up _JAVA_OPTIONS: -XX:AOTMode=on$' || { echo "::error::the backend did not start with -XX:AOTMode=on"; exit 1; }
+          echo "The backend started from its AOT cache: $(docker logs nfnn-backend 2>&1 | grep -oE 'Started AppApplication in [0-9.]+ seconds' | tail -n 1)"
 
       - name: First setup
         run: |
