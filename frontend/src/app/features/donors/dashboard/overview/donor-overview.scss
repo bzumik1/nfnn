@@ -93,12 +93,16 @@
 .receipt-ready-pdf {
   max-width: 100%;
   white-space: normal;
+
+  &[aria-disabled='true'] {
+    opacity: 1;
+  }
 }
 
 .receipt-saved {
   inline-size: 0;
   min-inline-size: 100%;
-  justify-items: end;
+  justify-content: flex-end;
   text-align: right;
 }
 
@@ -109,7 +113,7 @@
   }
 
   .receipt-saved {
-    justify-items: start;
+    justify-content: flex-start;
     text-align: left;
   }
 }

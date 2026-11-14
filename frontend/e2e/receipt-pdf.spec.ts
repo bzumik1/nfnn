@@ -50,14 +50,30 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
       },
     );
     await openReceiptsAfterSignIn(page);
+    const buttonBox = () =>
+      yearlyButton(page).evaluate((button) => {
+        const box = button.getBoundingClientRect();
+        return { x: box.x, y: box.y + scrollY, width: box.width, height: box.height };
+      });
+    const lineRoom = () =>
+      yearlyLine(page).evaluate((line) => {
+        const box = line.getBoundingClientRect();
+        return { y: box.y + scrollY, height: box.height };
+      });
+    const idleButton = await buttonBox();
+    const idleLine = await lineRoom();
 
     await yearlyButton(page).focus();
     await page.keyboard.press('Enter');
 
     await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
-    await expect(page.locator('.year-row progress')).toHaveAttribute('value', '1');
+    await expect(yearlyButton(page).locator('.pdf-button__ring')).toBeVisible();
+    await expect(page.locator('.year-row progress')).toHaveCount(0);
     await expect(yearlyButton(page)).toHaveAttribute('aria-disabled', 'true');
+    await expect(yearlyButton(page)).toHaveCSS('opacity', '1');
     await expect(yearlyButton(page)).toBeFocused();
+    expect(await buttonBox()).toEqual(idleButton);
+    expect(await lineRoom()).toEqual(idleLine);
 
     const download = page.waitForEvent('download');
     release();
@@ -67,8 +83,10 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await expect(yearlyLine(page)).toHaveText(
       'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
     );
-    await expect(page.locator('.year-row progress')).toHaveCount(0);
+    await expect(yearlyButton(page).locator('.pdf-button__download')).toBeVisible();
     await expect(yearlyButton(page)).toBeFocused();
+    expect(await buttonBox()).toEqual(idleButton);
+    expect(await lineRoom()).toEqual(idleLine);
     const pdf = await readPdf(await savedPdf(saved));
     expect(pdf.pages).toHaveLength(1);
     expect(pdf.pages[0].text).toContain('2026-000001');
@@ -145,6 +163,11 @@ test.describe('Given a signed-in donor on an iPhone, whose browser shares files'
       'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
     );
     await expect(yearlyButton(page)).toHaveText('Otevřít potvrzení za rok 2025 (PDF)');
+    await expect(yearlyButton(page).locator('.pdf-button__share')).toBeVisible();
+    await expect(yearlyLine(page).locator('.pdf-progress__brief')).toHaveAttribute(
+      'data-brief',
+      'PDF je připravené',
+    );
     await expect(yearlyButton(page)).toBeFocused();
     await yearlyButton(page).click();
 

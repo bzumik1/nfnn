@@ -47,7 +47,8 @@ import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { Dialog } from '../../../shared/ui/dialog/dialog';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
-import { DownloadProgress } from '../../../shared/ui/download-progress/download-progress';
+import { PdfButtonFace } from '../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgress } from '../../../shared/ui/pdf-progress/pdf-progress';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { isChangedMeanwhile } from '../../../core/version/row-version';
 import { ChangedMeanwhileDialog } from '../changed-meanwhile/changed-meanwhile-dialog';
@@ -117,7 +118,8 @@ const PAIRING_LABELS: Record<NonNullable<DonationItem['pairedBy']>, string> = {
     BankAccount,
     CopyButton,
     Dialog,
-    DownloadProgress,
+    PdfButtonFace,
+    PdfProgress,
     FormControlDirective,
     FormField,
     FormsModule,

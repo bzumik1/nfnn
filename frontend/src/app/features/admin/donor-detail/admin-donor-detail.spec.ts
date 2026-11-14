@@ -34,6 +34,7 @@ import type { AccountStore, CopyContents } from '../../../core/device/store/acco
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { AdministrationCopyDownload } from '../device-copy/administration-copy-download';
 import { FORCED_REFRESH_GAP_MS } from '../device-copy/administration-reads';
+import { PHASE_SHOWN_AFTER_MS } from '../../../shared/ui/pdf-progress/pdf-progress';
 
 const DONOR_ID = '01a18e56-bdb0-775a-bd0a-a60756831369';
 const LINK_ID = '0192f0c4-0000-7000-8000-000000000001';
@@ -1237,6 +1238,11 @@ describe('Given an administrator on a donor card', () => {
       return row;
     }
 
+    async function afterPhaseLasts(): Promise<void> {
+      await new Promise((resolve) => setTimeout(resolve, PHASE_SHOWN_AFTER_MS));
+      await settle();
+    }
+
     function rowLine(number: string): string {
       return (receiptRow(number).querySelector('[role="status"]')?.textContent ?? '')
         .replace(/\s+/g, ' ')
@@ -1286,6 +1292,8 @@ describe('Given an administrator on a donor card', () => {
       downloadButton('2027-000001').click();
       await settle();
 
+      expect(rowLine('2027-000001')).toBe('');
+      await afterPhaseLasts();
       expect(rowLine('2027-000001')).toBe('Připravujeme údaje potvrzení…');
       expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBe('true');
       expect(buttonText('2027-000001')).toBe('Připravujeme PDF… potvrzení 2027-000001');
@@ -1293,6 +1301,7 @@ describe('Given an administrator on a donor card', () => {
       expect(read.request.method).toBe('GET');
       read.flush(readAnswer());
       await settle();
+      await afterPhaseLasts();
       expect(rowLine('2027-000001')).toBe('Načítáme nástroje pro PDF…');
 
       receiptEnvironment.last().drawAll();
@@ -1315,7 +1324,7 @@ describe('Given an administrator on a donor card', () => {
       expect(http.match(READ_URL)).toHaveLength(1);
     });
 
-    it('then a receipt that cannot be read shows its reason at the row and the button can try again', async () => {
+    it('then a receipt that cannot be read shows its reason at the row and the button offers Zkusit znovu', async () => {
       downloadButton('2027-000001').click();
       await settle();
       const missing = problem(
@@ -1333,6 +1342,8 @@ describe('Given an administrator on a donor card', () => {
       expect(rowLine('2027-000001')).toBe('');
       expect(receiptEnvironment.workers).toEqual([]);
       expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBeNull();
+      expect(buttonText('2027-000001')).toBe('Zkusit znovu potvrzení 2027-000001');
+      expect(downloadButton('2027-000001').querySelector('.pdf-button__warning')).not.toBeNull();
     });
 
     it('then drawing tools that do not load are named at the row with what to do', async () => {
@@ -1398,7 +1409,7 @@ describe('Given an administrator on a donor card', () => {
       await vi.advanceTimersByTimeAsync(8001);
       await settle();
       const cancel = receiptRow('2027-000001').querySelector<HTMLButtonElement>(
-        'button.download-progress-cancel',
+        'button.pdf-progress__cancel',
       );
       expect(cancel?.textContent?.trim()).toBe('Zrušit');
       cancel?.focus();

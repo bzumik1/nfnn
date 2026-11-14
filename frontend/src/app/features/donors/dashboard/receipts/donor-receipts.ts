@@ -6,7 +6,8 @@ import { DonationsTable } from '../donations-table/donations-table';
 import { MissingGift } from '../missing-gift/missing-gift';
 import { DonationsPending } from '../donations-pending/donations-pending';
 import { DonorDonations } from '../donor-donations';
-import { DownloadProgress } from '../../../../shared/ui/download-progress/download-progress';
+import { PdfButtonFace } from '../../../../shared/ui/pdf-button-face/pdf-button-face';
+import { PdfProgress } from '../../../../shared/ui/pdf-progress/pdf-progress';
 import { GiftCount, receivedVerifications } from '../gift-count/gift-count';
 import { PageTitle } from '../page-title/page-title';
 import { YearReceipt, yearReceipt } from '../yearly-receipt';
@@ -24,7 +25,8 @@ interface YearRow {
   selector: 'app-donor-receipts',
   imports: [
     DiagnosticsDownload,
-    DownloadProgress,
+    PdfButtonFace,
+    PdfProgress,
     RouterLink,
     PageTitle,
     DonationsPending,

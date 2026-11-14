@@ -1,0 +1,34 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > and the receipt is drawn in the browser > then the line at the button names each phase with a progress bar until the PDF is saved",
+    "reason": "#823, design P1 (Jakub 2026-11-15): the native progress bar is gone; the button's ring turns while the line names each phase once it has lasted 300 ms, the drawing phase with the page the worker reported",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > and the receipt is drawn in the browser > then the line at the button names each phase that lasts, and the ring in the button turns until the PDF is saved",
+    "contract": "docs/frontend-overview.md, donor area and shared/ui pdf-button-face, pdf-progress"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > and the receipt is drawn in the browser > then each page drawn moves the bar on, against the pages a year of that many gifts takes",
+    "reason": "#823, design P1 (Jakub 2026-11-15): no bar and no share of an estimated page count any more; the ring is indeterminate and the line names the page the worker reported",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the receipts page opens > and the receipt is drawn in the browser > then the line at the button names each phase that lasts, and the ring in the button turns until the PDF is saved",
+    "contract": "docs/frontend-overview.md, donor area"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/donor-detail/admin-donor-detail.spec.ts > Given an administrator on a donor card > when the receipts card lists a valid receipt and a replaced one > then a receipt that cannot be read shows its reason at the row and the button can try again",
+    "reason": "#823, design P1 (Jakub 2026-11-15): after a failure the button says Zkusit znovu with an exclamation icon, which the renamed test now checks",
+    "replacement": "src/app/features/admin/donor-detail/admin-donor-detail.spec.ts > Given an administrator on a donor card > when the receipts card lists a valid receipt and a replaced one > then a receipt that cannot be read shows its reason at the row and the button offers Zkusit znovu",
+    "contract": "docs/frontend-overview.md, donor-detail"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when a signed-in donor waits for a receipt PDF, then its progress line, bar and cancel button break no rule",
+    "reason": "#823, design P1 (Jakub 2026-11-15): the progress bar gave way to a ring in the button, so axe now checks the line, the ring and the cancel button",
+    "replacement": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when a signed-in donor waits for a receipt PDF, then its progress line, ring and cancel button break no rule",
+    "contract": "docs/frontend-overview.md, shared/ui pdf-button-face, pdf-progress"
+  }
+]
