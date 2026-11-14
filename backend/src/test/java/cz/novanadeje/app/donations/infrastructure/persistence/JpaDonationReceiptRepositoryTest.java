@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
@@ -225,15 +226,39 @@ class JpaDonationReceiptRepositoryTest {
         receipts.save(replaced);
         replaced.markSuperseded(NOW.plusSeconds(60));
         receipts.save(replaced);
-        receipts.save(yearly(jana, YEAR_2025, "2026-000002", Optional.of(replaced.id())));
-        receipts.save(yearly(petr, YEAR_2025, "2026-000003", Optional.empty()));
+        DonationReceipt janasActive = yearly(jana, YEAR_2025, "2026-000002", Optional.of(replaced.id()));
+        receipts.save(janasActive);
+        DonationReceipt petrsActive = yearly(petr, YEAR_2025, "2026-000003", Optional.empty());
+        receipts.save(petrsActive);
         receipts.save(yearly(petr, Year.of(2024), "2026-000004", Optional.empty()));
         flushAndClear();
 
-        assertThat(receipts.findActiveForYearOfEveryDonor(YEAR_2025))
-                .extracting(receipt -> receipt.donor() + " " + receipt.number().value())
-                .containsExactlyInAnyOrder(jana + " 2026-000002", petr + " 2026-000003");
-        assertThat(receipts.findActiveForYearOfEveryDonor(Year.of(2023))).isEmpty();
+        assertThat(receipts.findActiveYearlyOfEveryDonor(YEAR_2025)).containsExactlyInAnyOrder(
+                new ActiveYearlyReceipt(jana, janasActive.id(), janasActive.number(), janasActive.issuedAt()),
+                new ActiveYearlyReceipt(petr, petrsActive.id(), petrsActive.number(), petrsActive.issuedAt()));
+        assertThat(receipts.findActiveYearlyOfEveryDonor(Year.of(2023))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a donor's replaced and active yearly receipts of one year, when whether an active receipt of a year exists is asked, then only that year and that donor answer yes")
+    void should_answer_only_for_the_donors_year_when_an_active_receipt_is_asked_for_given_a_replaced_and_an_active_one() {
+        DonorReference jana = storedDonor("4821937560");
+        DonorReference petr = storedDonor("7310945528");
+        DonationReceipt replaced = yearly(jana, YEAR_2025, "2026-000001", Optional.empty());
+        receipts.save(replaced);
+        replaced.markSuperseded(NOW.plusSeconds(60));
+        receipts.save(replaced);
+        receipts.save(yearly(jana, YEAR_2025, "2026-000002", Optional.of(replaced.id())));
+        DonationReceipt petrsOlder = yearly(petr, Year.of(2024), "2026-000003", Optional.empty());
+        receipts.save(petrsOlder);
+        petrsOlder.markSuperseded(NOW.plusSeconds(90));
+        receipts.save(petrsOlder);
+        flushAndClear();
+
+        assertThat(receipts.existsActiveForYear(jana, YEAR_2025)).isTrue();
+        assertThat(receipts.existsActiveForYear(jana, Year.of(2024))).isFalse();
+        assertThat(receipts.existsActiveForYear(petr, YEAR_2025)).isFalse();
+        assertThat(receipts.existsActiveForYear(petr, Year.of(2024))).isFalse();
     }
 
     @Test

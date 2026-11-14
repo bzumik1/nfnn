@@ -133,8 +133,8 @@ class SymbolClaimServiceTest {
     @DisplayName("Given active yearly receipts for 2025 and 2026 and receipts from 2026, when a confirmation pairs payments of both years, then only 2026 is reported as changed")
     void should_report_only_admitted_years_with_active_receipt_when_confirmed_given_receipts_of_paired_years() {
         when(pairing.pairConfirmedSymbol(any(), eq(NOW))).thenReturn(new ConfirmedSymbolPairing(List.of(confirmed(december), confirmed(september))));
-        when(receipts.findActiveForYear(JANA, Year.of(2025))).thenReturn(Optional.of(yearlyReceipt(Year.of(2025))));
-        when(receipts.findActiveForYear(JANA, Year.of(2026))).thenReturn(Optional.of(yearlyReceipt(Year.of(2026))));
+        when(receipts.existsActiveForYear(JANA, Year.of(2025))).thenReturn(true);
+        when(receipts.existsActiveForYear(JANA, Year.of(2026))).thenReturn(true);
 
         assertThat(service.confirm(JANA, link.id(), OLD_SYMBOL).changedYearlyReceipts()).containsExactly(Year.of(2026));
     }
@@ -143,8 +143,8 @@ class SymbolClaimServiceTest {
     @DisplayName("Given receipts from 2025 and active yearly receipts for 2025 and 2026, when a confirmation pairs payments of both years, then both years are reported in ascending order")
     void should_report_years_ascending_when_confirmed_given_receipts_from_2025() {
         when(pairing.pairConfirmedSymbol(any(), eq(NOW))).thenReturn(new ConfirmedSymbolPairing(List.of(confirmed(september), confirmed(december))));
-        when(receipts.findActiveForYear(JANA, Year.of(2025))).thenReturn(Optional.of(yearlyReceipt(Year.of(2025))));
-        when(receipts.findActiveForYear(JANA, Year.of(2026))).thenReturn(Optional.of(yearlyReceipt(Year.of(2026))));
+        when(receipts.existsActiveForYear(JANA, Year.of(2025))).thenReturn(true);
+        when(receipts.existsActiveForYear(JANA, Year.of(2026))).thenReturn(true);
 
         assertThat(service(new FirstReceiptYear(Year.of(2025))).confirm(JANA, link.id(), OLD_SYMBOL).changedYearlyReceipts())
                 .containsExactly(Year.of(2025), Year.of(2026));

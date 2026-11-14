@@ -134,7 +134,7 @@ public class ManualPairingService {
     }
 
     private List<Year> changedYearlyReceipts(DonorReference donor, Year year) {
-        if (firstYear.admits(year) && receipts.findActiveForYear(donor, year).isPresent()) {
+        if (firstYear.admits(year) && receipts.existsActiveForYear(donor, year)) {
             return List.of(year);
         }
         return List.of();
