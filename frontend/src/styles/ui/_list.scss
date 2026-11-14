@@ -109,7 +109,7 @@ div.ui-list__row {
   color: var(--color-warning);
 }
 
-a.ui-list__row--action {
+.ui-list__row--action {
   color: var(--color-accent);
 }
 
@@ -159,17 +159,18 @@ a.ui-list__row--action {
   container: list-card / inline-size;
 }
 
+.ui-card {
+  --list-row-padding-inline: var(--space-6);
+}
+
 .ui-card .ui-list__row,
 .ui-card .ui-list__group-title {
-  --list-row-inline: var(--space-6);
-
-  padding-inline: var(--list-row-inline);
+  padding-inline: var(--list-row-padding-inline);
 }
 
 @include bp.container-down(list-card, pair) {
-  .ui-card .ui-list__row,
-  .ui-card .ui-list__group-title {
-    --list-row-inline: var(--space-4);
+  .ui-card > .ui-list > * {
+    --list-row-padding-inline: var(--space-4);
   }
 }
 
@@ -189,7 +190,7 @@ a.ui-list__row--action {
     position: absolute;
     inset-block-start: -1px;
     inset-inline: calc(
-        var(--list-row-inline, var(--space-4)) + var(--list-lead-size) + var(--space-3)
+        var(--list-row-padding-inline, var(--space-4)) + var(--list-lead-size) + var(--space-3)
       )
       0;
     border-top: 1px solid var(--color-divider);
