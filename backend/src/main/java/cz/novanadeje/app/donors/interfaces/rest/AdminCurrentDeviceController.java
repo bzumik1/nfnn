@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AdministrationDeviceService;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ class AdminCurrentDeviceController {
 
     @PostMapping("/administration-copy")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void storedAdministrationCopy(@AuthenticationPrincipal Jwt jwt, HttpServletRequest http) {
-        devices.storedCopy(DonorId.of(jwt.getSubject()), SessionDevices.requesting(jwt, http));
+    void storedAdministrationCopy(@AuthenticationPrincipal Jwt jwt, HttpServletRequest http, CurrentDevice device) {
+        devices.storedCopy(DonorId.of(jwt.getSubject()), SessionDevices.requesting(device, http));
     }
 }

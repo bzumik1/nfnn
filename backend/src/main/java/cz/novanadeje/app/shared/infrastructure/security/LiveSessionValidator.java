@@ -26,7 +26,7 @@ final class LiveSessionValidator implements OAuth2TokenValidator<Jwt> {
         if (checked.hasErrors() || token.getClaimAsString(JwtProperties.SCOPE_CLAIM) != null) {
             return checked;
         }
-        Optional<UUID> session = sessionOf(token);
+        Optional<UUID> session = SessionClaim.of(token);
         if (session.isEmpty() && token.hasClaim(JwtProperties.SESSION_CLAIM)) {
             return ended();
         }
@@ -34,14 +34,6 @@ final class LiveSessionValidator implements OAuth2TokenValidator<Jwt> {
             return ended();
         }
         return checked;
-    }
-
-    private static Optional<UUID> sessionOf(Jwt token) {
-        try {
-            return Optional.ofNullable(token.getClaimAsString(JwtProperties.SESSION_CLAIM)).map(UUID::fromString);
-        } catch (IllegalArgumentException malformed) {
-            return Optional.empty();
-        }
     }
 
     private static OAuth2TokenValidatorResult ended() {

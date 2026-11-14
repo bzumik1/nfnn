@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.interfaces.rest;
 import cz.novanadeje.app.operations.application.push.PushSubscriptionService;
 import cz.novanadeje.app.operations.domain.push.PushDeviceRequired;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
+import cz.novanadeje.app.shared.application.session.CurrentDevice;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -36,14 +37,14 @@ class AdminPushController {
     }
 
     @GetMapping
-    PushResponse view(@AuthenticationPrincipal Jwt jwt) {
-        return PushResponse.from(push.view(admin(jwt), SessionDevices.of(jwt)));
+    PushResponse view(@AuthenticationPrincipal Jwt jwt, CurrentDevice device) {
+        return PushResponse.from(push.view(admin(jwt), device.id()));
     }
 
     @PostMapping("/subscriptions")
     @ResponseStatus(HttpStatus.CREATED)
-    PushResponse.Subscription subscribe(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PushSubscriptionRequest request) {
-        return PushResponse.Subscription.from(push.subscribe(admin(jwt), device(jwt), request.toEndpoint(), request.toKeys(), request.toAlerts()));
+    PushResponse.Subscription subscribe(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PushSubscriptionRequest request, CurrentDevice device) {
+        return PushResponse.Subscription.from(push.subscribe(admin(jwt), required(device), request.toEndpoint(), request.toKeys(), request.toAlerts()));
     }
 
     @DeleteMapping("/subscriptions/{id}")
@@ -53,8 +54,9 @@ class AdminPushController {
     }
 
     @PutMapping("/subscriptions/{id}/alerts")
-    PushResponse.Subscription changeAlerts(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PushAlertsRequest request) {
-        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts(), SessionDevices.of(jwt)));
+    PushResponse.Subscription changeAlerts(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PushAlertsRequest request,
+                                            CurrentDevice device) {
+        return PushResponse.Subscription.from(push.changeAlerts(admin(jwt), new PushSubscriptionId(id), request.toAlerts(), device.id()));
     }
 
     @PostMapping("/test")
@@ -67,7 +69,7 @@ class AdminPushController {
         return UUID.fromString(jwt.getSubject());
     }
 
-    private static UUID device(Jwt jwt) {
-        return SessionDevices.of(jwt).orElseThrow(PushDeviceRequired::new);
+    private static UUID required(CurrentDevice device) {
+        return device.id().orElseThrow(PushDeviceRequired::new);
     }
 }
