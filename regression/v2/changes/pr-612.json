@@ -1829,7 +1829,7 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "path": "GET /api/live/*",
+    "path": "GET /api/live",
     "scenario": "donations/live_updates: *",
     "kind": "headers",
     "field": "nfnn-api",
@@ -2205,7 +2205,7 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "path": "GET /api/live/*",
+    "path": "GET /api/live",
     "scenario": "donors/connected_apps: *",
     "kind": "headers",
     "field": "nfnn-api",
@@ -3063,7 +3063,7 @@
     "contract": "docs/api-contract.md, Conventions (Versions)"
   },
   {
-    "path": "GET /api/nowhere/*",
+    "path": "GET /api/nowhere",
     "scenario": "operations/request_text_in_logs: *",
     "kind": "headers",
     "field": "nfnn-api",
@@ -3343,12 +3343,11 @@
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "path": "None None",
     "scenario": "donations/admin_receipts: *",
     "kind": "added",
-    "field": "*",
-    "reason": "PR #612, Jakub 2026-11-12: a person of the foundation has one signature, shown under the founders' note and printed on the receipts they sign; the person's webSignature is now signature, POST/DELETE /api/admin/content/people/{id}/web-signature are now /signature, GET /api/admin/donations/receipt-signatory drops signatures, and /api/admin/donations/receipt-signatures/{personId} is gone",
-    "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
+    "reason": "PR #612, Jakub 2026-11-12: a change to the signature of the person who signs the receipts e-mails every administrator (ReceiptSignatureChanged), and these scenarios set that signature",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation",
+    "subject": "Podpis na potvrzeních o daru se změnil – Nová naděje"
   },
   {
     "path": "POST /api/admin/content/people",
@@ -3359,12 +3358,11 @@
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "path": "None None",
     "scenario": "donations/donation_receipts_frozen: *",
     "kind": "added",
-    "field": "*",
-    "reason": "PR #612, Jakub 2026-11-12: a person of the foundation has one signature, shown under the founders' note and printed on the receipts they sign; the person's webSignature is now signature, POST/DELETE /api/admin/content/people/{id}/web-signature are now /signature, GET /api/admin/donations/receipt-signatory drops signatures, and /api/admin/donations/receipt-signatures/{personId} is gone",
-    "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
+    "reason": "PR #612, Jakub 2026-11-12: a change to the signature of the person who signs the receipts e-mails every administrator (ReceiptSignatureChanged), and these scenarios set that signature",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation",
+    "subject": "Podpis na potvrzeních o daru se změnil – Nová naděje"
   },
   {
     "path": "POST /api/admin/content/people",
@@ -3383,12 +3381,11 @@
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
   },
   {
-    "path": "None None",
     "scenario": "operations/admin_operations_sync: *",
     "kind": "added",
-    "field": "*",
-    "reason": "PR #612, Jakub 2026-11-12: a person of the foundation has one signature, shown under the founders' note and printed on the receipts they sign; the person's webSignature is now signature, POST/DELETE /api/admin/content/people/{id}/web-signature are now /signature, GET /api/admin/donations/receipt-signatory drops signatures, and /api/admin/donations/receipt-signatures/{personId} is gone",
-    "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
+    "reason": "PR #612, Jakub 2026-11-12: a change to the signature of the person who signs the receipts e-mails every administrator (ReceiptSignatureChanged), and these scenarios set that signature",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation",
+    "subject": "Podpis na potvrzeních o daru se změnil – Nová naděje"
   },
   {
     "kind": "retired",
