@@ -36,4 +36,9 @@ record PasskeyCreationOptionsResponse(String challenge, RelyingParty rp, User us
                 new Selection(REQUIRED, true, REQUIRED),
                 "none");
     }
+
+    @Override
+    public String toString() {
+        return "PasskeyCreationOptionsResponse[challenge=***, rp=" + rp + ", timeout=" + timeout + "]";
+    }
 }

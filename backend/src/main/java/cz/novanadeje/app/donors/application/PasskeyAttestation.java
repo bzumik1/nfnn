@@ -7,4 +7,9 @@ public record PasskeyAttestation(String clientDataJson, String attestationObject
     public PasskeyAttestation {
         transports = transports == null ? List.of() : List.copyOf(transports);
     }
+
+    @Override
+    public String toString() {
+        return "PasskeyAttestation[clientDataJson=***, attestationObject=***, transports=" + transports + "]";
+    }
 }

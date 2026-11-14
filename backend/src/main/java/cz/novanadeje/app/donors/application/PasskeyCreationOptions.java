@@ -6,4 +6,9 @@ import java.util.List;
 public record PasskeyCreationOptions(String challenge, String relyingPartyId, String relyingPartyName, String userHandle, String userName,
                                      String userDisplayName, List<Integer> algorithms, List<PasskeyDescriptor> excluded,
                                      Duration timeout) {
+
+    @Override
+    public String toString() {
+        return "PasskeyCreationOptions[challenge=***, relyingPartyId=" + relyingPartyId + ", algorithms=" + algorithms + ", timeout=" + timeout + "]";
+    }
 }
