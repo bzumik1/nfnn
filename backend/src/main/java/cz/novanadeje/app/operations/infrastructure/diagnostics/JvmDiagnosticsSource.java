@@ -1,8 +1,8 @@
 package cz.novanadeje.app.operations.infrastructure.diagnostics;
 
 import cz.novanadeje.app.operations.application.diagnostics.DiagnosticsSource;
-import cz.novanadeje.app.operations.domain.diagnostics.DiskSpace;
-import cz.novanadeje.app.operations.domain.diagnostics.JvmDiagnostics;
+import cz.novanadeje.app.operations.application.diagnostics.DiskSpace;
+import cz.novanadeje.app.operations.application.diagnostics.JvmDiagnostics;
 import cz.novanadeje.app.operations.infrastructure.backup.BackupProperties;
 import cz.novanadeje.app.operations.infrastructure.logs.LogProperties;
 import org.springframework.stereotype.Component;

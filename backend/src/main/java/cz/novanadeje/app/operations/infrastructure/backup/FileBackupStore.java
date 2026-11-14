@@ -14,6 +14,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.operations.domain.backup.NotABackup;
 import cz.novanadeje.app.operations.domain.backup.RestoreFile;
 import cz.novanadeje.app.operations.domain.backup.RestoreFileState;
+import cz.novanadeje.app.operations.domain.backup.RestoreSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -121,7 +122,7 @@ class FileBackupStore implements BackupStore {
         if (!Files.isDirectory(requests)) {
             throw new BackupsUnavailable();
         }
-        String content = "source=" + request.source().requestValue() + "\n"
+        String content = "source=" + requestValue(request.source()) + "\n"
                 + "file=" + request.fileName() + "\n"
                 + "admin=" + request.requestedBy().map(UUID::toString).orElse("") + "\n";
         Path part = requests.resolve(request.id() + RESTORE_REQUEST_EXTENSION + ".part");
@@ -274,6 +275,13 @@ class FileBackupStore implements BackupStore {
             log.warn("The folder {} cannot be listed: {}", folder.getFileName(), unreadable.getClass().getSimpleName());
             return Stream.empty();
         }
+    }
+
+    private static String requestValue(RestoreSource source) {
+        return switch (source) {
+            case BACKUP -> "backup";
+            case UPLOAD -> "upload";
+        };
     }
 
     private static String fileName(Path path) {

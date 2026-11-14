@@ -1,4 +1,4 @@
-package cz.novanadeje.app.operations.domain.diagnostics;
+package cz.novanadeje.app.operations.application.diagnostics;
 
 import java.time.Instant;
 

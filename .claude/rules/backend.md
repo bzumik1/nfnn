@@ -37,7 +37,7 @@ How each context works today is in `docs/system-overview.md`; this file is what 
 - Retry-safe by design (`reliability.md`).
 
 ## REST (`<context>/interfaces/rest`)
-- Paths `/api/<context>/...`; the administration under `/api/admin/<context>/...` (role `ADMIN`, `security.md`). Request and response records only; Jakarta validation on requests with `@Size` limits from domain constants; `Accept-Language` selects texts.
+- Paths `/api/<context>/...`; the administration under `/api/admin/<context>/...` (role `ADMIN`, `security.md`). Request and response records only (`architecture/ResponseRecordRulesTest`: a handler answers with a `…Response` of `interfaces/rest`, nothing, bytes, a text, a resource or an event stream, and a response holds only types of `interfaces/rest`, JDK types and enums); Jakarta validation on requests with `@Size` limits from domain constants; `Accept-Language` selects texts.
 - Errors are problem+json: types `https://nfnn.cz/problems/<context>/<code>` (`ProblemTypes`); validation 400 with `errors[{field,message}]`; 401/403 from the security chain (never a Basic challenge); 429 `rate-limited` from a limiter built like `SignInRateLimiter` (per client address, counted before any hashing or work). A failure outside the `DomainException` kinds (an upstream 502) gets a handler in the context's `interfaces/rest` (`AdminReportProblemHandler`).
 - A public endpoint needs its `permitAll` line in `ApiSecurityConfiguration`; everything else needs the donor JWT. Another donor's resource answers 404.
 - Every endpoint change updates `docs/api-contract.md` in the same PR.

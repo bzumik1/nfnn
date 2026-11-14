@@ -2,7 +2,7 @@ package cz.novanadeje.app.donors.interfaces.rest;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-record TokenErrorResponse(String error, @JsonProperty("error_description") String errorDescription) {
+record TokenErrorResponse(String error, @JsonProperty("error_description") String errorDescription) implements TokenEndpointAnswer {
 
     static final TokenErrorResponse INVALID_GRANT =
             new TokenErrorResponse("invalid_grant", "The grant is invalid, expired, already used or issued to another client.");

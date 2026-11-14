@@ -20,8 +20,8 @@ class OAuthMetadataController {
     }
 
     @GetMapping("/.well-known/oauth-authorization-server")
-    AuthorizationServerMetadata metadata() {
-        return new AuthorizationServerMetadata(
+    AuthorizationServerMetadataResponse metadata() {
+        return new AuthorizationServerMetadataResponse(
                 properties.issuer(),
                 properties.authorizationEndpoint(),
                 properties.issuer() + TOKEN_PATH,
