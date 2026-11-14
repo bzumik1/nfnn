@@ -12,7 +12,7 @@
     <button
       #helpToggle
       type="button"
-      class="accounts-help"
+      class="ui-group-aside accounts-help"
       aria-controls="accounts-help-panel"
       [attr.aria-expanded]="helpOpen()"
       (click)="toggleHelp()"
@@ -227,6 +227,11 @@
     </li>
   </ul>
 
+  @if (actionError()) {
+    <p class="ui-callout ui-callout--danger accounts-error" role="alert">{{ actionError() }}</p>
+  }
+  <p class="accounts-status" role="status">{{ actionDone() }}</p>
+
   @switch (state()) {
     @case ('loading') {
       <p class="accounts-inset accounts-loading" role="status" i18n="@@donor.bankAccounts.loading">
@@ -279,15 +284,10 @@
       }
     }
   }
-
-  @if (actionError()) {
-    <p class="ui-callout ui-callout--danger accounts-error" role="alert">{{ actionError() }}</p>
-  }
-  <p class="accounts-status" role="status">{{ actionDone() }}</p>
 </section>
 
 <ng-template #warning let-text>
-  <p class="account-hint account-hint--warning">
+  <p class="ui-callout ui-callout--warning account-hint account-hint--warning">
     <svg
       class="account-hint-icon"
       aria-hidden="true"

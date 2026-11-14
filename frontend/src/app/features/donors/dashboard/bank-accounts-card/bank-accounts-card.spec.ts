@@ -421,14 +421,19 @@ describe('Given the bank accounts card in the overview', () => {
     const list = element('ul:has(> li.account)');
     expect(list?.classList).toContain('ui-list');
     expect(list?.classList).not.toContain('ui-list--inset');
-    expect(element('.ui-group-title, .ui-group-head, .ui-group-aside, .ui-group-note')).toBeNull();
+    expect(element('.ui-group-title, .ui-group-head, .ui-group-note')).toBeNull();
   });
 
-  it('when the donor has no known account, then the card explains it in its footer under Přidat účet', async () => {
+  it('when the donor has no known account, then the card explains it in its footer under Přidat účet, the last part of the card, after the status line', async () => {
     await respond([]);
 
     const footer = element('.accounts-empty')?.closest('.ui-card__footer');
     expect(footer).not.toBeNull();
+    expect(element('section')?.lastElementChild).toBe(footer);
+    expect(
+      (element('.accounts-status') as HTMLElement).compareDocumentPosition(footer as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(footer?.querySelector('.accounts-nudge')).not.toBeNull();
     expect(
       (element('.accounts-add') as HTMLElement).compareDocumentPosition(footer as HTMLElement) &
@@ -482,7 +487,9 @@ describe('Given the bank accounts card in the overview', () => {
   it('when the donor has known accounts but none verified, then a short nudge under the list says a 1 Kč also brings gifts with an older symbol', async () => {
     await respond([bankAccount({ status: 'AWAITING_PAYMENT', verifiedOn: null })]);
 
-    expect(element('.accounts-list + .accounts-nudge')).not.toBeNull();
+    const nudge = element('.accounts-list ~ .ui-card__footer.accounts-nudge');
+    expect(nudge).not.toBeNull();
+    expect(element('section')?.lastElementChild).toBe(nudge);
     expect(text('.accounts-nudge')).toBe(
       'Posíláte trvalým příkazem se starším symbolem? Ověřte platbou 1 Kč ze stejného účtu a uvidíte i dřívější dary.',
     );
