@@ -28,11 +28,17 @@
   justify-self: stretch;
 }
 
+.proof-status {
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
+
 .proof-status:empty {
   position: absolute;
   margin: 0;
   padding: 0;
-  border: 0;
 }
 
 .proof-problem {

@@ -194,6 +194,7 @@ describe('Given the verification page', () => {
   it('when it opens without a code, then each way to read a code is a card holding its own heading, and nothing on the page is a grouped row', async () => {
     await open('/overit');
 
+    expect(root().querySelectorAll('h2').length).toBeGreaterThan(0);
     for (const title of Array.from(root().querySelectorAll('h2'))) {
       const card = title.closest('section');
       expect(card?.classList).toContain('ui-card');
@@ -320,6 +321,9 @@ describe('Given the verification page', () => {
   it('when a yearly receipt is signed, then the signed data and the gifts each sit in a card under their own title, and verifying another is an action row of a card', async () => {
     await open(`/overit#${FRAGMENT}`, { state: 'signed', receipt: YEARLY, status: 'active' });
 
+    const facts = root().querySelector('[aria-labelledby="verify-data-title"]');
+    expect(facts?.classList).toContain('ui-card--padded');
+    expect(facts?.querySelector('dl')?.classList).toContain('ui-data-list');
     for (const id of ['verify-data-title', 'verify-gifts-title']) {
       const title = root().querySelector(`#${id}`);
       expect(title?.classList).toContain('ui-card__title');

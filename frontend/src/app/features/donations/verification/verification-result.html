@@ -297,82 +297,58 @@
 </section>
 
 @if (receipt(); as data) {
-  <section class="ui-card" aria-labelledby="verify-data-title">
-    <div class="ui-card__bar">
-      <h2 id="verify-data-title" class="ui-card__title" i18n="@@donor.verify.data.title">
-        Údaje v kódu
-      </h2>
-    </div>
-    <dl class="ui-list ui-list--fields verify-data">
-      <div class="ui-list__row ui-list__item ui-list__field">
-        <dt class="ui-list__field-label" i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
-        <dd class="ui-list__field-body">
-          <span class="ui-list__field-value ui-figures">{{ data.number }}</span>
-        </dd>
+  <section class="ui-card ui-card--padded" aria-labelledby="verify-data-title">
+    <h2 id="verify-data-title" class="ui-card__title" i18n="@@donor.verify.data.title">
+      Údaje v kódu
+    </h2>
+    <dl class="ui-data-list verify-data">
+      <div>
+        <dt i18n="@@donor.verify.data.number">Číslo potvrzení</dt>
+        <dd class="ui-figures">{{ data.number }}</dd>
       </div>
-      <div class="ui-list__row ui-list__item ui-list__field">
-        <dt class="ui-list__field-label" i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
-        <dd class="ui-list__field-body">
-          <span class="ui-list__field-value">{{ data.issuedOn }}</span>
-        </dd>
+      <div>
+        <dt i18n="@@donor.verify.data.issuedOn">Vystaveno</dt>
+        <dd>{{ data.issuedOn }}</dd>
       </div>
       @if (data.replaces; as replaced) {
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.replaces">
-            Nahrazuje potvrzení
-          </dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value" i18n="@@donor.verify.data.replacesValue"
-              >{{ replaced.number }} ze dne {{ replaced.issuedOn }}</span
-            >
+        <div>
+          <dt i18n="@@donor.verify.data.replaces">Nahrazuje potvrzení</dt>
+          <dd i18n="@@donor.verify.data.replacesValue">
+            {{ replaced.number }} ze dne {{ replaced.issuedOn }}
           </dd>
         </div>
       }
-      <div class="ui-list__row ui-list__item ui-list__field">
-        <dt class="ui-list__field-label" i18n="@@donor.verify.data.donor">Dárce</dt>
-        <dd class="ui-list__field-body">
-          <span class="ui-list__field-value">{{ data.donorName }}</span>
-        </dd>
+      <div>
+        <dt i18n="@@donor.verify.data.donor">Dárce</dt>
+        <dd>{{ data.donorName }}</dd>
       </div>
       @if (data.donorIdentifier) {
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value">{{ data.donorIdentifier }}</span>
-          </dd>
+        <div>
+          <dt i18n="@@donor.verify.data.companyIdentifier">IČO</dt>
+          <dd>{{ data.donorIdentifier }}</dd>
         </div>
       }
-      <div class="ui-list__row ui-list__item ui-list__field">
-        <dt class="ui-list__field-label" i18n="@@donor.verify.data.address">Adresa</dt>
-        <dd class="ui-list__field-body">
-          <span class="ui-list__field-value">{{ data.donorAddress }}</span>
-        </dd>
+      <div>
+        <dt i18n="@@donor.verify.data.address">Adresa</dt>
+        <dd>{{ data.donorAddress }}</dd>
       </div>
       @if (data.year === null) {
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value">{{ data.gifts[0].receivedOn }}</span>
-          </dd>
+        <div>
+          <dt i18n="@@donor.verify.data.giftDate">Dar ze dne</dt>
+          <dd>{{ data.gifts[0].receivedOn }}</dd>
         </div>
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.amount">Částka</dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
-          </dd>
+        <div>
+          <dt i18n="@@donor.verify.data.amount">Částka</dt>
+          <dd class="ui-figures">{{ data.total }}</dd>
         </div>
       } @else {
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.year">Za rok</dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value">{{ data.year }}</span>
-          </dd>
+        <div>
+          <dt i18n="@@donor.verify.data.year">Za rok</dt>
+          <dd>{{ data.year }}</dd>
         </div>
-        <div class="ui-list__row ui-list__item ui-list__field">
-          <dt class="ui-list__field-label" i18n="@@donor.verify.data.total">Celkem</dt>
-          <dd class="ui-list__field-body">
-            <span class="ui-list__field-value ui-figures">{{ data.total }}</span>
-          </dd>
+        <div>
+          <dt i18n="@@donor.verify.data.total">Celkem</dt>
+          <dd class="ui-figures">{{ data.total }}</dd>
         </div>
       }
     </dl>
@@ -399,7 +375,7 @@
 }
 
 @if (checked()) {
-  <p class="verify-note verify-local">
+  <p class="ui-footnote verify-local">
     @if (statusAnswered()) {
       <ng-container i18n="@@donor.verify.local.withStatus"
         >Podpis jsme ověřili ve vašem zařízení. Fondu jsme poslali jen otisk podepsaných údajů, aby

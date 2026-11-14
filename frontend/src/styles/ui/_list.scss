@@ -6,8 +6,7 @@
   padding: 0;
   margin: 0;
 
-  > li + li,
-  > .ui-list__item + .ui-list__item {
+  > li + li {
     border-top: 1px solid var(--color-divider);
   }
 }
@@ -160,10 +159,6 @@ div.ui-list__row {
   container: list-card / inline-size;
 }
 
-.ui-card > .ui-list--fields {
-  container: list-card list-fields / inline-size;
-}
-
 .ui-card {
   --list-row-padding-inline: var(--space-6);
 }
@@ -255,8 +250,7 @@ div.ui-list__row {
     font-weight: var(--weight-list-inset-title);
   }
 
-  .ui-list__value:not(.ui-list__count),
-  .ui-list__field-value {
+  .ui-list__value:not(.ui-list__count) {
     font-weight: var(--weight-list-inset-title);
   }
 }
@@ -271,7 +265,7 @@ div.ui-list__row {
   container: list-fields / inline-size;
 }
 
-.ui-list--fields .ui-list__field {
+.ui-list--inset .ui-list__field {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
@@ -302,7 +296,7 @@ div.ui-list__row {
   flex: 1 1 0;
   color: var(--color-text);
   font-variant-numeric: var(--numeric-figures);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-list-inset-title);
   white-space: normal;
   overflow-wrap: anywhere;
 
@@ -312,7 +306,7 @@ div.ui-list__row {
 }
 
 @include bp.container-up(list-fields, cards) {
-  .ui-list--fields .ui-list__field {
+  .ui-list--inset .ui-list__field {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas: 'label body';
   }

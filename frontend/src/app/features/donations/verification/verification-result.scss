@@ -34,6 +34,13 @@
   margin-top: var(--space-4);
 }
 
+.verify-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin-top: var(--space-4);
+}
+
 .verify-local {
   margin: calc(-1 * var(--space-2)) 0 var(--space-5);
   padding-inline: var(--space-6);
@@ -44,6 +51,7 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
+    column-gap: var(--space-3);
 
     > .ui-list__title {
       flex: 1 0 auto;
