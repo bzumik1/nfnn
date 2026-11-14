@@ -167,6 +167,7 @@ class AdminActionFactsTest {
                         "CHANGE_NEWS_LOOK_BACK_YEAR", Map.of("slug", "ohlednuti-2025", "year", "2025", "title", "Ohlédnutí za rokem 2025")),
                 arguments("CHANGE_NEWS_LOOK_BACK_YEAR", "Aktualita " + OTHER + " „ohlednuti-2025“ se už neohlíží za žádným rokem; titulek „Ohlédnutí“",
                         "CHANGE_NEWS_LOOK_BACK_YEAR.removed", Map.of("slug", "ohlednuti-2025", "title", "Ohlédnutí")),
+                arguments("UPLOAD_IMAGE", "Fotka " + OTHER + " nahrána", "UPLOAD_IMAGE", Map.of()),
                 arguments("CHANGE_PHOTO_FOCAL_POINT", "Bod výřezu fotky " + OTHER + " nastaven na 0 % zleva a 100 % shora", "CHANGE_PHOTO_FOCAL_POINT",
                         Map.of("x", "0", "y", "100")),
                 arguments("CHANGE_PHOTO_FOCAL_POINT", "Bod výřezu fotky " + OTHER + " zrušen, fotka se ořezává kolem středu", "CHANGE_PHOTO_FOCAL_POINT.removed",

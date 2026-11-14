@@ -227,6 +227,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | CHANGE_FOUNDERS_NOTE | Upraveno slovo zakladatelů.    |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
+      | UPLOAD_IMAGE         | Nahrána fotka.                 |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
 
   Scenario: The founders note keeps its paragraphs, and emptying it removes it

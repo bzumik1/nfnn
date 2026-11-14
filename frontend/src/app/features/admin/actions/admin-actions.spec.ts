@@ -302,6 +302,21 @@ describe('Given an administrator on the history page', () => {
     expect(rowText(removed)).not.toContain('REMOVE_SIGNATURE');
   });
 
+  it('when a photo was uploaded, then the change is named in Czech, not by its code', () => {
+    firstPage([
+      adminAction({
+        action: 'UPLOAD_IMAGE',
+        summary: 'Nahrána fotka.',
+        details: 'Fotka 019a1c00-0000-7000-8000-00000000f001 nahrána',
+        client: 'claude.ai',
+      }),
+    ]);
+
+    const uploaded = rowText(rows()[0]);
+    expect(uploaded).toContain('Nahrání fotky');
+    expect(uploaded).not.toContain('UPLOAD_IMAGE');
+  });
+
   it('when a receipt was issued, then the change is named in Czech, not by its code', () => {
     firstPage([
       adminAction({

@@ -58,6 +58,19 @@ Feature: An administrator writes news articles with photos and publishes them on
     Then the response status is 404
     And the problem type ends with "content/media-not-found"
 
+  Scenario: Every uploaded photo is in the audit trail, which names the application that uploaded it
+    Given "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When "Jana" uploads a 1600 by 1000 pixel PNG image named "zahrada.png"
+    Then the response status is 201
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token uploads a 800 by 600 pixel PNG image named "louka.png"
+    Then the response status is 201
+    When "Jana" asks for the admin actions
+    Then the admin actions came through these applications:
+      | action       | client    |
+      | UPLOAD_IMAGE |           |
+      | UPLOAD_IMAGE | claude.ai |
+
   Scenario: A file that is not an image and a file over 10 MB are refused
     When "Jana" uploads a text file as an image
     Then the response status is 400

@@ -35,12 +35,12 @@ class AdminMediaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    UploadedImageResponse upload(@RequestPart("file") MultipartFile file) {
+    UploadedImageResponse upload(@AuthenticationPrincipal Jwt jwt, @RequestPart("file") MultipartFile file) {
         if (file.isEmpty()) {
             throw new UnsupportedImage("it is empty");
         }
         try {
-            return UploadedImageResponse.from(uploads.upload(file.getBytes()));
+            return UploadedImageResponse.from(uploads.upload(UUID.fromString(jwt.getSubject()), file.getBytes()));
         } catch (IOException unreadable) {
             throw new UnsupportedImage("it could not be read");
         }

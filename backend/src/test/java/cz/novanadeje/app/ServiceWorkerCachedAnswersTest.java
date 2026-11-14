@@ -158,9 +158,9 @@ class ServiceWorkerCachedAnswersTest {
     }
 
     private List<String> cachedPaths() throws IOException {
-        UploadedImage photo = uploads.upload(png());
-        LocalDate today = LocalDate.now(clock);
         UUID admin = UuidV7.generate(clock.instant());
+        UploadedImage photo = uploads.upload(admin, png());
+        LocalDate today = LocalDate.now(clock);
         NewsArticleView article = news.create(admin, new NewsArticleCommand("Den otevřených dveří", Optional.empty(), Optional.of("Akce"),
                 "Krátký úvod", "Text článku", Optional.of(photo.id()), Optional.of("Popis fotky"), Optional.empty())).view();
         news.publish(admin, article.id(), today.minusDays(1), ExpectedVersion.none());

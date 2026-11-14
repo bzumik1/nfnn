@@ -200,6 +200,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
         shapes.put("CHANGE_NEWS_LOOK_BACK_YEAR", List.of(
                 full("Aktualita " + ID + " „(?<slug>[^“]+)“ se ohlíží za rokem (?<year>\\d{4}); titulek „(?<title>(?s:.+))“"),
                 variant("removed", "Aktualita " + ID + " „(?<slug>[^“]+)“ se už neohlíží za žádným rokem; titulek „(?<title>(?s:.+))“")));
+        shapes.put("UPLOAD_IMAGE", List.of(full("Fotka " + ID + " nahrána")));
         shapes.put("CHANGE_PHOTO_FOCAL_POINT", List.of(
                 full("Bod výřezu fotky " + ID + " nastaven na (?<x>\\d{1,3}) % zleva a (?<y>\\d{1,3}) % shora"),
                 variant("removed", "Bod výřezu fotky " + ID + " zrušen, fotka se ořezává kolem středu")));

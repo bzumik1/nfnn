@@ -37,6 +37,7 @@ Feature: An administrator shows a photo in the closing Přispět band and remove
     Then the admin actions are:
       | action                   | summary                          |
       | CHANGE_DONATE_BAND_PHOTO | Nastavena fotka v pruhu Přispět. |
+      | UPLOAD_IMAGE             | Nahrána fotka.                   |
     When someone without a token asks for the home content
     Then the response status is 200
     And the home donate band says:
@@ -164,6 +165,7 @@ Feature: An administrator shows a photo in the closing Přispět band and remove
       | action                   | client    |
       | REMOVE_DONATE_BAND_PHOTO | claude.ai |
       | CHANGE_DONATE_BAND_PHOTO | claude.ai |
+      | UPLOAD_IMAGE             |           |
 
   Scenario: A connected application with the reading permission only reads the donate band but cannot change it
     Given "Jana" uploads a 1600 by 900 pixel PNG image named "pruh.png"
