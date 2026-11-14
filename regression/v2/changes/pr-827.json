@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then on a phone the yearly receipt of a completed year is the last row of that year",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > when the screen is a phone, then the yearly receipt of a completed year stands at the heading of that year, before its gifts",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the yearly receipt is again a small button at its year's heading, not the last row of the year's list",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then on a phone a yearly receipt being prepared says so in its row and marks the row busy and unavailable",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then a yearly receipt being prepared says so on its button and marks the button busy and unavailable",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the busy state stays, on the yearly receipt button that replaces the action row",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then on a wide screen the yearly receipt is a row of its own list under the table of its year",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > when the screen is wide, then the yearly receipt of a completed year stands at the heading of that year, before its gifts",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the yearly receipt is again a small button at its year's heading, not an inset row under the table",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note of a year that is not over follows the gifts of that year",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note of a year that is not over stands at the heading of that year, before its gifts",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the note of a running year is again at its year's heading, as before #710",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note about checking the bank follows the bank check, before the years",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note about checking the bank and the standing order guide close the card, after the years",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the note on the hourly bank search is again in the footer of the card Všechny dary, as before #710",
+    "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the standing order guide is a disclosure row at the end of the page",
+    "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note about checking the bank and the standing order guide close the card, after the years",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the standing order guide is again the underlined link in the card's footer, not a grouped disclosure row",
+    "contract": "docs/frontend-overview.md"
+  }
+]
