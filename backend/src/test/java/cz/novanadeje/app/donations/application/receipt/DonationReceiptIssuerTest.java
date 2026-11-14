@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordNotFound;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptId;
@@ -206,6 +207,22 @@ class DonationReceiptIssuerTest {
                 .isInstanceOf(ReceiptSigningKeyUnpublished.class);
 
         verifyNoInteractions(receipts, donations, donorRecords, freezer, signatories, events);
+    }
+
+    @Test
+    @DisplayName("Given the running year on New Year's Eve, when the donor or the administration issues its yearly receipt, then it is refused as not yet completed under the lock and no number is taken and nothing saved")
+    void should_refuse_before_numbering_when_yearly_receipt_issued_given_running_year() {
+        UUID petr = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
+        LocalDate newYearsEve = LocalDate.of(2026, 12, 31);
+        givenDonationsOfJana(jana(), MARCH);
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, newYearsEve)).isInstanceOf(YearNotYetCompleted.class)
+                .hasFieldOrPropertyWithValue("code", "donations/year-not-yet-completed");
+        assertThatThrownBy(() -> issuer.issueForYearInBulk(petr, BROWSER, JANA, YEAR_2026, newYearsEve)).isInstanceOf(YearNotYetCompleted.class);
+
+        verify(receipts, never()).nextSerial();
+        verify(receipts, never()).save(any());
+        verifyNoInteractions(freezer);
     }
 
     @Test

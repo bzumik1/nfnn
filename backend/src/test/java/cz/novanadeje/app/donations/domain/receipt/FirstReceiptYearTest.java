@@ -39,7 +39,7 @@ class FirstReceiptYearTest {
     }
 
     @Test
-    @DisplayName("Given receipts from 2026, when the yearly receipt of 2026 is required on 31 December 2026, then the year is not completed yet")
+    @DisplayName("Given receipts from 2026, when the yearly receipt of the running year or a later one is required, then the year is not completed yet")
     void should_refuse_yearly_receipt_when_required_on_new_years_eve_given_running_year() {
         assertThatThrownBy(() -> FROM_2026.requireYearlyReceiptFor(Year.of(2026), LocalDate.of(2026, 12, 31)))
                 .isInstanceOf(YearNotYetCompleted.class)
