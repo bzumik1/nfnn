@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.account.VerifiedAccountEmailsAdapterTest > Given an account with a confirmed e-mail, when its e-mail is asked for and the address is checked, then both name the account",
+    "reason": "#885 (#621 R3-A5): VerifiedAccountEmails and AccountEmails merged into one port shared/application/account/AccountEmails, so the adapter and its test are renamed and the cases name which e-mail is asked for",
+    "replacement": "donors.infrastructure.account.AccountEmailsAdapterTest > Given an account with a confirmed e-mail, when its e-mail and its confirmed e-mail are asked for and the address is checked, then all name the account",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.account.VerifiedAccountEmailsAdapterTest > Given an account whose e-mail is not confirmed, when its e-mail is asked for and the address is checked, then neither counts it",
+    "reason": "#885 (#621 R3-A5): VerifiedAccountEmails and AccountEmails merged into one port shared/application/account/AccountEmails, so the adapter and its test are renamed and the cases name which e-mail is asked for",
+    "replacement": "donors.infrastructure.account.AccountEmailsAdapterTest > Given an account whose e-mail is not confirmed, when its confirmed e-mail is asked for and the address is checked, then neither counts it",
+    "contract": "docs/system-overview.md, shared"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.account.VerifiedAccountEmailsAdapterTest > Given no account, when an e-mail is asked for and an address is checked, then there is none",
+    "reason": "#885 (#621 R3-A5): VerifiedAccountEmails and AccountEmails merged into one port shared/application/account/AccountEmails, so the adapter and its test are renamed and the cases name which e-mail is asked for",
+    "replacement": "donors.infrastructure.account.AccountEmailsAdapterTest > Given no account, when its e-mails are asked for and an address is checked, then there is none",
+    "contract": "docs/system-overview.md, shared"
+  }
+]
