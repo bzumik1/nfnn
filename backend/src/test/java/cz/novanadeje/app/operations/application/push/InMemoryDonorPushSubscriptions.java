@@ -34,6 +34,11 @@ class InMemoryDonorPushSubscriptions implements DonorPushSubscriptionRepository 
     }
 
     @Override
+    public synchronized List<DonorPushSubscription> findWithYearlyReceiptNotificationsOf(Collection<UUID> donorIds) {
+        return rows.values().stream().filter(row -> donorIds.contains(row.donorId()) && row.notifications().yearlyReceipts()).toList();
+    }
+
+    @Override
     public synchronized void lockWrites() {
     }
 

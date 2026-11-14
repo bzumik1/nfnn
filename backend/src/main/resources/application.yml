@@ -126,6 +126,8 @@ app:
       cron: "0 40 5 * * *"
     bank-logos:
       cron: "0 50 5 * * *"
+    yearly-receipt-announcement:
+      cron: "0 0 10 * * *"
     report:
       cron: "0 0 * * * *"
       recipient: ${REPORT_RECIPIENT:${CONTACT_RECIPIENT:info@nfnn.cz}}

@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 @Repository
 class JpaDonorPushSubscriptionRepository implements DonorPushSubscriptionRepository {
@@ -43,13 +44,12 @@ class JpaDonorPushSubscriptionRepository implements DonorPushSubscriptionReposit
 
     @Override
     public List<DonorPushSubscription> findWithGiftNotificationsOf(Collection<UUID> donorIds) {
-        List<UUID> donors = List.copyOf(donorIds);
-        List<DonorPushSubscription> found = new ArrayList<>();
-        for (int from = 0; from < donors.size(); from += DONORS_PER_QUERY) {
-            jpa.findByDonorIdInAndGiftNotificationsTrueOrderByCreatedAtAscIdAsc(donors.subList(from, Math.min(from + DONORS_PER_QUERY, donors.size())))
-                    .forEach(entity -> found.add(entity.toDomain()));
-        }
-        return List.copyOf(found);
+        return inChunks(donorIds, jpa::findByDonorIdInAndGiftNotificationsTrueOrderByCreatedAtAscIdAsc);
+    }
+
+    @Override
+    public List<DonorPushSubscription> findWithYearlyReceiptNotificationsOf(Collection<UUID> donorIds) {
+        return inChunks(donorIds, jpa::findByDonorIdInAndYearlyReceiptNotificationsTrueOrderByCreatedAtAscIdAsc);
     }
 
     @Override
@@ -101,5 +101,14 @@ class JpaDonorPushSubscriptionRepository implements DonorPushSubscriptionReposit
     @Override
     public int deleteAll() {
         return jpa.deleteEvery();
+    }
+
+    private static List<DonorPushSubscription> inChunks(Collection<UUID> donorIds, Function<List<UUID>, List<DonorPushSubscriptionJpaEntity>> query) {
+        List<UUID> donors = List.copyOf(donorIds);
+        List<DonorPushSubscription> found = new ArrayList<>();
+        for (int from = 0; from < donors.size(); from += DONORS_PER_QUERY) {
+            query.apply(donors.subList(from, Math.min(from + DONORS_PER_QUERY, donors.size()))).forEach(entity -> found.add(entity.toDomain()));
+        }
+        return List.copyOf(found);
     }
 }
