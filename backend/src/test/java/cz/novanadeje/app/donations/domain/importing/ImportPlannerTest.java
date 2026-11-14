@@ -106,10 +106,10 @@ class ImportPlannerTest {
     }
 
     @Test
-    @DisplayName("Given a history start before the coverage, when the startup run plans, then it attempts the deep history again")
-    void should_reattempt_deep_history_when_startup_given_history_from_before_coverage() {
+    @DisplayName("Given a coverage and a history start before it, when the startup run plans, then it asks only for the overlap window")
+    void should_plan_only_overlap_when_startup_given_coverage_and_history_from_before_coverage() {
         assertThat(ImportPlanner.plan(coverage("2026-07-20", "2026-10-16"), TODAY, DEEP, STARTUP))
-                .isEqualTo(new ImportPlan(period("2025-01-01", "2026-10-17"), true));
+                .isEqualTo(new ImportPlan(period("2026-10-13", "2026-10-17"), false));
     }
 
     @Test

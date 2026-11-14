@@ -372,7 +372,7 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
       | 1234567/0800  | ACTIVE |               |                | 1             | 30000            | 2026-09-12     | false  |
     And bank account "1234567/0800" lists confirmed symbols "612345678"
 
-  Scenario: A deeper import that brings a second old symbol from before the verification withdraws an open question
+  Scenario: Older payments loaded on request that bring a second old symbol from before the verification withdraw an open question
     Given today is 2026-10-17
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -384,10 +384,9 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     And no bank payment 1001 is stored
     And "Jana" asks for her bank accounts
     And bank account "1234567/0800" asks about symbol "6123456789" with 1 payment from "2026-09" to "2026-09"
-    And the foundation wants bank history from 2025-01-01
     And the bank history is unlocked
     And 1 days pass
-    And the application starts the import
+    And the older bank payments are loaded from 2025-01-01
     When "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     Then the response status is 409
     And the problem type ends with "donations/symbol-offer-not-available"
@@ -395,7 +394,7 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     When "Jana" asks for her bank accounts
     Then bank account "1234567/0800" asks about no symbol
 
-  Scenario: After the confirmation a deeper import pairs the older payments with the confirmed symbol in the same run
+  Scenario: After the confirmation the older payments loaded on request are paired with the confirmed symbol in the same run
     Given today is 2026-10-17
     And a person "Jana" is registered
     And the bank account has these movements:
@@ -407,10 +406,9 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     And no bank payment 1001 is stored
     And "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     And the confirmation paired 1 payment and changed no yearly receipt
-    And the foundation wants bank history from 2025-01-01
     And the bank history is unlocked
     When 1 days pass
-    And the application starts the import
+    And the older bank payments are loaded from 2025-01-01
     Then bank payment 1001 is paired with "Jana" by confirmed symbol
     And the import paired 0 by symbol, 0 by account and 1 by confirmed symbol
 

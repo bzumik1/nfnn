@@ -50,7 +50,7 @@ Feature: Incoming bank payments are imported from Fio
     And the bank movements are covered from 2026-07-20 to 2026-10-17
     And no follow-up import is due
 
-  Scenario: The deep history is attempted again at the next start until it is filled
+  Scenario: A later start asks only for the overlap and leaves the older payments to an administrator's request
     Given today is 2026-10-17
     And the foundation wants bank history from 2025-01-01
     And the bank account has these movements:
@@ -60,17 +60,15 @@ Feature: Incoming bank payments are imported from Fio
     And the application starts the import
     And the follow-up import runs
     When the application starts the import
-    Then Fio was asked for movements from 2025-01-01 to 2026-10-17
-    And the import failed because the history older than 90 days is locked
+    Then Fio was asked for movements from 2026-10-14 to 2026-10-17
+    And 1 bank payments are stored
     And the bank movements are covered from 2026-07-20 to 2026-10-17
     Given the bank history is unlocked
     And the bank reports the period 2025-01-01 to 2026-10-17
-    When the application starts the import
+    When the older bank payments are loaded from 2025-01-01
     Then Fio was asked for movements from 2025-01-01 to 2026-10-17
     And 2 bank payments are stored
     And the bank movements are covered from 2025-01-01 to 2026-10-17
-    When the application starts the import
-    Then Fio was asked for movements from 2026-10-14 to 2026-10-17
 
   Scenario: An hourly import asks only for the days since the last run with a three-day overlap
     Given today is 2026-10-17
