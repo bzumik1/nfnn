@@ -31,12 +31,24 @@ interface MediaImageJpaRepository extends JpaRepository<MediaImageJpaEntity, UUI
     @Query("select new cz.novanadeje.app.content.domain.media.MediaSize(m.width, m.height) from MediaImageJpaEntity m where m.id = :id")
     Optional<MediaSize> findSizeById(UUID id);
 
+    @Query("select m.id as id, m.width as width, m.height as height from MediaImageJpaEntity m where m.id in :ids")
+    List<SizeRow> findSizes(Collection<UUID> ids);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update MediaImageJpaEntity m set m.focalX = :x, m.focalY = :y where m.id = :id")
     int placeFocalPoint(UUID id, Short x, Short y);
 
     @Query("select m.id as id, m.focalX as x, m.focalY as y from MediaImageJpaEntity m where m.id in :ids and m.focalX is not null")
     List<FocalPointRow> findFocalPoints(Collection<UUID> ids);
+
+    interface SizeRow {
+
+        UUID getId();
+
+        int getWidth();
+
+        int getHeight();
+    }
 
     interface FocalPointRow {
 
