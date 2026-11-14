@@ -54,7 +54,7 @@
     backdrop-filter: blur(var(--blur-bar));
     mask-image: linear-gradient(
       to bottom,
-      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade) / 3),
+      var(--scroll-edge-tone) var(--status-bar-inset),
       transparent
     );
   }
