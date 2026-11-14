@@ -6,7 +6,6 @@ import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
 import { AuthStore } from '../auth/auth-store';
-import { AccountBadges } from '../layout/account-badges';
 
 import { AppBadge } from './app-badge';
 import { OPEN_ALERTS_REFRESH_GAP_MS, OpenAlerts } from './open-alerts';
@@ -209,25 +208,5 @@ describe('Given the app open on any page', () => {
 
     expect(alerts.alerts()).toBeNull();
     expect(badge.show).not.toHaveBeenCalled();
-  });
-
-  it('when the server names open faults, then the account button counts them, and when they are resolved the count goes', () => {
-    signsInAsAdministrator();
-    http.expectOne(PUSH_URL).flush(answer([MAIL]));
-    const badges = TestBed.inject(AccountBadges);
-
-    expect(badges.total()).toEqual({ count: 1, description: '1 porucha' });
-
-    alerts.accept([]);
-    expect(badges.total()).toBeNull();
-  });
-
-  it('when the administrator signs out, then the account button no longer counts faults', () => {
-    signsInAsAdministrator();
-    http.expectOne(PUSH_URL).flush(answer([MAIL]));
-
-    signsOut();
-
-    expect(TestBed.inject(AccountBadges).total()).toBeNull();
   });
 });

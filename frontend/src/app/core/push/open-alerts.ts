@@ -4,10 +4,8 @@ import { DestroyRef, effect, inject, Injectable, Injector, signal, untracked } f
 import { Subscription } from 'rxjs';
 
 import { AuthStore } from '../auth/auth-store';
-import { AccountBadges } from '../layout/account-badges';
 
-import { faultDescription } from './alert-areas';
-import { ALERTS_PAGE, openAlertCountOf } from './alert-routes';
+import { openAlertCountOf } from './alert-routes';
 import { AppBadge } from './app-badge';
 import { OpenAlert, OpenAlertsApi } from './open-alerts-api';
 import { SERVICE_WORKER_PUSH } from './service-worker-push';
@@ -18,7 +16,6 @@ export const OPEN_ALERTS_REFRESH_GAP_MS = 60_000;
 export class OpenAlerts {
   private readonly api = inject(OpenAlertsApi);
   private readonly badge = inject(AppBadge);
-  private readonly accountBadges = inject(AccountBadges);
   private readonly auth = inject(AuthStore);
   private readonly push = inject(SERVICE_WORKER_PUSH);
   private readonly document = inject(DOCUMENT);
@@ -76,10 +73,6 @@ export class OpenAlerts {
     if (this.auth.isAdmin()) {
       this.current.set(alerts);
       this.badge.show(alerts.length);
-      this.accountBadges.show(ALERTS_PAGE, {
-        count: alerts.length,
-        description: faultDescription(alerts.length),
-      });
     }
   }
 
@@ -117,6 +110,5 @@ export class OpenAlerts {
     this.reading = null;
     this.readAgain = false;
     this.current.set(null);
-    this.accountBadges.clear(ALERTS_PAGE);
   }
 }

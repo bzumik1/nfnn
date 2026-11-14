@@ -1,5 +1,7 @@
 /// <reference types="@angular/localize" />
 
+import { faultDescription } from '../../core/push/alert-areas';
+import { OpenAlerts } from '../../core/push/open-alerts';
 import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
@@ -67,7 +69,14 @@ export class AppHeader {
     { initialValue: pathOf(this.router.url) },
   );
   private readonly badges = inject(AccountBadges);
-  protected readonly accountBadge = computed(() => this.badges.total(this.path()));
+  private readonly openAlerts = inject(OpenAlerts).alerts;
+  protected readonly faultCount = computed(() => this.openAlerts()?.length ?? 0);
+  protected readonly accountBadge = computed(() => {
+    const faults = this.faultCount();
+    return faults > 0
+      ? { count: faults, description: faultDescription(faults) }
+      : this.badges.total(this.path());
+  });
   private readonly portraits = inject(AccountPortrait);
   protected readonly portrait = this.portraits.url;
   protected readonly accountOpen = linkedSignal({
