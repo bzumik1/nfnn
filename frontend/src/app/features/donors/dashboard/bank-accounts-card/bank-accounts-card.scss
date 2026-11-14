@@ -4,10 +4,36 @@
   display: block;
 }
 
+.accounts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5) var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+}
+
+.accounts-title {
+  padding: 0;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 4px;
+  }
+}
+
 .accounts-help {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1-5);
+}
+
+.accounts-inset {
+  display: block;
+  padding-inline: var(--space-6);
 }
 
 .accounts-help-icon {
@@ -40,10 +66,28 @@
 
 .accounts-list {
   --list-lead-size: var(--space-10);
+
+  border-top: 1px solid var(--color-divider);
+}
+
+.accounts-add {
+  color: var(--color-accent);
 }
 
 .accounts-add:disabled .ui-list__glyph {
   color: inherit;
+}
+
+.accounts-loading {
+  padding-block: var(--space-4) var(--space-5);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-soft);
+}
+
+.accounts-load-error,
+.accounts-error {
+  margin: var(--space-4) var(--space-6) var(--space-5);
 }
 
 .accounts-load-error {
@@ -67,6 +111,7 @@
 @include bp.container-down(account, tabs) {
   .account > .account-row {
     grid-template-columns: minmax(0, 1fr);
+    padding-inline: var(--space-4);
     grid-template-areas:
       'lead'
       'title'
@@ -146,7 +191,10 @@
   max-width: 560px;
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
-  color: var(--color-text-muted);
+
+  &:not(.ui-callout) {
+    color: var(--color-text-muted);
+  }
 
   strong {
     color: var(--color-text);
@@ -157,7 +205,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  color: var(--color-warning);
+  margin: 0;
 }
 
 .account-hint-icon {
@@ -165,8 +213,18 @@
   margin-top: var(--space-0-75);
 }
 
+.accounts-footer > p + p {
+  margin-top: var(--space-2-5);
+}
+
 .accounts-nudge strong {
   color: var(--color-text);
+}
+
+.accounts-status:not(:empty) {
+  padding: var(--space-4) var(--space-6) var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-success);
 }
 
 .account--disconnected .account-number {
@@ -181,6 +239,13 @@
 
 .account-action--apart {
   margin-top: var(--space-2-5);
+}
+
+.account-confirm {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .account-confirm-text {
