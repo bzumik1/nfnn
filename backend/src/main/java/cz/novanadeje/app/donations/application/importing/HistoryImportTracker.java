@@ -20,7 +20,7 @@ public class HistoryImportTracker {
         return Optional.ofNullable(last.get());
     }
 
-    public boolean current(long runId) {
+    boolean current(long runId) {
         HistoryImportRun run = last.get();
         return run != null && run.id() == runId && run.pending();
     }
@@ -48,7 +48,7 @@ public class HistoryImportTracker {
         });
     }
 
-    public void abandoned(long runId, ImportFailureKind kind, Instant at) {
+    void abandoned(long runId, ImportFailureKind kind, Instant at) {
         update(runId, run -> run.pending() ? run.failed(kind, at) : run);
     }
 
