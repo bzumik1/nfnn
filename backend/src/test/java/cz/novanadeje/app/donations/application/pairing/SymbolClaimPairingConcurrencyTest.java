@@ -26,6 +26,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportCoverage;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -188,7 +189,7 @@ class SymbolClaimPairingConcurrencyTest {
 
     private DonorReference storedJanaWithProvedAccount() {
         Instant now = Instant.now();
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), "Jana Nováková",
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(now)), new DonorName("Jana Nováková"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol(JANAS_SYMBOL), LocaleCode.CS, now);
         BankPayment proof = payment(9101, LocalDate.of(2026, 9, 1), Money.czk(100), Optional.of(ACCOUNT), JANAS_SYMBOL, "OVERENI UCTU");
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {

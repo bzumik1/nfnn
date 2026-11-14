@@ -139,7 +139,7 @@ public class SecondFactorRecoveryService {
                 .map(other -> new AdministratorSecondFactorRecovered.Recipient(other.email(), other.preferredLocale()))
                 .toList();
         if (!others.isEmpty()) {
-            events.publishEvent(new AdministratorSecondFactorRecovered(administrator.id().value(), administrator.name(), administrator.email(),
+            events.publishEvent(new AdministratorSecondFactorRecovered(administrator.id().value(), administrator.name().value(), administrator.email(),
                     senderAccount, others));
         }
     }

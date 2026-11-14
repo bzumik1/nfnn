@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationToken;
 import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -162,7 +163,7 @@ class DonorEmailClaimConcurrencyTest {
 
     private Donor verified(String name, String email, String symbol) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), null,
+        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), null,
                 new VariableSymbol(symbol), LocaleCode.CS, now);
         donor.verifyEmail(now);
         return donor;

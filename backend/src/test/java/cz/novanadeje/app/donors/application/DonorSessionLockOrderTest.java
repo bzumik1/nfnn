@@ -10,6 +10,7 @@ import cz.novanadeje.app.donors.domain.InvalidRefreshToken;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RefreshTokenSecret;
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -64,7 +65,7 @@ class DonorSessionLockOrderTest {
     @BeforeEach
     void aDonor() {
         new DatabaseCleaner(jdbc).emptyAllTables();
-        jana = Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, "Jana Nováková", null,
+        jana = Donor.register(DonorId.newId(clock.instant()), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, clock.instant());
         inTransaction(() -> donors.save(jana));

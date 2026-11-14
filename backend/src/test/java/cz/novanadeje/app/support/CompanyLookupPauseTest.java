@@ -3,9 +3,9 @@ package cz.novanadeje.app.support;
 import cz.novanadeje.app.donors.application.CompanyRegistry;
 import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

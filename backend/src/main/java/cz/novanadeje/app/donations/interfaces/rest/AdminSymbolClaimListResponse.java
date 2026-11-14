@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.application.admin.SymbolClaimView;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -21,7 +22,7 @@ record AdminSymbolClaimListResponse(List<Item> items) {
             return new Item(
                     view.claim().id().value(),
                     view.claim().donor().value(),
-                    view.donor().map(DonorRecord::name).orElse(null),
+                    view.donor().map(DonorRecord::name).map(DonorName::value).orElse(null),
                     view.claim().account().display(),
                     view.claim().symbol().value(),
                     view.claim().answer(),

@@ -22,6 +22,8 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -106,7 +108,7 @@ class DonorRecordServiceTest {
         DonorRecord saved = savedRecord();
         assertThat(saved.id()).isEqualTo(DONOR);
         assertThat(saved.type()).isEqualTo(DonorType.PERSON);
-        assertThat(saved.name()).isEqualTo("Jana Nováková");
+        assertThat(saved.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(saved.companyIdentifier()).isEmpty();
         assertThat(saved.address()).isEqualTo(ADDRESS);
         assertThat(saved.variableSymbol()).isEqualTo(SYMBOL);
@@ -121,25 +123,25 @@ class DonorRecordServiceTest {
     void should_save_company_record_when_registered_given_unknown_company() {
         when(donorRecords.findById(DONOR)).thenReturn(Optional.empty());
 
-        service.register(new RegisterDonorRecordCommand(DONOR_ID, DonorType.COMPANY, "Stavby Novák s.r.o.", Optional.of("45274649"),
+        service.register(new RegisterDonorRecordCommand(DONOR_ID, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), Optional.of(new CompanyIdentifier("45274649")),
                 ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT));
 
         DonorRecord saved = savedRecord();
         assertThat(saved.type()).isEqualTo(DonorType.COMPANY);
-        assertThat(saved.companyIdentifier()).contains("45274649");
+        assertThat(saved.companyIdentifier()).contains(new CompanyIdentifier("45274649"));
     }
 
     @Test
     @DisplayName("Given a donor already known to donations, when the registration is announced again, then the existing record takes the announced profile and keeps its symbol")
     void should_update_existing_record_when_registered_again_given_known_donor() {
-        DonorRecord existing = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        DonorRecord existing = DonorRecord.registerPerson(DONOR, new DonorName("Jana Nováková"), ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
         when(donorRecords.findById(DONOR)).thenReturn(Optional.of(existing));
 
         service.register(personCommand("Jana Malá", NEW_ADDRESS, LocaleCode.EN));
 
         DonorRecord saved = savedRecord();
         assertThat(saved).isSameAs(existing);
-        assertThat(saved.name()).isEqualTo("Jana Malá");
+        assertThat(saved.name()).isEqualTo(new DonorName("Jana Malá"));
         assertThat(saved.address()).isEqualTo(NEW_ADDRESS);
         assertThat(saved.preferredLocale()).isEqualTo(LocaleCode.EN);
         assertThat(saved.variableSymbol()).isEqualTo(SYMBOL);
@@ -151,12 +153,12 @@ class DonorRecordServiceTest {
     @DisplayName("Given a known donor, when the profile changes, then name, address and locale are saved with the clock's time")
     void should_save_new_profile_when_profile_changed_given_known_donor() {
         when(donorRecords.findById(DONOR)).thenReturn(Optional.of(
-                DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT)));
+                DonorRecord.registerPerson(DONOR, new DonorName("Jana Nováková"), ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT)));
 
-        service.changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, "Jana Malá", NEW_ADDRESS, LocaleCode.EN));
+        service.changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, new DonorName("Jana Malá"), NEW_ADDRESS, LocaleCode.EN));
 
         DonorRecord saved = savedRecord();
-        assertThat(saved.name()).isEqualTo("Jana Malá");
+        assertThat(saved.name()).isEqualTo(new DonorName("Jana Malá"));
         assertThat(saved.address()).isEqualTo(NEW_ADDRESS);
         assertThat(saved.preferredLocale()).isEqualTo(LocaleCode.EN);
         assertThat(saved.variableSymbol()).isEqualTo(SYMBOL);
@@ -168,7 +170,7 @@ class DonorRecordServiceTest {
     void should_warn_and_save_nothing_when_profile_changed_given_unknown_donor() {
         when(donorRecords.findById(DONOR)).thenReturn(Optional.empty());
 
-        service.changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, "Jana Malá", NEW_ADDRESS, LocaleCode.EN));
+        service.changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, new DonorName("Jana Malá"), NEW_ADDRESS, LocaleCode.EN));
 
         verify(donorRecords, never()).save(any());
         assertThat(warnings()).anySatisfy(message -> assertThat(message).contains(DONOR_ID.toString()));
@@ -177,7 +179,7 @@ class DonorRecordServiceTest {
     @Test
     @DisplayName("Given a known donor with a learned account, two answers about older symbols and donations paired through them, when the donor is erased, then under the pairing lock the donations keep only their pairing method, the record loses its personal data and links, the answers are deleted and the record is saved")
     void should_anonymize_record_and_delete_links_and_answers_when_erased_given_known_donor() {
-        DonorRecord record = DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        DonorRecord record = DonorRecord.registerPerson(DONOR, new DonorName("Jana Nováková"), ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
         when(donorRecords.findById(DONOR)).thenReturn(Optional.of(record));
         SenderAccount account = new SenderAccount("2900233333", "2010");
         SymbolClaim confirmed = SymbolClaim.answer(SymbolClaimId.newId(NOW), DONOR, account, new VariableSymbol("6123456789"),
@@ -239,7 +241,7 @@ class DonorRecordServiceTest {
     }
 
     private RegisterDonorRecordCommand personCommand(String name, PostalAddress address, LocaleCode locale) {
-        return new RegisterDonorRecordCommand(DONOR_ID, DonorType.PERSON, name, Optional.empty(), address, SYMBOL, locale, REGISTERED_AT);
+        return new RegisterDonorRecordCommand(DONOR_ID, DonorType.PERSON, new DonorName(name), Optional.empty(), address, SYMBOL, locale, REGISTERED_AT);
     }
 
     private DonorRecord savedRecord() {

@@ -164,7 +164,7 @@ class YearlyReceiptsServiceTest {
         assertThat(candidates.year()).isEqualTo(YEAR_2026);
         assertThat(candidates.years()).isEqualTo(new ReceiptYears(YEAR_2026, YEAR_2026));
         assertThat(candidates.donors()).containsExactly(
-                new YearlyReceiptCandidate(JANA, jana().name(), jana().type(), 2, 125000, Optional.of(janasReceipt)));
+                new YearlyReceiptCandidate(JANA, jana().name().value(), jana().type(), 2, 125000, Optional.of(janasReceipt)));
         assertThat(candidates.erasedDonors()).isEqualTo(1);
     }
 

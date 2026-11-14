@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -61,7 +62,7 @@ class JpaDonorRecordRepositoryTest {
         flushAndClear();
 
         DonorRecord byId = donorRecords.findById(jana.id()).orElseThrow();
-        assertThat(byId.name()).isEqualTo("Jana Nováková");
+        assertThat(byId.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(byId.address()).isEqualTo(ADDRESS);
         assertThat(byId.variableSymbol()).isEqualTo(new VariableSymbol("4821937560"));
         assertThat(byId.registeredAt()).isEqualTo(NOW);
@@ -133,7 +134,7 @@ class JpaDonorRecordRepositoryTest {
         flushAndClear();
 
         DonorRecord stored = donorRecords.findById(jana.id()).orElseThrow();
-        stored.changeProfile("Jana Malá", new PostalAddress("Krátká 3", "Praha", "110 00"), LocaleCode.EN, LATER);
+        stored.changeProfile(new DonorName("Jana Malá"), new PostalAddress("Krátká 3", "Praha", "110 00"), LocaleCode.EN, LATER);
         donorRecords.save(stored);
         flushAndClear();
 
@@ -143,7 +144,7 @@ class JpaDonorRecordRepositoryTest {
                 .containsEntry("learned_from_payment_id", payment.id().value());
         assertThat(accountRows()).isEqualTo(1L);
         DonorRecord reread = donorRecords.findById(jana.id()).orElseThrow();
-        assertThat(reread.name()).isEqualTo("Jana Malá");
+        assertThat(reread.name()).isEqualTo(new DonorName("Jana Malá"));
         assertThat(reread.senderAccountLinks()).singleElement().satisfies(link -> assertThat(link.provedBy()).contains(payment.id()));
     }
 
@@ -218,7 +219,7 @@ class JpaDonorRecordRepositoryTest {
         flushAndClear();
 
         assertThat(donorRecords.findByIds(List.of(jana.id(), eva.id(), new DonorReference(UuidV7.generate(LATER)))))
-                .extracting(DonorRecord::name).containsExactlyInAnyOrder("Jana Nováková", "Eva Dvořáková");
+                .extracting(DonorRecord::name).extracting(DonorName::value).containsExactlyInAnyOrder("Jana Nováková", "Eva Dvořáková");
         assertThat(donorRecords.findByIds(List.of())).isEmpty();
     }
 
@@ -267,11 +268,11 @@ class JpaDonorRecordRepositoryTest {
         donorRecords.save(person("Karel 100% Veselý", "1000000000"));
         flushAndClear();
 
-        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).containsExactly("Jana Nováková", "Petr Novák");
-        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková", "Jana Nováková");
-        assertThat(donorRecords.searchByNameOrSymbol("48", 1)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková");
-        assertThat(donorRecords.searchByNameOrSymbol("100%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
-        assertThat(donorRecords.searchByNameOrSymbol("%", 20)).extracting(DonorRecord::name).containsExactly("Karel 100% Veselý");
+        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Jana Nováková", "Petr Novák");
+        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donorRecords.searchByNameOrSymbol("48", 1)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Eva Dvořáková");
+        assertThat(donorRecords.searchByNameOrSymbol("100%", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Karel 100% Veselý");
+        assertThat(donorRecords.searchByNameOrSymbol("%", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Karel 100% Veselý");
         assertThat(donorRecords.searchByNameOrSymbol("xyz", 20)).isEmpty();
     }
 
@@ -287,8 +288,8 @@ class JpaDonorRecordRepositoryTest {
         }
         flushAndClear();
 
-        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).containsExactlyElementsOf(czechOrder);
-        assertThat(donorRecords.searchByNameOrSymbol("48", 6)).extracting(DonorRecord::name).containsExactlyElementsOf(czechOrder.subList(0, 6));
+        assertThat(donorRecords.searchByNameOrSymbol("48", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactlyElementsOf(czechOrder);
+        assertThat(donorRecords.searchByNameOrSymbol("48", 6)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactlyElementsOf(czechOrder.subList(0, 6));
     }
 
     @Test
@@ -299,11 +300,11 @@ class JpaDonorRecordRepositoryTest {
         donorRecords.save(person("ŠTĚPÁN ŘÍHA", "1000000000"));
         flushAndClear();
 
-        assertThat(donorRecords.searchByNameOrSymbol("novakova", 20)).extracting(DonorRecord::name).containsExactly("Jana Nováková");
-        assertThat(donorRecords.searchByNameOrSymbol("DVORAK", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková");
-        assertThat(donorRecords.searchByNameOrSymbol("štěpán říha", 20)).extracting(DonorRecord::name).containsExactly("ŠTĚPÁN ŘÍHA");
-        assertThat(donorRecords.searchByNameOrSymbol("stepan riha", 20)).extracting(DonorRecord::name).containsExactly("ŠTĚPÁN ŘÍHA");
-        assertThat(donorRecords.searchByNameOrSymbol("ková", 20)).extracting(DonorRecord::name).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donorRecords.searchByNameOrSymbol("novakova", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Jana Nováková");
+        assertThat(donorRecords.searchByNameOrSymbol("DVORAK", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Eva Dvořáková");
+        assertThat(donorRecords.searchByNameOrSymbol("štěpán říha", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donorRecords.searchByNameOrSymbol("stepan riha", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donorRecords.searchByNameOrSymbol("ková", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Eva Dvořáková", "Jana Nováková");
     }
 
     @Test
@@ -353,7 +354,7 @@ class JpaDonorRecordRepositoryTest {
         assertThat(donorRecords.findByVariableSymbol(new VariableSymbol("4821937560"))).map(DonorRecord::id).contains(jana.id());
         assertThat(donorRecords.searchByNameOrSymbol("48", 20)).isEmpty();
         assertThat(donorRecords.searchByNameOrSymbol("vymaz", 20)).isEmpty();
-        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).containsExactly("Petr Novák");
+        assertThat(donorRecords.searchByNameOrSymbol("novák", 20)).extracting(DonorRecord::name).extracting(DonorName::value).containsExactly("Petr Novák");
     }
 
     @Test
@@ -378,7 +379,7 @@ class JpaDonorRecordRepositoryTest {
     }
 
     private static DonorRecord registeredAt(String symbol, Instant at) {
-        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(at)), "Jana Nováková", ADDRESS, new VariableSymbol(symbol),
+        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(at)), new DonorName("Jana Nováková"), ADDRESS, new VariableSymbol(symbol),
                 LocaleCode.CS, at);
     }
 
@@ -387,7 +388,7 @@ class JpaDonorRecordRepositoryTest {
     }
 
     private DonorRecord person(String name, String symbol, DonorReference id) {
-        return DonorRecord.registerPerson(id, name, ADDRESS, new VariableSymbol(symbol), LocaleCode.CS, NOW);
+        return DonorRecord.registerPerson(id, new DonorName(name), ADDRESS, new VariableSymbol(symbol), LocaleCode.CS, NOW);
     }
 
     private static SenderAccountLink learn(DonorRecord record, BankPayment payment) {

@@ -5,6 +5,8 @@ import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.BankTransactionId;
 import cz.novanadeje.app.donations.domain.bank.IncomingMovement;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -44,7 +46,7 @@ class DonorRecordTest {
 
         assertThat(record.id()).isEqualTo(DONOR);
         assertThat(record.type()).isEqualTo(DonorType.PERSON);
-        assertThat(record.name()).isEqualTo("Jana Nováková");
+        assertThat(record.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(record.companyIdentifier()).isEmpty();
         assertThat(record.address()).isEqualTo(ADDRESS);
         assertThat(record.variableSymbol()).isEqualTo(SYMBOL);
@@ -56,55 +58,24 @@ class DonorRecordTest {
     }
 
     @Test
-    @DisplayName("Given a name with surrounding spaces, when the record is registered, then the name is trimmed")
-    void should_trim_name_when_registered_given_padded_name() {
-        DonorRecord record = DonorRecord.registerPerson(DONOR, "  Jana Nováková ", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
-
-        assertThat(record.name()).isEqualTo("Jana Nováková");
-    }
-
-    @Test
-    @DisplayName("Given a blank or overlong name, when the record is registered, then it is refused")
-    void should_refuse_when_registered_given_invalid_name() {
-        assertThatThrownBy(() -> DonorRecord.registerPerson(DONOR, " ", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> DonorRecord.registerPerson(DONOR, "x".repeat(161), ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     @DisplayName("Given a company with its identification number, when the record is registered, then it is a company carrying the identifier")
     void should_carry_identifier_when_registered_given_company() {
-        DonorRecord record = company("45274649");
+        DonorRecord record = company(new CompanyIdentifier("45274649"));
 
         assertThat(record.type()).isEqualTo(DonorType.COMPANY);
-        assertThat(record.companyIdentifier()).contains("45274649");
+        assertThat(record.companyIdentifier()).contains(new CompanyIdentifier("45274649"));
     }
 
     @Test
     @DisplayName("Given a company without an identification number, when the record is registered, then it is refused")
     void should_refuse_when_registered_given_company_without_identifier() {
         assertThatThrownBy(() -> company(null)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> company("  ")).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("Given a company identifier that is not eight digits, when the record is registered, then it is refused")
-    void should_refuse_when_registered_given_malformed_identifier() {
-        assertThatThrownBy(() -> company("4527464")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> company("4527464X")).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("Given a company identifier with a wrong check digit, when the record is registered, then it is accepted because donors validated it")
-    void should_accept_when_registered_given_identifier_with_wrong_check_digit() {
-        assertThat(company("45274648").companyIdentifier()).contains("45274648");
     }
 
     @Test
     @DisplayName("Given a stored person with an identifier, when reconstituted, then it is refused")
     void should_refuse_when_reconstituted_given_person_with_identifier() {
-        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", "45274649", ADDRESS, SYMBOL,
+        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), new CompanyIdentifier("45274649"), ADDRESS, SYMBOL,
                 LocaleCode.CS, List.of(), REGISTERED_AT, REGISTERED_AT, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -114,7 +85,7 @@ class DonorRecordTest {
         SenderAccountLink link = SenderAccountLink.reconstitute(LINK, ACCOUNT, SenderAccountLinkStatus.ACTIVE, Optional.of(PAYMENT),
                 Optional.of(LATER), Optional.empty(), Optional.empty(), LATER, Optional.empty());
 
-        DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
+        DonorRecord record = DonorRecord.reconstitute(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, SYMBOL,
                 LocaleCode.EN, List.of(link), REGISTERED_AT, LATER, null);
 
         assertThat(record.senderAccountLinks()).containsExactly(link);
@@ -131,7 +102,7 @@ class DonorRecordTest {
                 Optional.of(LATER), Optional.empty(), Optional.empty(), LATER, Optional.empty());
         SenderAccountLink second = SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(LATER), ACCOUNT, BOOKED_ON, LATER);
 
-        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, SYMBOL,
+        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, SYMBOL,
                 LocaleCode.EN, List.of(first, second), REGISTERED_AT, LATER, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -386,9 +357,9 @@ class DonorRecordTest {
         learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)));
         PostalAddress newAddress = new PostalAddress("Krátká 3", "Praha", "110 00");
 
-        record.changeProfile(" Jana Malá ", newAddress, LocaleCode.EN, LATER);
+        record.changeProfile(new DonorName("Jana Malá"), newAddress, LocaleCode.EN, LATER);
 
-        assertThat(record.name()).isEqualTo("Jana Malá");
+        assertThat(record.name()).isEqualTo(new DonorName("Jana Malá"));
         assertThat(record.address()).isEqualTo(newAddress);
         assertThat(record.preferredLocale()).isEqualTo(LocaleCode.EN);
         assertThat(record.updatedAt()).isEqualTo(LATER);
@@ -398,12 +369,12 @@ class DonorRecordTest {
     }
 
     @Test
-    @DisplayName("Given a record, when the profile changes to a blank name, then it is refused and the profile stays")
-    void should_refuse_when_profile_changed_given_blank_name() {
+    @DisplayName("Given a record, when the profile changes without a name, then it is refused and the profile stays")
+    void should_refuse_when_profile_changed_given_no_name() {
         DonorRecord record = person();
 
-        assertThatThrownBy(() -> record.changeProfile(" ", ADDRESS, LocaleCode.EN, LATER)).isInstanceOf(IllegalArgumentException.class);
-        assertThat(record.name()).isEqualTo("Jana Nováková");
+        assertThatThrownBy(() -> record.changeProfile(null, ADDRESS, LocaleCode.EN, LATER)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(record.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(record.preferredLocale()).isEqualTo(LocaleCode.CS);
     }
 
@@ -412,9 +383,9 @@ class DonorRecordTest {
     void should_change_nothing_when_profile_changed_given_missing_locale() {
         DonorRecord record = person();
 
-        assertThatThrownBy(() -> record.changeProfile("Jana Malá", new PostalAddress("Krátká 3", "Praha", "110 00"), null, LATER))
+        assertThatThrownBy(() -> record.changeProfile(new DonorName("Jana Malá"), new PostalAddress("Krátká 3", "Praha", "110 00"), null, LATER))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(record.name()).isEqualTo("Jana Nováková");
+        assertThat(record.name()).isEqualTo(new DonorName("Jana Nováková"));
         assertThat(record.address()).isEqualTo(ADDRESS);
         assertThat(record.updatedAt()).isEqualTo(REGISTERED_AT);
     }
@@ -447,7 +418,7 @@ class DonorRecordTest {
     @Test
     @DisplayName("Given a company record with a learned account, when erased, then the links are returned and gone, the personal data are placeholders, the symbol stays and no payment is claimed by symbol any more")
     void should_replace_personal_data_and_return_links_when_erased_given_company_with_learned_account() {
-        DonorRecord record = company("45274649");
+        DonorRecord record = company(new CompanyIdentifier("45274649"));
         SenderAccountLink link = learn(record, payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT))).orElseThrow();
         Instant erasedAt = LATER.plusSeconds(60);
 
@@ -503,7 +474,7 @@ class DonorRecordTest {
         DonorRecord record = person();
         record.erase(LATER);
 
-        assertThatThrownBy(() -> record.changeProfile("Jana Nováková", ADDRESS, LocaleCode.EN, LATER.plusSeconds(1)))
+        assertThatThrownBy(() -> record.changeProfile(new DonorName("Jana Nováková"), ADDRESS, LocaleCode.EN, LATER.plusSeconds(1)))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(record.name()).isEqualTo(ErasedPersonalData.NAME);
         assertThat(record.address()).isEqualTo(ErasedPersonalData.ADDRESS);
@@ -520,16 +491,16 @@ class DonorRecordTest {
         assertThat(record.isErased()).isTrue();
         assertThat(record.companyIdentifier()).isEmpty();
         assertThat(record.claimsBySymbol(payment(PAYMENT, SYMBOL.value(), Optional.of(ACCOUNT)))).isFalse();
-        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.COMPANY, "Stavby Novák s.r.o.", null, ADDRESS, SYMBOL,
+        assertThatThrownBy(() -> DonorRecord.reconstitute(DONOR, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), null, ADDRESS, SYMBOL,
                 LocaleCode.CS, List.of(), REGISTERED_AT, LATER, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static DonorRecord person() {
-        return DonorRecord.registerPerson(DONOR, "Jana Nováková", ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
+        return DonorRecord.registerPerson(DONOR, new DonorName("Jana Nováková"), ADDRESS, SYMBOL, LocaleCode.CS, REGISTERED_AT);
     }
 
-    private static DonorRecord company(String identifier) {
-        return DonorRecord.registerCompany(DONOR, "Stavby Novák s.r.o.", identifier, new PostalAddress("Průmyslová 5", "Teplice", "415 01"),
+    private static DonorRecord company(CompanyIdentifier identifier) {
+        return DonorRecord.registerCompany(DONOR, new DonorName("Stavby Novák s.r.o."), identifier, new PostalAddress("Průmyslová 5", "Teplice", "415 01"),
                 SYMBOL, LocaleCode.CS, REGISTERED_AT);
     }
 
@@ -545,14 +516,5 @@ class DonorRecordTest {
         return BankPayment.incoming(id, IncomingMovement.of(new BankTransactionId(1001), bookedOn, Money.czk(50000), sender,
                 sender.map(SenderAccount::accountNumber), sender.map(SenderAccount::bankCode), Optional.of("Nováková Jana"),
                 Optional.ofNullable(variableSymbol), Optional.empty(), Optional.empty(), Optional.empty(), "Bezhotovostní příjem"), LATER);
-    }
-
-    @Test
-    @DisplayName("Given a company identifier that is not eight digits, when the record is registered, then the message names the rule without the identifier")
-    void should_name_the_rule_without_the_identifier_when_registered_given_malformed_identifier() {
-        assertThatThrownBy(() -> company("4527464X"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("A company identification number is eight digits")
-                .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4527464"));
     }
 }

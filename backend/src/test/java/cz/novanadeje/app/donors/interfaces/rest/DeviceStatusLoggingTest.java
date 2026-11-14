@@ -13,6 +13,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -159,7 +160,7 @@ class DeviceStatusLoggingTest {
 
     private List<String> devicesOfEveryStatus() {
         Instant now = clock.instant();
-        Donor jana = Donor.register(DonorId.newId(now), DonorType.PERSON, "Jana Nováková", null,
+        Donor jana = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
                 new VariableSymbol("4821937561"), LocaleCode.CS, now);
         donors.save(jana);

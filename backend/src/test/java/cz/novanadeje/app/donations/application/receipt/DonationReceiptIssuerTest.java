@@ -38,6 +38,7 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyUnpublished;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -981,7 +982,7 @@ class DonationReceiptIssuerTest {
     })
     @DisplayName("Given a donor record whose printed data has a character outside the printable set, when a receipt is issued, then it is refused before a number is taken and nothing is frozen or saved")
     void should_refuse_before_numbering_when_issued_given_an_unprintable_character_in_the_donor_record(String part, String name, String street, String city) {
-        DonorRecord record = DonorRecord.registerPerson(JANA, name, new PostalAddress(street, city, "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        DonorRecord record = DonorRecord.registerPerson(JANA, new DonorName(name), new PostalAddress(street, city, "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
         givenDonationsOfJana(record, MARCH);
 
         assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY))

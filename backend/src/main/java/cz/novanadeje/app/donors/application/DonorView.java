@@ -1,8 +1,8 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 
@@ -34,7 +34,7 @@ public record DonorView(
         return new DonorView(
                 donor.id().toString(),
                 donor.type(),
-                donor.name(),
+                donor.name().value(),
                 donor.companyIdentifier().map(CompanyIdentifier::value).orElse(null),
                 donor.address(),
                 donor.email().value(),

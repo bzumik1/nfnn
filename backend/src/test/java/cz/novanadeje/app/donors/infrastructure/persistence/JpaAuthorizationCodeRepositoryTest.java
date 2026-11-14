@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -46,7 +47,7 @@ class JpaAuthorizationCodeRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("jana@example.cz"), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
         donors.save(donor);
@@ -90,7 +91,7 @@ class JpaAuthorizationCodeRepositoryTest {
     @Test
     @DisplayName("Given codes of two donors, when one donor's are deleted, then only the other donor's stay")
     void should_delete_only_the_donors_codes_when_deleted_given_two_donors() {
-        Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Petr Svoboda", null,
+        Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"), new PasswordHash("$hash"),
                 new VariableSymbol("4821937561"), LocaleCode.CS, NOW);
         donors.save(petr);

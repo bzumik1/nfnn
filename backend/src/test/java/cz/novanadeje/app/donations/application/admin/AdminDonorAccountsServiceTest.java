@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
@@ -216,7 +217,7 @@ class AdminDonorAccountsServiceTest {
     }
 
     private static DonorRecord record() {
-        return DonorRecord.registerPerson(PETR, "Petr Svoboda", new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), SYMBOL, LocaleCode.CS,
+        return DonorRecord.registerPerson(PETR, new DonorName("Petr Svoboda"), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), SYMBOL, LocaleCode.CS,
                 NOW.minusSeconds(300));
     }
 

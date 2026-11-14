@@ -2,8 +2,8 @@ package cz.novanadeje.app.donors.infrastructure.ares;
 
 import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;

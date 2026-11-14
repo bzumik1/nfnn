@@ -9,6 +9,8 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -84,7 +86,7 @@ public class DonorRecordStepDefinitions {
     public void donationsIsToldThatAPersonRegisteredWithVariableSymbol(String alias, String variableSymbol) {
         UUID donorId = scenarioDonors.findIdOf(alias).orElseGet(() -> UuidV7.generate(clock.instant()));
         VariableSymbol symbol = new VariableSymbol(variableSymbol);
-        DonorRegistered event = new DonorRegistered(donorId, DonorType.PERSON, personName(alias), Optional.empty(), PERSON_ADDRESS,
+        DonorRegistered event = new DonorRegistered(donorId, DonorType.PERSON, new DonorName(personName(alias)), Optional.empty(), PERSON_ADDRESS,
                 new EmailAddress(email(alias)), symbol, LocaleCode.CS, clock.instant());
         transaction.executeWithoutResult(status -> events.publishEvent(event));
         scenarioDonors.remember(alias, donorId, symbol);
@@ -122,7 +124,7 @@ public class DonorRecordStepDefinitions {
 
     @Then("donations knows {string} with company identifier {string}")
     public void donationsKnowsWithCompanyIdentifier(String alias, String companyIdentifier) {
-        assertThat(recordOf(alias).companyIdentifier()).contains(companyIdentifier);
+        assertThat(recordOf(alias).companyIdentifier()).contains(new CompanyIdentifier(companyIdentifier));
     }
 
     @Then("the stored data of receipt {string} still names the donor as issued:")

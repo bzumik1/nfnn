@@ -22,6 +22,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -551,7 +552,7 @@ class PaymentPairingServiceTest {
     }
 
     private static DonorRecord donor(String name, VariableSymbol symbol) {
-        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 symbol, LocaleCode.CS, NOW);
     }
 

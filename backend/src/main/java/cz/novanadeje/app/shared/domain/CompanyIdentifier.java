@@ -1,4 +1,4 @@
-package cz.novanadeje.app.donors.domain;
+package cz.novanadeje.app.shared.domain;
 
 public record CompanyIdentifier(String value) {
 

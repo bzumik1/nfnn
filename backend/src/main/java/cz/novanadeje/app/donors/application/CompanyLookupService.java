@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

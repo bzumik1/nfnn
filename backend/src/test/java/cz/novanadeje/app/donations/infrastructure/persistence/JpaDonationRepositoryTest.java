@@ -22,6 +22,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -331,7 +332,7 @@ class JpaDonationRepositoryTest {
     }
 
     private ConfirmedSymbolSetup confirmedSymbolSetup() {
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Jana Nováková"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
         donorRecords.save(jana);
         BankPayment proof = payment(1001, LocalDate.of(2026, 10, 14), Money.czk(100), ACCOUNT, "4821937560");
@@ -436,7 +437,7 @@ class JpaDonationRepositoryTest {
     }
 
     private DonorReference storedDonor(String symbol) {
-        DonorRecord record = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková",
+        DonorRecord record = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Jana Nováková"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol(symbol), LocaleCode.CS, NOW);
         donorRecords.save(record);
         return record.id();

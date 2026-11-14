@@ -5,9 +5,9 @@ import cz.novanadeje.app.donations.application.admin.PaymentFilter;
 import cz.novanadeje.app.donations.application.pairing.ManualPairingService;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
-import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.domain.DonorName;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -66,7 +66,7 @@ class AdminPaymentsController {
     }
 
     @GetMapping("/donors")
-    AdminDonorSearchResponse donors(@RequestParam(defaultValue = "") @Size(max = DonorRecord.MAX_NAME_LENGTH) String query) {
+    AdminDonorSearchResponse donors(@RequestParam(defaultValue = "") @Size(max = DonorName.MAX_LENGTH) String query) {
         return AdminDonorSearchResponse.from(adminPayments.searchDonors(query));
     }
 

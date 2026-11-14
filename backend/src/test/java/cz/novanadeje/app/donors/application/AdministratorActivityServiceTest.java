@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -161,7 +162,7 @@ class AdministratorActivityServiceTest {
     }
 
     private static Donor donor(DonorId id, String name) {
-        return Donor.register(id, DonorType.PERSON, name, null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return Donor.register(id, DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
     }
 }

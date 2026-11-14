@@ -19,6 +19,7 @@ import cz.novanadeje.app.donations.domain.report.ReportMonth;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.YearOverview;
 import cz.novanadeje.app.shared.application.account.AdministrationHolders;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -90,9 +91,9 @@ class AdminDonationsSyncServiceTest {
     @Test
     @DisplayName("Given an administrator, an erased donor with a receipt and a donor with one, when the snapshot is taken, then the foundation's day and every offered year's overview come, the erased donor's record stays as a placeholder and only the other donor's receipt comes")
     void should_leave_out_erased_donors_receipts_and_compile_every_year_when_snapshot_taken_given_administrator() {
-        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Jana Nováková", ADDRESS,
+        DonorRecord jana = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Jana Nováková"), ADDRESS,
                 new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
-        DonorRecord erased = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Petr Svoboda", ADDRESS,
+        DonorRecord erased = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Petr Svoboda"), ADDRESS,
                 new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
         erased.erase(NOW);
         DonationReceipt janas = Receipts.yearlyReceiptOf(jana.id(), Year.of(2026));

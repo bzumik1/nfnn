@@ -4,6 +4,7 @@ import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donation.DonationId;
 import cz.novanadeje.app.donations.domain.donation.DonationSource;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
@@ -121,7 +122,7 @@ class ReceiptFingerprintTest {
 
     private static DonorRecord renamed(String name) {
         DonorRecord record = jana();
-        record.changeProfile(name, record.address(), record.preferredLocale(), NOW);
+        record.changeProfile(new DonorName(name), record.address(), record.preferredLocale(), NOW);
         return record;
     }
 

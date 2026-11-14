@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawal;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalReason;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.DonorType;
 
@@ -37,8 +38,8 @@ record AdminDonorDetailResponse(AdminDonorRecordResponse donor, List<AdminBankAc
                                     AddressResponse address, String preferredLocale, Instant registeredAt, Instant erasedAt) {
 
         static AdminDonorRecordResponse from(DonorRecord record) {
-            return new AdminDonorRecordResponse(record.id().value(), record.name(), record.type(), record.variableSymbol().value(),
-                    record.companyIdentifier().orElse(null),
+            return new AdminDonorRecordResponse(record.id().value(), record.name().value(), record.type(), record.variableSymbol().value(),
+                    record.companyIdentifier().map(CompanyIdentifier::value).orElse(null),
                     new AddressResponse(record.address().street(), record.address().city(), record.address().postalCode()),
                     record.preferredLocale().tag(), record.registeredAt(), record.erasedAt().orElse(null));
         }

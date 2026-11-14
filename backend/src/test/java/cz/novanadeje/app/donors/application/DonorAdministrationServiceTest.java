@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -112,7 +113,7 @@ class DonorAdministrationServiceTest {
     }
 
     private static Donor donor(DonorId id, String name, String email, Set<Role> roles) {
-        return Donor.reconstitute(id, DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol("4821937560"), LocaleCode.CS, roles, NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 }

@@ -20,6 +20,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptTextSet;
 import cz.novanadeje.app.donations.domain.receipt.Receipts;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -222,7 +223,7 @@ class AdminDeviceSyncTest {
         ReceiptTextSet texts = receiptTexts.textsFor(LocaleCode.CS);
         long serial = 0;
         for (int index = 0; index < donors.size(); index++) {
-            DonorRecord record = DonorRecord.registerPerson(new DonorReference(donors.get(index)), "Dárce", Receipts.JANA_ADDRESS,
+            DonorRecord record = DonorRecord.registerPerson(new DonorReference(donors.get(index)), new DonorName("Dárce"), Receipts.JANA_ADDRESS,
                     new VariableSymbol(Long.toString(5_000_000_000L + index)), LocaleCode.CS, clock.instant());
             for (int year = TIMED_FIRST_RECEIPT_YEAR; year < TIMED_FIRST_RECEIPT_YEAR + TIMED_RECEIPT_YEARS; year++) {
                 Year receiptYear = Year.of(year);

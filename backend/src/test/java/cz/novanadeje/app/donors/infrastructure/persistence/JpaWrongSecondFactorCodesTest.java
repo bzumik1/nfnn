@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactorCodeReservation;
 import cz.novanadeje.app.donors.domain.WrongSecondFactorCodes;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -131,7 +132,7 @@ class JpaWrongSecondFactorCodesTest {
     }
 
     private DonorId donor(String email, String variableSymbol) {
-        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+        Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol(variableSymbol), LocaleCode.CS, NOW);
         donors.save(donor);

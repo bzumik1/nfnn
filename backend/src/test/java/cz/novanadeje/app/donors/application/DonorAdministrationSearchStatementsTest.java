@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -58,7 +59,7 @@ class DonorAdministrationSearchStatementsTest {
     void twelveDonors() {
         new DatabaseCleaner(jdbc).emptyAllTables();
         for (int index = 0; index < DONORS; index++) {
-            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Hledaná dárkyně %02d".formatted(index), null,
+            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Hledaná dárkyně %02d".formatted(index)), null,
                     new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("hledana-%02d@example.cz".formatted(index)),
                     new PasswordHash("$hash"), new VariableSymbol(Long.toString(6_100_000_000L + index)), LocaleCode.CS, NOW);
             if (index % 3 == 0) {
@@ -95,7 +96,7 @@ class DonorAdministrationSearchStatementsTest {
 
         assertThat(forTwelve.result().items()).hasSize(DONORS);
         assertThat(forTwelve.result().items()).allSatisfy(view -> {
-            int index = Integer.parseInt(view.donor().name().substring(view.donor().name().length() - 2));
+            int index = Integer.parseInt(view.donor().name().value().substring(view.donor().name().value().length() - 2));
             assertThat(view.donor().roles().contains(Role.ADMIN)).as("administrator %d", index).isEqualTo(index % 3 == 0);
             assertThat(view.secondFactorEnabled()).as("second factor of %d", index).isEqualTo(index % 2 == 0);
             assertThat(view.passkeys()).as("passkeys of %d", index).isEqualTo(index % 4);

@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -219,7 +220,7 @@ class DonorRowLockConcurrencyTest {
 
     private Donor verified(String name, String email, String symbol, PasswordHash hash) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), hash,
+        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), hash,
                 new VariableSymbol(symbol), LocaleCode.CS, now);
         donor.verifyEmail(now);
         return donor;

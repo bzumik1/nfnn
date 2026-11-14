@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
@@ -14,12 +16,9 @@ import java.util.Set;
 
 public final class Donor {
 
-    public static final int MAX_NAME_LENGTH = 160;
-    public static final String NOT_BLANK_NAME = "(?s).*\\P{javaWhitespace}.*";
-
     private final DonorId id;
     private final DonorType type;
-    private String name;
+    private DonorName name;
     private CompanyIdentifier companyIdentifier;
     private PostalAddress address;
     private EmailAddress email;
@@ -31,12 +30,12 @@ public final class Donor {
     private Instant emailVerifiedAt;
     private Instant erasedAt;
 
-    private Donor(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
+    private Donor(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                   EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
                   Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt, Instant erasedAt) {
         this.id = require(id, "Donor id");
         this.type = require(type, "Donor type");
-        this.name = requireName(name);
+        this.name = require(name, "Name");
         this.companyIdentifier = companyIdentifier;
         this.address = require(address, "Address");
         this.email = require(email, "Email");
@@ -50,7 +49,7 @@ public final class Donor {
         this.erasedAt = erasedAt;
     }
 
-    public static Donor register(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
+    public static Donor register(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                  EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
                                  Instant registeredAt) {
         if (type == DonorType.COMPANY && companyIdentifier == null) {
@@ -63,7 +62,7 @@ public final class Donor {
                 EnumSet.of(Role.DONOR), registeredAt, null, null);
     }
 
-    public static Donor reconstitute(DonorId id, DonorType type, String name, CompanyIdentifier companyIdentifier, PostalAddress address,
+    public static Donor reconstitute(DonorId id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                      EmailAddress email, PasswordHash passwordHash, VariableSymbol variableSymbol, LocaleCode preferredLocale,
                                      Set<Role> roles, Instant registeredAt, Instant emailVerifiedAt, Instant erasedAt) {
         return new Donor(id, type, name, companyIdentifier, address, email, passwordHash, variableSymbol, preferredLocale, roles, registeredAt,
@@ -128,9 +127,9 @@ public final class Donor {
         return Optional.ofNullable(emailVerifiedAt);
     }
 
-    public void updateProfile(String newName, PostalAddress newAddress, LocaleCode newLocale) {
+    public void updateProfile(DonorName newName, PostalAddress newAddress, LocaleCode newLocale) {
         requireNotErased();
-        this.name = requireName(newName);
+        this.name = require(newName, "Name");
         this.address = require(newAddress, "Address");
         this.preferredLocale = require(newLocale, "Preferred locale");
     }
@@ -169,7 +168,7 @@ public final class Donor {
         return type;
     }
 
-    public String name() {
+    public DonorName name() {
         return name;
     }
 
@@ -250,17 +249,6 @@ public final class Donor {
         if (erasedAt != null) {
             throw new DonorAlreadyErased(id);
         }
-    }
-
-    private static String requireName(String value) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Name is required");
-        }
-        String trimmed = value.trim();
-        if (trimmed.length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("Name must not exceed " + MAX_NAME_LENGTH + " characters");
-        }
-        return trimmed;
     }
 
     private static <T> T require(T value, String label) {

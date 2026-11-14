@@ -162,6 +162,6 @@ public class AdministratorService {
 
     private AdministratorView view(Donor donor) {
         boolean secondFactorEnabled = secondFactors.findByDonor(donor.id()).filter(SecondFactor::isEnabled).isPresent();
-        return new AdministratorView(donor.id(), donor.name(), donor.email(), secondFactorEnabled);
+        return new AdministratorView(donor.id(), donor.name().value(), donor.email(), secondFactorEnabled);
     }
 }
