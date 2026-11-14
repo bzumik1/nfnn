@@ -362,6 +362,30 @@ const PRESSES: Press[] = [
   },
 ];
 
+export class PressMemory {
+  private readonly clicking = new Map<string, string>();
+
+  order<P extends { name: string }>(target: string, presses: readonly P[]): P[] {
+    const first = this.clicking.get(target);
+    return [
+      ...presses.filter(({ name }) => name === first),
+      ...presses.filter(({ name }) => name !== first),
+    ];
+  }
+
+  remember(target: string, press: string): void {
+    this.clicking.set(target, press);
+  }
+}
+
+const PRESS_MEMORIES = new WeakMap<WebDriver, PressMemory>();
+
+function pressMemoryOf(driver: WebDriver): PressMemory {
+  const memory = PRESS_MEMORIES.get(driver) ?? new PressMemory();
+  PRESS_MEMORIES.set(driver, memory);
+  return memory;
+}
+
 async function clicked(driver: WebDriver): Promise<boolean> {
   const deadline = Date.now() + CLICK_WAIT_MS;
   for (;;) {
@@ -385,6 +409,7 @@ export function webDriverUi(
     driver.execute<ElementReference | null>(FIND_SHOWN, target.css, target.text ?? '');
   const shown = (target: Target) =>
     until(`${described(target)} to show`, waits.ms, () => find(target));
+  const presses = pressMemoryOf(driver);
   return {
     routes: host.routes,
     rememberSession: async () => host.rememberSession(),
@@ -400,13 +425,14 @@ export function webDriverUi(
         element,
       );
       await driver.executeAsync(NEXT_FRAMES);
-      for (const press of PRESSES) {
+      for (const press of presses.order(described(target), PRESSES)) {
         const before = await driver.execute<string>(WATCH_CLICK, element);
         const pressed = await press
           .run(driver, element)
           .then(() => undefined)
           .catch((error: unknown) => String(error));
         if (await clicked(driver)) {
+          presses.remember(described(target), press.name);
           waits.presses.push(`${described(target)}: ${press.name}`);
           return;
         }
