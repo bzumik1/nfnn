@@ -4,7 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 
 final class ApplicationExecutorIdleWait {
 
@@ -13,32 +15,39 @@ final class ApplicationExecutorIdleWait {
         void pause(Duration length) throws InterruptedException;
     }
 
+    private static final int IDLE_POLLS_IN_A_ROW = 2;
+
     private static final Logger log = LoggerFactory.getLogger(ApplicationExecutorIdleWait.class);
 
     private final ThreadPoolTaskExecutor executor;
+    private final Clock clock;
     private final Duration bound;
     private final Duration poll;
     private final Pause pause;
 
-    ApplicationExecutorIdleWait(ThreadPoolTaskExecutor executor, Duration bound, Duration poll, Pause pause) {
+    ApplicationExecutorIdleWait(ThreadPoolTaskExecutor executor, Clock clock, Duration bound, Duration poll, Pause pause) {
         this.executor = executor;
+        this.clock = clock;
         this.bound = bound;
         this.poll = poll;
         this.pause = pause;
     }
 
     boolean awaitIdle() throws InterruptedException {
-        long pausesLeft = bound.dividedBy(poll);
-        while (!idle()) {
-            if (pausesLeft == 0) {
-                log.warn("The backend restarts with {} asynchronous tasks running and {} queued after waiting {} for them to finish",
-                        executor.getActiveCount(), executor.getQueueSize(), bound);
+        Instant deadline = clock.instant().plus(bound);
+        int idlePolls = 0;
+        while (true) {
+            idlePolls = idle() ? idlePolls + 1 : 0;
+            if (idlePolls == IDLE_POLLS_IN_A_ROW) {
+                return true;
+            }
+            if (!clock.instant().isBefore(deadline)) {
+                log.warn("The backend restarts after waiting {} for the asynchronous tasks; running: {}, queued: {}",
+                        bound, executor.getActiveCount(), executor.getQueueSize());
                 return false;
             }
             pause.pause(poll);
-            pausesLeft--;
         }
-        return true;
     }
 
     private boolean idle() {

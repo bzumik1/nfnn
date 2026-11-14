@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class RecordingApplicationRestarter implements ApplicationRestarter {
 
-    public record Restart(boolean onceAsyncWorkIsDone, long asyncTasksHandedOver) {
+    public record Restart(long asyncTasksHandedOver) {
     }
 
     private final AsyncTaskTracker asyncTasks;
@@ -19,12 +19,7 @@ public class RecordingApplicationRestarter implements ApplicationRestarter {
 
     @Override
     public void restartAfterCommit() {
-        restarts.add(new Restart(false, asyncTasks.handedOver()));
-    }
-
-    @Override
-    public void restartAfterCommitOnceAsyncWorkIsDone() {
-        restarts.add(new Restart(true, asyncTasks.handedOver()));
+        restarts.add(new Restart(asyncTasks.handedOver()));
     }
 
     public int restarts() {

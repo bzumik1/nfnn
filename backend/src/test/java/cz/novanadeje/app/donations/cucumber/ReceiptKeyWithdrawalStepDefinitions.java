@@ -141,11 +141,10 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         assertThat(api.lastResponseJson().get("restarting").asBoolean()).isEqualTo(Boolean.parseBoolean(restarting));
     }
 
-    @Then("the backend restarts once to replace the seed of the receipt signing key {string}, after the notices were handed to the async executor and once they are done")
+    @Then("the backend restarts once to replace the seed of the receipt signing key {string}, after the notices were handed to the async executor")
     public void theBackendRestartsToReplaceTheSeed(String keyId) {
         await().until(() -> restarter.restarts() > 0);
         assertThat(restarter.recorded()).singleElement().satisfies(restart -> {
-            assertThat(restart.onceAsyncWorkIsDone()).isTrue();
             assertThat(restart.asyncTasksHandedOver())
                     .withFailMessage("The restart was asked for with %s async tasks handed over since the withdrawal began, of the %s the withdrawal handed over",
                             restart.asyncTasksHandedOver() - asyncTasksBeforeWithdrawal, asyncTasksAfterWithdrawal - asyncTasksBeforeWithdrawal)

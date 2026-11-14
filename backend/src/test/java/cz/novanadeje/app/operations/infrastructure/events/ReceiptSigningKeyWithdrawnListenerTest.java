@@ -63,17 +63,7 @@ class ReceiptSigningKeyWithdrawnListenerTest {
     @DisplayName("Given the withdrawal of the server's own key published in a transaction, when it commits, then the restart once the async work is done is asked for after the commit with no transaction synchronization left, so the restarter starts its wait at once instead of waiting for a commit that already passed")
     void should_ask_for_the_restart_outside_any_synchronization_when_committed_given_the_current_key() {
         List<String> steps = new ArrayList<>();
-        ApplicationRestarter restarter = new ApplicationRestarter() {
-            @Override
-            public void restartAfterCommit() {
-                steps.add("restart at once");
-            }
-
-            @Override
-            public void restartAfterCommitOnceAsyncWorkIsDone() {
-                steps.add("restart once async work is done, synchronization active: " + TransactionSynchronizationManager.isSynchronizationActive());
-            }
-        };
+        ApplicationRestarter restarter = () -> steps.add("restart once async work is done, synchronization active: " + TransactionSynchronizationManager.isSynchronizationActive());
 
         new ApplicationContextRunner()
                 .withUserConfiguration(InMemoryTransactionManagement.class)

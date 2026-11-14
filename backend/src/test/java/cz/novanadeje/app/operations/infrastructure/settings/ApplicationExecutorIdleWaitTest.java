@@ -9,9 +9,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import cz.novanadeje.app.support.MutableClock;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -20,11 +23,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ApplicationExecutorIdleWaitTest {
 
     private static final Duration POLL = Duration.ofMillis(5);
 
+    private final MutableClock clock = new MutableClock(Instant.parse("2026-11-14T10:00:00Z"), ZoneOffset.UTC);
     private final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
     private final ExecutorService waiting = Executors.newSingleThreadExecutor();
     private final CountDownLatch releaseFirst = new CountDownLatch(1);
@@ -52,15 +58,29 @@ class ApplicationExecutorIdleWaitTest {
     }
 
     @Test
-    @DisplayName("Given an executor with no running or queued task, when the idle wait runs, then it ends at once without pausing and logs nothing")
-    void should_end_at_once_when_waited_given_an_idle_executor() throws InterruptedException {
+    @DisplayName("Given an executor with no running or queued task, when the idle wait runs, then it ends after two idle polls one pause apart and logs nothing")
+    void should_end_after_two_idle_polls_when_waited_given_an_idle_executor() throws InterruptedException {
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(executor, Duration.ofMinutes(5), POLL, length -> pauses.incrementAndGet()).awaitIdle();
+        boolean idle = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()).awaitIdle();
 
         assertThat(idle).isTrue();
-        assertThat(pauses).hasValue(0);
+        assertThat(pauses).hasValue(1);
         assertThat(lines.list).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given an executor that looks idle for one poll while a worker takes the next task, when the idle wait runs, then that poll does not count and it ends only after two idle polls in a row")
+    void should_count_idle_only_after_two_idle_polls_in_a_row_when_waited_given_a_moment_of_idleness() throws InterruptedException {
+        ThreadPoolTaskExecutor between = mock(ThreadPoolTaskExecutor.class);
+        when(between.getActiveCount()).thenReturn(0, 1, 0, 0);
+        when(between.getQueueSize()).thenReturn(0);
+        AtomicInteger pauses = new AtomicInteger();
+
+        boolean idle = new ApplicationExecutorIdleWait(between, clock, Duration.ofMinutes(3), POLL, length -> pauses.incrementAndGet()).awaitIdle();
+
+        assertThat(idle).isTrue();
+        assertThat(pauses).hasValue(3);
     }
 
     @Test
@@ -76,7 +96,7 @@ class ApplicationExecutorIdleWaitTest {
         });
         assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue();
         CountDownLatch pausedWhileBusy = new CountDownLatch(1);
-        ApplicationExecutorIdleWait wait = new ApplicationExecutorIdleWait(executor, Duration.ofMinutes(5), POLL, length -> {
+        ApplicationExecutorIdleWait wait = new ApplicationExecutorIdleWait(executor, clock, Duration.ofMinutes(3), POLL, length -> {
             pausedWhileBusy.countDown();
             Thread.sleep(length);
         });
@@ -94,25 +114,47 @@ class ApplicationExecutorIdleWaitTest {
     }
 
     @Test
-    @DisplayName("Given a task that keeps running, when the idle wait runs out of its bound, then it ends without the executor idle and one WARN names the running and queued task counts and the bound")
+    @DisplayName("Given a task that keeps running, when the idle wait runs out of its bound on the clock, then it ends without the executor idle and one WARN names the bound and the running and queued task counts")
     void should_give_up_and_warn_when_the_bound_runs_out_given_a_task_that_keeps_running() throws InterruptedException {
-        executor.execute(() -> {
-            firstStarted.countDown();
-            awaitQuietly(releaseFirst);
-        });
-        executor.execute(() -> awaitQuietly(releaseSecond));
-        assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue();
+        startTwoTasksThatKeepRunning();
         AtomicInteger pauses = new AtomicInteger();
 
-        boolean idle = new ApplicationExecutorIdleWait(executor, POLL.multipliedBy(3), POLL, length -> pauses.incrementAndGet()).awaitIdle();
+        boolean idle = new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(3), POLL, length -> {
+            pauses.incrementAndGet();
+            clock.advance(length);
+        }).awaitIdle();
 
         assertThat(idle).isFalse();
         assertThat(pauses).hasValue(3);
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage())
-                    .isEqualTo("The backend restarts with 1 asynchronous tasks running and 1 queued after waiting PT0.015S for them to finish");
+                    .isEqualTo("The backend restarts after waiting PT0.015S for the asynchronous tasks; running: 1, queued: 1");
         });
+    }
+
+    @Test
+    @DisplayName("Given pauses that last longer than the poll, when the idle wait runs, then it gives up once the deadline on the clock passed rather than after a number of pauses")
+    void should_give_up_at_the_deadline_on_the_clock_when_waited_given_pauses_longer_than_the_poll() throws InterruptedException {
+        startTwoTasksThatKeepRunning();
+        AtomicInteger pauses = new AtomicInteger();
+
+        boolean idle = new ApplicationExecutorIdleWait(executor, clock, POLL.multipliedBy(4), POLL, length -> {
+            pauses.incrementAndGet();
+            clock.advance(length.multipliedBy(2));
+        }).awaitIdle();
+
+        assertThat(idle).isFalse();
+        assertThat(pauses).hasValue(2);
+    }
+
+    private void startTwoTasksThatKeepRunning() throws InterruptedException {
+        executor.execute(() -> {
+            firstStarted.countDown();
+            awaitQuietly(releaseFirst);
+        });
+        executor.execute(() -> awaitQuietly(releaseSecond));
+        assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue();
     }
 
     private static boolean awaitIdle(ApplicationExecutorIdleWait wait) {

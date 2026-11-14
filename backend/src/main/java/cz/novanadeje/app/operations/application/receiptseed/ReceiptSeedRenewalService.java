@@ -23,6 +23,6 @@ public class ReceiptSeedRenewalService {
             return;
         }
         log.warn("The receipt signing key {} of this server was withdrawn, so the backend restarts and its entrypoint generates a new seed", keyId);
-        restarter.restartAfterCommitOnceAsyncWorkIsDone();
+        restarter.restartAfterCommit();
     }
 }
