@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 )
 class SecretMaskingRulesTest {
 
-    private static final Pattern SECRET_NAME = Pattern.compile("(?i)code|.*(password|secret|token|seed|privatekey|apikey|encryptionkey|challenge|verifier|clientdatajson)");
+    private static final Pattern SECRET_NAME = Pattern.compile("(?i)code|key|word|p256dh|auth|endpoint|wrapped|.*(password|secret|token|seed|privatekey|apikey|encryptionkey|challenge|verifier|clientdatajson)");
     private static final String BANK_CODE_REASON = "a four-digit bank code of the Czech National Bank's public list";
     private static final String PKCE_CHALLENGE_REASON = "a PKCE code_challenge, the SHA-256 of the client's verifier, which the client sends "
             + "in the clear in the authorization address (RFC 7636) and which redeems nothing without the verifier";
@@ -127,13 +127,29 @@ class SecretMaskingRulesTest {
                     record PlantedExchange(String codeVerifier) {
                     }
 
+                    record PlantedBackupKey(String key) {
+                    }
+
+                    record PlantedKeyWord(String word) {
+                    }
+
+                    record PlantedPushDevice(String endpoint, String p256dh, String auth) {
+                    }
+
+                    record PlantedCarriedKey(String wrapped) {
+                    }
+
                     record PlantedAssertion(String clientDataJSON, String credentialId) {
                     }
                 }
                 """));
 
         assertThat(records_holding_a_plain_secret_mask_it_in_to_string.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(9)
+                .hasSize(13)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedBackupKey holds [key]"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedKeyWord holds [word]"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedPushDevice holds").contains("endpoint").contains("p256dh").contains("auth"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedCarriedKey holds [wrapped]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSignIn holds [password]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedResetLink holds [resetToken]"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedKeys holds [privateKey]"))
