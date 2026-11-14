@@ -149,9 +149,11 @@ class ApplicationLayerRulesTest {
                 planted(rule, "donations.application.PlantedEntity", "@jakarta.persistence.Entity public class PlantedEntity { }"),
                 planted(rule, "donations.application.PlantedHibernate",
                         "public class PlantedHibernate { Class<?> failure() { return org.hibernate.HibernateException.class; } }"),
-                planted(rule, "donations.application.receipt.AfterCommitLater",
-                        "public class AfterCommitLater { boolean active() { "
-                                + "return org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive(); } }"),
+                planted(rule, "donations.application.receipt.AfterCommit",
+                        "final class AfterCommit { static void run(Runnable work) { "
+                                + "org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization("
+                                + "new org.springframework.transaction.support.TransactionSynchronization() { "
+                                + "@Override public void afterCommit() { work.run(); } }); } }"),
                 planted(rule, "donations.application.PlantedSql", "public class PlantedSql { java.sql.Connection connection() { return null; } }"),
                 planted(rule, "operations.application.PlantedPath",
                         "public record PlantedPath(java.nio.file.Path path) { }"),

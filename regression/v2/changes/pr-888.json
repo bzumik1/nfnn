@@ -6,5 +6,13 @@
     "replacement": "architecture.ApplicationLayerRulesTest > application_must_not_depend_on_adapter_technology",
     "reason": "PR #888 (#886, part of #621; architecture audit, deferred until #612): the receipt signatory service logs its choice through the AfterCommitWork port, the AfterCommit helper is gone, and with it the rule that fenced the helper; the layer rule now holds with no exception",
     "contract": "docs/api-contract.md, architecture rules (ApplicationLayerRulesTest)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.ApplicationLayerRulesTest > \"application_must_not_depend_on_adapter_technology\" reports \"cz.novanadeje.app.donations.application.receipt.AfterCommitLater\"",
+    "replacement": "architecture.ApplicationLayerRulesTest > \"application_must_not_depend_on_adapter_technology\" reports \"cz.novanadeje.app.donations.application.receipt.AfterCommit\"",
+    "reason": "PR #888 (#886, part of #621): the planted class that proved the helper's exemption matched its exact name is replaced by a planted copy of the deleted helper itself, in the same sub-package, which the rule must report now that no exemption exists",
+    "contract": "docs/api-contract.md, architecture rules (ApplicationLayerRulesTest)"
   }
 ]
