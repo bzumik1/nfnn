@@ -39,17 +39,19 @@ public class BankLogoAdminService {
     private final BankLogoRepository logos;
     private final BankCodeRepository banks;
     private final BankLogoImages images;
+    private final BankLogoImageChanges imageChanges;
     private final BankLogoVersions versions;
     private final ApplicationEventPublisher events;
     private final TransactionTemplate transaction;
     private final TransactionTemplate reads;
     private final Clock clock;
 
-    public BankLogoAdminService(BankLogoRepository logos, BankCodeRepository banks, BankLogoImages images, BankLogoVersions versions,
+    public BankLogoAdminService(BankLogoRepository logos, BankCodeRepository banks, BankLogoImages images, BankLogoImageChanges imageChanges, BankLogoVersions versions,
                                 ApplicationEventPublisher events, TransactionTemplate transaction, Clock clock) {
         this.logos = logos;
         this.banks = banks;
         this.images = images;
+        this.imageChanges = imageChanges;
         this.versions = versions;
         this.events = events;
         this.transaction = transaction;
@@ -72,7 +74,7 @@ public class BankLogoAdminService {
             admit(current, precondition);
             BankLogo locked = current.orElseGet(() -> createAndLock(source, precondition));
             Instant now = clock.instant();
-            BankLogo changed = BankLogoImageChanges.apply(logos, locked, source, fetched, now);
+            BankLogo changed = imageChanges.apply(locked, source, fetched, now);
             audit(adminId, SET_ACTION, "Logo banky " + source.bank().value() + " nastaveno z " + source.host() + ", obrázek " + fetched.sha256(), now);
             return row(changed, bankNames());
         });
@@ -90,7 +92,7 @@ public class BankLogoAdminService {
                 return row(locked, bankNames());
             }
             Instant now = clock.instant();
-            BankLogo changed = BankLogoImageChanges.apply(logos, locked, locked.source(), fetched, now);
+            BankLogo changed = imageChanges.apply(locked, locked.source(), fetched, now);
             audit(adminId, REFRESH_ACTION, "Logo banky " + code.value() + " znovu staženo z " + locked.source().host() + ", obrázek " + fetched.sha256(), now);
             return row(changed, bankNames());
         });

@@ -16,13 +16,15 @@ public class BankLogoRefreshService {
 
     private final BankLogoRepository logos;
     private final BankLogoImages images;
+    private final BankLogoImageChanges imageChanges;
     private final TransactionTemplate transaction;
     private final TransactionTemplate reads;
     private final Clock clock;
 
-    public BankLogoRefreshService(BankLogoRepository logos, BankLogoImages images, TransactionTemplate transaction, Clock clock) {
+    public BankLogoRefreshService(BankLogoRepository logos, BankLogoImages images, BankLogoImageChanges imageChanges, TransactionTemplate transaction, Clock clock) {
         this.logos = logos;
         this.images = images;
+        this.imageChanges = imageChanges;
         this.transaction = transaction;
         this.reads = new TransactionTemplate(transaction.getTransactionManager());
         this.reads.setReadOnly(true);
@@ -59,7 +61,7 @@ public class BankLogoRefreshService {
         if (locked.isEmpty()) {
             return BankLogoCheck.SKIPPED;
         }
-        BankLogoImageChanges.apply(logos, locked.get(), checked.source(), fetched, now);
+        imageChanges.apply(locked.get(), checked.source(), fetched, now);
         return BankLogoCheck.FETCHED;
     }
 }

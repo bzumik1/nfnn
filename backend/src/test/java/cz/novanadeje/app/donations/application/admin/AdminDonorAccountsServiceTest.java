@@ -91,7 +91,7 @@ class AdminDonorAccountsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminDonorAccountsService(donorRecords, donations, receipts, claims, bankAccounts, donorDonations, lock, events,
+        service = new AdminDonorAccountsService(donorRecords, donations, receipts, new ReceiptCoverage(receipts), claims, bankAccounts, donorDonations, lock, events,
                 new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 

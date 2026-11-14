@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,7 +41,7 @@ public class DonateBandService {
     public DonateBandView read() {
         return new DonateBandView(band.find()
                 .flatMap(DonateBand::photo)
-                .flatMap(photo -> media.findSize(photo.image()).map(size -> DonateBandPhotoView.of(photo, size, media))));
+                .flatMap(photo -> media.findSize(photo.image()).map(size -> DonateBandPhotoView.of(photo, size, media.findFocalPoints(List.of(photo.image()))))));
     }
 
     public DonateBandView change(UUID adminId, DonateBandCommand command) {
@@ -57,7 +58,7 @@ public class DonateBandService {
         band.save(changed);
         current.imageLeftBy(changed).ifPresent(media::deleteIfUnused);
         audit(adminId, current.image(), changed.image(), now);
-        return new DonateBandView(next.flatMap(photo -> size.map(photoSize -> DonateBandPhotoView.of(photo, photoSize, media))));
+        return new DonateBandView(next.flatMap(photo -> size.map(photoSize -> DonateBandPhotoView.of(photo, photoSize, media.findFocalPoints(List.of(photo.image()))))));
     }
 
     private void audit(UUID adminId, Optional<MediaId> before, Optional<MediaId> after, Instant now) {

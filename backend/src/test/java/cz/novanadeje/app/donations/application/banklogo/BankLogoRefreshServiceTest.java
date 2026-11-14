@@ -35,7 +35,7 @@ class BankLogoRefreshServiceTest {
     private final InMemoryBankLogoRepository logos = new InMemoryBankLogoRepository();
     private final BankLogoAdminServiceTest.Transactions transactions = new BankLogoAdminServiceTest.Transactions();
     private final BankLogoAdminServiceTest.FakeImages images = new BankLogoAdminServiceTest.FakeImages(transactions);
-    private final BankLogoRefreshService service = new BankLogoRefreshService(logos, images, new TransactionTemplate(transactions),
+    private final BankLogoRefreshService service = new BankLogoRefreshService(logos, images, new BankLogoImageChanges(logos), new TransactionTemplate(transactions),
             new MutableClock(NOW, ZoneOffset.UTC));
 
     @Test

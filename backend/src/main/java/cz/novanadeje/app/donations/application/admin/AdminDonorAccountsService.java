@@ -53,6 +53,7 @@ public class AdminDonorAccountsService {
     private final DonorRecordRepository donorRecords;
     private final DonationRepository donations;
     private final DonationReceiptRepository receipts;
+    private final ReceiptCoverage coverage;
     private final SymbolClaimRepository claims;
     private final DonorBankAccountsService bankAccounts;
     private final DonorDonationsService donorDonations;
@@ -62,11 +63,12 @@ public class AdminDonorAccountsService {
     private final Clock clock;
 
     public AdminDonorAccountsService(DonorRecordRepository donorRecords, DonationRepository donations, DonationReceiptRepository receipts,
-                                     SymbolClaimRepository claims, DonorBankAccountsService bankAccounts, DonorDonationsService donorDonations,
+                                     ReceiptCoverage coverage, SymbolClaimRepository claims, DonorBankAccountsService bankAccounts, DonorDonationsService donorDonations,
                                      PairingLock lock, ApplicationEventPublisher events, AdminDonationsRows rows, Clock clock) {
         this.donorRecords = donorRecords;
         this.donations = donations;
         this.receipts = receipts;
+        this.coverage = coverage;
         this.claims = claims;
         this.bankAccounts = bankAccounts;
         this.donorDonations = donorDonations;
@@ -122,7 +124,7 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = requireUnchanged(record, linkId, expected);
         receipts.lockDonor(donor);
         List<Donation> paired = donations.findBySenderAccountLink(linkId);
-        if (ReceiptCoverage.anyReceiptCovers(receipts, donor, paired)) {
+        if (coverage.anyReceiptCovers(donor, paired)) {
             throw new SenderAccountLinkHasReceipt(linkId);
         }
         paired.forEach(donation -> donations.delete(donation.id()));
