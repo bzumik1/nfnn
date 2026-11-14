@@ -390,8 +390,8 @@ class EventListenerRulesTest {
 
                         import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
                         import cz.novanadeje.app.shared.application.event.DonorErased;
+                        import cz.novanadeje.app.shared.application.event.ImportOutageChanged;
                         import cz.novanadeje.app.shared.application.event.LiveFeed;
-                        import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
                         import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 
                         import java.util.List;
@@ -413,7 +413,7 @@ class EventListenerRulesTest {
                             public void complete(UUID donorId, String senderAccount) {
                             }
 
-                            public void feed(LiveFeed feed, OperationalAlertRaised.Area area) {
+                            public void feed(LiveFeed feed, ImportOutageChanged.Change change) {
                             }
 
                             public Consumer<DonorErased> erasureHandler() {

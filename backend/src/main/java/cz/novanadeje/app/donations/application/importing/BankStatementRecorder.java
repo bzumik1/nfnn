@@ -20,7 +20,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import cz.novanadeje.app.shared.application.event.DonationsArrived;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
+import cz.novanadeje.app.shared.application.event.ImportOutageChanged;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -83,7 +83,7 @@ public class BankStatementRecorder {
             alerts.add(outage, at);
         });
         if (state.reportedOutage().isPresent()) {
-            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, at));
+            events.publishEvent(ImportOutageChanged.opened(at));
         }
         states.save(state);
     }
@@ -125,7 +125,7 @@ public class BankStatementRecorder {
             alerts.add(recovery, now);
         });
         statement.closingBalance().ifPresent(balance -> state.balanceRead(balance, now));
-        events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, now));
+        events.publishEvent(ImportOutageChanged.resolved(now));
         states.save(state);
     }
 }
