@@ -150,5 +150,13 @@
     "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when an answer names a newer API generation and nothing is typed, then the page loads the new version by itself at the same address, shows no bar and loads only once for that generation while it still sends nothing",
     "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
     "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name",
+    "replacement": "src/app/features/admin/backups/admin-backups.spec.ts > Given an administrator on the backups page > when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name, and no reload cuts it off meanwhile",
+    "reason": "PR #603: a backup download now holds the automatic reload (RunningWork) until the file is saved, so the test also says that no reload cuts it off; its name says so",
+    "contract": "docs/frontend-overview.md, core/updates/"
   }
 ]
