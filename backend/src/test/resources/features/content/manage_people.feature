@@ -622,6 +622,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | signature.id | {image:podpis-eva.png} |
     And an e-mail goes to the address of "Jana" with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje"
     And an e-mail goes to the address of "Petr" with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje"
+    And both parts of the last e-mail contain "Změnu udělala připojená aplikace claude.ai."
     When "Jana" asks for the receipt signatory
     Then the receipt signatory is "Eva Vzorová" as "předsedkyně správní rady", with a portrait missing and a signature set
     When the exchanged API token removes the signature of "Eva Vzorová"
