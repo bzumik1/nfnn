@@ -31,12 +31,15 @@ public class ReceiptSignatoryService {
     private final ReceiptSignatoryRepository signatories;
     private final FoundationPeople people;
     private final ApplicationEventPublisher events;
+    private final AfterCommitWork afterCommit;
     private final Clock clock;
 
-    public ReceiptSignatoryService(ReceiptSignatoryRepository signatories, FoundationPeople people, ApplicationEventPublisher events, Clock clock) {
+    public ReceiptSignatoryService(ReceiptSignatoryRepository signatories, FoundationPeople people, ApplicationEventPublisher events,
+                                   AfterCommitWork afterCommit, Clock clock) {
         this.signatories = signatories;
         this.people = people;
         this.events = events;
+        this.afterCommit = afterCommit;
         this.clock = clock;
     }
 
@@ -59,7 +62,7 @@ public class ReceiptSignatoryService {
         signatories.choose(chosen);
         events.publishEvent(new AdminActionPerformed(adminId, CHOOSE_ACTION, Optional.empty(),
                 "Potvrzení o daru podepisuje osoba " + person, now));
-        AfterCommit.run(() -> log.info("Admin {} chose person {} to sign the receipts", adminId, person));
+        afterCommit.run(() -> log.info("Admin {} chose person {} to sign the receipts", adminId, person));
         return view(chosen, known);
     }
 
