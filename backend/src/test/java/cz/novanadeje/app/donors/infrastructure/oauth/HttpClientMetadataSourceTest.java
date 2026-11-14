@@ -21,7 +21,14 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -125,6 +132,57 @@ class HttpClientMetadataSourceTest {
         assertThatThrownBy(() -> source.fetch(local("/slow"), CLAUDE)).isInstanceOf(InvalidClient.class);
 
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(2_000));
+    }
+
+    @Test
+    @DisplayName("Given a client host whose name lookup never answers, when the document is fetched, then the client is invalid within the timeout")
+    void should_refuse_within_timeout_when_fetched_given_lookup_that_never_answers() {
+        CountDownLatch never = new CountDownLatch(1);
+        HttpClientMetadataSource stalled = new HttpClientMetadataSource(HttpClient.newHttpClient(), new ClientMetadataDocuments(), false,
+                Duration.ofMillis(500), Clock.systemUTC(), host -> {
+                    never.await();
+                    return new java.net.InetAddress[0];
+                });
+        long started = System.nanoTime();
+
+        assertThatThrownBy(() -> stalled.fetch(CLAUDE)).isInstanceOf(InvalidClient.class);
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(2_000));
+    }
+
+    @Test
+    @DisplayName("Given a client host that stalls, when eight requests fetch the same document at once, then each is refused within one timeout, not one after another")
+    void should_refuse_every_caller_within_one_timeout_when_fetched_concurrently_given_stalled_client() throws Exception {
+        CountDownLatch never = new CountDownLatch(1);
+        AtomicInteger lookups = new AtomicInteger();
+        HttpClientMetadataSource stalled = new HttpClientMetadataSource(HttpClient.newHttpClient(), new ClientMetadataDocuments(), false,
+                Duration.ofMillis(500), Clock.systemUTC(), host -> {
+                    lookups.incrementAndGet();
+                    never.await();
+                    return new java.net.InetAddress[0];
+                });
+        long started = System.nanoTime();
+
+        try (ExecutorService callers = Executors.newFixedThreadPool(8)) {
+            List<Future<Throwable>> refusals = IntStream.range(0, 8)
+                    .mapToObj(caller -> callers.submit(() -> refusalOf(() -> stalled.fetch(CLAUDE))))
+                    .toList();
+            for (Future<Throwable> refusal : refusals) {
+                assertThat(refusal.get(10, TimeUnit.SECONDS)).isInstanceOf(InvalidClient.class);
+            }
+        }
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofMillis(2_000));
+        assertThat(lookups.get()).isEqualTo(8);
+    }
+
+    private static Throwable refusalOf(Runnable call) {
+        try {
+            call.run();
+            return null;
+        } catch (RuntimeException refused) {
+            return refused;
+        }
     }
 
     private URI local(String path) {

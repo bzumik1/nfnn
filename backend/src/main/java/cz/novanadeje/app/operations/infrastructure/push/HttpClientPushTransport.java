@@ -1,5 +1,6 @@
 package cz.novanadeje.app.operations.infrastructure.push;
 
+import cz.novanadeje.app.shared.infrastructure.net.TimeBoundedCall;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -8,13 +9,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 @Component
 class HttpClientPushTransport implements PushTransport {
@@ -24,6 +26,7 @@ class HttpClientPushTransport implements PushTransport {
 
     private final HttpClient client;
     private final HostResolver resolver;
+    private final Duration lookupTimeout;
 
     @Autowired
     HttpClientPushTransport() {
@@ -31,8 +34,13 @@ class HttpClientPushTransport implements PushTransport {
     }
 
     HttpClientPushTransport(HttpClient client, HostResolver resolver) {
+        this(client, resolver, TIMEOUT);
+    }
+
+    HttpClientPushTransport(HttpClient client, HostResolver resolver, Duration lookupTimeout) {
         this.client = client;
         this.resolver = resolver;
+        this.lookupTimeout = lookupTimeout;
     }
 
     HttpClient client() {
@@ -60,15 +68,13 @@ class HttpClientPushTransport implements PushTransport {
 
     private boolean resolvesOnlyToPublicAddresses(String host) {
         try {
-            InetAddress[] addresses = resolver.resolve(host);
+            InetAddress[] addresses = TimeBoundedCall.within(lookupTimeout, "push-host-lookup", () -> resolver.resolve(host));
             return addresses.length > 0 && Arrays.stream(addresses).allMatch(PublicAddresses::isPublic);
-        } catch (UnknownHostException unknown) {
+        } catch (ExecutionException | TimeoutException unresolved) {
+            return false;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
             return false;
         }
-    }
-
-    @FunctionalInterface
-    interface HostResolver {
-        InetAddress[] resolve(String host) throws UnknownHostException;
     }
 }
