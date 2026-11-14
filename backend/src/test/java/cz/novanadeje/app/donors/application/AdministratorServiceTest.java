@@ -237,6 +237,7 @@ class AdministratorServiceTest {
         InOrder order = inOrder(donors);
         order.verify(donors).lockAdministrators();
         order.verify(donors).findByIdForUpdate(PETR);
+        order.verify(donors).findAdministrators();
         verify(donors, never()).save(any());
         verifyNoInteractions(signOuts, events);
     }
