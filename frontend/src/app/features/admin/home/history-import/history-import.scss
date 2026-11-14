@@ -32,6 +32,16 @@
 
 .history-from {
   width: min(100%, 20rem);
+
+  input {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+.history-form .ui-button {
+  max-width: 100%;
+  white-space: normal;
 }
 
 app-live-notice {

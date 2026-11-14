@@ -70,10 +70,6 @@
   border-top: 1px solid var(--color-divider);
 }
 
-.accounts-add {
-  color: var(--color-accent);
-}
-
 .accounts-add:disabled .ui-list__glyph {
   color: inherit;
 }
@@ -111,7 +107,6 @@
 @include bp.container-down(account, tabs) {
   .account > .account-row {
     grid-template-columns: minmax(0, 1fr);
-    padding-inline: var(--space-4);
     grid-template-areas:
       'lead'
       'title'

@@ -11,7 +11,7 @@
   }
 
   <div class="admin-status">
-    <section class="ui-card" aria-labelledby="admin-import-title">
+    <section class="ui-card ui-card--padded" aria-labelledby="admin-import-title">
       <h2 id="admin-import-title" class="ui-card__title" i18n="@@admin.home.import.title">
         Stav stahování plateb z banky
       </h2>
@@ -138,7 +138,7 @@
       }
     </section>
 
-    <section class="ui-card" aria-labelledby="admin-backups-title">
+    <section class="ui-card ui-card--padded" aria-labelledby="admin-backups-title">
       <h2 id="admin-backups-title" class="ui-card__title" i18n="@@admin.home.backups.title">
         Zálohy databáze
       </h2>
@@ -199,7 +199,7 @@
     </section>
   </div>
 
-  <section class="ui-card admin-overview" aria-labelledby="admin-overview-title">
+  <section class="ui-card ui-card--padded admin-overview" aria-labelledby="admin-overview-title">
     <div class="admin-card-head">
       <h2 id="admin-overview-title" class="ui-card__title" i18n="@@admin.home.overview.title">
         Dary a dárci
@@ -379,11 +379,13 @@
 </div>
 
 <ng-template #attentionBlock>
-  <section class="attention" aria-labelledby="admin-attention-title">
-    <h2 id="admin-attention-title" class="ui-group-title" i18n="@@admin.home.attention.title">
-      Co potřebuje vaši pozornost
-    </h2>
-    <ul class="ui-list ui-list--inset attention-list">
+  <section class="ui-card attention" aria-labelledby="admin-attention-title">
+    <div class="ui-card__bar">
+      <h2 id="admin-attention-title" class="ui-card__title" i18n="@@admin.home.attention.title">
+        Co potřebuje vaši pozornost
+      </h2>
+    </div>
+    <ul class="ui-list attention-list">
       @if (attentionLoading()) {
         <li>
           <div class="ui-list__row">
@@ -430,7 +432,7 @@
                   <button
                     appNeedsConnection
                     type="button"
-                    class="ui-pill-button"
+                    class="ui-button ui-button--small"
                     (click)="retry(target)"
                     i18n="@@admin.home.attention.retry"
                   >
@@ -536,6 +538,8 @@
         }
       </svg>
     </span>
+  } @else {
+    <span class="ui-list__lead ui-list__lead--blank" aria-hidden="true"></span>
   }
   <span class="ui-list__title">
     @if (toneLabels[row.tone]; as label) {

@@ -109,6 +109,10 @@ div.ui-list__row {
   color: var(--color-warning);
 }
 
+.ui-list__row--action {
+  color: var(--color-accent);
+}
+
 .ui-list__chevron {
   grid-area: chevron;
   width: var(--list-chevron-size);
@@ -151,9 +155,56 @@ div.ui-list__row {
   font-weight: var(--weight-semibold);
 }
 
+.ui-card > .ui-list {
+  container: list-card / inline-size;
+}
+
+.ui-card {
+  --list-row-padding-inline: var(--space-6);
+}
+
 .ui-card .ui-list__row,
 .ui-card .ui-list__group-title {
-  padding-inline: var(--space-6);
+  padding-inline: var(--list-row-padding-inline);
+}
+
+@include bp.container-down(list-card, pair) {
+  .ui-card > .ui-list > * {
+    --list-row-padding-inline: var(--space-4);
+  }
+
+  .ui-card .ui-list__lead.ui-list__glyph {
+    width: auto;
+    margin-inline-end: var(--space-2);
+  }
+
+  .ui-card .ui-list__chevron {
+    margin-inline-start: var(--space-2);
+  }
+}
+
+.ui-list__lead--blank {
+  width: var(--list-lead-size);
+}
+
+.ui-list:not(.ui-list--inset) > li:has(> .ui-list__row > .ui-list__lead--blank) {
+  border-top-color: transparent;
+}
+
+.ui-list:not(.ui-list--inset) > li + li > .ui-list__row:has(> .ui-list__lead--blank) {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block-start: -1px;
+    inset-inline: calc(
+        var(--list-row-padding-inline, var(--space-4)) + var(--list-lead-size) + var(--space-3)
+      )
+      0;
+    border-top: 1px solid var(--color-divider);
+    pointer-events: none;
+  }
 }
 
 .ui-card .ui-list__row:focus-visible {
