@@ -13,6 +13,8 @@ interface Entry {
 
 const OWN_METHODS = ['pushState', 'replaceState', 'back', 'forward', 'go'] as const;
 
+const FORGETTERS = new WeakMap<Window, (forgotten: (url: URL) => boolean) => void>();
+
 const NOTHING_KEPT: HistoryStorage = {
   getItem: () => null,
   setItem: () => undefined,
@@ -20,6 +22,10 @@ const NOTHING_KEPT: HistoryStorage = {
 
 export function installOwnHistoryIn(view: Window): () => void {
   return installOwnHistory(view, sessionStorageOf(view));
+}
+
+export function forgetOwnHistory(view: Window, forgotten: (url: URL) => boolean): void {
+  FORGETTERS.get(view)?.(forgotten);
 }
 
 export function installOwnHistory(view: Window, storage: HistoryStorage): () => void {
@@ -87,8 +93,18 @@ export function installOwnHistory(view: Window, storage: HistoryStorage): () => 
     });
   }
   keep();
+  FORGETTERS.set(view, (forgotten) => {
+    if (pending > 0) {
+      return;
+    }
+    const current = entries[entries.length - 1];
+    const remembered = entries.slice(0, -1).filter((entry) => !forgotten(new URL(entry.url)));
+    entries.splice(0, entries.length, ...remembered, current);
+    keep();
+  });
 
   return () => {
+    FORGETTERS.delete(view);
     for (const method of OWN_METHODS) {
       delete (history as Partial<History>)[method];
     }
