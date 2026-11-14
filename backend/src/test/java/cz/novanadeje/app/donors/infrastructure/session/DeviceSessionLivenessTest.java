@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.infrastructure.session;
 
+import cz.novanadeje.app.donors.application.SignedInDeviceCheck;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
@@ -41,7 +42,7 @@ class DeviceSessionLivenessTest {
 
         private void askOnce() {
             when(devices.isSignedIn(any(), any())).thenReturn(true);
-            liveness = new DeviceSessionLiveness(devices, clock);
+            liveness = new DeviceSessionLiveness(new SignedInDeviceCheck(devices, clock), clock);
             assertThat(liveness.isLive(PHONE.value())).isTrue();
         }
 

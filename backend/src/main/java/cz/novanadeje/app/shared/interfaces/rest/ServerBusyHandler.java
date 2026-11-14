@@ -18,12 +18,16 @@ import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
+
 @Order(Ordered.LOWEST_PRECEDENCE - 1)
 @RestControllerAdvice
 class ServerBusyHandler {
 
     static final String CODE = "server-busy";
     static final String RETRY_AFTER_SECONDS = "5";
+    static final List<Class<? extends Exception>> DATABASE_WAITS = List.of(PessimisticLockingFailureException.class, QueryTimeoutException.class,
+            CannotCreateTransactionException.class);
 
     private static final Logger log = LoggerFactory.getLogger(ServerBusyHandler.class);
 
@@ -38,6 +42,10 @@ class ServerBusyHandler {
         log.warn("Database wait ran out ({}) answered as 503 at {} {}", ex.getClass().getSimpleName(), UnhandledExceptionHandler.method(request),
                 UnhandledExceptionHandler.pattern(request));
         return busy();
+    }
+
+    static boolean isDatabaseWait(Exception failure) {
+        return DATABASE_WAITS.stream().anyMatch(wait -> wait.isInstance(failure));
     }
 
     @ExceptionHandler(CpuSlotsFull.class)
