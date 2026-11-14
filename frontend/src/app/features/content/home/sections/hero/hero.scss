@@ -95,6 +95,18 @@
 }
 
 @include bp.down(phone) {
+  .hero-content {
+    padding-bottom: calc(var(--tab-bar-clearance) + var(--floating-room) + var(--space-4));
+  }
+
+  .hero-title {
+    margin-bottom: var(--space-4);
+  }
+
+  .hero-lead {
+    margin-bottom: var(--space-5);
+  }
+
   .hero-btns {
     flex-direction: column;
   }
