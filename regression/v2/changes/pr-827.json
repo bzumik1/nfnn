@@ -46,5 +46,13 @@
     "replacement": "src/app/features/donors/dashboard/donor-area.spec.ts > Given a signed-in donor in the donor area > when the donations page opens > then the note about checking the bank and the standing order guide close the card, after the years",
     "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): the standing order guide is again the underlined link in the card's footer, not a grouped disclosure row",
     "contract": "docs/frontend-overview.md"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when it is a row of a grouped card, then the row keeps the name and the disclosure of the guide",
+    "replacement": "src/app/features/donors/dashboard/standing-order/standing-order.spec.ts > Given the standing order guide of the donor area > when it is shown, then a collapsed button names the guide and asks nothing yet",
+    "reason": "PR #827 (#817, part of #630; Moje dary goes back into the donor cards, Jakub 2026-11-14): with Poslat dar (#819) and Moje dary both back in the cards, nothing shows the standing order guide as a grouped row, so its grouped input is gone and the guide is always the underlined link the replacement tests",
+    "contract": "docs/frontend-overview.md"
   }
 ]
