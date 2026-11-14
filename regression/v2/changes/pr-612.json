@@ -4733,5 +4733,216 @@
     "replacement": "test/tools.spec.ts > Given an administrator connected with the writing permission > when people are removed, then a person goes whether or not they have a signature",
     "reason": "PR #612, Jakub 2026-11-12, one signature per person of the foundation: the web signature tools are the one signature's tools now (nfnn_set_signature, nfnn_remove_signature)",
     "contract": "docs/api-contract.md, People of the foundation; Receipt signatory and signatures"
+  },
+  {
+    "scenario": "content/admin_content_sync: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "content/manage_people: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "operations/admin_operations_sync: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list"
+      }
+    }
+  },
+  {
+    "scenario": "content/manage_people: *",
+    "kind": "logs",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin * performed *_SIGNATURE on nothing through *",
+    "reason": "One signature per person (Jakub 2026-11-12): the audit actions CHANGE_WEB_SIGNATURE, REMOVE_WEB_SIGNATURE and CHANGE_RECEIPT_SIGNATURE become CHANGE_SIGNATURE and REMOVE_SIGNATURE; the line keeps its shape, only the value of the closed list changes",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #253, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID), as before",
+        "<enum>": "CHANGE_SIGNATURE or REMOVE_SIGNATURE, values of the closed AdminAction list",
+        "claude.ai": "the client claim of the token, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "scenario": "content/admin_content_sync: *",
+    "kind": "logs",
+    "line": "donations.application.receipt.ReceiptSignatureService: Admin * uploaded a * signature image for receipts",
+    "reason": "One signature per person (Jakub 2026-11-12): the separate upload of a receipt signature is gone with ReceiptSignatureService, so its line is no longer written; the signature is set as a person's signature and audited by AdminActionLog",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID)",
+        "<w>x<h>": "the stored image's width and height in pixels"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "logs",
+    "line": "donations.application.receipt.ReceiptSignatureService: Admin * uploaded a * signature image for receipts",
+    "reason": "One signature per person (Jakub 2026-11-12): the separate upload of a receipt signature is gone with ReceiptSignatureService, so its line is no longer written; the signature is set as a person's signature and audited by AdminActionLog",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID)",
+        "<w>x<h>": "the stored image's width and height in pixels"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "logs",
+    "line": "donations.application.receipt.ReceiptSignatureService: Admin * uploaded a * signature image for receipts",
+    "reason": "One signature per person (Jakub 2026-11-12): the separate upload of a receipt signature is gone with ReceiptSignatureService, so its line is no longer written; the signature is set as a person's signature and audited by AdminActionLog",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID)",
+        "<w>x<h>": "the stored image's width and height in pixels"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "logs",
+    "line": "donations.application.receipt.ReceiptSignatureService: Admin * uploaded a * signature image for receipts",
+    "reason": "One signature per person (Jakub 2026-11-12): the separate upload of a receipt signature is gone with ReceiptSignatureService, so its line is no longer written; the signature is set as a person's signature and audited by AdminActionLog",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID)",
+        "<w>x<h>": "the stored image's width and height in pixels"
+      }
+    }
+  },
+  {
+    "scenario": "operations/admin_operations_sync: *",
+    "kind": "logs",
+    "line": "donations.application.receipt.ReceiptSignatureService: Admin * uploaded a * signature image for receipts",
+    "reason": "One signature per person (Jakub 2026-11-12): the separate upload of a receipt signature is gone with ReceiptSignatureService, so its line is no longer written; the signature is set as a person's signature and audited by AdminActionLog",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id (UUID)",
+        "<w>x<h>": "the stored image's width and height in pixels"
+      }
+    }
+  },
+  {
+    "scenario": "content/admin_content_sync: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "One signature per person (Jakub 2026-11-12): the scenario sets the signature by uploading a photo and naming it as the person's signature, so the ids first seen before the pairing are numbered differently (<id:n>); the log line is the same line of the same shape",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "One signature per person (Jakub 2026-11-12): the scenario sets the signature by uploading a photo and naming it as the person's signature, so the ids first seen before the pairing are numbered differently (<id:n>); the log line is the same line of the same shape",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "logs",
+    "line": "donations.application.pairing.PaymentPairingService: Donor * learned sender account link * from bank payment *",
+    "reason": "One signature per person (Jakub 2026-11-12): the scenario sets the signature by uploading a photo and naming it as the person's signature, so the ids first seen before the pairing are numbered differently (<id:n>); the log line is the same line of the same shape",
+    "contract": "docs/security-overview.md, The signature of a person of the foundation; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #270, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "first the donor's id, then the learned sender account link's id, both UUIDs as before",
+        "<n>": "the bank payment's transaction id from Fio, as before"
+      }
+    }
   }
 ]
