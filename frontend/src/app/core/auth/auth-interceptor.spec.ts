@@ -47,6 +47,38 @@ describe('Given the auth interceptor', () => {
     request.flush(sampleDonor());
   });
 
+  it.each([
+    '/api/content/home',
+    '/api/content/news?page=1',
+    '/api/content/projects/skola-v-prirode',
+    '/api/donations/bank-logos',
+  ])('when a signed-in donor loads public content %s, then the request carries no access token', (url) => {
+    signIn('token-1');
+
+    client.get(url).subscribe();
+
+    const request = http.expectOne(url);
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush({});
+  });
+
+  it.each([
+    ['GET', '/api/donations/me/receipts'],
+    ['GET', '/api/admin/content/news'],
+    ['POST', '/api/content/home'],
+  ])(
+    'when a signed-in donor calls %s %s, which does not answer the same for everyone, then the request carries the access token',
+    (method, url) => {
+      signIn('token-1');
+
+      client.request(method, url).subscribe();
+
+      const request = http.expectOne(url);
+      expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
+      request.flush({});
+    },
+  );
+
   it('when nobody is signed in, then API calls carry no token', () => {
     client.post('/api/contact/messages', {}).subscribe();
 

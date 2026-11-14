@@ -8,6 +8,7 @@ import {
 } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, from, map, Observable, of, switchMap, throwError } from 'rxjs';
+import { answersTheSameForEveryone } from '../updates/service-worker-bypass';
 import { problemTypeEndsWith } from './api-problem';
 import { AuthStore, isRefusal } from './auth-store';
 
@@ -21,7 +22,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   if (!needsAccessToken(request.url)) {
     return next(request);
   }
-  if (request.context.get(WITHOUT_ACCESS_TOKEN)) {
+  if (request.context.get(WITHOUT_ACCESS_TOKEN) || answersTheSameForEveryone(request)) {
     return send(request, next);
   }
   const store = inject(AuthStore);
