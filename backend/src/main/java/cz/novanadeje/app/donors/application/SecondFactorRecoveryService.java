@@ -16,7 +16,6 @@ import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRecoveryUnavailable;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
 import cz.novanadeje.app.shared.domain.FoundationZone;
@@ -33,6 +32,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class SecondFactorRecoveryService {
@@ -93,10 +93,10 @@ public class SecondFactorRecoveryService {
     }
 
     @Transactional
-    public void complete(SecondFactorRecoveryPaid payment) {
+    public void complete(UUID paidByDonorId, SecondFactorRecoveryCode code, String senderAccount) {
         Instant now = clock.instant();
-        DonorId donorId = new DonorId(payment.donorId());
-        Optional<SecondFactorRecovery> recovery = recoveries.findByCodeHash(payment.code().hash())
+        DonorId donorId = new DonorId(paidByDonorId);
+        Optional<SecondFactorRecovery> recovery = recoveries.findByCodeHash(code.hash())
                 .filter(found -> found.donorId().equals(donorId) && found.isOpenAt(now));
         Optional<Donor> locked = recovery.flatMap(found -> donors.findByIdForUpdate(donorId));
         if (locked.isEmpty() || !recoveries.markUsed(recovery.get().id(), now)) {
@@ -111,9 +111,9 @@ public class SecondFactorRecoveryService {
         secondFactors.delete(donorId);
         signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
         events.publishEvent(new DonorSecondFactorRecovered(donorId.value(), donor.get().email(), donor.get().preferredLocale(),
-                payment.senderAccount()));
+                senderAccount));
         if (donor.get().isAdministrator()) {
-            tellTheOtherAdministrators(donor.get(), payment.senderAccount(), now);
+            tellTheOtherAdministrators(donor.get(), senderAccount, now);
         }
         log.info("Second factor of donor {} turned off by recovery payment {}; every session ended", donorId, recovery.get().id());
     }

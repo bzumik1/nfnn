@@ -19,7 +19,6 @@ import cz.novanadeje.app.donors.domain.SecondFactorRecoveryUnavailable;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryPaymentText;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
@@ -221,7 +220,7 @@ class SecondFactorRecoveryServiceTest {
         when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(jana));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
 
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW.minusSeconds(5)));
+        service.complete(JANA.value(), CODE, "…5399/0800");
 
         InOrder order = inOrder(donors, recoveries, secondFactors, signOuts, events);
         order.verify(donors).findByIdForUpdate(JANA);
@@ -246,7 +245,7 @@ class SecondFactorRecoveryServiceTest {
         when(donors.findAdministrators()).thenReturn(List.of(eva, jana, petr));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.of(enabledFactor(JANA)));
 
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW));
+        service.complete(JANA.value(), CODE, "…5399/0800");
 
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, org.mockito.Mockito.times(3)).publishEvent(published.capture());
@@ -271,9 +270,9 @@ class SecondFactorRecoveryServiceTest {
         SecondFactorRecovery expired = SecondFactorRecovery.open(JANA, other, NOW.minus(RECOVERY_TTL), RECOVERY_TTL);
         when(recoveries.findByCodeHash(other.hash())).thenReturn(Optional.of(expired));
 
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW));
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), other, "…5399/0800", NOW));
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), new SecondFactorRecoveryCode("MNPQ2345"), "…5399/0800", NOW));
+        service.complete(JANA.value(), CODE, "…5399/0800");
+        service.complete(JANA.value(), other, "…5399/0800");
+        service.complete(JANA.value(), new SecondFactorRecoveryCode("MNPQ2345"), "…5399/0800");
 
         verify(recoveries, never()).markUsed(any(), any());
         verifyNoInteractions(secondFactors, signOuts, events);
@@ -287,7 +286,7 @@ class SecondFactorRecoveryServiceTest {
         when(donors.findByIdForUpdate(JANA)).thenReturn(Optional.of(donor(JANA, "Jana Nováková", "jana@example.cz", false)));
         when(secondFactors.findByDonor(JANA)).thenReturn(Optional.empty());
 
-        service.complete(new SecondFactorRecoveryPaid(JANA.value(), CODE, "…5399/0800", NOW));
+        service.complete(JANA.value(), CODE, "…5399/0800");
 
         verify(secondFactors, never()).delete(any());
         verifyNoInteractions(signOuts, events);

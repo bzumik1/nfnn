@@ -5,16 +5,11 @@ import cz.novanadeje.app.operations.domain.push.DonorPushSubscriptionRepository;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
-import cz.novanadeje.app.shared.application.event.DonationsArrived;
-import cz.novanadeje.app.shared.application.event.YearlyReceiptsReady;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
@@ -49,16 +44,12 @@ public class DonorPushDispatcher {
         this.clock = clock;
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void on(DonationsArrived arrived) {
-        attempt(PushMessageKind.GIFT_ARRIVED, arrived.donorIds(), 1, Optional.empty());
+    public void giftsArrived(Set<UUID> donorIds) {
+        attempt(PushMessageKind.GIFT_ARRIVED, donorIds, 1, Optional.empty());
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void on(YearlyReceiptsReady ready) {
-        attempt(PushMessageKind.YEARLY_RECEIPT_READY, ready.donorIds(), 1, Optional.empty());
+    public void yearlyReceiptsReady(Set<UUID> donorIds) {
+        attempt(PushMessageKind.YEARLY_RECEIPT_READY, donorIds, 1, Optional.empty());
     }
 
     void attempt(PushMessageKind kind, Set<UUID> donors, int attempt, Optional<Set<PushSubscriptionId>> only) {

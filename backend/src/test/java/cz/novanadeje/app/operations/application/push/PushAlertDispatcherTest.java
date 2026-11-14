@@ -16,7 +16,6 @@ import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushOutcome;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.VapidKeys;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -158,11 +157,7 @@ class PushAlertDispatcherTest {
     }
 
     private OperationalAlertChanged opened(MonitoredArea area) {
-        alerts.on(OperationalAlertRaised.opened(switch (area) {
-            case BANK_IMPORT -> OperationalAlertRaised.Area.BANK_IMPORT;
-            case BACKUPS -> OperationalAlertRaised.Area.BACKUPS;
-            case MAIL -> OperationalAlertRaised.Area.MAIL;
-        }, NOW));
+        alerts.record(area, true, NOW);
         long changes = alertRows.find(area).orElseThrow().changes();
         return new OperationalAlertChanged(area, true, changes, (int) alerts.open().size(), NOW);
     }

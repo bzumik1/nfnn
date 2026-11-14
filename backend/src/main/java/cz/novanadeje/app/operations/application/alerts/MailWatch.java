@@ -1,11 +1,8 @@
 package cz.novanadeje.app.operations.application.alerts;
 
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
-import cz.novanadeje.app.shared.application.event.MailDeliveryFailed;
-import cz.novanadeje.app.shared.application.event.MailDeliverySucceeded;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -27,15 +24,13 @@ public class MailWatch {
         this.separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    @EventListener
-    public void on(MailDeliveryFailed failed) {
-        record(true, failed.at());
+    public void failed(Instant at) {
+        record(true, at);
     }
 
-    @EventListener
-    public void on(MailDeliverySucceeded succeeded) {
+    public void succeeded(Instant at) {
         if (open()) {
-            record(false, succeeded.at());
+            record(false, at);
         }
     }
 
