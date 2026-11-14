@@ -29,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
@@ -132,6 +133,27 @@ class LiveEndpointTest {
         mockMvc.perform(get("/api/live").accept(MediaType.TEXT_EVENT_STREAM).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.type").value("https://nfnn.cz/problems/auth/expired-token"));
+    }
+
+    @Test
+    @DisplayName("Given a donor whose sessions ended after the token was issued, when the stream is asked for in Czech and in English, then the answer is the expired token's problem with its texts in that language")
+    void should_answer_the_expired_token_problem_when_stream_requested_given_sessions_ended() throws Exception {
+        UUID donor = UUID.randomUUID();
+        String token = token(donor, List.of(), null, clock.instant().minusSeconds(5));
+        transactions.executeWithoutResult(status -> events.publishEvent(new DonorSessionsEnded(donor, clock.instant())));
+
+        mockMvc.perform(get("/api/live").accept(MediaType.TEXT_EVENT_STREAM).header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "cs"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                .andExpect(content().string("{\"detail\":\"Přihlaste se prosím znovu.\",\"instance\":\"/api/live\",\"status\":401,"
+                        + "\"title\":\"Platnost přihlášení vypršela\",\"type\":\"https://nfnn.cz/problems/auth/expired-token\"}"));
+        mockMvc.perform(get("/api/live").accept(MediaType.TEXT_EVENT_STREAM).header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+                .andExpect(content().string("{\"detail\":\"Please sign in again.\",\"instance\":\"/api/live\",\"status\":401,"
+                        + "\"title\":\"Your sign-in has expired\",\"type\":\"https://nfnn.cz/problems/auth/expired-token\"}"));
     }
 
     @Test
