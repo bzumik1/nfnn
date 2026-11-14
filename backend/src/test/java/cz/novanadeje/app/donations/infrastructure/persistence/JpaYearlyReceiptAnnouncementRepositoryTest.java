@@ -1,12 +1,10 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
+import cz.novanadeje.app.PersistenceTest;
 import cz.novanadeje.app.donations.domain.receipt.YearlyReceiptAnnouncementRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.time.Instant;
@@ -14,9 +12,7 @@ import java.time.Year;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(BankPersistenceTestConfiguration.class)
+@PersistenceTest
 class JpaYearlyReceiptAnnouncementRepositoryTest {
 
     private static final Instant NOW = Instant.parse("2027-01-02T09:00:00Z");
