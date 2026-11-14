@@ -6,38 +6,38 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public enum PushMessageKind {
-    TEST("test", Optional.empty(), false),
-    BANK_IMPORT_OUTAGE("bank-import-outage", Optional.of(MonitoredArea.BANK_IMPORT), true),
-    BANK_IMPORT_RECOVERED("bank-import-recovered", Optional.of(MonitoredArea.BANK_IMPORT), false),
-    BACKUPS_OUTAGE("backups-outage", Optional.of(MonitoredArea.BACKUPS), true),
-    BACKUPS_RECOVERED("backups-recovered", Optional.of(MonitoredArea.BACKUPS), false),
-    MAIL_OUTAGE("mail-outage", Optional.of(MonitoredArea.MAIL), true),
-    MAIL_RECOVERED("mail-recovered", Optional.of(MonitoredArea.MAIL), false),
-    DONOR_TEST("donor-test"),
-    GIFT_ARRIVED("gift-arrived"),
-    YEARLY_RECEIPT_READY("yearly-receipt-ready");
+    TEST("test", false),
+    BANK_IMPORT_OUTAGE("bank-import-outage", MonitoredArea.BANK_IMPORT, true),
+    BANK_IMPORT_RECOVERED("bank-import-recovered", MonitoredArea.BANK_IMPORT, false),
+    BACKUPS_OUTAGE("backups-outage", MonitoredArea.BACKUPS, true),
+    BACKUPS_RECOVERED("backups-recovered", MonitoredArea.BACKUPS, false),
+    MAIL_OUTAGE("mail-outage", MonitoredArea.MAIL, true),
+    MAIL_RECOVERED("mail-recovered", MonitoredArea.MAIL, false),
+    DONOR_TEST("donor-test", true),
+    GIFT_ARRIVED("gift-arrived", true),
+    YEARLY_RECEIPT_READY("yearly-receipt-ready", true);
 
     private final String token;
-    private final Optional<MonitoredArea> area;
+    private final MonitoredArea area;
     private final boolean outage;
     private final boolean toDonors;
 
-    PushMessageKind(String token, Optional<MonitoredArea> area, boolean outage) {
+    PushMessageKind(String token, MonitoredArea area, boolean outage) {
         this.token = token;
         this.area = area;
         this.outage = outage;
         this.toDonors = false;
     }
 
-    PushMessageKind(String token) {
+    PushMessageKind(String token, boolean toDonors) {
         this.token = token;
-        this.area = Optional.empty();
+        this.area = null;
         this.outage = false;
-        this.toDonors = true;
+        this.toDonors = toDonors;
     }
 
     public static PushMessageKind of(MonitoredArea area, boolean opened) {
-        return Arrays.stream(values()).filter(kind -> kind.area.equals(Optional.of(area)) && kind.outage == opened).findFirst().orElseThrow();
+        return Arrays.stream(values()).filter(kind -> kind.area == area && kind.outage == opened).findFirst().orElseThrow();
     }
 
     public String token() {
@@ -45,7 +45,7 @@ public enum PushMessageKind {
     }
 
     public Optional<MonitoredArea> area() {
-        return area;
+        return Optional.ofNullable(area);
     }
 
     public boolean carriesOpenAlertCount() {

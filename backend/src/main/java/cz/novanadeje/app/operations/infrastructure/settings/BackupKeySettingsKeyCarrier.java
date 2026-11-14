@@ -28,31 +28,29 @@ final class BackupKeySettingsKeyCarrier implements SettingsKeyCarrier {
     private static final int IV_BYTES = 12;
     private static final int TAG_BITS = 128;
 
-    private final Optional<byte[]> settingsKey;
-    private final Optional<SecretKey> wrappingKey;
+    private final byte[] settingsKey;
+    private final SecretKey wrappingKey;
     private final SecureRandom random = new SecureRandom();
 
-    private BackupKeySettingsKeyCarrier(Optional<byte[]> settingsKey, Optional<SecretKey> wrappingKey) {
+    private BackupKeySettingsKeyCarrier(byte[] settingsKey, SecretKey wrappingKey) {
         this.settingsKey = settingsKey;
         this.wrappingKey = wrappingKey;
     }
 
     static BackupKeySettingsKeyCarrier of(String settingsKey, String backupKey) {
-        Optional<byte[]> settings = settingsKey == null || settingsKey.isBlank()
-                ? Optional.empty()
-                : Optional.of(AesGcmSecretSealer.decodeKey(settingsKey));
-        return new BackupKeySettingsKeyCarrier(settings, wrappingKeyOf(backupKey));
+        byte[] settings = settingsKey == null || settingsKey.isBlank() ? null : AesGcmSecretSealer.decodeKey(settingsKey);
+        return new BackupKeySettingsKeyCarrier(settings, wrappingKeyOf(backupKey).orElse(null));
     }
 
     @Override
     public boolean available() {
-        return settingsKey.isPresent() && wrappingKey.isPresent();
+        return heldSettingsKey().isPresent() && heldWrappingKey().isPresent();
     }
 
     @Override
     public CarriedSettingsKey carryCurrentKey(Instant at) {
-        byte[] key = settingsKey.orElseThrow(() -> new IllegalStateException("No settings key to carry"));
-        SecretKey wrapping = wrappingKey.orElseThrow(() -> new IllegalStateException("No backup key to carry the settings key under"));
+        byte[] key = heldSettingsKey().orElseThrow(() -> new IllegalStateException("No settings key to carry"));
+        SecretKey wrapping = heldWrappingKey().orElseThrow(() -> new IllegalStateException("No backup key to carry the settings key under"));
         try {
             byte[] iv = new byte[IV_BYTES];
             random.nextBytes(iv);
@@ -69,7 +67,7 @@ final class BackupKeySettingsKeyCarrier implements SettingsKeyCarrier {
 
     @Override
     public boolean carriesCurrentKey(CarriedSettingsKey carried) {
-        return settingsKey.isPresent() && unwrap(carried).filter(key -> MessageDigest.isEqual(key, settingsKey.get())).isPresent();
+        return heldSettingsKey().flatMap(current -> unwrap(carried).filter(key -> MessageDigest.isEqual(key, current))).isPresent();
     }
 
     @Override
@@ -78,11 +76,12 @@ final class BackupKeySettingsKeyCarrier implements SettingsKeyCarrier {
     }
 
     Optional<byte[]> settingsKey() {
-        return settingsKey.map(byte[]::clone);
+        return heldSettingsKey().map(byte[]::clone);
     }
 
     Optional<byte[]> unwrap(CarriedSettingsKey carried) {
-        if (wrappingKey.isEmpty() || !carried.wrapped().startsWith(VERSION)) {
+        Optional<SecretKey> wrapping = heldWrappingKey();
+        if (wrapping.isEmpty() || !carried.wrapped().startsWith(VERSION)) {
             return Optional.empty();
         }
         try {
@@ -91,13 +90,21 @@ final class BackupKeySettingsKeyCarrier implements SettingsKeyCarrier {
                 return Optional.empty();
             }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, wrappingKey.get(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
+            cipher.init(Cipher.DECRYPT_MODE, wrapping.get(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
             cipher.updateAAD(INFO);
             byte[] key = cipher.doFinal(bytes, IV_BYTES, bytes.length - IV_BYTES);
             return key.length == AesGcmSecretSealer.KEY_BYTES ? Optional.of(key) : Optional.empty();
         } catch (GeneralSecurityException | IllegalArgumentException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private Optional<byte[]> heldSettingsKey() {
+        return Optional.ofNullable(settingsKey);
+    }
+
+    private Optional<SecretKey> heldWrappingKey() {
+        return Optional.ofNullable(wrappingKey);
     }
 
     private static Optional<SecretKey> wrappingKeyOf(String backupKey) {

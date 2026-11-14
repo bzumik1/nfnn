@@ -20,18 +20,22 @@ final class AesGcmSecretSealer implements SecretSealer {
     private static final int IV_BYTES = 12;
     private static final int TAG_BITS = 128;
 
-    private final Optional<SecretKeySpec> key;
+    private final SecretKeySpec key;
     private final SecureRandom random = new SecureRandom();
 
-    private AesGcmSecretSealer(Optional<SecretKeySpec> key) {
+    private AesGcmSecretSealer() {
+        this.key = null;
+    }
+
+    private AesGcmSecretSealer(SecretKeySpec key) {
         this.key = key;
     }
 
     static AesGcmSecretSealer fromKey(String encodedKey) {
         if (encodedKey == null || encodedKey.isBlank()) {
-            return new AesGcmSecretSealer(Optional.empty());
+            return new AesGcmSecretSealer();
         }
-        return new AesGcmSecretSealer(Optional.of(new SecretKeySpec(decodeKey(encodedKey), "AES")));
+        return new AesGcmSecretSealer(new SecretKeySpec(decodeKey(encodedKey), "AES"));
     }
 
     static byte[] decodeKey(String encodedKey) {
@@ -49,12 +53,12 @@ final class AesGcmSecretSealer implements SecretSealer {
 
     @Override
     public boolean available() {
-        return key.isPresent();
+        return key().isPresent();
     }
 
     @Override
     public String seal(String purpose, String value) {
-        SecretKeySpec secretKey = key.orElseThrow(() -> new IllegalStateException("No settings key to seal with"));
+        SecretKeySpec secretKey = key().orElseThrow(() -> new IllegalStateException("No settings key to seal with"));
         try {
             byte[] iv = new byte[IV_BYTES];
             random.nextBytes(iv);
@@ -70,7 +74,8 @@ final class AesGcmSecretSealer implements SecretSealer {
 
     @Override
     public Optional<String> unseal(String purpose, String sealed) {
-        if (key.isEmpty() || sealed == null || !sealed.startsWith(VERSION)) {
+        Optional<SecretKeySpec> secretKey = key();
+        if (secretKey.isEmpty() || sealed == null || !sealed.startsWith(VERSION)) {
             return Optional.empty();
         }
         try {
@@ -79,11 +84,15 @@ final class AesGcmSecretSealer implements SecretSealer {
                 return Optional.empty();
             }
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, key.get(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
+            cipher.init(Cipher.DECRYPT_MODE, secretKey.get(), new GCMParameterSpec(TAG_BITS, bytes, 0, IV_BYTES));
             cipher.updateAAD(purpose.getBytes(StandardCharsets.US_ASCII));
             return Optional.of(new String(cipher.doFinal(bytes, IV_BYTES, bytes.length - IV_BYTES), StandardCharsets.UTF_8));
         } catch (GeneralSecurityException | IllegalArgumentException unreadable) {
             return Optional.empty();
         }
+    }
+
+    private Optional<SecretKeySpec> key() {
+        return Optional.ofNullable(key);
     }
 }
