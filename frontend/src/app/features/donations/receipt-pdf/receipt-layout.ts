@@ -117,11 +117,15 @@ function joined(chunks: readonly Uint8Array[]): Uint8Array {
 }
 
 type PdfImage = ReturnType<PDFDocument['openImage']>;
+type PdfReference = ReturnType<PDFDocument['ref']>;
+
+const MULTIPLIED_INK = 'GsMultipliedInk';
 
 class ReceiptPdfFile {
   readonly doc: PDFDocument;
   readonly root: PdfStructureElement;
   private readonly images = new Map<Uint8Array, PdfImage>();
+  private multiplied: PdfReference | null = null;
   private readonly ended: Promise<Uint8Array>;
   private pages = 1;
 
@@ -195,6 +199,15 @@ class ReceiptPdfFile {
       this.images.set(bytes, image);
     }
     return image;
+  }
+
+  multiplyNextDrawing(): void {
+    if (this.multiplied === null) {
+      this.multiplied = this.doc.ref({ Type: 'ExtGState', BM: 'Multiply' });
+      this.multiplied.end();
+    }
+    this.doc.page.ext_gstates[MULTIPLIED_INK] = this.multiplied;
+    this.doc.addContent(`/${MULTIPLIED_INK} gs`);
   }
 
   flush(): void {
@@ -937,7 +950,10 @@ class ReceiptLayout {
     if (art.kind === 'vector') {
       this.vector(art.art, x, y, width, height);
     } else {
+      this.doc.save();
+      this.file.multiplyNextDrawing();
       this.doc.image(this.file.image(art.bytes), x, y, { fit: [width, height], valign: 'bottom' });
+      this.doc.restore();
     }
   }
 

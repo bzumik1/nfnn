@@ -10,6 +10,7 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
+import cz.novanadeje.app.shared.application.people.PrintSignature;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -44,6 +45,7 @@ class ContentFoundationPeopleTest {
 
     private static final Instant AT = Instant.parse("2026-10-31T08:00:00Z");
     private static final MediaId PORTRAIT = MediaId.newId(AT);
+    private static final MediaId SIGNATURE = MediaId.newId(AT.plusSeconds(2));
     private static final PersonId WITH_PORTRAIT = PersonId.newId(AT);
     private static final PersonId WITHOUT_PORTRAIT = PersonId.newId(AT.plusSeconds(1));
 
@@ -98,6 +100,58 @@ class ContentFoundationPeopleTest {
         assertThat(foundationPeople.printPortraitOf(WITHOUT_PORTRAIT.value())).isEmpty();
         assertThat(foundationPeople.printPortraitOf(PersonId.newId(AT.plusSeconds(9)).value())).isEmpty();
         assertThat(foundationPeople.printPortraitOf(WITH_PORTRAIT.value())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a person with a signature in several sizes, when the signature for print is asked for twice, then it is prepared from the largest size once and the same PNG comes back")
+    void should_prepare_signature_once_when_asked_twice_given_signature() {
+        givenPeople();
+        when(media.findLargestVariant(SIGNATURE)).thenReturn(Optional.of(variant(1440, 480)));
+
+        Optional<PrintSignature> first = foundationPeople.printSignatureOf(WITH_PORTRAIT.value());
+        Optional<PrintSignature> second = foundationPeople.printSignatureOf(WITH_PORTRAIT.value());
+
+        assertThat(first).hasValueSatisfying(signature -> {
+            assertThat(signature.width()).isEqualTo(1200);
+            assertThat(signature.height()).isEqualTo(400);
+        });
+        assertThat(second).isEqualTo(first);
+        verify(media, times(1)).findLargestVariant(SIGNATURE);
+    }
+
+    @Test
+    @DisplayName("Given a person without a signature, an unknown person or a signature whose image is gone, when the signature for print is asked for, then there is none")
+    void should_answer_no_signature_when_asked_given_no_signature() {
+        givenPeople();
+        when(media.findLargestVariant(SIGNATURE)).thenReturn(Optional.empty());
+
+        assertThat(foundationPeople.printSignatureOf(WITHOUT_PORTRAIT.value())).isEmpty();
+        assertThat(foundationPeople.printSignatureOf(PersonId.newId(AT.plusSeconds(9)).value())).isEmpty();
+        assertThat(foundationPeople.printSignatureOf(WITH_PORTRAIT.value())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a signature whose stored image cannot be decoded, when the signature for print is asked for, then there is none and a warning names only the image id")
+    void should_answer_no_signature_and_warn_when_asked_given_undecodable_signature() {
+        givenPeople();
+        when(media.findLargestVariant(SIGNATURE)).thenReturn(Optional.of(new MediaVariant(1200, 400, new byte[] {1, 2, 3, 4})));
+        ListAppender<ILoggingEvent> log = new ListAppender<>();
+        log.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(ContentFoundationPeople.class);
+        logger.addAppender(log);
+        try {
+            assertThat(foundationPeople.printSignatureOf(WITH_PORTRAIT.value())).isEmpty();
+        } finally {
+            logger.detachAppender(log);
+        }
+
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel()).isEqualTo(Level.WARN);
+            assertThat(event.getFormattedMessage())
+                    .isEqualTo("Signature " + SIGNATURE.value() + " cannot be prepared for print, the receipt is issued without it")
+                    .doesNotContain("Petr");
+            assertThat(event.getThrowableProxy()).isNull();
+        });
     }
 
     @Test
@@ -177,7 +231,7 @@ class ContentFoundationPeopleTest {
     }
 
     private void givenPeople() {
-        when(people.findById(WITH_PORTRAIT)).thenReturn(Optional.of(person(WITH_PORTRAIT, "Petr Vzorový", Optional.of(PORTRAIT))));
+        when(people.findById(WITH_PORTRAIT)).thenReturn(Optional.of(person(WITH_PORTRAIT, "Petr Vzorový", Optional.of(PORTRAIT)).signWith(SIGNATURE, AT)));
         when(people.findById(WITHOUT_PORTRAIT)).thenReturn(Optional.of(person(WITHOUT_PORTRAIT, "Eva Ukázková", Optional.empty())));
     }
 

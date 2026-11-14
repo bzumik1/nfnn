@@ -14,14 +14,7 @@ import {
   PORTRAIT_ID,
 } from '../../content/testing/people-fixtures';
 import { ReceiptSignatoryResponse } from '../admin-api';
-import {
-  noReceiptSignatory,
-  noReceiptSignature,
-  receiptSignatory,
-  receiptSignature,
-  SIGNATURE_IMAGE,
-  vectorReceiptSignature,
-} from '../testing/admin-fixtures';
+import { noReceiptSignatory, receiptSignatory } from '../testing/admin-fixtures';
 import {
   draftWorkOf,
   MemoryDraftShelf,
@@ -44,7 +37,6 @@ const FOOTNOTE_VERSION = '00000000000000b1';
 const VERSIONS = { noteVersion: NOTE_VERSION, footnoteVersion: FOOTNOTE_VERSION };
 const MEDIA_URL = '/api/admin/content/media';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
-const RECEIPT_SIGNATURES = '/api/admin/donations/receipt-signatures/';
 
 function problem(status: number, type: string, title: string, detail: string) {
   return {
@@ -59,7 +51,6 @@ function problem(status: number, type: string, title: string, detail: string) {
 
 async function setUp(
   signatory: ReceiptSignatoryResponse | 'pending' = noReceiptSignatory(),
-  previews: 'none' | 'pending' = 'none',
   providers: Provider[] = [],
 ): Promise<{
   fixture: ComponentFixture<AdminPeople>;
@@ -84,21 +75,8 @@ async function setUp(
   fixture.detectChanges();
   if (signatory !== 'pending') {
     http.expectOne(SIGNATORY_URL).flush(signatory);
-    if (previews === 'none') {
-      http
-        .match((request) => request.url.startsWith(RECEIPT_SIGNATURES))
-        .forEach((pending) => pending.flush(noReceiptSignature()));
-    }
   }
   return { fixture, http };
-}
-
-function verifyLeavingReceiptSignatures(http: HttpTestingController): void {
-  http
-    .match((request) => request.url.startsWith(RECEIPT_SIGNATURES))
-    .filter((pending) => !pending.cancelled)
-    .forEach((pending) => pending.flush(noReceiptSignature()));
-  http.verify();
 }
 
 function element<T extends HTMLElement>(fixture: ComponentFixture<unknown>, selector: string): T {
@@ -214,7 +192,7 @@ describe('Given an administrator and no people of the foundation yet', () => {
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when the page opens, then it says the site keeps its own block and offers to add a person', () => {
     expect(text(fixture, 'h1')).toBe('Lidé fondu');
@@ -365,7 +343,7 @@ describe('Given an administrator and two people of the foundation', () => {
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when the page opens, then the list names both in order with their badges and the note and the line under the board are filled in', () => {
     expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
@@ -452,7 +430,7 @@ describe('Given an administrator and two people of the foundation', () => {
     expect(text(fixture, '.ui-notice--status')).toBe('Změny u Eva Vzorová jsou uložené a na webu.');
   });
 
-  it('when they upload a web signature, then it is uploaded and set at once, and the page says where it shows', async () => {
+  it('when they upload a signature, then it is uploaded and set at once, and the page says where it shows', async () => {
     await click(fixture, `#person-edit-${PERSON_ID}`);
     await chooseFile(
       fixture,
@@ -462,12 +440,12 @@ describe('Given an administrator and two people of the foundation', () => {
 
     http.expectOne(MEDIA_URL).flush(uploadedImage({ width: 600, height: 180 }));
     await settle(fixture);
-    const set = http.expectOne(`${PEOPLE_URL}/${PERSON_ID}/web-signature`);
+    const set = http.expectOne(`${PEOPLE_URL}/${PERSON_ID}/signature`);
     expect(set.request.method).toBe('POST');
     expect(set.request.body).toEqual({ imageId: IMAGE_ID });
     set.flush(
       person({
-        webSignature: {
+        signature: {
           id: IMAGE_ID,
           url: `/api/content/media/${IMAGE_ID}`,
           width: 600,
@@ -484,7 +462,7 @@ describe('Given an administrator and two people of the foundation', () => {
       `/api/content/media/${IMAGE_ID}?w=480`,
     );
     expect(button(fixture, 'Odebrat podpis')).toBeTruthy();
-    expect(text(fixture, '.person-row:first-child .person-signatures')).toContain('Podpis na webu');
+    expect(text(fixture, '.person-row:first-child .person-signatures')).toContain('Podpis');
     expect(element<HTMLImageElement>(fixture, '.signature-preview').classList).toContain('ui-ink');
   });
 
@@ -559,7 +537,7 @@ describe('Given an administrator whose people do not load', () => {
     ({ fixture, http } = await setUp());
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when the server fails, then the page offers to try again, and trying again loads them', async () => {
     http.expectOne(PEOPLE_URL).flush(null, { status: 500, statusText: 'Error' });
@@ -597,13 +575,13 @@ describe('Given an administrator and two people of the foundation, one of whom s
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when the page opens, then the person who signs carries a badge saying so', () => {
     expect(badges(fixture)).toContain('Podepisuje potvrzení');
   });
 
-  it('when they edit the signatory, then the part for receipts says so with the receipt role, shows their receipt signature and refuses removing them', async () => {
+  it('when they edit the signatory, then the part for receipts says so with the receipt role and refuses removing them', async () => {
     await click(fixture, `#person-edit-${PERSON_ID}`);
 
     expect(text(fixture, '.receipt-part h3')).toBe('Na potvrzení o daru');
@@ -614,11 +592,6 @@ describe('Given an administrator and two people of the foundation, one of whom s
       'předsedkyně správní rady',
     );
     expect(fixture.nativeElement.querySelector('#person-signs-receipts')).toBeNull();
-    http
-      .expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
-      .flush(noReceiptSignature());
-    await settle(fixture);
-    expect(text(fixture, '.receipt-part h4')).toBe('Podpis na potvrzení');
     expect(findButton(fixture, 'Odebrat osobu z webu')).toBeNull();
     expect(text(fixture, '.remove-part .ui-callout')).toBe(
       'Osoba podepisuje potvrzení o daru, a tak ji nejde odebrat. Nejdřív vyberte jinou osobu, která je bude podepisovat.',
@@ -683,7 +656,7 @@ describe('Given an administrator and two people of the foundation, one of whom s
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
 
     expect(text(fixture, '.remove-part .ui-card__intro')).toBe(
-      'Osoba hned zmizí z webu a její portrét a podpis na webu se smažou z databáze; ze záloh zmizí do 30 dnů. Její podpis na potvrzení už žádné další potvrzení neponese; podpis a portrét na už vystavených potvrzeních o daru zůstávají s nimi.',
+      'Osoba hned zmizí z webu a její portrét a podpis se smažou z databáze; ze záloh zmizí do 30 dnů. Podpis a portrét na už vystavených potvrzeních o daru zůstávají s nimi.',
     );
   });
 
@@ -722,56 +695,36 @@ describe('Given an administrator and two people of the foundation, one of whom s
     expect(fixture.nativeElement.querySelector('.remove-part .ui-callout')).toBeNull();
   });
 
-  it('when a receipt signature uploads, then no other person can be opened until it is done', async () => {
+  it('when they upload the signature of the person who signs the receipts, then the page says the receipts print it from now on, the administrators are told and the kept card of who signs is forgotten', async () => {
+    const kept = TestBed.inject(KeptAdministrationAnswers);
+    kept.keep('receipt-signatory', { block: null });
     await click(fixture, `#person-edit-${PERSON_ID}`);
-    http
-      .expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
-      .flush(noReceiptSignature());
-    await settle(fixture);
-
+    expect(text(fixture, '#person-signature-hint')).toContain(
+      'vytiskne se na potvrzeních o daru, která osoba podepisuje',
+    );
     await chooseFile(
       fixture,
-      '#receipt-signature-file',
-      new File([new Uint8Array(10)], 'podpis.png', { type: 'image/png' }),
+      '#person-signature',
+      new File(['png'], 'podpis.png', { type: 'image/png' }),
     );
-
-    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
-      true,
-    );
-    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(true);
-    http
-      .expectOne({ method: 'POST', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
-      .flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne(MEDIA_URL).flush(uploadedImage({ width: 600, height: 180 }));
     await settle(fixture);
-    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
-      false,
+    http.expectOne(`${PEOPLE_URL}/${PERSON_ID}/signature`).flush(
+      person({
+        signature: {
+          id: IMAGE_ID,
+          url: `/api/content/media/${IMAGE_ID}`,
+          width: 600,
+          height: 180,
+        },
+      }),
     );
-  });
-
-  it('when a receipt signature removal runs, then no other person can be opened and the editor cannot be closed until it is done', async () => {
-    await click(fixture, `#person-edit-${PERSON_ID}`);
-    http
-      .expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
-      .flush(receiptSignature());
     await settle(fixture);
 
-    await press(fixture, 'Odebrat podpis z potvrzení');
-    await click(fixture, '.signature-confirm .ui-button--danger');
-
-    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
-      true,
+    expect(text(fixture, '.signature-part .ui-notice--status')).toBe(
+      'Podpis je uložený. Ukáže se pod slovem zakladatelů a vytiskne se na potvrzeních o daru vystavených od teď; správci o změně dostanou e-mail.',
     );
-    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(true);
-    http.expectOne({ method: 'DELETE', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` }).flush(null);
-    await settle(fixture);
-    http
-      .match(SIGNATORY_URL)
-      .forEach((request) => request.flush(receiptSignatory({ personId: PERSON_ID })));
-    await settle(fixture);
-    expect(element<HTMLButtonElement>(fixture, `#person-edit-${OTHER_PERSON_ID}`).disabled).toBe(
-      false,
-    );
-    expect(findButton(fixture, 'Zavřít bez uložení')?.disabled).toBe(false);
+    expect(kept.kept('receipt-signatory')).toBeNull();
   });
 
   it('when they let another person sign without a receipt role, then the field says so and nothing is sent', async () => {
@@ -783,6 +736,47 @@ describe('Given an administrator and two people of the foundation, one of whom s
       'Vyplňte prosím funkci, která se vytiskne pod jméno.',
     );
     http.expectNone(SIGNATORY_URL);
+  });
+});
+
+describe('Given an administrator and the person who signs the receipts with a signature', () => {
+  let fixture: ComponentFixture<AdminPeople>;
+  let http: HttpTestingController;
+
+  beforeEach(async () => {
+    ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID })));
+    http.expectOne(PEOPLE_URL).flush({
+      members: [
+        person({
+          signature: {
+            id: IMAGE_ID,
+            url: `/api/content/media/${IMAGE_ID}`,
+            width: 600,
+            height: 180,
+          },
+        }),
+        ADAM,
+      ],
+      note: null,
+      footnote: null,
+      ...VERSIONS,
+    });
+    await settle(fixture);
+  });
+
+  afterEach(() => http.verify());
+
+  it('when they remove the signature, then the page says the receipts carry only the line from now on and the administrators are told', async () => {
+    await click(fixture, `#person-edit-${PERSON_ID}`);
+    await press(fixture, 'Odebrat podpis');
+    const removed = http.expectOne(`${PEOPLE_URL}/${PERSON_ID}/signature`);
+    expect(removed.request.method).toBe('DELETE');
+    removed.flush(person());
+    await settle(fixture);
+
+    expect(text(fixture, '.signature-part .ui-notice--status')).toBe(
+      'Podpis jsme odebrali a smazali. Potvrzení vystavená od teď budou mít místo něj jen čáru; správci o změně dostanou e-mail.',
+    );
   });
 });
 
@@ -799,7 +793,7 @@ describe('Given an administrator whose check of who signs the receipts fails', (
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when they edit a person, then the receipt part says the check failed, claims nobody signs, offers no choice and keeps removal off', async () => {
     await click(fixture, `#person-edit-${OTHER_PERSON_ID}`);
@@ -840,7 +834,7 @@ describe('Given an administrator who opens the signatory before the check of who
     await click(fixture, `#person-edit-${PERSON_ID}`);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   it('when the check runs, then the receipt part says so and offers no choice yet', () => {
     expect(text(fixture, '.receipt-part [role="status"]:not(:empty)')).toContain(
@@ -864,11 +858,7 @@ describe('Given an administrator who opens the signatory before the check of who
 describe('Given an administrator and people of the foundation with signatures', () => {
   let fixture: ComponentFixture<AdminPeople>;
   let http: HttpTestingController;
-  const WEB_SIGNATURE_ID = '019a0000-0000-7000-8000-00000000d101';
-
-  function receiptPreview(personId: string) {
-    return http.expectOne({ method: 'GET', url: `${RECEIPT_SIGNATURES}${personId}` });
-  }
+  const SIGNATURE_ID = '019a0000-0000-7000-8000-00000000d101';
 
   function previews(): HTMLElement[] {
     return Array.from(
@@ -877,13 +867,13 @@ describe('Given an administrator and people of the foundation with signatures', 
   }
 
   beforeEach(async () => {
-    ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID }), 'pending'));
+    ({ fixture, http } = await setUp(receiptSignatory({ personId: PERSON_ID })));
     http.expectOne(PEOPLE_URL).flush({
       members: [
         person({
-          webSignature: {
-            id: WEB_SIGNATURE_ID,
-            url: `/api/content/media/${WEB_SIGNATURE_ID}`,
+          signature: {
+            id: SIGNATURE_ID,
+            url: `/api/content/media/${SIGNATURE_ID}`,
             width: 600,
             height: 180,
           },
@@ -895,117 +885,24 @@ describe('Given an administrator and people of the foundation with signatures', 
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
-  it('when the list shows, then a person with a web signature shows it labelled with their name and a person without shows none', () => {
-    receiptPreview(PERSON_ID).flush(noReceiptSignature());
-    fixture.detectChanges();
+  it('when the list shows, then a person with a signature shows it labelled with their name and a person without shows none', () => {
     const [eva, adam] = previews();
     const ink = eva.querySelector('.person-signature-ink') as HTMLImageElement;
 
-    expect(ink.getAttribute('src')).toBe(`/api/content/media/${WEB_SIGNATURE_ID}?w=480`);
-    expect(ink.getAttribute('alt')).toBe('Podpis na webu: Eva Vzorová');
-    expect(eva.querySelector('.person-signatures figcaption')?.textContent?.trim()).toBe(
-      'Podpis na webu',
-    );
-    expect(eva.querySelector('.person-badges')?.textContent).not.toContain('Podpis na webu');
+    expect(ink.getAttribute('src')).toBe(`/api/content/media/${SIGNATURE_ID}?w=480`);
+    expect(ink.getAttribute('alt')).toBe('Podpis: Eva Vzorová');
+    expect(eva.querySelector('.person-signatures figcaption')?.textContent?.trim()).toBe('Podpis');
+    expect(eva.querySelector('.person-badges')?.textContent).not.toContain('Podpis');
+    expect(eva.querySelector('.person-signature--receipt')).toBeNull();
     expect(adam.querySelector('.person-signatures')).toBeNull();
   });
 
-  it("when the list shows, then the web signature is drawn as the theme's ink, as under the founders' note on the home page", () => {
-    receiptPreview(PERSON_ID).flush(noReceiptSignature());
-    fixture.detectChanges();
+  it("when the list shows, then the signature is drawn as the theme's ink, as under the founders' note on the home page", () => {
     const [eva] = previews();
 
     expect(eva.querySelector('.person-signature-ink')?.classList).toContain('ui-ink');
-  });
-
-  it('when the receipt signature is a drawing, then the list draws it labelled with their name from one request', async () => {
-    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
-    await settle(fixture);
-    const art = previews()[0].querySelector('.person-signature--receipt svg[role="img"]');
-
-    expect(art?.getAttribute('aria-label')).toBe('Podpis na potvrzení: Eva Vzorová');
-    expect(art?.querySelectorAll('path').length).toBe(2);
-    expect(text(fixture, '.person-row:first-child .person-signature--receipt figcaption')).toBe(
-      'Podpis na potvrzení',
-    );
-  });
-
-  it('when the receipt signature is a scan, then the list shows its image labelled with their name', async () => {
-    receiptPreview(PERSON_ID).flush(receiptSignature());
-    await settle(fixture);
-    const scan = previews()[0].querySelector(
-      '.person-signature--receipt img',
-    ) as HTMLImageElement | null;
-
-    expect(scan?.getAttribute('src')).toBe(SIGNATURE_IMAGE);
-    expect(scan?.getAttribute('alt')).toBe('Podpis na potvrzení: Eva Vzorová');
-  });
-
-  it('when the receipt signature cannot be loaded, then a quiet line says so and the list stays usable', async () => {
-    receiptPreview(PERSON_ID).flush(null, { status: 500, statusText: 'Server Error' });
-    await settle(fixture);
-
-    expect(text(fixture, '.person-row:first-child .person-signature--receipt')).toBe(
-      'Podpis na potvrzení Náhled se nepodařilo načíst.',
-    );
-    expect(fixture.nativeElement.querySelector('[role="alert"]:not(:empty)')).toBeNull();
-    expect(rows(fixture)).toEqual(['Eva Vzorová', 'Adam Vzor']);
-    expect(element<HTMLButtonElement>(fixture, `#person-edit-${PERSON_ID}`).disabled).toBe(false);
-  });
-
-  it('when the signatory is read again with the same signatures, then no preview is requested again', async () => {
-    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
-    await settle(fixture);
-    await click(fixture, `#person-edit-${PERSON_ID}`);
-    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
-    await settle(fixture);
-
-    await press(fixture, 'Odebrat podpis z potvrzení');
-    await click(fixture, '.signature-confirm .ui-button--danger');
-    http.expectOne({ method: 'DELETE', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` }).flush(null);
-    await settle(fixture);
-    http.expectOne(SIGNATORY_URL).flush(receiptSignatory({ personId: PERSON_ID }));
-    await settle(fixture);
-
-    http.expectNone(`${RECEIPT_SIGNATURES}${PERSON_ID}`);
-    expect(
-      previews()[0].querySelector('.person-signature--receipt svg[role="img"]'),
-    ).not.toBeNull();
-  });
-
-  it('when the receipt signature is replaced, then the list asks for the new one once', async () => {
-    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
-    await settle(fixture);
-    await click(fixture, `#person-edit-${PERSON_ID}`);
-    receiptPreview(PERSON_ID).flush(vectorReceiptSignature());
-    await settle(fixture);
-    await chooseFile(
-      fixture,
-      '#receipt-signature-file',
-      new File([new Uint8Array(10)], 'podpis.png', { type: 'image/png' }),
-    );
-    http
-      .expectOne({ method: 'POST', url: `${RECEIPT_SIGNATURES}${PERSON_ID}` })
-      .flush(receiptSignature({ uploadedAt: '2026-10-31T10:00:00Z' }));
-    await settle(fixture);
-    const refreshed = receiptSignatory({ personId: PERSON_ID });
-    http.expectOne(SIGNATORY_URL).flush({
-      ...refreshed,
-      signatures: refreshed.signatures.map((summary) => ({
-        ...summary,
-        kind: 'RASTER' as const,
-        uploadedAt: '2026-10-31T10:00:00Z',
-      })),
-    });
-    await settle(fixture);
-
-    receiptPreview(PERSON_ID).flush(receiptSignature({ uploadedAt: '2026-10-31T10:00:00Z' }));
-    await settle(fixture);
-    expect(previews()[0].querySelector('.person-signature--receipt img')?.getAttribute('src')).toBe(
-      SIGNATURE_IMAGE,
-    );
   });
 });
 
@@ -1037,7 +934,7 @@ describe('Given an administrator and the texts of the people page saved by someo
     await settle(fixture);
   });
 
-  afterEach(() => verifyLeavingReceiptSignatures(http));
+  afterEach(() => http.verify());
 
   async function moveWhile(answerVersions: typeof VERSIONS): Promise<void> {
     await click(fixture, `#person-down-${PERSON_ID}`);
@@ -1166,11 +1063,7 @@ describe('Given an administrator writing the texts of the people page on a devic
     footnote: string | null = null,
     versions = VERSIONS,
   ): Promise<void> {
-    ({ fixture, http } = await setUp(
-      noReceiptSignatory(),
-      'none',
-      memoryDraftShelfProviders(shelf),
-    ));
+    ({ fixture, http } = await setUp(noReceiptSignatory(), memoryDraftShelfProviders(shelf)));
     http.expectOne(PEOPLE_URL).flush({ members: [], note, footnote, ...versions });
     await drafted();
   }
@@ -1409,15 +1302,6 @@ describe('Given an administrator offline whose device keeps the administration c
       'Kdo potvrzení podepisuje, ukážeme, až budete online.',
     );
     expect(page.querySelector('.ui-load-state--error, .receipt-error')).toBeNull();
-    http
-      .expectOne((request) => request.url.startsWith(RECEIPT_SIGNATURES))
-      .error(new ProgressEvent('error'), { status: 0 });
-    await settle();
-
-    expect(textOf(page.querySelector('.signature-offline[role="status"]'))).toBe(
-      'Podpis ukážeme, až budete online.',
-    );
-    expect(page.querySelector('.signature-error')).toBeNull();
     http.verify();
   });
 });

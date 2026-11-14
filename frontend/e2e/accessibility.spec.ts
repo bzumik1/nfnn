@@ -78,13 +78,7 @@ import {
 } from './receipt-donations';
 import { answerReceiptIssuing, RECEIPT_ISSUING_URL } from './receipt-issuing';
 import { FOUR_DONORS, mockYearlyReceipts } from './yearly-receipts';
-import {
-  noSignatory,
-  refusedVector,
-  SIGNATORY_ID,
-  signatory,
-  vectorSignature,
-} from './signature-image';
+import { noSignatory, SIGNATORY_ID, signatory } from './signature-image';
 
 const WCAG_AA = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const PAGE_PINCH_STOPPED_JAKUB_2026_10_31 = 'meta-viewport';
@@ -2107,7 +2101,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 boardNote: null,
                 featured: true,
                 portrait: null,
-                webSignature: null,
+                signature: null,
                 personalEmail: null,
                 fundEmail: null,
                 linkedToAccount: false,
@@ -2560,25 +2554,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await page.route(
       (url) => url.pathname === '/api/admin/donations/receipt-signatory',
-      (route) =>
-        route.fulfill({
-          json: {
-            ...signatory({ portrait: true, signature: true }),
-            signatures: [
-              {
-                personId: SIGNATORY_ID,
-                kind: 'VECTOR',
-                width: 1200,
-                height: 400,
-                uploadedAt: '2026-10-23T19:30:00Z',
-              },
-            ],
-          },
-        }),
-    );
-    await page.route(
-      (url) => url.pathname === `/api/admin/donations/receipt-signatures/${SIGNATORY_ID}`,
-      (route) => route.fulfill({ json: vectorSignature }),
+      (route) => route.fulfill({ json: signatory({ portrait: true, signature: true }) }),
     );
     await page.route(
       (url) => url.pathname === '/api/admin/content/people',
@@ -2600,7 +2576,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                   width: 640,
                   height: 640,
                 },
-                webSignature: null,
+                signature: {
+                  id: '0199f3e0-0000-7000-8000-00000000c201',
+                  url: '/api/content/media/0199f3e0-0000-7000-8000-00000000c201',
+                  width: 600,
+                  height: 180,
+                },
                 personalEmail: null,
                 fundEmail: null,
               },
@@ -2661,7 +2642,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  test('when an administrator sees a vector receipt signature of a person and an SVG is refused, then the people page breaks no rule', async ({
+  test('when an administrator sees the signature of the person who signs the receipts and the part that changes it, then the people page breaks no rule', async ({
     page,
   }) => {
     await page.route(
@@ -2679,7 +2660,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 boardNote: null,
                 featured: false,
                 portrait: null,
-                webSignature: null,
+                signature: {
+                  id: '0199f3e0-0000-7000-8000-00000000c201',
+                  url: '/api/content/media/0199f3e0-0000-7000-8000-00000000c201',
+                  width: 600,
+                  height: 180,
+                },
                 personalEmail: null,
                 fundEmail: null,
               },
@@ -2692,33 +2678,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
         }),
     );
     await page.route(
-      (url) => url.pathname === `/api/admin/donations/receipt-signatures/${SIGNATORY_ID}`,
-      (route) =>
-        route.request().method() === 'POST'
-          ? route.fulfill({
-              status: 400,
-              contentType: 'application/problem+json',
-              body: JSON.stringify(refusedVector),
-            })
-          : route.fulfill({ json: vectorSignature }),
-    );
-    await page.route(
       (url) => url.pathname === '/api/admin/donations/receipt-signatory',
-      (route) =>
-        route.fulfill({
-          json: {
-            ...signatory({ signature: true }),
-            signatures: [
-              {
-                personId: SIGNATORY_ID,
-                kind: 'VECTOR',
-                width: 300,
-                height: 100,
-                uploadedAt: '2026-10-23T19:30:00Z',
-              },
-            ],
-          },
-        }),
+      (route) => route.fulfill({ json: signatory({ signature: true }) }),
     );
     await page.route('**/api/donors/auth/refresh', (route) =>
       route.fulfill(session(200, administrator)),
@@ -2727,28 +2688,12 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
     await page.goto('/sprava/lide-fondu');
     await expect(
-      page
-        .locator('.ui-person-list')
-        .getByRole('img', { name: 'Podpis na potvrzení: Petr Vzorový' }),
+      page.locator('.ui-person-list').getByRole('img', { name: 'Podpis: Petr Vzorový' }),
     ).toBeVisible();
     expect(await violations(page)).toEqual([]);
     await page.getByRole('button', { name: 'Upravit: Petr Vzorový' }).click();
-    const card = page.locator('app-receipt-signature');
-    await expect(card.getByRole('img', { name: 'Nahraný podpis' })).toBeVisible();
-    expect(await violations(page)).toEqual([]);
-
-    await card.getByRole('button', { name: 'Odebrat podpis z potvrzení' }).click();
-    await expect(card.getByRole('group', { name: 'Odebrat podpis z potvrzení?' })).toBeVisible();
-    expect(await violations(page)).toEqual([]);
-    await card.getByRole('button', { name: 'Zrušit' }).click();
-
-    await card.getByLabel('Nahrát jiný podpis na potvrzení').setInputFiles({
-      name: 'podpis.svg',
-      mimeType: 'image/svg+xml',
-      buffer: Buffer.from('<svg/>'),
-    });
-    await expect(card.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
-      'nepovolený prvek',
+    await expect(page.locator('.signature-part')).toContainText(
+      'vytiskne se na potvrzeních o daru, která osoba podepisuje',
     );
     expect(await violations(page)).toEqual([]);
   });
@@ -3015,7 +2960,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
                 boardNote: 'předsedkyně',
                 featured: true,
                 portrait: image(portraitId, 640, 640),
-                webSignature: image(signatureId, 600, 180),
+                signature: image(signatureId, 600, 180),
                 personalEmail: 'eva@example.org',
                 fundEmail: 'eva@nfnn.cz',
               },

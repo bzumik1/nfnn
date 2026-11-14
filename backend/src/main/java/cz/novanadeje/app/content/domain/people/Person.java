@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public record Person(PersonId id, PersonDetails details, int position, Optional<MediaId> webSignature, Instant createdAt,
+public record Person(PersonId id, PersonDetails details, int position, Optional<MediaId> signature, Instant createdAt,
                      Instant updatedAt) {
 
     public static final int MAX_PEOPLE = 30;
 
     public Person {
-        if (id == null || details == null || webSignature == null || createdAt == null || updatedAt == null) {
+        if (id == null || details == null || signature == null || createdAt == null || updatedAt == null) {
             throw new IllegalArgumentException("A person has an id, details, a web signature (even when absent) and the times of their changes");
         }
         if (position < 0) {
@@ -28,7 +28,7 @@ public record Person(PersonId id, PersonDetails details, int position, Optional<
 
     public Person edit(PersonDetails next, Instant at) {
         requireWritable(next);
-        return new Person(id, next, position, webSignature, createdAt, at);
+        return new Person(id, next, position, signature, createdAt, at);
     }
 
     private static void requireWritable(PersonDetails details) {
@@ -38,19 +38,19 @@ public record Person(PersonId id, PersonDetails details, int position, Optional<
     }
 
     public Person placeAt(int nextPosition, Instant at) {
-        return new Person(id, details, nextPosition, webSignature, createdAt, at);
+        return new Person(id, details, nextPosition, signature, createdAt, at);
     }
 
     public Person signWith(MediaId signature, Instant at) {
         return new Person(id, details, position, Optional.of(signature), createdAt, at);
     }
 
-    public Person withoutWebSignature(Instant at) {
+    public Person withoutSignature(Instant at) {
         return new Person(id, details, position, Optional.empty(), createdAt, at);
     }
 
     public List<MediaId> images() {
-        return Stream.of(details.portrait(), webSignature).flatMap(Optional::stream).toList();
+        return Stream.of(details.portrait(), signature).flatMap(Optional::stream).toList();
     }
 
     public List<MediaId> imagesLeftBy(Person next) {

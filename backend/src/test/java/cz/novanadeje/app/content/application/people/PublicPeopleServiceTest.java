@@ -112,7 +112,7 @@ class PublicPeopleServiceTest {
                 .mapToObj(index -> person("Osoba " + index, true, false, Optional.empty(), Optional.of(MediaId.newId(NOW.plusSeconds(10 + index))), index)
                         .signWith(MediaId.newId(NOW.plusSeconds(20 + index)), NOW))
                 .toList();
-        Set<MediaId> images = featured.stream().flatMap(person -> Stream.of(person.details().portrait().orElseThrow(), person.webSignature().orElseThrow()))
+        Set<MediaId> images = featured.stream().flatMap(person -> Stream.of(person.details().portrait().orElseThrow(), person.signature().orElseThrow()))
                 .collect(Collectors.toSet());
         when(people.findAllInOrder()).thenReturn(featured);
         when(notes.find()).thenReturn(Optional.of(new FoundersNote(Optional.of("Děkujeme."), NOW)));

@@ -670,7 +670,6 @@ public class AdministrationDeviceStepDefinitions {
         List<String> images = new ArrayList<>();
         images.addAll(jdbc.sql("select sha256 from receipt_image").query(String.class).list());
         images.addAll(jdbc.sql("select substr(encode(content, 'base64'), 1, 64) from receipt_image").query(String.class).list());
-        images.addAll(jdbc.sql("select image_sha256 from donation_person_receipt_signature").query(String.class).list());
         images.addAll(jdbc.sql("select substr(encode(data, 'base64'), 1, 64) from content_media_variant").query(String.class).list());
         assertThat(jdbc.sql("select count(*) from receipt_image").query(Integer.class).single()).as("the receipt images stored").isEqualTo(receiptImages);
         String held = everythingHeld();
@@ -678,15 +677,15 @@ public class AdministrationDeviceStepDefinitions {
         images.forEach(image -> assertThat(held).as("the chunks on the administration devices").doesNotContain(image));
     }
 
-    @Then("the people on the administration device carry only their public portrait and web signature")
+    @Then("the people on the administration device carry only their public portrait and signature")
     public void thePeopleOnTheAdministrationDeviceCarryOnlyTheirPublicImages() {
         List<JsonNode> members = devices.values().stream().map(copy -> copy.chunks.get("people")).filter(java.util.Objects::nonNull)
                 .flatMap(chunk -> chunk.get("rows").valueStream()).flatMap(row -> row.get("members").valueStream()).toList();
         assertThat(members).as("the people scanned").isNotEmpty();
         members.forEach(member -> {
             assertThat(fieldNames(member)).containsExactlyInAnyOrder("id", "name", "role", "position", "onBoard", "boardNote", "featured", "portrait",
-                    "webSignature", "personalEmail", "fundEmail", "linkedToAccount");
-            Stream.of(member.get("portrait"), member.get("webSignature")).filter(image -> !image.isNull()).forEach(image -> {
+                    "signature", "personalEmail", "fundEmail", "linkedToAccount");
+            Stream.of(member.get("portrait"), member.get("signature")).filter(image -> !image.isNull()).forEach(image -> {
                 assertThat(fieldNames(image)).containsExactlyInAnyOrder("id", "url", "width", "height");
                 assertThat(image.get("url").asString()).isEqualTo("/api/content/media/" + image.get("id").asString());
             });

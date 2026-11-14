@@ -65,8 +65,8 @@ enum AdminHandlerReach {
         table.put("PUT /api/admin/content/people/footnote", CONNECTOR);
         table.put("PUT /api/admin/content/people/{id}", CONNECTOR_SIGNATORY_PORTRAIT_IN_BROWSER_ONLY);
         table.put("DELETE /api/admin/content/people/{id}", CONNECTOR);
-        table.put("POST /api/admin/content/people/{id}/web-signature", CONNECTOR);
-        table.put("DELETE /api/admin/content/people/{id}/web-signature", CONNECTOR);
+        table.put("POST /api/admin/content/people/{id}/signature", CONNECTOR);
+        table.put("DELETE /api/admin/content/people/{id}/signature", CONNECTOR);
         table.put("GET /api/admin/content/project-order", CONNECTOR);
         table.put("PUT /api/admin/content/project-order", CONNECTOR);
         table.put("GET /api/admin/content/projects", CONNECTOR);
@@ -97,9 +97,6 @@ enum AdminHandlerReach {
         table.put("GET /api/admin/donations/receipt-images/{sha256}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signatory", CONNECTOR);
         table.put("PUT /api/admin/donations/receipt-signatory", BROWSER_ONLY);
-        table.put("GET /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
-        table.put("POST /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
-        table.put("DELETE /api/admin/donations/receipt-signatures/{personId}", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipt-signing-keys", CONNECTOR);
         table.put("POST /api/admin/donations/receipt-signing-keys/{keyId}/withdrawal", BROWSER_ONLY);
         table.put("GET /api/admin/donations/receipts", CONNECTOR);

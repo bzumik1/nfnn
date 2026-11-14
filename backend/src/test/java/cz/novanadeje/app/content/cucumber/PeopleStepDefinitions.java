@@ -23,7 +23,7 @@ public class PeopleStepDefinitions {
     private static final String PEOPLE = "/api/admin/content/people";
     private static final String ACCESS_TOKEN = "access_token";
     private static final List<String> PEOPLE_ACTIONS = List.of("ADD_PERSON", "UPDATE_PERSON", "REMOVE_PERSON", "ORDER_PEOPLE",
-            "CHANGE_FOUNDERS_NOTE", "CHANGE_PEOPLE_FOOTNOTE", "CHANGE_WEB_SIGNATURE", "REMOVE_WEB_SIGNATURE");
+            "CHANGE_FOUNDERS_NOTE", "CHANGE_PEOPLE_FOOTNOTE", "CHANGE_SIGNATURE", "REMOVE_SIGNATURE");
 
     private final ApiClient api;
     private final DonorSessions sessions;
@@ -187,34 +187,34 @@ public class PeopleStepDefinitions {
         api.put(PEOPLE + "/footnote", note(text));
     }
 
-    @Given("{string} sets the web signature of {string} to the image uploaded as {string}")
-    public void setsTheWebSignature(String alias, String name, String fileName) {
+    @Given("{string} sets the signature of {string} to the image uploaded as {string}")
+    public void setsTheSignature(String alias, String name, String fileName) {
         sessions.actAs(alias);
-        api.post(PEOPLE + "/" + idOf(name) + "/web-signature", Map.of("imageId", images.idOf(fileName)));
+        api.post(PEOPLE + "/" + idOf(name) + "/signature", Map.of("imageId", images.idOf(fileName)));
     }
 
-    @When("{string} sets the web signature of {string} to an image that was never uploaded")
-    public void setsTheWebSignatureToAnUnknownImage(String alias, String name) {
+    @When("{string} sets the signature of {string} to an image that was never uploaded")
+    public void setsTheSignatureToAnUnknownImage(String alias, String name) {
         sessions.actAs(alias);
-        api.post(PEOPLE + "/" + idOf(name) + "/web-signature", Map.of("imageId", "0199f3e0-0000-7000-8000-000000000000"));
+        api.post(PEOPLE + "/" + idOf(name) + "/signature", Map.of("imageId", "0199f3e0-0000-7000-8000-000000000000"));
     }
 
-    @When("{string} removes the web signature of {string}")
-    public void removesTheWebSignature(String alias, String name) {
+    @When("{string} removes the signature of {string}")
+    public void removesTheSignature(String alias, String name) {
         sessions.actAs(alias);
-        api.delete(PEOPLE + "/" + idOf(name) + "/web-signature");
+        api.delete(PEOPLE + "/" + idOf(name) + "/signature");
     }
 
-    @When("the exchanged API token sets the web signature of {string} to the image uploaded as {string}")
-    public void theExchangedApiTokenSetsTheWebSignature(String name, String fileName) {
+    @When("the exchanged API token sets the signature of {string} to the image uploaded as {string}")
+    public void theExchangedApiTokenSetsTheSignature(String name, String fileName) {
         actAsExchangedApiToken();
-        api.post(PEOPLE + "/" + idOf(name) + "/web-signature", Map.of("imageId", images.idOf(fileName)));
+        api.post(PEOPLE + "/" + idOf(name) + "/signature", Map.of("imageId", images.idOf(fileName)));
     }
 
-    @When("the exchanged API token removes the web signature of {string}")
-    public void theExchangedApiTokenRemovesTheWebSignature(String name) {
+    @When("the exchanged API token removes the signature of {string}")
+    public void theExchangedApiTokenRemovesTheSignature(String name) {
         actAsExchangedApiToken();
-        api.delete(PEOPLE + "/" + idOf(name) + "/web-signature");
+        api.delete(PEOPLE + "/" + idOf(name) + "/signature");
     }
 
     @Then("the person says:")

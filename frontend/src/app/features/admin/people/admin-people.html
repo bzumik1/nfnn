@@ -69,57 +69,19 @@
                         </li>
                       }
                     </ul>
-                    @if (webSignatureUrl(member) || receiptPreview(member)) {
+                    @if (signatureUrlOf(member); as url) {
                       <div class="person-signatures">
-                        @if (webSignatureUrl(member); as url) {
-                          <figure class="person-signature">
-                            <figcaption i18n="@@admin.people.list.webSignature">
-                              Podpis na webu
-                            </figcaption>
-                            <img
-                              class="person-signature-ink ui-ink"
-                              loading="lazy"
-                              [src]="url"
-                              [alt]="webSignatureAlt(member)"
-                              [attr.width]="member.webSignature?.width"
-                              [attr.height]="member.webSignature?.height"
-                            />
-                          </figure>
-                        }
-                        @if (receiptPreview(member); as preview) {
-                          <figure class="person-signature person-signature--receipt">
-                            <figcaption i18n="@@admin.people.list.receiptSignature">
-                              Podpis na potvrzení
-                            </figcaption>
-                            @switch (preview.state) {
-                              @case ('ready') {
-                                @if (preview.state === 'ready') {
-                                  <app-signature-artwork
-                                    class="person-signature-art"
-                                    [signature]="preview.signature"
-                                    [label]="receiptSignatureLabel(member)"
-                                  />
-                                }
-                              }
-                              @case ('error') {
-                                <p
-                                  class="person-signature-note"
-                                  i18n="@@admin.people.list.receiptSignatureFailed"
-                                >
-                                  Náhled se nepodařilo načíst.
-                                </p>
-                              }
-                              @default {
-                                <p
-                                  class="person-signature-note"
-                                  i18n="@@admin.people.list.receiptSignatureLoading"
-                                >
-                                  Načítáme náhled…
-                                </p>
-                              }
-                            }
-                          </figure>
-                        }
+                        <figure class="person-signature">
+                          <figcaption i18n="@@admin.people.list.webSignature">Podpis</figcaption>
+                          <img
+                            class="person-signature-ink ui-ink"
+                            loading="lazy"
+                            [src]="url"
+                            [alt]="signatureAlt(member)"
+                            [attr.width]="member.signature?.width"
+                            [attr.height]="member.signature?.height"
+                          />
+                        </figure>
                       </div>
                     }
                   </div>
@@ -405,7 +367,7 @@
                 <button
                   type="button"
                   class="ui-link-button"
-                  [disabled]="saving() || signatureBusy()"
+                  [disabled]="saving()"
                   (click)="cancelEditing()"
                   i18n="@@admin.people.cancel"
                 >
@@ -417,24 +379,24 @@
 
             @if (current(); as member) {
               <div class="ui-card__body signature-part">
-                <h3 class="part-title" i18n="@@admin.people.signature.title">Podpis na webu</h3>
+                <h3 class="part-title" i18n="@@admin.people.signature.title">Podpis</h3>
                 <p
                   class="field-hint"
                   id="person-signature-hint"
                   i18n="@@admin.people.signature.hint"
                 >
-                  Obrázek ručního podpisu jen pro web, ne podpis na potvrzení o daru. Ukáže se pod
-                  slovem zakladatelů, má-li osoba kartu. Nejlépe PNG s průhledným pozadím, tmavý
-                  inkoust, ořízlý těsně kolem podpisu. Uloží se hned po nahrání; nahrát ho a odebrat
-                  jde jen tady v prohlížeči.
+                  Obrázek ručního podpisu. Ukáže se pod slovem zakladatelů, má-li osoba kartu, a
+                  vytiskne se na potvrzeních o daru, která osoba podepisuje; už vystavená potvrzení
+                  se nemění. Nejlépe PNG s průhledným pozadím, tmavý inkoust, ořízlý těsně kolem
+                  podpisu. Uloží se hned po nahrání.
                 </p>
                 @if (signatureUrl(); as url) {
                   <img
                     class="signature-preview ui-ink"
                     [src]="url"
                     alt=""
-                    [attr.width]="member.webSignature?.width"
-                    [attr.height]="member.webSignature?.height"
+                    [attr.width]="member.signature?.width"
+                    [attr.height]="member.signature?.height"
                   />
                 }
                 <div class="image-actions">
@@ -445,7 +407,7 @@
                     [disabled]="busy()"
                     (chosen)="uploadSignature($event)"
                   >
-                    @if (member.webSignature) {
+                    @if (member.signature) {
                       <ng-container i18n="@@admin.people.signature.replace"
                         >Vyměnit podpis</ng-container
                       >
@@ -455,7 +417,7 @@
                       >
                     }
                   </app-file-button>
-                  @if (member.webSignature) {
+                  @if (member.signature) {
                     <button
                       appNeedsConnection
                       type="button"
@@ -600,20 +562,14 @@
                   }
                 </div>
                 <app-live-notice class="card-notice" [notice]="receiptNotice()" />
-                <app-receipt-signature
-                  [personId]="member.id"
-                  [signs]="signs(member)"
-                  (changed)="loadSignatory()"
-                  (busyChange)="signatureBusy.set($event)"
-                />
               </div>
 
               <div class="ui-card__body remove-part">
                 <h3 class="part-title" i18n="@@admin.people.remove.title">Odebrání osoby</h3>
                 <p class="ui-card__intro" i18n="@@admin.people.remove.intro">
-                  Osoba hned zmizí z webu a její portrét a podpis na webu se smažou z databáze; ze
-                  záloh zmizí do 30 dnů. Její podpis na potvrzení už žádné další potvrzení neponese;
-                  podpis a portrét na už vystavených potvrzeních o daru zůstávají s nimi.
+                  Osoba hned zmizí z webu a její portrét a podpis se smažou z databáze; ze záloh
+                  zmizí do 30 dnů. Podpis a portrét na už vystavených potvrzeních o daru zůstávají s
+                  nimi.
                 </p>
                 @if (signs(member)) {
                   <p class="ui-callout ui-callout--warning" i18n="@@admin.people.remove.signs">
@@ -700,7 +656,7 @@
             <app-form-field
               label="Text pod kartami (nepovinné)"
               i18n-label="@@admin.people.note.label"
-              hint="Krátký text bez formátování, nejvíc 600 znaků; odstavce oddělte prázdným řádkem. Pod ním se ukážou podpisy lidí s kartou, kteří mají podpis na webu. Prázdný text slovo zakladatelů z webu odebere."
+              hint="Krátký text bez formátování, nejvíc 600 znaků; odstavce oddělte prázdným řádkem. Pod ním se ukážou podpisy lidí s kartou, kteří mají podpis. Prázdný text slovo zakladatelů z webu odebere."
               i18n-hint="@@admin.people.note.hint"
               [messages]="noteMessages"
             >

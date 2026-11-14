@@ -468,7 +468,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And a person "Jana" is registered
     And "Jana" is an administrator
     And a person "Petr" is registered
-    And "Jana" has uploaded a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
+    And "Jana" has set a 600 by 200 pixel scan as the signature of the person who signs the receipts
     And the bank account has these movements:
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
@@ -506,7 +506,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the application starts the import
     And "Jana" issues the receipt of her donation received on 2026-10-01
     And the frozen receipt shows no signature image
-    When "Jana" stores a 600 by 200 pixel JPEG scan as the receipt signature of the person who signs the receipts
+    When "Jana" sets a 600 by 200 pixel scan as the signature of the person who signs the receipts
     And today is 2027-01-15
     And "Jana" issues her yearly receipt for 2026
     Then the response status is 200
@@ -519,7 +519,7 @@ Feature: A donor issues receipts of their donations as frozen, signed data
     And the issued receipt has number "2027-000002"
     And the frozen receipt shows the current signature image
 
-  Scenario: A vector signature is frozen by its digest and served to the donor whose receipt shows it as its canonical JSON
+  Scenario: A receipt keeps the signature it was issued with, served only to its donor, when the signature changes later
     Given today is 2026-12-20
     And a person "Jana" is registered
     And "Jana" is an administrator
@@ -528,17 +528,17 @@ Feature: A donor issues receipts of their donations as frozen, signed data
       | id   | date       | amount  | account    | bankCode | name          | variableSymbol |
       | 2001 | 2026-10-01 | 1000.00 | 2900233333 | 2010     | Nováková Jana | {Jana}         |
     And the application starts the import
-    And "Jana" uploads the vector signature "podpis.svg" as the receipt signature
+    And "Jana" has set a 600 by 200 pixel scan as the signature of the person who signs the receipts
     When "Jana" issues the receipt of her donation received on 2026-10-01
     Then the response status is 200
     And the frozen receipt shows the current signature image
     When "Jana" fetches the signature image of receipt "2026-000001"
     Then the response status is 200
-    And the image is the current vector signature as its canonical JSON, never sniffed as another type
+    And the image is the current signature, stored by no cache
     When "Petr" fetches the signature image of receipt "2026-000001"
     Then the response status is 404
     And the problem type ends with "donations/receipt-image-not-found"
-    When "Jana" uploads a 600 by 200 pixel JPEG scan named "podpis.jpg" as the receipt signature
+    When "Jana" sets a 900 by 300 pixel scan as the signature of the person who signs the receipts
     And "Jana" reads the issued receipt again
     Then the response status is 200
     And the issued receipt has number "2026-000001"

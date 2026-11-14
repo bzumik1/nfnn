@@ -129,10 +129,10 @@ class JpaPersonRepositoryTest {
 
         assertThat(people.isAnyonesPortrait(portrait)).isTrue();
         assertThat(people.isAnyonesPortrait(signature)).isFalse();
-        assertThat(people.isAnyonesWebSignature(signature)).isTrue();
-        assertThat(people.isAnyonesWebSignature(portrait)).isFalse();
+        assertThat(people.isAnyonesSignature(signature)).isTrue();
+        assertThat(people.isAnyonesSignature(portrait)).isFalse();
         assertThat(people.isAnyonesPortrait(unused)).isFalse();
-        assertThat(people.isAnyonesWebSignature(unused)).isFalse();
+        assertThat(people.isAnyonesSignature(unused)).isFalse();
     }
 
     private LockModeType lockOf(Person person) {

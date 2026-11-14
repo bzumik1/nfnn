@@ -1,10 +1,12 @@
 package cz.novanadeje.app.content.interfaces.rest;
 
+import cz.novanadeje.app.content.application.people.ActingAdministrator;
 import cz.novanadeje.app.content.application.people.FoundersNoteService;
 import cz.novanadeje.app.content.application.people.PeopleAdminService;
 import cz.novanadeje.app.content.application.people.PeopleFootnoteService;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.people.PersonId;
+import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -82,14 +84,19 @@ class AdminPeopleController {
         people.remove(admin(jwt), new PersonId(id));
     }
 
-    @PostMapping("/{id}/web-signature")
-    PersonResponse setWebSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody WebSignatureRequest request) {
-        return PersonResponse.from(people.setWebSignature(admin(jwt), new PersonId(id), new MediaId(request.imageId())));
+    @PostMapping("/{id}/signature")
+    PersonResponse setSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody SignatureRequest request) {
+        return PersonResponse.from(people.setSignature(acting(jwt), new PersonId(id), new MediaId(request.imageId())));
     }
 
-    @DeleteMapping("/{id}/web-signature")
-    PersonResponse removeWebSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return PersonResponse.from(people.removeWebSignature(admin(jwt), new PersonId(id)));
+    @DeleteMapping("/{id}/signature")
+    PersonResponse removeSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return PersonResponse.from(people.removeSignature(acting(jwt), new PersonId(id)));
+    }
+
+    private static ActingAdministrator acting(Jwt jwt) {
+        return new ActingAdministrator(admin(jwt),
+                Optional.ofNullable(jwt.getClaimAsString(JwtProperties.CLIENT_CLAIM)).filter(client -> !client.isBlank()));
     }
 
     private static UUID admin(Jwt jwt) {

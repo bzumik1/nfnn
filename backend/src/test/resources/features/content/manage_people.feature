@@ -3,11 +3,12 @@ Feature: An administrator keeps the people of the foundation that the About sect
 
   The block "Kdo fond vede" of the home page shows the people an administrator keeps at
   /sprava/lide-fondu (Jakub 2026-10-30): cards with a portrait for the featured people, the line
-  of the board, the founders' note with the web signatures of the featured people under it, and
+  of the board, the founders' note with the signatures of the featured people under it, and
   one line under the board (Jakub 2026-10-30: the volunteer who runs the site).
-  A web signature is a separate public image for the site only, never the signature on receipts,
-  and a connected application may set and remove it too (Jakub 2026-10-30). A member's personal
-  and fund e-mails are administration data only and never reach the home page.
+  Each person has one signature, shown under the founders' note and printed on the receipts they
+  sign (Jakub 2026-11-12), and a connected application may set and remove it too (Jakub
+  2026-10-30 and 2026-11-12). A member's personal and fund e-mails are administration data only
+  and never reach the home page.
 
   Background:
     Given today is 2026-10-30
@@ -44,7 +45,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | portrait.id   | {image:eva.png}                 |
       | portrait.url  | /api/content/media/{image:eva.png} |
       | portrait.width | 640                            |
-      | webSignature  |                                 |
+      | signature     |                                 |
       | personalEmail | eva.vzorova@example.org         |
       | fundEmail     | eva@nfnn.cz                     |
     And the admin action "ADD_PERSON" by "Jana" on the person "Eva Vzorová" is recorded with details containing "přidána"
@@ -60,7 +61,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name | Petra Pomocná |
       | role | Dobrovolnice  |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     And "Jana" writes the founders note:
       """
       Fond jsme založili, abychom pomáhali konkrétním dětem.
@@ -88,18 +89,18 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name        | url                                       | width | height |
       | Eva Vzorová | /api/content/media/{image:podpis-eva.png} | 600   | 180    |
     And the people on the home page carry no e-mail address
-    And the admin action "CHANGE_WEB_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "{image:podpis-eva.png}"
+    And the admin action "CHANGE_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "{image:podpis-eva.png}"
     And these admin actions were recorded:
       | action               | client |
       | ADD_PERSON           |        |
       | ADD_PERSON           |        |
       | ADD_PERSON           |        |
       | ADD_PERSON           |        |
-      | CHANGE_WEB_SIGNATURE |        |
+      | CHANGE_SIGNATURE     |        |
       | CHANGE_FOUNDERS_NOTE |        |
     When "Jana" asks for the people of the foundation
     Then the people of the foundation are:
-      | name          | role                            | position | onBoard | boardNote   | featured | portrait.id     | portrait.width | webSignature.id        | webSignature.height | personalEmail           | fundEmail   |
+      | name          | role                            | position | onBoard | boardNote   | featured | portrait.id     | portrait.width | signature.id           | signature.height    | personalEmail           | fundEmail   |
       | Eva Vzorová   | Zakladatelka a předsedkyně rady | 0        | true    | předsedkyně | true     | {image:eva.png} | 640            | {image:podpis-eva.png} | 180                 | eva.vzorova@example.org | eva@nfnn.cz |
       | Adam Vzor     | Zakladatel a člen rady          | 1        | true    |             | true     |                 |                |                        |                     |                         |             |
       | Hana Vzorová  |                                 | 2        | true    |             | false    |                 |                |                        |                     |                         |             |
@@ -122,9 +123,9 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name     | Adam Vzor |
       | featured | true      |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     And "Jana" uploads a 500 by 200 pixel PNG image named "podpis-adam.png"
-    And "Jana" sets the web signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+    And "Jana" sets the signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
     And "Jana" writes the founders note:
       """
       Děkujeme všem, kdo pomáhají s námi.
@@ -142,7 +143,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name     | Eva Vzorová |
       | featured | true        |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     When someone without a token asks for the home content
     Then the home content has no founders note
     And the home board line is:
@@ -320,26 +321,26 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | featured | true        |
       | portrait | eva.png     |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-1.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-1.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-1.png"
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-2.png"
-    When "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-2.png"
+    When "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-2.png"
     Then the response status is 200
     And the person says:
-      | webSignature.id     | {image:podpis-2.png} |
-      | webSignature.width  | 600                  |
-      | webSignature.height | 180                  |
-    And the admin action "CHANGE_WEB_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "{image:podpis-2.png}"
+      | signature.id        | {image:podpis-2.png} |
+      | signature.width     | 600                  |
+      | signature.height    | 180                  |
+    And the admin action "CHANGE_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "{image:podpis-2.png}"
     When someone without a token asks for the image uploaded as "podpis-1.png"
     Then the response status is 404
-    When "Jana" removes the web signature of "Eva Vzorová"
+    When "Jana" removes the signature of "Eva Vzorová"
     Then the response status is 200
     And the person says:
-      | webSignature |  |
-    And the admin action "REMOVE_WEB_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "odebrán"
+      | signature    |  |
+    And the admin action "REMOVE_SIGNATURE" by "Jana" on the person "Eva Vzorová" is recorded with details containing "odebrán"
     When someone without a token asks for the image uploaded as "podpis-2.png"
     Then the response status is 404
     Given "Jana" uploads a 600 by 180 pixel PNG image named "podpis-3.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-3.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-3.png"
     When "Jana" removes the person "Eva Vzorová"
     Then the response status is 204
     And the admin action "REMOVE_PERSON" by "Jana" on the person "Eva Vzorová" is recorded with details containing "odebrána"
@@ -410,11 +411,11 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 200
     Given "Jana" adds a person:
       | name | Eva Vzorová |
-    When "Jana" sets the web signature of "Eva Vzorová" to an image that was never uploaded
+    When "Jana" sets the signature of "Eva Vzorová" to an image that was never uploaded
     Then the response status is 404
     And the problem type ends with "content/media-not-found"
     Given "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     When "Jana" adds a person:
       | name     | Adam Vzor      |
       | portrait | podpis-eva.png |
@@ -429,7 +430,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
     And "Jana" adds a person:
       | name     | Hana Vzorová |
       | portrait | hana.png     |
-    When "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "hana.png"
+    When "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "hana.png"
     Then the response status is 400
     And the problem type ends with "content/person-image-in-use"
     Given "Jana" adds 28 people
@@ -472,7 +473,7 @@ Feature: An administrator keeps the people of the foundation that the About sect
       | name     | Eva Vzorová |
       | featured | true        |
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
-    And "Jana" sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    And "Jana" sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-adam.png"
     And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
     When the connector exchanges the connector token for an API token
@@ -509,17 +510,17 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 200
     And the person says:
       | name            | Eva Nová               |
-      | webSignature.id | {image:podpis-eva.png} |
-    When the exchanged API token sets the web signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+      | signature.id    | {image:podpis-eva.png} |
+    When the exchanged API token sets the signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
     Then the response status is 200
     And the person says:
-      | webSignature.id     | {image:podpis-adam.png} |
-      | webSignature.width  | 600                     |
-      | webSignature.height | 180                     |
-    When the exchanged API token removes the web signature of "Eva Vzorová"
+      | signature.id        | {image:podpis-adam.png} |
+      | signature.width     | 600                     |
+      | signature.height    | 180                     |
+    When the exchanged API token removes the signature of "Eva Vzorová"
     Then the response status is 200
     And the person says:
-      | webSignature |  |
+      | signature    |  |
     When someone without a token asks for the image uploaded as "podpis-eva.png"
     Then the response status is 404
     When the exchanged API token removes the person "Adam Vzor"
@@ -528,20 +529,20 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 404
     When "Jana" asks for the people of the foundation
     Then the people of the foundation are:
-      | name     | webSignature |
+      | name     | signature    |
       | Eva Nová |              |
     And these admin actions were recorded:
       | action                 | client    |
       | REMOVE_PERSON          | claude.ai |
-      | REMOVE_WEB_SIGNATURE   | claude.ai |
-      | CHANGE_WEB_SIGNATURE   | claude.ai |
+      | REMOVE_SIGNATURE       | claude.ai |
+      | CHANGE_SIGNATURE       | claude.ai |
       | UPDATE_PERSON          | claude.ai |
       | CHANGE_FOUNDERS_NOTE   | claude.ai |
       | ORDER_PEOPLE           | claude.ai |
       | CHANGE_PEOPLE_FOOTNOTE | claude.ai |
       | UPDATE_PERSON          | claude.ai |
       | ADD_PERSON             | claude.ai |
-      | CHANGE_WEB_SIGNATURE   |           |
+      | CHANGE_SIGNATURE       |           |
       | ADD_PERSON             |           |
 
   Scenario: A connected application with the reading permission only reads the people but cannot change them
@@ -558,10 +559,10 @@ Feature: An administrator keeps the people of the foundation that the About sect
     When the exchanged API token removes the person "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When the exchanged API token sets the web signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    When the exchanged API token sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
-    When the exchanged API token removes the web signature of "Eva Vzorová"
+    When the exchanged API token removes the signature of "Eva Vzorová"
     Then the response status is 403
     And the problem type ends with "auth/forbidden"
     When the exchanged API token writes the line under the board:
@@ -602,6 +603,42 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 200
     And the person says:
       | portrait.id | {image:druha.png} |
+
+  Scenario: A connection sets and removes the signature of the person who signs the receipts, and every administrator is told by e-mail
+    Given a person "Petr" is registered
+    And "Petr" is an administrator
+    And "Jana" adds a person:
+      | name | Eva Vzorová |
+    And "Jana" adds a person:
+      | name | Adam Vzor |
+    And "Jana" chooses "Eva Vzorová" to sign the receipts as "předsedkyně správní rady"
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-eva.png"
+    And "Jana" uploads a 600 by 180 pixel PNG image named "podpis-adam.png"
+    And "Jana" connected the application "https://claude.ai/.well-known/oauth-client" with scope "admin:read admin:write"
+    When the connector exchanges the connector token for an API token
+    And the exchanged API token sets the signature of "Eva Vzorová" to the image uploaded as "podpis-eva.png"
+    Then the response status is 200
+    And the person says:
+      | signature.id | {image:podpis-eva.png} |
+    And an e-mail goes to the address of "Jana" with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje"
+    And an e-mail goes to the address of "Petr" with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje"
+    When "Jana" asks for the receipt signatory
+    Then the receipt signatory is "Eva Vzorová" as "předsedkyně správní rady", with a portrait missing and a signature set
+    When the exchanged API token removes the signature of "Eva Vzorová"
+    Then the response status is 200
+    When "Jana" asks for the receipt signatory
+    Then the receipt signatory is "Eva Vzorová" as "předsedkyně správní rady", with a portrait missing and a signature missing
+    When the exchanged API token sets the signature of "Adam Vzor" to the image uploaded as "podpis-adam.png"
+    Then the response status is 200
+    And these admin actions were recorded:
+      | action           | client    |
+      | CHANGE_SIGNATURE | claude.ai |
+      | REMOVE_SIGNATURE | claude.ai |
+      | CHANGE_SIGNATURE | claude.ai |
+      | ADD_PERSON       |           |
+      | ADD_PERSON       |           |
+    And 2 e-mails with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje" went to the address of "Jana"
+    And 2 e-mails with the subject "Podpis na potvrzeních o daru se změnil – Nová naděje" went to the address of "Petr"
 
   Scenario: Only a browser renames the person who signs the receipts, while a connection still renames anyone else
     Given "Jana" adds a person:

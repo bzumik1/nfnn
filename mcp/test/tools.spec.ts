@@ -115,7 +115,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_reconnect_bank_account',
       'nfnn_refresh_bank_logo',
       'nfnn_remove_person',
-      'nfnn_remove_web_signature',
+      'nfnn_remove_signature',
       'nfnn_report',
       'nfnn_request_backup',
       'nfnn_reset_log_level',
@@ -127,7 +127,7 @@ describe('Given an administrator connected with the reading permission only', ()
       'nfnn_set_photo_focal_point',
       'nfnn_set_project_order',
       'nfnn_set_push_alerts',
-      'nfnn_set_web_signature',
+      'nfnn_set_signature',
       'nfnn_settings',
       'nfnn_since_last_sign_in',
       'nfnn_status',
@@ -153,7 +153,7 @@ describe('Given an administrator connected with the reading permission only', ()
       tools.find((tool) => tool.name === 'nfnn_unpair_payment')?.annotations?.destructiveHint,
     ).toBe(true);
     expect(
-      tools.find((tool) => tool.name === 'nfnn_remove_web_signature')?.annotations?.destructiveHint,
+      tools.find((tool) => tool.name === 'nfnn_remove_signature')?.annotations?.destructiveHint,
     ).toBe(true);
     expect(
       tools.find((tool) => tool.name === 'nfnn_update_donate_band')?.annotations?.destructiveHint,
@@ -215,16 +215,17 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when the tools are listed, then the web signature tools say the image goes up only as a file and is never the receipt signature', async () => {
+  it("when the tools are listed, then the signature tools say the receipts print the signature too, that every administrator is told when it is the signatory's, and that the image goes up only as a file", async () => {
     const { tools } = await client.listTools();
-    for (const name of ['nfnn_set_web_signature', 'nfnn_remove_web_signature']) {
+    for (const name of ['nfnn_set_signature', 'nfnn_remove_signature']) {
       const description = tools.find((tool) => tool.name === name)?.description;
-      expect(description).toContain('never the receipt signature');
+      expect(description).toContain('the donation receipts they sign print it too');
+      expect(description).toContain('every administrator gets an e-mail');
     }
-    const setting = tools.find((tool) => tool.name === 'nfnn_set_web_signature')?.description;
+    const setting = tools.find((tool) => tool.name === 'nfnn_set_signature')?.description;
     expect(setting).toContain('nfnn_photo_upload_link');
     expect(setting).toContain('never from a public address');
-    expect(setting).toContain('CHANGE_WEB_SIGNATURE');
+    expect(setting).toContain('CHANGE_SIGNATURE');
   });
 
   it('when the bank logos are asked, then every logo comes with its source, version and image, and the tools say an address never comes from text read from a donor or a payment and that removing stays on the web', async () => {
@@ -749,7 +750,7 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when the people of the foundation are asked, then they come in order with their portraits, web signatures, the founders note and the line under the board', async () => {
+  it('when the people of the foundation are asked, then they come in order with their portraits, signatures, the founders note and the line under the board', async () => {
     const result = await client.callTool({ name: 'nfnn_people', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
@@ -777,20 +778,20 @@ describe('Given an administrator connected with the reading permission only', ()
     ).toBe(false);
   });
 
-  it('when a web signature is set or removed with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
+  it('when a signature is set or removed with the reading permission only, then nothing reaches the administration and the answer says how to allow changes', async () => {
     const set = await client.callTool({
-      name: 'nfnn_set_web_signature',
+      name: 'nfnn_set_signature',
       arguments: { id: PERSON_ID, imageId: MEDIA_ID },
     });
     const removed = await client.callTool({
-      name: 'nfnn_remove_web_signature',
+      name: 'nfnn_remove_signature',
       arguments: { id: SIGNED_PERSON_ID },
     });
     for (const result of [set, removed]) {
       expect(result.isError).toBe(true);
       expect(textOf(result)).toContain('may only read, so nothing was changed');
     }
-    expect(stack.backend.requests.some((request) => request.path.endsWith('/web-signature'))).toBe(
+    expect(stack.backend.requests.some((request) => request.path.endsWith('/signature'))).toBe(
       false,
     );
   });
@@ -804,36 +805,36 @@ describe('Given an administrator connected with the reading permission only', ()
     );
   });
 
-  it('when the receipt signature is asked, then it names the signatory, their receipt role and the signatures uploaded per person, without any image', async () => {
+  it('when the receipt signature is asked, then it names the signatory, their receipt role and whether their signature prints, without any image', async () => {
     const result = await client.callTool({ name: 'nfnn_receipt_signature', arguments: {} });
     expect(result.isError).toBeFalsy();
     const text = textOf(result);
     expect(text).toContain(`"personId":"${SIGNED_PERSON_ID}"`);
     expect(text).toContain('"receiptRole":"předsedkyně správní rady"');
     expect(text).toContain('"portrait":true');
-    expect(text).toContain('"kind":"VECTOR"');
-    expect(text).toContain('"uploadedAt":"2026-10-23T21:30:00+02:00"');
+    expect(text).toContain('"signature":true');
+    expect(text).not.toContain('signatures');
     expect(text).not.toContain('base64');
-    expect(text).not.toContain('viewBox');
     expect(stack.backend.requests.map((request) => request.path)).toContain(
       '/api/admin/donations/receipt-signatory',
     );
   });
 
-  it('when the tools are listed, then the receipt signature tool says choosing the signatory and the signatures stay on the web', async () => {
+  it("when the tools are listed, then the receipt signature tool says choosing the signatory stays on the web and the signature is the person's one signature", async () => {
     const { tools } = await client.listTools();
     const description =
       tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
-    expect(description).toContain('stay on the web (/sprava/lide-fondu)');
+    expect(description).toContain('Choosing the signatory stays on the web (/sprava/lide-fondu)');
     expect(description).toContain('no receipt can be issued');
+    expect(description).toContain('nfnn_set_signature');
   });
 
-  it('when the tools are listed, then the receipt signature tool says receipts issued after the upload carry a scan and a vector alike', async () => {
+  it('when the tools are listed, then the receipt signature tool says receipts issued after a change carry the signature as it was then', async () => {
     const { tools } = await client.listTools();
     const description =
       tools.find((tool) => tool.name === 'nfnn_receipt_signature')?.description ?? '';
     expect(description).toContain(
-      'Receipts issued after a change carry the portrait, the signature (a scan and a vector alike), the name and the receipt role.',
+      'Receipts issued after a change carry the portrait, the signature, the name and the receipt role as they are then; receipts issued before keep theirs.',
     );
     expect(description).not.toContain('until then');
   });
@@ -1739,7 +1740,7 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
-  it('when people are removed, then a person goes whether or not they have a web signature', async () => {
+  it('when people are removed, then a person goes whether or not they have a signature', async () => {
     for (const id of [PERSON_ID, SIGNED_PERSON_ID]) {
       const removed = await client.callTool({ name: 'nfnn_remove_person', arguments: { id } });
       expect(removed.isError).toBeFalsy();
@@ -1755,23 +1756,23 @@ describe('Given an administrator connected with the writing permission', () => {
     ]);
   });
 
-  it('when a web signature is set and removed, then the administration gets the image for the person and the removal, and each answer carries the person', async () => {
+  it('when a signature is set and removed, then the administration gets the image for the person and the removal, and each answer carries the person', async () => {
     const set = await client.callTool({
-      name: 'nfnn_set_web_signature',
+      name: 'nfnn_set_signature',
       arguments: { id: PERSON_ID, imageId: MEDIA_ID },
     });
     expect(set.isError).toBeFalsy();
-    expect(textOf(set)).toContain(`"webSignature":{"id":"${MEDIA_ID}"`);
+    expect(textOf(set)).toContain(`"signature":{"id":"${MEDIA_ID}"`);
     const removed = await client.callTool({
-      name: 'nfnn_remove_web_signature',
+      name: 'nfnn_remove_signature',
       arguments: { id: SIGNED_PERSON_ID },
     });
     expect(removed.isError).toBeFalsy();
-    expect(textOf(removed)).toContain('"webSignature":null');
+    expect(textOf(removed)).toContain('"signature":null');
 
     expect(
       stack.backend.requests
-        .filter((request) => request.path.endsWith('/web-signature'))
+        .filter((request) => request.path.endsWith('/signature'))
         .map((request) => [
           request.method,
           request.path,
@@ -1781,26 +1782,26 @@ describe('Given an administrator connected with the writing permission', () => {
     ).toEqual([
       [
         'POST',
-        `/api/admin/content/people/${PERSON_ID}/web-signature`,
+        `/api/admin/content/people/${PERSON_ID}/signature`,
         { imageId: MEDIA_ID },
         'Bearer api-token-write',
       ],
       [
         'DELETE',
-        `/api/admin/content/people/${SIGNED_PERSON_ID}/web-signature`,
+        `/api/admin/content/people/${SIGNED_PERSON_ID}/signature`,
         undefined,
         'Bearer api-token-write',
       ],
     ]);
   });
 
-  it('when a web signature names an image that is no id, then the tool refuses it before the administration', async () => {
+  it('when a signature names an image that is no id, then the tool refuses it before the administration', async () => {
     const result = await client.callTool({
-      name: 'nfnn_set_web_signature',
+      name: 'nfnn_set_signature',
       arguments: { id: PERSON_ID, imageId: 'https://example.org/podpis.png' },
     });
     expect(result.isError).toBe(true);
-    expect(stack.backend.requests.some((request) => request.path.endsWith('/web-signature'))).toBe(
+    expect(stack.backend.requests.some((request) => request.path.endsWith('/signature'))).toBe(
       false,
     );
   });

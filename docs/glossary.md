@@ -42,12 +42,12 @@ _Avoid_: plugin
 
 **Person of the foundation**\
 UI „Lidé fondu“ (`/sprava/lide-fondu`), block „Kdo fond vede“; also „člen fondu“ (news editor) · Code: `content/domain/people/Person`, `shared/application/people/FoundationPerson`, `memberIds` in `nfnn_order_people`.\
-Someone the About page shows as leading the foundation, with a name, a role on the site, board membership (`onBoard`, „správní rada“), a portrait and a web signature.\
+Someone the About page shows as leading the foundation, with a name, a role on the site, board membership (`onBoard`, „správní rada“), a portrait and a signature.\
 _Avoid_: employee
 
 **Receipt signatory**\
 UI „osoba, která podepisuje“, the receipt role „Funkce na potvrzení“ · Code: `donations/domain/receipt/ReceiptSignatory`, `donation_receipt_signatory`.\
-The one person of the foundation whose name, receipt role, portrait and receipt signature the receipts print; chosen and changed only in a browser session.\
+The one person of the foundation whose name, receipt role, portrait and signature the receipts print; chosen and changed only in a browser session (their signature, like anyone's, also by the connector).\
 _Avoid_: signer (in code `Ed25519ReceiptSigner` signs the verification QR and `NewsSigners` are the people under a news article)
 
 ## Money in and pairing
@@ -197,15 +197,10 @@ UI „zneplatnění klíče“ (until 2026-11-05 „stažení“) · Code: `Rece
 The web-only step that marks a leaked receipt signing key as no longer trusted; the server then restarts with a new key.\
 _Avoid_: „stáhnout“ / „stažení“ (Jakub renamed it: it reads as a download and the step cannot be undone)
 
-**Receipt signature**\
-UI „podpis na potvrzení“ · Code: `ReceiptSignatureService`, `SignatureImage` (scan), `SignatureVector` (SVG), `donation_person_receipt_signature`.\
-The signatory's handwritten signature printed on receipts, uploaded only in a browser session.\
-_Avoid_: „podpis na webu“ (a different image)
-
-**Web signature**\
-UI „podpis na webu“ · Code: `/api/admin/content/people/{id}/web-signature`, `WebSignatureRequest`.\
-A public image of a person's signature under the founders' note on the About page; the connector may set and remove it.\
-_Avoid_: receipt signature
+**Signature**\
+UI „podpis“ · Code: `Person.signature`, `/api/admin/content/people/{id}/signature`, `SignatureRequest`, `nfnn_set_signature`, `PrintSignature` (the PNG a receipt freezes), `content_person.web_signature_media_id`.\
+A person of the foundation's one handwritten signature (Jakub 2026-11-12): shown under the founders' note on the About page and printed on the receipts the person signs; a browser session and the connector set and remove it alike.\
+_Avoid_: „podpis na webu“ and „podpis na potvrzení“ as two things (until 2026-11-12 they were two images; the old names stay only in history, `CHANGE_WEB_SIGNATURE` and `CHANGE_RECEIPT_SIGNATURE` in the audit trail and `donation_person_receipt_signature`)
 
 **Portrait**\
 UI „portrét“ · Code: `PersonDetails.portrait`, `PrintPortrait`.\
@@ -368,7 +363,7 @@ The page about the foundation with its story, people, contact and the photo uplo
 
 **Founders' note**\
 UI „slovo zakladatelů“ · Code: `content/domain/people/FoundersNote`.\
-The optional plain text under the people's cards on the About page, followed by their web signatures.
+The optional plain text under the people's cards on the About page, followed by their signatures.
 
 **Focal point**\
 UI „místo, které musí zůstat vidět“ · Code: `content/domain/media/FocalPoint`.\

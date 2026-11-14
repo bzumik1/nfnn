@@ -11,6 +11,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptProofMessage;
 import cz.novanadeje.app.donations.domain.receipt.proof.ReceiptProofReader;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptProofText;
 import cz.novanadeje.app.donations.domain.receipt.proof.SignedReceipt;
+import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -53,11 +54,14 @@ public class DonorFrozenReceiptStepDefinitions {
     private final JdbcClient jdbc;
     private final ReceiptSigner signer;
     private final ProfileRowVersions profileVersions;
+    private final FoundationPeople people;
     private final List<JsonNode> issued = new ArrayList<>();
     private Optional<String> signatureImageSeen = Optional.empty();
     private Optional<String> portraitImageSeen = Optional.empty();
 
-    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer, ProfileRowVersions profileVersions) {
+    public DonorFrozenReceiptStepDefinitions(ApiClient api, DonorSessions sessions, ScenarioDonors scenarioDonors, JdbcClient jdbc, ReceiptSigner signer,
+                                             ProfileRowVersions profileVersions, FoundationPeople people) {
+        this.people = people;
         this.api = api;
         this.sessions = sessions;
         this.scenarioDonors = scenarioDonors;
@@ -343,6 +347,17 @@ public class DonorFrozenReceiptStepDefinitions {
         signatureImageSeen = Optional.of(shown);
     }
 
+    @Then("the frozen receipt's signature image is a PNG of {int} by {int} pixels without an alpha channel")
+    public void theFrozenReceiptsSignatureImageIsAnInkPng(int width, int height) throws IOException {
+        String shown = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
+        Map<String, Object> image = jdbc.sql("select media_type, content from receipt_image where sha256 = ?").param(shown).query().singleRow();
+        assertThat(image.get("media_type")).isEqualTo("image/png");
+        BufferedImage signature = ImageIO.read(new ByteArrayInputStream((byte[]) image.get("content")));
+        assertThat(signature.getWidth()).isEqualTo(width);
+        assertThat(signature.getHeight()).isEqualTo(height);
+        assertThat(signature.getColorModel().hasAlpha()).isFalse();
+    }
+
     @Then("the frozen receipt still shows the signature image it showed before")
     public void theFrozenReceiptStillShowsTheSignatureImageItShowedBefore() {
         String before = signatureImageSeen.orElseThrow(() -> new AssertionError("No signature image was seen before"));
@@ -400,36 +415,12 @@ public class DonorFrozenReceiptStepDefinitions {
         assertThat(damaged).isPositive();
     }
 
-    @Then("the image is the current vector signature as its canonical JSON, never sniffed as another type")
-    public void theImageIsTheCurrentVectorSignature() {
-        assertCanonicalVectorAnswer(currentSignatureImage());
-        JsonNode vector = JSON.readTree(api.lastResponseBytes());
-        assertThat(vector.properties()).extracting(Map.Entry::getKey).containsExactly("viewBox", "paths");
-        assertThat(vector.get("paths").get(0).properties()).extracting(Map.Entry::getKey).containsExactly("d", "fill", "opacity");
-    }
-
     @Then("the image is the current signature, stored by no cache")
     public void theImageIsTheCurrentSignature() {
         HttpHeaders headers = api.lastResponse().getHeaders();
         assertThat(headers.getContentType()).hasToString("image/png");
         assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
         assertThat(sha256(api.lastResponseBytes())).isEqualTo(currentSignatureImage());
-    }
-
-    @Then("the image is the current vector signature as its canonical JSON, stored by no cache and never sniffed")
-    public void theImageIsTheCurrentVectorSignatureStoredByNoCache() {
-        assertCanonicalVectorAnswer(currentSignatureImage());
-    }
-
-    @Then("the frozen receipt shows the vector signature it was issued with, not the current scan")
-    public void theFrozenReceiptShowsTheVectorItWasIssuedWith() {
-        String frozen = answeredReceipt().get("receipt").get("signatory").get("signatureImage").get("sha256").asString();
-        assertThat(frozen).isEqualTo(storedVectorSignature()).isNotEqualTo(currentSignatureImage());
-    }
-
-    @Then("the image is the vector signature the receipt was issued with")
-    public void theImageIsTheVectorSignatureTheReceiptWasIssuedWith() {
-        assertCanonicalVectorAnswer(storedVectorSignature());
     }
 
     @Then("the receipt list shows:")
@@ -517,26 +508,10 @@ public class DonorFrozenReceiptStepDefinitions {
         return jdbc.sql("select portrait_image_sha256 from issued_receipt where number = ?").param(number).query(String.class).single();
     }
 
-    private void assertCanonicalVectorAnswer(String digest) {
-        HttpHeaders headers = api.lastResponse().getHeaders();
-        assertThat(headers.getContentType()).hasToString("application/json");
-        assertThat(headers.getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
-        assertThat(headers.getCacheControl()).isEqualTo("private, no-store");
-        byte[] body = api.lastResponseBytes();
-        assertThat(sha256(body)).isEqualTo(digest);
-        assertThat(new String(body, StandardCharsets.UTF_8)).startsWith("{\"viewBox\":[").contains("\"paths\":[{\"d\":\"M").doesNotContain("\n", "<");
-    }
-
-    private String storedVectorSignature() {
-        List<String> vectors = jdbc.sql("select sha256 from receipt_image where media_type = 'application/json'").query(String.class).list();
-        assertThat(vectors).hasSize(1);
-        return vectors.getFirst();
-    }
-
     private String currentSignatureImage() {
-        Optional<String> digest = jdbc.sql("select s.image_sha256 from donation_person_receipt_signature s"
-                + " join donation_receipt_signatory c on c.person_id = s.person_id").query(String.class).optional();
-        return digest.orElseThrow(() -> new AssertionError("No receipt signature is set"));
+        UUID signatory = jdbc.sql("select person_id from donation_receipt_signatory").query(UUID.class).single();
+        return people.printSignatureOf(signatory).map(signature -> sha256(signature.png()))
+                .orElseThrow(() -> new AssertionError("The person who signs the receipts has no signature"));
     }
 
     private static String sha256(byte[] bytes) {

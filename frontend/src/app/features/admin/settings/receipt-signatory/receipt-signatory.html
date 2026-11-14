@@ -33,7 +33,8 @@
         @if (block(); as block) {
           <p class="ui-card__intro" i18n="@@admin.signatory.intro">
             Takhle vypadá podpis na potvrzeních vystavených od teď. Kdo podepisuje, jeho funkci na
-            potvrzení a podpis změníte u lidí fondu; potvrzení už vystavená se nemění.
+            potvrzení a podpis změníte u lidí fondu; je to tentýž podpis, který web ukazuje pod
+            slovem zakladatelů. Potvrzení už vystavená se nemění.
           </p>
           <figure class="signature-block">
             <figcaption class="signature-block-caption" i18n="@@admin.signatory.preview">
@@ -51,8 +52,8 @@
                   Za Nová naděje - nadační fond:
                 </p>
                 <div class="signature-block-signature">
-                  @if (block.signature; as signature) {
-                    <app-signature-artwork [signature]="signature" [label]="signatureLabel" />
+                  @if (block.signatureUrl; as url) {
+                    <img class="signature-block-image" [src]="url" [alt]="signatureLabel" />
                   }
                 </div>
                 <p class="signature-block-name">{{ block.signatory.name }}</p>
@@ -72,9 +73,9 @@
                 !block.signatory.signature
               ) {
                 <ng-container i18n="@@admin.signatory.gap.portraitUnprintableNoSignature"
-                  >Portrét této osoby nejde připravit pro tisk a osoba nemá nahraný podpis na
-                  potvrzení. Potvrzení budou mít jen čáru se jménem a funkcí. Nahrajte u lidí fondu
-                  jiný portrét a podpis.</ng-container
+                  >Portrét této osoby nejde připravit pro tisk a osoba nemá nahraný podpis.
+                  Potvrzení budou mít jen čáru se jménem a funkcí. Nahrajte u lidí fondu jiný
+                  portrét a podpis.</ng-container
                 >
               } @else if (block.signatory.portrait && !block.signatory.portraitPrintable) {
                 <ng-container i18n="@@admin.signatory.gap.portraitUnprintable"
@@ -83,13 +84,12 @@
                 >
               } @else if (!block.signatory.portrait && !block.signatory.signature) {
                 <ng-container i18n="@@admin.signatory.gap.both"
-                  >Osoba nemá portrét ani podpis na potvrzení. Potvrzení budou mít jen čáru se
-                  jménem a funkcí.</ng-container
+                  >Osoba nemá portrét ani podpis. Potvrzení budou mít jen čáru se jménem a
+                  funkcí.</ng-container
                 >
               } @else if (!block.signatory.signature) {
                 <ng-container i18n="@@admin.signatory.gap.signature"
-                  >Osoba nemá nahraný podpis na potvrzení. Potvrzení budou mít místo něj jen
-                  čáru.</ng-container
+                  >Osoba nemá nahraný podpis. Potvrzení budou mít místo něj jen čáru.</ng-container
                 >
               } @else {
                 <ng-container i18n="@@admin.signatory.gap.portrait"

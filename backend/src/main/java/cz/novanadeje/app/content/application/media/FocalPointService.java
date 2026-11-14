@@ -37,7 +37,7 @@ public class FocalPointService {
 
     public PhotoView place(UUID adminId, MediaId id, Optional<FocalPoint> point) {
         MediaSize size = media.findSize(id).orElseThrow(() -> new MediaNotFound(id));
-        if (people.isAnyonesPortrait(id) || people.isAnyonesWebSignature(id)) {
+        if (people.isAnyonesPortrait(id) || people.isAnyonesSignature(id)) {
             throw new FocalPointOnPersonImage(id);
         }
         Optional<FocalPoint> current = Optional.ofNullable(media.findFocalPoints(List.of(id)).get(id));

@@ -25,7 +25,7 @@ class PersonTest {
 
         assertThat(person.details().name()).isEqualTo("Eva Vzorová");
         assertThat(person.position()).isEqualTo(2);
-        assertThat(person.webSignature()).isEmpty();
+        assertThat(person.signature()).isEmpty();
         assertThat(person.createdAt()).isEqualTo(NOW);
         assertThat(person.updatedAt()).isEqualTo(NOW);
     }
@@ -57,7 +57,7 @@ class PersonTest {
         Person edited = current.edit(details(Optional.of(OTHER_PORTRAIT)), NOW);
 
         assertThat(current.imagesLeftBy(edited)).containsExactly(PORTRAIT);
-        assertThat(edited.webSignature()).contains(SIGNATURE);
+        assertThat(edited.signature()).contains(SIGNATURE);
         assertThat(edited.updatedAt()).isEqualTo(NOW);
         assertThat(edited.createdAt()).isEqualTo(BEFORE);
     }
@@ -67,7 +67,7 @@ class PersonTest {
     void should_leave_the_signature_when_removed_given_a_signature() {
         Person signed = Person.add(PersonId.newId(BEFORE), details(Optional.empty()), 0, BEFORE).signWith(SIGNATURE, BEFORE);
 
-        assertThat(signed.imagesLeftBy(signed.withoutWebSignature(NOW))).containsExactly(SIGNATURE);
+        assertThat(signed.imagesLeftBy(signed.withoutSignature(NOW))).containsExactly(SIGNATURE);
         assertThat(signed.imagesLeftBy(signed.signWith(SIGNATURE, NOW))).isEmpty();
     }
 

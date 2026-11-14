@@ -44,7 +44,7 @@ class PersonJpaEntity {
     private UUID portraitMediaId;
 
     @Column(name = "web_signature_media_id")
-    private UUID webSignatureMediaId;
+    private UUID signatureMediaId;
 
     @Column(name = "personal_email", length = EmailAddress.MAX_LENGTH)
     private String personalEmail;
@@ -72,7 +72,7 @@ class PersonJpaEntity {
         entity.boardNote = details.boardNote().orElse(null);
         entity.featured = details.featured();
         entity.portraitMediaId = details.portrait().map(MediaId::value).orElse(null);
-        entity.webSignatureMediaId = person.webSignature().map(MediaId::value).orElse(null);
+        entity.signatureMediaId = person.signature().map(MediaId::value).orElse(null);
         entity.personalEmail = details.emails().personal().map(EmailAddress::value).orElse(null);
         entity.fundEmail = details.emails().fund().map(EmailAddress::value).orElse(null);
         entity.createdAt = person.createdAt();
@@ -84,6 +84,6 @@ class PersonJpaEntity {
         PersonDetails details = new PersonDetails(name, Optional.ofNullable(role), onBoard, Optional.ofNullable(boardNote), featured,
                 Optional.ofNullable(portraitMediaId).map(MediaId::new),
                 new PersonEmails(Optional.ofNullable(personalEmail).map(EmailAddress::new), Optional.ofNullable(fundEmail).map(EmailAddress::new)));
-        return new Person(new PersonId(id), details, position, Optional.ofNullable(webSignatureMediaId).map(MediaId::new), createdAt, updatedAt);
+        return new Person(new PersonId(id), details, position, Optional.ofNullable(signatureMediaId).map(MediaId::new), createdAt, updatedAt);
     }
 }
