@@ -65,6 +65,20 @@ describe('Given the auth interceptor', () => {
     },
   );
 
+  it('when public content is refused as an expired token, then the failure reaches the caller and no refresh happens', () => {
+    signIn('token-1');
+    let failure: unknown;
+
+    client.get('/api/content/home').subscribe({ error: (error: unknown) => (failure = error) });
+
+    http
+      .expectOne('/api/content/home')
+      .flush(problem('auth/expired-token'), { status: 401, statusText: 'Unauthorized' });
+    http.expectNone('/api/donors/auth/refresh');
+    expect((failure as HttpErrorResponse).status).toBe(401);
+    expect(store.currentAccessToken()).toBe('token-1');
+  });
+
   it.each([
     ['GET', '/api/donations/me/receipts'],
     ['GET', '/api/admin/content/news'],
