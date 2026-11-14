@@ -34,7 +34,9 @@
 # The schedule is the one the backend writes to $BACKUPS/requests/schedule (chosen on /sprava/zalohy),
 # read again on every pass; a missing or invalid value keeps the default below, and the schedule in
 # use is reported in $BACKUPS/status/schedule. A scheduled backup that fails is tried again every
-# $BACKUP_RETRY_SECONDS (15 minutes) at most $BACKUP_RETRIES more times, each once the database answers.
+# $BACKUP_RETRY_SECONDS (15 minutes) at most $BACKUP_RETRIES more times; a retry that finds the database
+# not answering is not counted and waits another interval, so requests are still handled meanwhile, and
+# a requested backup that succeeds ends the retries.
 
 set -u
 
@@ -602,7 +604,7 @@ handle_requests() {
     [ -e "$request" ] || continue
     id=$(basename "$request")
     case "$id" in
-      *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" ;;
+      *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" && backup_attempts_left=0 ;;
       *.test-restore) rm -f "$request"; test_restore "${id%.test-restore}" ;;
       *.restore) restore_requested "$request" ;;
     esac
@@ -618,6 +620,8 @@ take_scheduled_backup() {
   backup_retry_at=$(($(date +%s) + BACKUP_RETRY_SECONDS))
 }
 
+backup_attempts_left=0
+backup_retry_at=0
 mkdir -p "$STATUS" "$REQUESTS"
 chmod 1777 "$REQUESTS"
 rm -f "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore
@@ -637,8 +641,6 @@ last_backup_day=""
 if reached "$BACKUP_TIME"; then
   last_backup_day=$(date +%Y-%m-%d)
 fi
-backup_attempts_left=0
-backup_retry_at=0
 last_test_day=""
 if [ "$(sed -n 's/^started_at=\(.\{10\}\).*/\1/p' "$STATUS/test-restore" 2>/dev/null)" = "$(date +%Y-%m-%d)" ]; then
   last_test_day=$(date +%Y-%m-%d)
@@ -653,8 +655,11 @@ while true; do
     backup_attempts_left=$((BACKUP_RETRIES + 1))
     take_scheduled_backup
   elif [ "$backup_attempts_left" -gt 0 ] && [ "$(date +%s)" -ge "$backup_retry_at" ]; then
-    wait_for_database
-    take_scheduled_backup
+    if pg_isready --quiet; then
+      take_scheduled_backup
+    else
+      backup_retry_at=$(($(date +%s) + BACKUP_RETRY_SECONDS))
+    fi
   fi
   if [ "$(date +%u)" = "$TEST_RESTORE_DAY" ] && reached "$TEST_RESTORE_TIME" && [ "$last_test_day" != "$today" ]; then
     last_test_day=$today
