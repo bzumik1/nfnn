@@ -150,14 +150,18 @@ restore_due() {
   return 1
 }
 
+drop_stale_restore_requests() {
+  find "$REQUESTS_DIR" -maxdepth 1 -name '*.restore' -mmin +"$REQUEST_PATIENCE_MINUTES" -delete -print 2>/dev/null \
+    | while IFS= read -r stale; do
+      echo "The backup container did not take the restore request ${stale##*/} within $REQUEST_PATIENCE_MINUTES minutes; starting with the current data"
+    done
+}
+
 wait_while_restore_due() {
   waited=0
   while restore_due; do
     if [ ! -f "$RUNNING_FILE" ] && [ -d "$REQUESTS_DIR" ]; then
-      for stale in $(find "$REQUESTS_DIR" -maxdepth 1 -name '*.restore' -mmin +"$REQUEST_PATIENCE_MINUTES" 2>/dev/null); do
-        rm -f "$stale"
-        echo "The backup container did not take the restore request $(basename "$stale") within $REQUEST_PATIENCE_MINUTES minutes; starting with the current data"
-      done
+      drop_stale_restore_requests
     fi
     if [ $((waited % 60)) -eq 0 ]; then
       echo "A restore is due or running; the backend starts once the backup container has finished it (waited ${waited}s)"
