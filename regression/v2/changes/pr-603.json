@@ -1,0 +1,154 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/updates/app-updates.spec.ts > Given someone asks for the new version > when no service worker runs, then the page loads from the server at once",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given someone asks for the new version > when no service worker runs, then the page loads from the server at once, keeping the place first",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when a form is half-typed, then nothing reloads and the page asks to load the new version",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when a form is half-typed, then nothing reloads until the form is gone, and then the page reloads by itself",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when the reload guard refuses, then the page asks to load the new version",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when the reload guard refuses, then the page stays",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when a modal dialog is open as it appears, then the dialog announces it, because the page behind is inert",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when a page failed to open and its own notice offers to load it again, then this one stays away",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when no dialog is open as it appears, then nothing is left for a dialog opened later to announce",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the page is shown, then the notice adds no status region beside the ones of the page",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the server speaks another API generation > and the server speaks the app generation again, then the notice goes",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the server speaks another API generation > and the visitor presses the button, then the page they are on loads again from the server",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the server speaks another API generation > then it leaves the focus where it was",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the server speaks another API generation > then the live region says so and offers to load the new version, and the page keeps room for it",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the server speaks the API the app is built for, then its live region is there and stays quiet",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the signed-out notice is on the screen, then this one waits until it is gone",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the server speaks another API generation than the app > when no service worker runs and nothing would break, then the page loads again at once at the same address",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the service worker cannot serve this version any more and the page was not reloaded for it > and the visitor presses the button, then the page loads again from the server and the button says it is loading",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when no form is half-typed, then it is reported and the page reloads",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/update-notice/update-notice.spec.ts > Given the notice that the app must load a new version > when the service worker cannot serve this version any more and the page was not reloaded for it > then the live region asks to load the new version and to copy any half-typed text first",
+    "replacement": "src/app/core/updates/app-updates.spec.ts > Given the service worker reports an unrecoverable state > when no form is half-typed, then it is reported and the page reloads",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when an answer names a newer API generation, then the site says so, sends nothing and loads the new version on request",
+    "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when an answer names a newer API generation and nothing is typed, then the page loads the new version by itself at the same address, shows no bar and loads only once for that generation while it still sends nothing",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when the first write after a deploy reaches a server of a newer API generation, then the server refuses it and the site asks to load the new version",
+    "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when the first write after a deploy reaches a server of a newer API generation, then the server refuses it, the typed message stays, and leaving the page loads the new version",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/accessibility.spec.ts > Given a visitor who relies on WCAG 2.2 AA > when the server speaks a newer API and the bar asks to load the new version, then nothing breaks the rules",
+    "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when an answer names a newer API generation and nothing is typed, then the page loads the new version by itself at the same address, shows no bar and loads only once for that generation while it still sends nothing",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/theme.spec.ts > Given the site built with another theme > when the server speaks a newer API, then the bar that asks to load the new version shows no colour or font of the default theme",
+    "replacement": "e2e/app-update.spec.ts > Given a visitor whose page was opened before the server changed its API > when an answer names a newer API generation and nothing is typed, then the page loads the new version by itself at the same address, shows no bar and loads only once for that generation while it still sends nothing",
+    "reason": "PR #603: Jakub 2026-11-12 (\"Všude automaticky\"): a new version loads by itself at a free moment, with no button and no bar, so the update notice and its button are gone and the app reloads without being asked",
+    "contract": "docs/frontend-overview.md, core/updates/"
+  }
+]

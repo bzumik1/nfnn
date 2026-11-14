@@ -6,8 +6,13 @@ import { AdministrationAccess } from '../../auth/administration-access';
 import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
 import { TAB_LOCKS } from '../../auth/session-tabs';
 import { ErrorReporter } from '../../errors/error-reporter';
+import { RunningWork } from '../../updates/running-work';
 import type { PrfReading } from '../crypto/prf';
-import { PasswordKeyFailure, type PasswordKeyQuestion } from '../crypto/password-key';
+import {
+  PasswordKeyFailure,
+  type PasswordKeyQuestion,
+  STRONG_PASSWORD_PARAMETERS,
+} from '../crypto/password-key';
 import { SmallArgon2Derivation } from '../crypto/testing/password-key-derivations';
 import type { CopyContents } from './account-store';
 import { DEVICE_DATABASE, type DeviceStorage, type StorageChange } from './device-storage';
@@ -1138,5 +1143,24 @@ describe('Given the device vault over IndexedDB with real WebCrypto', () => {
       expect(reporter.report).not.toHaveBeenCalled();
       expect(vault.opened()?.reason).toBe('empty');
     });
+  });
+});
+
+describe('Given the password key derivation the device copy uses', () => {
+  it('when a key is being derived, then it counts as work a reload would break until it ends', async () => {
+    const work = TestBed.inject(RunningWork);
+    vi.stubGlobal('Worker', undefined);
+
+    const derived = TestBed.inject(PASSWORD_KEY_DERIVATION).derive({
+      password: new Uint8Array(8),
+      salt: new Uint8Array(16),
+      parameters: STRONG_PASSWORD_PARAMETERS,
+    });
+
+    expect(work.any()).toBe(true);
+
+    await expect(derived).rejects.toBeDefined();
+    expect(work.any()).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

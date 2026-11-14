@@ -1,6 +1,7 @@
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { RunningWork } from '../../../core/updates/running-work';
 import { Subscription } from 'rxjs';
 import { DiagnosticEvents } from '../../../core/diagnostics/diagnostic-events';
 import { FrozenReceipt, IssuedReceipt } from './frozen-receipt';
@@ -106,6 +107,19 @@ describe('Given the browser receipt PDF', () => {
     expect(request.request.body).toEqual(body);
     request.flush(issued(receipt));
   }
+
+  it('when a receipt is being drawn, then the drawing counts as work a reload would break until it is left', () => {
+    const work = TestBed.inject(RunningWork);
+
+    draw({ year: 2026 });
+    issue(frozenCase(YEARLY_BILINGUAL), { year: 2026 });
+
+    expect(work.any()).toBe(true);
+
+    subscription.unsubscribe();
+
+    expect(work.any()).toBe(false);
+  });
 
   describe('when a yearly receipt is drawn', () => {
     beforeEach(() => {

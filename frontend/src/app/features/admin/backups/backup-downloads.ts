@@ -2,12 +2,14 @@ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { describeProblem } from '../../../core/auth/api-problem';
 import { saveBlob } from '../../../core/files/file-download';
+import { RunningWork } from '../../../core/updates/running-work';
 import { AdminApi, BackupFileResponse } from '../admin-api';
 
 @Injectable()
 export class BackupDownloads {
   private readonly api = inject(AdminApi);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly runningWork = inject(RunningWork);
 
   readonly downloading = signal<string | null>(null);
   readonly failure = signal<string | null>(null);
@@ -18,8 +20,8 @@ export class BackupDownloads {
     }
     this.failure.set(null);
     this.downloading.set(backup.fileName);
-    this.api
-      .downloadBackup(backup.fileName)
+    this.runningWork
+      .during(this.api.downloadBackup(backup.fileName))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (file) => {

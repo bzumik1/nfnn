@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Navigation, provideRouter, Router } from '@angular/router';
 import { authInterceptor } from '../../../core/auth/auth-interceptor';
+import { RunningWork } from '../../../core/updates/running-work';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { LoginDialogService } from '../../../core/auth/login-dialog.service';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
@@ -551,7 +552,7 @@ describe('Given an administrator on the backups page', () => {
     expect(button('Ověřit obnovu teď').disabled).toBe(true);
   });
 
-  it('when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name', async () => {
+  it('when a dump is downloaded, then the file is fetched as a blob with the token and saved under its name, and no reload cuts it off meanwhile', async () => {
     await respond(backupsView());
     const clicked: string[] = [];
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
@@ -578,6 +579,7 @@ describe('Given an administrator on the backups page', () => {
     expect(request.request.responseType).toBe('blob');
     expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
     expect(button('Stahujeme…').disabled).toBe(true);
+    expect(TestBed.inject(RunningWork).any()).toBe(true);
     request.flush(new Blob([new Uint8Array(1590)], { type: 'application/octet-stream' }), {
       headers: { 'Content-Disposition': 'attachment; filename="nfnn-2026-10-23_0300.dump.age"' },
     });
@@ -585,6 +587,7 @@ describe('Given an administrator on the backups page', () => {
 
     expect(clicked).toEqual(['nfnn-2026-10-23_0300.dump.age']);
     expect(button('Stáhnout').disabled).toBe(false);
+    expect(TestBed.inject(RunningWork).any()).toBe(false);
   });
 
   it('when the latest backup is opened, then a sheet names its time, kind, size and file and offers to download it or restore the site from it', async () => {

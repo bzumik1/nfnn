@@ -27,6 +27,7 @@ import { TAB_LOCKS } from '../../auth/session-tabs';
 import type { DeviceCopyDiagnostics } from '../../diagnostics/device-copy-diagnostics';
 import { ageBucket } from '../../diagnostics/diagnostics-schema';
 import { ErrorReporter } from '../../errors/error-reporter';
+import { RunningWork } from '../../updates/running-work';
 import {
   CopyRefused,
   generateSessionKey,
@@ -81,7 +82,16 @@ export const DEVICE_STORAGE_PRESENT = new InjectionToken<() => Promise<boolean>>
 
 export const PASSWORD_KEY_DERIVATION = new InjectionToken<PasswordKeyDerivation>(
   'PASSWORD_KEY_DERIVATION',
-  { providedIn: 'root', factory: () => new WorkerPasswordKeyDerivation() },
+  {
+    providedIn: 'root',
+    factory: () => {
+      const runningWork = inject(RunningWork);
+      const derivation = new WorkerPasswordKeyDerivation();
+      return {
+        derive: (question, timeoutMs) => runningWork.until(derivation.derive(question, timeoutMs)),
+      };
+    },
+  },
 );
 
 export interface PasskeyReader {
@@ -149,6 +159,7 @@ export class DeviceVault implements SessionDevice {
   private readonly openStorage = inject(DEVICE_STORAGE_OPENER);
   private readonly storagePresent = inject(DEVICE_STORAGE_PRESENT);
   private readonly derivation = inject(PASSWORD_KEY_DERIVATION);
+  private readonly runningWork = inject(RunningWork);
   private readonly channels = inject(COPY_CHANNELS);
   private readonly persist = inject(STORAGE_PERSISTENCE);
   private readonly locks = inject(TAB_LOCKS);
@@ -484,11 +495,15 @@ export class DeviceVault implements SessionDevice {
     if (asked === null || asked.credentialIds.length === 0 || credentials === null) {
       return false;
     }
-    const reading = await readPrf(credentials, {
-      rpId: this.passkeys.rpId,
-      deviceSalt: asked.salt,
-      credentialIds: asked.credentialIds,
-    }).catch(() => null);
+    const reading = await this.runningWork
+      .until(
+        readPrf(credentials, {
+          rpId: this.passkeys.rpId,
+          deviceSalt: asked.salt,
+          credentialIds: asked.credentialIds,
+        }),
+      )
+      .catch(() => null);
     if (reading === null) {
       return false;
     }
