@@ -1,6 +1,8 @@
 package cz.novanadeje.app.regression;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKey;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWords;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.sharedcases.SharedCases;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BaselineHygieneTest {
+
+    private static final BackupKeyWords WORDLIST = CzechBackupKeyWords.WORDLIST;
 
     private static final String FIXTURE_SECRET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJ0123-_QQ";
     private static final String TEST_BACKUP_KEY = "AGE-SECRET-KEY-1R45A984EXXAFC85YZSYGY9R6XJTD4E9AKY65ZCRGPDQ89E7ANW8QKT6GWH";
@@ -184,8 +188,8 @@ class BaselineHygieneTest {
     @Test
     @DisplayName("Given backup key words in a confirmation, a first setup and a list, when a JSON file is checked, then a word of another key is reported, and masked words, words of the dev key and words the features spell out are not")
     void should_report_backup_key_words_of_another_key_when_a_json_file_is_checked() {
-        List<String> devWords = new BackupKey(BaselineHygiene.DEV_BACKUP_KEY).words();
-        List<String> foreign = new BackupKey(OTHER_BACKUP_KEY).words().stream().filter(word -> !devWords.contains(word)).limit(2).toList();
+        List<String> devWords = new BackupKey(BaselineHygiene.DEV_BACKUP_KEY).words(WORDLIST);
+        List<String> foreign = new BackupKey(OTHER_BACKUP_KEY).words(WORDLIST).stream().filter(word -> !devWords.contains(word)).limit(2).toList();
         String text = """
                 {"words":[{"position":1,"word":"<secret>"},{"position":2,"word":"%s"},{"position":3,"word":"%s"},{"position":4,"word":"abeceda"}],
                  "backupKeyWords":[{"position":5,"word":"%s"}],"list":{"words":["%s","<secret>"]}}

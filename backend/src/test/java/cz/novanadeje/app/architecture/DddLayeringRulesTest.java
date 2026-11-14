@@ -2,6 +2,7 @@ package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -27,8 +28,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -39,6 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ResourceBundle;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -68,9 +69,19 @@ class DddLayeringRulesTest {
     private static final DescribedPredicate<JavaClass> WHAT_THE_DOMAIN_MAY_USE = resideInAnyPackage(
             "java.lang", "java.util", "java.util.function", "java.util.regex", "java.util.stream", "java.util.random", "java.time..", "java.math",
             "java.text", "java.security", "java.nio", "java.nio.charset", "javax.crypto..", DOMAIN)
-            .or(belongToAnyOf(URI.class, URISyntaxException.class, URLEncoder.class,
-                    InputStream.class, ByteArrayOutputStream.class, IOException.class, UncheckedIOException.class))
+            .or(belongToAnyOf(URI.class, URISyntaxException.class, URLEncoder.class, ByteArrayOutputStream.class))
             .as("the JDK's core or a domain package");
+    private static final Pattern CLASSPATH_READS = Pattern.compile("(get(System)?Resources?(AsStream)?|resources|systemResources)");
+    private static final Map<String, Pattern> RESOURCE_READS_BY_OWNER = Map.of(
+            Class.class.getName(), CLASSPATH_READS,
+            ClassLoader.class.getName(), CLASSPATH_READS,
+            Module.class.getName(), CLASSPATH_READS,
+            ResourceBundle.class.getName(), Pattern.compile("getBundle"),
+            ServiceLoader.class.getName(), Pattern.compile("load(Installed)?"));
+    private static final DescribedPredicate<JavaAccess<?>> READS_A_CLASSPATH_RESOURCE = DescribedPredicate.describe(
+            "read a classpath resource, a resource bundle or a service loader",
+            access -> RESOURCE_READS_BY_OWNER.entrySet().stream()
+                    .anyMatch(owner -> access.getTargetOwner().isAssignableTo(owner.getKey()) && owner.getValue().matcher(access.getName()).matches()));
     private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_IMPLEMENTS = DescribedPredicate.describe(
             "a port that persistence implements",
             type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAPackage("..infrastructure.persistence..")::test));
@@ -123,6 +134,12 @@ class DddLayeringRulesTest {
             .that().resideInAPackage(DOMAIN)
             .should().onlyDependOnClassesThat(WHAT_THE_DOMAIN_MAY_USE)
             .because(LAYERS);
+
+    @ArchTest
+    static final ArchRule domain_must_not_read_classpath_resources = noClasses()
+            .that().resideInAPackage(DOMAIN)
+            .should().accessTargetWhere(READS_A_CLASSPATH_RESOURCE)
+            .because(LAYERS + ": a list the domain needs is loaded by infrastructure at startup and handed to the domain as a value");
 
     @ArchTest
     static final ArchRule application_must_not_depend_on_web = noClasses()
@@ -190,6 +207,30 @@ class DddLayeringRulesTest {
                     planted("planteda.domain.ConcurrentGift", "public class ConcurrentGift { java.util.concurrent.ConcurrentHashMap<String, String> map; }"),
                     planted("planteda.domain.ReflectiveGift", "public class ReflectiveGift { java.lang.reflect.Method method; }"),
                     planted("planteda.domain.NetworkGift", "public class NetworkGift { java.net.Socket socket; }"),
+                    planted("planteda.domain.StreamedGift", """
+                            public class StreamedGift {
+                                byte[] read() throws java.io.IOException {
+                                    try (java.io.InputStream list = StreamedGift.class.getResourceAsStream("gift.txt")) {
+                                        return list.readAllBytes();
+                                    }
+                                }
+                            }
+                            """),
+                    planted("planteda.domain.ResourceGift", """
+                            public class ResourceGift {
+                                Object list() { return ResourceGift.class.getResourceAsStream("gift.txt"); }
+                                Object loaded() { return ResourceGift.class.getClassLoader().getResource("gift.txt"); }
+                                java.util.function.Function<String, Object> reader() { return ResourceGift.class::getResourceAsStream; }
+                            }
+                            """),
+                    planted("planteda.domain.BundledGift", """
+                            public class BundledGift {
+                                Object bundle() { return java.util.ResourceBundle.getBundle("gift"); }
+                                Object propertyBundle() { return java.util.PropertyResourceBundle.getBundle("gift"); }
+                                Object services() { return java.util.ServiceLoader.load(Runnable.class); }
+                                Object installed() { return java.util.ServiceLoader.loadInstalled(Runnable.class); }
+                            }
+                            """),
                     planted("planteda.application.GiftService", "public class GiftService {}"),
                     planted("planteda.application.GiftPairing", "public interface GiftPairing { void pair(); }"),
                     planted("planteda.application.PairingService", "@org.springframework.stereotype.Service public class PairingService { public void pair() {} }"),
@@ -303,7 +344,7 @@ class DddLayeringRulesTest {
         }
 
         @Test
-        @DisplayName("when the domain rule checks domain classes on a logger, JDBC, concurrency, reflection and a socket, then each is reported")
+        @DisplayName("when the domain rule checks domain classes on a logger, JDBC, concurrency, reflection, a socket and a stream, then each is reported")
         void should_report_every_library_outside_the_jdk_core_when_checked_given_planted_domain_classes() {
             assertThat(reportOf(domain_must_not_depend_on_frameworks))
                     .anySatisfy(detail -> assertThat(detail).contains("LoggingGift").contains("org.slf4j.Logger"))
@@ -311,7 +352,24 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("ConcurrentGift").contains("java.util.concurrent.ConcurrentHashMap"))
                     .anySatisfy(detail -> assertThat(detail).contains("ReflectiveGift").contains("java.lang.reflect.Method"))
                     .anySatisfy(detail -> assertThat(detail).contains("NetworkGift").contains("java.net.Socket"))
+                    .anySatisfy(detail -> assertThat(detail).contains("StreamedGift").contains("java.io.InputStream"))
+                    .anySatisfy(detail -> assertThat(detail).contains("StreamedGift").contains("java.io.IOException"))
                     .noneSatisfy(detail -> assertThat(detail).contains("planteda.domain.Gift>"));
+        }
+
+        @Test
+        @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader, by a method reference, as a resource bundle, through a subclass of one and through a service loader, then each is reported and a class that reads none is not")
+        void should_report_every_resource_read_when_checked_given_planted_domain_classes() {
+            assertThat(reportOf(domain_must_not_read_classpath_resources))
+                    .anySatisfy(detail -> assertThat(detail).contains("StreamedGift.read()").contains("getResourceAsStream"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.list()").contains("getResourceAsStream"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.loaded()").contains("java.lang.ClassLoader.getResource"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.reader()").contains("getResourceAsStream"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.bundle()").contains("java.util.ResourceBundle.getBundle"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.propertyBundle()").contains("java.util.PropertyResourceBundle.getBundle"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.services()").contains("java.util.ServiceLoader.load"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.installed()").contains("java.util.ServiceLoader.loadInstalled"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("NetworkGift"));
         }
 
         @Test

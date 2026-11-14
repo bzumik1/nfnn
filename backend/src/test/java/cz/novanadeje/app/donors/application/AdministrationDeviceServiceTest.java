@@ -14,6 +14,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.donors.domain.WrongPassword;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -72,7 +73,7 @@ class AdministrationDeviceServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new AdministrationDeviceService(donors, secondFactors,
-                new DonorConfirmations(passwordHasher, passkeys, challenges, ceremonies, transactions, clock),
+                new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, clock),
                 new SecondFactorCodes(secondFactors, wrongCodes), events, clock, transactions);
     }
 

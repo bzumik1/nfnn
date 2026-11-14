@@ -24,6 +24,7 @@ import cz.novanadeje.app.operations.domain.settings.SetupCode;
 import cz.novanadeje.app.operations.domain.settings.SetupCompleted;
 import cz.novanadeje.app.operations.domain.settings.SetupLocked;
 import cz.novanadeje.app.operations.domain.settings.SetupStateRepository;
+import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -75,7 +76,7 @@ class SetupServiceTest {
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final InMemoryBackupKeyConfirmations keyConfirmations = new InMemoryBackupKeyConfirmations();
     private final BackupKeyService backupKeys = new BackupKeyService(() -> Optional.of(BACKUP_KEY), keyConfirmations, mock(FreshSecondFactor.class),
-            mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), mock(ApplicationEventPublisher.class), clock);
+            mock(BackupKeyRevealRefusals.class), new BackupKeyWordChallenges(), CzechBackupKeyWords.WORDLIST, mock(ApplicationEventPublisher.class), clock);
     private final SetupService setup = new SetupService(state, new SettingsWriter(repository, new ReversibleSealer(), validator), announcer,
             mailProbe, restarter, backups, new BackupRestoreService(backups, mock(RestoreRecordRepository.class), restarter,
             mock(ApplicationEventPublisher.class), key -> false, clock), backupKeys, clock);

@@ -7,7 +7,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -32,15 +32,17 @@ public class DonorRegistrationService {
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
+    private final PasswordPolicy passwordPolicy;
     private final DonorEmailVerificationService emailVerification;
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final TransactionTemplate writes;
 
-    public DonorRegistrationService(DonorRepository donors, PasswordHasher passwordHasher, DonorEmailVerificationService emailVerification,
+    public DonorRegistrationService(DonorRepository donors, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorEmailVerificationService emailVerification,
                                     ApplicationEventPublisher events, Clock clock, PlatformTransactionManager transactions) {
         this.donors = donors;
         this.passwordHasher = passwordHasher;
+        this.passwordPolicy = passwordPolicy;
         this.emailVerification = emailVerification;
         this.events = events;
         this.clock = clock;
@@ -59,7 +61,7 @@ public class DonorRegistrationService {
     }
 
     private Optional<PasswordHash> hashOf(String password) {
-        return Optional.ofNullable(password).map(given -> passwordHasher.hash(new RawPassword(given)));
+        return Optional.ofNullable(password).map(given -> passwordHasher.hash(passwordPolicy.accept(given)));
     }
 
     private void register(RegisterDonorCommand command, EmailAddress email, Optional<CompanyIdentifier> companyIdentifier, PostalAddress address,

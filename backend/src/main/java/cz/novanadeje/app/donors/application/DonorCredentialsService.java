@@ -10,7 +10,7 @@ import cz.novanadeje.app.donors.domain.EmailUnchanged;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
-import cz.novanadeje.app.donors.domain.RawPassword;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +30,7 @@ public class DonorCredentialsService {
 
     private final DonorRepository donors;
     private final PasswordHasher passwordHasher;
+    private final PasswordPolicy passwordPolicy;
     private final DonorConfirmations confirmations;
     private final PasskeyRepository passkeys;
     private final DonorSessionService sessions;
@@ -41,12 +42,13 @@ public class DonorCredentialsService {
     private final TransactionTemplate reads;
     private final TransactionTemplate writes;
 
-    public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, DonorConfirmations confirmations, PasskeyRepository passkeys,
+    public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorConfirmations confirmations, PasskeyRepository passkeys,
                                    DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
                                    ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts, PlatformTransactionManager transactions) {
         this.signOuts = signOuts;
         this.donors = donors;
         this.passwordHasher = passwordHasher;
+        this.passwordPolicy = passwordPolicy;
         this.confirmations = confirmations;
         this.passkeys = passkeys;
         this.sessions = sessions;
@@ -62,7 +64,7 @@ public class DonorCredentialsService {
     public AuthenticatedDonor changePassword(DonorId donorId, boolean secondFactorVerified, Confirmation confirmation, String newPassword,
                                              RequestingDevice device) {
         ConfirmedCredentials confirmed = confirmations.confirm(read(donorId), confirmation);
-        PasswordHash newHash = passwordHasher.hash(new RawPassword(newPassword));
+        PasswordHash newHash = passwordHasher.hash(passwordPolicy.accept(newPassword));
         return writes.execute(status -> {
             Donor donor = lock(donorId);
             confirmed.requireUnchangedIn(donor);

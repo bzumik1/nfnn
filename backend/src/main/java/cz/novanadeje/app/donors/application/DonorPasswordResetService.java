@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
+import cz.novanadeje.app.donors.domain.PasswordPolicy;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class DonorPasswordResetService {
     private final DonorRepository donors;
     private final PasswordResetTokenRepository tokens;
     private final PasswordHasher passwordHasher;
+    private final PasswordPolicy passwordPolicy;
     private final DonorPasswordResetProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
@@ -41,7 +43,7 @@ public class DonorPasswordResetService {
     private final TransactionTemplate reads;
     private final TransactionTemplate writes;
 
-    public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, DonorPasswordResetProperties properties, Clock clock,
+    public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorPasswordResetProperties properties, Clock clock,
                                      ApplicationEventPublisher events, DeviceSignOuts signOuts, SecondFactorHoldings holdings,
                                      PlatformTransactionManager transactions) {
         this.signOuts = signOuts;
@@ -49,6 +51,7 @@ public class DonorPasswordResetService {
         this.donors = donors;
         this.tokens = tokens;
         this.passwordHasher = passwordHasher;
+        this.passwordPolicy = passwordPolicy;
         this.properties = properties;
         this.clock = clock;
         this.events = events;
@@ -86,7 +89,7 @@ public class DonorPasswordResetService {
     }
 
     public void confirmReset(String token, String password) {
-        RawPassword rawPassword = new RawPassword(password);
+        RawPassword rawPassword = passwordPolicy.accept(password);
         LinkSecret secret = new LinkSecret(token);
         Instant now = clock.instant();
         reads.executeWithoutResult(status -> resettableDonor(donors.findById(usableToken(secret, now).donorId())));

@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordTooWeak;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
+import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -63,7 +64,7 @@ class DonorRegistrationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DonorRegistrationService(donors, passwordHasher, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC), transactions);
+        service = new DonorRegistrationService(donors, passwordHasher, CommonPasswords.POLICY, emailVerification, events, Clock.fixed(NOW, ZoneOffset.UTC), transactions);
     }
 
     @Test
