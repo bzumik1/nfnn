@@ -32,6 +32,10 @@ public final class BackupKeyWords {
         if (words == null || words.size() != WORDLIST_SIZE) {
             throw new IllegalArgumentException("The Czech BIP39 wordlist must hold " + WORDLIST_SIZE + " words");
         }
+        if (!words.stream().allMatch(word -> word != null && word.length() >= UNIQUE_PREFIX && word.length() <= MAX_WORD_LENGTH
+                && LETTERS.matcher(word).matches())) {
+            throw new IllegalArgumentException("Every word of the BIP39 list is " + UNIQUE_PREFIX + " to " + MAX_WORD_LENGTH + " lower-case letters");
+        }
         this.words = List.copyOf(words);
         this.indexByPrefix = indexByPrefix(this.words);
     }

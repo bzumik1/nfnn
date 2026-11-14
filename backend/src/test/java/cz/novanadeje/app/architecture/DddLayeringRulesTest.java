@@ -80,9 +80,8 @@ class DddLayeringRulesTest {
             ServiceLoader.class.getName(), Pattern.compile("load(Installed)?"));
     private static final DescribedPredicate<JavaAccess<?>> READS_A_CLASSPATH_RESOURCE = DescribedPredicate.describe(
             "read a classpath resource, a resource bundle or a service loader",
-            access -> Optional.ofNullable(RESOURCE_READS_BY_OWNER.get(access.getTargetOwner().getName()))
-                    .filter(reads -> reads.matcher(access.getName()).matches())
-                    .isPresent());
+            access -> RESOURCE_READS_BY_OWNER.entrySet().stream()
+                    .anyMatch(owner -> access.getTargetOwner().isAssignableTo(owner.getKey()) && owner.getValue().matcher(access.getName()).matches()));
     private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_IMPLEMENTS = DescribedPredicate.describe(
             "a port that persistence implements",
             type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAPackage("..infrastructure.persistence..")::test));
@@ -227,6 +226,7 @@ class DddLayeringRulesTest {
                     planted("planteda.domain.BundledGift", """
                             public class BundledGift {
                                 Object bundle() { return java.util.ResourceBundle.getBundle("gift"); }
+                                Object propertyBundle() { return java.util.PropertyResourceBundle.getBundle("gift"); }
                                 Object services() { return java.util.ServiceLoader.load(Runnable.class); }
                                 Object installed() { return java.util.ServiceLoader.loadInstalled(Runnable.class); }
                             }
@@ -358,7 +358,7 @@ class DddLayeringRulesTest {
         }
 
         @Test
-        @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader, by a method reference, as a resource bundle and through a service loader, then each is reported and a class that reads none is not")
+        @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader, by a method reference, as a resource bundle, through a subclass of one and through a service loader, then each is reported and a class that reads none is not")
         void should_report_every_resource_read_when_checked_given_planted_domain_classes() {
             assertThat(reportOf(domain_must_not_read_classpath_resources))
                     .anySatisfy(detail -> assertThat(detail).contains("StreamedGift.read()").contains("getResourceAsStream"))
@@ -366,6 +366,7 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.loaded()").contains("java.lang.ClassLoader.getResource"))
                     .anySatisfy(detail -> assertThat(detail).contains("ResourceGift.reader()").contains("getResourceAsStream"))
                     .anySatisfy(detail -> assertThat(detail).contains("BundledGift.bundle()").contains("java.util.ResourceBundle.getBundle"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BundledGift.propertyBundle()").contains("java.util.PropertyResourceBundle.getBundle"))
                     .anySatisfy(detail -> assertThat(detail).contains("BundledGift.services()").contains("java.util.ServiceLoader.load"))
                     .anySatisfy(detail -> assertThat(detail).contains("BundledGift.installed()").contains("java.util.ServiceLoader.loadInstalled"))
                     .noneSatisfy(detail -> assertThat(detail).contains("NetworkGift"));

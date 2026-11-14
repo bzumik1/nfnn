@@ -28,6 +28,17 @@ class BackupKeyWordsTest {
         assertThatThrownBy(() -> new BackupKeyWords(words)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("four letters");
     }
 
+    @Test
+    @DisplayName("Given a list with a word shorter than four letters, a missing word or a word of other characters, when a wordlist is made of it, then it is refused")
+    void should_refuse_when_made_given_a_word_of_another_shape() {
+        for (String misshapen : new String[]{"abc", null, "Abcd", "ábcd", "ab1d"}) {
+            List<String> words = new ArrayList<>(distinctWords());
+            words.set(7, misshapen);
+
+            assertThatThrownBy(() -> new BackupKeyWords(words)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("lower-case letters");
+        }
+    }
+
     private static List<String> distinctWords() {
         return IntStream.range(0, 2048).mapToObj(BackupKeyWordsTest::word).toList();
     }
