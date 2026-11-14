@@ -58,7 +58,6 @@ class StereotypeRulesTest {
     private static final String APPLICATION = "backend.md, Application";
     private static final String SETUP_CODE_ANNOUNCER = "cz.novanadeje.app.operations.infrastructure.settings.ConsoleSetupCodeAnnouncer";
     private static final String DEFERRED_LOG_USER = "cz.novanadeje.app.operations.infrastructure.settings.DatabaseSettingsEnvironmentPostProcessor";
-    private static final String LIVE_FEED = "cz.novanadeje.app.shared.application.event.LiveFeed";
 
     private static JavaClasses planted;
 
@@ -150,9 +149,8 @@ class StereotypeRulesTest {
     static final ArchRule events_are_records = classes()
             .that().resideInAPackage("..application.event..")
             .and().areTopLevelClasses()
-            .and().doNotHaveFullyQualifiedName(LIVE_FEED)
             .should().beRecords()
-            .because("backend.md, Contexts and layers: an event record in application/event; LiveFeed goes with the shared kernel cleanup of #621");
+            .because("backend.md, Contexts and layers: an event record in application/event");
 
     @ArchTest
     static final ArchRule loggers_are_private_static_final_fields_named_log = fields()

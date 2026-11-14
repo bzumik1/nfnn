@@ -2,7 +2,7 @@ package cz.novanadeje.app.shared.infrastructure.live;
 
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.shared.infrastructure.config.BuildProperties;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
@@ -17,8 +17,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -231,7 +231,7 @@ public class LiveStreamHub implements SmartLifecycle {
         private final long sequence;
         private final LiveSubscriber subscriber;
         private final LiveConnection connection;
-        private final Set<LiveFeed> pending = EnumSet.noneOf(LiveFeed.class);
+        private final Set<LiveFeed> pending = new LinkedHashSet<>();
         private boolean flushQueued = true;
         private volatile ScheduledFuture<?> expiry;
         private volatile ScheduledFuture<?> heartbeat;
@@ -268,7 +268,7 @@ public class LiveStreamHub implements SmartLifecycle {
                 pending.clear();
                 flushQueued = false;
             }
-            feeds.forEach(feed -> send(CHANGED_EVENT, Map.of("feed", feed.wireName())));
+            feeds.forEach(feed -> send(CHANGED_EVENT, Map.of("feed", feed.name())));
         }
 
         private void send(String event, Map<String, String> data) {

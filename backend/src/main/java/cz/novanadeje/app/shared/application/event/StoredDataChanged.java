@@ -3,6 +3,7 @@ package cz.novanadeje.app.shared.application.event;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public record StoredDataChanged(LiveFeed feed, Optional<UUID> donor) {
 
@@ -20,5 +21,28 @@ public record StoredDataChanged(LiveFeed feed, Optional<UUID> donor) {
 
     public static StoredDataChanged of(LiveFeed feed) {
         return new StoredDataChanged(feed, Optional.empty());
+    }
+
+    public record LiveFeed(String name, Audience audience) {
+
+        public static final int MAXIMUM_NAME_LENGTH = 40;
+        private static final Pattern NAME_SHAPE = Pattern.compile("[a-z]+(-[a-z]+)*");
+
+        public LiveFeed {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(audience, "audience");
+            if (name.length() > MAXIMUM_NAME_LENGTH) {
+                throw new IllegalArgumentException("Live feed name must be at most " + MAXIMUM_NAME_LENGTH + " characters");
+            }
+            if (!NAME_SHAPE.matcher(name).matches()) {
+                throw new IllegalArgumentException("Live feed name must be lower-case words joined by hyphens");
+            }
+        }
+
+        public enum Audience {
+            DONOR,
+            EVERYONE,
+            ADMINISTRATION
+        }
     }
 }

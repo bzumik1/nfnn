@@ -7,8 +7,8 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.shared.infrastructure.search.AccentFolding;
 import org.springframework.context.ApplicationEventPublisher;
@@ -83,7 +83,7 @@ class JpaDonorRecordRepository implements DonorRecordRepository {
     }
 
     private void accountsChanged(DonorReference donor) {
-        events.publishEvent(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, donor.value()));
+        events.publishEvent(StoredDataChanged.ofDonor(DonationLiveFeeds.BANK_ACCOUNTS, donor.value()));
     }
 
     @Override
