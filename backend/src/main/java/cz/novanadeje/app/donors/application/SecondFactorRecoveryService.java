@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.AdministratorSecondFactorRecovered;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecovered;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -50,12 +49,12 @@ public class SecondFactorRecoveryService {
     private final DonorSecondFactorProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
 
     public SecondFactorRecoveryService(DonorRepository donors, SecondFactorRepository secondFactors, SecondFactorChallengeRepository challenges,
                                        SecondFactorRecoveryRepository recoveries, SecondFactorRecoveryTargets targets, DonorSecondFactorProperties properties,
-                                       ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
-        this.signOuts = signOuts;
+                                       ApplicationEventPublisher events, Clock clock, CredentialChanges credentialChanges) {
+        this.credentialChanges = credentialChanges;
         this.donors = donors;
         this.secondFactors = secondFactors;
         this.challenges = challenges;
@@ -109,7 +108,7 @@ public class SecondFactorRecoveryService {
             return;
         }
         secondFactors.delete(donorId);
-        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndLinkOf(donorId, now);
         events.publishEvent(new DonorSecondFactorRecovered(donorId.value(), donor.get().email(), donor.get().preferredLocale(),
                 senderAccount));
         if (donor.get().isAdministrator()) {

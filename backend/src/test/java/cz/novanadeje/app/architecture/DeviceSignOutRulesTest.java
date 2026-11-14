@@ -9,7 +9,9 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
+import cz.novanadeje.app.donors.application.CredentialChanges;
 import cz.novanadeje.app.donors.application.DeviceSignOuts;
+import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
@@ -92,6 +94,13 @@ class DeviceSignOutRulesTest {
             .should().accessTargetWhere(A_SIGN_OUT_LOCK_OR_END_OF_THE_ROWS.and(not(FROM_THE_MATCHING_ADAPTER_METHOD)))
             .because("the adapters' sign-outs are reached only from the device sign-outs, so no other method may reach the same rows through Spring Data");
 
+    @ArchTest
+    static final ArchRule sessions_end_for_changed_credentials_only_through_the_credential_changes = noClasses()
+            .that().doNotHaveFullyQualifiedName(CredentialChanges.class.getName())
+            .and().doNotBelongToAnyOf(DeviceSignOutReason.class)
+            .should().accessField(DeviceSignOutReason.class, DeviceSignOutReason.CREDENTIALS_CHANGED.name())
+            .because("a change of the credentials also spends the donor's pending e-mail change and password reset links, so a link sent before the change cannot undo it (security audit 2026-11-14)");
+
     @Test
     @DisplayName("Given the guarded names, when the repositories, the adapters and the Spring Data repositories are read, then each exists, so no rule watches a name that is gone")
     void should_find_every_guarded_name_when_read_given_the_repositories() throws ClassNotFoundException {
@@ -134,6 +143,15 @@ class DeviceSignOutRulesTest {
         }
 
         @Test
+        @DisplayName("when the rules check a class that ends sessions for changed credentials itself, then it is reported")
+        void should_report_sign_out_for_changed_credentials_when_checked_given_a_planted_class() {
+            JavaClasses planted = new ClassFileImporter().importClasses(PlantedCredentialChange.class);
+
+            assertThat(sessions_end_for_changed_credentials_only_through_the_credential_changes.evaluate(planted).getFailureReport().getDetails())
+                    .singleElement().asString().contains("PlantedCredentialChange");
+        }
+
+        @Test
         @DisplayName("when the rules check a decorator of the token repository, then its sign-out is reported like any other")
         void should_report_sign_out_when_checked_given_a_decorator_of_the_repository() {
             JavaClasses planted = new ClassFileImporter().importClasses(PlantedDecorator.class);
@@ -171,6 +189,13 @@ class DeviceSignOutRulesTest {
             Consumer<DonorId> lock = tokens::lockAllOf;
             BiConsumer<DonorId, Instant> reduce = devices::reduceErasedOf;
             return List.of(revoke, lock, reduce);
+        }
+    }
+
+    static final class PlantedCredentialChange {
+
+        void changed(DeviceSignOuts signOuts, DonorId donor) {
+            signOuts.endAllOf(donor, DeviceSignOutReason.CREDENTIALS_CHANGED, Instant.EPOCH);
         }
     }
 

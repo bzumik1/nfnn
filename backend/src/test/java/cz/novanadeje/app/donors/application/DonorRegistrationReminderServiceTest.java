@@ -16,6 +16,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,8 @@ class DonorRegistrationReminderServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private DonorSessionService sessions;
     @Mock
     private SecondFactorRepository secondFactors;
@@ -66,7 +69,7 @@ class DonorRegistrationReminderServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         DonorEmailVerificationService emailVerification = new DonorEmailVerificationService(donors, tokens, sessions,
-                new DonorViews(secondFactors, tokens, clock, new ProfileVersions(RowVersionsFixture.canonical())), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events, signOuts);
+                new DonorViews(secondFactors, tokens, clock, new ProfileVersions(RowVersionsFixture.canonical())), new DonorEmailVerificationProperties(Duration.ofHours(24), 3), clock, events, new CredentialChanges(signOuts, tokens, resetTokens));
         service = new DonorRegistrationReminderService(reminders, donors, emailVerification,
                 new RegistrationReminderProperties("0 20 * * * *", Duration.ofDays(1), Duration.ofDays(7)), clock);
     }

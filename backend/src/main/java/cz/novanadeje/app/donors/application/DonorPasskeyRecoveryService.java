@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.AdministratorRecoveryRefused;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -33,12 +32,12 @@ public class DonorPasskeyRecoveryService {
     private final SecondFactorRepository secondFactors;
     private final DonorPasskeyService passkeys;
     private final Clock clock;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
     private final SecondFactorCodes codes;
 
     public DonorPasskeyRecoveryService(PasswordResetTokenRepository tokens, DonorRepository donors, SecondFactorRepository secondFactors,
-                                       DonorPasskeyService passkeys, Clock clock, DeviceSignOuts signOuts, SecondFactorCodes codes) {
-        this.signOuts = signOuts;
+                                       DonorPasskeyService passkeys, Clock clock, CredentialChanges credentialChanges, SecondFactorCodes codes) {
+        this.credentialChanges = credentialChanges;
         this.codes = codes;
         this.tokens = tokens;
         this.donors = donors;
@@ -72,8 +71,7 @@ public class DonorPasskeyRecoveryService {
             throw new InvalidPasswordResetToken();
         }
         PasskeyView added = passkeys.registerFor(donor, challenge, name, attestation);
-        tokens.deleteOthersOf(donor.id(), found.id());
-        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndOtherLinkOf(donor.id(), found.id(), now);
         log.info("Passkey recovery completed for donor {}, every session revoked", donor.id());
         return added;
     }

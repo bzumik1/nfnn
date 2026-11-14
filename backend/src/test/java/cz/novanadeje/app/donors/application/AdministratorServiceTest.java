@@ -32,6 +32,8 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,6 +79,10 @@ class AdministratorServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private ApplicationEventPublisher events;
 
     private AdministratorService service;
@@ -84,7 +90,7 @@ class AdministratorServiceTest {
     @BeforeEach
     void setUp() {
         service = new AdministratorService(donors, secondFactors, passkeys, new SecondFactorHoldings(secondFactors, passkeys), events,
-                Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+                Clock.fixed(NOW, ZoneOffset.UTC), signOuts, new CredentialChanges(signOuts, verificationTokens, resetTokens));
     }
 
     @Test
@@ -349,6 +355,8 @@ class AdministratorServiceTest {
 
         verify(secondFactors).delete(PETR);
         verify(signOuts).endAllOf(PETR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(PETR);
+        verify(resetTokens).deleteAllOf(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
@@ -390,6 +398,8 @@ class AdministratorServiceTest {
         service.removePasskeys(JANA, PETR);
 
         verify(signOuts).endAllOf(PETR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(PETR);
+        verify(resetTokens).deleteAllOf(PETR);
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();

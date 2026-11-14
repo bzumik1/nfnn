@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.AdministratorRoster;
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
@@ -46,10 +45,13 @@ public class AdministratorService {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
 
     public AdministratorService(DonorRepository donors, SecondFactorRepository secondFactors, PasskeyRepository passkeys,
-                                SecondFactorHoldings holdings, ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts) {
+                                SecondFactorHoldings holdings, ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts,
+                                CredentialChanges credentialChanges) {
         this.signOuts = signOuts;
+        this.credentialChanges = credentialChanges;
         this.holdings = holdings;
         this.donors = donors;
         this.secondFactors = secondFactors;
@@ -109,7 +111,7 @@ public class AdministratorService {
         }
         secondFactors.delete(donorId);
         Instant now = clock.instant();
-        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndLinkOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), RESET_SECOND_FACTOR_ACTION, Optional.of(donorId.value()),
                 "Dvoufaktorové ověření dárce " + donorId + " vypnuto; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorSecondFactorReset(donorId.value(), donor.email(), donor.preferredLocale()));
@@ -124,7 +126,7 @@ public class AdministratorService {
             throw new NoPasskeys();
         }
         Instant now = clock.instant();
-        signOuts.endAllOf(donorId, DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndLinkOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REMOVE_PASSKEYS_ACTION, Optional.of(donorId.value()),
                 "Odebrané přístupové klíče dárce " + donorId + ": " + removed + "; všechna přihlášení dárce ukončena", now));
         events.publishEvent(new DonorPasskeysRemoved(donorId.value(), donor.email(), donor.preferredLocale()));

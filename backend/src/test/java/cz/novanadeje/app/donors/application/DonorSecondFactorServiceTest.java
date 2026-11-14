@@ -39,6 +39,7 @@ import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -89,6 +90,8 @@ class DonorSecondFactorServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private PasswordHasher passwordHasher;
     @Mock
     private DonorSessionService sessions;
@@ -111,7 +114,7 @@ class DonorSecondFactorServiceTest {
     void setUp() {
         service = new DonorSecondFactorService(donors, secondFactors, new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new SecondFactorSessionGuard(secondFactors, passkeys),
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, clock, signOuts,
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", Duration.ofDays(14)), events, clock, new CredentialChanges(signOuts, verificationTokens, resetTokens),
                 new SecondFactorCodes(secondFactors, wrongCodes), transactions);
     }
 
@@ -211,6 +214,8 @@ class DonorSecondFactorServiceTest {
         InOrder order = inOrder(secondFactors, signOuts, sessions);
         order.verify(secondFactors).save(factor);
         order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(DONOR);
+        verify(resetTokens).deleteAllOf(DONOR);
         order.verify(sessions).continueOn(donor, true, DEVICE);
         assertThat(factor.isEnabled()).isTrue();
         assertThat(result.donor().secondFactor().enabled()).isTrue();
@@ -338,6 +343,8 @@ class DonorSecondFactorServiceTest {
         InOrder order = inOrder(secondFactors, signOuts, sessions);
         order.verify(secondFactors).delete(DONOR);
         order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(DONOR);
+        verify(resetTokens).deleteAllOf(DONOR);
         order.verify(sessions).continueOn(donor, false, DEVICE);
         assertThat(result.donor().secondFactor().enabled()).isFalse();
         verify(events).publishEvent(new DonorSecondFactorDisabled(DONOR.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS));

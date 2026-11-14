@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.application.event.DonorPasswordResetRequested;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -38,15 +37,15 @@ public class DonorPasswordResetService {
     private final DonorPasswordResetProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
     private final SecondFactorHoldings holdings;
     private final TransactionTemplate reads;
     private final TransactionTemplate writes;
 
     public DonorPasswordResetService(DonorRepository donors, PasswordResetTokenRepository tokens, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorPasswordResetProperties properties, Clock clock,
-                                     ApplicationEventPublisher events, DeviceSignOuts signOuts, SecondFactorHoldings holdings,
+                                     ApplicationEventPublisher events, CredentialChanges credentialChanges, SecondFactorHoldings holdings,
                                      PlatformTransactionManager transactions) {
-        this.signOuts = signOuts;
+        this.credentialChanges = credentialChanges;
         this.holdings = holdings;
         this.donors = donors;
         this.tokens = tokens;
@@ -106,8 +105,7 @@ public class DonorPasswordResetService {
         resettableDonor(Optional.of(donor));
         donor.changePassword(newHash);
         donors.save(donor);
-        tokens.deleteOthersOf(donor.id(), found.id());
-        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndOtherLinkOf(donor.id(), found.id(), now);
         events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Password reset completed for donor {}", donor.id());
     }
