@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
+import java.util.Arrays;
+
 public record StoredReceiptImage(byte[] content, String mediaType) {
 
     public StoredReceiptImage {
@@ -16,5 +18,20 @@ public record StoredReceiptImage(byte[] content, String mediaType) {
 
     public ContentDigest digest() {
         return ContentDigest.of(content);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other instanceof StoredReceiptImage image && Arrays.equals(content, image.content) && mediaType.equals(image.mediaType);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Arrays.hashCode(content) + mediaType.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "StoredReceiptImage[" + content.length + " bytes, " + mediaType + "]";
     }
 }
