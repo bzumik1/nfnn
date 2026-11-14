@@ -2,6 +2,8 @@ package cz.novanadeje.app.donations.domain.donor;
 
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -16,20 +18,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class DonorRecord {
 
-    public static final int MAX_NAME_LENGTH = 160;
-    public static final int COMPANY_IDENTIFIER_LENGTH = 8;
-
-    private static final Pattern COMPANY_IDENTIFIER = Pattern.compile("[0-9]{" + COMPANY_IDENTIFIER_LENGTH + "}");
-
     private final DonorReference id;
     private final DonorType type;
-    private String name;
-    private String companyIdentifier;
+    private DonorName name;
+    private CompanyIdentifier companyIdentifier;
     private PostalAddress address;
     private final VariableSymbol variableSymbol;
     private LocaleCode preferredLocale;
@@ -38,12 +34,12 @@ public final class DonorRecord {
     private Instant updatedAt;
     private Instant erasedAt;
 
-    private DonorRecord(DonorReference id, DonorType type, String name, String companyIdentifier, PostalAddress address,
+    private DonorRecord(DonorReference id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                         VariableSymbol variableSymbol, LocaleCode preferredLocale, List<SenderAccountLink> senderAccountLinks,
                         Instant registeredAt, Instant updatedAt, Instant erasedAt) {
         this.id = require(id, "Donor reference");
         this.type = require(type, "Donor type");
-        this.name = requireName(name);
+        this.name = require(name, "Name");
         this.erasedAt = erasedAt;
         this.companyIdentifier = erasedAt == null ? requireIdentifierMatchingType(this.type, companyIdentifier) : null;
         this.address = require(address, "Address");
@@ -56,22 +52,22 @@ public final class DonorRecord {
         this.updatedAt = require(updatedAt, "Update time");
     }
 
-    public static DonorRecord registerPerson(DonorReference id, String name, PostalAddress address, VariableSymbol variableSymbol,
+    public static DonorRecord registerPerson(DonorReference id, DonorName name, PostalAddress address, VariableSymbol variableSymbol,
                                              LocaleCode preferredLocale, Instant registeredAt) {
         return new DonorRecord(id, DonorType.PERSON, name, null, address, variableSymbol, preferredLocale, List.of(),
                 registeredAt, registeredAt, null);
     }
 
-    public static DonorRecord registerCompany(DonorReference id, String name, String companyIdentifier, PostalAddress address,
+    public static DonorRecord registerCompany(DonorReference id, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                               VariableSymbol variableSymbol, LocaleCode preferredLocale, Instant registeredAt) {
-        if (companyIdentifier == null || companyIdentifier.isBlank()) {
+        if (companyIdentifier == null) {
             throw new IllegalArgumentException("A company needs its identification number");
         }
         return new DonorRecord(id, DonorType.COMPANY, name, companyIdentifier, address, variableSymbol, preferredLocale, List.of(),
                 registeredAt, registeredAt, null);
     }
 
-    public static DonorRecord reconstitute(DonorReference id, DonorType type, String name, String companyIdentifier, PostalAddress address,
+    public static DonorRecord reconstitute(DonorReference id, DonorType type, DonorName name, CompanyIdentifier companyIdentifier, PostalAddress address,
                                            VariableSymbol variableSymbol, LocaleCode preferredLocale, List<SenderAccountLink> senderAccountLinks,
                                            Instant registeredAt, Instant updatedAt, Instant erasedAt) {
         return new DonorRecord(id, type, name, companyIdentifier, address, variableSymbol, preferredLocale, senderAccountLinks,
@@ -107,8 +103,8 @@ public final class DonorRecord {
         return Optional.ofNullable(erasedAt);
     }
 
-    public void changeProfile(String newName, PostalAddress newAddress, LocaleCode newLocale, Instant at) {
-        String checkedName = requireName(newName);
+    public void changeProfile(DonorName newName, PostalAddress newAddress, LocaleCode newLocale, Instant at) {
+        DonorName checkedName = require(newName, "Name");
         PostalAddress checkedAddress = require(newAddress, "Address");
         LocaleCode checkedLocale = require(newLocale, "Preferred locale");
         Instant checkedAt = require(at, "Update time");
@@ -206,11 +202,11 @@ public final class DonorRecord {
         return type;
     }
 
-    public String name() {
+    public DonorName name() {
         return name;
     }
 
-    public Optional<String> companyIdentifier() {
+    public Optional<CompanyIdentifier> companyIdentifier() {
         return Optional.ofNullable(companyIdentifier);
     }
 
@@ -263,28 +259,14 @@ public final class DonorRecord {
         }
     }
 
-    private static String requireIdentifierMatchingType(DonorType type, String companyIdentifier) {
+    private static CompanyIdentifier requireIdentifierMatchingType(DonorType type, CompanyIdentifier companyIdentifier) {
         if (type == DonorType.PERSON) {
             if (companyIdentifier != null) {
                 throw new IllegalArgumentException("A person has no company identification number");
             }
             return null;
         }
-        if (companyIdentifier == null || !COMPANY_IDENTIFIER.matcher(companyIdentifier.trim()).matches()) {
-            throw new IllegalArgumentException("A company identification number is eight digits");
-        }
-        return companyIdentifier.trim();
-    }
-
-    private static String requireName(String value) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Name is required");
-        }
-        String trimmed = value.trim();
-        if (trimmed.length() > MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("Name must not exceed " + MAX_NAME_LENGTH + " characters");
-        }
-        return trimmed;
+        return require(companyIdentifier, "A company's identification number");
     }
 
     private static <T> T require(T value, String label) {

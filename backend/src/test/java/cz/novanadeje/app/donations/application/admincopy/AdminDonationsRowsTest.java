@@ -18,6 +18,7 @@ import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
 import cz.novanadeje.app.donations.domain.report.SentReport;
 import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -86,7 +87,7 @@ class AdminDonationsRowsTest {
     void should_refuse_when_a_row_is_made_given_another_donors_record() {
         DonorRecord giver = jana();
         Donation gift = Donation.fromBankPayment(DonationId.newId(NOW), giver.id(), payment, PairingMethod.VARIABLE_SYMBOL, NOW);
-        DonorRecord other = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Petr Svoboda",
+        DonorRecord other = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Petr Svoboda"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
 
         assertThatThrownBy(() -> rows.paidPayment(payment, gift, other)).isInstanceOf(IllegalArgumentException.class);

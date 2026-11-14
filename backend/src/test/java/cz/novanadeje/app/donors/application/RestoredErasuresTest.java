@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -64,7 +65,7 @@ class RestoredErasuresTest {
     }
 
     private static Donor donor(String name, String email, String symbol, Instant erasedAt) {
-        return Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
+        return Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol(symbol), LocaleCode.CS, Set.of(Role.DONOR), NOW.minusSeconds(7200), NOW.minusSeconds(7100), erasedAt);
     }
 }

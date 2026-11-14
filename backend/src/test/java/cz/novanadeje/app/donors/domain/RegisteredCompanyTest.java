@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +34,6 @@ class RegisteredCompanyTest {
     @Test
     @DisplayName("Given a name longer than a donor's name may be, when the company is created, then it is rejected")
     void should_reject_when_created_given_name_longer_than_donor_name() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new RegisteredCompany(ICO, "x".repeat(Donor.MAX_NAME_LENGTH + 1), Optional.empty()));
+        assertThatIllegalArgumentException().isThrownBy(() -> new RegisteredCompany(ICO, "x".repeat(DonorName.MAX_LENGTH + 1), Optional.empty()));
     }
 }

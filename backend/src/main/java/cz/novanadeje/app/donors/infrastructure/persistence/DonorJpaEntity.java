@@ -1,10 +1,11 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -40,10 +41,10 @@ class DonorJpaEntity {
     @Column(name = "type", nullable = false, length = 16)
     private DonorType type;
 
-    @Column(name = "name", nullable = false, length = Donor.MAX_NAME_LENGTH)
+    @Column(name = "name", nullable = false, length = DonorName.MAX_LENGTH)
     private String name;
 
-    @Column(name = "company_identifier", length = 8)
+    @Column(name = "company_identifier", length = CompanyIdentifier.LENGTH)
     private String companyIdentifier;
 
     @Column(name = "street", nullable = false, length = PostalAddress.MAX_STREET_LENGTH)
@@ -93,7 +94,7 @@ class DonorJpaEntity {
         DonorJpaEntity entity = new DonorJpaEntity();
         entity.id = donor.id().value();
         entity.type = donor.type();
-        entity.name = donor.name();
+        entity.name = donor.name().value();
         entity.companyIdentifier = donor.companyIdentifier().map(CompanyIdentifier::value).orElse(null);
         entity.street = donor.address().street();
         entity.city = donor.address().city();
@@ -114,7 +115,7 @@ class DonorJpaEntity {
         return Donor.reconstitute(
                 new DonorId(id),
                 type,
-                name,
+                new DonorName(name),
                 companyIdentifier == null ? null : new CompanyIdentifier(companyIdentifier),
                 new PostalAddress(street, city, postalCode),
                 new EmailAddress(email),

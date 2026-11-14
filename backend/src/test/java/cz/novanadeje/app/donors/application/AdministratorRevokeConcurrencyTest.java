@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.LastAdministratorRevoked;
 import cz.novanadeje.app.donors.domain.PasswordHash;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -91,7 +92,7 @@ class AdministratorRevokeConcurrencyTest {
     }
 
     private Donor administrator(String name, String email, String variableSymbol, Instant at) {
-        Donor donor = Donor.register(DonorId.newId(at), DonorType.PERSON, name, null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        Donor donor = Donor.register(DonorId.newId(at), DonorType.PERSON, new DonorName(name), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(variableSymbol), LocaleCode.CS, at);
         donor.verifyEmail(at);
         donor.grantAdministration(true);

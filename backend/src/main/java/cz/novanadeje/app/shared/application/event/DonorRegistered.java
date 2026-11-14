@@ -1,5 +1,7 @@
 package cz.novanadeje.app.shared.application.event;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -13,8 +15,8 @@ import java.util.UUID;
 public record DonorRegistered(
         UUID donorId,
         DonorType type,
-        String name,
-        Optional<String> companyIdentifier,
+        DonorName name,
+        Optional<CompanyIdentifier> companyIdentifier,
         PostalAddress address,
         EmailAddress email,
         VariableSymbol variableSymbol,

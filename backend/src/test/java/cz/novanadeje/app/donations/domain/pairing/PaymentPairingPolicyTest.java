@@ -12,6 +12,7 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -170,7 +171,7 @@ class PaymentPairingPolicyTest {
 
         PairingDecision decision = policy.decide(payment, Optional.of(namesake), List.of());
 
-        assertThat(payment.counterpartyName()).contains(namesake.name());
+        assertThat(payment.counterpartyName()).contains(namesake.name().value());
         assertThat(decision).isEqualTo(new PairingDecision.LeaveUnpaired(UnpairedReason.UNKNOWN_SENDER_ACCOUNT));
     }
 
@@ -332,7 +333,7 @@ class PaymentPairingPolicyTest {
     }
 
     private static DonorRecord donor(String name, VariableSymbol symbol) {
-        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), name, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName(name), new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 symbol, LocaleCode.CS, NOW);
     }
 

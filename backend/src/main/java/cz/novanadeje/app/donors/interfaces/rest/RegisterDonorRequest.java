@@ -1,10 +1,10 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.RegisterDonorCommand;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
-import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.validation.Valid;
@@ -16,7 +16,7 @@ import jakarta.validation.constraints.Size;
 
 record RegisterDonorRequest(
         @NotNull DonorType type,
-        @NotBlank @Size(max = Donor.MAX_NAME_LENGTH) @PrintableOnReceipt String name,
+        @NotBlank @Size(max = DonorName.MAX_LENGTH) @PrintableOnReceipt String name,
         @Size(max = CompanyIdentifier.LENGTH) @ValidCompanyIdentifier String companyIdentifier,
         @NotNull @Valid AddressRequest address,
         @NotBlank @Email(message = "{donors.email.invalid}") @Pattern(regexp = EmailAddress.SHAPE_REGEX, message = "{donors.email.invalid}") @Size(max = 254) String email,

@@ -3,6 +3,8 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -30,10 +32,10 @@ class DonorRecordJpaEntity {
     @Column(name = "type", nullable = false, length = 16)
     private DonorType type;
 
-    @Column(name = "name", nullable = false, length = DonorRecord.MAX_NAME_LENGTH)
+    @Column(name = "name", nullable = false, length = DonorName.MAX_LENGTH)
     private String name;
 
-    @Column(name = "company_identifier", length = DonorRecord.COMPANY_IDENTIFIER_LENGTH)
+    @Column(name = "company_identifier", length = CompanyIdentifier.LENGTH)
     private String companyIdentifier;
 
     @Column(name = "street", nullable = false, length = PostalAddress.MAX_STREET_LENGTH)
@@ -67,8 +69,8 @@ class DonorRecordJpaEntity {
         DonorRecordJpaEntity entity = new DonorRecordJpaEntity();
         entity.donorId = record.id().value();
         entity.type = record.type();
-        entity.name = record.name();
-        entity.companyIdentifier = record.companyIdentifier().orElse(null);
+        entity.name = record.name().value();
+        entity.companyIdentifier = record.companyIdentifier().map(CompanyIdentifier::value).orElse(null);
         entity.street = record.address().street();
         entity.city = record.address().city();
         entity.postalCode = record.address().postalCode();
@@ -88,8 +90,8 @@ class DonorRecordJpaEntity {
         return DonorRecord.reconstitute(
                 new DonorReference(donorId),
                 type,
-                name,
-                companyIdentifier,
+                new DonorName(name),
+                companyIdentifier == null ? null : new CompanyIdentifier(companyIdentifier),
                 new PostalAddress(street, city, postalCode),
                 new VariableSymbol(variableSymbol),
                 LocaleCode.fromTag(preferredLocale),

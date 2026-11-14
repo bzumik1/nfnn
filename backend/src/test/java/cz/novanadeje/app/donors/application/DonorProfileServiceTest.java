@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorAlreadyErased;
@@ -70,7 +71,7 @@ class DonorProfileServiceTest {
         service.updateProfile(DONOR, Set.of(Role.DONOR), new UpdateDonorProfileCommand("Jana Malá", "Krátká 3", "Praha", "110 00", "en"), ExpectedVersion.none());
 
         verify(events).publishEvent(new DonorProfileChanged(
-                DONOR.value(), "Jana Malá", new PostalAddress("Krátká 3", "Praha", "110 00"), LocaleCode.EN));
+                DONOR.value(), new DonorName("Jana Malá"), new PostalAddress("Krátká 3", "Praha", "110 00"), LocaleCode.EN));
     }
 
     @Test
@@ -128,7 +129,7 @@ class DonorProfileServiceTest {
     }
 
     private static Donor donor() {
-        return Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), new PasswordHash("$hash"), new VariableSymbol("1234567890"), LocaleCode.CS, NOW);
     }
 }

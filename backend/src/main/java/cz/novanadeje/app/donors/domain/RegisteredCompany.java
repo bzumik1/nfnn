@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 
 import java.util.Objects;
@@ -14,8 +16,8 @@ public record RegisteredCompany(CompanyIdentifier identifier, String name, Optio
             throw new IllegalArgumentException("Company name is required");
         }
         name = name.trim().replaceAll("\\s+", " ");
-        if (name.length() > Donor.MAX_NAME_LENGTH) {
-            throw new IllegalArgumentException("Company name must not exceed " + Donor.MAX_NAME_LENGTH + " characters");
+        if (name.length() > DonorName.MAX_LENGTH) {
+            throw new IllegalArgumentException("Company name must not exceed " + DonorName.MAX_LENGTH + " characters");
         }
     }
 }

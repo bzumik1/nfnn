@@ -5,8 +5,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import cz.novanadeje.app.donors.application.CompanyRegistry;
 import cz.novanadeje.app.donors.application.CompanyRegistryFailure;
 import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
 import cz.novanadeje.app.shared.infrastructure.net.TimeBoundedCall;
 

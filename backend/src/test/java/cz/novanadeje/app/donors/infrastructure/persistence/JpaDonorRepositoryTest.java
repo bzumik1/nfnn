@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.RegistrationReminders;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -209,11 +210,11 @@ class JpaDonorRepositoryTest {
     @DisplayName("Given two administrators and a plain donor, when the administrators are listed, then only they come, ordered by name")
     void should_list_administrators_by_name_when_asked_given_mixed_donors() {
         Donor zdena = donor("zdena@example.cz", "4821937570");
-        zdena.updateProfile("Zdeňka Horáčková", zdena.address(), zdena.preferredLocale());
+        zdena.updateProfile(new DonorName("Zdeňka Horáčková"), zdena.address(), zdena.preferredLocale());
         zdena.verifyEmail(NOW);
         zdena.grantAdministration(true);
         Donor andrea = donor("andrea@example.cz", "4821937571");
-        andrea.updateProfile("Andrea Horáčková", andrea.address(), andrea.preferredLocale());
+        andrea.updateProfile(new DonorName("Andrea Horáčková"), andrea.address(), andrea.preferredLocale());
         andrea.verifyEmail(NOW);
         andrea.grantAdministration(true);
         Donor plain = donor("jana@example.cz", "4821937572");
@@ -222,7 +223,7 @@ class JpaDonorRepositoryTest {
         donors.save(plain);
         flushAndClear();
 
-        assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactly("Andrea Horáčková", "Zdeňka Horáčková");
+        assertThat(donors.findAdministrators()).extracting(Donor::name).extracting(DonorName::value).containsExactly("Andrea Horáčková", "Zdeňka Horáčková");
         assertThat(donors.findAdministrators()).allMatch(Donor::isAdministrator);
     }
 
@@ -265,28 +266,28 @@ class JpaDonorRepositoryTest {
     void should_find_by_name_email_or_symbol_start_when_searched_given_saved_donors() {
         Donor jana = donor("jana@example.cz", "4821937560");
         Donor petr = donor("petr@firma.cz", "7310945528");
-        petr.updateProfile("Petr Novák", petr.address(), petr.preferredLocale());
+        petr.updateProfile(new DonorName("Petr Novák"), petr.address(), petr.preferredLocale());
         Donor eva = donor("eva@example.cz", "4899999999");
-        eva.updateProfile("Eva Dvořáková", eva.address(), eva.preferredLocale());
+        eva.updateProfile(new DonorName("Eva Dvořáková"), eva.address(), eva.preferredLocale());
         Donor karel = donor("karel@example.cz", "1000000000");
-        karel.updateProfile("Karel 100% Veselý", karel.address(), karel.preferredLocale());
+        karel.updateProfile(new DonorName("Karel 100% Veselý"), karel.address(), karel.preferredLocale());
         donors.save(jana);
         donors.save(petr);
         donors.save(eva);
         donors.save(karel);
         flushAndClear();
 
-        assertThat(donors.search("novák", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková", "Petr Novák");
-        assertThat(donors.search("FIRMA.CZ", 0, 20)).extracting(Donor::name).containsExactly("Petr Novák");
-        assertThat(donors.search("example", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý");
-        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková");
-        assertThat(donors.search("48", 0, 1)).extracting(Donor::name).containsExactly("Eva Dvořáková");
-        assertThat(donors.search("100%", 0, 20)).extracting(Donor::name).containsExactly("Karel 100% Veselý");
+        assertThat(donors.search("novák", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Jana Nováková", "Petr Novák");
+        assertThat(donors.search("FIRMA.CZ", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Petr Novák");
+        assertThat(donors.search("example", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý");
+        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Eva Dvořáková", "Jana Nováková");
+        assertThat(donors.search("48", 0, 1)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Eva Dvořáková");
+        assertThat(donors.search("100%", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Karel 100% Veselý");
         assertThat(donors.search("_", 0, 20)).isEmpty();
         assertThat(donors.search("xyz", 0, 20)).isEmpty();
-        assertThat(donors.search("", 0, 20)).extracting(Donor::name).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý", "Petr Novák");
-        assertThat(donors.search("", 1, 2)).extracting(Donor::name).containsExactly("Jana Nováková", "Karel 100% Veselý");
-        assertThat(donors.search("", 3, 20)).extracting(Donor::name).containsExactly("Petr Novák");
+        assertThat(donors.search("", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Eva Dvořáková", "Jana Nováková", "Karel 100% Veselý", "Petr Novák");
+        assertThat(donors.search("", 1, 2)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Jana Nováková", "Karel 100% Veselý");
+        assertThat(donors.search("", 3, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Petr Novák");
     }
 
     @Test
@@ -294,15 +295,15 @@ class JpaDonorRepositoryTest {
     void should_ignore_accents_and_case_when_searched_given_czech_names() {
         Donor jana = donor("jana@example.cz", "4821937560");
         Donor stepan = donor("stepan@example.cz", "1000000000");
-        stepan.updateProfile("ŠTĚPÁN ŘÍHA", stepan.address(), stepan.preferredLocale());
+        stepan.updateProfile(new DonorName("ŠTĚPÁN ŘÍHA"), stepan.address(), stepan.preferredLocale());
         donors.save(jana);
         donors.save(stepan);
         flushAndClear();
 
-        assertThat(donors.search("novakova", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková");
-        assertThat(donors.search("NOVÁKOVÁ", 0, 20)).extracting(Donor::name).containsExactly("Jana Nováková");
-        assertThat(donors.search("stepan riha", 0, 20)).extracting(Donor::name).containsExactly("ŠTĚPÁN ŘÍHA");
-        assertThat(donors.search("štěpán@", 0, 20)).extracting(Donor::name).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donors.search("novakova", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Jana Nováková");
+        assertThat(donors.search("NOVÁKOVÁ", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("Jana Nováková");
+        assertThat(donors.search("stepan riha", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("ŠTĚPÁN ŘÍHA");
+        assertThat(donors.search("štěpán@", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactly("ŠTĚPÁN ŘÍHA");
     }
 
     @Test
@@ -314,16 +315,16 @@ class JpaDonorRepositoryTest {
                 "Řezníček", "Říha", "Šťastný", "Žák");
         for (int index = 0; index < stored.size(); index++) {
             Donor donor = donor("darce" + index + "@example.cz", Long.toString(4_800_000_000L + index));
-            donor.updateProfile(stored.get(index), donor.address(), donor.preferredLocale());
+            donor.updateProfile(new DonorName(stored.get(index)), donor.address(), donor.preferredLocale());
             donor.verifyEmail(NOW);
             donor.grantAdministration(true);
             donors.save(donor);
         }
         flushAndClear();
 
-        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).containsExactlyElementsOf(czechOrder);
-        assertThat(donors.search("48", 5, 3)).extracting(Donor::name).containsExactlyElementsOf(czechOrder.subList(5, 8));
-        assertThat(donors.findAdministrators()).extracting(Donor::name).containsExactlyElementsOf(czechOrder);
+        assertThat(donors.search("48", 0, 20)).extracting(Donor::name).extracting(DonorName::value).containsExactlyElementsOf(czechOrder);
+        assertThat(donors.search("48", 5, 3)).extracting(Donor::name).extracting(DonorName::value).containsExactlyElementsOf(czechOrder.subList(5, 8));
+        assertThat(donors.findAdministrators()).extracting(Donor::name).extracting(DonorName::value).containsExactlyElementsOf(czechOrder);
     }
 
     @Test
@@ -382,7 +383,7 @@ class JpaDonorRepositoryTest {
     }
 
     private Donor registeredAt(String email, String variableSymbol, Instant registeredAt) {
-        Donor donor = Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, "Jana Nováková", null,
+        Donor donor = Donor.register(DonorId.newId(registeredAt), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol(variableSymbol), LocaleCode.CS, registeredAt);
         donors.save(donor);
@@ -410,7 +411,7 @@ class JpaDonorRepositoryTest {
     void should_list_only_erased_donors_when_erased_listed_given_erased_marked_and_active_donors() {
         Donor erased = donor("erased@example.cz", "4821937601");
         erased.erase(NOW);
-        Donor marked = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, "Eva Dvořáková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        Donor marked = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Eva Dvořáková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("eva@example.cz"), null, new VariableSymbol("4821937602"), LocaleCode.CS, java.util.Set.of(), NOW, NOW, NOW.plusSeconds(60));
         Donor active = donor("active@example.cz", "4821937603");
         donors.save(erased);
@@ -426,7 +427,7 @@ class JpaDonorRepositoryTest {
     }
 
     private static Donor donor(String email, String variableSymbol) {
-        return Donor.register(DonorId.newId(NOW), DonorType.PERSON, "Jana Nováková", null,
+        return Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress(email), new PasswordHash("$hash"),
                 new VariableSymbol(variableSymbol), LocaleCode.CS, NOW);
     }

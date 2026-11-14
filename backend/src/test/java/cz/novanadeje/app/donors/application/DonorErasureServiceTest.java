@@ -18,6 +18,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.event.DonorErased;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -167,7 +168,7 @@ class DonorErasureServiceTest {
     @DisplayName("Given a donor a restore marked erased whose personal data came back with the backup, when the erasure is completed, then the anonymized donor is saved, the factor, passkeys and tokens go, every session ends, and only the erasure is published with its first time, without a second audit entry or e-mail")
     void should_complete_the_erasure_when_completed_given_donor_marked_erased_by_a_restore() {
         Instant erasedAt = NOW.minusSeconds(86_400);
-        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, null, new VariableSymbol("7310945528"), LocaleCode.CS,
+        Donor petr = Donor.reconstitute(PETR, DonorType.PERSON, new DonorName("Petr Svoboda"), null, ADDRESS, PETR_EMAIL, null, new VariableSymbol("7310945528"), LocaleCode.CS,
                 Set.of(), NOW.minusSeconds(1000), NOW.minusSeconds(900), erasedAt);
         when(donors.findByIdForUpdate(PETR)).thenReturn(Optional.of(petr));
 
@@ -210,7 +211,7 @@ class DonorErasureServiceTest {
     }
 
     private static Donor donor(DonorId id, Set<Role> roles, LocaleCode locale) {
-        return Donor.reconstitute(id, DonorType.PERSON, "Petr Svoboda", null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
+        return Donor.reconstitute(id, DonorType.PERSON, new DonorName("Petr Svoboda"), null, ADDRESS, PETR_EMAIL, new PasswordHash("$hash"),
                 new VariableSymbol("7310945528"), locale, roles, NOW.minusSeconds(1000), NOW.minusSeconds(900), null);
     }
 }

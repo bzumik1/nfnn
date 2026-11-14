@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.ErasedPersonalData;
@@ -123,12 +124,12 @@ class DonorRowLockConcurrencyTest {
                 .isInstanceOf(ExecutionException.class)
                 .hasCauseInstanceOf(DonorAlreadyErased.class);
         assertThat(jdbc.sql("select erased_at is not null from donor where id = ?").param(petr.id().value()).query(Boolean.class).single()).isTrue();
-        assertThat(column("name")).isEqualTo(ErasedPersonalData.NAME);
+        assertThat(column("name")).isEqualTo(ErasedPersonalData.NAME.value());
         assertThat(column("street")).isEqualTo(ErasedPersonalData.ADDRESS.street());
         assertThat(column("email")).isEqualTo(ErasedPersonalData.emailFor(petr.id().value()).value());
         assertThat(column("password_hash")).isNull();
         assertThat(jdbc.sql("select name from donor_record where donor_id = ?").param(petr.id().value()).query(String.class).single())
-                .isEqualTo(ErasedPersonalData.NAME);
+                .isEqualTo(ErasedPersonalData.NAME.value());
         assertThat(jdbc.sql("select street from donor_record where donor_id = ?").param(petr.id().value()).query(String.class).single())
                 .isEqualTo(ErasedPersonalData.ADDRESS.street());
     }
@@ -219,7 +220,7 @@ class DonorRowLockConcurrencyTest {
 
     private Donor verified(String name, String email, String symbol, PasswordHash hash) {
         Instant now = clock.instant();
-        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, name, null, ADDRESS, new EmailAddress(email), hash,
+        Donor donor = Donor.register(DonorId.newId(now), DonorType.PERSON, new DonorName(name), null, ADDRESS, new EmailAddress(email), hash,
                 new VariableSymbol(symbol), LocaleCode.CS, now);
         donor.verifyEmail(now);
         return donor;

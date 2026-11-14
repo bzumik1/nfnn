@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -315,7 +316,7 @@ class DonorEmailVerificationServiceTest {
         ArgumentCaptor<Donor> saved = ArgumentCaptor.forClass(Donor.class);
         order.verify(donors).save(saved.capture());
         order.verify(tokens).deleteAllOf(DONOR);
-        order.verify(events).publishEvent(new DonorRegistered(DONOR.value(), DonorType.PERSON, "Jana Nováková", Optional.empty(), ADDRESS, EMAIL,
+        order.verify(events).publishEvent(new DonorRegistered(DONOR.value(), DonorType.PERSON, new DonorName("Jana Nováková"), Optional.empty(), ADDRESS, EMAIL,
                 SYMBOL, LocaleCode.CS, donor.registeredAt()));
         order.verify(sessions).signIn(donor, false, DeviceDescription.UNKNOWN, SessionKind.REMEMBERED);
         assertThat(saved.getValue().emailVerifiedAt()).contains(NOW);
@@ -472,12 +473,12 @@ class DonorEmailVerificationServiceTest {
     }
 
     private static Donor unverifiedDonor(LocaleCode locale) {
-        return Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, ADDRESS, EMAIL, new PasswordHash("$hash"), SYMBOL, locale,
+        return Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, new PasswordHash("$hash"), SYMBOL, locale,
                 NOW.minusSeconds(60));
     }
 
     private static Donor owner() {
-        return Donor.register(OWNER, DonorType.PERSON, "Petr Novák", null, ADDRESS, NEW_EMAIL, new PasswordHash("$other"),
+        return Donor.register(OWNER, DonorType.PERSON, new DonorName("Petr Novák"), null, ADDRESS, NEW_EMAIL, new PasswordHash("$other"),
                 new VariableSymbol("1234567890"), LocaleCode.EN, NOW.minusSeconds(120));
     }
 

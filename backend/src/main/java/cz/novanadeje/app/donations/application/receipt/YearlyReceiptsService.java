@@ -133,7 +133,7 @@ public class YearlyReceiptsService {
     }
 
     private static YearlyReceiptCandidate candidate(DonorRecord record, Collection<Donation> gifts, Optional<ActiveYearlyReceipt> receipt) {
-        return new YearlyReceiptCandidate(record.id(), record.name(), record.type(), gifts.size(),
+        return new YearlyReceiptCandidate(record.id(), record.name().value(), record.type(), gifts.size(),
                 gifts.stream().mapToLong(gift -> gift.amount().amountMinor()).sum(), receipt);
     }
 

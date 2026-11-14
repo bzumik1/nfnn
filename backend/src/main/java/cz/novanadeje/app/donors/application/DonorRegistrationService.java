@@ -1,13 +1,14 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
-import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.PasswordPolicy;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -69,7 +70,7 @@ public class DonorRegistrationService {
         Donor donor = Donor.register(
                 DonorId.newId(now),
                 command.type(),
-                command.name(),
+                new DonorName(command.name()),
                 companyIdentifier.orElse(null),
                 address,
                 email,

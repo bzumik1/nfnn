@@ -10,6 +10,8 @@ import cz.novanadeje.app.donations.domain.donation.PairingMethod;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -47,15 +49,15 @@ public final class Receipts {
     }
 
     public static DonorRecord jana() {
-        return DonorRecord.registerPerson(JANA, "Jana Nováková", JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        return DonorRecord.registerPerson(JANA, new DonorName("Jana Nováková"), JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
     }
 
     public static DonorRecord janaSpeakingEnglish() {
-        return DonorRecord.registerPerson(JANA, "Jana Nováková", JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.EN, NOW);
+        return DonorRecord.registerPerson(JANA, new DonorName("Jana Nováková"), JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.EN, NOW);
     }
 
     public static DonorRecord acme() {
-        return DonorRecord.registerCompany(ACME, "Acme Třebíč s.r.o.", "25596641", ACME_ADDRESS, new VariableSymbol("7310945528"),
+        return DonorRecord.registerCompany(ACME, new DonorName("Acme Třebíč s.r.o."), new CompanyIdentifier("25596641"), ACME_ADDRESS, new VariableSymbol("7310945528"),
                 LocaleCode.CS, NOW);
     }
 
@@ -88,7 +90,7 @@ public final class Receipts {
     }
 
     public static DonationReceipt yearlyReceiptOf(DonorReference donor, Year year) {
-        DonorRecord record = DonorRecord.registerPerson(donor, "Jana Nováková", JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
+        DonorRecord record = DonorRecord.registerPerson(donor, new DonorName("Jana Nováková"), JANA_ADDRESS, new VariableSymbol("4821937560"), LocaleCode.CS, NOW);
         Donation donation = donation(donor, year.atDay(1), 50000, DonationStatus.RECEIVED);
         ReceiptDocument document = ReceiptDocumentFactory.forYear(record, year, List.of(donation), FOUNDATION, SIGNATORY, FIRST_NUMBER, TODAY,
                 LocaleCode.CS, Optional.empty());

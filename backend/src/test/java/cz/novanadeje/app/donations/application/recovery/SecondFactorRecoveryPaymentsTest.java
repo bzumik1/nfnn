@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -87,7 +88,7 @@ class SecondFactorRecoveryPaymentsTest {
     @Test
     @DisplayName("Given a donor without a verified account or an unknown donor, when the recovery target is asked for, then there is none")
     void should_have_no_target_when_asked_for_given_no_verified_account_or_unknown_donor() {
-        DonorRecord withoutAccount = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), "Petr Svoboda",
+        DonorRecord withoutAccount = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Petr Svoboda"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
         when(donorRecords.findById(withoutAccount.id())).thenReturn(Optional.of(withoutAccount));
 
@@ -116,7 +117,7 @@ class SecondFactorRecoveryPaymentsTest {
         SenderAccountLink link = SenderAccountLink.reconstitute(SenderAccountLinkId.newId(VERIFIED_AT), ACCOUNT, SenderAccountLinkStatus.ACTIVE,
                 Optional.of(BankPaymentId.newId(VERIFIED_AT)), Optional.of(VERIFIED_AT), Optional.empty(), Optional.empty(), VERIFIED_AT,
                 Optional.empty());
-        return DonorRecord.reconstitute(new DonorReference(UuidV7.generate(NOW)), DonorType.PERSON, "Jana Nováková", null,
+        return DonorRecord.reconstitute(new DonorReference(UuidV7.generate(NOW)), DonorType.PERSON, new DonorName("Jana Nováková"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("4821937560"), LocaleCode.CS, List.of(link),
                 VERIFIED_AT, VERIFIED_AT, null);
     }

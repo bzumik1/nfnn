@@ -12,6 +12,8 @@ import cz.novanadeje.app.donations.application.pairing.PaymentPairingService;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -87,8 +89,8 @@ class DonorRecordSynchronizerTest {
     void should_register_record_when_registered_event_arrives_given_company() {
         synchronizer.onRegistered(registered());
 
-        verify(donorRecordService).register(new RegisterDonorRecordCommand(DONOR_ID, DonorType.COMPANY, "Stavby Novák s.r.o.",
-                Optional.of("45274649"), ADDRESS, SYMBOL, LocaleCode.EN, REGISTERED_AT));
+        verify(donorRecordService).register(new RegisterDonorRecordCommand(DONOR_ID, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."),
+                Optional.of(new CompanyIdentifier("45274649")), ADDRESS, SYMBOL, LocaleCode.EN, REGISTERED_AT));
     }
 
     @Test
@@ -177,9 +179,9 @@ class DonorRecordSynchronizerTest {
     void should_change_profile_when_profile_changed_event_arrives_given_donor() {
         PostalAddress newAddress = new PostalAddress("Krátká 3", "Praha", "110 00");
 
-        synchronizer.onProfileChanged(new DonorProfileChanged(DONOR_ID, "Jana Malá", newAddress, LocaleCode.CS));
+        synchronizer.onProfileChanged(new DonorProfileChanged(DONOR_ID, new DonorName("Jana Malá"), newAddress, LocaleCode.CS));
 
-        verify(donorRecordService).changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, "Jana Malá", newAddress, LocaleCode.CS));
+        verify(donorRecordService).changeProfile(new ChangeDonorRecordProfileCommand(DONOR_ID, new DonorName("Jana Malá"), newAddress, LocaleCode.CS));
     }
 
     @Test
@@ -219,7 +221,7 @@ class DonorRecordSynchronizerTest {
     }
 
     private static DonorRegistered registered() {
-        return new DonorRegistered(DONOR_ID, DonorType.COMPANY, "Stavby Novák s.r.o.", Optional.of("45274649"), ADDRESS,
+        return new DonorRegistered(DONOR_ID, DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), Optional.of(new CompanyIdentifier("45274649")), ADDRESS,
                 new EmailAddress("ucetni@stavby.example.cz"), SYMBOL, LocaleCode.EN, REGISTERED_AT);
     }
 }

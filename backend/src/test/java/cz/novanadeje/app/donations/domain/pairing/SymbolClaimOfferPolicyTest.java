@@ -12,6 +12,8 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -352,7 +354,7 @@ class SymbolClaimOfferPolicyTest {
         SenderAccountLink proved = provedLink(verificationPayment, Optional.empty());
         DonorRecord donor = type == DonorType.PERSON
                 ? janaWith(proved)
-                : DonorRecord.reconstitute(JANA, DonorType.COMPANY, "ABC s.r.o.", "45274649", address(), JANA_SYMBOL, LocaleCode.CS,
+                : DonorRecord.reconstitute(JANA, DonorType.COMPANY, new DonorName("ABC s.r.o."), new CompanyIdentifier("45274649"), address(), JANA_SYMBOL, LocaleCode.CS,
                 List.of(proved), NOW, NOW, null);
         return policy.candidate(donor, proved, List.of(january, september, verificationPayment), Set.of(verificationPayment.id()), List.of(donor),
                 List.of(), TODAY);
@@ -392,7 +394,7 @@ class SymbolClaimOfferPolicyTest {
     }
 
     private static DonorRecord person(DonorReference id, String name, VariableSymbol symbol, SenderAccountLink link) {
-        return DonorRecord.reconstitute(id, DonorType.PERSON, name, null, address(), symbol, LocaleCode.CS, List.of(link), NOW, NOW, null);
+        return DonorRecord.reconstitute(id, DonorType.PERSON, new DonorName(name), null, address(), symbol, LocaleCode.CS, List.of(link), NOW, NOW, null);
     }
 
     private static PostalAddress address() {

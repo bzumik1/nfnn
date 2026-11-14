@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.domain.receipt;
 
 import cz.novanadeje.app.donations.domain.donation.Donation;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 
@@ -47,7 +48,8 @@ public final class ReceiptDocumentFactory {
 
     public static ReceiptParty party(DonorRecord record) {
         DonorRecord donor = require(record, "Donor record");
-        return new ReceiptParty(donor.type(), donor.name(), donor.address(), donor.companyIdentifier(), donor.variableSymbol());
+        return new ReceiptParty(donor.type(), donor.name().value(), donor.address(), donor.companyIdentifier().map(CompanyIdentifier::value),
+                donor.variableSymbol());
     }
 
     public static List<ReceiptLine> lines(List<Donation> donations) {

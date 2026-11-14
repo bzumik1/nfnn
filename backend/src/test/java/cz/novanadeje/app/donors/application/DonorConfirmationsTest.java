@@ -16,6 +16,7 @@ import cz.novanadeje.app.donors.domain.PasswordHasher;
 import cz.novanadeje.app.donors.domain.RawPassword;
 import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
+import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -241,7 +242,7 @@ class DonorConfirmationsTest {
     }
 
     private static Donor donor(PasswordHash hash) {
-        Donor donor = Donor.register(DONOR, DonorType.PERSON, "Jana Nováková", null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
+        Donor donor = Donor.register(DONOR, DonorType.PERSON, new DonorName("Jana Nováková"), null, new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"),
                 new EmailAddress("jana@example.cz"), hash, new VariableSymbol("4821937560"), LocaleCode.CS, NOW.minusSeconds(120));
         donor.verifyEmail(NOW.minusSeconds(90));
         return donor;
