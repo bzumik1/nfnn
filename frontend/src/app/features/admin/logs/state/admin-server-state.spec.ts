@@ -1,7 +1,13 @@
-import { diagnostics, logOverride } from '../../testing/admin-fixtures';
+import {
+  diagnostics,
+  logOverride,
+  newerReleaseView,
+  releaseView,
+} from '../../testing/admin-fixtures';
 import { DIAGNOSTICS_URL, LogPageHarness } from '../testing/log-page-harness';
 import { AdminServerState } from './admin-server-state';
 
+const RELEASE_URL = '/api/admin/operations/release';
 const GIGABYTE = 1024 ** 3;
 const STATE = diagnostics({
   jvm: {
@@ -39,8 +45,20 @@ describe('Given an administrator on the server state page', () => {
   });
 
   afterEach(() => {
+    page.http.match(RELEASE_URL).forEach((pending) => pending.flush(releaseView()));
     page.http.verify();
   });
+
+  async function loaded(release: object | null): Promise<void> {
+    page.http.expectOne(DIAGNOSTICS_URL).flush(STATE);
+    const pending = page.http.expectOne(RELEASE_URL);
+    if (release === null) {
+      pending.flush(null, { status: 500, statusText: 'Error' });
+    } else {
+      pending.flush(release);
+    }
+    await page.settle();
+  }
 
   function rows(group: string): string[] {
     return page.texts(`.${group} .ui-list__row`);
@@ -116,5 +134,58 @@ describe('Given an administrator on the server state page', () => {
     await page.settle();
 
     expect(page.text('.verdict .ui-list__title')).toBe('Porucha');
+  });
+  it('when the server runs the latest release, then the application starts with it and when it was checked, without steps', async () => {
+    await loaded(releaseView());
+
+    expect(rows('application')[0]).toBe('Vydání nejnovější, ověřeno 15. 11. 2026 6:10 2026.11.3');
+    expect(page.has('.release-steps')).toBe(false);
+  });
+
+  it('when a newer release is published, then the release row names it with the steps in ZimaOS and what is new on GitHub', async () => {
+    await loaded(newerReleaseView());
+
+    expect(page.text('#vydani .ui-list__meta')).toBe(
+      'novější 2026.11.5 z 14. 11. 2026 10:30, ověřeno 15. 11. 2026 6:10',
+    );
+    expect(page.text('#vydani .ui-list__value')).toBe('2026.11.3');
+    expect(page.texts('.release-steps li')).toEqual([
+      'V ZimaOS otevřete aplikaci „Nová naděje“ a její nastavení.',
+      'Zkontrolujte, že všechny služby mají tag „latest“, nic neměňte a klikněte na Uložit.',
+      'Za 2–3 minuty obnovte tuto stránku, Vydání pak ukáže 2026.11.5.',
+    ]);
+    const link = page.element<HTMLAnchorElement>('#vydani a');
+    expect(page.text('#vydani a')).toBe('Co je nového v 2026.11.5');
+    expect(link.getAttribute('href')).toBe(
+      'https://github.com/bzumik1/nfnn/releases/tag/2026.11.5',
+    );
+    expect(link.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('when the last check failed, then the row says when the release could not be verified', async () => {
+    await loaded(
+      releaseView({
+        checkedAt: '2026-11-16T05:10:00Z',
+        failure: 'STATUS',
+      }),
+    );
+
+    expect(page.text('#vydani .ui-list__meta')).toBe(
+      'nejnovější, ověřit se nepodařilo 16. 11. 2026 6:10',
+    );
+  });
+
+  it('when a build outside the releases runs before the first check, then the row says the latest release is not known yet', async () => {
+    await loaded(releaseView({ running: 'dev', latest: null, checkedAt: null, succeededAt: null }));
+
+    expect(page.text('#vydani')).toBe('Vydání nejnovější vydání zatím neznáme dev');
+  });
+
+  it('when the release cannot be read, then the application rows show without it', async () => {
+    await loaded(null);
+
+    expect(page.has('#vydani')).toBe(false);
+    expect(rows('application')[0]).toContain('Paměť');
   });
 });

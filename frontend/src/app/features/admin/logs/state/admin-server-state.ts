@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { formatBankTime } from '../../../donations/donation-date';
-import { AdminApi, DiagnosticsResponse, DiskSpaceResponse } from '../../admin-api';
+import { AdminApi, DiagnosticsResponse, DiskSpaceResponse, ReleaseResponse } from '../../admin-api';
 import { formatSize } from '../../backups/backup-format';
 import { HealthIcon } from '../health-icon/health-icon';
 import { LogPageAccess } from '../log-page-access';
@@ -21,6 +21,7 @@ import { formatShare, serverHealth, ServerHealthKind } from '../server-health';
 type LoadState = 'loading' | 'ready' | 'error';
 
 const LOAD = new Intl.NumberFormat('cs-CZ', { maximumFractionDigits: 2 });
+const RELEASES = 'https://github.com/bzumik1/nfnn/releases/tag/';
 
 @Component({
   selector: 'app-admin-server-state',
@@ -43,9 +44,15 @@ export class AdminServerState {
     const diagnostics = this.diagnostics();
     return diagnostics === null ? null : serverHealth(diagnostics);
   });
+  protected readonly release = signal<ReleaseResponse | null>(null);
+  protected readonly releaseMeta = computed(() => {
+    const release = this.release();
+    return release === null ? '' : `${latestPart(release)}${checkPart(release)}`;
+  });
 
   constructor() {
     this.load();
+    this.loadRelease();
     afterNextRender(() => this.title().nativeElement.focus());
   }
 
@@ -64,6 +71,20 @@ export class AdminServerState {
             this.state.set('error');
           }
         },
+      });
+  }
+
+  protected releaseLink(version: string): string {
+    return `${RELEASES}${version}`;
+  }
+
+  private loadRelease(): void {
+    this.api
+      .release()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (release) => this.release.set(release),
+        error: () => this.release.set(null),
       });
   }
 
@@ -118,4 +139,25 @@ export class AdminServerState {
   protected loadAverage(average: number): string {
     return average < 0 ? '–' : LOAD.format(average);
   }
+}
+
+function latestPart({ running, latest, updateAvailable }: ReleaseResponse): string {
+  if (latest === null) {
+    return $localize`:@@admin.logs.state.release.unknown:nejnovější vydání zatím neznáme`;
+  }
+  if (updateAvailable) {
+    return $localize`:@@admin.logs.state.release.newer:novější ${latest.version}:version: z ${formatBankTime(latest.publishedAt)}:publishedAt:`;
+  }
+  return latest.version === running
+    ? $localize`:@@admin.logs.state.release.latest:nejnovější`
+    : $localize`:@@admin.logs.state.release.latestIs:nejnovější vydání ${latest.version}:version:`;
+}
+
+function checkPart({ checkedAt, failure }: ReleaseResponse): string {
+  if (checkedAt === null) {
+    return '';
+  }
+  return failure === null
+    ? $localize`:@@admin.logs.state.release.checked:, ověřeno ${formatBankTime(checkedAt)}:checkedAt:`
+    : $localize`:@@admin.logs.state.release.checkFailed:, ověřit se nepodařilo ${formatBankTime(checkedAt)}:checkedAt:`;
 }

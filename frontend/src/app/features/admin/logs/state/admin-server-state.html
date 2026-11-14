@@ -86,6 +86,40 @@
               Aplikace
             </h2>
             <ul class="ui-list ui-list--inset">
+              @if (release(); as release) {
+                <li id="vydani" class="release" tabindex="-1">
+                  <div class="ui-list__row">
+                    <span class="ui-list__title" i18n="@@admin.logs.state.release">Vydání</span>
+                    <span class="ui-list__meta">{{ releaseMeta() }}</span>
+                    <span class="ui-list__value ui-mono">{{ release.running }}</span>
+                    @if (release.updateAvailable && release.latest; as latest) {
+                      <div class="ui-list__extra">
+                        <ol class="release-steps">
+                          <li i18n="@@admin.logs.state.release.step.open">
+                            V ZimaOS otevřete aplikaci „Nová naděje“ a její nastavení.
+                          </li>
+                          <li i18n="@@admin.logs.state.release.step.save">
+                            Zkontrolujte, že všechny služby mají tag „latest“, nic neměňte a
+                            klikněte na Uložit.
+                          </li>
+                          <li i18n="@@admin.logs.state.release.step.verify">
+                            Za 2–3 minuty obnovte tuto stránku, Vydání pak ukáže
+                            {{ latest.version }}.
+                          </li>
+                        </ol>
+                        <a
+                          class="release-notes"
+                          [href]="releaseLink(latest.version)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          i18n="@@admin.logs.state.release.notes"
+                          >Co je nového v {{ latest.version }}</a
+                        >
+                      </div>
+                    }
+                  </div>
+                </li>
+              }
               <li>
                 <div class="ui-list__row">
                   <span class="ui-list__title" i18n="@@admin.logs.diagnostics.memory">Paměť</span>

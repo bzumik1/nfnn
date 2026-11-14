@@ -22,6 +22,8 @@ import {
   unpairedPayment,
   noReceiptSignatory,
   receiptSignatory,
+  newerReleaseView,
+  releaseView,
 } from '../testing/admin-fixtures';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FOUNDATION_STAR } from '../../../shared/ui/foundation-star/foundation-star';
@@ -44,6 +46,7 @@ const UNPAIRED_URL = '/api/admin/donations/payments?pairing=unpaired';
 const ADMINISTRATORS_URL = '/api/admin/donors/administrators';
 const SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const SIGNATORY_URL = '/api/admin/donations/receipt-signatory';
+const RELEASE_URL = '/api/admin/operations/release';
 
 describe('Given an administrator on the administration home', () => {
   const compact = signal(false);
@@ -98,6 +101,7 @@ describe('Given an administrator on the administration home', () => {
       .forEach((pending) => pending.flush({ items: [administrator()] }));
     http.match(SIGNING_KEYS_URL).forEach((pending) => pending.flush(receiptSigningKeys()));
     http.match(SIGNATORY_URL).forEach((pending) => pending.flush(receiptSignatory()));
+    http.match(RELEASE_URL).forEach((pending) => pending.flush(releaseView()));
     http.verify();
   });
 
@@ -860,6 +864,31 @@ describe('Given an administrator on the administration home', () => {
         'Naléhavé: Nikdo nepodepisuje potvrzení o daru Web je proto dárcům nevystaví.',
         'Upozornění: Klíč k zálohám si zatím nikdo neuložil Bez něj žádnou zálohu neobnovíte. Uložit ho má někdo ze správní rady, ne technik.',
       ]);
+    });
+
+    it('then a newer release adds a calm row leading to the release on the server state, after every problem', async () => {
+      await sources(paymentList([unpairedPayment()]));
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
+      http.expectOne(RELEASE_URL).flush(newerReleaseView());
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toEqual([
+        expect.stringContaining('čeká na přiřazení'),
+        'Nové vydání 2026.11.5 Běží 2026.11.3. V ZimaOS otevřete nastavení aplikace „Nová naděje“ a klikněte na Uložit.',
+      ]);
+      expect(links()).toEqual(['/sprava/platby', '/sprava/logy/stav#vydani']);
+    });
+
+    it('then a running latest release, a build outside the releases or a check that cannot be read adds no row', async () => {
+      await sources();
+      http.expectOne(SIGNATORY_URL).flush(receiptSignatory());
+      http.expectOne(RELEASE_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(items()).toHaveLength(1);
+      expect(items()[0]).toContain('Vše je v pořádku');
     });
 
     it('then a signatory without an uploaded signature gets a row leading to the people of the foundation', async () => {

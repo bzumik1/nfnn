@@ -819,6 +819,26 @@ export interface DiskSpaceResponse {
   totalBytes: number;
 }
 
+export type ReleaseCheckFailure =
+  | 'STATUS'
+  | 'REFUSED_ANSWER'
+  | 'TOO_LARGE'
+  | 'TIMEOUT'
+  | 'UNREACHABLE'
+  | 'UNKNOWN_HOST'
+  | 'NON_PUBLIC_ADDRESS'
+  | 'NOT_HTTPS'
+  | 'INTERRUPTED';
+
+export interface ReleaseResponse {
+  readonly running: string;
+  readonly latest: { readonly version: string; readonly publishedAt: string } | null;
+  readonly checkedAt: string | null;
+  readonly succeededAt: string | null;
+  readonly failure: ReleaseCheckFailure | null;
+  readonly updateAvailable: boolean;
+}
+
 export interface DiagnosticsResponse {
   now: string;
   jvm: JvmDiagnosticsResponse;
@@ -1245,6 +1265,10 @@ export class AdminApi {
     return this.http.get<DiagnosticsResponse>(DIAGNOSTICS_URL);
   }
 
+  release(): Observable<ReleaseResponse> {
+    return this.http.get<ReleaseResponse>(RELEASE_URL);
+  }
+
   threadDump(): Observable<string> {
     return this.http.get(`${DIAGNOSTICS_URL}/threads`, { responseType: 'text' });
   }
@@ -1260,6 +1284,7 @@ function receiptSignatureUrl(personId: string): string {
 const RECEIPT_SIGNING_KEYS_URL = '/api/admin/donations/receipt-signing-keys';
 const LOGGERS_URL = '/api/admin/operations/loggers';
 const DIAGNOSTICS_URL = '/api/admin/operations/diagnostics';
+const RELEASE_URL = '/api/admin/operations/release';
 
 function donorAccountUrl(donorId: string, linkId: string): string {
   return `/api/admin/donations/donors/${encodeURIComponent(donorId)}/bank-accounts/${encodeURIComponent(linkId)}`;
