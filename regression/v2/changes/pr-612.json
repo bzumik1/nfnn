@@ -4941,5 +4941,21 @@
         "<n>": "the bank payment's transaction id from Fio, as before"
       }
     }
+  },
+  {
+    "path": "GET /api/admin/*",
+    "scenario": "operations/release_check: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "PR #612 bumps the API generation from 4 to 5 (.claude/rules/backend.md, API versions and compatibility): one signature per person of the foundation (Jakub 2026-11-12) renames the person's webSignature to signature and its endpoints to /signature, drops signatures from the receipt signatory and removes the receipt signature endpoints, so every /api answer names generation 5",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
+  },
+  {
+    "path": "POST /api/donors/*",
+    "scenario": "operations/release_check: *",
+    "kind": "headers",
+    "field": "nfnn-api",
+    "reason": "PR #612 bumps the API generation from 4 to 5 (.claude/rules/backend.md, API versions and compatibility): one signature per person of the foundation (Jakub 2026-11-12) renames the person's webSignature to signature and its endpoints to /signature, drops signatures from the receipt signatory and removes the receipt signature endpoints, so every /api answer names generation 5",
+    "contract": "docs/api-contract.md, Conventions (Versions)"
   }
 ]
