@@ -30,23 +30,25 @@
       @if (days().length === 0) {
         <p class="empty" i18n="@@admin.backups.list.none">Zatím žádná záloha.</p>
       } @else {
-        <div class="ui-groups groups">
+        <div class="groups">
           @for (day of days(); track day.day) {
-            <section [attr.aria-labelledby]="'den-' + day.day">
-              <h2 class="ui-group-title" [id]="'den-' + day.day">
-                <span class="day-title">{{ day.title }}</span>
-                ·
-                <span
-                  class="day-count"
-                  i18n="@@admin.backups.history.count"
-                  >{day.backups.length, plural,
-                    one {1 záloha}
-                    few {{{ day.backups.length }} zálohy}
-                    other {{{ day.backups.length }} záloh}
-                  }</span
-                >
-              </h2>
-              <ul class="ui-list ui-list--inset">
+            <section class="ui-card" [attr.aria-labelledby]="'den-' + day.day">
+              <div class="ui-card__bar">
+                <h2 class="ui-card__title" [id]="'den-' + day.day">
+                  <span class="day-title">{{ day.title }}</span>
+                  ·
+                  <span
+                    class="day-count"
+                    i18n="@@admin.backups.history.count"
+                    >{day.backups.length, plural,
+                      one {1 záloha}
+                      few {{{ day.backups.length }} zálohy}
+                      other {{{ day.backups.length }} záloh}
+                    }</span
+                  >
+                </h2>
+              </div>
+              <ul class="ui-list">
                 @for (entry of day.backups; track entry.backup.fileName) {
                   <li>
                     <button type="button" class="ui-list__row" (click)="open(entry.backup)">

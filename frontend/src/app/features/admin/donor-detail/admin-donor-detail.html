@@ -128,11 +128,11 @@
       </nav>
     } @else if (section === null) {
       <nav
-        class="card-rows"
+        class="ui-card card-rows"
         aria-label="Části karty dárce"
         i18n-aria-label="@@admin.donorDetail.nav.label"
       >
-        <ul class="ui-list ui-list--inset">
+        <ul class="ui-list">
           @for (part of drillSections(); track part.id) {
             <li>
               <a class="ui-list__row" [routerLink]="['/sprava/darci', donorId, part.id]">
