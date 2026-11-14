@@ -8,8 +8,8 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.operations.domain.push.DonorNotifications;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushDeviceKeepsNothing;
+import cz.novanadeje.app.operations.domain.push.PushDeviceSignedOut;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
-import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -77,7 +77,7 @@ class DonorPushSubscriptionDeviceTest {
         inTransaction(() -> signOuts.end(new DonorId(JANA), new DeviceId(PHONE), DeviceSignOutReason.REMOTE_SIGN_OUT, clock.instant()));
 
         assertThatThrownBy(() -> subscriptions.subscribe(JANA, PHONE, ENDPOINT, KEYS, DonorNotifications.ALL))
-                .isInstanceOfSatisfying(AuthenticationFailure.class, failure -> assertThat(failure.code()).isEqualTo("auth/session-ended"));
+                .isInstanceOfSatisfying(PushDeviceSignedOut.class, failure -> assertThat(failure.code()).isEqualTo("auth/session-ended"));
         assertThat(storedSubscriptions()).isZero();
     }
 
@@ -100,7 +100,7 @@ class DonorPushSubscriptionDeviceTest {
             signOut.get(30, TimeUnit.SECONDS);
 
             assertThatThrownBy(() -> subscription.get(30, TimeUnit.SECONDS)).isInstanceOf(ExecutionException.class).cause()
-                    .isInstanceOfSatisfying(AuthenticationFailure.class, failure -> assertThat(failure.code()).isEqualTo("auth/session-ended"));
+                    .isInstanceOfSatisfying(PushDeviceSignedOut.class, failure -> assertThat(failure.code()).isEqualTo("auth/session-ended"));
         } finally {
             commit.countDown();
             callers.shutdownNow();

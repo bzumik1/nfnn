@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -160,8 +161,8 @@ class DonorPushDispatcherTest {
     private record SignedInDevicesOf(Set<UUID> signedIn) implements SignedInDevices {
 
         @Override
-        public SignedInDevice holdSignedIn(UUID donorId, UUID deviceId) {
-            return new SignedInDevice(false);
+        public Optional<SignedInDevice> holdSignedIn(UUID donorId, UUID deviceId) {
+            return Optional.of(new SignedInDevice(false));
         }
 
         @Override

@@ -3,6 +3,7 @@ package cz.novanadeje.app.operations.application.push;
 import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.domain.push.PushAlerts;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
+import cz.novanadeje.app.operations.domain.push.PushDeviceSignedOut;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
@@ -59,7 +60,7 @@ public class PushSubscriptionService {
     @Transactional
     public PushSubscriptionView subscribe(UUID administratorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys clientKeys, PushAlerts alerts) {
         Instant now = clock.instant();
-        devices.holdSignedIn(administratorId, deviceId);
+        devices.holdSignedIn(administratorId, deviceId).orElseThrow(PushDeviceSignedOut::new);
         subscriptions.lockWrites();
         List<PushSubscription> displaced = subscriptions.findByEndpointOrDevice(endpoint, deviceId);
         subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
