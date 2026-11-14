@@ -6,7 +6,7 @@
 
 <div class="admin-frame" [class.admin-sheet]="sheet()">
   @if (sheet()) {
-    <header class="admin-sheet-head">
+    <header class="admin-sheet-head" [class.admin-sheet-head--scrolled]="scrolled()">
       <button
         type="button"
         class="admin-sheet-button"

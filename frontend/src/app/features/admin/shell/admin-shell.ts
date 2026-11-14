@@ -12,12 +12,13 @@ import {
   ElementRef,
   inject,
   Injector,
+  signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter, map, take } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { APP_DEPTH_KEY, BACK_NAVIGATION, BackTarget } from '../../../core/navigation/back-target';
 import { RouteChrome } from '../../../core/navigation/route-chrome';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -58,23 +59,25 @@ export class AdminShell {
     { initialValue: framedFullScreen(this.router.routerState.snapshot.root) },
   );
   protected readonly sheet = computed(() => this.compact() && !this.fullScreen());
-  private entryDepth = 0;
+  protected readonly scrolled = signal(false);
+  private entryDepth: number | null = null;
   private focusBeforeLock: Element | null = null;
   private wasLocked = false;
 
   constructor() {
-    const arriving = untracked(this.router.currentNavigation);
-    if (arriving === null) {
-      this.entryDepth = depthOf(this.location.getState());
-    } else {
-      const entry = this.router.events
-        .pipe(
-          filter((event) => event instanceof NavigationEnd && event.id === arriving.id),
-          take(1),
-        )
-        .subscribe(() => (this.entryDepth = depthOf(this.location.getState())));
-      inject(DestroyRef).onDestroy(() => entry.unsubscribe());
+    if (untracked(this.router.currentNavigation) === null) {
+      this.entryDepth = this.keptEntry() ?? depthOf(this.location.getState());
     }
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.keepEntry());
+    const view = this.document.defaultView;
+    const followScroll = (): void => this.scrolled.set((view?.scrollY ?? 0) > 0);
+    view?.addEventListener('scroll', followScroll, { passive: true });
+    inject(DestroyRef).onDestroy(() => view?.removeEventListener('scroll', followScroll));
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));
@@ -86,11 +89,33 @@ export class AdminShell {
   }
 
   protected close(): void {
-    const steps = depthOf(this.location.getState()) - this.entryDepth + 1;
-    if (this.entryDepth > 0 && steps > 0) {
-      this.location.historyGo(-steps);
+    const entry = this.keptEntry() ?? this.entryDepth ?? 0;
+    const steps = depthOf(this.location.getState()) - entry + 1;
+    if (entry > 0 && steps > 0) {
+      this.backTarget.backBy(steps);
     } else {
       void this.router.navigateByUrl('/', { replaceUrl: true, info: BACK_NAVIGATION });
+    }
+  }
+
+  private keptEntry(): number | null {
+    const kept = stateOf(this.location.getState())[ADMIN_ENTRY_KEY];
+    return typeof kept === 'number' && kept >= 0 ? kept : null;
+  }
+
+  private keepEntry(): void {
+    const kept = this.keptEntry();
+    if (kept === null) {
+      if (this.router.lastSuccessfulNavigation()?.extras.skipLocationChange) {
+        return;
+      }
+      this.entryDepth ??= depthOf(this.location.getState());
+      this.location.replaceState(this.location.path(true), '', {
+        ...stateOf(this.location.getState()),
+        [ADMIN_ENTRY_KEY]: this.entryDepth,
+      });
+    } else {
+      this.entryDepth = kept;
     }
   }
 
@@ -129,11 +154,14 @@ export class AdminShell {
   }
 }
 
+const ADMIN_ENTRY_KEY = 'nfnnAdminEntry';
+
+function stateOf(state: unknown): Record<string, unknown> {
+  return typeof state === 'object' && state !== null ? (state as Record<string, unknown>) : {};
+}
+
 function depthOf(state: unknown): number {
-  const depth =
-    typeof state === 'object' && state !== null
-      ? (state as Record<string, unknown>)[APP_DEPTH_KEY]
-      : undefined;
+  const depth = stateOf(state)[APP_DEPTH_KEY];
   return typeof depth === 'number' && depth > 0 ? depth : 0;
 }
 

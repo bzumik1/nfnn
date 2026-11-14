@@ -25,6 +25,8 @@
   inset: 0;
   z-index: 0;
   background: var(--color-backdrop);
+  backdrop-filter: blur(var(--blur-backdrop));
+  -webkit-backdrop-filter: blur(var(--blur-backdrop));
 }
 
 .admin-sheet {
@@ -32,7 +34,7 @@
 
   position: relative;
   z-index: 1;
-  min-height: calc(100vh - var(--safe-area-top) - var(--sheet-top-gap));
+  min-height: calc(var(--full-screen-height) - var(--safe-area-top) - var(--sheet-top-gap));
   margin-inline: auto;
   max-width: var(--sheet-max-width);
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
@@ -44,13 +46,21 @@
 
 .admin-sheet-head {
   position: sticky;
-  top: var(--safe-area-top);
+  top: 0;
   z-index: 2;
   display: flex;
   justify-content: space-between;
-  padding: var(--sheet-close-inset) max(var(--sheet-inset-inline), env(safe-area-inset-right)) 0
-    max(var(--sheet-inset-inline), env(safe-area-inset-left));
+  padding: calc(var(--safe-area-top) + var(--sheet-close-inset))
+    max(var(--sheet-inset-inline), env(safe-area-inset-right)) 0
+    max(var(--sheet-inset-inline), env(safe-area-inset-left), var(--window-controls-inset-inline));
+  margin-top: calc(-1 * var(--safe-area-top));
   pointer-events: none;
+  transition: background var(--duration-base);
+}
+
+.admin-sheet-head--scrolled {
+  padding-bottom: var(--space-2);
+  background: var(--color-sheet-grouped);
 }
 
 .admin-sheet-button {

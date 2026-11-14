@@ -59,7 +59,30 @@ test.describe('Given an administrator on a phone', () => {
     await head.getByRole('button', { name: 'Zavřít' }).click();
 
     await expect(page).toHaveURL('/aktuality');
+    await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeFocused();
+  });
+
+  test('when they reload a page deeper in Správa opened over the news and press Zavřít, then the news is still where it leads', async ({
+    page,
+  }) => {
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/aktuality');
     await expect(page.getByRole('heading', { level: 1, name: LIST_TITLE })).toBeVisible();
+    await openAccountItem(page, 'Správa');
+    await copied();
+    await page
+      .getByRole('navigation', { name: 'Sekce správy' })
+      .getByRole('link', { name: /Lidé fondu, správci, zálohy/ })
+      .click();
+    await expect(page).toHaveURL(/\/sprava\/vice$/);
+
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Občas a pro technika' }),
+    ).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Zavřít' }).click();
+
+    await expect(page).toHaveURL('/aktuality');
   });
 
   test('when Správa opened by its address and they press Zavřít, then the site opens at home', async ({

@@ -75,6 +75,17 @@ describe('Given the back target of the app', () => {
       expect(back.canGoBack).toBe(false);
     });
 
+    it('and a button steps back over both pages at once, then the page it lands on counts as returned by a button', async () => {
+      await router.navigateByUrl('/aktuality/treti');
+      const steps = vi.spyOn(TestBed.inject(Location), 'historyGo');
+
+      back.backBy(2);
+      router.navigateByUrl('/aktuality/clanek', { onSameUrlNavigation: 'reload' });
+      await navigated(router);
+
+      expect(steps).toHaveBeenCalledWith(-2);
+    });
+
     it('then the depth is kept in the entry, so a reload still knows it', () => {
       expect((TestBed.inject(Location).getState() as Record<string, unknown>)[APP_DEPTH_KEY]).toBe(
         1,

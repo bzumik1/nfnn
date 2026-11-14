@@ -2,7 +2,6 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Location } from '@angular/common';
 import { provideRouter, Router } from '@angular/router';
 import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { CompactLayout } from '../../../core/layout/compact-layout';
@@ -398,16 +397,62 @@ describe('Given an administrator who opened the administration on a phone over a
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('when Zavřít is pressed two pages deep, then the site steps back past every page of the administration to the page it came from', async () => {
+  function close(): void {
+    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zavřít"]').click();
+  }
+
+  it('when Zavřít is pressed two pages deep, then the site steps back past every page of the administration to the page it came from, as a press of a button', async () => {
     await router.navigateByUrl('/sprava/darci');
     await fixture.whenStable();
     fixture.detectChanges();
     const steps = vi
-      .spyOn(TestBed.inject(Location), 'historyGo')
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
       .mockImplementation(() => undefined);
 
-    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zavřít"]').click();
+    close();
 
-    expect(steps).toHaveBeenCalledWith(-2);
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when the page is reloaded deeper in the administration, then Zavřít still knows where the administration was opened', async () => {
+    await router.navigateByUrl('/sprava/darci');
+    await fixture.whenStable();
+    fixture.destroy();
+    fixture = TestBed.createComponent(AdminShell);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const steps = vi
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
+      .mockImplementation(() => undefined);
+
+    close();
+
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when the router creates the administration while it opens it, then Zavřít counts from its first page, not from the page before', async () => {
+    fixture.destroy();
+    await router.navigateByUrl('/aktuality', { state: { [APP_DEPTH_KEY]: 6 } });
+    const opening = router.navigateByUrl('/sprava');
+    fixture = TestBed.createComponent(AdminShell);
+    await opening;
+    await router.navigateByUrl('/sprava/darci');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const steps = vi
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
+      .mockImplementation(() => undefined);
+
+    close();
+
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when Zpět is pressed, then the site steps back towards the parent of the page', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+
+    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zpět"]').click();
+
+    expect(back).toHaveBeenCalledWith('/');
   });
 });
