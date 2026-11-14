@@ -93,7 +93,7 @@ public final class RefreshToken {
     }
 
     public boolean mayBeReissuedAt(Instant now) {
-        return usedAt != null && revokedAt == null && clientId == null && successorId != null && now.isBefore(usedAt.plus(REUSE_GRACE))
+        return usedAt != null && revokedAt == null && successorId != null && now.isBefore(usedAt.plus(REUSE_GRACE))
                 && now.isBefore(expiresAt);
     }
 
