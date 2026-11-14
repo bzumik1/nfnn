@@ -1,9 +1,9 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.regex.Pattern;
 
 public record CodeChallenge(String value, String method) {
@@ -28,11 +28,6 @@ public record CodeChallenge(String value, String method) {
     }
 
     private static String challengeOf(String codeVerifier) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest.digest(codeVerifier.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return Sha256.base64Url(codeVerifier.getBytes(StandardCharsets.US_ASCII));
     }
 }

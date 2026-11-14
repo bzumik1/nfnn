@@ -1,11 +1,11 @@
 package cz.novanadeje.app.operations.domain.backup;
 
+import cz.novanadeje.app.shared.domain.Sha256;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,7 +85,7 @@ public final class BackupKeyWords {
 
     private static byte[] withChecksum(byte[] key) {
         byte[] bits = Arrays.copyOf(key, KEY_BYTES + 1);
-        bits[KEY_BYTES] = sha256(key)[0];
+        bits[KEY_BYTES] = Sha256.digest(key)[0];
         return bits;
     }
 
@@ -95,14 +95,6 @@ public final class BackupKeyWords {
 
     private static String plain(String text) {
         return MARKS.matcher(Normalizer.normalize(text, Normalizer.Form.NFKD)).replaceAll("").toLowerCase(Locale.ROOT);
-    }
-
-    private static byte[] sha256(byte[] bytes) {
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(bytes);
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is part of every Java platform", missing);
-        }
     }
 
     private static List<String> load() {

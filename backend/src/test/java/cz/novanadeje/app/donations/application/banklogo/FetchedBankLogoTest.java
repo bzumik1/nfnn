@@ -3,6 +3,8 @@ package cz.novanadeje.app.donations.application.banklogo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -43,5 +45,12 @@ class FetchedBankLogoTest {
     void should_refuse_when_made_given_no_bytes_or_too_many() {
         assertThatThrownBy(() -> FetchedBankLogo.of(new byte[0])).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> FetchedBankLogo.of(new byte[FetchedBankLogo.MAX_BYTES + 1])).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("Given a fetched image, when it is kept, then its digest is the hex SHA-256 of its bytes")
+    void should_carry_sha256_of_bytes_when_kept_given_image() {
+        assertThat(FetchedBankLogo.of("abc".getBytes(StandardCharsets.US_ASCII)).sha256())
+                .isEqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
     }
 }

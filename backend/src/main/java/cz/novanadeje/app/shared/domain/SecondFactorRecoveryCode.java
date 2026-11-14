@@ -1,10 +1,7 @@
 package cz.novanadeje.app.shared.domain;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
-import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.random.RandomGenerator;
@@ -47,12 +44,7 @@ public record SecondFactorRecoveryCode(String value) {
     }
 
     public String hash() {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.US_ASCII)));
-        } catch (NoSuchAlgorithmException missing) {
-            throw new IllegalStateException("SHA-256 is not available", missing);
-        }
+        return Sha256.hex(value.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static String plain(String message) {
