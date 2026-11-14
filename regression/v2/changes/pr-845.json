@@ -3,7 +3,7 @@
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given three follow-ups since the tick, when a fourth is reported, then it is not scheduled and a warning says the scheduler waits for the hourly run",
-    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test The scheduler's own part, that only the scheduled run starts the count again and a follow-up keeps counting, is FioImportSchedulerTest's \"Given an import the bank held back, when its follow-up runs, then the follow-ups keep counting, because only the scheduled run starts the count again\".",
     "replacement": "donations.application.importing.ImportFollowUpsTest > Given three follow-ups since the scheduled run, when a fourth is reported, then it does not run and a warning says the import waits for the hourly run",
     "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
   },
@@ -11,7 +11,7 @@
     "kind": "retired",
     "suite": "backend-junit",
     "test": "donations.infrastructure.fio.FioImportSchedulerTest > Given a pending follow-up and an exhausted follow-up budget, when the scheduler ticks, then the pending follow-up is cancelled and three new follow-ups are allowed again",
-    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the cancelled follow-up and the restart before the import stay in the scheduler test \"Given a pending follow-up, when the scheduler ticks, then the pending follow-up is cancelled and the follow-ups start counting again before the import runs\"",
+    "reason": "Architecture audit #621, follow-up from the review of #753 (#843): the scheduler is a driving adapter, so FioImportSchedulerTest mocks ImportFollowUps and checks only its wiring; the follow-up rule this case re-tested through the scheduler is proved by the application test; the cancelled follow-up and the restart before the import stay in the scheduler test \"Given a pending follow-up, when the scheduler ticks, then the pending follow-up is cancelled and the follow-ups start counting again before the import runs\" The scheduler's own part, that only the scheduled run starts the count again and a follow-up keeps counting, is FioImportSchedulerTest's \"Given an import the bank held back, when its follow-up runs, then the follow-ups keep counting, because only the scheduled run starts the count again\".",
     "replacement": "donations.application.importing.ImportFollowUpsTest > Given the follow-ups used up, when the next scheduled run starts, then three follow-ups are allowed again",
     "contract": ".claude/rules/testing.md, Testing rules (a test at the lowest level that proves the behaviour)"
   },

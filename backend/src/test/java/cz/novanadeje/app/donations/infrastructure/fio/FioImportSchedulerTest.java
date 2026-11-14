@@ -129,6 +129,35 @@ class FioImportSchedulerTest {
     }
 
     @Test
+    @DisplayName("Given an import the bank held back, when its follow-up runs, then the follow-ups keep counting, because only the scheduled run starts the count again")
+    void should_keep_counting_follow_ups_when_the_follow_up_runs_given_an_import_held_back() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importIncomingPayments(any(), any()))
+                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)))
+                .thenReturn(completed(STARTUP));
+        when(followUps.after(any())).thenReturn(Optional.of(new FollowUp(RETRY_AT, STARTUP)), Optional.empty());
+        scheduler.tick();
+
+        scheduledFollowUp().run();
+
+        verify(service, times(2)).importIncomingPayments(STARTUP, SETTINGS);
+        verify(followUps, times(1)).scheduledRunStarted();
+    }
+
+    @Test
+    @DisplayName("Given an on-demand import, when it runs, then the follow-ups do not start counting again, because only the scheduled run starts the count")
+    void should_not_restart_the_follow_up_count_when_an_on_demand_import_runs_given_requested_import() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importOnDemand(any(), any())).thenReturn(Optional.of(completed(ON_DEMAND)));
+        scheduler.requestImport();
+
+        scheduledFollowUp().run();
+
+        verify(service).importOnDemand(SETTINGS, COOLDOWN);
+        verify(followUps, never()).scheduledRunStarted();
+    }
+
+    @Test
     @DisplayName("Given an on-demand import, when it ends, then the bank import hint goes out once the scheduler no longer reports an import in progress")
     void should_publish_bank_import_hint_after_progress_cleared_when_on_demand_import_ends_given_requested_import() {
         when(service.importOnDemand(any(), any())).thenReturn(Optional.of(completed(ON_DEMAND)));
