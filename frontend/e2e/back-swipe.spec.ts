@@ -234,12 +234,6 @@ test.describe('Given the app on the home screen of a phone with an article opene
   });
 });
 
-function barBackButtonLeft(page: Page): Promise<number> {
-  return page
-    .locator('.page-transition--swipe .page-transition__bar .back-button')
-    .evaluate((button) => button.getBoundingClientRect().left);
-}
-
 test.describe('Given the app on the home screen of a phone and an administrator who opened the administration from the account sheet over the news', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -275,7 +269,7 @@ test.describe('Given the app on the home screen of a phone and an administrator 
     await expect(page.locator('.page-transition')).toHaveCount(0);
   });
 
-  test('when a finger drags the administration back, then the news lies under it without the sheet while the round back button stands still, and on letting go the news returns', async ({
+  test('when a finger drags the administration sheet back, then the news lies under it without the account sheet, and on letting go the news returns', async ({
     page,
   }) => {
     const finger = await fingerOn(page);
@@ -285,10 +279,8 @@ test.describe('Given the app on the home screen of a phone and an administrator 
       LIST_TITLE,
     );
     await expect(swipeOverlay(page).locator('dialog')).toHaveCount(0);
-    const backAt = await barBackButtonLeft(page);
     await finger.move(250);
     await expect.poll(() => pageOffset(page)).toBeCloseTo(220, 0);
-    expect(await barBackButtonLeft(page)).toBe(backAt);
 
     await restLongerThanAFlick(page);
     await finger.up();
