@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.SecretMaskingRulesTest > Given the records listed as holding a public code, when they are read, then each exists and holds its code as text, so the list names no record that is gone",
+    "reason": "Architecture audit #621 (round 4, #856): the list of public codes became a list of public components per component name, so the PKCE code challenge of AuthorizationDecision can be listed beside the bank codes; the test checks every listed record for its component",
+    "replacement": "architecture.SecretMaskingRulesTest > Given the records listed as holding a public code or code challenge, when they are read, then each exists and holds that component, so the list names no record that is gone",
+    "contract": "docs/security-overview.md, Secrets"
+  }
+]
