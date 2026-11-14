@@ -70,10 +70,6 @@
 }
 
 .standing-figure {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
   color: var(--color-text);
   font-weight: var(--weight-semibold);
   font-variant-numeric: var(--numeric-figures);
@@ -93,6 +89,13 @@
 @include bp.container-down(payment-panel, pair) {
   .standing-box {
     padding-inline: var(--space-2);
+  }
+
+  .standing-figure {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 

@@ -6,7 +6,7 @@
   container: payment-panel / inline-size;
 }
 
-.bank-box {
+.bank {
   background: var(--color-surface-accent);
   border-radius: var(--radius-media);
   padding: var(--space-6) var(--space-7);
@@ -42,7 +42,7 @@
   gap: var(--space-2-5);
 }
 
-.amount-pill {
+.amount-option {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
@@ -71,6 +71,15 @@
     border-color: var(--color-accent-fill);
     color: var(--color-on-accent);
     box-shadow: var(--shadow-cta);
+  }
+
+  @media (forced-colors: active) {
+    &.active {
+      forced-color-adjust: none;
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
   }
 }
 
@@ -117,24 +126,24 @@
   color: var(--color-danger);
 }
 
-.bank-grid {
+.bank-rows {
   display: grid;
   gap: var(--space-2-5);
 }
 
-.bank-line {
+.bank-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-4);
 }
 
-.bank-label {
+.bank-key {
   color: var(--color-text-muted);
   font-size: var(--text-md);
 }
 
-.bank-figure {
+.bank-value {
   font-weight: var(--weight-bold);
   color: var(--color-text);
   font-size: var(--text-md);
@@ -275,7 +284,7 @@
   }
 }
 
-.bank-values {
+.bank-value-wrap {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -288,21 +297,21 @@
     align-items: flex-start;
   }
 
-  .bank-box {
+  .bank {
     padding: var(--space-5);
   }
 
-  .bank-line {
+  .bank-row {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-1);
   }
 
-  .bank-values {
+  .bank-value-wrap {
     justify-content: space-between;
   }
 
-  .bank-figure {
+  .bank-value {
     flex: 1 1 0;
   }
 
@@ -320,12 +329,16 @@
 }
 
 @include bp.container-down(payment-panel, pair) {
-  .bank-values {
+  .bank {
+    padding-inline: var(--space-3);
+  }
+
+  .bank-value-wrap {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .bank-figure {
+  .bank-value {
     flex: none;
     max-width: 100%;
     white-space: normal;
@@ -422,18 +435,15 @@
   justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  text-align: start;
-  cursor: pointer;
-}
-
-.other-device-box {
   margin-top: var(--space-5);
   padding: var(--space-4) var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-media);
   background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  text-align: start;
+  cursor: pointer;
 }
 
 .other-device-text {
@@ -457,6 +467,10 @@
   height: 1.25rem;
   color: var(--color-text-soft);
   transition: transform var(--duration-base);
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
 }
 
 .qr[role='region'] .qr-image,

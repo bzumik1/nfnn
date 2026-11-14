@@ -4,7 +4,7 @@
     @for (preset of presets; track preset.amount) {
       <button
         type="button"
-        class="amount-option amount-pill"
+        class="amount-option"
         [class.active]="!customChosen() && presetAmount() === preset.amount"
         [attr.aria-pressed]="!customChosen() && presetAmount() === preset.amount"
         (click)="choosePreset(preset.amount)"
@@ -14,7 +14,7 @@
     }
     <button
       type="button"
-      class="amount-option amount-pill"
+      class="amount-option"
       [class.active]="customChosen()"
       [attr.aria-pressed]="customChosen()"
       (click)="chooseCustomAmount()"
@@ -64,15 +64,15 @@
 <ng-content />
 
 @if (bankAccount(); as account) {
-  <div class="bank bank-box">
+  <div class="bank">
     <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
       Bankovní spojení
     </p>
-    <div class="bank-rows bank-grid">
-      <div class="bank-row bank-line">
-        <span class="bank-key bank-label" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
-        <span class="bank-value-wrap bank-values">
-          <span class="bank-value ui-figures bank-figure"
+    <div class="bank-rows">
+      <div class="bank-row">
+        <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
+        <span class="bank-value-wrap">
+          <span class="bank-value ui-figures"
             >{{ accountParts(account.number).head }}<wbr />{{
               accountParts(account.number).bankCode
             }}</span
@@ -86,10 +86,10 @@
         </span>
       </div>
       @if (amount(); as chosen) {
-        <div class="bank-row bank-line">
-          <span class="bank-key bank-label" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
-          <span class="bank-value-wrap bank-values">
-            <span class="bank-value ui-figures bank-figure"
+        <div class="bank-row">
+          <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
+          <span class="bank-value-wrap">
+            <span class="bank-value ui-figures"
               >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
                 >Kč</ng-container
               ></span
@@ -104,11 +104,10 @@
         </div>
       }
       @if (variableSymbol(); as symbol) {
-        <div class="bank-row bank-line">
-          <span class="bank-key bank-label" i18n="@@home.donate.bank.vs">Variabilní symbol</span
-          >&ngsp;
-          <span class="bank-value-wrap bank-values">
-            <span class="bank-value ui-figures bank-figure">{{ symbol }}</span>
+        <div class="bank-row">
+          <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
+          <span class="bank-value-wrap">
+            <span class="bank-value ui-figures">{{ symbol }}</span>
             <app-copy-button
               [value]="symbol"
               what="variabilní symbol"
@@ -118,10 +117,10 @@
           </span>
         </div>
       }
-      <div class="bank-row bank-line">
-        <span class="bank-key bank-label" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
-        <span class="bank-value-wrap bank-values">
-          <span class="bank-value ui-figures ui-figures--groups bank-figure"
+      <div class="bank-row">
+        <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
+        <span class="bank-value-wrap">
+          <span class="bank-value ui-figures ui-figures--groups"
             ><span class="iban-half">{{ ibanLines()[0] }}</span
             >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
           >
@@ -286,7 +285,7 @@
     </button>
     <button
       type="button"
-      class="other-device other-device-box"
+      class="other-device"
       [attr.aria-controls]="qrRegionId()"
       [attr.aria-expanded]="qrShown()"
       (click)="toggleQr()"
@@ -308,9 +307,7 @@
       </span>
       <svg
         class="other-device-chevron"
-        [class.ui-list__chevron--open]="qrShown()"
-        width="16"
-        height="16"
+        [class.is-open]="qrShown()"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

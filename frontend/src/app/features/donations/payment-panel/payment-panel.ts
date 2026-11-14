@@ -52,7 +52,6 @@ import { LocalPaymentRoute } from './local-payment-route';
 import { ChosenAmount, ChosenAmountStore } from './chosen-amount';
 
 const DEFAULT_AMOUNT = 500;
-
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 1_000_000;
 const MINOR_PER_CROWN = 100;
