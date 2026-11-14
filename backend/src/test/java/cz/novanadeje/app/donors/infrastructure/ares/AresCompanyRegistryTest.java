@@ -15,17 +15,25 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +49,7 @@ class AresCompanyRegistryTest {
             "nazevCastiObce":"Malá Strana","psc":11800,"textovaAdresa":"Letenská 525/15, Malá Strana, 11800 Praha 1",
             "standardizaceAdresy":true,"typCisloDomovni":1},"pravniForma":"325","dic":"CZ00006947"}""";
 
+    private static final byte[] PUBLIC_ADDRESS = {(byte) 193, 86, 74, 1};
     private static final Duration FUNCTIONAL_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration STALL_TIMEOUT = Duration.ofSeconds(2);
 
@@ -218,20 +227,98 @@ class AresCompanyRegistryTest {
     @Test
     @DisplayName("Given the production settings, when the register resolves to a private address or is not https, then it is not asked")
     void should_refuse_when_found_given_private_address_or_plain_http() {
-        AresCompanyRegistry strict = new AresCompanyRegistry(HttpClient.newHttpClient(), URI.create("https://127.0.0.1:" + port() + "/ekonomicke-subjekty/"),
-                false, Duration.ofMillis(500), clock);
-        AresCompanyRegistry plain = new AresCompanyRegistry(HttpClient.newHttpClient(), URI.create("http://ares.gov.cz/ekonomicke-subjekty/"),
-                false, Duration.ofMillis(500), clock);
+        try (HttpClient strictClient = HttpClient.newHttpClient(); HttpClient plainClient = HttpClient.newHttpClient()) {
+            AresCompanyRegistry strict = new AresCompanyRegistry(strictClient, URI.create("https://127.0.0.1:" + port() + "/ekonomicke-subjekty/"),
+                    false, Duration.ofMillis(500), clock);
+            AresCompanyRegistry plain = new AresCompanyRegistry(plainClient, URI.create("http://ares.gov.cz/ekonomicke-subjekty/"),
+                    false, Duration.ofMillis(500), clock);
 
-        assertThatThrownBy(() -> strict.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NON_PUBLIC_ADDRESS));
-        assertThatThrownBy(() -> plain.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NOT_HTTPS));
+            assertThatThrownBy(() -> strict.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NON_PUBLIC_ADDRESS));
+            assertThatThrownBy(() -> plain.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class, failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.NOT_HTTPS));
+        }
         assertThat(requests.get()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a name lookup that never answers, when a company is found, then it is unavailable as timed out within the lookup's time and the register is not asked")
+    void should_time_out_when_found_given_a_name_lookup_that_never_answers() {
+        CountDownLatch never = new CountDownLatch(1);
+        long started = System.nanoTime();
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            AresCompanyRegistry stalled = new AresCompanyRegistry(client, URI.create("https://ares.gov.cz/ekonomicke-subjekty/"),
+                    false, Duration.ofMillis(300), clock, host -> {
+                        try {
+                            never.await();
+                        } catch (InterruptedException cancelled) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new UnknownHostException(host);
+                    });
+
+            assertThatThrownBy(() -> stalled.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class,
+                    failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
+        }
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(3));
+        assertThat(requests.get()).isZero();
+    }
+
+    @Test
+    @DisplayName("Given a name lookup that spends most of the time and a register that never answers, when a company is found, then it is unavailable as timed out within the one time for the lookup and the answer")
+    void should_time_out_within_the_one_time_when_found_given_a_slow_lookup_and_a_silent_register() throws IOException {
+        Duration budget = Duration.ofSeconds(2);
+        CountDownLatch never = new CountDownLatch(1);
+        try (SilentEndpoint silent = SilentEndpoint.open(); HttpClient client = HttpClient.newHttpClient()) {
+            AresCompanyRegistry slow = new AresCompanyRegistry(client, silent.base(), false, budget, clock, host -> {
+                try {
+                    never.await(1_600, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException cancelled) {
+                    Thread.currentThread().interrupt();
+                }
+                return new InetAddress[]{InetAddress.getByAddress(PUBLIC_ADDRESS)};
+            });
+            long started = System.nanoTime();
+
+            assertThatThrownBy(() -> slow.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class,
+                    failure -> assertThat(failure.failure()).isEqualTo(CompanyRegistryFailure.TIMEOUT));
+
+            assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(3));
+            assertThat(silent.connections()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    @DisplayName("Given the production checks, when the injected lookup finds a private address among public ones, does not know the host or fails otherwise, then the register is never asked")
+    void should_refuse_before_asking_when_found_given_a_private_unknown_or_failing_lookup() throws IOException {
+        try (SilentEndpoint silent = SilentEndpoint.open();
+             HttpClient privateClient = HttpClient.newHttpClient();
+             HttpClient unknownClient = HttpClient.newHttpClient();
+             HttpClient failingClient = HttpClient.newHttpClient()) {
+            AresCompanyRegistry privateHost = new AresCompanyRegistry(privateClient, silent.base(), false, Duration.ofMillis(800), clock,
+                    host -> new InetAddress[]{InetAddress.getByAddress(PUBLIC_ADDRESS), InetAddress.getByName("10.0.0.7")});
+            AresCompanyRegistry unknown = new AresCompanyRegistry(unknownClient, silent.base(), false, Duration.ofMillis(800), clock, host -> {
+                throw new UnknownHostException(host);
+            });
+            AresCompanyRegistry failing = new AresCompanyRegistry(failingClient, silent.base(), false, Duration.ofMillis(800), clock, host -> {
+                throw new SecurityException("lookup refused");
+            });
+
+            assertFailure(privateHost, CompanyRegistryFailure.NON_PUBLIC_ADDRESS);
+            assertFailure(unknown, CompanyRegistryFailure.UNKNOWN_HOST);
+            assertFailure(failing, CompanyRegistryFailure.UNREACHABLE);
+            assertThat(silent.connections()).isZero();
+        }
     }
 
     @Test
     @DisplayName("Given the production register, when its address is read, then it is the fixed https address of ARES")
     void should_be_the_fixed_https_address_of_ares_when_read_given_the_production_register() {
         assertThat(AresCompanyRegistry.ARES).hasToString("https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/");
+    }
+
+    private static void assertFailure(AresCompanyRegistry registry, CompanyRegistryFailure expected) {
+        assertThatThrownBy(() -> registry.find(MINISTRY)).isInstanceOfSatisfying(CompanyRegistryUnavailable.class,
+                failure -> assertThat(failure.failure()).isEqualTo(expected));
     }
 
     private AresCompanyRegistry localRegistry(Duration timeout) {
@@ -241,6 +328,47 @@ class AresCompanyRegistryTest {
 
     private int port() {
         return server.getAddress().getPort();
+    }
+
+    private static final class SilentEndpoint implements AutoCloseable {
+
+        private final ServerSocket socket;
+        private final List<Socket> accepted = new CopyOnWriteArrayList<>();
+
+        private SilentEndpoint(ServerSocket socket) {
+            this.socket = socket;
+            Thread.ofVirtual().name("silent-register").start(this::acceptAndKeepQuiet);
+        }
+
+        static SilentEndpoint open() throws IOException {
+            return new SilentEndpoint(new ServerSocket(0, 50, InetAddress.getLoopbackAddress()));
+        }
+
+        URI base() {
+            return URI.create("https://127.0.0.1:" + socket.getLocalPort() + "/ekonomicke-subjekty/");
+        }
+
+        int connections() {
+            return accepted.size();
+        }
+
+        private void acceptAndKeepQuiet() {
+            try {
+                while (!socket.isClosed()) {
+                    accepted.add(socket.accept());
+                }
+            } catch (IOException closed) {
+                return;
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            socket.close();
+            for (Socket connection : accepted) {
+                connection.close();
+            }
+        }
     }
 
     private record Answer(int status, String contentType, String body, Duration stall) {

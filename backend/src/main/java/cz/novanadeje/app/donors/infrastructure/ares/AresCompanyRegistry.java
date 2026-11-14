@@ -8,6 +8,7 @@ import cz.novanadeje.app.donors.application.CompanyRegistryUnavailable;
 import cz.novanadeje.app.donors.domain.CompanyIdentifier;
 import cz.novanadeje.app.donors.domain.RegisteredCompany;
 import cz.novanadeje.app.shared.infrastructure.net.PublicAddresses;
+import cz.novanadeje.app.shared.infrastructure.net.TimeBoundedCall;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +45,7 @@ class AresCompanyRegistry implements CompanyRegistry {
     private final URI base;
     private final boolean privateAddressesAllowed;
     private final Duration timeout;
+    private final HostResolver resolver;
     private final AresAnswers answers = new AresAnswers();
     private final Cache<CompanyIdentifier, Optional<RegisteredCompany>> cache;
 
@@ -52,10 +54,15 @@ class AresCompanyRegistry implements CompanyRegistry {
     }
 
     AresCompanyRegistry(HttpClient http, URI base, boolean privateAddressesAllowed, Duration timeout, Clock clock) {
+        this(http, base, privateAddressesAllowed, timeout, clock, InetAddress::getAllByName);
+    }
+
+    AresCompanyRegistry(HttpClient http, URI base, boolean privateAddressesAllowed, Duration timeout, Clock clock, HostResolver resolver) {
         this.http = http;
         this.base = base;
         this.privateAddressesAllowed = privateAddressesAllowed;
         this.timeout = timeout;
+        this.resolver = resolver;
         this.cache = Caffeine.newBuilder()
                 .maximumSize(CACHE_SIZE)
                 .expireAfterWrite(CACHE_TTL)
@@ -70,9 +77,9 @@ class AresCompanyRegistry implements CompanyRegistry {
 
     private Optional<RegisteredCompany> ask(CompanyIdentifier identifier) {
         long deadline = System.nanoTime() + timeout.toNanos();
-        requireSafeTarget();
+        requireSafeTarget(deadline);
         HttpRequest request = HttpRequest.newBuilder(base.resolve(identifier.value()))
-                .timeout(timeout)
+                .timeout(Duration.ofNanos(remaining(deadline)))
                 .header("Accept", "application/json")
                 .GET()
                 .build();
@@ -94,24 +101,40 @@ class AresCompanyRegistry implements CompanyRegistry {
         }
     }
 
-    private void requireSafeTarget() {
+    private void requireSafeTarget(long deadline) {
         if (privateAddressesAllowed) {
             return;
         }
         if (!"https".equals(base.getScheme())) {
             throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NOT_HTTPS);
         }
-        InetAddress[] addresses;
-        try {
-            addresses = InetAddress.getAllByName(base.getHost());
-        } catch (UnknownHostException unknown) {
-            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.UNKNOWN_HOST);
-        }
-        for (InetAddress address : addresses) {
+        for (InetAddress address : resolveBounded(base.getHost(), deadline)) {
             if (!PublicAddresses.isPublic(address)) {
                 throw new CompanyRegistryUnavailable(CompanyRegistryFailure.NON_PUBLIC_ADDRESS);
             }
         }
+    }
+
+    private InetAddress[] resolveBounded(String host, long deadline) {
+        try {
+            return TimeBoundedCall.within(Duration.ofNanos(remaining(deadline)), "company-register-lookup", () -> resolver.resolve(host));
+        } catch (TimeoutException slow) {
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
+        } catch (ExecutionException failed) {
+            throw new CompanyRegistryUnavailable(failed.getCause() instanceof UnknownHostException
+                    ? CompanyRegistryFailure.UNKNOWN_HOST : CompanyRegistryFailure.UNREACHABLE);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.INTERRUPTED);
+        }
+    }
+
+    private static long remaining(long deadline) {
+        long remaining = deadline - System.nanoTime();
+        if (remaining <= 0) {
+            throw new CompanyRegistryUnavailable(CompanyRegistryFailure.TIMEOUT);
+        }
+        return remaining;
     }
 
     private HttpResponse<InputStream> send(HttpRequest request) {
