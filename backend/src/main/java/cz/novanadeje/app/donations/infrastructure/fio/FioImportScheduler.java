@@ -10,7 +10,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Conditional;
@@ -151,7 +151,7 @@ class FioImportScheduler implements BankImportRequests {
     }
 
     private void importEnded() {
-        events.publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        events.publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT));
     }
 
     private boolean execute(ImportTrigger trigger, Supplier<Optional<ImportReport>> importer) {

@@ -2,7 +2,7 @@ package cz.novanadeje.app.shared.infrastructure.live;
 
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.shared.application.event.DonorSessionsEnded;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.shared.application.event.StoredDataChanged.LiveFeed;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.AfterEach;
@@ -32,6 +32,10 @@ class LiveStreamHubTest {
     private static final UUID ADMIN = UUID.fromString("0190a000-0000-7000-8000-000000000003");
     private static final UUID PHONE = UUID.fromString("0190a000-0000-7000-8000-0000000000a1");
     private static final UUID LAPTOP = UUID.fromString("0190a000-0000-7000-8000-0000000000a2");
+    private static final LiveFeed DONATIONS = new LiveFeed("donations", LiveFeed.Audience.DONOR);
+    private static final LiveFeed BANK_ACCOUNTS = new LiveFeed("bank-accounts", LiveFeed.Audience.DONOR);
+    private static final LiveFeed BANK_IMPORT = new LiveFeed("bank-import", LiveFeed.Audience.EVERYONE);
+    private static final LiveFeed PAYMENTS = new LiveFeed("payments", LiveFeed.Audience.ADMINISTRATION);
 
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
     private LiveStreamHub hub = hub(new LiveProperties(Duration.ofMinutes(1), 5, 50, 10));
@@ -56,8 +60,8 @@ class LiveStreamHubTest {
         RecordingConnection jana = open(donor(JANA));
         RecordingConnection petr = open(donor(PETR));
 
-        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA));
-        hub.publish(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        hub.publish(StoredDataChanged.ofDonor(DONATIONS, JANA));
+        hub.publish(StoredDataChanged.of(BANK_IMPORT));
 
         await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactlyInAnyOrder("donations", "bank-import"));
         await().untilAsserted(() -> assertThat(petr.changedFeeds()).containsExactly("bank-import"));
@@ -69,12 +73,25 @@ class LiveStreamHubTest {
         RecordingConnection jana = open(donor(JANA));
         RecordingConnection admin = open(administrator(ADMIN));
 
-        hub.publish(StoredDataChanged.of(LiveFeed.PAYMENTS));
-        hub.publish(StoredDataChanged.ofDonor(LiveFeed.BANK_ACCOUNTS, PETR));
-        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, ADMIN));
-        hub.publish(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        hub.publish(StoredDataChanged.of(PAYMENTS));
+        hub.publish(StoredDataChanged.ofDonor(BANK_ACCOUNTS, PETR));
+        hub.publish(StoredDataChanged.ofDonor(DONATIONS, ADMIN));
+        hub.publish(StoredDataChanged.of(BANK_IMPORT));
 
         await().untilAsserted(() -> assertThat(admin.changedFeeds()).containsExactlyInAnyOrder("payments", "donations", "bank-import"));
+        await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactly("bank-import"));
+    }
+
+    @Test
+    @DisplayName("Given a feed whose name the hub has never seen, when it changes, then its name reaches the streams of its audience unchanged")
+    void should_send_name_unchanged_when_unknown_feed_changes_given_streams_of_its_audience() {
+        RecordingConnection jana = open(donor(JANA));
+        RecordingConnection admin = open(administrator(ADMIN));
+
+        hub.publish(StoredDataChanged.of(new LiveFeed("planted-ledger", LiveFeed.Audience.ADMINISTRATION)));
+        hub.publish(StoredDataChanged.of(BANK_IMPORT));
+
+        await().untilAsserted(() -> assertThat(admin.changedFeeds()).containsExactlyInAnyOrder("planted-ledger", "bank-import"));
         await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactly("bank-import"));
     }
 
@@ -86,7 +103,7 @@ class LiveStreamHubTest {
             connection.beforeEachSend(() -> {
                 connection.beforeEachSend(() -> {
                 });
-                new Thread(() -> hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA))).start();
+                new Thread(() -> hub.publish(StoredDataChanged.ofDonor(DONATIONS, JANA))).start();
                 await().pollDelay(Duration.ofMillis(100)).until(() -> true);
             });
             return connection;
@@ -229,7 +246,7 @@ class LiveStreamHubTest {
         RecordingConnection jana = open(donor(JANA));
         jana.failFromNowOn();
 
-        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA));
+        hub.publish(StoredDataChanged.ofDonor(DONATIONS, JANA));
 
         await().untilAsserted(() -> assertThat(jana.closed()).isTrue());
         assertThat(hub.openStreams()).isZero();
@@ -256,7 +273,7 @@ class LiveStreamHubTest {
         hub.start();
 
         RecordingConnection jana = open(donor(JANA));
-        hub.publish(StoredDataChanged.ofDonor(LiveFeed.DONATIONS, JANA));
+        hub.publish(StoredDataChanged.ofDonor(DONATIONS, JANA));
 
         await().untilAsserted(() -> assertThat(jana.changedFeeds()).containsExactly("donations"));
     }

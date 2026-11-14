@@ -16,7 +16,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.donations.domain.importing.ImportSettings;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
-import cz.novanadeje.app.shared.application.event.LiveFeed;
+import cz.novanadeje.app.donations.infrastructure.events.DonationLiveFeeds;
 import cz.novanadeje.app.shared.application.event.StoredDataChanged;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -167,7 +167,7 @@ class FioImportSchedulerTest {
 
         scheduledFollowUp().run();
 
-        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        verify(events).publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT));
         assertThat(inProgressAtHint).containsExactly(false);
     }
 
@@ -183,7 +183,7 @@ class FioImportSchedulerTest {
 
         scheduledFollowUp().run();
 
-        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        verify(events).publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT));
         assertThat(inProgressAtHint).containsExactly(false);
     }
 
@@ -194,7 +194,7 @@ class FioImportSchedulerTest {
 
         scheduler.tick();
 
-        verify(events).publishEvent(StoredDataChanged.of(LiveFeed.BANK_IMPORT));
+        verify(events).publishEvent(StoredDataChanged.of(DonationLiveFeeds.BANK_IMPORT));
     }
 
     @Test
