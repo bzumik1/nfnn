@@ -38,6 +38,27 @@ class ClientMetadataTest {
     }
 
     @Test
+    @DisplayName("Given a loopback redirect address, when a redirect with a fragment or user information is asked, then it is refused, so the code never lands in a fragment")
+    void should_refuse_when_requested_loopback_redirect_carries_fragment() {
+        ClientMetadata metadata = new ClientMetadata(CLAUDE, "Claude Code", List.of(URI.create("http://127.0.0.1/cb")));
+
+        assertThat(metadata.allowsRedirect(URI.create("http://127.0.0.1:5000/cb"))).isTrue();
+        assertThat(metadata.allowsRedirect(URI.create("http://127.0.0.1:5000/cb#x"))).isFalse();
+        assertThat(metadata.allowsRedirect(URI.create("http://127.0.0.1:5000/cb#"))).isFalse();
+        assertThat(metadata.allowsRedirect(URI.create("http://user@127.0.0.1:5000/cb"))).isFalse();
+        assertThat(metadata.allowsRedirect(URI.create("http://user:secret@127.0.0.1/cb"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an https redirect address, when it is asked with a fragment or user information, then it is refused")
+    void should_refuse_when_requested_https_redirect_carries_fragment_or_user_information() {
+        ClientMetadata metadata = new ClientMetadata(CLAUDE, "Claude", List.of(URI.create("https://claude.ai/api/mcp/auth_callback")));
+
+        assertThat(metadata.allowsRedirect(URI.create("https://claude.ai/api/mcp/auth_callback#x"))).isFalse();
+        assertThat(metadata.allowsRedirect(URI.create("https://someone@claude.ai/api/mcp/auth_callback"))).isFalse();
+    }
+
+    @Test
     @DisplayName("Given either loopback host, when asked, then it is told to be a loopback redirect")
     void should_tell_a_loopback_redirect_when_asked_given_either_loopback_host() {
         assertThat(ClientMetadata.isLoopback(URI.create("http://localhost:3118/callback"))).isTrue();
