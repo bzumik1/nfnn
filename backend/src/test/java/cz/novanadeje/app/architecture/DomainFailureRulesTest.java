@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 )
 class DomainFailureRulesTest {
 
-    private static final String FAILURES = "backend.md, Domain: failures are sealed DomainException subtypes with a code";
+    private static final String FAILURES = "backend.md, Domain: failures are named classes with a code, declared in a domain package, of the sealed DomainException's abstract kinds";
 
     private static JavaClasses planted;
 
