@@ -68,6 +68,11 @@ export class BackTarget {
     }
   }
 
+  backBy(steps: number): void {
+    this.buttonPressed = true;
+    this.location.historyGo(-steps);
+  }
+
   toTabRoot(root: string): void {
     if (this.canGoBack && this.behind === root) {
       this.buttonPressed = true;

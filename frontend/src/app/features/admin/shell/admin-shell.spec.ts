@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Component, inject, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { APP_DEPTH_KEY, BackTarget } from '../../../core/navigation/back-target';
 import { CompactLayout } from '../../../core/layout/compact-layout';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { DIALOG_SUSPENSION } from '../../../shared/ui/dialog/dialog-suspension';
@@ -56,6 +57,13 @@ describe('Given an administrator anywhere in the administration', () => {
           { path: 'sprava/darci', component: Page },
           { path: 'sprava/darci/:id', component: Page },
           { path: 'sprava/platby', component: Page },
+          {
+            path: 'sprava/aktuality/nova',
+            component: Page,
+            data: { parent: '/sprava', adminFrame: 'full' },
+          },
+          { path: 'aktuality', component: Page },
+          { path: '', component: Page },
         ]),
       ],
     }).compileComponents();
@@ -184,6 +192,46 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('button.side-nav-toggle')).toBeNull();
     });
 
+    it('then the administration stands in a sheet over the page, with Zpět and Zavřít in its head instead of the header of the app', () => {
+      const sheet = element('.admin-sheet');
+
+      expect(sheet).not.toBeNull();
+      expect(sheet!.querySelector('header button[aria-label="Zpět"]')).not.toBeNull();
+      expect(sheet!.querySelector('header button[aria-label="Zavřít"]')).not.toBeNull();
+      expect(sheet!.querySelector('main#obsah h1')?.textContent).toBe('Stránka');
+      expect(element('header.app-header')).toBeNull();
+      expect(element('.admin-sheet-backdrop')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('and a news editor opens, then it stands full screen under the header of the app, as before', async () => {
+      await router.navigateByUrl('/sprava/aktuality/nova');
+      await settle();
+
+      expect(element('.admin-sheet')).toBeNull();
+      expect(element('header.app-header')).not.toBeNull();
+      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+    });
+
+    it('and the window widens again, then the page keeps its state, since the frame changes around the same page', async () => {
+      const before = fixture.debugElement.query((node) => node.componentInstance instanceof Page);
+      compact.set(false);
+      await settle();
+      const after = fixture.debugElement.query((node) => node.componentInstance instanceof Page);
+
+      expect(after.componentInstance).toBe(before.componentInstance);
+      expect(element('.admin-sheet')).toBeNull();
+    });
+
+    it('and Zavřít is pressed after the administration opened by itself, then the site opens at home', async () => {
+      await router.navigateByUrl('/sprava/platby');
+      await settle();
+
+      element('.admin-sheet header button[aria-label="Zavřít"]')!.click();
+      await settle();
+
+      expect(router.url).toBe('/');
+    });
+
     it('then no site tabs stand at the bottom, since the administration is no tab of the site', () => {
       expect(element('nav[aria-label="Hlavní sekce"]')).toBeNull();
     });
@@ -205,11 +253,11 @@ describe('Given an administrator anywhere in the administration', () => {
       expect(element('#admin-nav')).not.toBeNull();
     });
 
-    it('and the window is a phone, then the header stays, so the administrator can still leave', async () => {
+    it('and the window is a phone, then the head of the sheet stays with Zavřít, so the administrator can still leave', async () => {
       compact.set(true);
       await settle();
 
-      expect(element('header.app-header')).not.toBeNull();
+      expect(element('.admin-sheet header button[aria-label="Zavřít"]')).not.toBeNull();
     });
 
     it('and it is unlocked again, then the page comes back', async () => {
@@ -308,5 +356,103 @@ describe('Given an administrator anywhere in the administration', () => {
 
       expect(clean(element('.admin-first-download')?.textContent)).toBe('');
     });
+  });
+});
+
+describe('Given an administrator who opened the administration on a phone over a page of the site', () => {
+  let fixture: ComponentFixture<AdminShell>;
+  let router: Router;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AdminShell],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CompactLayout, useValue: { isCompact: signal(true).asReadonly() } },
+        {
+          provide: ADMINISTRATION_LOCK,
+          useValue: {
+            locked: signal(false).asReadonly(),
+            panel: signal(LockPanel).asReadonly(),
+            keepsPage: signal(false).asReadonly(),
+            firstDownload: signal(null).asReadonly(),
+          },
+        },
+        provideRouter([
+          { path: 'aktuality', component: Page },
+          { path: 'sprava', component: Page },
+          { path: 'sprava/darci', component: Page },
+        ]),
+      ],
+    }).compileComponents();
+    router = TestBed.inject(Router);
+    TestBed.inject(BackTarget);
+    await router.navigateByUrl('/aktuality');
+    await router.navigateByUrl('/sprava', { replaceUrl: true, state: { [APP_DEPTH_KEY]: 4 } });
+    fixture = TestBed.createComponent(AdminShell);
+    await fixture.whenStable();
+    fixture.detectChanges();
+  });
+
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  function close(): void {
+    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zavřít"]').click();
+  }
+
+  it('when Zavřít is pressed two pages deep, then the site steps back past every page of the administration to the page it came from, as a press of a button', async () => {
+    await router.navigateByUrl('/sprava/darci');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const steps = vi
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
+      .mockImplementation(() => undefined);
+
+    close();
+
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when the page is reloaded deeper in the administration, then Zavřít still knows where the administration was opened', async () => {
+    await router.navigateByUrl('/sprava/darci');
+    await fixture.whenStable();
+    fixture.destroy();
+    fixture = TestBed.createComponent(AdminShell);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const steps = vi
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
+      .mockImplementation(() => undefined);
+
+    close();
+
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when the router creates the administration while it opens it, then Zavřít counts from its first page, not from the page before', async () => {
+    fixture.destroy();
+    await router.navigateByUrl('/aktuality', { state: { [APP_DEPTH_KEY]: 6 } });
+    const opening = router.navigateByUrl('/sprava');
+    fixture = TestBed.createComponent(AdminShell);
+    await opening;
+    await router.navigateByUrl('/sprava/darci');
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const steps = vi
+      .spyOn(TestBed.inject(BackTarget), 'backBy')
+      .mockImplementation(() => undefined);
+
+    close();
+
+    expect(steps).toHaveBeenCalledWith(2);
+  });
+
+  it('when Zpět is pressed, then the site steps back towards the parent of the page', () => {
+    const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
+
+    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zpět"]').click();
+
+    expect(back).toHaveBeenCalledWith('/');
   });
 });
