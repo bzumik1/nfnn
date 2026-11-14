@@ -1,12 +1,13 @@
 package cz.novanadeje.app.operations.application.backup;
 
+import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupHealth;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,9 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class BackupWatchServiceTest {
@@ -35,11 +35,12 @@ class BackupWatchServiceTest {
     private final BackupAdministrationService backups = mock(BackupAdministrationService.class);
     private final BackupAlertStateRepository states = mock(BackupAlertStateRepository.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+    private final OperationalAlertService alerts = mock(OperationalAlertService.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final BackupWatchService service = new BackupWatchService(backups, states, events, clock);
+    private final BackupWatchService service = new BackupWatchService(backups, states, alerts, events, clock);
 
     @Test
-    @DisplayName("Given a failed backup not yet reported, when the check runs, then the problem is reported once and remembered")
+    @DisplayName("Given a failed backup not yet reported, when the check runs, then the problem is reported once and remembered and the backup alert is recorded as opened")
     void should_report_when_checked_given_a_new_problem() {
         when(backups.view()).thenReturn(view(Set.of(BackupProblem.BACKUP_FAILED)));
         when(states.current()).thenReturn(BackupAlertState.nothingReported());
@@ -49,24 +50,24 @@ class BackupWatchServiceTest {
         assertThat(problems).containsExactly(BackupProblem.BACKUP_FAILED);
         verify(states).save(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW));
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, times(2)).publishEvent(published.capture());
-        assertThat(published.getAllValues().getFirst()).isInstanceOfSatisfying(BackupProblemsDetected.class, event -> {
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue()).isInstanceOfSatisfying(BackupProblemsDetected.class, event -> {
             assertThat(event.problems()).containsExactly(BackupProblem.BACKUP_FAILED);
             assertThat(event.detectedAt()).isEqualTo(NOW);
         });
-        assertThat(published.getAllValues().getLast()).isEqualTo(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
     }
 
     @Test
-    @DisplayName("Given the same problem already reported, when the check runs again, then only the open backup alert is announced and nothing is reported or saved")
-    void should_only_announce_open_alert_when_checked_given_the_same_problem_reported() {
+    @DisplayName("Given the same problem already reported, when the check runs again, then only the backup alert is recorded as opened and nothing is reported or saved")
+    void should_only_record_open_alert_when_checked_given_the_same_problem_reported() {
         when(backups.view()).thenReturn(view(Set.of(BackupProblem.BACKUP_FAILED)));
         when(states.current()).thenReturn(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_FAILED), NOW.minusSeconds(86_400)));
 
         service.check();
 
-        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, NOW));
-        verifyNoMoreInteractions(events);
+        verify(alerts).record(MonitoredArea.BACKUPS, true, NOW);
+        verifyNoInteractions(events);
         verify(states, never()).save(any());
     }
 
@@ -83,7 +84,7 @@ class BackupWatchServiceTest {
     }
 
     @Test
-    @DisplayName("Given a reported problem that has ended, when the check runs, then the recovery is published once and the state cleared")
+    @DisplayName("Given a reported problem that has ended, when the check runs, then the recovery is published once, the state cleared and the backup alert recorded as resolved")
     void should_report_recovery_when_checked_given_problems_ended() {
         when(backups.view()).thenReturn(view(Set.of()));
         when(states.current()).thenReturn(BackupAlertState.reported(Set.of(BackupProblem.BACKUP_STALE), NOW.minusSeconds(86_400)));
@@ -93,22 +94,22 @@ class BackupWatchServiceTest {
         assertThat(problems).isEmpty();
         verify(states).save(BackupAlertState.nothingReported());
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
-        verify(events, times(2)).publishEvent(published.capture());
-        assertThat(published.getAllValues().getFirst()).isInstanceOfSatisfying(BackupRecovered.class,
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue()).isInstanceOfSatisfying(BackupRecovered.class,
                 event -> assertThat(event.resolvedProblems()).containsExactly(BackupProblem.BACKUP_STALE));
-        assertThat(published.getAllValues().getLast()).isEqualTo(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, NOW));
+        verify(alerts).record(MonitoredArea.BACKUPS, false, NOW);
     }
 
     @Test
-    @DisplayName("Given healthy backups and nothing reported, when the check runs, then only the resolved backup alert is announced and nothing is reported or saved")
-    void should_only_announce_resolved_alert_when_checked_given_healthy_and_nothing_reported() {
+    @DisplayName("Given healthy backups and nothing reported, when the check runs, then only the backup alert is recorded as resolved and nothing is reported or saved")
+    void should_only_record_resolved_alert_when_checked_given_healthy_and_nothing_reported() {
         when(backups.view()).thenReturn(view(Set.of()));
         when(states.current()).thenReturn(BackupAlertState.nothingReported());
 
         service.check();
 
-        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, NOW));
-        verifyNoMoreInteractions(events);
+        verify(alerts).record(MonitoredArea.BACKUPS, false, NOW);
+        verifyNoInteractions(events);
         verify(states, never()).save(any());
     }
 

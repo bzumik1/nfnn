@@ -26,7 +26,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportPlan;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
 import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import cz.novanadeje.app.shared.application.event.DonationsArrived;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
+import cz.novanadeje.app.shared.application.event.ImportOutageChanged;
 import cz.novanadeje.app.shared.domain.Money;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -290,7 +290,7 @@ class BankStatementRecorderTest {
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
         verifyNoInteractions(alerts);
-        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verify(events).publishEvent(ImportOutageChanged.resolved(NOW));
         verifyNoMoreInteractions(events);
     }
 
@@ -304,8 +304,8 @@ class BankStatementRecorderTest {
         recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW);
         recorder.recordFailure(ImportFailureKind.TRANSPORT, "timed out", NOW.plusSeconds(3600));
 
-        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
-        verify(events).publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BANK_IMPORT, NOW.plusSeconds(3600)));
+        verify(events).publishEvent(ImportOutageChanged.opened(NOW));
+        verify(events).publishEvent(ImportOutageChanged.opened(NOW.plusSeconds(3600)));
         verifyNoMoreInteractions(events);
     }
 
@@ -318,7 +318,7 @@ class BankStatementRecorderTest {
 
         recorder.record(new BankStatement(HOURLY_REQUEST, Optional.empty(), List.of(), 0, Optional.empty()), new ImportPlan(HOURLY_REQUEST, false), ImportTrigger.HOURLY, NOW);
 
-        verify(events).publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BANK_IMPORT, NOW));
+        verify(events).publishEvent(ImportOutageChanged.resolved(NOW));
         verifyNoMoreInteractions(events);
     }
 

@@ -1,11 +1,12 @@
 package cz.novanadeje.app.operations.application.backup;
 
+import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
 import cz.novanadeje.app.operations.application.event.BackupProblemsDetected;
 import cz.novanadeje.app.operations.application.event.BackupRecovered;
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertState;
 import cz.novanadeje.app.operations.domain.backup.BackupAlertStateRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupProblem;
-import cz.novanadeje.app.shared.application.event.OperationalAlertRaised;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,12 +24,15 @@ public class BackupWatchService {
 
     private final BackupAdministrationService backups;
     private final BackupAlertStateRepository states;
+    private final OperationalAlertService alerts;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public BackupWatchService(BackupAdministrationService backups, BackupAlertStateRepository states, ApplicationEventPublisher events, Clock clock) {
+    public BackupWatchService(BackupAdministrationService backups, BackupAlertStateRepository states, OperationalAlertService alerts,
+                              ApplicationEventPublisher events, Clock clock) {
         this.backups = backups;
         this.states = states;
+        this.alerts = alerts;
         this.events = events;
         this.clock = clock;
     }
@@ -45,17 +49,17 @@ public class BackupWatchService {
                 events.publishEvent(new BackupRecovered(state.reportedProblems(), view.lastBackup(), view.lastTestRestore(), now));
                 log.info("Backups are healthy again after {}", state.reportedProblems());
             }
-            events.publishEvent(OperationalAlertRaised.resolved(OperationalAlertRaised.Area.BACKUPS, now));
+            alerts.record(MonitoredArea.BACKUPS, false, now);
             return problems;
         }
         if (problems.equals(state.reportedProblems())) {
-            events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, now));
+            alerts.record(MonitoredArea.BACKUPS, true, now);
             log.warn("Backup problems continue: {}", problems);
             return problems;
         }
         states.save(BackupAlertState.reported(problems, now));
         events.publishEvent(new BackupProblemsDetected(problems, view.lastBackup(), view.lastTestRestore(), now));
-        events.publishEvent(OperationalAlertRaised.opened(OperationalAlertRaised.Area.BACKUPS, now));
+        alerts.record(MonitoredArea.BACKUPS, true, now);
         log.warn("Backup problems detected: {}", problems);
         return problems;
     }
