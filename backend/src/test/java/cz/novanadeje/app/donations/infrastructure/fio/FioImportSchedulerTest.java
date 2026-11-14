@@ -7,7 +7,6 @@ import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.importing.BankImportProperties;
 import cz.novanadeje.app.donations.application.importing.FollowUp;
 import cz.novanadeje.app.donations.application.importing.HistoryImportRun;
-import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donations.application.importing.ImportBankPaymentsService;
 import cz.novanadeje.app.donations.application.importing.ImportCounts;
 import cz.novanadeje.app.donations.application.importing.ImportFollowUps;
@@ -24,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 import cz.novanadeje.app.support.MutableClock;
 import org.springframework.context.ApplicationEventPublisher;
@@ -49,12 +49,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -65,6 +65,7 @@ class FioImportSchedulerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-17T10:00:00Z");
     private static final Instant RETRY_AT = Instant.parse("2026-10-17T10:00:31Z");
+    private static final Instant PUT_OFF_UNTIL = Instant.parse("2026-10-17T10:00:45Z");
     private static final ImportPeriod REQUESTED = new ImportPeriod(LocalDate.parse("2026-07-20"), LocalDate.parse("2026-10-17"));
     private static final String FAILURE_MESSAGE = "Fio API request GET /periods/***/ failed: timed out";
     private static final Duration COOLDOWN = Duration.ofSeconds(30);
@@ -78,21 +79,20 @@ class FioImportSchedulerTest {
     private final TaskScheduler taskScheduler = mock(TaskScheduler.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final MutableClock clock = new MutableClock(NOW, ZoneId.of("Europe/Prague"));
-    private final HistoryImportTracker historyImports = mock(HistoryImportTracker.class);
-    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler,
-            new ImportFollowUps(historyImports, IMPORT_PROPERTIES, clock), clock, events);
+    private final ImportFollowUps followUps = mock(ImportFollowUps.class);
+    private final FioImportScheduler scheduler = new FioImportScheduler(service, IMPORT_PROPERTIES, taskScheduler, followUps, clock, events);
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void captureLog() {
         log = new ListAppender<>();
         log.start();
-        loggers().forEach(logger -> logger.addAppender(log));
+        logger().addAppender(log);
     }
 
     @AfterEach
     void releaseLog() {
-        loggers().forEach(logger -> logger.detachAppender(log));
+        logger().detachAppender(log);
     }
 
     @Test
@@ -105,6 +105,56 @@ class FioImportSchedulerTest {
 
         verify(service).importIncomingPayments(STARTUP, SETTINGS);
         verify(service).importIncomingPayments(HOURLY, SETTINGS);
+    }
+
+    @Test
+    @DisplayName("Given a pending follow-up, when the scheduler ticks, then the pending follow-up is cancelled and the follow-ups start counting again before the import runs")
+    void should_cancel_pending_follow_up_and_restart_count_before_import_when_ticked_given_pending_follow_up() {
+        ScheduledFuture<?> pending = mock(ScheduledFuture.class);
+        doReturn(pending).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importIncomingPayments(any(), any()))
+                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)))
+                .thenReturn(completed(HOURLY));
+        when(followUps.after(any())).thenReturn(Optional.of(new FollowUp(RETRY_AT, STARTUP)), Optional.empty());
+        scheduler.tick();
+
+        scheduler.tick();
+
+        verify(pending).cancel(false);
+        InOrder order = inOrder(followUps, service);
+        order.verify(followUps).scheduledRunStarted();
+        order.verify(service).importIncomingPayments(STARTUP, SETTINGS);
+        order.verify(followUps).scheduledRunStarted();
+        order.verify(service).importIncomingPayments(HOURLY, SETTINGS);
+    }
+
+    @Test
+    @DisplayName("Given an import the bank held back, when its follow-up runs, then the follow-ups keep counting, because only the scheduled run starts the count again")
+    void should_keep_counting_follow_ups_when_the_follow_up_runs_given_an_import_held_back() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importIncomingPayments(any(), any()))
+                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)))
+                .thenReturn(completed(STARTUP));
+        when(followUps.after(any())).thenReturn(Optional.of(new FollowUp(RETRY_AT, STARTUP)), Optional.empty());
+        scheduler.tick();
+
+        scheduledFollowUp().run();
+
+        verify(service, times(2)).importIncomingPayments(STARTUP, SETTINGS);
+        verify(followUps, times(1)).scheduledRunStarted();
+    }
+
+    @Test
+    @DisplayName("Given an on-demand import, when it runs, then the follow-ups do not start counting again, because only the scheduled run starts the count")
+    void should_not_restart_the_follow_up_count_when_an_on_demand_import_runs_given_requested_import() {
+        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+        when(service.importOnDemand(any(), any())).thenReturn(Optional.of(completed(ON_DEMAND)));
+        scheduler.requestImport();
+
+        scheduledFollowUp().run();
+
+        verify(service).importOnDemand(SETTINGS, COOLDOWN);
+        verify(followUps, never()).scheduledRunStarted();
     }
 
     @Test
@@ -126,7 +176,7 @@ class FioImportSchedulerTest {
     void should_publish_bank_import_hint_after_progress_cleared_when_history_run_ends_given_queued_run() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(null, null));
-        currentRuns(1);
+        allRunsDue();
         List<Boolean> inProgressAtHint = new ArrayList<>();
         doAnswer(invocation -> inProgressAtHint.add(scheduler.inProgress())).when(events).publishEvent(any(Object.class));
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
@@ -161,9 +211,9 @@ class FioImportSchedulerTest {
     @Test
     @DisplayName("Given an import that reports a follow-up, when the scheduler ticks, then the follow-up runs at the reported instant with its trigger")
     void should_schedule_follow_up_at_reported_instant_when_ticked_given_follow_up() {
-        when(service.importIncomingPayments(any(), any()))
-                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)))
-                .thenReturn(completed(STARTUP));
+        ImportReport heldBack = failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP));
+        when(service.importIncomingPayments(any(), any())).thenReturn(heldBack).thenReturn(completed(STARTUP));
+        when(followUps.after(heldBack)).thenReturn(Optional.of(new FollowUp(RETRY_AT, STARTUP)));
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
 
         scheduler.tick();
@@ -175,6 +225,19 @@ class FioImportSchedulerTest {
     }
 
     @Test
+    @DisplayName("Given an import the bank held back, when the follow-ups allow no more, then nothing is scheduled")
+    void should_schedule_nothing_when_follow_ups_allow_no_more_given_import_held_back() {
+        ImportReport heldBack = failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP));
+        when(service.importIncomingPayments(any(), any())).thenReturn(heldBack);
+        when(followUps.after(heldBack)).thenReturn(Optional.empty());
+
+        scheduler.tick();
+
+        verify(followUps).after(heldBack);
+        verify(taskScheduler, never()).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
     @DisplayName("Given a pending follow-up, when the follow-up asks for another one, then the first is cancelled and only the second stays pending")
     void should_cancel_previous_follow_up_when_scheduling_given_pending_follow_up() {
         ScheduledFuture<?> first = mock(ScheduledFuture.class);
@@ -182,6 +245,9 @@ class FioImportSchedulerTest {
         when(service.importIncomingPayments(any(), any()))
                 .thenReturn(failed(STARTUP, ImportFailureKind.HISTORY_LOCKED, new FollowUp(RETRY_AT, HOURLY)))
                 .thenReturn(failed(HOURLY, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT.plusSeconds(31), HOURLY)));
+        when(followUps.after(any()))
+                .thenReturn(Optional.of(new FollowUp(RETRY_AT, HOURLY)))
+                .thenReturn(Optional.of(new FollowUp(RETRY_AT.plusSeconds(31), HOURLY)));
         doReturn(first).doReturn(second).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
 
         scheduler.tick();
@@ -190,45 +256,6 @@ class FioImportSchedulerTest {
         verify(first).cancel(false);
         verify(second, never()).cancel(any(Boolean.class));
         verify(service).importIncomingPayments(HOURLY, SETTINGS);
-    }
-
-    @Test
-    @DisplayName("Given three follow-ups since the tick, when a fourth is reported, then it is not scheduled and a warning says the scheduler waits for the hourly run")
-    void should_refuse_fourth_follow_up_when_reported_given_three_since_tick() {
-        when(service.importIncomingPayments(any(), any()))
-                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)));
-        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-
-        scheduler.tick();
-        for (int i = 0; i < 3; i++) {
-            scheduledFollowUps().getLast().run();
-        }
-
-        verify(taskScheduler, times(3)).schedule(any(Runnable.class), any(Instant.class));
-        verify(service, times(4)).importIncomingPayments(STARTUP, SETTINGS);
-        assertThat(messages(Level.WARN))
-                .contains("Fio refused 4 follow-ups in a row; waiting for the next hourly run");
-    }
-
-    @Test
-    @DisplayName("Given a pending follow-up and an exhausted follow-up budget, when the scheduler ticks, then the pending follow-up is cancelled and three new follow-ups are allowed again")
-    void should_cancel_pending_follow_up_and_reset_budget_when_ticked_given_pending_follow_up() {
-        ScheduledFuture<?> pending = mock(ScheduledFuture.class);
-        when(service.importIncomingPayments(any(), any()))
-                .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)));
-        doReturn(mock(ScheduledFuture.class)).doReturn(mock(ScheduledFuture.class)).doReturn(pending)
-                .doReturn(mock(ScheduledFuture.class))
-                .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-        scheduler.tick();
-        for (int i = 0; i < 3; i++) {
-            scheduledFollowUps().getLast().run();
-        }
-
-        scheduler.tick();
-
-        verify(pending).cancel(false);
-        verify(taskScheduler, times(4)).schedule(any(Runnable.class), any(Instant.class));
-        assertThat(messages(Level.WARN)).filteredOn(message -> message.startsWith("Fio refused")).hasSize(1);
     }
 
     @Test
@@ -269,6 +296,7 @@ class FioImportSchedulerTest {
         when(service.importIncomingPayments(any(), any()))
                 .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)))
                 .thenThrow(new IllegalStateException("boom"));
+        when(followUps.after(any())).thenReturn(Optional.of(new FollowUp(RETRY_AT, STARTUP)));
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         scheduler.tick();
 
@@ -280,7 +308,6 @@ class FioImportSchedulerTest {
     void should_warn_with_follow_up_when_ticked_given_rate_limited() {
         when(service.importIncomingPayments(any(), any()))
                 .thenReturn(failed(STARTUP, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, STARTUP)));
-        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
 
         scheduler.tick();
 
@@ -306,7 +333,6 @@ class FioImportSchedulerTest {
     void should_warn_with_unlock_instruction_when_ticked_given_history_locked() {
         when(service.importIncomingPayments(any(), any()))
                 .thenReturn(failed(STARTUP, ImportFailureKind.HISTORY_LOCKED, new FollowUp(RETRY_AT, HOURLY)));
-        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
 
         scheduler.tick();
 
@@ -429,6 +455,7 @@ class FioImportSchedulerTest {
         doReturn(onDemand).doReturn(followUp).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importOnDemand(SETTINGS, COOLDOWN))
                 .thenReturn(Optional.of(failed(ON_DEMAND, ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, ON_DEMAND))));
+        when(followUps.after(any())).thenReturn(Optional.of(new FollowUp(RETRY_AT, ON_DEMAND)));
         scheduler.requestImport();
         scheduledFollowUp().run();
 
@@ -443,7 +470,7 @@ class FioImportSchedulerTest {
     void should_schedule_one_history_run_with_latest_run_when_requested_twice_given_nothing_queued() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(null, null));
-        currentRuns(2);
+        allRunsDue();
 
         scheduler.requestHistoryImport(run(1, LocalDate.parse("2025-01-01"), STARTS_AT));
         scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
@@ -462,7 +489,7 @@ class FioImportSchedulerTest {
     void should_import_newer_run_when_older_handover_arrives_late_given_newer_run_handed_over() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(null, null));
-        currentRuns(2);
+        allRunsDue();
 
         scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
         scheduler.requestHistoryImport(run(1, LocalDate.parse("2025-01-01"), NOW));
@@ -478,11 +505,11 @@ class FioImportSchedulerTest {
         ScheduledFuture<?> queued = mock(ScheduledFuture.class);
         ScheduledFuture<?> followUp = mock(ScheduledFuture.class);
         doReturn(queued).doReturn(followUp).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-        when(service.importHistory(any(), any()))
-                .thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)))
-                .thenReturn(history(null, null));
+        ImportReport heldBack = history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY));
+        when(service.importHistory(any(), any())).thenReturn(heldBack).thenReturn(history(null, null));
         when(service.importIncomingPayments(any(), any())).thenReturn(completed(STARTUP));
-        currentRuns(1);
+        allRunsDue();
+        when(followUps.afterHistory(run(1, HISTORY_FROM, NOW), heldBack)).thenReturn(Optional.of(RETRY_AT));
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
         scheduledFollowUp().run();
 
@@ -496,84 +523,45 @@ class FioImportSchedulerTest {
     }
 
     @Test
-    @DisplayName("Given three history follow-ups in a row, when the bank refuses a fourth time, then no follow-up is scheduled, a warning says so and the run is abandoned")
-    void should_abandon_history_run_when_refused_four_times_given_three_follow_ups() {
-        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
+    @DisplayName("Given a history follow-up waiting, when a newer run is requested, then the waiting follow-up is cancelled and the newer run is scheduled at its time")
+    void should_cancel_waiting_follow_up_and_schedule_newer_run_when_requested_given_history_follow_up_waiting() {
+        ScheduledFuture<?> waiting = mock(ScheduledFuture.class);
+        doReturn(mock(ScheduledFuture.class)).doReturn(waiting).doReturn(mock(ScheduledFuture.class))
+                .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
-        currentRuns(7);
-        scheduler.requestHistoryImport(run(7, HISTORY_FROM, NOW));
-
-        for (int run = 0; run < 4; run++) {
-            scheduledFollowUp().run();
-        }
-
-        verify(taskScheduler, times(4)).schedule(any(Runnable.class), any(Instant.class));
-        verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
-        assertThat(messages(Level.WARN)).contains("Fio import HISTORY put off 4 times in a row; it waits to be requested again");
-    }
-
-    @Test
-    @DisplayName("Given a history run held back twice, when the hourly import ticks between its follow-ups, then the tick leaves its budget alone and the fourth refusal still abandons it")
-    void should_keep_history_budget_across_tick_when_refused_given_hourly_tick_between() {
-        doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
-        when(service.importIncomingPayments(any(), any())).thenReturn(completed(STARTUP));
-        currentRuns(7);
-        scheduler.requestHistoryImport(run(7, HISTORY_FROM, NOW));
-        Runnable historyRun = scheduledFollowUp();
-        historyRun.run();
-        scheduledFollowUp().run();
-
-        scheduler.tick();
-        scheduledFollowUp().run();
-        scheduledFollowUp().run();
-
-        verify(historyImports).abandoned(7, ImportFailureKind.RATE_LIMITED, NOW);
-    }
-
-    @Test
-    @DisplayName("Given a run that used up its follow-ups but one, when a new run is requested, then the new run gets all three follow-ups again and the pending one is cancelled")
-    void should_reset_follow_ups_and_cancel_pending_when_requested_given_earlier_run_put_off() {
-        ScheduledFuture<?> pending = mock(ScheduledFuture.class);
-        doReturn(mock(ScheduledFuture.class)).doReturn(mock(ScheduledFuture.class)).doReturn(pending)
-                .doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-        when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
-        currentRuns(1, 2);
+        allRunsDue();
+        when(followUps.afterHistory(any(), any())).thenReturn(Optional.of(RETRY_AT));
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
         scheduledFollowUp().run();
+
+        scheduler.requestHistoryImport(run(2, HISTORY_FROM, STARTS_AT));
         scheduledFollowUp().run();
 
-        scheduler.requestHistoryImport(run(2, HISTORY_FROM, NOW));
-        for (int run = 0; run < 4; run++) {
-            scheduledFollowUp().run();
-        }
-
-        verify(pending).cancel(false);
-        verify(historyImports, never()).abandoned(eq(1L), any(), any());
-        verify(historyImports).abandoned(2, ImportFailureKind.RATE_LIMITED, NOW);
+        verify(waiting).cancel(false);
+        verify(taskScheduler).schedule(any(Runnable.class), eq(STARTS_AT));
+        verify(service).importHistory(run(2, HISTORY_FROM, STARTS_AT), SETTINGS);
     }
 
     @Test
-    @DisplayName("Given another import still running when the history run is due, when it fires, then it is put off by the bank's 30 seconds without using up a follow-up and runs then")
-    void should_put_off_without_follow_up_when_due_given_another_import_running() {
+    @DisplayName("Given another import still running when the history run is due, when it fires, then it is put off until the time the follow-ups give without asking them for a follow-up, and runs then")
+    void should_put_off_until_follow_ups_time_without_follow_up_when_due_given_another_import_running() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(null, null));
-        currentRuns(3);
+        allRunsDue();
+        when(followUps.putOffWhileBusy()).thenReturn(PUT_OFF_UNTIL);
         when(service.importIncomingPayments(any(), any())).thenAnswer(invocation -> {
             scheduler.requestHistoryImport(run(3, HISTORY_FROM, NOW));
-            for (int skipped = 0; skipped < 5; skipped++) {
-                scheduledFollowUp().run();
-            }
+            scheduledFollowUp().run();
             return completed(STARTUP);
         });
 
         scheduler.tick();
         verify(service, never()).importHistory(any(), any());
+        verify(followUps, never()).afterHistory(any(), any());
         scheduledFollowUp().run();
 
-        verify(taskScheduler, times(5)).schedule(any(Runnable.class), eq(NOW.plus(COOLDOWN)));
+        verify(taskScheduler).schedule(any(Runnable.class), eq(PUT_OFF_UNTIL));
         verify(service).importHistory(run(3, HISTORY_FROM, NOW), SETTINGS);
-        verify(historyImports, never()).abandoned(anyLong(), any(), any());
     }
 
     @Test
@@ -581,11 +569,11 @@ class FioImportSchedulerTest {
     void should_import_nothing_when_old_follow_up_fires_given_run_replaced() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
-        currentRuns(1);
+        when(followUps.due(run(1, HISTORY_FROM, NOW))).thenReturn(true, false);
+        when(followUps.afterHistory(any(), any())).thenReturn(Optional.of(RETRY_AT));
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
         scheduledFollowUp().run();
         Runnable oldFollowUp = scheduledFollowUp();
-        when(historyImports.current(1)).thenReturn(false);
 
         oldFollowUp.run();
 
@@ -593,19 +581,20 @@ class FioImportSchedulerTest {
     }
 
     @Test
-    @DisplayName("Given a run replaced while it was running, when the bank holds the old one back, then no follow-up is scheduled for it")
-    void should_schedule_no_follow_up_when_held_back_given_run_replaced_while_running() {
+    @DisplayName("Given a history run the bank held back, when the follow-ups give it no next time, then no follow-up is scheduled for it")
+    void should_schedule_no_follow_up_when_follow_ups_give_no_time_given_history_run_held_back() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
-        currentRuns(1);
-        when(service.importHistory(any(), any())).thenAnswer(invocation -> {
-            when(historyImports.current(1)).thenReturn(false);
-            return history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY));
-        });
+        ImportReport heldBack = history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY));
+        when(service.importHistory(any(), any())).thenReturn(heldBack);
+        allRunsDue();
+        when(followUps.afterHistory(run(1, HISTORY_FROM, NOW), heldBack)).thenReturn(Optional.empty());
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
 
         scheduledFollowUp().run();
 
+        verify(followUps).afterHistory(run(1, HISTORY_FROM, NOW), heldBack);
         verify(taskScheduler, never()).schedule(any(Runnable.class), eq(RETRY_AT));
+        assertThat(scheduler.inProgress()).isFalse();
     }
 
     @Test
@@ -627,12 +616,13 @@ class FioImportSchedulerTest {
         doReturn(mock(ScheduledFuture.class)).doThrow(new TaskRejectedException("shutting down"))
                 .when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.RATE_LIMITED, new FollowUp(RETRY_AT, HISTORY)));
-        currentRuns(1);
+        allRunsDue();
+        when(followUps.afterHistory(any(), any())).thenReturn(Optional.of(RETRY_AT));
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
 
         scheduledFollowUp().run();
 
-        verify(historyImports).abandoned(1, ImportFailureKind.UNEXPECTED, NOW);
+        verify(followUps).notRescheduled(run(1, HISTORY_FROM, NOW));
         assertThat(messages(Level.WARN)).contains("Fio import HISTORY run 1 could not be scheduled again (TaskRejectedException); it ends as failed");
     }
 
@@ -641,7 +631,7 @@ class FioImportSchedulerTest {
     void should_warn_with_unlock_instruction_when_history_run_fails_given_locked_history() {
         doReturn(mock(ScheduledFuture.class)).when(taskScheduler).schedule(any(Runnable.class), any(Instant.class));
         when(service.importHistory(any(), any())).thenReturn(history(ImportFailureKind.HISTORY_LOCKED, null));
-        currentRuns(1);
+        allRunsDue();
         scheduler.requestHistoryImport(run(1, HISTORY_FROM, NOW));
 
         scheduledFollowUp().run();
@@ -655,10 +645,8 @@ class FioImportSchedulerTest {
         return HistoryImportRun.queued(id, new ImportPeriod(from, LocalDate.parse("2026-10-17")), true, NOW, startsAt);
     }
 
-    private void currentRuns(long... ids) {
-        for (long id : ids) {
-            when(historyImports.current(id)).thenReturn(true);
-        }
+    private void allRunsDue() {
+        when(followUps.due(any())).thenReturn(true);
     }
 
     private static ImportReport history(ImportFailureKind kind, FollowUp followUp) {
@@ -667,13 +655,9 @@ class FioImportSchedulerTest {
     }
 
     private Runnable scheduledFollowUp() {
-        return scheduledFollowUps().getLast();
-    }
-
-    private List<Runnable> scheduledFollowUps() {
         ArgumentCaptor<Runnable> tasks = ArgumentCaptor.forClass(Runnable.class);
         verify(taskScheduler, atLeastOnce()).schedule(tasks.capture(), any(Instant.class));
-        return tasks.getAllValues();
+        return tasks.getAllValues().getLast();
     }
 
     private List<String> messages(Level level) {
@@ -694,7 +678,7 @@ class FioImportSchedulerTest {
                 Optional.of(kind), Optional.of(FAILURE_MESSAGE), Optional.ofNullable(followUp));
     }
 
-    private static List<Logger> loggers() {
-        return List.of((Logger) LoggerFactory.getLogger(FioImportScheduler.class), (Logger) LoggerFactory.getLogger(ImportFollowUps.class));
+    private static Logger logger() {
+        return (Logger) LoggerFactory.getLogger(FioImportScheduler.class);
     }
 }
