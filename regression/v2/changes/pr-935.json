@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.domain.loggers.ProtectedLoggersTest > [3] name = \"org.hibernate.internal.util.EntityPrinter\"",
+    "replacement": "operations.domain.loggers.ProtectedLoggersTest > [3] name = \"org.hibernate.orm.core\"",
+    "reason": "Security audit 2026-11-14 (#915, BACKEND-DATA-1): Hibernate 7 no longer logs the flush's entity listing under org.hibernate.internal.util.EntityPrinter but under org.hibernate.orm.core, so the stale pin is replaced by the logger Hibernate really writes rows under, and the protected-logger case names it",
+    "contract": "docs/security-overview.md, Logs; docs/api-contract.md, Log levels"
+  }
+]
