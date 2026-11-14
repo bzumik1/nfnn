@@ -139,6 +139,20 @@ class JpaEmailVerificationTokenRepositoryTest {
     }
 
     @Test
+    @DisplayName("Given a token read before it was marked used, when the copy read earlier is saved, then the use stays, so a save never takes a spend back")
+    void should_keep_the_use_when_saved_given_a_copy_read_before_the_use() {
+        EmailVerificationToken token = issue(jana, NOW);
+        flushAndClear();
+        EmailVerificationToken readBefore = tokens.findBySecretHash(token.secretHash()).orElseThrow();
+        assertThat(tokens.markUsed(token.id(), NOW.plusSeconds(10))).isTrue();
+
+        tokens.save(readBefore);
+        flushAndClear();
+
+        assertThat(tokens.findBySecretHash(token.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(10));
+    }
+
+    @Test
     @DisplayName("Given three tokens of a donor, one used, and one of another donor, when all of the donor's are deleted, then only the other donor's stays")
     void should_keep_only_other_donors_token_when_all_of_donor_deleted_given_three_tokens() {
         EmailVerificationToken used = issue(jana, NOW);

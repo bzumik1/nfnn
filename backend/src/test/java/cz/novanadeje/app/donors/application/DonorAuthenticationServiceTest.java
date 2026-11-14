@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
 import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -397,14 +398,11 @@ class DonorAuthenticationServiceTest {
         when(challenges.findBySecretHash(expired.hash()))
                 .thenReturn(Optional.of(SecondFactorChallenge.issue(expired, donor.id(), NOW.minus(CHALLENGE_TTL), CHALLENGE_TTL)));
         LinkSecret spent = LinkSecret.generate();
-        SecondFactorChallenge used = SecondFactorChallenge.issue(spent, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL);
-        used.markUsed(NOW.minusSeconds(30));
+        SecondFactorChallenge used = SpentCredentials.used(SecondFactorChallenge.issue(spent, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL), NOW.minusSeconds(30));
         when(challenges.findBySecretHash(spent.hash())).thenReturn(Optional.of(used));
         LinkSecret exhausted = LinkSecret.generate();
-        SecondFactorChallenge failed = SecondFactorChallenge.issue(exhausted, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL);
-        for (int attempt = 0; attempt < CHALLENGE_ATTEMPTS; attempt++) {
-            failed.recordFailedAttempt();
-        }
+        SecondFactorChallenge failed = SpentCredentials.withFailedAttempts(
+                SecondFactorChallenge.issue(exhausted, donor.id(), NOW.minusSeconds(60), CHALLENGE_TTL), CHALLENGE_ATTEMPTS);
         when(challenges.findBySecretHash(exhausted.hash())).thenReturn(Optional.of(failed));
 
         assertThatThrownBy(() -> service.completeSecondFactor(expired.value(), codeAt(NOW), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED)).isInstanceOf(InvalidSecondFactorChallenge.class);

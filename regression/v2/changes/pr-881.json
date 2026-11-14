@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.RefreshTokenTest > Given a rotation, when the token is marked used, then it is used but not revoked",
+    "replacement": "donors.domain.RefreshTokenTest > Given a token its rotation used, when it is checked, then it is used but not revoked",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.RefreshTokenTest > Given a sign-out or a password change, when the token is revoked, then it does not count as used",
+    "replacement": "donors.domain.RefreshTokenTest > Given a token a sign-out or a password change revoked, when it is checked, then it does not count as used",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.RefreshTokenTest > Given an unused token, when the grace supersedes it, then it is revoked and remembered as superseded",
+    "replacement": "donors.domain.RefreshTokenTest > Given an unused token and one the grace superseded, when they are checked, then only the superseded one is revoked and remembered as superseded",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.PasswordResetTokenTest > Given a used token, when it is marked used again, then it refuses",
+    "replacement": "donors.infrastructure.persistence.JpaPasswordResetTokenRepositoryTest > Given a live token, when it is marked used twice, then the first wins and the second finds nothing to win",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.EmailVerificationTokenTest > Given a used token, when it is marked used again, then it refuses",
+    "replacement": "donors.infrastructure.persistence.JpaEmailVerificationTokenRepositoryTest > Given a live token, when it is marked used twice, then the first wins and the second finds nothing to win",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.persistence.JpaSecondFactorChallengeRepositoryTest > Given a challenge with a counted attempt and a use, when it is saved again, then both survive",
+    "replacement": "donors.infrastructure.persistence.JpaSecondFactorChallengeRepositoryTest > Given a challenge read before two attempts were reserved and it was marked used, when the copy read earlier is saved, then the attempts and the use stay, so a save never takes a spend back",
+    "reason": "PR #881 (#878, part of #621, architecture audit round 4): the single-use credentials lose their unused domain mutators and are spent only by their repositories' conditional updates, so a test that marked, revoked or superseded the domain object now checks a stored spent copy or the conditional update",
+    "contract": "docs/system-overview.md, shared (Database incidents, #878); docs/security-overview.md, Donor authentication (Spending one-time secrets)"
+  }
+]

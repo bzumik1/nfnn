@@ -26,9 +26,9 @@ class PasskeyChallengeTest {
         assertThat(challenge.isUsableForRegistrationBy(DonorId.newId(NOW), NOW)).isFalse();
         assertThat(challenge.isUsableForSignInAt(NOW)).isFalse();
         assertThat(challenge.isUsableForRegistrationBy(donor, NOW.plus(TTL))).isFalse();
-        challenge.markUsed(NOW.plusSeconds(5));
-        assertThat(challenge.isUsableForRegistrationBy(donor, NOW.plusSeconds(10))).isFalse();
-        assertThat(challenge.usedAt()).contains(NOW.plusSeconds(5));
+        PasskeyChallenge used = usedCopyOf(challenge, NOW.plusSeconds(5));
+        assertThat(used.isUsableForRegistrationBy(donor, NOW.plusSeconds(10))).isFalse();
+        assertThat(used.usedAt()).contains(NOW.plusSeconds(5));
     }
 
     @Test
@@ -41,7 +41,11 @@ class PasskeyChallengeTest {
         assertThat(challenge.isUsableForRegistrationBy(DonorId.newId(NOW), NOW)).isFalse();
         assertThat(challenge.isUsableForSignInAt(NOW.plus(TTL).minusMillis(1))).isTrue();
         assertThat(challenge.isUsableForSignInAt(NOW.plus(TTL))).isFalse();
-        challenge.markUsed(NOW);
-        assertThat(challenge.isUsableForSignInAt(NOW)).isFalse();
+        assertThat(usedCopyOf(challenge, NOW).isUsableForSignInAt(NOW)).isFalse();
+    }
+
+    private static PasskeyChallenge usedCopyOf(PasskeyChallenge challenge, Instant usedAt) {
+        return PasskeyChallenge.reconstitute(challenge.id(), challenge.ceremony(), challenge.donorId().orElse(null), challenge.challengeHash(),
+                challenge.issuedAt(), challenge.expiresAt(), usedAt);
     }
 }

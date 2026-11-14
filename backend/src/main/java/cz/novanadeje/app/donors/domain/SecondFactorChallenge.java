@@ -14,8 +14,8 @@ public final class SecondFactorChallenge {
     private final String secretHash;
     private final Instant issuedAt;
     private final Instant expiresAt;
-    private int failedAttempts;
-    private Instant usedAt;
+    private final int failedAttempts;
+    private final Instant usedAt;
 
     private SecondFactorChallenge(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, int failedAttempts,
                                   Instant usedAt) {
@@ -39,14 +39,6 @@ public final class SecondFactorChallenge {
 
     public boolean isUsableAt(Instant now, int maxFailedAttempts) {
         return usedAt == null && now.isBefore(expiresAt) && failedAttempts < maxFailedAttempts;
-    }
-
-    public void recordFailedAttempt() {
-        failedAttempts++;
-    }
-
-    public void markUsed(Instant at) {
-        usedAt = at;
     }
 
     public UUID id() {

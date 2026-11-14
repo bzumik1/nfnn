@@ -33,19 +33,20 @@ class SecondFactorChallengeTest {
     void should_not_be_usable_when_expired_used_or_exhausted() {
         DonorId donor = DonorId.newId(NOW);
         SecondFactorChallenge expired = SecondFactorChallenge.issue(LinkSecret.generate(), donor, NOW, TTL);
-        SecondFactorChallenge used = SecondFactorChallenge.issue(LinkSecret.generate(), donor, NOW, TTL);
-        SecondFactorChallenge exhausted = SecondFactorChallenge.issue(LinkSecret.generate(), donor, NOW, TTL);
+        SecondFactorChallenge used = stored(donor, 0, NOW.plusSeconds(10));
+        SecondFactorChallenge lastAttemptLeft = stored(donor, MAX_ATTEMPTS - 1, null);
+        SecondFactorChallenge exhausted = stored(donor, MAX_ATTEMPTS, null);
 
-        used.markUsed(NOW.plusSeconds(10));
-        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            assertThat(exhausted.isUsableAt(NOW, MAX_ATTEMPTS)).isTrue();
-            exhausted.recordFailedAttempt();
-        }
-
+        assertThat(lastAttemptLeft.isUsableAt(NOW, MAX_ATTEMPTS)).isTrue();
         assertThat(expired.isUsableAt(NOW.plus(TTL), MAX_ATTEMPTS)).isFalse();
         assertThat(used.isUsableAt(NOW.plusSeconds(20), MAX_ATTEMPTS)).isFalse();
         assertThat(used.usedAt()).contains(NOW.plusSeconds(10));
         assertThat(exhausted.isUsableAt(NOW, MAX_ATTEMPTS)).isFalse();
         assertThat(exhausted.failedAttempts()).isEqualTo(MAX_ATTEMPTS);
+    }
+
+    private static SecondFactorChallenge stored(DonorId donor, int failedAttempts, Instant usedAt) {
+        SecondFactorChallenge issued = SecondFactorChallenge.issue(LinkSecret.generate(), donor, NOW, TTL);
+        return SecondFactorChallenge.reconstitute(issued.id(), donor, issued.secretHash(), NOW, issued.expiresAt(), failedAttempts, usedAt);
     }
 }

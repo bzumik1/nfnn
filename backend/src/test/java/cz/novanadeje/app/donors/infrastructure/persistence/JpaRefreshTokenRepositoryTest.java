@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.infrastructure.persistence;
 
 import cz.novanadeje.app.PersistenceTest;
+import cz.novanadeje.app.donors.domain.SpentCredentials;
 import cz.novanadeje.app.donors.domain.SessionKind;
 import cz.novanadeje.app.donors.domain.ClientId;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
@@ -79,11 +80,9 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used and a revoked token, when they are found by hash, then the use and the revocation survive separately")
     void should_keep_use_and_revocation_apart_when_found_given_both_kinds() {
         RefreshTokenSecret usedSecret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false);
-        used.markUsed(NOW.plusSeconds(60));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false), NOW.plusSeconds(60));
         RefreshTokenSecret revokedSecret = RefreshTokenSecret.generate();
-        RefreshToken revoked = RefreshToken.issue(revokedSecret, jana, device, NOW, TTL, false);
-        revoked.revoke(NOW.plusSeconds(120));
+        RefreshToken revoked = SpentCredentials.revoked(RefreshToken.issue(revokedSecret, jana, device, NOW, TTL, false), NOW.plusSeconds(120));
         refreshTokens.save(used);
         refreshTokens.save(revoked);
         flushAndClear();
@@ -100,10 +99,8 @@ class JpaRefreshTokenRepositoryTest {
     @Test
     @DisplayName("Given a client's rotated, revoked, expired and live tokens, when the usable client tokens are listed, then only the live one is returned")
     void should_list_only_live_client_tokens_when_listed_given_rotated_revoked_and_expired_ones() {
-        RefreshToken rotated = RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW, NOW, TTL);
-        rotated.markUsed(NOW.plusSeconds(60));
-        RefreshToken revoked = RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW, NOW, TTL);
-        revoked.revoke(NOW.plusSeconds(60));
+        RefreshToken rotated = SpentCredentials.used(RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW, NOW, TTL), NOW.plusSeconds(60));
+        RefreshToken revoked = SpentCredentials.revoked(RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW, NOW, TTL), NOW.plusSeconds(60));
         RefreshToken expired = RefreshToken.issueForClient(RefreshTokenSecret.generate(), jana, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW,
                 NOW.minus(TTL), TTL);
         RefreshToken browser = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, true);
@@ -121,8 +118,7 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used and a live token, when every token of the donor is revoked, then both carry the revocation and the use stays")
     void should_revoke_every_token_when_all_revoked_given_used_and_live_tokens() {
         RefreshTokenSecret usedSecret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false);
-        used.markUsed(NOW.plusSeconds(60));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(usedSecret, jana, device, NOW, TTL, false), NOW.plusSeconds(60));
         RefreshTokenSecret liveSecret = RefreshTokenSecret.generate();
         refreshTokens.save(used);
         refreshTokens.save(RefreshToken.issue(liveSecret, jana, device, NOW.plusSeconds(60), TTL, false));
@@ -193,8 +189,7 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given a used token and the token issued after it, when the successor is recorded, then the used token names it")
     void should_name_the_successor_when_recorded_given_a_used_token_and_the_next_one() {
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        RefreshToken used = RefreshToken.issue(secret, jana, device, NOW, TTL, false);
-        used.markUsed(NOW.plusSeconds(60));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(secret, jana, device, NOW, TTL, false), NOW.plusSeconds(60));
         RefreshToken successor = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW.plusSeconds(60), TTL, false);
         refreshTokens.save(used);
         refreshTokens.save(successor);
@@ -210,10 +205,8 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given an unused, a used and a revoked token, when each is revoked if unused, then only the unused one is revoked and the others keep their state")
     void should_revoke_only_the_unused_token_when_revoked_if_unused_given_unused_used_and_revoked_tokens() {
         RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        used.markUsed(NOW.plusSeconds(10));
-        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        revoked.revoke(NOW.plusSeconds(10));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false), NOW.plusSeconds(10));
+        RefreshToken revoked = SpentCredentials.revoked(RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false), NOW.plusSeconds(10));
         for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
             refreshTokens.save(token);
         }
@@ -233,10 +226,8 @@ class JpaRefreshTokenRepositoryTest {
     @DisplayName("Given an unused, a used and a revoked token, when each is superseded if unused, then only the unused one is revoked and remembered as superseded")
     void should_supersede_only_the_unused_token_when_superseded_if_unused_given_unused_used_and_revoked_tokens() {
         RefreshToken unused = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        RefreshToken used = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        used.markUsed(NOW.plusSeconds(10));
-        RefreshToken revoked = RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false);
-        revoked.revoke(NOW.plusSeconds(10));
+        RefreshToken used = SpentCredentials.used(RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false), NOW.plusSeconds(10));
+        RefreshToken revoked = SpentCredentials.revoked(RefreshToken.issue(RefreshTokenSecret.generate(), jana, device, NOW, TTL, false), NOW.plusSeconds(10));
         for (RefreshToken token : new RefreshToken[]{unused, used, revoked}) {
             refreshTokens.save(token);
         }

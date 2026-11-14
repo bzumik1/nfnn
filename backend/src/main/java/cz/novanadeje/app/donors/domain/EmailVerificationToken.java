@@ -16,7 +16,7 @@ public final class EmailVerificationToken {
     private final Instant issuedAt;
     private final Instant expiresAt;
     private final EmailAddress newEmail;
-    private Instant usedAt;
+    private final Instant usedAt;
 
     private EmailVerificationToken(UUID id, DonorId donorId, String secretHash, Instant issuedAt, Instant expiresAt, EmailAddress newEmail,
                                    Instant usedAt) {
@@ -56,13 +56,6 @@ public final class EmailVerificationToken {
 
     public boolean isUsableAt(Instant now) {
         return usedAt == null && now.isBefore(expiresAt);
-    }
-
-    public void markUsed(Instant at) {
-        if (usedAt != null) {
-            throw new IllegalStateException("E-mail verification token " + id + " is already used");
-        }
-        usedAt = at;
     }
 
     public UUID id() {

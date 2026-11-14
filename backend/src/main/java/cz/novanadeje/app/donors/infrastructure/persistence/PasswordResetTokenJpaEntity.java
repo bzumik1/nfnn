@@ -29,7 +29,7 @@ class PasswordResetTokenJpaEntity {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @Column(name = "used_at")
+    @Column(name = "used_at", updatable = false)
     private Instant usedAt;
 
     protected PasswordResetTokenJpaEntity() {

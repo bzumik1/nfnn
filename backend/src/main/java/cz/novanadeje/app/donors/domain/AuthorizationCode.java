@@ -22,7 +22,7 @@ public final class AuthorizationCode {
     private final boolean secondFactorVerified;
     private final Instant issuedAt;
     private final Instant expiresAt;
-    private Instant usedAt;
+    private final Instant usedAt;
 
     private AuthorizationCode(UUID id, String secretHash, DonorId donorId, ClientId clientId, URI redirectUri, CodeChallenge codeChallenge,
                               Set<OAuthScope> scopes, String resource, boolean secondFactorVerified, Instant issuedAt, Instant expiresAt,
@@ -64,12 +64,6 @@ public final class AuthorizationCode {
 
     public boolean verifies(String codeVerifier) {
         return codeChallenge.matches(codeVerifier);
-    }
-
-    public void markUsed(Instant at) {
-        if (usedAt == null) {
-            usedAt = at;
-        }
     }
 
     public UUID id() {
