@@ -26,6 +26,34 @@ describe('Given the news API', () => {
 
   afterEach(() => http.verify());
 
+  it('when an address names a slug or id with a slash, a backslash or dots, then every request keeps it in one encoded segment of its own path', () => {
+    const planted = '..\\../donors/me';
+    const encoded = encodeURIComponent(planted);
+    api.publishedBySlug(planted).subscribe();
+    api.get(planted).subscribe();
+    api.update(planted, {} as never, 'v', null).subscribe();
+    api.publish(planted, '2026-10-20', 'v', null).subscribe();
+    api.unpublish(planted, 'v', null).subscribe();
+    api.setLookBackYear(planted, 2025, 'v').subscribe();
+    api.delete(planted, 'v', null).subscribe();
+
+    const urls = http
+      .match(() => true)
+      .map((request) => {
+        request.flush({});
+        return request.request.url;
+      });
+    expect(urls).toEqual([
+      `/api/content/news/${encoded}`,
+      `/api/admin/content/news/${encoded}`,
+      `/api/admin/content/news/${encoded}`,
+      `/api/admin/content/news/${encoded}/publish`,
+      `/api/admin/content/news/${encoded}/unpublish`,
+      `/api/admin/content/news/${encoded}/look-back-year`,
+      `/api/admin/content/news/${encoded}`,
+    ]);
+  });
+
   it("when a page of published news is read, then only the Aktuality list asks for the server's answer after a kept copy, and an article always does", () => {
     api.published(0, 50).subscribe();
     api.publishedWithLatest(0, 10).subscribe();

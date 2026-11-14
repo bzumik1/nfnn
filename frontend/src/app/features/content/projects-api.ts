@@ -135,7 +135,7 @@ const PUBLIC_PROJECTS = '/api/content/projects';
 const PUBLIC_MEDIA = '/api/content/media/';
 
 export function mediaUrl(imageId: string, width: number): string {
-  return `${PUBLIC_MEDIA}${imageId}?w=${width}`;
+  return `${PUBLIC_MEDIA}${encodeURIComponent(imageId)}?w=${width}`;
 }
 
 export function slugFromText(text: string): string {
@@ -158,7 +158,7 @@ export class ProjectsApi {
   }
 
   get(id: string): Observable<AdminProjectResponse> {
-    return this.http.get<AdminProjectResponse>(`${ADMIN_PROJECTS}/${id}`);
+    return this.http.get<AdminProjectResponse>(`${ADMIN_PROJECTS}/${encodeURIComponent(id)}`);
   }
 
   create(request: ProjectRequest): Observable<AdminProjectResponse> {
@@ -172,7 +172,7 @@ export class ProjectsApi {
     held: StoredProject | null,
   ): Observable<AdminProjectResponse> {
     return this.http.put<AdminProjectResponse>(
-      `${ADMIN_PROJECTS}/${id}`,
+      `${ADMIN_PROJECTS}/${encodeURIComponent(id)}`,
       request,
       ifMatch(version, held),
     );
@@ -185,7 +185,7 @@ export class ProjectsApi {
     held: StoredProject | null,
   ): Observable<AdminProjectResponse> {
     return this.http.post<AdminProjectResponse>(
-      `${ADMIN_PROJECTS}/${id}/publish`,
+      `${ADMIN_PROJECTS}/${encodeURIComponent(id)}/publish`,
       { publishedOn },
       ifMatch(version, held),
     );
@@ -197,14 +197,17 @@ export class ProjectsApi {
     held: StoredProject | null,
   ): Observable<AdminProjectResponse> {
     return this.http.post<AdminProjectResponse>(
-      `${ADMIN_PROJECTS}/${id}/unpublish`,
+      `${ADMIN_PROJECTS}/${encodeURIComponent(id)}/unpublish`,
       {},
       ifMatch(version, held),
     );
   }
 
   delete(id: string, version: string, held: StoredProject | null): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_PROJECTS}/${id}`, ifMatch(version, held));
+    return this.http.delete<void>(
+      `${ADMIN_PROJECTS}/${encodeURIComponent(id)}`,
+      ifMatch(version, held),
+    );
   }
 
   order(): Observable<ProjectOrderResponse> {
@@ -229,6 +232,8 @@ export class ProjectsApi {
     slug: string,
     context: HttpContext = refreshedAfterKeptCopy(),
   ): Observable<ProjectResponse> {
-    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${slug}`, { context });
+    return this.http.get<ProjectResponse>(`${PUBLIC_PROJECTS}/${encodeURIComponent(slug)}`, {
+      context,
+    });
   }
 }

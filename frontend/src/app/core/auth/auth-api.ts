@@ -242,7 +242,7 @@ export class AuthApi {
   }
 
   disconnect(id: string): Observable<void> {
-    return this.http.delete<void>(`/api/donors/me/connections/${id}`);
+    return this.http.delete<void>(`/api/donors/me/connections/${encodeURIComponent(id)}`);
   }
 
   devices(): Observable<SignedInDeviceList> {
@@ -250,7 +250,7 @@ export class AuthApi {
   }
 
   signOutDevice(id: string): Observable<void> {
-    return this.http.delete<void>(`/api/donors/me/devices/${id}`);
+    return this.http.delete<void>(`/api/donors/me/devices/${encodeURIComponent(id)}`);
   }
 
   signOutOtherDevices(): Observable<void> {
