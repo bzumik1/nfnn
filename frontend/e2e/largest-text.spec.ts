@@ -544,4 +544,40 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       320,
     );
   });
+
+  test('when they open /sprava/logy/stav with long values, then every value wraps within its row and never runs into the padding of its card', async ({
+    page,
+  }) => {
+    await routeLogsApi(page);
+    const diagnostics = logsApi()['diagnostics'] as { database: object };
+    await page.route(
+      (url) => url.pathname === DIAGNOSTICS,
+      (route) =>
+        route.fulfill({
+          json: {
+            ...diagnostics,
+            database: { ...diagnostics.database, activeConnections: 123456789 },
+          },
+        }),
+    );
+    await page.goto('/sprava/logy/stav');
+    await expect(page.getByRole('heading', { level: 1, name: 'Stav serveru' })).toBeVisible();
+    await expect(page.getByText('123456789 v práci')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const overflowing = await page
+      .getByRole('main')
+      .locator('.ui-list__row > .ui-list__value')
+      .evaluateAll((values) =>
+        values
+          .filter((value) => {
+            const row = value.parentElement!;
+            const content =
+              row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight);
+            return value.getBoundingClientRect().right > content + 0.5;
+          })
+          .map((value) => value.textContent?.trim()),
+      );
+    expect(overflowing).toEqual([]);
+  });
 });
