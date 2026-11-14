@@ -29,6 +29,7 @@ import {
   AdministratorResponse,
   BackupRunResponse,
   ImportStateResponse,
+  ReleaseResponse,
   TallyResponse,
 } from '../admin-api';
 import { OpenAlerts } from '../../../core/push/open-alerts';
@@ -122,6 +123,7 @@ export class AdminHome {
   protected readonly administratorsState = signal<LoadState>('loading');
   protected readonly withoutSecondFactor = signal<readonly string[]>([]);
   protected readonly signatoryState = signal<SignatoryState>('loading');
+  private readonly release = signal<ReleaseResponse | null>(null);
   protected readonly backupsState = signal<LoadState>('loading');
   protected readonly backups = signal<AdminBackupsResponse | null>(null);
   protected readonly signingKeysState = signal<LoadState>('loading');
@@ -194,6 +196,7 @@ export class AdminHome {
       signingKeyWarnings: this.signingKeyWarnings(),
       signatory: this.signatoryState(),
       openAlerts: this.openAlerts.alerts(),
+      release: this.release(),
     }),
   );
   protected readonly attentionLoading = computed(() =>
@@ -227,6 +230,7 @@ export class AdminHome {
     this.loadAdministrators();
     this.loadSigningKeys();
     this.loadSignatory();
+    this.loadRelease();
     let wasOffline = this.connectivity.offline();
     effect(() => {
       const offline = this.connectivity.offline();
@@ -329,6 +333,16 @@ export class AdminHome {
             view.signatory === null ? 'missing' : view.signatory.signature ? 'ok' : 'unsigned',
           ),
         error: () => this.signatoryState.set('error'),
+      });
+  }
+
+  private loadRelease(): void {
+    this.api
+      .release()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (release) => this.release.set(release),
+        error: () => this.release.set(null),
       });
   }
 

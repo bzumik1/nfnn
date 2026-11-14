@@ -4,7 +4,7 @@ import { pluralCategory } from '../../../core/i18n/plural-category';
 import { OpenAlert } from '../../../core/push/open-alerts-api';
 import { formatBankTime } from '../../donations/donation-date';
 import { formatMinorUnits } from '../../donations/donation-amount';
-import { AdminBackupsResponse } from '../admin-api';
+import { AdminBackupsResponse, ReleaseResponse } from '../admin-api';
 import type { StoredImportState } from '../device-copy/administration-reads';
 import { BACKUP_PROBLEM_ACTIONS, BACKUP_PROBLEM_SUMMARIES } from '../backups/backup-texts';
 import { needsTechnician, technicianMessage } from '../backups/backup-message';
@@ -19,7 +19,7 @@ export type LoadState = 'loading' | 'ready' | 'error';
 export type SignatoryState = 'loading' | 'ok' | 'missing' | 'unsigned' | 'error';
 export type AttentionTone = 'danger' | 'warning' | 'task' | 'unknown' | 'action';
 export type AttentionIcon =
-  'payments' | 'bank' | 'backup' | 'mail' | 'key' | 'administrators' | 'signature';
+  'payments' | 'bank' | 'backup' | 'mail' | 'key' | 'administrators' | 'signature' | 'release';
 export type AttentionRetry = 'unpaired' | 'signingKeys' | 'administrators' | 'signatory';
 
 export interface UnpairedSummary {
@@ -61,6 +61,7 @@ export interface AttentionSources {
   readonly signingKeyWarnings: readonly string[];
   readonly signatory: SignatoryState;
   readonly openAlerts: readonly OpenAlert[] | null;
+  readonly release: ReleaseResponse | null;
 }
 
 const NEXT_STEP_LINKS: Record<
@@ -91,6 +92,7 @@ const SIGNING_KEY_SETTINGS: AttentionLink = {
 };
 const PEOPLE: AttentionLink = { path: '/sprava/lide-fondu', fragment: undefined };
 const BACKUPS: AttentionLink = { path: '/sprava/zalohy', fragment: undefined };
+const RELEASE: AttentionLink = { path: '/sprava/logy/stav', fragment: 'vydani' };
 
 const ROW: Omit<AttentionRow, 'key' | 'hook' | 'tone' | 'title'> = {
   icon: null,
@@ -129,6 +131,24 @@ export function attentionRows(sources: AttentionSources): readonly AttentionRow[
     ...signingKeyRows(sources),
     ...administratorRows(sources),
     ...signatoryRows(sources),
+    ...releaseRows(sources),
+  ];
+}
+
+function releaseRows({ release }: AttentionSources): AttentionRow[] {
+  const latest = release?.latest;
+  if (!release?.updateAvailable || !latest) {
+    return [];
+  }
+  return [
+    row({
+      key: 'release',
+      tone: 'task',
+      icon: 'release',
+      title: $localize`:@@admin.home.attention.release.title:Nové vydání ${latest.version}:version:`,
+      meta: $localize`:@@admin.home.attention.release.meta:Běží ${release.running}:running:. V ZimaOS otevřete nastavení aplikace „Nová naděje“ a klikněte na Uložit.`,
+      link: RELEASE,
+    }),
   ];
 }
 

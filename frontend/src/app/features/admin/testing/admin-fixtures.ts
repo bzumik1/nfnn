@@ -5,6 +5,7 @@ import {
   AdminBankAccountItem,
   AdminActionResponse,
   DiagnosticsResponse,
+  ReleaseResponse,
   LogFileResponse,
   LoggerResponse,
   LogOverrideResponse,
@@ -867,4 +868,24 @@ export function adminPush(overrides: Partial<AdminPushResponse> = {}): AdminPush
     openAlerts: [],
     ...overrides,
   };
+}
+
+export function releaseView(overrides: Partial<ReleaseResponse> = {}): ReleaseResponse {
+  return {
+    running: '2026.11.3',
+    latest: { version: '2026.11.3', publishedAt: '2026-11-12T14:02:40Z' },
+    checkedAt: '2026-11-15T05:10:00Z',
+    succeededAt: '2026-11-15T05:10:00Z',
+    failure: null,
+    updateAvailable: false,
+    ...overrides,
+  };
+}
+
+export function newerReleaseView(overrides: Partial<ReleaseResponse> = {}): ReleaseResponse {
+  return releaseView({
+    latest: { version: '2026.11.5', publishedAt: '2026-11-14T09:30:12Z' },
+    updateAvailable: true,
+    ...overrides,
+  });
 }
