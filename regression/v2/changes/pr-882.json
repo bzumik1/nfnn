@@ -1,0 +1,66 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.PushSenderTest > Given a delivery that throws, when a message is sent to three devices, then that one counts as failed and the others are still delivered",
+    "replacement": "operations.infrastructure.push.FanOutPushDeliveryTest > Given a device whose push service throws, when a message is delivered to three devices, then that one counts as failed and the others are still delivered",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.PushSenderTest > Given ten devices, when a message is sent, then every delivery runs at the same time, so the slowest service alone bounds the wait",
+    "replacement": "operations.infrastructure.push.FanOutPushDeliveryTest > Given ten devices, when a message is delivered at once, then every delivery runs at the same time, so the slowest service alone bounds the wait",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.PushSenderTest > Given a delivered, a gone, a failing and a throwing device, when a message is attempted, then the attempt names the failing and the throwing one to try again",
+    "replacement": "operations.application.push.PushSenderTest > Given a delivered, a gone and two failing devices, when a message is attempted, then the attempt names both failing ones to try again in their order",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushSenderTest > Given a device whose push service keeps failing, when a notification fails the third time in a row, then one warning names the subscription by its id and the count",
+    "replacement": "operations.application.push.PushSenderTest > Given a device whose push service keeps failing, when a notification fails the third time in a row, then one warning names the subscription by its id and the count",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushSenderTest > Given a notification the push service took, when its outcome cannot be written, then it still counts as delivered",
+    "replacement": "operations.application.push.PushSenderTest > Given a notification the push service took, when its outcome cannot be written, then it still counts as delivered",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushSenderTest > Given twenty devices whose push services answer slowly, when they are sent a notification, then at most eight sends run at once, every device gets it and the one that failed is named for a retry",
+    "replacement": "operations.infrastructure.push.FanOutPushDeliveryTest > Given twenty devices whose push services answer slowly, when they are sent a paced notification, then at most eight sends run at once, every device gets it and the one that failed is reported failed",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushSenderTest > Given three devices, when they are sent a notification with a gap between starts, then the sending takes at least the two gaps between the three starts",
+    "replacement": "operations.infrastructure.push.FanOutPushDeliveryTest > Given three devices, when they are sent a notification with a gap between starts, then the sending takes at least the two gaps between the three starts",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.push.DonorPushDispatcherTest > Given a retry that comes while the server stops and its executor refuses work, when the retry is due, then one warning names the attempt and the refusal, and nothing else happens",
+    "replacement": "operations.infrastructure.push.TaskSchedulerPushRetryTimerTest > Given a paced retry that comes while the server stops and its executor refuses work, when the retry is due, then one warning names the refusal by its class and nothing else happens",
+    "reason": "PR #882 (#879, part of #621; architecture audit round 4): push fan-out, pacing and the retry thread move from the application senders into FanOutPushDelivery and TaskSchedulerPushRetryTimer, and one PushSender records the outcomes for administrators and donors",
+    "contract": "docs/system-overview.md, operations (Push alerts of the administration, Push notifications of donors)"
+  }
+]
