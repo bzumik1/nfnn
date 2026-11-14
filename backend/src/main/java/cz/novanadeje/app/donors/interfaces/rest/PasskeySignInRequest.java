@@ -19,6 +19,11 @@ record PasskeySignInRequest(@NotBlank @Size(max = 43) String challenge, @NotNull
             @NotBlank @Size(max = 1024) String signature,
             @NotBlank @Size(max = 128) String userHandle
     ) {
+
+        @Override
+        public String toString() {
+            return "Response[***]";
+        }
     }
 
     SessionKind sessionKind() {

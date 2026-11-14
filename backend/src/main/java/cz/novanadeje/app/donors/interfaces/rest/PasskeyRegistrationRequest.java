@@ -23,6 +23,11 @@ record PasskeyRegistrationRequest(
             @NotBlank @Size(max = 16384) String attestationObject,
             @Size(max = 8) List<@NotBlank @Size(max = 16) String> transports
     ) {
+
+        @Override
+        public String toString() {
+            return "Response[clientDataJSON=***, attestationObject=***, transports=" + transports + "]";
+        }
     }
 
     PasskeyAttestation attestation() {
