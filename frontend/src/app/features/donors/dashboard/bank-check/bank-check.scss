@@ -1,3 +1,9 @@
+@use 'touch-target';
+
+:host {
+  display: block;
+}
+
 .bank-check {
   display: flex;
   flex-wrap: wrap;
@@ -21,6 +27,8 @@
 
 .bank-check-btn,
 .bank-check-incoming {
+  @include touch-target.reaches-finger-size;
+
   max-width: 100%;
   white-space: normal;
 }

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 .last-gift-main {
   display: flex;
@@ -74,6 +75,10 @@
   margin-bottom: 0;
 }
 
+.recent-all {
+  @include touch-target.reaches-finger-size;
+}
+
 .recent-head {
   display: flex;
   flex-wrap: wrap;
@@ -84,7 +89,7 @@
 
 .overview-account {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .overview-question,
@@ -164,9 +169,6 @@
 
 .recent-hint {
   margin-top: var(--space-2);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  color: var(--color-text-muted);
 }
 
 @include bp.down(cards) {

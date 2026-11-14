@@ -78,17 +78,23 @@
 
 @for (account of donations.accountsWithQuestion(); track account.id) {
   <p class="ui-callout ui-callout--warning overview-question">
-    <span i18n="@@donor.overview.question"
+    @let number = accountParts(account.accountNumber);
+    <span [id]="'overview-question-' + account.id" i18n="@@donor.overview.question"
       >Máme na vás otázku k platbám z účtu
-      <span class="overview-account ui-figures">{{ account.accountNumber }}</span
+      <span class="overview-account ui-figures">{{ number.head }}<wbr />{{ number.bankCode }}</span
       >.</span
-    >&ngsp;<a routerLink="/darce/ucty" i18n="@@donor.overview.question.answer">Odpovědět</a>
+    >&ngsp;<a
+      routerLink="/darce/ucty"
+      [attr.aria-describedby]="'overview-question-' + account.id"
+      i18n="@@donor.overview.question.answer"
+      >Odpovědět</a
+    >
   </p>
 }
 
 <ng-template #bankStatus>
   <app-bank-check />
-  <p class="recent-hint" i18n="@@donor.dashboard.bank.hint">
+  <p class="ui-card__intro recent-hint" i18n="@@donor.dashboard.bank.hint">
     Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá platba se
     tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
   </p>

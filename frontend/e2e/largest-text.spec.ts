@@ -346,6 +346,51 @@ for (const { width, height } of [
       }
     });
 
+    test('when a signed-in donor with gifts opens Můj přehled and Moje dary, then the card Poslední dar and the bar of Všechny dary keep the bank check and its status within them', async ({
+      page,
+    }) => {
+      await mockDonorApi(page, {
+        summary: {
+          ...noDonations.summary,
+          totalAmountMinor: 50000,
+          count: 1,
+          lastReceivedAt: '2026-03-15',
+          byYear: [{ year: 2026, count: 1, totalAmountMinor: 50000 }],
+        },
+        list: {
+          items: [donationItem({ id: 'd-1' })],
+          totalAmountMinor: 50000,
+          currency: 'CZK',
+          count: 1,
+        },
+      });
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const lastGift = page.locator('section[aria-labelledby="last-gift-title"]');
+      await expect(
+        lastGift.getByRole('button', { name: 'Zkontrolovat nové platby' }),
+      ).toBeVisible();
+
+      await expect.poll(() => contentPastTheSides(lastGift), 'largest').toEqual([]);
+      const double = await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+      await expect.poll(() => contentPastTheSides(lastGift), 'double').toEqual([]);
+      await double.evaluate((style) => style.remove());
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await openDonorSection(page, 'Moje dary');
+      await page.setViewportSize({ width, height });
+      const bar = page.locator('.payments-card > .ui-card__bar');
+      await expect(bar.getByRole('button', { name: 'Zkontrolovat nové platby' })).toBeVisible();
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        await expect.poll(() => contentPastTheSides(bar), textSize).toEqual([]);
+      }
+    });
+
     test('when a signed-in donor opens Můj přehled and the standing order guide, then every bank detail of Poslat dar stays whole within its row and the bank code of the account number stays on one line', async ({
       page,
     }) => {

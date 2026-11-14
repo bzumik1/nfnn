@@ -1193,16 +1193,15 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
     });
 
-    it('then Poslední dar is one padded card with its title inside, its amount, date and state, then Zkontrolovat nové platby', async () => {
+    it('then Poslední dar is one card with its heading inside, its amount, date and state, then Zkontrolovat nové platby', async () => {
       await open('/darce/prehled');
       await respond(twoYearSummary(), twoYearDonations());
 
       const card = element('section[aria-labelledby="last-gift-title"]')!;
       expect(card.classList).toContain('ui-card');
-      expect(card.classList).toContain('ui-card--padded');
-      const title = card.querySelector('h2')!;
-      expect(title.classList).toContain('ui-card__title');
-      expect(title.classList).not.toContain('ui-card__title--large');
+      const title = element('#last-gift-title')!;
+      expect(title.tagName).toBe('H2');
+      expect(title.closest('.ui-card')).toBe(card);
       expect(normalized(title.textContent ?? '')).toBe('Poslední dar');
       expect(normalized(card.querySelector('.last-gift-main')?.textContent ?? '')).toBe(
         '500 Kč 15. 3. 2026 Přijato',
@@ -1297,6 +1296,15 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(text('.overview-question a')).toBe('Odpovědět');
       expect(element('.overview-question')?.classList).toContain('ui-callout--warning');
       expect(element('.overview-question')?.closest('.ui-list')).toBeNull();
+      const sentence = document.getElementById(
+        element('.overview-question a')?.getAttribute('aria-describedby') ?? '',
+      );
+      expect(normalized(sentence?.textContent ?? '')).toBe(
+        'Máme na vás otázku k platbám z účtu 19-2000145399/0800.',
+      );
+      expect(
+        element('.overview-question .overview-account wbr')?.previousSibling?.textContent,
+      ).toBe('19-2000145399/');
     });
 
     it('then no question is announced while no bank account carries one', async () => {
@@ -1449,12 +1457,12 @@ describe('Given a signed-in donor in the donor area', () => {
 
         const card = element('section[aria-labelledby="recent-title"]')!;
         expect(card.classList).toContain('ui-card');
-        const title = card.querySelector('h2')!;
-        expect(title.classList).toContain('ui-card__title');
-        expect(title.classList).not.toContain('ui-card__title--large');
+        const title = element('#recent-title')!;
+        expect(title.tagName).toBe('H2');
+        expect(normalized(title.textContent ?? '')).toBe('Poslední dary');
         expect(title.closest('.ui-card')).toBe(card);
-        const all = card.querySelector('a.recent-all')!;
-        expect(all.classList).toContain('ui-button');
+        const all = card.querySelector('a[href="/darce/dary"]')!;
+        expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
         expect(card.querySelector('app-donations-table')?.closest('.ui-card')).toBe(card);
         expect(
           card.querySelector(
@@ -1499,16 +1507,16 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(order).toEqual(['H2', 'missing-gift', 'first-gift-steps']);
     });
 
-    it('then Jak poslat první dar is one padded card with its title inside that ends with Zkontrolovat nové platby and the note on bank delays', async () => {
+    it('then Jak poslat první dar is one card with its heading inside that ends with Zkontrolovat nové platby and the note on bank delays', async () => {
       await open('/darce/prehled');
       await respond(emptySummary(), emptyDonations());
 
       const card = element('section[aria-labelledby="first-gift-title"]')!;
       expect(card.classList).toContain('ui-card');
-      expect(card.classList).toContain('ui-card--padded');
-      const title = card.querySelector('h2')!;
-      expect(title.classList).toContain('ui-card__title');
-      expect(title.classList).not.toContain('ui-card__title--large');
+      const title = element('#first-gift-title')!;
+      expect(title.tagName).toBe('H2');
+      expect(normalized(title.textContent ?? '')).toBe('Jak poslat první dar');
+      expect(title.closest('.ui-card')).toBe(card);
       expect(normalized(card.querySelector('.bank-check-btn')?.textContent ?? '')).toBe(
         'Zkontrolovat nové platby',
       );
