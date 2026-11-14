@@ -26,6 +26,8 @@ const MERGEABLE_WAIT_MS = 150_000;
 const WRITE_PAUSE_MS = 2_000;
 const READ_ATTEMPTS = 4;
 const READ_RETRY_MS = 5_000;
+const SETTLE_READS = 6;
+const SETTLE_PAUSE_MS = 10_000;
 
 const OPEN_PULL_REQUESTS = `
   query ($owner: String!, $repo: String!, $cursor: String) {
@@ -90,6 +92,26 @@ export async function syncSizeLabel({ github, context, core }) {
     await github.rest.issues.addLabels({ ...context.repo, issue_number: number, labels: [wanted] });
   }
   core.info(`PR #${number}: ${wanted}`);
+}
+
+export async function clearSettledRebase({ github, context, core, pause = sleep }) {
+  const number = context.payload.pull_request.number;
+  const current = await github.paginate(github.rest.issues.listLabelsOnIssue, { ...context.repo, issue_number: number, per_page: 100 });
+  if (!current.some(({ name }) => name === REBASE_LABEL)) return;
+  for (let read = 1; read <= SETTLE_READS; read += 1) {
+    const { data } = await github.rest.pulls.get({ ...context.repo, pull_number: number });
+    if (data.mergeable === true) {
+      await removeLabel(github, context, number, REBASE_LABEL);
+      core.info(`PR #${number}: merges cleanly, ${REBASE_LABEL} cleared`);
+      return;
+    }
+    if (data.mergeable === false) {
+      core.info(`PR #${number}: still conflicts, ${REBASE_LABEL} stays`);
+      return;
+    }
+    if (read < SETTLE_READS) await pause(SETTLE_PAUSE_MS);
+  }
+  core.info(`PR #${number}: mergeability not computed yet, the next sweep decides`);
 }
 
 export async function sweep({ github, context, core, pause = sleep }) {
