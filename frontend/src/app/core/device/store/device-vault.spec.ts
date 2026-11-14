@@ -28,6 +28,7 @@ import {
 import { openIdbDeviceStorage } from './idb-device-storage';
 import { MemoryDeviceStorage } from './memory-device-storage';
 import { ChannelBus, NamedLocks } from './testing/fake-device';
+import { LostConnections, UnhandledRejections } from './testing/lost-connection';
 import { leaks, rawIndexedDbDump, textDump } from './testing/raw-scan';
 
 const JANA: DeviceAccount = {
@@ -1162,5 +1163,71 @@ describe('Given the password key derivation the device copy uses', () => {
     await expect(derived).rejects.toBeDefined();
     expect(work.any()).toBe(false);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('Given the device storage lost its connection', () => {
+  let connections: LostConnections;
+  let reporter: { report: ReturnType<typeof vi.fn> };
+  let vault: DeviceVault;
+
+  function nextStart(): DeviceVault {
+    return createEnvironmentInjector([DeviceVault], TestBed.inject(EnvironmentInjector)).get(
+      DeviceVault,
+    );
+  }
+
+  beforeEach(async () => {
+    const factory = new IDBFactory();
+    globalThis.indexedDB = factory;
+    localStorage.clear();
+    connections = new LostConnections(factory);
+    reporter = { report: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DEVICE_STORAGE_OPENER, useValue: () => openIdbDeviceStorage() },
+        { provide: PASSWORD_KEY_DERIVATION, useValue: new SmallArgon2Derivation() },
+        { provide: COPY_CHANNELS, useValue: new ChannelBus().factory },
+        { provide: STORAGE_PERSISTENCE, useValue: vi.fn() },
+        { provide: TAB_LOCKS, useValue: new NamedLocks() },
+        { provide: ErrorReporter, useValue: reporter },
+      ],
+    });
+    vault = TestBed.inject(DeviceVault);
+    await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+  });
+
+  afterEach(() => {
+    connections.reopenWorks();
+    TestBed.resetTestingModule();
+  });
+
+  it("when the donor's session ends, then the session wraps are removed after one reopen and no rejection is left unhandled", async () => {
+    const unhandled = new UnhandledRejections();
+    const opensBefore = connections.opens;
+    connections.lose();
+
+    await vault.signedOut(JANA);
+
+    expect(connections.opens - opensBefore).toBe(1);
+    expect(await unhandled.settled()).toEqual([]);
+    expect(await wrapsOf(vault)).toEqual(['password']);
+    expect(reporter.report).not.toHaveBeenCalled();
+  });
+
+  it("when the donor's session ends and the reopen fails too, then nothing is left unhandled and the next start removes the session wraps", async () => {
+    const unhandled = new UnhandledRejections();
+    connections.lose('fails');
+
+    await vault.signedOut(JANA);
+
+    expect(await unhandled.settled()).toEqual([]);
+    expect(vault.opened()).toBeNull();
+    connections.reopenWorks();
+    expect(await wrapsOf(vault)).toEqual(['password', 'session']);
+
+    await nextStart().sessionLost();
+
+    expect(await wrapsOf(vault)).toEqual(['password']);
   });
 });

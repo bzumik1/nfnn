@@ -296,7 +296,7 @@ export class DeviceVault implements SessionDevice {
     return this.run(async () => {
       const storage = await this.storageOf(account);
       this.closeOpen();
-      await this.endSessions(storage);
+      await this.endSessionsOrAtNextStart(storage);
     }).then(() => this.checkStatus(true));
   }
 
@@ -304,7 +304,7 @@ export class DeviceVault implements SessionDevice {
     this.sessionGeneration++;
     return this.run(async () => {
       this.closeOpen();
-      await this.endSessions(await this.presentStorage().catch(() => null));
+      await this.endSessionsOrAtNextStart(await this.presentStorage().catch(() => null));
     }).then(() => this.checkStatus(true));
   }
 
@@ -1300,6 +1300,14 @@ export class DeviceVault implements SessionDevice {
     }
     await this.committed(storage, change);
     await this.afterRemoval(storage);
+  }
+
+  private async endSessionsOrAtNextStart(storage: DeviceStorage | null): Promise<void> {
+    try {
+      await this.endSessions(storage);
+    } catch {
+      return;
+    }
   }
 
   private async dropSessionsWritten(storage: DeviceStorage): Promise<void> {
