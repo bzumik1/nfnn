@@ -53,7 +53,12 @@
         <span class="visually-hidden" i18n="@@layout.header.account">Účet</span>
         @if (accountBadge(); as badge) {
           &ngsp;<span class="visually-hidden">{{ badge.description }}</span>
-          <span class="account-badge" aria-hidden="true">{{ badge.count }}</span>
+          <span
+            class="account-badge"
+            [class.account-badge--fault]="faultCount() > 0"
+            aria-hidden="true"
+            >{{ badge.count }}</span
+          >
         }
         @if (portrait(); as source) {
           <img class="account-portrait" [src]="source" alt="" width="44" height="44" />

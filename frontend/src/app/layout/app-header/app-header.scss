@@ -273,6 +273,13 @@
   font-variant-numeric: var(--numeric-figures);
 }
 
+.account-badge--fault {
+  border-color: var(--color-badge-warning);
+  background: var(--color-badge-warning);
+  color: var(--color-on-badge-warning);
+  font-weight: var(--weight-bold);
+}
+
 @include bp.down(tablet) {
   .app-header-inner {
     padding: 0 max(var(--space-5), env(safe-area-inset-right)) 0

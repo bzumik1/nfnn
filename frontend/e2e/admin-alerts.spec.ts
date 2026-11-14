@@ -283,6 +283,29 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await expect.poll(async () => (await deviceRecord(page)).badges).toEqual([null]);
   });
 
+  test('when a fault is open and the administrator reads a public page, then the account button counts it and the first row of the account sheet leads to its page', async ({
+    page,
+  }) => {
+    await servePush(
+      page,
+      pushView({ openAlerts: [{ area: 'backups', since: '2026-11-14T02:00:05Z' }] }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto('/o-nas');
+    const account = page.getByRole('button', { name: /^Účet.*1 porucha/ });
+    await expect(account).toBeVisible();
+    await account.click();
+
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    const fault = sheet.getByRole('link', { name: /^Nefunguje: Zálohy od 14\. 11\. 2026 3:00/ });
+    await expect(fault).toBeVisible();
+    await fault.click();
+
+    await expect(page).toHaveURL(/\/sprava\/zalohy$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Zálohy' })).toBeVisible();
+  });
+
   test('when the administration opens on any page, then the icon badge shows the open alerts', async ({
     page,
   }) => {
