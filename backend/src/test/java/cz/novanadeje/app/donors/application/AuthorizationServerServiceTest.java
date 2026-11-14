@@ -283,7 +283,23 @@ class AuthorizationServerServiceTest {
         void tokenIsIssued() {
             token = RefreshToken.issueForClient(secret, DONOR, CLAUDE, Set.of(OAuthScope.ADMIN_READ), NOW.minus(Duration.ofDays(2)),
                     NOW.minus(Duration.ofHours(1)), REFRESH_TTL);
-            when(refreshTokens.findBySecretHash(secret.hash())).thenReturn(Optional.of(token));
+            when(refreshTokens.findDonorOfSecretHash(secret.hash())).thenReturn(Optional.of(DONOR));
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(token));
+        }
+
+        @Test
+        @DisplayName("when the client refreshes, then the donor's sessions are locked before the token is read, so a disconnect that committed meanwhile is seen")
+        void should_lock_sessions_before_reading_the_token_when_refreshed_given_right_client() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(true);
+
+            service.refresh(secret.value(), CLAUDE.value());
+
+            InOrder order = inOrder(refreshTokens);
+            order.verify(refreshTokens).lockSessionsOf(DONOR);
+            order.verify(refreshTokens).findBySecretHashForUpdate(secret.hash());
+            order.verify(refreshTokens).markUsed(token.id(), NOW);
         }
 
         @Test
@@ -368,7 +384,8 @@ class AuthorizationServerServiceTest {
 
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
-            assertThat(token.isRevoked()).isTrue();
+            verify(refreshTokens).revokeIfUnused(token.id(), NOW);
+            verify(refreshTokens, never()).save(any());
             verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
         }
     }
