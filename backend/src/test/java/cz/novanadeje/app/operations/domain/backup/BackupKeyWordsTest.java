@@ -16,7 +16,7 @@ class BackupKeyWordsTest {
     void should_refuse_when_made_given_a_list_of_another_length() {
         List<String> tooShort = distinctWords().subList(0, 2047);
 
-        assertThatThrownBy(() -> new BackupKeyWords(tooShort)).isInstanceOf(IllegalStateException.class).hasMessageContaining("2048");
+        assertThatThrownBy(() -> new BackupKeyWords(tooShort)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("2048");
     }
 
     @Test
@@ -25,7 +25,7 @@ class BackupKeyWordsTest {
         List<String> words = new ArrayList<>(distinctWords());
         words.set(1, words.getFirst() + "x");
 
-        assertThatThrownBy(() -> new BackupKeyWords(words)).isInstanceOf(IllegalStateException.class).hasMessageContaining("four letters");
+        assertThatThrownBy(() -> new BackupKeyWords(words)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("four letters");
     }
 
     private static List<String> distinctWords() {

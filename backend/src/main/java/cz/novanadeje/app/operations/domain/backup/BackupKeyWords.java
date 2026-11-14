@@ -30,7 +30,7 @@ public final class BackupKeyWords {
 
     public BackupKeyWords(List<String> words) {
         if (words == null || words.size() != WORDLIST_SIZE) {
-            throw new IllegalStateException("The Czech BIP39 wordlist must hold " + WORDLIST_SIZE + " words");
+            throw new IllegalArgumentException("The Czech BIP39 wordlist must hold " + WORDLIST_SIZE + " words");
         }
         this.words = List.copyOf(words);
         this.indexByPrefix = indexByPrefix(this.words);
@@ -103,7 +103,7 @@ public final class BackupKeyWords {
         Map<String, Integer> index = new HashMap<>();
         for (int i = 0; i < words.size(); i++) {
             if (index.put(words.get(i).substring(0, UNIQUE_PREFIX), i) != null) {
-                throw new IllegalStateException("Every word of the BIP39 list starts with its own four letters");
+                throw new IllegalArgumentException("Every word of the BIP39 list starts with its own four letters");
             }
         }
         return Map.copyOf(index);
