@@ -1,8 +1,8 @@
-<nav class="ui-groups" [attr.aria-label]="label()">
+<nav [attr.aria-label]="label()">
   @for (group of groups(); track group.id) {
-    <section class="section-group" [attr.aria-labelledby]="group.id">
-      <h2 class="ui-group-title" [id]="group.id">{{ group.label }}</h2>
-      <ul class="ui-list ui-list--inset">
+    <section class="ui-card section-group" [attr.aria-labelledby]="group.id">
+      <h2 class="ui-card__title" [id]="group.id">{{ group.label }}</h2>
+      <ul class="ui-list">
         @for (row of group.rows; track row.path) {
           <li>
             <a class="ui-list__row" [routerLink]="row.path">

@@ -39,6 +39,22 @@ describe('Given an administrator who opens the less frequent sections of the adm
     expect(document.activeElement).toBe(heading);
   });
 
+  it('when the page opens, then each group is a card titled by its group, its sections a plain list inside', () => {
+    const sections: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('nav section'),
+    );
+
+    expect(sections.length).toBe(2);
+    for (const section of sections) {
+      const title = section.querySelector(`#${section.getAttribute('aria-labelledby')}`);
+      expect(section.classList).toContain('ui-card');
+      expect(title?.tagName).toBe('H2');
+      expect(title?.classList).toContain('ui-card__title');
+      expect(section.querySelector('.ui-group-title, .ui-list--inset')).toBeNull();
+      expect(section.querySelector('ul')?.classList).toContain('ui-list');
+    }
+  });
+
   it('when the page opens, then a navigation lists every section the overview leaves out, grouped as in the side panel', () => {
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
       'Další sekce správy',

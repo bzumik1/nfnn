@@ -109,6 +109,10 @@ div.ui-list__row {
   color: var(--color-warning);
 }
 
+a.ui-list__row--action {
+  color: var(--color-accent);
+}
+
 .ui-list__chevron {
   grid-area: chevron;
   width: var(--list-chevron-size);

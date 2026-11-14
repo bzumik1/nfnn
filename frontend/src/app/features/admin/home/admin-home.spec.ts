@@ -662,6 +662,29 @@ describe('Given an administrator on the administration home', () => {
       expect(text('.attention [role="status"]')).toBe('Zjišťujeme, jestli na vás něco nečeká…');
     });
 
+    it('then what needs attention is one card with its heading inside and its rows as a plain list', async () => {
+      await sources();
+
+      const heading = attention().querySelector('#admin-attention-title');
+      expect(attention().classList).toContain('ui-card');
+      expect(heading?.tagName).toBe('H2');
+      expect(heading?.classList).toContain('ui-card__title');
+      expect(attention().querySelector('.ui-group-title, .ui-list--inset')).toBeNull();
+      expect(attention().querySelector('.attention-list')?.classList).toContain('ui-list');
+    });
+
+    it('then a retry inside the card is a small button of the cards, not a pill', async () => {
+      await sources();
+      http.expectOne(SIGNATORY_URL).flush(null, { status: 500, statusText: 'Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const retry = attention().querySelector('.attention-signatory button');
+      expect(retry?.classList).toContain('ui-button');
+      expect(retry?.classList).toContain('ui-button--small');
+      expect(retry?.classList).not.toContain('ui-pill-button');
+    });
+
     it('then with nothing pending one calm row says everything is fine with the last import and backup', async () => {
       await sources();
 
@@ -1052,6 +1075,16 @@ describe('Given an administrator on the administration home', () => {
         ],
         ['Občas a pro technika', 'Lidé fondu, správci, zálohy, nastavení… → /sprava/vice'],
       ]);
+    });
+
+    it('then each group of sections is a card titled by its group', () => {
+      const groups: HTMLElement[] = Array.from(sections()?.querySelectorAll('section') ?? []);
+
+      expect(groups.length).toBeGreaterThan(0);
+      for (const group of groups) {
+        expect(group.classList).toContain('ui-card');
+        expect(group.querySelector('h2')?.classList).toContain('ui-card__title');
+      }
     });
 
     it("then the way to the rest leads with the foundation's star, hidden from screen readers", () => {

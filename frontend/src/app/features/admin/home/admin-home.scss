@@ -20,24 +20,12 @@
   margin-bottom: var(--space-6);
 }
 
-.ui-card {
-  overflow: visible;
-  padding: var(--space-5) var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
 .sections {
   display: block;
-  margin-bottom: var(--space-6);
 }
 
-.ui-card__title {
-  padding: 0;
+.ui-card--padded .ui-card__title {
   margin-bottom: var(--space-4);
-}
-
-.admin-status .ui-card {
-  padding: var(--space-4) var(--space-5);
 }
 
 .admin-status .admin-data dd {
@@ -268,8 +256,6 @@
 }
 
 .attention {
-  display: block;
-  margin-bottom: var(--space-6);
   container: attention / inline-size;
 }
 
@@ -287,7 +273,7 @@
 .attention-action {
   font-weight: var(--weight-regular);
 
-  .ui-pill-button {
+  .ui-button {
     @include touch-target.reaches-finger-size;
   }
 }
