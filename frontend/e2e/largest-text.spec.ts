@@ -11,6 +11,7 @@ import {
   signIn,
 } from './donor-session';
 import { expect, test } from './fixtures';
+import { serveReceiptKeys, serveReceiptStatus, YEARLY_RECEIPT } from './receipt-verification';
 
 const LARGEST_SYSTEM_TEXT_PX = 53;
 
@@ -549,6 +550,51 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       await expect(titles.first()).toBeVisible();
       await page.evaluate(() => document.fonts.ready);
 
+      for (const title of await titles.all()) {
+        expect(await wordsSplitAcrossLines(title, 'between-spaces-and-hyphens')).toEqual([]);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        320,
+      );
+    });
+  }
+});
+
+test.describe('Given a visitor verifying a receipt on a phone 320 pt wide with the text at 200 %', () => {
+  test.use({ viewport: { width: 320, height: 568 } });
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const style = document.createElement('style');
+        style.textContent = 'html { font-size: 200%; }';
+        document.head.append(style);
+      });
+    });
+    await mockDonorApi(page);
+    await serveReceiptKeys(page);
+    await serveReceiptStatus(page, 'active');
+  });
+
+  for (const { name, address, heading } of [
+    { name: 'without a code', address: '/overit', heading: 'Ověření potvrzení o daru' },
+    {
+      name: 'with the code of a yearly receipt',
+      address: `/overit#${YEARLY_RECEIPT.fragment}`,
+      heading: 'Podepsáno fondem Nová naděje',
+    },
+  ]) {
+    test(`when they open the page ${name}, then every card and row title breaks only between words or after a hyphen and the page never pans sideways`, async ({
+      page,
+    }) => {
+      await page.goto(address);
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+
+      const titles = page
+        .getByRole('main')
+        .locator(':is(.ui-card__title, .ui-list__title):not(.visually-hidden)');
+      expect(await titles.count()).toBeGreaterThan(1);
       for (const title of await titles.all()) {
         expect(await wordsSplitAcrossLines(title, 'between-spaces-and-hyphens')).toEqual([]);
       }
