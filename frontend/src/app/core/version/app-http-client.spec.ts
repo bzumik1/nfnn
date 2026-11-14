@@ -10,6 +10,7 @@ import { API_GENERATION } from './api-generation';
 import { ServerVersion } from './server-version';
 import { Connectivity, OFFLINE_AFTER_MS, PROBE_PATH } from '../connectivity/connectivity';
 import { AdministrationWrites } from '../admin-writes/administration-writes';
+import { RunningWork } from '../updates/running-work';
 import { ifMatch } from './row-version';
 
 describe("Given the app's HTTP client", () => {
@@ -49,6 +50,17 @@ describe("Given the app's HTTP client", () => {
       headers: { 'Cache-Control': 'no-store', 'Nfnn-Api': String(API_GENERATION) },
     });
     expect(version.mustUpdate()).toBe(false);
+  });
+
+  it('when a write is on its way, then a reload waits for it until its answer comes', () => {
+    const work = TestBed.inject(RunningWork);
+    client.post('/api/contact/messages', {}).subscribe();
+
+    expect(work.any()).toBe(true);
+
+    http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
+
+    expect(work.any()).toBe(false);
   });
 
   it('when a donor call is refreshed and retried, then the call, the refresh and the retry all go past the service worker', () => {

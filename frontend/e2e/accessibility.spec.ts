@@ -48,7 +48,6 @@ import {
   openPolicyFromContact,
   withoutSessionStorage,
 } from './lost-chunks';
-import { serveNewerApiGeneration, updateNotice } from './app-update';
 import { fakePushDevice } from './push-device';
 import {
   CHANGED_AMOUNT,
@@ -486,16 +485,6 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await openAboutThenLoseNewChunks(page);
     await openPolicyFromContact(page);
     await expect(chunkLoadNotice(page)).toBeVisible();
-
-    expect(await violations(page)).toEqual([]);
-  });
-
-  test('when the server speaks a newer API and the bar asks to load the new version, then nothing breaks the rules', async ({
-    page,
-  }) => {
-    await serveNewerApiGeneration(page);
-    await page.goto('/o-nas');
-    await expect(updateNotice(page)).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
   });

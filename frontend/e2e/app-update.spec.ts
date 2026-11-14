@@ -1,9 +1,38 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from './fixtures';
+import { waitWhileNothingMayHappen } from './fixed-waits';
 import { API_GENERATION } from '../src/app/core/version/api-generation';
-import { UPDATE_NOTICE as NOTICE, updateNotice } from './app-update';
+
 const HELD =
   'Web mezitím dostal novou verzi, a tak jsme zprávu neodeslali. Zkopírujte si její text, načtěte stránku znovu a odešlete ji ještě jednou.';
 const NOT_STORED = { 'Cache-Control': 'no-store' };
+const SETTLE_MS = 1_500;
+
+async function countLoads(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const loads = Number(sessionStorage.getItem('e2e.loads') ?? '0') + 1;
+    sessionStorage.setItem('e2e.loads', String(loads));
+  });
+}
+
+function loads(page: Page): Promise<number> {
+  return page.evaluate(() => Number(sessionStorage.getItem('e2e.loads') ?? '0'));
+}
+
+async function markThisDocument(page: Page): Promise<void> {
+  await page.evaluate(() => Object.assign(window, { e2eSameDocument: true }));
+}
+
+function sameDocument(page: Page): Promise<boolean> {
+  return page.evaluate(() => 'e2eSameDocument' in window);
+}
+
+async function fillContactForm(page: Page): Promise<void> {
+  await page.locator('#contact-name').fill('Jana Nováková');
+  await page.locator('#contact-email').fill('jana@example.cz');
+  await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+}
 
 test.describe('Given a visitor whose page was opened before the server changed its API', () => {
   test('when the About page loads, then every API call names the app revision', async ({
@@ -23,15 +52,15 @@ test.describe('Given a visitor whose page was opened before the server changed i
     );
   });
 
-  test('when an answer names a newer API generation, then the site says so, sends nothing and loads the new version on request', async ({
+  test('when an answer names a newer API generation and nothing is typed, then the page loads the new version by itself at the same address, shows no bar and loads only once for that generation while it still sends nothing', async ({
     page,
   }) => {
-    let generation = API_GENERATION + 1;
     const posted: unknown[] = [];
+    await countLoads(page);
     await page.route('**/api/content/home', (route) =>
       route.fulfill({
         json: { news: [], projects: [] },
-        headers: { ...NOT_STORED, 'Nfnn-Api': String(generation), 'Nfnn-Revision': '0123abc' },
+        headers: { ...NOT_STORED, 'Nfnn-Api': String(API_GENERATION + 1) },
       }),
     );
     await page.route('**/api/contact/messages', async (route) => {
@@ -40,28 +69,22 @@ test.describe('Given a visitor whose page was opened before the server changed i
     });
 
     await page.goto('/o-nas');
-    const notice = page.locator('[aria-live="polite"]').filter({ hasText: NOTICE });
-    await expect(notice.getByText(NOTICE)).toBeVisible();
-    await expect(page.getByRole('status').filter({ hasText: NOTICE })).toHaveCount(0);
 
-    await page.locator('#contact-name').fill('Jana Nováková');
-    await page.locator('#contact-email').fill('jana@example.cz');
-    await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+    await expect.poll(() => loads(page).catch(() => 0)).toBe(2);
+    await expect(page).toHaveURL(/\/o-nas$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Načíst novou verzi' })).toHaveCount(0);
+
+    await fillContactForm(page);
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(HELD);
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
+    expect(await loads(page)).toBe(2);
     expect(posted).toEqual([]);
-
-    generation = API_GENERATION;
-    await Promise.all([
-      page.waitForResponse('**/api/content/home'),
-      notice.getByRole('button', { name: 'Načíst novou verzi' }).click(),
-    ]);
-
-    await expect(page.locator('#contact-name')).toBeVisible();
-    await expect(page.getByText(NOTICE)).toHaveCount(0);
   });
 
-  test('when the first write after a deploy reaches a server of a newer API generation, then the server refuses it and the site asks to load the new version', async ({
+  test('when the first write after a deploy reaches a server of a newer API generation, then the server refuses it, the typed message stays, and leaving the page loads the new version', async ({
     page,
   }) => {
     const sent: (string | null)[] = [];
@@ -87,13 +110,22 @@ test.describe('Given a visitor whose page was opened before the server changed i
     });
 
     await page.goto('/o-nas');
-    await page.locator('#contact-name').fill('Jana Nováková');
-    await page.locator('#contact-email').fill('jana@example.cz');
-    await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+    await markThisDocument(page);
+    await fillContactForm(page);
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
     await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(HELD);
-    await expect(updateNotice(page)).toBeVisible();
+    await waitWhileNothingMayHappen(page, SETTLE_MS);
+    expect(await sameDocument(page)).toBe(true);
+    await expect(page.locator('#contact-message')).toHaveValue('Mám dotaz k projektu.');
     expect(sent).toEqual([String(API_GENERATION)]);
+
+    await page
+      .getByRole('navigation', { name: 'Hlavní sekce' })
+      .getByRole('link', { name: 'Aktuality' })
+      .click();
+
+    await expect.poll(() => sameDocument(page).catch(() => true)).toBe(false);
+    await expect(page).toHaveURL(/\/aktuality$/);
   });
 });

@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { RunningWork } from '../../updates/running-work';
 import { IDBFactory } from 'fake-indexeddb';
 import { AdministrationAccess } from '../../auth/administration-access';
 import { type DeviceAccount, userHandleOf } from '../../auth/session-device';
@@ -381,6 +382,30 @@ describe('Given the device vault keeping a copy of the administration for an adm
       expect(await unlocking).toBe(false);
       await signingOut;
       expect(vault.administration()).toBeNull();
+    });
+
+    it('and the passkey is being asked to unlock it, then the question counts as work a reload would break until it is answered', async () => {
+      await vault.lockAdministration();
+      let answer: () => void = () => undefined;
+      const asked = new Promise<void>((resolve) => (answer = resolve));
+      let ceremonyStarted = false;
+      const get = credentials.get.bind(credentials);
+      credentials.get = async (options) => {
+        ceremonyStarted = true;
+        await asked;
+        return get(options);
+      };
+      const work = TestBed.inject(RunningWork);
+
+      const unlocking = vault.unlockAdministrationWithPasskey(JANA, false);
+      await vi.waitFor(() => expect(ceremonyStarted).toBe(true));
+
+      expect(work.any()).toBe(true);
+
+      answer();
+      await unlocking;
+
+      expect(work.any()).toBe(false);
     });
 
     it('and another passkey answers, then nothing opens and the copy is kept', async () => {
