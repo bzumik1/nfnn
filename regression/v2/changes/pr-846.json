@@ -82,9 +82,9 @@
   {
     "kind": "retired",
     "suite": "backend-junit",
-    "test": "donors.domain.DonorNameShapeTest > [1] name = \"   \"",
+    "test": "donors.domain.DonorNameShapeTest > [1] name = \" \"",
     "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
-    "replacement": "shared.domain.DonorNameTest > [1] name = \"   \"",
+    "replacement": "shared.domain.DonorNameTest > [1] name = \" \"",
     "contract": "docs/system-overview.md, shared"
   },
   {
@@ -98,17 +98,17 @@
   {
     "kind": "retired",
     "suite": "backend-junit",
-    "test": "donors.domain.DonorNameShapeTest > [3] name = \" \"",
+    "test": "donors.domain.DonorNameShapeTest > [3] name = \" \"",
     "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
-    "replacement": "shared.domain.DonorNameTest > [3] name = \" \"",
+    "replacement": "shared.domain.DonorNameTest > [3] name = \" \"",
     "contract": "docs/system-overview.md, shared"
   },
   {
     "kind": "retired",
     "suite": "backend-junit",
-    "test": "donors.domain.DonorNameShapeTest > [4] name = \" \"",
+    "test": "donors.domain.DonorNameShapeTest > [4] name = \" \"",
     "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
-    "replacement": "shared.domain.DonorNameTest > [4] name = \" \"",
+    "replacement": "shared.domain.DonorNameTest > [4] name = \" \"",
     "contract": "docs/system-overview.md, shared"
   },
   {
@@ -130,9 +130,9 @@
   {
     "kind": "retired",
     "suite": "backend-junit",
-    "test": "donors.domain.DonorNameShapeTest > [7] name = \" Jana\"",
+    "test": "donors.domain.DonorNameShapeTest > [7] name = \" Jana\"",
     "reason": "Architecture audit #621 (R3-D4, #844): the request pattern for a blank name moved from Donor.NOT_BLANK_NAME to the shared DonorName.NOT_BLANK, and its unchanged cases moved into DonorNameTest",
-    "replacement": "shared.domain.DonorNameTest > [7] name = \" Jana\"",
+    "replacement": "shared.domain.DonorNameTest > [7] name = \" Jana\"",
     "contract": "docs/system-overview.md, shared"
   },
   {
