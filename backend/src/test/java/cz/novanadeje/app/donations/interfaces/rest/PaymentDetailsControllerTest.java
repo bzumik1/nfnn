@@ -2,8 +2,8 @@ package cz.novanadeje.app.donations.interfaces.rest;
 
 import cz.novanadeje.app.donations.application.PaymentDetailsService;
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.Iban;
 import cz.novanadeje.app.donations.domain.payment.PaymentDetails;
-import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

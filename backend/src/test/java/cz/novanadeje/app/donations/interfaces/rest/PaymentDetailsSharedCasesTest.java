@@ -3,7 +3,7 @@ package cz.novanadeje.app.donations.interfaces.rest;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.donations.application.PaymentDetailsService;
 import cz.novanadeje.app.donations.domain.BankAccount;
-import cz.novanadeje.app.shared.domain.Iban;
+import cz.novanadeje.app.donations.domain.Iban;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import org.springframework.beans.factory.annotation.Autowired;

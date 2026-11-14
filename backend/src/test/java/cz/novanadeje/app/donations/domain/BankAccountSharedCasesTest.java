@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donations.domain;
 
-import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.sharedcases.SharedCase;
 import cz.novanadeje.app.sharedcases.SharedCaseRunner;
 import tools.jackson.databind.json.JsonMapper;

@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.application.recovery;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.Iban;
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
 import cz.novanadeje.app.donations.domain.bank.BankPaymentId;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
@@ -15,7 +16,6 @@ import cz.novanadeje.app.shared.application.event.SecondFactorRecoveryPaid;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
-import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.PostalAddress;

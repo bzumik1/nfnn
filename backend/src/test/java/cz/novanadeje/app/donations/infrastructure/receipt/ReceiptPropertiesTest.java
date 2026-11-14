@@ -1,10 +1,10 @@
 package cz.novanadeje.app.donations.infrastructure.receipt;
 
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.Iban;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
-import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -2,10 +2,10 @@ package cz.novanadeje.app.donations.domain.payment;
 
 import cz.novanadeje.app.donations.BankPayments;
 import cz.novanadeje.app.donations.domain.BankAccount;
+import cz.novanadeje.app.donations.domain.Iban;
 import cz.novanadeje.app.donations.domain.bank.SenderAccount;
 import cz.novanadeje.app.donations.domain.donation.DonationPurpose;
 import cz.novanadeje.app.shared.domain.Currency;
-import cz.novanadeje.app.shared.domain.Iban;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.DisplayName;
