@@ -24,7 +24,7 @@ Test support:
 
 ## Keeping the suite fast
 - Passwords in tests go through `CachingPasswordHasher` over the real hasher; never a second real-cost hasher or a lower cost, because each BCrypt check at cost 12 costs a core a third of a second.
-- E-mail and async waits use Awaitility's defaults, set once in `CommonStepDefinitions.pollWithoutDelay` (no delay, 10 ms interval); no own `pollDelay`, `pollInterval` or `Thread.sleep`. A deliberate "nothing more arrives" wait stays explicit (`pollDelay(SETTLE)`).
+- E-mail and async waits use Awaitility's defaults, set once in `CommonStepDefinitions.pollWithoutDelay` (no delay, 10 ms interval); no own `pollDelay`, `pollInterval` or `Thread.sleep`. A step that checks nothing more arrives (no e-mail, exactly `n` e-mails) waits for the asynchronous work with `AsyncTaskTracker.awaitIdleAfter`, never for a fixed time: the work the request or job started is then finished, however slow the mail server (`contact_message.feature`, a mail server that takes 500 ms; Jakub 2026-11-14).
 - A new `@SpringBootTest` is `@IntegrationTest` (`TestContextRulesTest`) and a new JPA slice is `@PersistenceTest` (`TestContextRulesTest`; a new adapter joins its context's `<Context>PersistenceTestConfiguration`), so it reuses a cached context and its PostgreSQL container instead of starting both. A test that needs other beans or properties starts a context of its own: say why in the PR.
 - A new table needs nothing: `DatabaseCleaner` reads the tables and foreign keys from the catalogue. An integration test that commits cleans before it runs (`@BeforeEach`), because other classes share its database.
 - State on disk is per fork: scenarios use the folders under `build/cucumber/fork-${org.gradle.test.worker}/`; a new folder follows suit.

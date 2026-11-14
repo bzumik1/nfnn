@@ -14,6 +14,15 @@ Feature: Visitor sends a contact message
     And the email mentions "Jana Nováková" and "Mám dotaz k projektu Dominik."
     And the message is stored
 
+  Scenario: The e-mail of a slow mail server is there as soon as the request is answered
+    Given the email server takes 500 ms to accept a message
+    When the visitor submits a contact message
+      | fullName | Jana Nováková                   |
+      | email    | jana@example.cz                 |
+      | message  | Mám dotaz k projektu Dominik.   |
+    Then the response status is 202
+    And the email can be answered to "jana@example.cz"
+
   Scenario: Honeypot blocks a bot
     Given the email server accepts messages
     When the visitor submits a contact message with a non-empty "website" field

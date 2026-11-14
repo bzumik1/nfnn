@@ -5,6 +5,7 @@ import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.PasswordResetToken;
 import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.RecordingMailSender;
 import io.cucumber.java.en.And;
@@ -37,18 +38,19 @@ public class DonorPasswordResetStepDefinitions {
     private static final String PROFILE_PATH = "/api/donors/me";
     private static final Pattern TOKEN_IN_LINK = Pattern.compile("obnova-hesla#token=([A-Za-z0-9_-]{43})");
     private static final Duration MAIL_WAIT = Duration.ofSeconds(5);
-    private static final Duration SETTLE = Duration.ofMillis(300);
 
     private final ApiClient api;
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final PasswordResetTokenRepository tokens;
     private final ScenarioDonors scenarioDonors;
+    private final AsyncTaskTracker asyncTasks;
     private final List<Integer> requestStatuses = new ArrayList<>();
 
     public DonorPasswordResetStepDefinitions(ApiClient api, RecordingMailSender mailSender, JdbcClient jdbc,
-                                             PasswordResetTokenRepository tokens, ScenarioDonors scenarioDonors) {
+                                             PasswordResetTokenRepository tokens, ScenarioDonors scenarioDonors, AsyncTaskTracker asyncTasks) {
         this.scenarioDonors = scenarioDonors;
+        this.asyncTasks = asyncTasks;
         this.api = api;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
@@ -115,7 +117,7 @@ public class DonorPasswordResetStepDefinitions {
 
     @Then("no reset e-mail is sent to {string}")
     public void noResetEmailIsSentTo(String alias) {
-        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        asyncTasks.awaitIdleAfter("no reset e-mail is sent to " + alias);
         assertThat(resetEmailsTo(scenarioDonors.credentialsOf(alias).email())).isEmpty();
     }
 
@@ -184,8 +186,8 @@ public class DonorPasswordResetStepDefinitions {
     }
 
     @Then("no reset e-mail is sent")
-    public void noResetEmailIsSent() throws InterruptedException {
-        Thread.sleep(SETTLE.toMillis());
+    public void noResetEmailIsSent() {
+        asyncTasks.awaitIdleAfter("no reset e-mail is sent");
         assertThat(mailSender.sent()).isEmpty();
     }
 
@@ -244,8 +246,7 @@ public class DonorPasswordResetStepDefinitions {
     }
 
     private List<MimeMessage> awaitEmails(int count) {
-        await().atMost(MAIL_WAIT).untilAsserted(() -> assertThat(mailSender.sent()).hasSizeGreaterThanOrEqualTo(count));
-        await().pollDelay(SETTLE).atMost(MAIL_WAIT).until(() -> true);
+        asyncTasks.awaitIdleAfter(count + " reset e-mails");
         assertThat(mailSender.sent()).hasSize(count);
         return mailSender.sent();
     }
