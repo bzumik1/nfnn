@@ -1,5 +1,9 @@
 package cz.novanadeje.app.shared.infrastructure.audit;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
@@ -7,6 +11,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -162,9 +167,24 @@ class JpaAdminActionTrailTest {
                         values (?, ?, 'REMOVE_BANK_LOGO', null, 'Logo banky 0100 odebráno', ?, cast(? as jsonb))""")
                 .params(id, admin, java.sql.Timestamp.from(later), "{\"summaryKey\": \"remove bank logo\", \"values\": {\"bank\": 100}}").update();
 
-        assertThat(trail.findPerformedBefore(later.plusSeconds(1), 200)).filteredOn(entry -> entry.id().equals(id))
-                .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
-        assertThat(trail.findAllNewestFirst()).filteredOn(entry -> entry.id().equals(id))
-                .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(AdminActionFactsColumn.class);
+        logger.addAppender(lines);
+        try {
+            assertThat(trail.findPerformedBefore(later.plusSeconds(1), 200)).filteredOn(entry -> entry.id().equals(id))
+                    .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
+            assertThat(trail.findAllNewestFirst()).filteredOn(entry -> entry.id().equals(id))
+                    .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
+        } finally {
+            logger.detachAppender(lines);
+        }
+
+        assertThat(lines.list).filteredOn(line -> line.getFormattedMessage().contains(id.toString())).hasSize(2).allSatisfy(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage())
+                    .isEqualTo("The facts of admin action " + id + " could not be read: not an object of a summary key and text values")
+                    .doesNotContain("remove bank logo");
+        });
     }
 }

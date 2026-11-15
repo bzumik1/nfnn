@@ -24,7 +24,7 @@ class AdminActionFactsTest {
     private static final String DONOR = "0192f0f1-0000-7000-8000-00000000000d";
     private static final String OTHER = "0192f0f1-0000-7000-8000-0000000000aa";
     private static final String LINK = "0192f0f1-0000-7000-8000-0000000000bb";
-    private static final String FROZEN_SHAPES_SHA256 = "4e9b519cd0be12769fb0159dccb2b38d1686d57669d4e320d3b09183811fa2f4";
+    private static final String FROZEN_SHAPES_SHA256 = "0c0030a1e9e44fd710e0a778b9e10539a1efb1f0a4ada9481ef35edab99299ae";
 
     static Stream<Arguments> czechAndEnglishRecords() {
         return Stream.of(
@@ -419,7 +419,7 @@ class AdminActionFactsTest {
     }
 
     @Test
-    @DisplayName("Given the frozen shapes of older details, when they are listed, then they are exactly the shapes of 15 November 2026, because a new action publishes facts instead")
+    @DisplayName("Given the frozen shapes of older details, when they are listed with their normalised words, then they are exactly those of 15 November 2026, because a new action publishes facts instead")
     void should_list_the_shapes_of_15_november_2026_when_listed_given_the_frozen_parser() {
         String shapes = String.join("\n", AdminActionFacts.frozenShapes());
 

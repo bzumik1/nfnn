@@ -1,10 +1,10 @@
 package cz.novanadeje.app.donors.interfaces.rest;
 
 import cz.novanadeje.app.donors.application.AdminAccountsSyncSnapshot;
-import cz.novanadeje.app.donors.application.AdminActionFacts;
 import cz.novanadeje.app.donors.application.AdminActionView;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.shared.interfaces.rest.SyncChunk;
+import cz.novanadeje.app.support.OlderAuditEntries;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -61,7 +61,7 @@ class AdminDonorsSyncProjectionTest {
 
     private static AdminActionView action(String action, String details) {
         return new AdminActionView(ACTION, ADMIN, Optional.empty(), action, Optional.empty(), details, NOW, Optional.empty(),
-                AdminActionFacts.read(action, details), Optional.empty());
+                OlderAuditEntries.factsOf(action, details), Optional.empty());
     }
 
     private static ResourceBundleMessageSource messages() {

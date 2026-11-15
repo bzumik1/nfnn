@@ -78,7 +78,8 @@ public class CommonStepDefinitions {
     @Before
     public void isolateScenario() {
         asyncTasks.awaitIdleAfter("the previous scenario", ASYNC_WORK_WAIT);
-        context.getBean(AdminActionFactsWatch.class).takeDisagreements();
+        assertThat(context.getBean(AdminActionFactsWatch.class).takeDisagreements())
+                .as("audited actions published before this scenario whose facts disagree with their details").isEmpty();
         database.emptyAllTables();
         mailSender.clear();
         mailSender.startScenario();
@@ -104,6 +105,7 @@ public class CommonStepDefinitions {
 
     @After
     public void auditedActionsPublishedTheirFacts() {
+        asyncTasks.awaitIdleAfter("the scenario", ASYNC_WORK_WAIT);
         assertThat(context.getBean(AdminActionFactsWatch.class).takeDisagreements())
                 .as("audited actions whose facts disagree with what the frozen shapes read from their details").isEmpty();
     }

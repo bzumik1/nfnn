@@ -17,15 +17,17 @@ public final class AdminActionFactsAgreement {
     }
 
     public static Optional<String> disagreement(AdminActionPerformed event) {
-        Optional<AdminActionFacts> read = AdminActionFacts.read(event.action(), event.details());
+        Optional<AdminActionFacts> read = OlderAuditEntries.factsOf(event.action(), event.details());
         if (read.isEmpty()) {
-            return event.facts().map(published -> event.action() + " publishes " + published + ", but the frozen shapes read none from its details");
+            return Optional.empty();
         }
         if (event.facts().isEmpty()) {
             return Optional.of(event.action() + " publishes no facts, though the frozen shapes read " + read.get() + " from its details");
         }
         AdminActionPerformed.Facts published = event.facts().get();
-        if (!published.summaryKey().equals(read.get().summaryKey()) || !published.values().equals(read.get().values())) {
+        boolean keepsEveryReadValue = read.get().values().entrySet().stream()
+                .allMatch(value -> value.getValue().equals(published.values().get(value.getKey())));
+        if (!published.summaryKey().equals(read.get().summaryKey()) || !keepsEveryReadValue) {
             return Optional.of(event.action() + " publishes " + published + ", but the frozen shapes read " + read.get() + " from its details");
         }
         return Optional.empty();

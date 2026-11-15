@@ -8,11 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public record AdminActionFacts(String summaryKey, Map<String, String> values) {
 
@@ -57,7 +61,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 .or(() -> read(entry.action(), entry.details()));
     }
 
-    public static Optional<AdminActionFacts> read(String action, String details) {
+    static Optional<AdminActionFacts> read(String action, String details) {
         return SHAPES.getOrDefault(action, List.of()).stream()
                 .map(shape -> shape.read(action, details))
                 .flatMap(Optional::stream)
@@ -65,10 +69,13 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
     }
 
     static List<String> frozenShapes() {
-        return SHAPES.entrySet().stream()
+        Stream<String> shapes = SHAPES.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .flatMap(shapes -> shapes.getValue().stream().map(shape -> shapes.getKey() + " " + shape.variant() + " " + shape.pattern().pattern()))
-                .toList();
+                .flatMap(byAction -> byAction.getValue().stream().map(shape -> byAction.getKey() + " " + shape.variant() + " " + shape.pattern().pattern()));
+        Stream<String> sections = new TreeMap<>(SECTION_CODES).entrySet().stream().map(section -> "section " + section.getKey() + " " + section.getValue());
+        Stream<String> inherited = INHERITED_WORDS.stream().map(word -> "inherited " + word);
+        Stream<String> normalized = new TreeSet<>(NORMALIZERS.keySet()).stream().map(name -> "normalized " + name);
+        return Stream.of(shapes, sections, inherited, normalized).flatMap(Function.identity()).toList();
     }
 
     public Optional<String> value(String name) {

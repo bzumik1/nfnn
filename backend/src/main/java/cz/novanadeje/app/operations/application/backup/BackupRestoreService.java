@@ -97,6 +97,7 @@ public class BackupRestoreService {
             return;
         }
         String file = run.fileName().orElse("an unnamed backup");
+        Optional<String> namedFile = run.fileName();
         if (run.succeeded()) {
             String tables = run.tables().map(count -> ", tabulek: " + count).orElse("");
             String revoked = run.tables().flatMap(count -> run.revocations())
@@ -104,12 +105,14 @@ public class BackupRestoreService {
                             + run.carriedForward().map(BackupRestoreService::carried).orElse(""))
                     .orElse("");
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORED_ACTION, Optional.empty(),
-                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked, restoredFacts(run, file), now));
+                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked,
+                    namedFile.map(named -> restoredFacts(run, named)), now));
             log.info("The restore of {} (request {}) finished and is recorded in the administration history", file, requestId);
         } else {
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORE_FAILED_ACTION, Optional.empty(),
                     truncated("Obnova ze zálohy " + file + " (požadavek " + requestId + ") selhala: " + run.error().orElse("neznámá chyba")
-                            + "; data zůstala, jak byla"), AdminActionPerformed.Facts.of(BACKUP_RESTORE_FAILED_ACTION, Map.of("file", file)), now));
+                            + "; data zůstala, jak byla"), namedFile.map(named -> AdminActionPerformed.Facts.of(BACKUP_RESTORE_FAILED_ACTION, Map.of("file", named))),
+                    now));
             log.warn("The restore of {} (request {}) failed; the data stayed as they were", file, requestId);
         }
     }

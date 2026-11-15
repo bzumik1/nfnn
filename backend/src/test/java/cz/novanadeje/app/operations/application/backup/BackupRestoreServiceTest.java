@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -236,6 +237,26 @@ class BackupRestoreServiceTest {
         assertThat(audit.getValue().action()).isEqualTo("BACKUP_RESTORE_FAILED");
         assertThat(audit.getValue().details())
                 .isEqualTo("Obnova ze zálohy " + FILE + " (požadavek " + REQUEST + ") selhala: pg_restore: error: x; data zůstala, jak byla");
+    }
+
+    @Test
+    @DisplayName("Given a finished and a failed restore of a backup without a file name, when the backend starts, then both are audited without facts, so their sentence never names a made-up file")
+    void should_audit_without_facts_when_started_given_restores_without_a_file_name() {
+        BackupRun named = restore(RunOutcome.OK, Optional.of(ADMIN), Optional.empty());
+        BackupRun unnamedOk = new BackupRun(RunOutcome.OK, named.startedAt(), named.finishedAt(), Optional.empty(), named.sizeBytes(), named.tables(),
+                named.requestId(), named.requestedBy(), Optional.empty(), Optional.empty(), Optional.empty());
+        BackupRun unnamedFailed = new BackupRun(RunOutcome.FAILED, named.startedAt(), named.finishedAt(), Optional.empty(), named.sizeBytes(), Optional.empty(),
+                named.requestId(), named.requestedBy(), Optional.of("pg_restore: error: x"), Optional.empty(), Optional.empty());
+        when(store.lastRestore()).thenReturn(Optional.of(unnamedOk), Optional.of(unnamedFailed));
+        when(records.recordOnce(REQUEST, NOW)).thenReturn(true);
+
+        service.recordFinishedRestore();
+        service.recordFinishedRestore();
+
+        ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events, times(2)).publishEvent(audit.capture());
+        assertThat(audit.getAllValues()).extracting(AdminActionPerformed::action).containsExactly("BACKUP_RESTORED", "BACKUP_RESTORE_FAILED");
+        assertThat(audit.getAllValues()).extracting(AdminActionPerformed::facts).containsOnly(Optional.empty());
     }
 
     @Test
