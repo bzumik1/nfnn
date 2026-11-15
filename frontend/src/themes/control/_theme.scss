@@ -96,6 +96,8 @@
   --color-sheet-separator: var(--color-border);
   --color-sheet-chevron: var(--color-text-subtle);
   --shadow-sheet-close: none;
+  --color-segment-thumb: var(--color-surface);
+  --shadow-segment-thumb: 0 1px 0 var(--color-border);
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -361,6 +363,7 @@
 @mixin dark-appearance {
   color-scheme: dark;
   --color-sheet-grouped: var(--color-surface-alt);
+  --color-segment-thumb: var(--color-surface-muted);
   --color-accent: #5eead4;
   --color-accent-soft: #133a35;
   --color-accent-bg: #10302b;

@@ -93,3 +93,57 @@
     opacity: 1;
   }
 }
+
+.ui-field-group {
+  background: var(--color-sheet-group);
+  border-radius: var(--radius-sheet-group);
+
+  app-form-field {
+    position: relative;
+    margin: 0;
+    padding: var(--space-2-5) var(--sheet-row-padding-inline);
+  }
+
+  > * + *::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto var(--sheet-row-padding-inline);
+    border-top: 1px solid var(--color-sheet-separator);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+  }
+
+  app-form-field .field-label {
+    margin-bottom: 0;
+    color: var(--color-sheet-secondary);
+    font-size: var(--text-sheet-subtitle);
+    font-weight: var(--weight-regular);
+  }
+
+  app-form-field:has([aria-invalid='true']) .field-label {
+    color: var(--color-danger);
+  }
+
+  .form-control {
+    padding-block: var(--space-1);
+    padding-inline-start: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-sheet-text);
+    font-size: var(--text-sheet-body);
+  }
+
+  app-password-reveal .password-reveal {
+    height: 100%;
+
+    @include touch-target.reaches-finger-size($positioned: true);
+  }
+}
+
+.ui-field-group + .ui-field-group {
+  margin-top: var(--space-5);
+}

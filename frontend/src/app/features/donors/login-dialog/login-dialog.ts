@@ -68,6 +68,7 @@ import {
 } from '../donor-field-messages';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { Connectivity } from '../../../core/connectivity/connectivity';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 interface RegistrationFields {
   name: string;
@@ -139,6 +140,8 @@ export class LoginDialog {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
   protected readonly appearance = inject(Appearance);
+  private readonly compact = inject(CompactLayout).isCompact;
+  protected readonly presentation = computed(() => (this.compact() ? 'sheet' : 'centered'));
   private readonly passkeyAuthenticator = inject(PasskeyAuthenticator);
   private readonly companyLookup = inject(CompanyLookupApi);
   private readonly changeDetector = inject(ChangeDetectorRef);

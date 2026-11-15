@@ -1,4 +1,5 @@
 import { HttpHeaders, provideHttpClient } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -29,6 +30,7 @@ import { drawsText } from '../../../shared/ui/qr-code/testing/branded-qr';
 import { FakeDialogHistory } from '../../../shared/ui/dialog/testing/fake-dialog-history';
 import { LoginDialog } from './login-dialog';
 import { Connectivity, PROBE_PATH } from '../../../core/connectivity/connectivity';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 
 describe('Given the sign-in dialog', () => {
   let fixture: ComponentFixture<LoginDialog>;
@@ -39,8 +41,10 @@ describe('Given the sign-in dialog', () => {
   let history: FakeDialogHistory;
   let secrets: SignInSecret[];
   let prepared: number;
+  const compact = signal(false);
 
   beforeEach(async () => {
+    compact.set(false);
     secrets = [];
     prepared = 0;
     const device: SessionDevice = {
@@ -60,6 +64,7 @@ describe('Given the sign-in dialog', () => {
         { provide: PasskeyAuthenticator, useValue: passkeys },
         { provide: DialogHistory, useValue: history },
         { provide: SESSION_DEVICE, useValue: device },
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
       ],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);
@@ -174,8 +179,10 @@ describe('Given the sign-in dialog', () => {
 
     it('then the forgotten password link stands right under the password field', () => {
       const field = element('#login-password').closest('app-form-field') as HTMLElement;
+      const card = field.parentElement as HTMLElement;
 
-      expect(field.nextElementSibling?.querySelector('.forgot-link')?.textContent?.trim()).toBe(
+      expect(field.nextElementSibling).toBeNull();
+      expect(card.nextElementSibling?.querySelector('.forgot-link')?.textContent?.trim()).toBe(
         'Zapomněli jste heslo?',
       );
     });
@@ -194,6 +201,18 @@ describe('Given the sign-in dialog', () => {
 
       expect(dialog.isOpen()).toBe(false);
     });
+  });
+
+  it('when it opens on a phone, then it slides up as a sheet like the account, and on a computer it stays a centred dialog', async () => {
+    compact.set(true);
+    await render();
+
+    expect(element('dialog').getAttribute('data-presentation')).toBe('sheet');
+
+    compact.set(false);
+    await settle();
+
+    expect(element('dialog').getAttribute('data-presentation')).toBe('centered');
   });
 
   it('when it opens for the administration, then the lead says signing in leads into the administration', async () => {

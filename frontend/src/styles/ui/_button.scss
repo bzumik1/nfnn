@@ -133,3 +133,30 @@
     border-color: var(--color-success);
   }
 }
+
+.ui-button--grouped {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--sheet-row-height);
+  margin-top: 0;
+  padding: var(--space-2) var(--sheet-row-padding-inline);
+  border-radius: var(--radius-sheet-group);
+  background: var(--color-sheet-group);
+  color: var(--color-accent);
+  font-family: var(--font-sheet);
+  font-size: var(--text-sheet-body);
+  font-weight: var(--weight-regular);
+  text-align: center;
+  white-space: normal;
+  box-shadow: none;
+}
+
+.ui-button--primary.ui-button--grouped {
+  background: var(--color-accent-fill);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-semibold);
+  box-shadow: none;
+}

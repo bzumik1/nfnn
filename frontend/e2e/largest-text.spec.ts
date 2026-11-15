@@ -504,7 +504,7 @@ for (const { width, height } of [
       }
       const close = dialog.getByRole('button', { name: 'Zavřít' });
       const button = (await close.boundingBox())!;
-      const glyph = (await close.locator('span').boundingBox())!;
+      const glyph = (await close.locator('svg, span').locator('visible=true').boundingBox())!;
       expect(glyph.x).toBeGreaterThanOrEqual(button.x - 1);
       expect(glyph.x + glyph.width).toBeLessThanOrEqual(button.x + button.width + 1);
       expect(await contentPastTheSides(dialog)).toEqual([]);
