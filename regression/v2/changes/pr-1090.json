@@ -3,7 +3,7 @@
     "kind": "retired",
     "suite": "backend-junit",
     "test": "architecture.TimeRulesTest > Given a class that reads the system clock in every way Java offers, when the time rule checks it, then each read is reported and no read of a given clock is",
-    "replacement": "architecture.TimeRulesTest > Given a class that reads the system clock, the default zone or a calendar day from a clock in every way Java offers, when the time rule checks it, then each read is reported and only an instant of a given clock is not",
+    "replacement": "architecture.TimeRulesTest > Given a class that reads the system clock, the default zone or a calendar day from a clock in every way Java offers, when the time rule checks it, then each read is reported and a read through a given clock's instant or an explicit zone is not",
     "reason": "Architecture audit #621 round 5 (#1083): the injected clock runs in UTC and the foundation's calendar is Prague's, so the time rule now also reports a calendar day read from a clock (LocalDate.now(clock), Year.now(clock)) and every read of the default zone; the planted test proves them reported, and only Instant.now(clock) stays allowed",
     "contract": "docs/api-contract.md, architecture rules (TimeRulesTest)"
   }

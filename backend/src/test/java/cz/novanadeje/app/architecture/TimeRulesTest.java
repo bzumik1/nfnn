@@ -41,6 +41,7 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Set;
+import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -75,7 +76,7 @@ class TimeRulesTest {
                     + "ofInstant(clock.instant(), FoundationZone.ZONE), never from the clock's or the JVM's zone");
 
     @Test
-    @DisplayName("Given a class that reads the system clock, the default zone or a calendar day from a clock in every way Java offers, when the time rule checks it, then each read is reported and only an instant of a given clock is not")
+    @DisplayName("Given a class that reads the system clock, the default zone or a calendar day from a clock in every way Java offers, when the time rule checks it, then each read is reported and a read through a given clock's instant or an explicit zone is not")
     void should_report_every_system_clock_zone_and_calendar_read_when_rule_checks_given_a_planted_class() {
         var details = time_comes_from_the_injected_clock.evaluate(new ClassFileImporter().importClasses(PlantedClockReads.class))
                 .getFailureReport().getDetails();
@@ -108,8 +109,10 @@ class TimeRulesTest {
                 "java.time.ZoneId.systemDefault()",
                 "java.time.ZoneOffset.systemDefault()",
                 "java.util.TimeZone.getDefault()",
+                "java.util.SimpleTimeZone.getDefault()",
                 "java.util.TimeZone.setDefault(java.util.TimeZone)",
-                "java.time.Clock.getZone()");
+                "java.time.Clock.getZone()",
+                PlantedClockReads.PlantedClock.class.getName() + ".getZone()");
     }
 
     @Test
@@ -203,7 +206,7 @@ class TimeRulesTest {
 
     static final class PlantedClockReads {
 
-        List<Object> reads(Clock clock, ZoneId zone) {
+        List<Object> reads(Clock clock, PlantedClock plantedClock, ZoneId zone) {
             Supplier<Instant> reference = Instant::now;
             return List.of(
                     reference,
@@ -233,11 +236,16 @@ class TimeRulesTest {
                     ZoneId.systemDefault(),
                     ZoneOffset.systemDefault(),
                     TimeZone.getDefault(),
-                    clock.getZone());
+                    SimpleTimeZone.getDefault(),
+                    clock.getZone(),
+                    plantedClock.getZone());
         }
 
         void changesTheDefaultZone() {
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        }
+
+        abstract static class PlantedClock extends Clock {
         }
 
         List<Object> readsTheGivenClock(Clock clock, ZoneId zone) {
@@ -246,8 +254,7 @@ class TimeRulesTest {
                     LocalDate.ofInstant(clock.instant(), zone),
                     Clock.tick(clock, Duration.ofSeconds(1)),
                     Clock.fixed(Instant.EPOCH, zone),
-                    new Date(0L),
-                    new GregorianCalendar(2026, Calendar.NOVEMBER, 13));
+                    new Date(0L));
         }
     }
 }
