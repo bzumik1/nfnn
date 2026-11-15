@@ -67,8 +67,8 @@ class DomainMutatorRulesTest {
         return new ArchCondition<>("call or reference no mutator of a domain class and write no field of one (a mutator writes a field of a "
                 + "domain class it reaches through its receiver, parameters and their fields, or changes a collection or map such a field holds "
                 + "on the line that reads it, directly or through the domain methods it calls, an override's included, or is a transition, or "
-                + "returns what a transition it reaches made; a transition is an instance method of an entity returning its own kind, alone or "
-                + "inside a generic type, and an entity a class or record, no enum, with a field id of a domain record named …Id or …Reference, "
+                + "returns what a transition it reaches made, as its kind or a supertype in the domain; a transition is an instance method of an "
+                + "entity returning its own kind or a subtype, alone or inside a generic type, and an entity a class or record, no enum, with a field id of a domain record named …Id or …Reference, "
                 + "or one a domain interface named …Repository both takes and returns, an id record aside)") {
             @Override
             public void check(JavaClass controller, ConditionEvents events) {
@@ -107,7 +107,7 @@ class DomainMutatorRulesTest {
         JavaClass owner = method.getOwner();
         return !method.getModifiers().contains(JavaModifier.STATIC) && isEntity(owner)
                 && method.getReturnType().getAllInvolvedRawTypes().stream()
-                .anyMatch(returned -> isDomain(returned) && (owner.isAssignableTo(returned.getName()) || returned.isAssignableTo(owner.getName())));
+                .anyMatch(returned -> returned.isAssignableTo(owner.getName()));
     }
 
     private static boolean isEntity(JavaClass type) {
@@ -155,8 +155,8 @@ class DomainMutatorRulesTest {
 
     private static Optional<String> transitionReturnedBy(JavaMethod start, JavaMethod reached) {
         return Optional.of(reached)
-                .filter(method -> !method.equals(start) && isTransition(method) && start.getReturnType().getAllInvolvedRawTypes().stream()
-                        .anyMatch(returned -> returned.isAssignableTo(method.getOwner().getName()) || method.getOwner().isAssignableTo(returned.getName())))
+                .filter(method -> isTransition(method) && start.getReturnType().getAllInvolvedRawTypes().stream()
+                        .anyMatch(returned -> isDomain(returned) && method.getOwner().isAssignableTo(returned.getName())))
                 .map(transition -> "returns what the transition " + transition.getFullName() + " made");
     }
 
@@ -319,11 +319,14 @@ class DomainMutatorRulesTest {
                     planted("planteda.domain.Notice", "public record Notice(String text) { public Notice dismissed() { return new Notice(\"\"); } }"),
                     planted("planteda.domain.BannerId",
                             "public record BannerId(java.util.UUID value) { public BannerId successor() { return new BannerId(java.util.UUID.randomUUID()); } }"),
+                    planted("planteda.domain.Promise", "public interface Promise {}"),
                     planted("planteda.domain.Pledges", """
                             public final class Pledges {
                                 public static java.util.List<Pledge> withdrawAll(java.util.List<Pledge> pledges) {
                                     return pledges.stream().map(Pledge::withdrawn).toList();
                                 }
+                                public static Promise promiseOf(Pledge pledge) { return pledge.withdrawn(); }
+                                public static Object firstAmount(java.util.List<Pledge> pledges) { return pledges.getFirst().withdrawn().amount(); }
                                 public static int total(java.util.List<Pledge> pledges) {
                                     return pledges.stream().map(Pledge::withdrawn).mapToInt(Pledge::amount).sum();
                                 }
@@ -355,13 +358,15 @@ class DomainMutatorRulesTest {
                     planted("planteda.domain.TaggedGift", "public class TaggedGift implements Tagged { private boolean tagged; public void tag() { tagged = true; } }"),
                     planted("planteda.domain.GiftValue", "public record GiftValue(String name) { public GiftValue renamed(String other) { return new GiftValue(other); } }"),
                     planted("planteda.domain.Pledge", """
-                            public class Pledge {
+                            public class Pledge implements Promise {
                                 private final PledgeId id;
                                 private final int amount;
                                 public Pledge(int amount) { this.id = new PledgeId(java.util.UUID.randomUUID()); this.amount = amount; }
                                 public int amount() { return amount; }
                                 public Pledge withdrawn() { return new Pledge(0); }
                                 public java.util.Optional<Pledge> renewed() { return java.util.Optional.of(new Pledge(amount)); }
+                                public Promise asPromise() { return this; }
+                                public Object snapshot() { return amount; }
                             }
                             """),
                     planted("planteda.domain.PledgeId", "public record PledgeId(java.util.UUID value) {}"),
@@ -413,6 +418,7 @@ class DomainMutatorRulesTest {
                                 void touchingTag(cz.novanadeje.app.planteda.domain.Item item) { item.touchTag(); }
                                 String granting(cz.novanadeje.app.planteda.domain.Wish wish) { return wish.granted().text(); }
                                 boolean showing(cz.novanadeje.app.planteda.domain.Banner banner) { return banner.show().shown(); }
+                                Object promising(cz.novanadeje.app.planteda.domain.Pledge pledge) { return cz.novanadeje.app.planteda.domain.Pledges.promiseOf(pledge); }
                                 int withdrawingAll(java.util.List<cz.novanadeje.app.planteda.domain.Pledge> pledges) {
                                     return cz.novanadeje.app.planteda.domain.Pledges.withdrawAll(pledges).size();
                                 }
@@ -429,6 +435,9 @@ class DomainMutatorRulesTest {
                                             + new cz.novanadeje.app.planteda.domain.Label(" label ").trimmed()
                                             + new cz.novanadeje.app.planteda.domain.Notice("notice").dismissed()
                                             + cz.novanadeje.app.planteda.domain.Pledges.total(java.util.List.of())
+                                            + cz.novanadeje.app.planteda.domain.Pledges.firstAmount(java.util.List.of())
+                                            + new cz.novanadeje.app.planteda.domain.Pledge(1).asPromise()
+                                            + new cz.novanadeje.app.planteda.domain.Pledge(1).snapshot()
                                             + new cz.novanadeje.app.planteda.domain.Tray(1).emptied()
                                             + new cz.novanadeje.app.planteda.domain.Box(1).emptied()
                                             + new cz.novanadeje.app.planteda.domain.Bin(1).emptied()
@@ -448,7 +457,7 @@ class DomainMutatorRulesTest {
                 + "method, in a lambda, through a static method on its parameter, through another domain class, through an override of an abstract "
                 + "method and of an interface, by a method reference, by writing a field, in a held set, in the object of a field, of a subclass's "
                 + "field, and a transition of an entity class or record (one with its own id, or one a repository stores and loads) returning its own kind, "
-                + "alone and in an Optional, and a domain function returning what such a transition made")
+                + "alone and in an Optional, and a domain function returning what such a transition made, as its kind or a supertype")
         void should_report_every_change_when_checked_given_a_controller_that_changes_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.renaming(").contains("Gift.rename("))
@@ -468,15 +477,16 @@ class DomainMutatorRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.touchingTag(").contains("GiftTag.label"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.granting(").contains("returns its own kind"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.showing(").contains("returns its own kind"))
-                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.withdrawingAll(").contains("returns what the transition"));
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.withdrawingAll(").contains("returns what the transition"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.promising(").contains("returns what the transition"));
         }
 
         @Test
         @DisplayName("when the rule checks the controller, then reading accessors, a public field and a domain service's check, a record's copy, "
                 + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, a value a "
                 + "repository only takes, a view it only returns, an id it takes and returns, a value a domain "
-                + "interface not named …Repository, an application …Repository or a domain class named …Repository takes and returns, a domain "
-                + "function that uses a transition only to compute a number, an enum's next value, a filtered copy of a list that "
+                + "interface not named …Repository, an application …Repository or a domain class named …Repository takes and returns, domain "
+                + "functions that use a transition only to compute a number or an Object, an entity's method returning a supertype or an Object, an enum's next value, a filtered copy of a list that "
                 + "is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
         void should_report_no_read_when_checked_given_a_controller_that_reads_and_creates_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object)).noneSatisfy(detail -> assertThat(detail).contains("GiftController.reading("));
