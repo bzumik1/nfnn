@@ -13,6 +13,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -27,38 +29,44 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.method.MethodValidationException;
+import org.springframework.validation.method.MethodValidationResult;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.UnsatisfiedServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -72,8 +80,29 @@ class ProblemTextsTest {
     private static final String CLIENT_METHOD = "NFNN-CLIENT-VALUE";
     private static final String EXCEPTION_TEXT = "nfnn-exception-text";
     private static final List<String> LANGUAGES = List.of("cs", "en", "de");
-    private static final Pattern PROBLEM_CODE = Pattern.compile("\"((?:auth|contact|content|donations|donors|operations)/[a-z0-9-]+)\"");
-    private static final Pattern DOMAIN_EXCEPTION = Pattern.compile("extends (RuleViolation|NotFound|Conflict|AuthenticationFailure|AccessDenied)\\b");
+    private static final Map<String, String> TEXTS_KEPT_WITHOUT_A_READER = Map.of(
+            "problem.donations/unsupported-signature-vector.detail.",
+            "the reasons of the SVG signature parser, kept with the parser for the step that brings the vector to the one signature "
+                    + "(docs/api-contract.md, Vector signature); nothing answers them since API generation 5 removed the upload");
+
+    private static final List<Class<? extends Exception>> SPRING_ANSWERS_WITH_SITE_TEXTS = List.of(
+            MethodArgumentNotValidException.class, NoResourceFoundException.class, NoHandlerFoundException.class,
+            HttpRequestMethodNotSupportedException.class, HttpMediaTypeNotSupportedException.class, ConversionNotSupportedException.class,
+            HttpMessageNotReadableException.class);
+
+    private static final Map<Class<? extends Exception>, String> SPRING_ANSWERS_WITH_SPRING_TEXTS = Map.of(
+            HttpMediaTypeNotAcceptableException.class,
+            "406 names the media types the server produces or that the Accept header could not be parsed, never the header itself",
+            MissingPathVariableException.class, "500 names the handler's own path variable, a server's mistake the client cannot cause",
+            MissingServletRequestPartException.class, "400 names the part the handler requires, never what the client sent",
+            ServletRequestBindingException.class,
+            "400 names the header, cookie or parameter the handler requires and its conditions, never the value the client sent",
+            AsyncRequestTimeoutException.class, "503 with Spring's status title and no detail",
+            HttpMessageNotWritableException.class, "500 with Spring's fixed sentence, which names no value",
+            MethodValidationException.class, "500 with Spring's fixed sentence, which names no value",
+            AsyncRequestNotUsableException.class, "the client went away, so no answer is written");
+
+    private static final List<String> KEYS_READ_WITHOUT_THE_CZECH_FALLBACK = List.of("problem.validation.title", "problem.validation.detail");
 
     private static final Map<String, Supplier<Exception>> FAILURES = Map.ofEntries(
             Map.entry("illegal-argument", () -> new IllegalArgumentException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
@@ -103,7 +132,8 @@ class ProblemTextsTest {
             Map.entry("error-response", ProblemTextsTest::errorResponseWithDetail),
             Map.entry("missing-parameter", () -> new MissingServletRequestParameterException("mode", "String")),
             Map.entry("missing-path-variable", () -> new MissingPathVariableException("kind", probeParameter())),
-            Map.entry("missing-part", () -> new MissingServletRequestPartException("file")));
+            Map.entry("missing-part", () -> new MissingServletRequestPartException("file")),
+            Map.entry("method-validation", () -> new MethodValidationException(methodValidationResult())));
 
     private static final Map<String, RequestBuilder> REQUESTS = Map.of(
             "invalid-field", post("/probe/record").contentType(MediaType.APPLICATION_JSON).content("{\"value\": \"" + CLIENT_VALUE + "\"}"),
@@ -234,6 +264,16 @@ class ProblemTextsTest {
     }
 
     @Test
+    @DisplayName("Given a third language and a method Spring refuses, when it is answered, then the base bundle gives the Czech texts, because Spring's own lookup has no Czech fallback")
+    void should_answer_base_texts_when_answered_given_third_language_and_spring_refusal() throws Exception {
+        MvcResult result = mockMvc.perform(request(HttpMethod.valueOf(CLIENT_METHOD), "/probe").header("Accept-Language", "de")).andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(405);
+        assertThat(bodyOf(result)).contains("\"title\":\"Nepovolená metoda\"")
+                .contains("\"detail\":\"Tato adresa takový požadavek nepřijímá.\"");
+    }
+
+    @Test
     @DisplayName("Given a value a value object refuses, when the refusal is answered, then the problem says so in the client's language without the exception's text")
     void should_answer_with_translated_texts_when_answered_given_illegal_argument() throws Exception {
         MvcResult czech = mockMvc.perform(get("/fail/illegal-argument").header("Accept-Language", "cs")).andReturn();
@@ -268,45 +308,99 @@ class ProblemTextsTest {
 
     @Test
     @DisplayName("Given every problem code a domain failure is raised with, when the bundles are read, then each has a Czech and an English title and detail")
-    void should_find_czech_and_english_texts_when_bundles_read_given_every_domain_problem_code() throws IOException {
-        List<String> codes;
-        try (Stream<Path> sources = Files.walk(Path.of("src/main/java"))) {
-            codes = sources.filter(path -> path.toString().endsWith(".java"))
-                    .map(ProblemTextsTest::read)
-                    .filter(source -> DOMAIN_EXCEPTION.matcher(source).find())
-                    .flatMap(ProblemTextsTest::problemCodes)
-                    .distinct()
-                    .sorted()
-                    .toList();
-        }
+    void should_find_czech_and_english_texts_when_bundles_read_given_every_domain_problem_code() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses(SPRING_ANSWERS_WITH_SITE_TEXTS);
 
-        assertThat(codes).contains("donors/donor-not-found", "operations/invalid-settings");
-        assertThat(codes.stream().flatMap(this::missingTexts).toList()).isEmpty();
+        assertThat(catalogue.codes()).contains("donors/donor-not-found", "operations/invalid-settings", "donors/password-too-common",
+                "operations/changed-meanwhile", "auth/invalid-credentials");
+        assertThat(catalogue.keysRead()).contains("problem.validation.title", "problem.app.update-required.detail", "problem.server-busy.detail");
+        assertThat(catalogue.keyPrefixesRead()).contains("problem.donations/bank-logo-unavailable.detail.");
+        assertThat(catalogue.errorResponses()).contains(LiveUnavailableException.class.getName(), RateLimitExceededException.class.getName(),
+                HttpRequestMethodNotSupportedException.class.getName());
+        assertThat(catalogue.missingTexts(Map.of("cs", bundle("cs"), "en", bundle("en")), TEXTS_KEPT_WITHOUT_A_READER.keySet())).isEmpty();
     }
 
-    private Stream<String> missingTexts(String code) {
-        return Stream.of(Locale.forLanguageTag("cs"), Locale.ENGLISH)
-                .flatMap(locale -> Stream.of("title", "detail")
-                        .map(part -> "problem." + code + "." + part)
-                        .filter(key -> messages.getMessage(key, null, null, locale) == null)
-                        .map(key -> key + " (" + locale + ")"));
+    @Test
+    @DisplayName("Given every domain failure, when its codes are read from its class file, then each is one constant code and every concrete failure holds its own")
+    void should_find_only_constant_codes_of_their_own_when_read_given_every_domain_failure() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses(SPRING_ANSWERS_WITH_SITE_TEXTS);
+
+        assertThat(catalogue.irregularCodes()).isEmpty();
+        assertThat(catalogue.failuresWithoutCode()).isEmpty();
+        assertThat(catalogue.failuresForwardingACode()).isEmpty();
     }
 
-    private static Stream<String> problemCodes(String source) {
-        Matcher matcher = PROBLEM_CODE.matcher(source);
-        Stream.Builder<String> codes = Stream.builder();
-        while (matcher.find()) {
-            codes.add(matcher.group(1));
-        }
-        return codes.build();
+    @Test
+    @DisplayName("Given the problem texts of the Czech, English and base bundles, when each is matched with the codes, the error responses and the keys the handlers read, then none is an orphan beyond the reviewed ones")
+    void should_find_no_orphan_text_when_matched_given_the_problem_texts_of_every_bundle() {
+        List<String> orphans = ProblemTextCatalogue.ofMainClasses(SPRING_ANSWERS_WITH_SITE_TEXTS)
+                .orphanTexts(List.of(bundle("cs"), bundle("en"), baseBundle()), TEXTS_KEPT_WITHOUT_A_READER.keySet());
+
+        assertThat(orphans).isEmpty();
     }
 
-    private static String read(Path path) {
-        try {
-            return Files.readString(path);
-        } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
-        }
+    @Test
+    @DisplayName("Given the base bundle a third language falls back to, when its problem texts are compared with the Czech bundle, then each is the Czech text")
+    void should_hold_the_czech_text_when_compared_given_every_problem_text_of_the_base_bundle() {
+        Properties czech = bundle("cs");
+        Properties base = baseBundle();
+
+        Map<String, String> differing = new TreeMap<>();
+        base.stringPropertyNames().stream()
+                .filter(ProblemTextCatalogue::isProblemKey)
+                .filter(key -> !base.getProperty(key).equals(czech.getProperty(key)))
+                .forEach(key -> differing.put(key, base.getProperty(key)));
+
+        assertThat(differing).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the base bundle a third language falls back to, when the texts Spring's own answers and UndecodableTargetFilter read without the Czech fallback are looked up in it, then it holds each")
+    void should_hold_every_text_read_without_the_czech_fallback_when_looked_up_given_the_base_bundle() {
+        List<String> missing = ProblemTextCatalogue.missingWithoutTheCzechFallback(baseBundle(), SPRING_ANSWERS_WITH_SITE_TEXTS,
+                KEYS_READ_WITHOUT_THE_CZECH_FALLBACK);
+
+        assertThat(missing).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given every failure Spring's ResponseEntityExceptionHandler answers, when each is classified, then it has site texts, a handler of ApiExceptionHandler or a reviewed reason to keep Spring's text")
+    void should_classify_every_failure_when_classified_given_the_failures_spring_answers() throws NoSuchMethodException {
+        List<Class<? extends Throwable>> answered = List.of(ResponseEntityExceptionHandler.class
+                .getMethod("handleException", Exception.class, WebRequest.class).getAnnotation(ExceptionHandler.class).value());
+
+        assertThat(answered).filteredOn(type -> !SPRING_ANSWERS_WITH_SITE_TEXTS.contains(type) && !SPRING_ANSWERS_WITH_SPRING_TEXTS.containsKey(type)
+                && !answeredByAnOverride(type)).isEmpty();
+        assertThat(SPRING_ANSWERS_WITH_SPRING_TEXTS.keySet()).allSatisfy(type -> assertThat(answered).contains(type))
+                .noneMatch(type -> SPRING_ANSWERS_WITH_SITE_TEXTS.contains(type) || answeredByAnOverride(type));
+        assertThat(SPRING_ANSWERS_WITH_SITE_TEXTS).allSatisfy(type -> assertThat(answered).contains(type));
+    }
+
+    @Test
+    @DisplayName("Given the reviewed texts kept without a reader, when the bundles and the handlers are read, then each prefix still has texts that nothing reads, so the list names nothing that is gone or read again")
+    void should_find_texts_nothing_reads_under_every_kept_prefix_when_read_given_the_reviewed_list() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses(SPRING_ANSWERS_WITH_SITE_TEXTS);
+
+        List<String> orphans = catalogue.orphanTexts(List.of(bundle("cs"), bundle("en")), Set.of());
+
+        assertThat(TEXTS_KEPT_WITHOUT_A_READER.keySet())
+                .allSatisfy(prefix -> assertThat(orphans).anySatisfy(orphan -> assertThat(orphan).startsWith(prefix)));
+    }
+
+    private static boolean answeredByAnOverride(Class<?> failure) {
+        return Stream.of(ResponseEntityExceptionHandler.class.getDeclaredMethods())
+                .filter(method -> !method.getName().equals("handleException") && method.getParameterCount() > 0 && method.getParameterTypes()[0] == failure)
+                .anyMatch(method -> Stream.of(ApiExceptionHandler.class.getDeclaredMethods())
+                        .anyMatch(override -> override.getName().equals(method.getName())
+                                && Arrays.equals(override.getParameterTypes(), method.getParameterTypes())));
+    }
+
+    private static Properties bundle(String language) {
+        return ProblemTextCatalogue.bundle(ProblemTextsTest.class.getResourceAsStream("/i18n/messages_" + language + ".properties"));
+    }
+
+    private static Properties baseBundle() {
+        return ProblemTextCatalogue.bundle(ProblemTextsTest.class.getResourceAsStream("/i18n/messages.properties"));
     }
 
     private static RequestBuilder withLanguage(RequestBuilder builder, String language) {
@@ -331,6 +425,13 @@ class ProblemTextsTest {
         } catch (NoSuchMethodException missing) {
             throw new IllegalStateException(missing);
         }
+    }
+
+    private static MethodValidationResult methodValidationResult() {
+        MessageSourceResolvable error = new DefaultMessageSourceResolvable(new String[]{"Size"}, EXCEPTION_TEXT + ": " + CLIENT_VALUE);
+        ParameterValidationResult parameter = new ParameterValidationResult(probeParameter(), CLIENT_VALUE, List.of(error), null, null, null,
+                (resolvable, type) -> null);
+        return MethodValidationResult.create(new ProbeController(), probeParameter().getMethod(), List.of(parameter));
     }
 
     private static String bodyOf(MvcResult result) throws Exception {

@@ -53,6 +53,18 @@ class UndecodableTargetFilterTest {
     }
 
     @Test
+    @DisplayName("Given a client of a third language, when the error page for an undecodable target is dispatched, then the base bundle answers the Czech texts, because the filter reads without the Czech fallback")
+    void should_answer_the_base_texts_when_dispatched_given_a_client_of_a_third_language() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(errorDispatchFor("/api/content/news;m=%ZZ", "de"), response, new MockFilterChain());
+
+        JsonNode problem = JsonMapper.builder().build().readTree(response.getContentAsString());
+        assertThat(problem.get("title").asString()).isEqualTo("Neplatné údaje");
+        assertThat(problem.get("detail").asString()).isEqualTo("Zkontrolujte prosím označená pole.");
+    }
+
+    @Test
     @DisplayName("Given the error page for an undecodable target with another status, when it is dispatched, then the answer keeps that status")
     void should_keep_error_status_when_dispatched_given_error_page_with_other_status() throws Exception {
         MockHttpServletRequest request = errorDispatchFor("/api/x;m=%ZZ", "cs");
