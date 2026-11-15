@@ -121,6 +121,6 @@ public class DonorPasswordResetService {
     }
 
     private boolean mayResetByLink(Donor donor) {
-        return donor.mayResetPasswordByLink(holdings.holdsAny(donor.id()));
+        return !donor.isAdministratorWithoutSecondFactor(holdings.holdsAny(donor.id()));
     }
 }

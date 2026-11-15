@@ -250,8 +250,8 @@ public final class Donor {
         }
     }
 
-    public boolean mayResetPasswordByLink(boolean holdsSecondFactor) {
-        return !isAdministrator() || holdsSecondFactor;
+    public boolean isAdministratorWithoutSecondFactor(boolean holdsSecondFactor) {
+        return isAdministrator() && !holdsSecondFactor;
     }
 
     public Instant registeredAt() {

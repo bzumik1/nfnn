@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DonorTest {
@@ -316,7 +317,7 @@ class DonorTest {
     }
 
     @Nested
-    @DisplayName("Given a reset link")
+    @DisplayName("Given a donor acting by a reset link")
     class RecoveryByLink {
 
         @Test
@@ -325,9 +326,7 @@ class DonorTest {
             Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
             donor.verifyEmail(NOW);
 
-            donor.requirePasskeyRecoverableByLink();
-
-            assertThat(donor.isAdministrator()).isFalse();
+            assertThatCode(donor::requirePasskeyRecoverableByLink).doesNotThrowAnyException();
         }
 
         @Test
@@ -351,6 +350,15 @@ class DonorTest {
         }
 
         @Test
+        @DisplayName("when an administrator who has not confirmed the e-mail recovers a passkey by it, then the link is refused as invalid before the administrator's refusal")
+        void should_refuse_link_before_administrator_when_passkey_recovered_by_link_given_unconfirmed_administrator() {
+            Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                    Set.of(Role.DONOR, Role.ADMIN), NOW, null, null);
+
+            assertThatThrownBy(admin::requirePasskeyRecoverableByLink).isInstanceOf(InvalidPasswordResetToken.class);
+        }
+
+        @Test
         @DisplayName("when an administrator recovers a passkey by it, then the administrator's recovery is refused")
         void should_refuse_administrator_when_passkey_recovered_by_link_given_administrator() {
             Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
@@ -362,21 +370,21 @@ class DonorTest {
         }
 
         @Test
-        @DisplayName("when an administrator who holds no second factor resets the password by it, then it is not allowed, and with a second factor it is")
-        void should_allow_password_reset_only_with_second_factor_when_reset_by_link_given_administrator() {
+        @DisplayName("when an administrator resets the password by it, then the donor counts as an administrator without a second factor only while holding none")
+        void should_count_as_administrator_without_second_factor_only_while_holding_none_when_reset_by_link_given_administrator() {
             Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
                     Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
 
-            assertThat(admin.mayResetPasswordByLink(false)).isFalse();
-            assertThat(admin.mayResetPasswordByLink(true)).isTrue();
+            assertThat(admin.isAdministratorWithoutSecondFactor(false)).isTrue();
+            assertThat(admin.isAdministratorWithoutSecondFactor(true)).isFalse();
         }
 
         @Test
-        @DisplayName("when a plain donor who holds no second factor resets the password by it, then it is allowed")
-        void should_allow_password_reset_when_reset_by_link_given_plain_donor_without_second_factor() {
+        @DisplayName("when a plain donor who holds no second factor resets the password by it, then the donor is no administrator without a second factor, whose confirmation and erasure the caller still checks")
+        void should_not_count_as_administrator_without_second_factor_when_reset_by_link_given_plain_donor() {
             Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
 
-            assertThat(donor.mayResetPasswordByLink(false)).isTrue();
+            assertThat(donor.isAdministratorWithoutSecondFactor(false)).isFalse();
         }
     }
 
