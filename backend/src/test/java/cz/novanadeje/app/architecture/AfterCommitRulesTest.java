@@ -99,10 +99,10 @@ class AfterCommitRulesTest {
     static final ArchRule synchronous_after_completion_listeners_stay_out_of_the_finished_transaction = methods()
             .that(SYNCHRONOUS_AFTER_COMPLETION_LISTENERS)
             .should(reachNoWorkThatJoinsTheFinishedTransaction())
-            .because("backend.md, Contexts and layers: while an AFTER_COMMIT listener runs synchronously the finished transaction's resources are still "
+            .because("backend.md, Contexts and layers: while an AFTER_COMMIT, AFTER_ROLLBACK or AFTER_COMPLETION listener runs synchronously the finished transaction's resources are still "
                     + "bound to the thread, so whatever joins a running transaction there writes into one that never commits again, and an event "
                     + "published there runs its fallback listeners inside it and skips the others; such work runs behind a REQUIRES_NEW or NOT_SUPPORTED "
-                    + "method, or the listener itself is @Async");
+                    + "method, or the AFTER_COMMIT listener itself is @Async");
 
     @Test
     @DisplayName("Given planted @Async methods and an @Async class, when the rules check them, then each outside an AFTER_COMMIT listener is reported and the AFTER_COMMIT listeners are not")
