@@ -42,12 +42,22 @@ class BankImportPropertiesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"1.1.2025", "2025-13-01", "2025-01-01 12:00:00 +0000 UTC", "2025-01-01 00:00:00 +0100 CET", "2025-01-01x"})
+    @ValueSource(strings = {"1.1.2025", "2025-1-01", "2025-01-01 12:00:00 +0000 UTC", "2025-01-01 00:00:00 +0100 CET", "2025-01-01x"})
     @DisplayName("Given a history start that is not a date, when the properties are bound, then binding fails")
     void should_refuse_to_bind_when_created_given_history_from_that_is_not_a_date(String historyFrom) {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BankImportProperties(Period.ofDays(3), Period.ofDays(89), historyFrom, COOLDOWN))
                 .withMessage("FIO_HISTORY_FROM must be a date in the form YYYY-MM-DD, e.g. 2025-01-01")
+                .withNoCause();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2025-02-30", "2025-13-01"})
+    @DisplayName("Given a history start in the date form that names no calendar day, when the properties are bound, then binding fails")
+    void should_refuse_to_bind_when_created_given_history_from_that_names_no_calendar_day(String historyFrom) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BankImportProperties(Period.ofDays(3), Period.ofDays(89), historyFrom, COOLDOWN))
+                .withMessage("FIO_HISTORY_FROM must be a calendar date that exists, e.g. 2025-01-01")
                 .withNoCause();
     }
 

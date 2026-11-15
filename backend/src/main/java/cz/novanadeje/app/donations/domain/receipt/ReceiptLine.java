@@ -13,7 +13,7 @@ public record ReceiptLine(DonationId donationId, LocalDate receivedOn, Money amo
             throw new IllegalArgumentException("A receipt line needs the donation, its date, amount and source");
         }
         if (!amount.isPositive()) {
-            throw new IllegalArgumentException("A receipt line has a positive amount: " + amount);
+            throw new IllegalArgumentException("A receipt line has a positive amount");
         }
     }
 }

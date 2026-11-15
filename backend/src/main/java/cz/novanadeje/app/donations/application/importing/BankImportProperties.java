@@ -32,16 +32,12 @@ public record BankImportProperties(Period overlap, Period historyWindow, String 
         }
         Matcher date = DATE_AT_UTC_MIDNIGHT.matcher(historyFrom.trim());
         if (!date.matches()) {
-            throw invalidHistoryFrom();
+            throw new IllegalArgumentException("FIO_HISTORY_FROM must be a date in the form YYYY-MM-DD, e.g. 2025-01-01");
         }
         try {
             return Optional.of(LocalDate.parse(date.group(1)));
-        } catch (DateTimeParseException notADate) {
-            throw invalidHistoryFrom();
+        } catch (DateTimeParseException notACalendarDay) {
+            throw new IllegalArgumentException("FIO_HISTORY_FROM must be a calendar date that exists, e.g. 2025-01-01");
         }
-    }
-
-    private static IllegalArgumentException invalidHistoryFrom() {
-        return new IllegalArgumentException("FIO_HISTORY_FROM must be a date in the form YYYY-MM-DD, e.g. 2025-01-01");
     }
 }

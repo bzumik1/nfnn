@@ -163,17 +163,14 @@ class FioBankStatementSource implements BankStatementSource {
     }
 
     private static BankStatementUnavailable unavailable(ImportFailureKind kind, Optional<Instant> retryAfter, FioException cause) {
-        return new BankStatementUnavailable(kind, retryAfter, description(cause), cause);
-    }
-
-    private static String description(FioException failure) {
-        return switch (failure) {
-            case FioTransportException unreachable -> "Fio API request failed: " + causeName(unreachable);
+        String description = switch (cause) {
+            case FioTransportException unreachable -> "Fio API request failed: " + causeType(unreachable).getSimpleName();
             case FioResponseTooLargeException ignored -> "Fio API answered with more than this client reads";
             case FioException answered when answered.statusCode().isPresent() -> statusDescription(answered.statusCode().getAsInt());
             case FioRateLimitException ignored -> "Fio API request was not sent: the token was used too recently";
             case FioException other -> "Fio API request failed: " + other.getClass().getSimpleName();
         };
+        return new BankStatementUnavailable(kind, retryAfter, description, cause);
     }
 
     private static String statusDescription(int status) {
@@ -183,8 +180,8 @@ class FioBankStatementSource implements BankStatementSource {
         return "Fio API request was refused with HTTP " + status;
     }
 
-    private static String causeName(FioTransportException unreachable) {
+    private static Class<?> causeType(FioTransportException unreachable) {
         Throwable cause = unreachable.getCause();
-        return (cause == null ? unreachable : cause).getClass().getSimpleName();
+        return (cause == null ? unreachable : cause).getClass();
     }
 }

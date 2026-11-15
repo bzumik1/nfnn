@@ -192,7 +192,7 @@ public final class Donation {
 
     private static Money requirePositive(Money amount) {
         if (!require(amount, "Amount").isPositive()) {
-            throw new IllegalArgumentException("A donation has a positive amount: " + amount);
+            throw new IllegalArgumentException("A donation has a positive amount");
         }
         return amount;
     }

@@ -61,7 +61,7 @@ public record IncomingMovement(
 
     static void requirePositive(Money amount) {
         if (!require(amount, "Amount").isPositive()) {
-            throw new IllegalArgumentException("An incoming payment has a positive amount: " + amount);
+            throw new IllegalArgumentException("An incoming payment has a positive amount");
         }
     }
 
