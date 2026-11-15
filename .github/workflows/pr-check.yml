@@ -945,6 +945,8 @@ jobs:
           sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/nfnn#g" deploy/compose.yml > "$RUNNER_TEMP/compose.yml"
           yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/compose.yml"
           yq -i '.services.backup.environment.BACKUP_RETRY_SECONDS = "5"' "$RUNNER_TEMP/compose.yml"
+          echo "Every healthcheck probes each second while its service starts, so compose sees a service healthy as soon as it is; after the start the server's intervals apply"
+          yq -i '(.services[] | select(has("healthcheck")) | .healthcheck) |= (.start_period = (.start_period // "60s") | .start_interval = "1s")' "$RUNNER_TEMP/compose.yml"
           echo "The backend starts with -XX:AOTMode=on, so a JVM that cannot use the image's AOT cache refuses to start instead of starting slower"
           yq -i '.services.backend.environment._JAVA_OPTIONS = "-XX:AOTMode=on"' "$RUNNER_TEMP/compose.yml"
           echo "COMPOSE_FILE=$RUNNER_TEMP/compose.yml" >> "$GITHUB_ENV"

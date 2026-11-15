@@ -94,6 +94,7 @@ jobs:
             install -d -m 755 "$RUNNER_TEMP/$server/logs"
             sed "s#/DATA/AppData/nfnn#$RUNNER_TEMP/$server#g" deploy/compose.yml > "$RUNNER_TEMP/$server-candidate.yml"
             yq -i '.services.backup.environment.POLL_SECONDS = "1"' "$RUNNER_TEMP/$server-candidate.yml"
+            yq -i '(.services[] | select(has("healthcheck")) | .healthcheck) |= (.start_period = (.start_period // "60s") | .start_interval = "1s")' "$RUNNER_TEMP/$server-candidate.yml"
             yq -i '.services.backend.environment.APP_DONATIONS_FIO_BASEURI = "https://nfnn-fake-fio:8443/v1/rest"' "$RUNNER_TEMP/$server-candidate.yml"
             yq -i '.services.backend.environment.JAVA_TOOL_OPTIONS += " -Djavax.net.ssl.trustStore=/fake-fio/cacerts -Djavax.net.ssl.trustStorePassword=changeit"' "$RUNNER_TEMP/$server-candidate.yml"
             yq -i '.services.backend.volumes += [strenv(FAKE_FIO) + "/cacerts:/fake-fio/cacerts:ro"]' "$RUNNER_TEMP/$server-candidate.yml"
