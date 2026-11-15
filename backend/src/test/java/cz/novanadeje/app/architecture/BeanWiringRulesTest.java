@@ -149,6 +149,12 @@ class BeanWiringRulesTest {
                                 public static GiftPairing on(PairingService service) { return () -> {}; }
                             }
                             """),
+                    planted("planteda.application.LazyPairings", """
+                            public final class LazyPairings {
+                                private LazyPairings() {}
+                                public static GiftPairing over(java.util.function.Supplier<PairingService> services) { return () -> {}; }
+                            }
+                            """),
                     planted("planteda.application.PairingCoordinator", """
                             public class PairingCoordinator {
                                 public PairingCoordinator(PairingService service) {}
@@ -284,6 +290,51 @@ class BeanWiringRulesTest {
                             @org.springframework.context.annotation.Bean
                             cz.novanadeje.app.planteda.application.GiftPairing pairing() {
                                 return precomputed;
+                            }
+                            """),
+                    configuration("planteda.infrastructure.config.LazyFactoryConfiguration", """
+                            private final cz.novanadeje.app.planteda.application.GiftPairing pairing;
+                            public LazyFactoryConfiguration(org.springframework.beans.factory.ObjectProvider<cz.novanadeje.app.planteda.application.PairingService> services) {
+                                this.pairing = cz.novanadeje.app.planteda.application.LazyPairings.over(services::getObject);
+                            }
+                            @org.springframework.context.annotation.Bean
+                            cz.novanadeje.app.planteda.application.GiftPairing pairing() {
+                                return pairing;
+                            }
+                            """),
+                    planted("planteda.infrastructure.config.PairingBase", """
+                            public abstract class PairingBase {
+                                protected final cz.novanadeje.app.planteda.application.PairingService service;
+                                protected final cz.novanadeje.app.planteda.application.PairingSettings settings;
+                                protected PairingBase(cz.novanadeje.app.planteda.application.PairingService service,
+                                        cz.novanadeje.app.planteda.application.PairingSettings settings) {
+                                    this.service = service;
+                                    this.settings = settings;
+                                }
+                            }
+                            """),
+                    planted("planteda.infrastructure.config.InheritingConfiguration", """
+                            @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+                            public class InheritingConfiguration extends PairingBase {
+                                public InheritingConfiguration(cz.novanadeje.app.planteda.application.PairingService service,
+                                        cz.novanadeje.app.planteda.application.PairingSettings settings) {
+                                    super(service, settings);
+                                }
+                                @org.springframework.context.annotation.Bean
+                                cz.novanadeje.app.planteda.domain.GiftPolicy policy() {
+                                    return gift -> gift.amount() > settings.batch();
+                                }
+                            }
+                            """),
+                    planted("planteda.infrastructure.pairing.CachedRegistry", """
+                            public class CachedRegistry {
+                                private cz.novanadeje.app.planteda.application.GiftRegistry cached;
+                                public cz.novanadeje.app.planteda.application.GiftRegistry registry() {
+                                    if (cached == null) {
+                                        cached = gift -> false;
+                                    }
+                                    return cached;
+                                }
                             }
                             """),
                     configuration("planteda.infrastructure.config.SeveralBeansConfiguration", """
@@ -477,10 +528,10 @@ class BeanWiringRulesTest {
         @Test
         @DisplayName("when the port rule checks methods, then a port of infrastructure built on a service in a lambda, by a method reference, by a static "
                 + "method reference alone, from a service parameter alone, from a provider of a service, through a helper, through a method and field "
-                + "of its own class, from a field its constructor set by a method reference or a factory, inside an Optional, of a port an application sub-interface extends, as an anonymous abstract port, as an interface extending the port, as a concrete adapter handed a helper's method reference and by a plain method of an adapter is reported, and a scheduler, "
+                + "of its own class, from a field its constructor set by a method reference, a factory or a factory over a provider, inside an Optional, of a port an application sub-interface extends, as an anonymous abstract port, as an interface extending the port, as a concrete adapter handed a helper's method reference and by a plain method of an adapter is reported, and a scheduler, "
                 + "a domain policy, a settings record, an application class on a service, a Runnable, a scheduler's helper returning a use case's sealed result, "
                 + "a reviewed driving port implementer, a policy reading a field beside a service the "
-                + "constructor also stored, a driving adapter's getter of a port it was handed and a @Bean method of the application layer are not")
+                + "constructor also stored, in its own class or a base class, a lazily cached port, a driving adapter's getter of a port it was handed and a @Bean method of the application layer are not")
         void should_report_every_port_built_on_a_use_case_when_checked_given_planted_bean_methods() {
             assertThat(reportOf(infrastructure_methods_build_no_port_on_a_use_case))
                     .anySatisfy(detail -> assertThat(detail).contains("LambdaPairingConfiguration.pairing(").contains("PairingService"))
@@ -498,7 +549,10 @@ class BeanWiringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("PrecomputedPairingConfiguration.pairing(").contains("PairingHelper").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("OptionalPairings.pairing(").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("PrecomputedFactoryConfiguration.pairing(").contains("PairingService"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LazyFactoryConfiguration.pairing(").contains("PairingService"))
                     .noneSatisfy(detail -> assertThat(detail).contains("SeveralBeansConfiguration"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("InheritingConfiguration"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("CachedRegistry"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingJob"))
                     .anySatisfy(detail -> assertThat(detail).contains("BreakerConfiguration.breaker(").contains("PairingHelper").contains("PairingService"))
                     .noneSatisfy(detail -> assertThat(detail).contains("OutcomeScheduler"))
@@ -559,7 +613,8 @@ class BeanWiringRulesTest {
     }
 
     private static List<JavaClass> typesReachedBy(JavaMethod method) {
-        JavaClass owner = method.getOwner();
+        Set<JavaClass> own = new HashSet<>(method.getOwner().getAllRawSuperclasses());
+        own.add(method.getOwner());
         List<JavaClass> reached = new ArrayList<>();
         Set<Visit> visited = new HashSet<>();
         Deque<Visit> pending = new ArrayDeque<>(List.of(new Visit(method, false)));
@@ -570,7 +625,7 @@ class BeanWiringRulesTest {
                     visit.codeUnit().getParameterTypes().forEach(type -> reached.addAll(type.getAllInvolvedRawTypes()));
                 }
                 for (JavaAccess<?> access : visit.codeUnit().getAccessesFromSelf()) {
-                    if (access.getTargetOwner().equals(owner)) {
+                    if (own.contains(access.getTargetOwner())) {
                         followOwnMember(access, visit.asWriter(), pending, reached);
                     } else {
                         reached.add(access.getTargetOwner());
@@ -604,7 +659,7 @@ class BeanWiringRulesTest {
         }
         return target.resolveMember()
                 .map(codeUnit -> codeUnit.getParameterTypes().stream().flatMap(type -> type.getAllInvolvedRawTypes().stream()).toList())
-                .orElseGet(target::getRawParameterTypes);
+                .orElse(List.of());
     }
 
     private record Visit(JavaCodeUnit codeUnit, boolean asWriter) {
