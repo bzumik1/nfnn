@@ -522,7 +522,7 @@ class AuthorizationServerServiceTest {
         void should_issue_api_token_when_exchanged_given_connector_token() {
             Instant subjectExpiry = NOW.plusSeconds(300);
             when(verifier.verify("connector")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP),
-                    Set.of(OAuthScope.ADMIN_READ), subjectExpiry, "claude.ai"));
+                    Set.of(OAuthScope.ADMIN_READ), subjectExpiry, Optional.of("claude.ai")));
             when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
             when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("api", subjectExpiry));
 
@@ -539,7 +539,7 @@ class AuthorizationServerServiceTest {
         @DisplayName("when a browser or API token is presented as the subject, then the grant is invalid")
         void should_refuse_when_exchanged_given_api_token() {
             when(verifier.verify("browser")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(API), Set.of(),
-                    NOW.plusSeconds(300), null));
+                    NOW.plusSeconds(300), Optional.empty()));
 
             assertThatThrownBy(() -> service.exchangeToken("browser", API)).isInstanceOf(InvalidGrant.class);
         }
@@ -548,9 +548,19 @@ class AuthorizationServerServiceTest {
         @DisplayName("when a connector token without any scope is presented, then the grant is invalid and no API token is issued, so it can never pass for a browser session")
         void should_refuse_when_exchanged_given_connector_token_without_scope() {
             when(verifier.verify("scopeless")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP), Set.of(),
-                    NOW.plusSeconds(300), "claude.ai"));
+                    NOW.plusSeconds(300), Optional.of("claude.ai")));
 
             assertThatThrownBy(() -> service.exchangeToken("scopeless", API)).isInstanceOf(InvalidGrant.class);
+            verify(accessTokens, never()).issue(any());
+        }
+
+        @Test
+        @DisplayName("when a connector token with scopes but without a connected application's name is presented, then the grant is invalid and no API token is issued, so no change is audited without the connection that made it")
+        void should_refuse_when_exchanged_given_connector_token_without_client() {
+            when(verifier.verify("nameless")).thenReturn(new VerifiedAccessToken(DONOR, Set.of(Role.DONOR, Role.ADMIN), Set.of(MCP),
+                    Set.of(OAuthScope.ADMIN_WRITE), NOW.plusSeconds(300), Optional.empty()));
+
+            assertThatThrownBy(() -> service.exchangeToken("nameless", API)).isInstanceOf(InvalidGrant.class);
             verify(accessTokens, never()).issue(any());
         }
 
