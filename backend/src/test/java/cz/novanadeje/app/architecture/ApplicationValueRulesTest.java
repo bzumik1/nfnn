@@ -219,7 +219,7 @@ class ApplicationValueRulesTest {
                 Arguments.of("enum constant", "cz.novanadeje.app.donors.interfaces.rest.PlantedEnumController"),
                 Arguments.of("package merely named like the application", "cz.novanadeje.app.donors.infrastructure.mail.PlantedLookalikeConstantSender"),
                 Arguments.of("application reading the application", "cz.novanadeje.app.donors.application.PlantedReminderPolicy"),
-                Arguments.of("unused static import", "cz.novanadeje.app.donors.infrastructure.mail.PlantedUnusedImportSender"),
+                Arguments.of("unused static import", "cz.novanadeje.app.donors.infrastructure.mail.package-info"),
                 Arguments.of("package merely named like an adapter", "cz.novanadeje.app.donors.infrastructures.mail.PlantedLookalikeLayerSender"),
                 Arguments.of("adapter package below the application", "cz.novanadeje.app.donors.application.infrastructure.PlantedNestedLayerReader"),
                 Arguments.of("constant of an application package below an adapter", "cz.novanadeje.app.donors.infrastructure.mail.PlantedNestedSettingsSender"));

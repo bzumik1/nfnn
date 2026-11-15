@@ -53,8 +53,9 @@ public final class AttributedSources {
 
     public static <T> T read(List<Path> sources, Function<AttributedSources, T> reading) {
         JavaCompiler compiler = compiler();
-        try (StandardJavaFileManager files = compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8)) {
-            return reading.apply(attributed(compiler, files, sources));
+        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+        try (StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
+            return reading.apply(attributed(compiler, files, diagnostics, sources));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -85,11 +86,12 @@ public final class AttributedSources {
     }
 
     private static AttributedSources attributed(JavaCompiler compiler, List<Path> sources) {
-        return attributed(compiler, compiler.getStandardFileManager(null, Locale.ROOT, StandardCharsets.UTF_8), sources);
+        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+        return attributed(compiler, compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8), diagnostics, sources);
     }
 
-    private static AttributedSources attributed(JavaCompiler compiler, StandardJavaFileManager files, List<Path> sources) {
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+    private static AttributedSources attributed(JavaCompiler compiler, StandardJavaFileManager files, DiagnosticCollector<JavaFileObject> diagnostics,
+                                                List<Path> sources) {
         List<String> options = List.of("-proc:none", "-classpath", System.getProperty("java.class.path"));
         JavacTask task = (JavacTask) compiler.getTask(null, files, diagnostics, options, null, files.getJavaFileObjectsFromPaths(sources));
         List<CompilationUnitTree> units = new ArrayList<>();

@@ -35,7 +35,6 @@ final class InlinedApplicationConstants {
     private final Trees trees;
     private final Elements elements;
     private final Map<VariableElement, TreePath> initializersByConstant = new HashMap<>();
-    private final Map<VariableElement, Set<VariableElement>> applicationConstantsByConstant = new HashMap<>();
 
     private InlinedApplicationConstants(AttributedSources sources) {
         this.trees = sources.trees();
@@ -88,17 +87,11 @@ final class InlinedApplicationConstants {
         if (isIn(elements.getPackageOf(field).getQualifiedName().toString(), Set.of(APPLICATION))) {
             return Set.of(field);
         }
-        Set<VariableElement> known = applicationConstantsByConstant.get(field);
-        if (known != null) {
-            return known;
-        }
-        applicationConstantsByConstant.put(field, Set.of());
         Set<VariableElement> passedOn = new HashSet<>();
         TreePath initializer = initializersByConstant.get(field);
         if (initializer != null) {
             new FieldsRead((path, read) -> passedOn.addAll(applicationConstantsReadThrough(read))).scan(initializer, null);
         }
-        applicationConstantsByConstant.put(field, Set.copyOf(passedOn));
         return passedOn;
     }
 
