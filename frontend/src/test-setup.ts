@@ -1,3 +1,5 @@
+import { jsdomWindowProperties, restoreJsdomWindow } from './testing/jsdom-window';
+
 if (
   typeof HTMLDialogElement !== 'undefined' &&
   typeof HTMLDialogElement.prototype.showModal !== 'function'
@@ -14,30 +16,9 @@ if (
   };
 }
 
-const jsdomWindowProperties =
-  typeof window === 'undefined'
-    ? new Map<string, PropertyDescriptor | undefined>()
-    : new Map(
-        [
-          'scrollTo',
-          'scrollX',
-          'scrollY',
-          'innerWidth',
-          'innerHeight',
-          'matchMedia',
-          'visualViewport',
-        ].map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const),
-      );
+const windowAsJsdomMadeIt = jsdomWindowProperties();
 
-beforeEach(() => {
-  for (const [name, descriptor] of jsdomWindowProperties) {
-    if (descriptor) {
-      Object.defineProperty(window, name, descriptor);
-    } else {
-      delete (window as unknown as Record<string, unknown>)[name];
-    }
-  }
-});
+beforeEach(() => restoreJsdomWindow(windowAsJsdomMadeIt));
 
 afterEach(() => {
   try {
