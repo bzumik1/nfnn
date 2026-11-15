@@ -174,7 +174,7 @@ UI „číslo potvrzení“ · Code: `ReceiptNumber`.\
 The sequential number the server gives each issued receipt under the donor's lock.
 
 **Replaced receipt**\
-UI „nahrazené novějším“, the new one „náhradní potvrzení“ · Code: `ReceiptStatus.REPLACED`, `ReplacedReceipt`.\
+UI „nahrazené novějším“, the new one „náhradní potvrzení“ · Code: `ReceiptStatus.REPLACED`, `ReplacedReceipt`, `ReceiptReplacementCaps` (how many replacements a donor is numbered).\
 A receipt superseded by a newer one with a new number that names what it replaces (changed data, or a yearly receipt covering the gift).
 
 **Withdrawn receipt**\
@@ -195,7 +195,7 @@ The Ed25519 key the server signs verification QR codes with; the site publishes 
 _Avoid_: „klíč“ alone
 
 **Key withdrawal**\
-UI „zneplatnění klíče“ (until 2026-11-05 „stažení“) · Code: `ReceiptSigningKeyWithdrawal`, `ReceiptSigningKeyWithdrawn`, published status `revoked`.\
+UI „zneplatnění klíče“ (until 2026-11-05 „stažení“) · Code: `ReceiptSigningKeyWithdrawal`, `ReceiptSigningKeyWithdrawn`, `ReceiptSigningKeyWithdrawalPause` (five refused second factors in 15 minutes), published status `revoked`.\
 The web-only step that marks a leaked receipt signing key as no longer trusted; the server then restarts with a new key.\
 _Avoid_: „stáhnout“ / „stažení“ (Jakub renamed it: it reads as a download and the step cannot be undone)
 
