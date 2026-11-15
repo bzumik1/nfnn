@@ -44,6 +44,7 @@ for (const [network, prefix] of [
 for (const [network, prefix] of [
   ['::', 96],
   ['::ffff:0:0', 96],
+  ['::ffff:0:0:0', 96],
   ['64:ff9b::', 32],
   ['100::', 16],
   ['2001::', 23],
