@@ -1,6 +1,9 @@
 package cz.novanadeje.app.donations.domain;
 
+import cz.novanadeje.app.support.ArabicDigitsDefaultLocale;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -71,5 +74,19 @@ class CzechAccountNumberTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new CzechAccountNumber("000/0800"))
                 .withMessage("Account number must not be zero")
                 .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("000/", "0800"));
+    }
+
+    @Nested
+    @DisplayName("Given the JVM's default locale writes Arabic-Indic digits")
+    class GivenADefaultLocaleWithOtherDigits {
+
+        @RegisterExtension
+        final ArabicDigitsDefaultLocale locale = new ArabicDigitsDefaultLocale();
+
+        @Test
+        @DisplayName("when an account number's IBAN is derived, then its check digits are ASCII digits")
+        void should_write_ascii_check_digits_when_derived_given_a_default_locale_with_other_digits() {
+            assertThat(new CzechAccountNumber("5544332217/2010").toIban()).isEqualTo(new Iban("CZ2620100000005544332217"));
+        }
     }
 }
