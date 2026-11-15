@@ -32,6 +32,8 @@ public class DonorSecondFactorStepDefinitions {
     private static final String SECOND_FACTOR_LOGIN_PATH = "/api/donors/auth/login/second-factor";
     private static final String DISABLE_PATH = "/api/donors/me/second-factor/disable";
     private static final String PROFILE_PATH = "/api/donors/me";
+    private static final String FACTORS = "select count(*) from donor_second_factor f join donor d on d.id = f.donor_id where d.email = ?";
+    private static final String PENDING_FACTORS = FACTORS + " and f.confirmed_at is null";
 
     private final ApiClient api;
     private final TotpCodes totpCodes;
@@ -91,6 +93,16 @@ public class DonorSecondFactorStepDefinitions {
     @When("the donor confirms the second factor with code {string}")
     public void theDonorConfirmsTheSecondFactorWithCode(String code) {
         api.post(SecondFactorEnrolments.CONFIRM_PATH, Map.of("code", code));
+    }
+
+    @Then("a second factor set-up of {string} is stored")
+    public void aSecondFactorSetUpIsStored(String email) {
+        assertThat(storedFactors(email, PENDING_FACTORS)).isEqualTo(1);
+    }
+
+    @Then("no second factor of {string} is stored")
+    public void noSecondFactorIsStored(String email) {
+        assertThat(storedFactors(email, FACTORS)).isZero();
     }
 
     @Given("the donor turned the second factor on with password {string}")
@@ -206,5 +218,9 @@ public class DonorSecondFactorStepDefinitions {
         ResponseEntity<String> response = api.get(PROFILE_PATH);
         assertThat(response.getStatusCode().value()).withFailMessage("Profile answered %s", response.getBody()).isEqualTo(200);
         return api.lastResponseJson();
+    }
+
+    private long storedFactors(String email, String query) {
+        return jdbc.sql(query).param(email).query(Long.class).single();
     }
 }

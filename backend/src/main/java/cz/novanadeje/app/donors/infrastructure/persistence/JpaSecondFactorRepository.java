@@ -5,6 +5,7 @@ import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
@@ -54,5 +55,10 @@ class JpaSecondFactorRepository implements SecondFactorRepository {
     public void delete(DonorId donorId) {
         jpa.deleteById(donorId.value());
         jpa.flush();
+    }
+
+    @Override
+    public int deletePendingBegunUpTo(Instant cutoff) {
+        return jpa.deletePendingCreatedUpTo(cutoff);
     }
 }

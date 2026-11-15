@@ -11,6 +11,7 @@ import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
+import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,8 @@ class DonorSessionCleanupServiceTest {
     @Mock
     private SecondFactorRecoveryRepository recoveries;
     @Mock
+    private SecondFactorRepository secondFactors;
+    @Mock
     private DeviceSignOuts signOuts;
 
     @Test
@@ -78,7 +81,17 @@ class DonorSessionCleanupServiceTest {
         order.verify(devices).findActiveWithoutUsableTokenAt(NOW);
     }
 
+    @Test
+    @DisplayName("Given second-factor set-ups never confirmed, when the cleanup runs, then those begun 30 minutes ago or earlier are deleted before any device is ended")
+    void should_delete_expired_pending_second_factors_before_ending_devices_when_run() {
+        service().cleanUp();
+
+        InOrder order = inOrder(secondFactors, devices);
+        order.verify(secondFactors).deletePendingBegunUpTo(NOW.minus(Duration.ofMinutes(30)));
+        order.verify(devices).findActiveWithoutUsableTokenAt(NOW);
+    }
+
     private DonorSessionCleanupService service() {
-        return new DonorSessionCleanupService(devices, refreshTokens, challenges, authorizationCodes, recoveries, signOuts, Clock.fixed(NOW, ZoneOffset.UTC));
+        return new DonorSessionCleanupService(devices, refreshTokens, challenges, authorizationCodes, recoveries, secondFactors, signOuts, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 }

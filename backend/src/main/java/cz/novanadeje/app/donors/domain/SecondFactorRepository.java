@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.domain;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
@@ -17,4 +18,6 @@ public interface SecondFactorRepository {
     Set<DonorId> findDonorsWithEnabledFactorAmong(Collection<DonorId> donorIds);
 
     void delete(DonorId donorId);
+
+    int deletePendingBegunUpTo(Instant cutoff);
 }

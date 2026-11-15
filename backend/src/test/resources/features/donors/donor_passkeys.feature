@@ -75,6 +75,20 @@ Feature: A donor signs in with a passkey instead of the password
     Then the response status is 204
     And the passkeys of "Jana" are none
 
+  Scenario: A code set-up begun before the passkey and the role is not confirmed from a session opened with the password only
+    Given "Jana" starts the second factor set-up with the right password
+    And "Jana" added a passkey named "Mac"
+    And "Jana" is given the administrator role without signing in again
+    When "Jana" signs in again
+    And the donor confirms the second factor with the current code
+    Then the response status is 403
+    And the problem type ends with "donors/second-factor-session-required"
+    And the donor profile shows roles "DONOR" and the second factor off
+    When "Jana" signs in with the passkey "Mac"
+    And the donor confirms the second factor with the current code
+    Then the response status is 200
+    And the donor profile shows roles "DONOR, ADMIN" and the second factor on
+
   Scenario: An administrator without any second factor still sets up the first one from a session opened with the password
     Given "Jana" is given the administrator role without signing in again
     When "Jana" signs in again
