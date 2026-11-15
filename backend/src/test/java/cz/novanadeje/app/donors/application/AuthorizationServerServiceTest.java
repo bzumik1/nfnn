@@ -238,6 +238,35 @@ class AuthorizationServerServiceTest {
         }
 
         @Test
+        @DisplayName("when the code is exchanged, then the donor's sessions lock is taken before the code is spent, so a sign-out of every session either spends it first or revokes what it gave")
+        void should_lock_sessions_before_spending_the_code_when_exchanged() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
+
+            service.exchangeCode(new CodeExchange(secret.value(), CLAUDE.value(), CALLBACK.toString(), VERIFIER, MCP));
+
+            InOrder order = inOrder(refreshTokens, codes);
+            order.verify(refreshTokens).lockSessionsOf(DONOR);
+            order.verify(codes).markUsed(code.id(), NOW);
+            order.verify(refreshTokens).save(any());
+        }
+
+        @Test
+        @DisplayName("when the donor lost the administrator role after the approval, then the grant is invalid, the code is used up and no tokens are issued")
+        void should_refuse_when_exchanged_given_role_lost() {
+            Donor donor = administrator();
+            donor.revokeAdministration();
+            when(donors.findById(DONOR)).thenReturn(Optional.of(donor));
+
+            assertThatThrownBy(() -> service.exchangeCode(new CodeExchange(secret.value(), CLAUDE.value(), CALLBACK.toString(), VERIFIER, MCP)))
+                    .isInstanceOf(InvalidGrant.class);
+
+            verify(codes).markUsed(code.id(), NOW);
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
+            verify(refreshTokens, never()).save(any());
+        }
+
+        @Test
         @DisplayName("when another request spends the code at the same moment, then the grant is invalid and no tokens are issued")
         void should_refuse_when_exchanged_given_code_spent_concurrently() {
             when(codes.markUsed(code.id(), NOW)).thenReturn(false);

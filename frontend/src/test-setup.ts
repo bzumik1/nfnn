@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { jsdomWindowProperties, restoreJsdomWindow } from './testing/jsdom-window';
+import { restoreWindowProperties, windowPropertiesOf } from './testing/window-properties';
+
+type KeptWindowProperties = WeakMap<object, Map<string, PropertyDescriptor | undefined>>;
+
+const KEPT_WINDOW_PROPERTIES = Symbol.for('nfnn.keptWindowProperties');
 
 if (
   typeof HTMLDialogElement !== 'undefined' &&
@@ -17,9 +21,19 @@ if (
   };
 }
 
-const windowAsJsdomMadeIt = jsdomWindowProperties();
+const keptWindowProperties = ((globalThis as { [KEPT_WINDOW_PROPERTIES]?: KeptWindowProperties })[
+  KEPT_WINDOW_PROPERTIES
+] ??= new WeakMap());
 
-beforeEach(() => restoreJsdomWindow(windowAsJsdomMadeIt));
+if (typeof window !== 'undefined') {
+  windowPropertiesOf(window, keptWindowProperties);
+}
+
+beforeEach(() => {
+  if (typeof window !== 'undefined') {
+    restoreWindowProperties(window, windowPropertiesOf(window, keptWindowProperties));
+  }
+});
 
 afterEach(() => {
   try {
