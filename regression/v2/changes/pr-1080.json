@@ -901,10 +901,11 @@
     "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
     "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
     "security": {
-      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "approvedIn": "PR #253, Jakub 2026-10-31",
       "fields": {
         "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
-        "<enum>": "the action, a value of the closed list of audit actions, as before"
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "claude.ai": "the client claim, the host of the connected application's client metadata address, as before"
       }
     }
   },
@@ -917,7 +918,8 @@
       "approvedIn": "PR #612, Jakub 2026-11-14",
       "fields": {
         "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
-        "<enum>": "the action, a value of the closed list of audit actions, as before"
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "claude.ai": "the client claim, the host of the connected application's client metadata address, as before"
       }
     }
   },
