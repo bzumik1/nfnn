@@ -28,8 +28,11 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
         if (donationMessage.isEmpty() || accountVerificationMessage.isEmpty()) {
             throw new IllegalArgumentException("Payment details need a donation message and an account verification message that are not empty");
         }
-        if (!accountVerificationAmount.isPositive() || accountVerificationAmount.currency() != currency) {
-            throw new IllegalArgumentException("The verification amount must be positive and in the payments' currency");
+        if (!accountVerificationAmount.isPositive()) {
+            throw new IllegalArgumentException("The verification amount must be positive");
+        }
+        if (accountVerificationAmount.currency() != currency) {
+            throw new IllegalArgumentException("The verification amount must be in " + currency.name() + ", the payments' currency");
         }
     }
 

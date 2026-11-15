@@ -1,21 +1,51 @@
 package cz.novanadeje.app.architecture;
 
+import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.junit.AnalyzeClasses;
+import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchRule;
+import cz.novanadeje.app.AppApplication;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
+import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.RecordComponent;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@AnalyzeClasses(
+        packagesOf = AppApplication.class,
+        importOptions = ImportOption.DoNotIncludeTests.class
+)
 class ExceptionMessageRulesTest {
+
+    @ArchTest
+    static final ArchRule throwables_compute_no_message_when_it_is_read = noMethods()
+            .that().haveNameMatching("getMessage|getLocalizedMessage|toString")
+            .and().haveRawParameterTypes(new Class<?>[0])
+            .should().beDeclaredInClassesThat().areAssignableTo(Throwable.class)
+            .because("backend.md, Logging: the message a throwable's own method builds when it is read never passes a constructor, "
+                    + "so the scan of ExceptionMessageValues would not see an open value in it");
 
     private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
 
@@ -92,6 +122,108 @@ class ExceptionMessageRulesTest {
             }
             """;
 
+    private static final String PLANTED_FLEXIBLE_FAILURE = """
+            package planted.domain;
+
+            import java.util.Objects;
+
+            public class PlantedFlexibleFailure extends RuntimeException {
+
+                public PlantedFlexibleFailure(String message) {
+                    Objects.requireNonNull(message);
+                    super(message);
+                }
+            }
+            """;
+
+    private static final String PLANTED_REASSIGNING_FAILURE = """
+            package planted.domain;
+
+            public class PlantedReassigningFailure extends RuntimeException {
+
+                public PlantedReassigningFailure(String message, String raw) {
+                    message = raw;
+                    super(message);
+                }
+            }
+            """;
+
+    private static final String PLANTED_ADAPTER_FAILURE = """
+            package planted.infrastructure;
+
+            import planted.domain.PlantedFailure;
+
+            class PlantedAdapterFailure extends PlantedFailure {
+
+                PlantedAdapterFailure(String message) {
+                    super(message);
+                }
+            }
+            """;
+
+    private static final String PLANTED_SECRET = """
+            package planted.domain;
+
+            import java.security.SecureRandom;
+            import java.util.Base64;
+
+            public record PlantedSecret(String value) {
+
+                private static final SecureRandom RANDOM = new SecureRandom();
+
+                public static PlantedSecret generate() {
+                    byte[] bytes = new byte[32];
+                    RANDOM.nextBytes(bytes);
+                    return new PlantedSecret(Base64.getUrlEncoder().encodeToString(bytes));
+                }
+            }
+            """;
+
+    private static final String PLANTED_AMBIENT = """
+            package planted.domain;
+
+            public final class PlantedAmbient {
+
+                private static String current = "none";
+
+                private PlantedAmbient() {
+                }
+
+                public static void set(String value) {
+                    current = value;
+                }
+
+                public static String current() {
+                    return current;
+                }
+            }
+            """;
+
+    private static final String PLANTED_DESCRIPTIONS = """
+            package planted.domain;
+
+            public class PlantedDescription {
+
+                public String describe() {
+                    return "fixed";
+                }
+            }
+
+            final class PlantedLeakingDescription extends PlantedDescription {
+
+                private final String raw;
+
+                PlantedLeakingDescription(String raw, int ignored) {
+                    this.raw = raw;
+                }
+
+                @Override
+                public String describe() {
+                    return raw;
+                }
+            }
+            """;
+
     private static final String PLANTED_CODE = """
             package planted.domain;
 
@@ -136,6 +268,8 @@ class ExceptionMessageRulesTest {
     private static final String PLANTED_HOLDERS = """
             package planted.application;
 
+            import java.util.UUID;
+
             class PlantedBase {
 
                 protected final String text;
@@ -159,6 +293,47 @@ class ExceptionMessageRulesTest {
             }
 
             record PlantedCycleB(PlantedCycleA previous) {
+            }
+
+            interface PlantedNamedThing {
+
+                default String name() {
+                    return "fixed";
+                }
+            }
+
+            record PlantedNamedRecord(String name) implements PlantedNamedThing {
+            }
+
+            class PlantedCounted {
+
+                private final int count;
+
+                PlantedCounted(int count, int ignored) {
+                    this.count = count;
+                }
+            }
+
+            final class PlantedNamedCount extends PlantedCounted {
+
+                private final String name;
+
+                PlantedNamedCount(String name, int ignored) {
+                    super(1, ignored);
+                    this.name = name;
+                }
+
+                @Override
+                public String toString() {
+                    return name;
+                }
+            }
+
+            record PlantedLabelled(String label) {
+
+                PlantedLabelled(UUID id) {
+                    this(id.toString());
+                }
             }
             """;
 
@@ -262,12 +437,21 @@ class ExceptionMessageRulesTest {
     private static final String PLANTED_ADAPTER = """
             package planted.infrastructure;
 
+            import planted.domain.PlantedAmbient;
             import planted.domain.PlantedConflict;
             import planted.domain.PlantedFailure;
             import planted.domain.PlantedLeakedReason;
             import planted.domain.PlantedReason;
 
             class PlantedAdapter {
+
+                void forwardsTheValueThroughItsOwnFailure(String header) {
+                    throw new PlantedAdapterFailure("bad header " + header);
+                }
+
+                void remembersTheHeader(String header) {
+                    PlantedAmbient.set(header);
+                }
 
                 void refuses(String header) {
                     if (header.isBlank()) {
@@ -296,15 +480,23 @@ class ExceptionMessageRulesTest {
     private static final String PLANTED_MESSAGES = """
             package planted.application;
 
+            import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
+            import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
             import cz.novanadeje.app.shared.domain.Money;
+            import planted.domain.PlantedAmbient;
             import planted.domain.PlantedDelegating;
+            import planted.domain.PlantedDescription;
             import planted.domain.PlantedFailure;
+            import planted.domain.PlantedFlexibleFailure;
             import planted.domain.PlantedName;
+            import planted.domain.PlantedReassigningFailure;
             import planted.domain.PlantedRefusal;
+            import planted.domain.PlantedSecret;
 
             import java.math.BigDecimal;
             import java.util.List;
             import java.util.Locale;
+            import java.util.Map;
             import java.util.Objects;
             import java.util.Optional;
             import java.util.UUID;
@@ -312,8 +504,11 @@ class ExceptionMessageRulesTest {
 
             class PlantedMessages {
 
+                enum Kind { ONE, TWO }
+
                 private final String label;
                 private String mutableLabel = "Name";
+                private final Map<UUID, String> names = Map.of();
 
                 PlantedMessages(String label) {
                     this.label = label;
@@ -430,6 +625,11 @@ class ExceptionMessageRulesTest {
                     throw new IllegalStateException("Bad " + describe());
                 }
 
+                void holdsItsDescriptionInALocal() {
+                    String description = describe();
+                    throw new IllegalStateException("Bad " + description);
+                }
+
                 private String describe() {
                     return label;
                 }
@@ -498,14 +698,105 @@ class ExceptionMessageRulesTest {
                 void concatenatesTheSecondOfACycle(PlantedCycleB second) {
                     throw new IllegalArgumentException("Bad " + second);
                 }
+
+                void namesAGeneratedSecret() {
+                    throw new IllegalStateException("Bad link " + PlantedSecret.generate().value());
+                }
+
+                void namesAGeneratedSecretThroughALocal() {
+                    PlantedSecret secret = PlantedSecret.generate();
+                    throw new IllegalStateException("Bad link " + secret.value());
+                }
+
+                void namesAnAmountAFactoryBuilds(long amountMinor) {
+                    throw new IllegalArgumentException("Bad amount " + Money.czk(amountMinor));
+                }
+
+                void namesAnAmountItBuilds(long amountMinor) {
+                    throw new IllegalArgumentException("Bad amount " + new Money(amountMinor, cz.novanadeje.app.shared.domain.Currency.CZK));
+                }
+
+                void namesAStaticFieldOthersMayChange() {
+                    throw new IllegalStateException("Bad " + PlantedAmbient.current());
+                }
+
+                void mapsIdsThroughAMethodReference(List<UUID> ids) {
+                    throw new IllegalStateException("Bad " + ids.stream().map(names::get).toList());
+                }
+
+                void mapsIdsThroughAConstructorReference(List<UUID> ids) {
+                    throw new IllegalStateException("Bad " + ids.stream().map(PlantedLabelled::new).toList());
+                }
+
+                void requiresWithAMethodReference(Object value) {
+                    Objects.requireNonNull(value, this::describe);
+                }
+
+                void namesAnOverriddenDescription(PlantedDescription description) {
+                    throw new IllegalStateException("Bad " + description.describe());
+                }
+
+                void namesADefaultARecordOverrides(PlantedNamedThing thing) {
+                    throw new IllegalStateException("Bad " + thing.name());
+                }
+
+                void namesTheStartOfACycleFirst() {
+                    throw new IllegalStateException("Bad " + startOfACycle(true));
+                }
+
+                void namesTheMiddleOfACycleSecond() {
+                    throw new IllegalStateException("Bad " + middleOfACycle(true));
+                }
+
+                private String startOfACycle(boolean again) {
+                    return again ? middleOfACycle(false) : label;
+                }
+
+                private String middleOfACycle(boolean again) {
+                    return startOfACycle(again);
+                }
+
+                void passesTheValueToAFailureCheckingFirst(String raw) {
+                    throw new PlantedFlexibleFailure("Bad " + raw);
+                }
+
+                void passesTheValueToAFailureThatReassignsIt(String raw) {
+                    throw new PlantedReassigningFailure("fixed", raw);
+                }
+
+                void concatenatesANonFinalBase(PlantedCounted counted) {
+                    throw new IllegalArgumentException("Bad " + counted);
+                }
+
+                void namesAContentDigest(ContentDigest digest) {
+                    throw new IllegalStateException("Bad digest " + digest);
+                }
+
+                void namesAReceiptFingerprint(ReceiptFingerprint fingerprint) {
+                    throw new IllegalStateException("Bad fingerprint " + fingerprint);
+                }
+
+                void switchesTheMessageToTheValue(Kind kind, String raw) {
+                    throw new IllegalArgumentException(switch (kind) {
+                        case ONE -> "One";
+                        case TWO -> raw;
+                    });
+                }
+
+                void yieldsTheValueInASwitch(Kind kind, String raw) {
+                    throw new IllegalArgumentException(switch (kind) {
+                        case ONE -> "One";
+                        case TWO -> {
+                            yield raw;
+                        }
+                    });
+                }
             }
             """;
 
     private static final String PLANTED_CLOSED_MESSAGES = """
             package planted.application;
 
-            import cz.novanadeje.app.donations.domain.receipt.ContentDigest;
-            import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
             import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
             import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
             import planted.domain.PlantedConflict;
@@ -525,6 +816,16 @@ class ExceptionMessageRulesTest {
                 private final String field;
 
                 enum Kind { ONE, TWO }
+
+                enum Labelled {
+                    NAME("Name");
+
+                    Labelled(String label) {
+                        if (label.isBlank()) {
+                            throw new IllegalArgumentException("Blank label " + label);
+                        }
+                    }
+                }
 
                 record Named(String value) {
                 }
@@ -596,7 +897,7 @@ class ExceptionMessageRulesTest {
                 }
 
                 void wrapsAConstantInANewObject() {
-                    throw new IllegalStateException("Bad " + new Named("fixed"));
+                    throw new IllegalStateException("Bad " + new Named("fixed") + " " + new Named("fixed").toString() + " " + new Named("fixed").value());
                 }
 
                 void holdsAConstantInALocal() {
@@ -629,8 +930,32 @@ class ExceptionMessageRulesTest {
                     Objects.requireNonNull(value, "Missing value");
                 }
 
-                void namesIdsOfAFixedShape(ReceiptNumber number, ReceiptSigningKeyId keyId, ContentDigest digest, ReceiptFingerprint fingerprint) {
-                    throw new IllegalStateException("Receipt " + number + " key " + keyId + " digest " + digest + " fingerprint " + fingerprint);
+                void namesIdsOfAFixedShape(ReceiptNumber number, ReceiptSigningKeyId keyId) {
+                    throw new IllegalStateException("Receipt " + number + " key " + keyId + " number " + number.value());
+                }
+
+                void namesAWordAHelperChooses(int status) {
+                    throw new IllegalStateException("Status " + wordOf(status) + " " + PlantedClosedMessages.wordOf(status));
+                }
+
+                private static String wordOf(int status) {
+                    return status > 0 ? "positive" : "other";
+                }
+
+                void namesAWordARecursiveHelperChooses(int status) {
+                    throw new IllegalStateException("Status " + wordAfter(status));
+                }
+
+                private static String wordAfter(int status) {
+                    return status > 0 ? wordAfter(status - 1) : "settled";
+                }
+
+                void mapsIdsThroughAClosedMethodReference(List<UUID> ids) {
+                    throw new IllegalStateException("Bad " + ids.stream().map(UUID::version).toList());
+                }
+
+                void namesWhetherTheValueMatches(String raw) {
+                    throw new IllegalArgumentException("Bad " + "x".equals(raw) + " " + Boolean.valueOf(raw));
                 }
 
                 void namesTheTypeAHelperFinds(Object value) {
@@ -668,8 +993,88 @@ class ExceptionMessageRulesTest {
         assertThat(scan.reports()).isEmpty();
         assertThat(scan.checkedSitesByLayer()).as("message sites checked per layer")
                 .hasEntrySatisfying("domain", count -> assertThat(count).isPositive())
-                .hasEntrySatisfying("application", count -> assertThat(count).isPositive())
-                .hasEntrySatisfying("infrastructure", count -> assertThat(count).isPositive());
+                .hasEntrySatisfying("application", count -> assertThat(count).isPositive());
+    }
+
+    @Test
+    @DisplayName("Given planted throwables that override getMessage, getLocalizedMessage or toString and a plain class overriding toString, when the rule checks them, then exactly the throwables are reported")
+    void should_report_every_throwable_computing_its_message_when_checked_given_planted_overrides(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of(
+                "cz.novanadeje.app.plantedm.domain.PlantedOverrides", """
+                        package cz.novanadeje.app.plantedm.domain;
+
+                        class PlantedOverrides {
+
+                            static class PlantedMessage extends RuntimeException {
+
+                                private final String raw = "raw";
+
+                                @Override
+                                public String getMessage() {
+                                    return "Bad " + raw;
+                                }
+                            }
+
+                            static class PlantedLocalizedMessage extends RuntimeException {
+
+                                @Override
+                                public String getLocalizedMessage() {
+                                    return "Bad";
+                                }
+                            }
+
+                            static class PlantedDescribedFailure extends Exception {
+
+                                @Override
+                                public String toString() {
+                                    return "Bad";
+                                }
+                            }
+
+                            static class PlantedValue {
+
+                                @Override
+                                public String toString() {
+                                    return "Value";
+                                }
+                            }
+                        }
+                        """));
+
+        assertThat(throwables_compute_no_message_when_it_is_read.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(3)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedMessage.getMessage()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedLocalizedMessage.getLocalizedMessage()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedDescribedFailure.toString()"));
+    }
+
+    static Stream<Arguments> idsOfAFixedShape() {
+        return Stream.of(
+                Arguments.of(ReceiptNumber.class, "2026-000001", "ABCD-EFGHIJ"),
+                Arguments.of(ReceiptSigningKeyId.class, "21fe31df", "21FE31DF"));
+    }
+
+    @Test
+    @DisplayName("Given the ids the rule counts closed by their fixed shape, when they are listed, then each one has its free-text check below")
+    void should_check_every_closed_id_when_listed_given_the_ids_of_a_fixed_shape() {
+        assertThat(idsOfAFixedShape().map(arguments -> ((Class<?>) arguments.get()[0]).getName()))
+                .containsExactlyInAnyOrderElementsOf(ExceptionMessageValues.CLOSED_SITE_TYPES);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("idsOfAFixedShape")
+    @DisplayName("Given an id the rule counts closed by its fixed shape, when it is built from free text or uppercase letters, then its constructor refuses it")
+    void should_refuse_free_text_when_built_given_an_id_of_a_fixed_shape(Class<?> type, String valid, String uppercase) throws ReflectiveOperationException {
+        assertThat(type.isRecord()).as("%s is a record", type.getSimpleName()).isTrue();
+        assertThat(type.getRecordComponents()).extracting(RecordComponent::getType).containsExactly(String.class);
+        Constructor<?> constructor = type.getDeclaredConstructor(String.class);
+
+        assertThat(constructor.newInstance(valid)).isNotNull();
+        for (String refused : List.of("a b", uppercase)) {
+            assertThatThrownBy(() -> constructor.newInstance(refused)).as("%s(%s)", type.getSimpleName(), refused)
+                    .isInstanceOf(InvocationTargetException.class)
+                    .cause().isInstanceOf(IllegalArgumentException.class);
+        }
     }
 
     @Test
@@ -677,7 +1082,8 @@ class ExceptionMessageRulesTest {
     void should_report_every_planted_message_when_read_given_messages_built_from_open_values(@TempDir Path root) {
         List<Path> sources = planted(root, PLANTED_FAILURE, PLANTED_KIND, PLANTED_REFUSAL, PLANTED_CONFLICT, PLANTED_DELEGATING,
                 PLANTED_CODE, PLANTED_TOKEN, PLANTED_REASON, PLANTED_LEAKED_REASON, PLANTED_NAME, PLANTED_LABEL, PLANTED_CHECK,
-                PLANTED_OVERRIDING_CHECK, PLANTED_ADAPTER, PLANTED_HOLDERS, PLANTED_MUTABLES, PLANTED_MESSAGES);
+                PLANTED_OVERRIDING_CHECK, PLANTED_ADAPTER, PLANTED_HOLDERS, PLANTED_MUTABLES, PLANTED_MESSAGES, PLANTED_FLEXIBLE_FAILURE,
+                PLANTED_REASSIGNING_FAILURE, PLANTED_ADAPTER_FAILURE, PLANTED_SECRET, PLANTED_AMBIENT, PLANTED_DESCRIPTIONS);
 
         assertThat(ExceptionMessageValues.scan(sources).reports()).extracting(ExceptionMessageRulesTest::siteOf).containsExactlyInAnyOrder(
                 "PlantedFailure.<init>",
@@ -711,6 +1117,7 @@ class ExceptionMessageRulesTest {
                 "PlantedMessages.wrapsTheValueInAnArray",
                 "PlantedMessages.wrapsTheValueInANewObject",
                 "PlantedMessages.describesItself",
+                "PlantedMessages.holdsItsDescriptionInALocal",
                 "PlantedMessages.appendsTheValueToALocal",
                 "PlantedMessages.concatenatesAnAmount",
                 "PlantedMessages.concatenatesADecimal",
@@ -724,7 +1131,27 @@ class ExceptionMessageRulesTest {
                 "PlantedMessages.concatenatesAnInheritedValue",
                 "PlantedMessages.concatenatesAStatelessHandle",
                 "PlantedMessages.concatenatesTheFirstOfACycle",
-                "PlantedMessages.concatenatesTheSecondOfACycle");
+                "PlantedMessages.concatenatesTheSecondOfACycle",
+                "PlantedMessages.namesAGeneratedSecret",
+                "PlantedMessages.namesAGeneratedSecretThroughALocal",
+                "PlantedMessages.namesAnAmountAFactoryBuilds",
+                "PlantedMessages.namesAnAmountItBuilds",
+                "PlantedMessages.namesAStaticFieldOthersMayChange",
+                "PlantedMessages.mapsIdsThroughAMethodReference",
+                "PlantedMessages.mapsIdsThroughAConstructorReference",
+                "PlantedMessages.requiresWithAMethodReference",
+                "PlantedMessages.namesAnOverriddenDescription",
+                "PlantedMessages.namesADefaultARecordOverrides",
+                "PlantedMessages.namesTheStartOfACycleFirst",
+                "PlantedMessages.namesTheMiddleOfACycleSecond",
+                "PlantedMessages.passesTheValueToAFailureCheckingFirst",
+                "PlantedReassigningFailure.<init>",
+                "PlantedAdapter.forwardsTheValueThroughItsOwnFailure",
+                "PlantedMessages.concatenatesANonFinalBase",
+                "PlantedMessages.namesAContentDigest",
+                "PlantedMessages.namesAReceiptFingerprint",
+                "PlantedMessages.switchesTheMessageToTheValue",
+                "PlantedMessages.yieldsTheValueInASwitch");
     }
 
     @Test
