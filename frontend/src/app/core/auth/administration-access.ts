@@ -3,6 +3,7 @@ import { computed, DestroyRef, inject, Injectable, InjectionToken, signal } from
 import { DirtyForms } from '../updates/dirty-forms';
 
 export const ADMINISTRATION_LOCK_AFTER_MS = 5 * 60 * 1000;
+export const ADMINISTRATION_PRESENCE_CHECK_MS = 15 * 1000;
 
 export interface AccessInstant {
   readonly monotonic: number;
@@ -30,8 +31,9 @@ export class AdministrationAccess {
   private readonly now = inject(ACCESS_CLOCK);
   private readonly open = signal(false);
   private readonly pageKept = signal(false);
-  private hiddenSince: AccessInstant | null = null;
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private seenAt: AccessInstant | null = null;
+  private awayTimer: ReturnType<typeof setTimeout> | null = null;
+  private presenceCheck: ReturnType<typeof setInterval> | null = null;
 
   readonly unlocked = this.open.asReadonly();
   readonly keepsPage = computed(() => !this.open() && this.pageKept());
@@ -47,7 +49,7 @@ export class AdministrationAccess {
       this.document.removeEventListener('visibilitychange', changed);
       this.document.removeEventListener('resume', returned);
       window?.removeEventListener('pageshow', returned);
-      this.stopTimer();
+      this.stopWatching();
     });
   }
 
@@ -56,6 +58,7 @@ export class AdministrationAccess {
   }
 
   ended(): void {
+    this.stopWatching();
     this.open.set(false);
     this.pageKept.set(false);
   }
@@ -63,39 +66,61 @@ export class AdministrationAccess {
   unlock(): void {
     this.pageKept.set(false);
     this.open.set(true);
+    this.watchFromNow();
   }
 
   lock(): void {
     if (!this.open()) {
       return;
     }
+    this.stopWatching();
     this.pageKept.set(this.dirtyForms.any());
     this.open.set(false);
   }
 
   private visibilityChanged(): void {
+    this.lockIfAwayLongEnough();
+    if (this.open()) {
+      this.watchFromNow();
+    }
+  }
+
+  private presenceChecked(): void {
+    this.lockIfAwayLongEnough();
+    if (this.open()) {
+      this.seenAt = this.now();
+    }
+  }
+
+  private watchFromNow(): void {
+    this.stopWatching();
+    this.seenAt = this.now();
     if (this.document.visibilityState === 'hidden') {
-      this.hiddenSince = this.now();
-      this.stopTimer();
-      this.timer = setTimeout(() => this.lock(), ADMINISTRATION_LOCK_AFTER_MS);
+      this.awayTimer = setTimeout(() => this.lock(), ADMINISTRATION_LOCK_AFTER_MS);
       return;
     }
-    this.stopTimer();
-    this.lockIfAwayLongEnough();
-    this.hiddenSince = null;
+    this.presenceCheck = setInterval(
+      () => this.presenceChecked(),
+      ADMINISTRATION_PRESENCE_CHECK_MS,
+    );
   }
 
   private lockIfAwayLongEnough(): void {
-    const since = this.hiddenSince;
-    if (since !== null && awayLongEnough(since, this.now())) {
+    const since = this.seenAt;
+    if (this.open() && since !== null && awayLongEnough(since, this.now())) {
       this.lock();
     }
   }
 
-  private stopTimer(): void {
-    if (this.timer !== null) {
-      clearTimeout(this.timer);
-      this.timer = null;
+  private stopWatching(): void {
+    if (this.awayTimer !== null) {
+      clearTimeout(this.awayTimer);
+      this.awayTimer = null;
     }
+    if (this.presenceCheck !== null) {
+      clearInterval(this.presenceCheck);
+      this.presenceCheck = null;
+    }
+    this.seenAt = null;
   }
 }

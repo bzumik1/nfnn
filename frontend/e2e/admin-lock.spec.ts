@@ -170,6 +170,25 @@ test.describe('Given an administrator whose administration locks on this device'
       await expect(page.getByLabel('Příjemci')).toHaveCount(0);
     });
 
+    test('and the computer sleeps with the page open for less than five minutes, then it stays unlocked when it wakes', async ({
+      page,
+    }) => {
+      await page.clock.fastForward(FIVE_MINUTES_MS - 60 * 1000);
+
+      await expect(page.getByRole('heading', { level: 1, name: 'Měsíční e-mail' })).toBeVisible();
+    });
+
+    test('and the computer sleeps with the page open for five minutes, then it locks when it wakes', async ({
+      page,
+    }) => {
+      await page.clock.fastForward(FIVE_MINUTES_MS);
+
+      await expect(
+        page.getByRole('heading', { level: 1, name: ADMINISTRATION_LOCKED }),
+      ).toBeVisible();
+      await expect(page.getByLabel('Příjemci')).toHaveCount(0);
+    });
+
     test('and it locks while the recipients are half-typed, then after unlocking the typed text is still there', async ({
       page,
     }) => {
