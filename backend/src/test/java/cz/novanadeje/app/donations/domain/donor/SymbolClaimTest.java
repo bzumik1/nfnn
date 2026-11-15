@@ -37,6 +37,26 @@ class SymbolClaimTest {
     }
 
     @Test
+    @DisplayName("Given a confirmed claim, when an administrator resets it, then it refuses as still confirmed")
+    void should_refuse_as_still_confirmed_when_reset_given_confirmed_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.CONFIRMED);
+
+        assertThatThrownBy(claim::requireResettable)
+                .isInstanceOf(SymbolClaimStillConfirmed.class)
+                .hasFieldOrPropertyWithValue("code", "donations/symbol-claim-still-confirmed");
+    }
+
+    @Test
+    @DisplayName("Given a declined claim, when an administrator resets it, then it may be reset")
+    void should_allow_reset_when_reset_given_declined_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.DECLINED);
+
+        claim.requireResettable();
+
+        assertThat(claim.answer()).isEqualTo(SymbolClaimAnswer.DECLINED);
+    }
+
+    @Test
     @DisplayName("Given a confirmed claim, when an administrator reverses it, then the same claim answers DECLINED from the reversal time")
     void should_become_declined_at_reversal_time_when_reversed_given_confirmed_claim() {
         SymbolClaim claim = claim(SymbolClaimAnswer.CONFIRMED);
