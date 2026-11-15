@@ -6,52 +6,17 @@
 
 <div class="admin-frame" [class.admin-sheet]="sheet()">
   @if (sheet()) {
-    <header class="admin-sheet-head" [class.admin-sheet-head--scrolled]="scrolled()">
-      <button
-        type="button"
-        class="admin-sheet-button"
-        aria-label="Zpět"
-        i18n-aria-label="@@layout.header.back"
-        (click)="back()"
-      >
-        <svg
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        class="admin-sheet-button"
-        aria-label="Zavřít"
-        i18n-aria-label="@@ui.dialog.close"
-        (click)="close()"
-      >
-        <svg
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-        >
-          <path d="M4.5 4.5l15 15M19.5 4.5l-15 15" />
-        </svg>
-      </button>
-    </header>
+    <div class="admin-sheet-cover" aria-hidden="true"></div>
+    <app-sheet-head
+      role="banner"
+      class="admin-sheet-head"
+      [title]="pageTitle()"
+      (backPressed)="back()"
+      (closePressed)="close()"
+    />
   }
   <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
-    <div class="admin-content">
+    <div class="admin-content" [class.ui-sheet-page]="sheet()">
       <app-first-download-notice />
       @if (lock.locked()) {
         @if (lock.panel(); as panel) {

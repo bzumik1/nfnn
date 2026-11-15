@@ -183,14 +183,15 @@ describe('Given the account sheet of a signed-in donor', () => {
       await choose('nav a[href="/darce/potvrzeni"]');
     });
 
-    it('then it opens inside the sheet under its title with Zpět, and the sheet goes one step deeper', () => {
+    it('then it opens inside the sheet under its title between Zpět and Zavřít, and the sheet goes one step deeper', () => {
       expect(navigate).not.toHaveBeenCalled();
       expect(closed).toBe(0);
       expect(sheet.querySelector('#account-section-title')?.textContent?.trim()).toBe(
         'Potvrzení o daru',
       );
       expect(sheet.querySelector('.stub-page')?.textContent).toBe('Obsah sekce');
-      expect(sheet.querySelector('button.account-back')?.getAttribute('aria-label')).toBe('Zpět');
+      expect(sheet.querySelector('button[aria-label="Zpět"]')).not.toBeNull();
+      expect(sheet.querySelectorAll('button[aria-label="Zavřít"]')).toHaveLength(1);
       expect(sheet.querySelector('nav.account-nav')).toBeNull();
       expect(history.steps.at(-1)).toBe(1);
     });
@@ -202,7 +203,7 @@ describe('Given the account sheet of a signed-in donor', () => {
     it('and Zpět is pressed, then the sheet steps back through the history', () => {
       const back = vi.spyOn(TestBed.inject(Location), 'back');
 
-      sheet.querySelector<HTMLButtonElement>('button.account-back')!.click();
+      sheet.querySelector<HTMLButtonElement>('button[aria-label="Zpět"]')!.click();
 
       expect(back).toHaveBeenCalledOnce();
     });
@@ -233,6 +234,62 @@ describe('Given the account sheet of a signed-in donor', () => {
       expect(closed).toBe(0);
     });
 
+    it('and Zavřít is pressed, then the whole sheet closes over the page, as at its first step', async () => {
+      sheet.querySelector<HTMLButtonElement>('button[aria-label="Zavřít"]')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(closed).toBe(1);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    describe('and something is written in a form of the section and the visitor presses Zavřít', () => {
+      const settle = async (): Promise<void> => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+
+      beforeEach(async () => {
+        const input = sheet.querySelector<HTMLInputElement>('input.stub-input')!;
+        input.value = 'rozepsáno';
+        input.dispatchEvent(new Event('input'));
+        await settle();
+        sheet.querySelector<HTMLButtonElement>('button[aria-label="Zavřít"]')!.click();
+        await settle();
+      });
+
+      it('then the sheet stays open and a dialog asks whether to discard what is written, without speaking of going back', () => {
+        expect(closed).toBe(0);
+        expect(sheet.querySelector('#account-section-title')).not.toBeNull();
+        expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
+          'Zahodit rozepsané údaje?',
+        );
+        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
+          'Co jste do formuláře napsali, se neuloží.',
+        );
+      });
+
+      it('and they choose to keep writing, then the dialog closes and the section stays', async () => {
+        document.querySelector<HTMLButtonElement>('button.account-discard-keep')!.click();
+        await settle();
+
+        expect(closed).toBe(0);
+        expect(document.querySelector('#account-discard-title')).toBeNull();
+        expect(sheet.querySelector<HTMLInputElement>('input.stub-input')?.value).toBe('rozepsáno');
+      });
+
+      it('and they choose to discard, then the whole sheet closes', async () => {
+        const back = vi.spyOn(TestBed.inject(Location), 'back');
+
+        document.querySelector<HTMLButtonElement>('button.account-discard-leave')!.click();
+        await settle();
+
+        expect(closed).toBe(1);
+        expect(back).not.toHaveBeenCalled();
+      });
+    });
+
     describe('and something is written in a form of the section and the visitor goes back', () => {
       const settle = async (): Promise<void> => {
         fixture.detectChanges();
@@ -254,6 +311,9 @@ describe('Given the account sheet of a signed-in donor', () => {
         expect(history.steps.at(-1)).toBe(1);
         expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
           'Zahodit rozepsané údaje?',
+        );
+        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
+          'Když se teď vrátíte, co jste vyplnili, se neuloží.',
         );
       });
 

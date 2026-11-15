@@ -21,6 +21,11 @@ class Page {
   protected readonly suspended = inject(DIALOG_SUSPENSION);
 }
 
+@Component({ template: `<h1>{{ name() }}</h1>` })
+class NamedPage {
+  readonly name = signal('Načítáme dárce…');
+}
+
 @Component({ template: '<p class="lock-panel" tabindex="-1">Správa je zamčená</p>' })
 class LockPanel {}
 
@@ -59,6 +64,7 @@ describe('Given an administrator anywhere in the administration', () => {
           { path: 'sprava/darci', component: Page },
           { path: 'sprava/darci/:id', component: Page },
           { path: 'sprava/platby', component: Page },
+          { path: 'sprava/lide', component: NamedPage },
           {
             path: 'sprava/aktuality/nova',
             component: Page,
@@ -199,11 +205,38 @@ describe('Given an administrator anywhere in the administration', () => {
       const sheet = element('.admin-sheet');
 
       expect(sheet).not.toBeNull();
-      expect(sheet!.querySelector('header button[aria-label="Zpět"]')).not.toBeNull();
-      expect(sheet!.querySelector('header button[aria-label="Zavřít"]')).not.toBeNull();
+      expect(sheet!.querySelector('[role="banner"] button[aria-label="Zpět"]')).not.toBeNull();
+      expect(sheet!.querySelector('[role="banner"] button[aria-label="Zavřít"]')).not.toBeNull();
       expect(sheet!.querySelector('main#obsah h1')?.textContent).toBe('Stránka');
       expect(element('header.app-header')).toBeNull();
       expect(element('.admin-sheet-backdrop')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('then the head names the page in its middle, as an account section does, while the heading of the page stays for screen readers', () => {
+      const title = element('.admin-sheet [role="banner"] p[aria-hidden="true"]');
+
+      expect(clean(title?.textContent)).toBe('Stránka');
+      expect(
+        element('.admin-sheet [role="banner"] h1, .admin-sheet [role="banner"] h2'),
+      ).toBeNull();
+      expect(element('main#obsah h1')?.textContent).toBe('Stránka');
+    });
+
+    it('and the page names itself only once its data arrive, then the head follows its heading', async () => {
+      await router.navigateByUrl('/sprava/lide');
+      await settle();
+      const page = fixture.debugElement.query(
+        (node) => node.componentInstance instanceof NamedPage,
+      );
+      const title = () =>
+        clean(element('.admin-sheet [role="banner"] p[aria-hidden="true"]')?.textContent);
+      expect(title()).toBe('Načítáme dárce…');
+
+      (page.componentInstance as NamedPage).name.set('Jana Nováková');
+      await settle();
+      await settle();
+
+      expect(title()).toBe('Jana Nováková');
     });
 
     it('and a news editor opens, then it stands full screen under the header of the app, as before', async () => {
@@ -229,7 +262,7 @@ describe('Given an administrator anywhere in the administration', () => {
       await router.navigateByUrl('/sprava/platby');
       await settle();
 
-      element('.admin-sheet header button[aria-label="Zavřít"]')!.click();
+      element('.admin-sheet [role="banner"] button[aria-label="Zavřít"]')!.click();
       await settle();
 
       expect(router.url).toBe('/');
@@ -260,7 +293,7 @@ describe('Given an administrator anywhere in the administration', () => {
       compact.set(true);
       await settle();
 
-      expect(element('.admin-sheet header button[aria-label="Zavřít"]')).not.toBeNull();
+      expect(element('.admin-sheet [role="banner"] button[aria-label="Zavřít"]')).not.toBeNull();
     });
 
     it('and it is unlocked again, then the page comes back', async () => {
@@ -420,7 +453,9 @@ describe('Given an administrator who opened the administration on a phone over a
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   function close(): void {
-    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zavřít"]').click();
+    fixture.nativeElement
+      .querySelector('.admin-sheet [role="banner"] button[aria-label="Zavřít"]')
+      .click();
   }
 
   it('when Zavřít is pressed two pages deep, then the site steps back past every page of the administration to the page it came from, as a press of a button', async () => {
@@ -473,7 +508,9 @@ describe('Given an administrator who opened the administration on a phone over a
   it('when Zpět is pressed, then the site steps back towards the parent of the page', () => {
     const back = vi.spyOn(TestBed.inject(BackTarget), 'back').mockImplementation(() => undefined);
 
-    fixture.nativeElement.querySelector('.admin-sheet header button[aria-label="Zpět"]').click();
+    fixture.nativeElement
+      .querySelector('.admin-sheet [role="banner"] button[aria-label="Zpět"]')
+      .click();
 
     expect(back).toHaveBeenCalledWith('/');
   });

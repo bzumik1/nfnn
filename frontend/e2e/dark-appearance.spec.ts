@@ -420,7 +420,7 @@ test.describe('Given a signed-in donor on a touch phone', () => {
     if (!(await sheet.isVisible())) {
       await page.getByRole('banner').getByRole('button', { name: 'Účet' }).click();
     }
-    const back = sheet.locator('.account-back');
+    const back = sheet.getByRole('button', { name: 'Zpět' });
     if (await back.isVisible()) {
       await back.click();
     }

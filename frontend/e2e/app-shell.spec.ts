@@ -160,14 +160,19 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
   });
 
   for (const section of SECTIONS) {
-    test(`when they choose ${section}, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays`, async ({
+    test(`when they choose ${section}, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it`, async ({
       page,
     }) => {
       const sheet = await openSheetSection(page, section);
 
       await expect(sheet.getByRole('button', { name: 'Zpět' })).toBeVisible();
-      await expect(sheet.getByRole('button', { name: 'Zavřít' })).toHaveCount(0);
+      await expect(sheet.getByRole('button', { name: 'Zavřít' })).toHaveCount(1);
       await expect(sheet.locator('app-account-section > *')).not.toHaveCount(0);
+      await expect(page).toHaveURL('/o-nas');
+
+      await sheet.getByRole('button', { name: 'Zavřít' }).click();
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect(page).toHaveURL('/o-nas');
     });
 
@@ -209,6 +214,31 @@ test.describe('Given a signed-in donor on a phone who opens a section from the a
       .click();
 
     await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeVisible();
+    await expect(page).toHaveURL('/o-nas');
+  });
+
+  test('when they have written into a form of Údaje a zabezpečení and press Zavřít, then a dialog asks first, and only discarding closes the sheet', async ({
+    page,
+  }) => {
+    const sheet = await openSheetSection(page, 'Údaje a zabezpečení');
+    await sheet.getByRole('button', { name: 'Upravit údaje' }).click();
+    await sheet.getByLabel('Jméno a příjmení').fill('Jana Rozepsaná');
+
+    await sheet.getByRole('button', { name: 'Zavřít' }).click();
+
+    const ask = page.getByRole('dialog', { name: 'Zahodit rozepsané údaje?' });
+    await expect(ask).toBeVisible();
+    await ask.getByRole('button', { name: 'Pokračovat v psaní' }).click();
+    await expect(ask).toHaveCount(0);
+    await expect(sheet.getByLabel('Jméno a příjmení')).toHaveValue('Jana Rozepsaná');
+
+    await sheet.getByRole('button', { name: 'Zavřít' }).click();
+    await page
+      .getByRole('dialog', { name: 'Zahodit rozepsané údaje?' })
+      .getByRole('button', { name: 'Zahodit' })
+      .click();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page).toHaveURL('/o-nas');
   });
 

@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { mockDonorApi, noDonations, signIn } from './donor-session';
+import { mockDonorApi, noDonations, openAccountItem, signIn } from './donor-session';
 
 const IPAD_SCREEN = { width: 820, height: 1180 };
 const IPAD_SCREEN_ON_ITS_SIDE = { width: 1180, height: 820 };
@@ -94,6 +94,27 @@ test.describe('Given the app opened from the home screen of an iPad, in a window
     await expect(back).toBeVisible();
     expect(await liesUnderWindowControls(back)).toBe(false);
     await expect(logo(page)).toHaveCount(0);
+  });
+
+  test('when a signed-in donor opens Můj přehled in the account sheet and scrolls it, then Zpět in the head of the sheet stays clear of the window controls', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await signIn(page);
+    await page.setViewportSize({ width: 500, height: 700 });
+    await openAccountItem(page, 'Můj přehled');
+    const sheet = page.getByRole('dialog', { name: 'Můj přehled' });
+    const back = sheet.getByRole('button', { name: 'Zpět' });
+    await expect(back).toBeVisible();
+    expect(await liesUnderWindowControls(back)).toBe(false);
+
+    await sheet.locator('.dialog-panel').evaluate((panel) => panel.scrollTo(0, 400));
+    await expect
+      .poll(() => sheet.locator('.dialog-panel').evaluate((panel) => panel.scrollTop))
+      .toBeGreaterThan(0);
+
+    await expect(back).toBeInViewport({ ratio: 1 });
+    expect(await liesUnderWindowControls(back)).toBe(false);
   });
 
   test('when the keyboard reaches the skip link, then it shows clear of the window controls', async ({

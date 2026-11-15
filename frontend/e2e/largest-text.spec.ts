@@ -6,6 +6,7 @@ import {
   mockAdministration,
   PETR_DETAIL_PATH,
   rememberedSession,
+  renamePetr,
 } from './baseline/screen-mocks';
 import {
   administrator,
@@ -565,6 +566,35 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
       );
     });
   }
+
+  test('when they open the card of a donor with a long name, then the head of the sheet keeps the name on one line between Zpět and Zavřít', async ({
+    page,
+  }) => {
+    const name = 'Marie Kateřina Nováková-Svobodová z Dlouhé Lhoty u Českých Budějovic';
+    await mockAdministration(page);
+    await renamePetr(page, name);
+    await page.goto(PETR_DETAIL_PATH);
+    await expect(page.getByRole('heading', { level: 1, name })).toBeAttached();
+    const head = page.getByRole('banner');
+    const title = head.getByText(name, { exact: true });
+    await expect(title).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const room = await title.evaluate((element) => {
+      const root = getComputedStyle(document.documentElement);
+      return {
+        oneLine: parseFloat(getComputedStyle(element).lineHeight),
+        inset: parseFloat(root.getPropertyValue('--sheet-close-inset')),
+        button: parseFloat(root.getPropertyValue('--sheet-close-size')),
+      };
+    });
+    const headBox = (await head.boundingBox())!;
+    const titleBox = (await title.boundingBox())!;
+    expect(titleBox.height).toBeLessThanOrEqual(room.oneLine + 1);
+    expect(headBox.height).toBeLessThanOrEqual(room.inset + room.button + room.oneLine);
+    await expect(head.getByRole('button', { name: 'Zpět' })).toBeInViewport({ ratio: 1 });
+    await expect(head.getByRole('button', { name: 'Zavřít' })).toBeInViewport({ ratio: 1 });
+  });
 
   test('when they open /sprava/logy with a level raised and errors today, then every row title that is not a file name breaks only between words and the page never pans sideways', async ({
     page,

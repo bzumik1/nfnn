@@ -16,6 +16,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
@@ -33,6 +34,7 @@ import { DialogAnnouncer } from '../../shared/ui/dialog/dialog-announcer';
 import { DialogHistory } from '../../shared/ui/dialog/dialog-history';
 import { AccountBadges } from '../../core/layout/account-badges';
 import { AppInstall } from '../../core/install/app-install';
+import { SheetHead } from '../../shared/ui/sheet-head/sheet-head';
 
 export type AccountIcon = 'overview' | 'gifts' | 'receipts' | 'accounts' | 'details' | 'admin';
 
@@ -74,7 +76,7 @@ export const ADMINISTRATION_ITEM: AccountItem = {
 
 @Component({
   selector: 'app-account-sheet',
-  imports: [Dialog, AccountSection],
+  imports: [Dialog, AccountSection, SheetHead],
   templateUrl: './account-sheet.html',
   styleUrl: './account-sheet.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,8 +133,8 @@ export class AccountSheet {
   private readonly injector = inject(Injector);
   protected readonly section = signal<AccountItem | null>(null);
   protected readonly depth = computed(() => (this.section() === null ? 0 : 1));
-  protected readonly backLabel = $localize`:@@layout.header.back:Zpět`;
-  protected readonly discardAsked = signal(false);
+  private readonly dialog = viewChild.required(Dialog);
+  protected readonly discardAsked = signal<'back' | 'close' | null>(null);
   private discarding = false;
   private openedFrom: string | null = null;
   protected readonly appearance = inject(Appearance);
@@ -172,9 +174,17 @@ export class AccountSheet {
     this.location.back();
   }
 
+  protected closeSection(): void {
+    if (this.sectionHasUnsavedInput()) {
+      this.discardAsked.set('close');
+      return;
+    }
+    this.dialog().dismiss();
+  }
+
   protected steppedBack(): void {
     if (!this.discarding && this.sectionHasUnsavedInput()) {
-      this.discardAsked.set(true);
+      this.discardAsked.set('back');
       return;
     }
     this.discarding = false;
@@ -182,11 +192,16 @@ export class AccountSheet {
   }
 
   protected keepWriting(): void {
-    this.discardAsked.set(false);
+    this.discardAsked.set(null);
   }
 
   protected discard(): void {
-    this.discardAsked.set(false);
+    const leaving = this.discardAsked();
+    this.discardAsked.set(null);
+    if (leaving === 'close') {
+      this.dialog().dismiss();
+      return;
+    }
     this.discarding = true;
     this.location.back();
   }

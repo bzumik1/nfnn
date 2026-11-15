@@ -1,0 +1,18 @@
+$top: calc(var(--safe-area-top) + var(--sheet-top-gap));
+
+$inline-start: max(var(--sheet-inset-inline), env(safe-area-inset-left));
+$inline-end: max(var(--sheet-inset-inline), env(safe-area-inset-right));
+
+@mixin edge {
+  max-width: var(--sheet-max-width);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--shadow-sheet);
+}
+
+@mixin grouped {
+  --color-group-cell: var(--color-sheet-group);
+
+  background: var(--color-sheet-grouped);
+  color: var(--color-sheet-text);
+  font-family: var(--font-sheet);
+}
