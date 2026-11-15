@@ -110,7 +110,7 @@ describe('Given the panel of the locked administration', () => {
       ]);
     });
 
-    it('then its heading carries the one card title size of every card', () => {
+    it('then its heading is the title of the card', () => {
       expect(element('h1')?.className).toBe('ui-card__title');
     });
 
@@ -256,7 +256,7 @@ describe('Given the panel of the locked administration', () => {
         await settle();
       });
 
-      it('then its heading keeps the one card title size of every card', () => {
+      it('then its heading stays the title of the card', () => {
         expect(element('h1')?.className).toBe('ui-card__title');
       });
 

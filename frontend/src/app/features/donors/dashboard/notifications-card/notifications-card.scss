@@ -10,6 +10,10 @@
   padding-bottom: 0;
 }
 
+.notifications--noticed > p:nth-last-child(2) {
+  margin-bottom: var(--space-4);
+}
+
 .notifications-inset {
   padding-inline: var(--space-6);
 }

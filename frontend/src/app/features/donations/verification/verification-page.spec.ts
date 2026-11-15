@@ -203,7 +203,7 @@ describe('Given the verification page', () => {
       expect(card?.classList).toContain('ui-card');
       expect(card?.getAttribute('aria-labelledby')).toBe(title.id);
     }
-    expect(root().querySelector('.ui-list--inset, .ui-groups, .ui-group-note')).toBeNull();
+    expect(root().querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
   });
 
   it('when it opens, then search engines are asked not to index it, and leaving it lifts that', async () => {

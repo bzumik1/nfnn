@@ -1039,8 +1039,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(card.classList).toContain('ui-card');
       expect(card.classList).toContain('ui-card--padded');
       const title = card.querySelector('h2') as HTMLElement;
-      expect(title.classList).toContain('ui-card__title');
-      expect(title.classList).not.toContain('ui-card__title--large');
+      expect(title.className).toBe('ui-card__title send-gift-title');
       expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
       expect(card.getAttribute('aria-labelledby')).toBe(title.id);
     });
@@ -1465,9 +1464,7 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
         expect(card.querySelector('app-donations-table')?.closest('.ui-card')).toBe(card);
         expect(
-          card.querySelector(
-            '.ui-list--inset, .ui-group-title, .ui-group-head, .ui-group-aside, .ui-card .ui-card',
-          ),
+          card.querySelector('.ui-list--inset, .ui-group-title, .ui-card .ui-card'),
         ).toBeNull();
       });
     }

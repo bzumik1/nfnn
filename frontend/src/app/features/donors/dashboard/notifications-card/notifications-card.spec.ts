@@ -417,8 +417,17 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
 
     expect(text()).toContain('Prohlížeč ale upozornění od tohoto webu už nepřijímá');
     expect(button('Zapnout znovu')).toBeTruthy();
+  });
+
+  it('when the server lists this device but the browser lost its subscription, then the warning is a callout of the card', async () => {
+    withPushApi('granted');
+    push.browserSubscription = () =>
+      Promise.resolve<BrowserPushSubscriptionState>('not-subscribed');
+    await signIn('APP');
+    await open(pushView({ device: device(), devices: ['device-here'] }));
+
     const warning = fixture.nativeElement.querySelector('.ui-callout--warning') as HTMLElement;
-    expect(warning.classList).toContain('ui-callout');
+    expect(warning.className).toContain('ui-callout ui-callout--warning');
     expect(warning.textContent).toContain('Prohlížeč ale upozornění od tohoto webu už nepřijímá');
   });
 

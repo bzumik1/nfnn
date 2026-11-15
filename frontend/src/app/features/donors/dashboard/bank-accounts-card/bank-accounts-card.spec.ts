@@ -416,12 +416,11 @@ describe('Given the bank accounts card in the overview', () => {
     const card = element('section');
     expect(card?.classList).toContain('ui-card');
     expect(card?.classList).not.toContain('ui-card--padded');
-    expect(card?.querySelector('h2')?.classList).toContain('ui-card__title');
-    expect(card?.querySelector('h2')?.classList).not.toContain('ui-card__title--large');
+    expect(card?.querySelector('h2')?.className).toBe('ui-card__title accounts-title');
     const list = element('ul:has(> li.account)');
     expect(list?.classList).toContain('ui-list');
     expect(list?.classList).not.toContain('ui-list--inset');
-    expect(element('.ui-group-title, .ui-group-head, .ui-group-note')).toBeNull();
+    expect(element('.ui-group-title, .ui-group-note')).toBeNull();
   });
 
   it('when the donor has no known account, then the card explains it in its footer under Přidat účet, the last part of the card, after the status line', async () => {
@@ -630,7 +629,6 @@ describe('Given the bank accounts card in the overview', () => {
       const bar = element('.ui-card > .ui-card__bar') as HTMLElement;
       expect(bar.querySelector(':scope > h2.ui-card__title')).not.toBeNull();
       expect(bar.querySelector(':scope > .ui-card__aside')).toBe(helpButton());
-      expect(element('.ui-group-aside')).toBeNull();
     });
 
     it("and presses the help button, then the labelled panel opens under the head with the donor's symbol", async () => {
