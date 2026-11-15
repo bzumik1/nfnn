@@ -20,6 +20,7 @@ class PendingSecondFactorStepMigrationTest {
     private static final String PENDING_WITH_STEP = "0190a000-0000-7000-8000-000000000051";
     private static final String PENDING_WITHOUT_STEP = "0190a000-0000-7000-8000-000000000052";
     private static final String CONFIRMED = "0190a000-0000-7000-8000-000000000053";
+    private static final String CLEARING_CHANGESET = "023-clear-pending-second-factor-steps";
 
     @Test
     @DisplayName("Given a pending second factor with a last used step beside a pending one without and a confirmed one, when the current changelogs run, then only the pending one loses its step and every factor keeps its confirmation")
@@ -37,6 +38,39 @@ class PendingSecondFactorStepMigrationTest {
                 assertThat(factorOf(connection, PENDING_WITH_STEP)).containsExactly("pending", null);
                 assertThat(factorOf(connection, PENDING_WITHOUT_STEP)).containsExactly("pending", null);
                 assertThat(factorOf(connection, CONFIRMED)).containsExactly("confirmed", "59000001");
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("Given the current changelogs ran and the previous image, run again after a rollback, gave a pending factor a last used step, when the current changelogs run at a later start, then the step is cleared again and the changeset is recorded as run again")
+    void should_clear_the_step_again_when_current_changelogs_run_later_given_a_pending_factor_given_a_step_after_a_rollback() throws Exception {
+        try (var postgres = TestcontainersConfiguration.newPostgres()) {
+            postgres.start();
+            try (var connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
+                BaselineDatabase.migrate(connection, CURRENT_CHANGELOG);
+                insertFactor(connection, PENDING_WITH_STEP, "1000000051", null, null);
+                try (var statement = connection.prepareStatement("update donor_second_factor set last_used_step = 59000002 where donor_id = ?::uuid")) {
+                    statement.setString(1, PENDING_WITH_STEP);
+                    statement.executeUpdate();
+                }
+
+                BaselineDatabase.migrate(connection, CURRENT_CHANGELOG);
+
+                assertThat(factorOf(connection, PENDING_WITH_STEP)).containsExactly("pending", null);
+                assertThat(clearingRuns(connection)).containsExactly("1", "RERAN");
+            }
+        }
+    }
+
+    private static List<String> clearingRuns(Connection connection) throws SQLException {
+        try (var statement = connection.prepareStatement("""
+                select count(*)::text, max(exectype) from databasechangelog where id = ?
+                """)) {
+            statement.setString(1, CLEARING_CHANGESET);
+            try (var result = statement.executeQuery()) {
+                result.next();
+                return new ArrayList<>(Arrays.asList(result.getString(1), result.getString(2)));
             }
         }
     }
