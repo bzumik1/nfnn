@@ -20,7 +20,7 @@ public class DonorRegistrationExpiryService {
 
     @Transactional
     public ExpiredRegistrations expireUnconfirmed() {
-        int deleted = donors.deleteUnconfirmedRegisteredBefore(UnconfirmedRegistration.expiredWhenRegisteredBefore(clock.instant()));
+        int deleted = donors.deleteUnconfirmedRegisteredBefore(UnconfirmedRegistration.deletionCutoff(clock.instant()));
         return new ExpiredRegistrations(deleted, UnconfirmedRegistration.LIFETIME);
     }
 }

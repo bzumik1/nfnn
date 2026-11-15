@@ -150,4 +150,24 @@ class RegistrationReminderSchedulingTest {
     @EnableScheduling
     static class Scheduling {
     }
+
+    @Test
+    @DisplayName("Given the expiry deleted registrations under a lifetime other than thirty days, when the job runs, then its log names the lifetime the expiry reported")
+    void should_log_the_reported_lifetime_when_run_given_another_lifetime() {
+        DonorRegistrationReminderService reminders = mock(DonorRegistrationReminderService.class);
+        DonorRegistrationExpiryService expiry = mock(DonorRegistrationExpiryService.class);
+        when(expiry.expireUnconfirmed()).thenReturn(new ExpiredRegistrations(3, Duration.ofDays(45)));
+        Logger schedulerLog = (Logger) LoggerFactory.getLogger(RegistrationReminderScheduler.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        schedulerLog.addAppender(logged);
+        try {
+            new RegistrationReminderScheduler(reminders, expiry).tendUnconfirmedRegistrations();
+
+            assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+                    .contains("Deleted 3 unconfirmed registrations older than 45 days");
+        } finally {
+            schedulerLog.detachAppender(logged);
+        }
+    }
 }

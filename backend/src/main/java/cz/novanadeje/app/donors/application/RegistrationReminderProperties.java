@@ -18,7 +18,7 @@ public record RegistrationReminderProperties(String cron, Duration delay, Durati
         if (window == null || window.compareTo(delay) <= 0) {
             throw new IllegalArgumentException(PREFIX + "window must be longer than the delay, but is " + window);
         }
-        if (window.compareTo(UnconfirmedRegistration.LIFETIME) >= 0) {
+        if (!UnconfirmedRegistration.outlivesReminderWindow(window)) {
             throw new IllegalArgumentException(PREFIX + "window must be shorter than the " + UnconfirmedRegistration.LIFETIME.toDays()
                     + " days after which an unconfirmed registration is deleted, but is " + window);
         }

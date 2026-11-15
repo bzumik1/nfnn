@@ -53,7 +53,7 @@ class AdminActionSummaries {
     Optional<String> sentenceOnADevice(AdminActionView view) {
         return view.facts().map(AdminActionFacts::onADevice)
                 .flatMap(facts -> templateOf(facts, CZECH)
-                        .filter(template -> placeholdersOf(template).noneMatch(AdminActionFacts.NEVER_ON_A_DEVICE::contains))
+                        .filter(template -> placeholdersOf(template).noneMatch(AdminActionFacts::keptOffADevice))
                         .flatMap(template -> filled(template, facts, view, CZECH)))
                 .filter(sentence -> !EMAIL_ADDRESS.matcher(sentence).find());
     }

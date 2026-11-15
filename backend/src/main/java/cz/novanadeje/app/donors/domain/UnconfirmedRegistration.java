@@ -10,7 +10,11 @@ public final class UnconfirmedRegistration {
     private UnconfirmedRegistration() {
     }
 
-    public static Instant expiredWhenRegisteredBefore(Instant now) {
+    public static Instant deletionCutoff(Instant now) {
         return now.minus(LIFETIME);
+    }
+
+    public static boolean outlivesReminderWindow(Duration window) {
+        return window.compareTo(LIFETIME) < 0;
     }
 }
