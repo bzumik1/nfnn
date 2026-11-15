@@ -116,7 +116,7 @@ class DomainMutatorRulesTest {
 
     private static boolean holdsItsOwnId(JavaClass type) {
         return type.getAllFields().stream()
-                .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC) && field.getName().equals("id"))
+                .filter(field -> field.getName().equals("id"))
                 .map(JavaField::getRawType)
                 .anyMatch(DomainMutatorRulesTest::isIdRecord);
     }
@@ -315,7 +315,8 @@ class DomainMutatorRulesTest {
                     planted("planteda.domain.Banner", "public record Banner(boolean shown) { public Banner show() { return new Banner(true); } }"),
                     planted("planteda.domain.Label", "public record Label(String text) { public Label trimmed() { return new Label(text.trim()); } }"),
                     planted("planteda.domain.BannerRepository", "public interface BannerRepository { Banner load(); void save(Banner banner); boolean has(Label label); Notice latestNotice(); "
-                            + "BannerId lastId(); boolean exists(BannerId id); }"),
+                            + "BannerId lastId(); boolean exists(BannerId id); GiftKind kind(); void choose(GiftKind kind); Stand stand(); void place(Stand stand); }"),
+                    planted("planteda.domain.Stand", "public interface Stand { default Stand turned() { return this; } }"),
                     planted("planteda.domain.Notice", "public record Notice(String text) { public Notice dismissed() { return new Notice(\"\"); } }"),
                     planted("planteda.domain.BannerId",
                             "public record BannerId(java.util.UUID value) { public BannerId successor() { return new BannerId(java.util.UUID.randomUUID()); } }"),
@@ -438,6 +439,7 @@ class DomainMutatorRulesTest {
                                             + cz.novanadeje.app.planteda.domain.Pledges.firstAmount(java.util.List.of())
                                             + new cz.novanadeje.app.planteda.domain.Pledge(1).asPromise()
                                             + new cz.novanadeje.app.planteda.domain.Pledge(1).snapshot()
+                                            + ((cz.novanadeje.app.planteda.domain.Stand) new cz.novanadeje.app.planteda.domain.Stand() { }).turned()
                                             + new cz.novanadeje.app.planteda.domain.Tray(1).emptied()
                                             + new cz.novanadeje.app.planteda.domain.Box(1).emptied()
                                             + new cz.novanadeje.app.planteda.domain.Bin(1).emptied()
@@ -486,7 +488,7 @@ class DomainMutatorRulesTest {
                 + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, a value a "
                 + "repository only takes, a view it only returns, an id it takes and returns, a value a domain "
                 + "interface not named …Repository, an application …Repository or a domain class named …Repository takes and returns, domain "
-                + "functions that use a transition only to compute a number or an Object, an entity's method returning a supertype or an Object, an enum's next value, a filtered copy of a list that "
+                + "functions that use a transition only to compute a number or an Object, an entity's method returning a supertype or an Object, an enum's next value and an interface's default method returning its own kind, both stored by a repository, a filtered copy of a list that "
                 + "is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
         void should_report_no_read_when_checked_given_a_controller_that_reads_and_creates_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object)).noneSatisfy(detail -> assertThat(detail).contains("GiftController.reading("));
