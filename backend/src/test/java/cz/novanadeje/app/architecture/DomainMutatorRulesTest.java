@@ -66,9 +66,10 @@ class DomainMutatorRulesTest {
     private static ArchCondition<JavaClass> changeNoDomainObject() {
         return new ArchCondition<>("call or reference no mutator of a domain class and write no field of one (a mutator writes a field of a "
                 + "domain class it reaches through its receiver, parameters and their fields, or changes a collection or map such a field holds "
-                + "on the line that reads it, directly or through the domain methods it calls, an override's included, or is a transition: an "
-                + "instance method of an entity, a class or record that is no enum and holds its own id, a field id of a domain record named "
-                + "…Id or …Reference, returning its own kind, alone or inside a generic type)") {
+                + "on the line that reads it, directly or through the domain methods it calls, an override's included, or is a transition, or "
+                + "returns what a transition it reaches made; a transition is an instance method of an entity returning its own kind, alone or "
+                + "inside a generic type, and an entity a class or record, no enum, with a field id of a domain record named …Id or …Reference, "
+                + "or one a domain interface named …Repository both takes and returns, an id record aside)") {
             @Override
             public void check(JavaClass controller, ConditionEvents events) {
                 for (JavaAccess<?> access : controller.getAccessesFromSelf()) {
@@ -139,7 +140,9 @@ class DomainMutatorRulesTest {
         while (!pending.isEmpty()) {
             JavaMethod method = pending.poll();
             String through = method.equals(start) ? "" : " through " + method.getFullName();
-            Optional<String> change = fieldWriteIn(method, reachable).or(() -> heldContainerChangeIn(method, reachable));
+            Optional<String> change = fieldWriteIn(method, reachable)
+                    .or(() -> heldContainerChangeIn(method, reachable))
+                    .or(() -> transitionReturnedBy(start, method));
             if (change.isPresent()) {
                 return change.map(found -> found + through);
             }
@@ -148,6 +151,13 @@ class DomainMutatorRulesTest {
                     .forEach(pending::add);
         }
         return Optional.empty();
+    }
+
+    private static Optional<String> transitionReturnedBy(JavaMethod start, JavaMethod reached) {
+        return Optional.of(reached)
+                .filter(method -> !method.equals(start) && isTransition(method) && start.getReturnType().getAllInvolvedRawTypes().stream()
+                        .anyMatch(returned -> returned.isAssignableTo(method.getOwner().getName()) || method.getOwner().isAssignableTo(returned.getName())))
+                .map(transition -> "returns what the transition " + transition.getFullName() + " made");
     }
 
     private static Optional<String> fieldWriteIn(JavaMethod method, Set<JavaClass> reachable) {
@@ -227,7 +237,7 @@ class DomainMutatorRulesTest {
 
         @Test
         @DisplayName("when the mutators are found, then a change by a field write, through a field's object, through a held set and map, an "
-                + "entity's transition, a record aggregate's, an aggregate's without an id field and the known over-report of a read that adds a "
+                + "entity's transition, a record aggregate's, an aggregate's without an id field, a domain function returning what a transition made and the known over-reports of a read that adds a "
                 + "held list's element to a local on the same line are among them, and a copy, a filtered list and an accessor are not")
         void should_find_the_known_state_changes_when_found_given_todays_domain() {
             assertThat(Map.ofEntries(
@@ -240,6 +250,8 @@ class DomainMutatorRulesTest {
                     Map.entry("cz.novanadeje.app.content.domain.about.AboutSection.show", true),
                     Map.entry("cz.novanadeje.app.operations.domain.alerts.OperationalAlert.resolvedAt", true),
                     Map.entry("cz.novanadeje.app.operations.domain.backup.BackupKey.words", true),
+                    Map.entry("cz.novanadeje.app.operations.domain.backup.BackupKey.matches", true),
+                    Map.entry("cz.novanadeje.app.content.domain.people.PeopleOrder.apply", true),
                     Map.entry("cz.novanadeje.app.donors.domain.Donor.sessionRoles", false),
                     Map.entry("cz.novanadeje.app.donations.domain.donation.DonationList.inYear", false),
                     Map.entry("cz.novanadeje.app.donors.domain.Donor.email", false)))
@@ -307,6 +319,22 @@ class DomainMutatorRulesTest {
                     planted("planteda.domain.Notice", "public record Notice(String text) { public Notice dismissed() { return new Notice(\"\"); } }"),
                     planted("planteda.domain.BannerId",
                             "public record BannerId(java.util.UUID value) { public BannerId successor() { return new BannerId(java.util.UUID.randomUUID()); } }"),
+                    planted("planteda.domain.Pledges", """
+                            public final class Pledges {
+                                public static java.util.List<Pledge> withdrawAll(java.util.List<Pledge> pledges) {
+                                    return pledges.stream().map(Pledge::withdrawn).toList();
+                                }
+                                public static int total(java.util.List<Pledge> pledges) {
+                                    return pledges.stream().map(Pledge::withdrawn).mapToInt(Pledge::amount).sum();
+                                }
+                            }
+                            """),
+                    planted("planteda.domain.Tray", "public record Tray(int size) { public Tray emptied() { return new Tray(0); } }"),
+                    planted("planteda.domain.Shelving", "public interface Shelving { Tray tidy(Tray tray); }"),
+                    planted("planteda.domain.Box", "public record Box(int size) { public Box emptied() { return new Box(0); } }"),
+                    planted("planteda.application.BoxRepository", "public interface BoxRepository { cz.novanadeje.app.planteda.domain.Box load(); void save(cz.novanadeje.app.planteda.domain.Box box); }"),
+                    planted("planteda.domain.Bin", "public record Bin(int size) { public Bin emptied() { return new Bin(0); } }"),
+                    planted("planteda.domain.BinRepository", "public abstract class BinRepository { abstract Bin load(); abstract void save(Bin bin); }"),
                     planted("planteda.domain.GiftPolicy", """
                             public final class GiftPolicy {
                                 public void close(Gift gift) { gift.rename("closed"); }
@@ -385,6 +413,9 @@ class DomainMutatorRulesTest {
                                 void touchingTag(cz.novanadeje.app.planteda.domain.Item item) { item.touchTag(); }
                                 String granting(cz.novanadeje.app.planteda.domain.Wish wish) { return wish.granted().text(); }
                                 boolean showing(cz.novanadeje.app.planteda.domain.Banner banner) { return banner.show().shown(); }
+                                int withdrawingAll(java.util.List<cz.novanadeje.app.planteda.domain.Pledge> pledges) {
+                                    return cz.novanadeje.app.planteda.domain.Pledges.withdrawAll(pledges).size();
+                                }
                                 int withdrawing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.withdrawn().amount(); }
                                 boolean renewing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.renewed().isPresent(); }
                                 char stepping(cz.novanadeje.app.planteda.domain.GiftCursor cursor) { return cursor.next(); }
@@ -397,6 +428,10 @@ class DomainMutatorRulesTest {
                                             + new cz.novanadeje.app.planteda.domain.GiftNote("note").copied()
                                             + new cz.novanadeje.app.planteda.domain.Label(" label ").trimmed()
                                             + new cz.novanadeje.app.planteda.domain.Notice("notice").dismissed()
+                                            + cz.novanadeje.app.planteda.domain.Pledges.total(java.util.List.of())
+                                            + new cz.novanadeje.app.planteda.domain.Tray(1).emptied()
+                                            + new cz.novanadeje.app.planteda.domain.Box(1).emptied()
+                                            + new cz.novanadeje.app.planteda.domain.Bin(1).emptied()
                                             + new cz.novanadeje.app.planteda.domain.BannerId(java.util.UUID.randomUUID()).successor()
                                             + new cz.novanadeje.app.planteda.domain.WishView(new cz.novanadeje.app.planteda.domain.WishId(java.util.UUID.randomUUID()), "wish").retitled()
                                             + new cz.novanadeje.app.planteda.domain.PledgeList(java.util.List.of()).large()
@@ -413,7 +448,7 @@ class DomainMutatorRulesTest {
                 + "method, in a lambda, through a static method on its parameter, through another domain class, through an override of an abstract "
                 + "method and of an interface, by a method reference, by writing a field, in a held set, in the object of a field, of a subclass's "
                 + "field, and a transition of an entity class or record (one with its own id, or one a repository stores and loads) returning its own kind, "
-                + "alone and in an Optional")
+                + "alone and in an Optional, and a domain function returning what such a transition made")
         void should_report_every_change_when_checked_given_a_controller_that_changes_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.renaming(").contains("Gift.rename("))
@@ -432,13 +467,16 @@ class DomainMutatorRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.retagging(").contains("GiftTag.label"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.touchingTag(").contains("GiftTag.label"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.granting(").contains("returns its own kind"))
-                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.showing(").contains("returns its own kind"));
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.showing(").contains("returns its own kind"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.withdrawingAll(").contains("returns what the transition"));
         }
 
         @Test
         @DisplayName("when the rule checks the controller, then reading accessors, a public field and a domain service's check, a record's copy, "
                 + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, a value a "
-                + "repository only takes, a view it only returns, an id it takes and returns, an enum's next value, a filtered copy of a list that "
+                + "repository only takes, a view it only returns, an id it takes and returns, a value a domain "
+                + "interface not named …Repository, an application …Repository or a domain class named …Repository takes and returns, a domain "
+                + "function that uses a transition only to compute a number, an enum's next value, a filtered copy of a list that "
                 + "is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
         void should_report_no_read_when_checked_given_a_controller_that_reads_and_creates_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object)).noneSatisfy(detail -> assertThat(detail).contains("GiftController.reading("));
