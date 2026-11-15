@@ -1,0 +1,90 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Můj přehled, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Můj přehled, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Potvrzení o daru, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Potvrzení o daru, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Bankovní účty, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Bankovní účty, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Údaje a zabezpečení, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Údaje a zabezpečení, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Můj přehled, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Můj přehled, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it #2",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Moje dary, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it #2",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Potvrzení o daru, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Potvrzení o daru, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it #2",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Bankovní účty, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Bankovní účty, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it #2",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Údaje a zabezpečení, then it opens inside the sheet under a Zpět button, without a close button, and the page under it stays #2",
+    "replacement": "e2e/app-shell.spec.ts > Given a signed-in donor on a phone who opens a section from the account sheet > when they choose Údaje a zabezpečení, then it opens inside the sheet between Zpět and Zavřít, the page under it stays, and Zavřít closes the whole sheet over it #2",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen on a phone > then it opens inside the sheet under its title with Zpět, and the sheet goes one step deeper",
+    "replacement": "src/app/layout/account-sheet/account-sheet.spec.ts > Given the account sheet of a signed-in donor > when a section is chosen on a phone > then it opens inside the sheet under its title between Zpět and Zavřít, and the sheet goes one step deeper",
+    "reason": "PR #1018 (#989): an account section and the administration share one sheet head with Zpět, the centred title and Zavřít, so a section now has Zavřít, which closes the whole sheet",
+    "contract": "docs/frontend-overview.md, Shared UI (sheet-head) and Layout (account sheet)"
+  }
+]

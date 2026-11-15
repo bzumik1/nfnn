@@ -49,8 +49,17 @@
 .admin-sheet-head {
   --sheet-head-top: #{sheet.$top};
 
-  box-shadow: var(--shadow-sheet);
-  clip-path: inset(-100vh -100vw 0);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: -1;
+    height: var(--radius-sheet);
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    box-shadow: var(--shadow-sheet);
+    clip-path: inset(-100vh -100vw 0);
+    pointer-events: none;
+  }
 }
 
 .admin-content {
