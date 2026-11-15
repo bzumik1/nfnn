@@ -216,6 +216,29 @@ class PushSenderTest {
     }
 
     @Test
+    @DisplayName("Given a device the push service no longer knows, when its removal cannot be written, then one warning names the outcome, the subscription by its id and the failure's class only")
+    void should_warn_when_sent_given_gone_outcome_not_written() {
+        PushSubscription gone = administratorDevice("gone");
+        outcomes.put(gone.endpoint(), PushOutcome.GONE);
+        InMemoryPushSubscriptions unwritable = new InMemoryPushSubscriptions() {
+            @Override
+            public synchronized void delete(PushSubscriptionId id) {
+                throw new IllegalStateException("The database is busy");
+            }
+        };
+        administrators.all().forEach(unwritable::save);
+
+        PushDeliveryReport report = sender(unwritable, donors).toAdministrators(List.of(gone), TEST).report();
+
+        assertThat(report).isEqualTo(new PushDeliveryReport(0, 0, 1));
+        assertThat(log.list).singleElement().satisfies(event -> {
+            assertThat(event.getLevel().toString()).isEqualTo("WARN");
+            assertThat(event.getFormattedMessage())
+                    .isEqualTo("Push outcome GONE of subscription " + gone.id().value() + " could not be recorded: IllegalStateException");
+        });
+    }
+
+    @Test
     @DisplayName("Given a device whose outcome the delivery could not read because its thread was stopped, when a message is sent, then it counts neither as delivered nor as failed and its row is untouched")
     void should_count_nothing_when_sent_given_outcome_not_read() {
         PushSubscription read = administratorDevice("read");
