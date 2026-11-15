@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.domain;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -9,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class RefreshTokenTest {
 
@@ -193,6 +195,82 @@ class RefreshTokenTest {
         assertThat(token.isUsableAt(NOW.plusSeconds(20))).isFalse();
     }
 
+    @Nested
+    @DisplayName("Given the parts of a stored token")
+    class GivenStoredParts {
+
+        private static final UUID ID = UUID.randomUUID();
+        private static final String HASH = RefreshTokenSecret.generate().hash();
+        private static final Instant EXPIRES = NOW.plus(Duration.ofDays(14));
+        private static final DeviceId DEVICE = DeviceId.newId(NOW);
+        private static final ClientId CLIENT = new ClientId("https://claude.ai/.well-known/oauth-client");
+        private static final Set<OAuthScope> SCOPES = Set.of(OAuthScope.ADMIN_READ);
+
+        @Test
+        @DisplayName("when its id or its donor is missing, then it is refused")
+        void should_refuse_when_reconstituted_without_id_or_donor() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(null, DONOR, HASH, NOW, EXPIRES, NOW, null, Set.of(), DEVICE));
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, null, HASH, NOW, EXPIRES, NOW, null, Set.of(), DEVICE));
+        }
+
+        @Test
+        @DisplayName("when its secret's hash is missing or blank, then it is refused")
+        void should_refuse_when_reconstituted_without_hash() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, null, NOW, EXPIRES, NOW, null, Set.of(), DEVICE));
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, " ", NOW, EXPIRES, NOW, null, Set.of(), DEVICE));
+        }
+
+        @Test
+        @DisplayName("when its issue, expiry or grant time is missing, then it is refused")
+        void should_refuse_when_reconstituted_without_a_time() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, null, EXPIRES, NOW, null, Set.of(), DEVICE));
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, null, NOW, null, Set.of(), DEVICE));
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, EXPIRES, null, null, Set.of(), DEVICE));
+        }
+
+        @Test
+        @DisplayName("when it expires at its issue or before it, then it is refused")
+        void should_refuse_when_reconstituted_expiring_at_or_before_its_issue() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, NOW, NOW, null, Set.of(), DEVICE));
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, NOW.minusSeconds(1), NOW, null, Set.of(), DEVICE));
+        }
+
+        @Test
+        @DisplayName("when it names both a device and a connected application, then it is refused")
+        void should_refuse_when_reconstituted_with_device_and_client() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, EXPIRES, NOW, CLIENT, SCOPES, DEVICE));
+        }
+
+        @Test
+        @DisplayName("when it names a connected application without a scope, then it is refused")
+        void should_refuse_when_reconstituted_with_client_without_scope() {
+            assertThatIllegalArgumentException().isThrownBy(() -> token(ID, DONOR, HASH, NOW, EXPIRES, NOW, CLIENT, Set.of(), null));
+        }
+
+        @Test
+        @DisplayName("when it names neither a device nor a connected application, as a browser token from before devices, then it is kept")
+        void should_keep_when_reconstituted_without_device_and_client() {
+            RefreshToken token = token(ID, DONOR, HASH, NOW, EXPIRES, NOW, null, Set.of(), null);
+
+            assertThat(token.deviceId()).isEmpty();
+            assertThat(token.clientId()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("when a connected application's token is issued without the application or a scope, then it is refused")
+        void should_refuse_when_issued_for_a_client_without_the_client_or_a_scope() {
+            assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, null, SCOPES, NOW,
+                    NOW, Duration.ofDays(14)));
+            assertThatIllegalArgumentException().isThrownBy(() -> RefreshToken.issueForClient(RefreshTokenSecret.generate(), DONOR, CLIENT, Set.of(),
+                    NOW, NOW, Duration.ofDays(14)));
+        }
+
+        private static RefreshToken token(UUID id, DonorId donor, String hash, Instant issued, Instant expires, Instant granted, ClientId client,
+                                          Set<OAuthScope> scopes, DeviceId device) {
+            return RefreshToken.reconstitute(id, donor, hash, issued, expires, false, client, scopes, granted, null, null, null, null, device);
+        }
+    }
+
     private static RefreshToken stored(Instant usedAt, Instant revokedAt, Instant supersededAt) {
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), NOW, NOW.plus(Duration.ofDays(14)), false,
                 null, Set.of(), NOW, usedAt, revokedAt, null, supersededAt, DeviceId.newId(NOW));
@@ -201,6 +279,6 @@ class RefreshTokenTest {
     private static RefreshToken rotated(ClientId client, Instant usedAt, Instant revokedAt, UUID successor) {
         Instant issued = usedAt.minus(Duration.ofDays(1));
         return RefreshToken.reconstitute(UUID.randomUUID(), DONOR, RefreshTokenSecret.generate().hash(), issued, issued.plus(Duration.ofDays(14)),
-                false, client, Set.of(), issued, usedAt, revokedAt, successor, null, null);
+                false, client, client == null ? Set.of() : Set.of(OAuthScope.ADMIN_READ), issued, usedAt, revokedAt, successor, null, null);
     }
 }
