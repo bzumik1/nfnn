@@ -8,6 +8,8 @@ import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNumber;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
+import cz.novanadeje.app.support.AttributedSources;
+import cz.novanadeje.app.support.PlantedSources;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,17 +18,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
@@ -46,11 +43,6 @@ class ExceptionMessageRulesTest {
             .should().beDeclaredInClassesThat().areAssignableTo(Throwable.class)
             .because("backend.md, Logging: the message a throwable's own method builds when it is read never passes a constructor, "
                     + "so the scan of ExceptionMessageValues would not see an open value in it");
-
-    private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
-
-    private static final Pattern PACKAGE = Pattern.compile("^package ([a-z.]+);", Pattern.MULTILINE);
-    private static final Pattern TYPE = Pattern.compile("^(?:public )?(?:abstract |final )?(?:class|record|interface) ([A-Za-z]+)", Pattern.MULTILINE);
 
     private static final String PLANTED_FAILURE = """
             package planted.domain;
@@ -986,10 +978,7 @@ class ExceptionMessageRulesTest {
     @Test
     @DisplayName("Given the main sources, when the exception messages of domain and application code are read, then none is built from an open value")
     void should_build_no_exception_message_from_an_open_value_when_read_given_the_main_sources() {
-        List<Path> sources = ExceptionMessageValues.javaSources(MAIN_SOURCES);
-
-        assertThat(sources).isNotEmpty();
-        ExceptionMessageValues.Scan scan = ExceptionMessageValues.scan(sources);
+        ExceptionMessageValues.Scan scan = ExceptionMessageValues.scan(AttributedSources.ofMainSources());
         assertThat(scan.reports()).isEmpty();
         assertThat(scan.checkedSitesByLayer()).as("message sites checked per layer")
                 .hasEntrySatisfying("domain", count -> assertThat(count).isPositive())
@@ -1165,7 +1154,7 @@ class ExceptionMessageRulesTest {
     @Test
     @DisplayName("Given an adapter's source in a folder named like a message layer, when it is read, then its package decides and nothing is reported")
     void should_report_nothing_when_read_given_an_adapter_in_a_folder_named_like_a_message_layer(@TempDir Path root) {
-        List<Path> sources = List.of(written(root.resolve("domain"), PLANTED_OUTSIDE_IN_A_LAYER_FOLDER));
+        List<Path> sources = List.of(PlantedSources.written(root.resolve("domain"), PLANTED_OUTSIDE_IN_A_LAYER_FOLDER));
 
         assertThat(ExceptionMessageValues.scan(sources).reports()).isEmpty();
     }
@@ -1175,18 +1164,6 @@ class ExceptionMessageRulesTest {
     }
 
     private static List<Path> planted(Path root, String... sources) {
-        return Arrays.stream(sources).map(source -> written(root, source)).toList();
-    }
-
-    private static Path written(Path root, String source) {
-        Matcher packageName = PACKAGE.matcher(source);
-        Matcher typeName = TYPE.matcher(source);
-        assertThat(packageName.find() && typeName.find()).as("a planted source names its package and type").isTrue();
-        try {
-            Path folder = Files.createDirectories(root.resolve(packageName.group(1).replace('.', '/')));
-            return Files.writeString(folder.resolve(typeName.group(1) + ".java"), source);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return PlantedSources.written(root, List.of(sources));
     }
 }

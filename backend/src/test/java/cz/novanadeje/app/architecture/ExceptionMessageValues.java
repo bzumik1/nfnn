@@ -27,10 +27,10 @@ import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeCastTree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.tree.YieldTree;
-import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
+import cz.novanadeje.app.support.AttributedSources;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -45,16 +45,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -63,7 +53,6 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -120,10 +109,10 @@ final class ExceptionMessageValues {
     private Set<ParameterSlot> messageParametersEndingInAMessageLayer = Set.of();
     private Set<VariableElement> closedVariables = Set.of();
 
-    private ExceptionMessageValues(JavacTask task) {
-        this.trees = Trees.instance(task);
-        this.types = task.getTypes();
-        this.elements = task.getElements();
+    private ExceptionMessageValues(AttributedSources sources) {
+        this.trees = sources.trees();
+        this.types = sources.types();
+        this.elements = sources.elements();
         this.throwable = elements.getTypeElement("java.lang.Throwable").asType();
         refuseUnknownSiteTypes();
     }
@@ -137,56 +126,27 @@ final class ExceptionMessageValues {
         }
     }
 
-    static List<Path> javaSources(Path root) {
-        try (Stream<Path> files = Files.walk(root)) {
-            return files.filter(Files::isRegularFile).filter(file -> file.toString().endsWith(".java")).sorted().toList();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     record Scan(List<String> reports, Map<String, Integer> checkedSitesByLayer) {
     }
 
     static Scan scan(List<Path> sources) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new IllegalStateException("The rule needs javac of the JDK toolchain");
-        }
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
-            List<String> options = List.of("-proc:none", "-classpath", System.getProperty("java.class.path"));
-            JavacTask task = (JavacTask) compiler.getTask(null, files, diagnostics, options, null, files.getJavaFileObjectsFromPaths(sources));
-            List<CompilationUnitTree> units = new ArrayList<>();
-            task.parse().forEach(units::add);
-            task.analyze();
-            refuseCompilationErrors(diagnostics);
-            return new ExceptionMessageValues(task).scanOf(units);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return AttributedSources.read(sources, ExceptionMessageValues::scan);
+    }
+
+    static Scan scan(AttributedSources sources) {
+        return new ExceptionMessageValues(sources).scanOf(sources.units());
     }
 
     private static Optional<String> layerOf(CompilationUnitTree unit) {
         return unit.getPackageName() == null ? Optional.empty() : layerOf(unit.getPackageName().toString());
     }
 
-    private static Optional<String> layerOf(String packageName) {
+    static Optional<String> layerOf(String packageName) {
         return Arrays.stream(packageName.split("\\.")).filter(LAYERS::contains).findFirst();
     }
 
     private boolean isDeclaredInAMessageLayer(ExecutableElement executable) {
         return layerOf(elements.getPackageOf(executable).getQualifiedName().toString()).filter(MESSAGE_LAYERS::contains).isPresent();
-    }
-
-    private static void refuseCompilationErrors(DiagnosticCollector<JavaFileObject> diagnostics) {
-        List<String> errors = diagnostics.getDiagnostics().stream()
-                .filter(diagnostic -> diagnostic.getKind() == Diagnostic.Kind.ERROR)
-                .map(diagnostic -> diagnostic.getMessage(Locale.ROOT))
-                .toList();
-        if (!errors.isEmpty()) {
-            throw new IllegalStateException("The sources do not compile, so the rule would see no types: " + errors);
-        }
     }
 
     private Scan scanOf(List<CompilationUnitTree> units) {

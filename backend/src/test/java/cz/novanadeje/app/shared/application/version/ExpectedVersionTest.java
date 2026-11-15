@@ -40,4 +40,18 @@ class ExpectedVersionTest {
         assertThatThrownBy(() -> new ExpectedVersion(null)).isInstanceOf(IllegalArgumentException.class);
         assertThat(ExpectedVersion.of("a".repeat(ExpectedVersion.MAX_LENGTH)).value()).isEqualTo(Optional.of("a".repeat(ExpectedVersion.MAX_LENGTH)));
     }
+
+    @Test
+    @DisplayName("Given a version a client sent, when it is taken as the expected version, then a version of 1 to the longest length is expected as sent")
+    void should_expect_the_sent_version_when_taken_given_a_matchable_one() {
+        assertThat(ExpectedVersion.sent("0123456789abcdef")).isEqualTo(ExpectedVersion.of("0123456789abcdef"));
+        assertThat(ExpectedVersion.sent("a".repeat(ExpectedVersion.MAX_LENGTH))).isEqualTo(ExpectedVersion.of("a".repeat(ExpectedVersion.MAX_LENGTH)));
+    }
+
+    @Test
+    @DisplayName("Given an empty or an over-long version a client sent, when it is taken as the expected version, then no current version is admitted")
+    void should_admit_nothing_when_taken_given_an_empty_or_over_long_sent_version() {
+        assertThat(ExpectedVersion.sent("").admits("0123456789abcdef")).isFalse();
+        assertThat(ExpectedVersion.sent("a".repeat(ExpectedVersion.MAX_LENGTH + 1)).admits("a".repeat(ExpectedVersion.MAX_LENGTH + 1))).isFalse();
+    }
 }

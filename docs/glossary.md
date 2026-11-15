@@ -160,7 +160,7 @@ A receipt for all of a donor's donations of a completed Prague calendar year; is
 _Avoid_: annual receipt
 
 **Bulk yearly receipts**\
-UI „Hromadná potvrzení“ · Code: `YearlyReceiptsService`, `nfnn_yearly_receipts`, `nfnn_issue_receipts`.\
+UI „Hromadná potvrzení“ · Code: `YearlyReceiptsService`, `donations/domain/receipt/BulkYearlyReceipts`, `nfnn_yearly_receipts`, `nfnn_issue_receipts`.\
 Issuing the yearly receipts of many donors at once in the administration, drawn by the browser into one PDF for printing.
 
 **Issue a receipt**\

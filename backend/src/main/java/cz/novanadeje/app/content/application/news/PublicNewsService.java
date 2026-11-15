@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.application.news;
 
+import cz.novanadeje.app.content.domain.PublicListPage;
 import cz.novanadeje.app.content.domain.news.NewsArticle;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.news.NewsArticleRepository;
@@ -17,8 +18,6 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class PublicNewsService {
 
-    public static final int MAX_PAGE_SIZE = 50;
-
     private final NewsArticleRepository news;
     private final FormerNewsSlugs formerSlugs;
     private final NewsSigners signers;
@@ -32,9 +31,7 @@ public class PublicNewsService {
     }
 
     public NewsPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
-        }
+        PublicListPage.check(page, size);
         LocalDate today = today();
         if (beyondEveryOffset(page, size)) {
             return new NewsPage(List.of(), page, size, news.countVisible(today));

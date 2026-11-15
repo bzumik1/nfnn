@@ -1,5 +1,6 @@
 package cz.novanadeje.app.content.application.project;
 
+import cz.novanadeje.app.content.domain.PublicListPage;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectNotFound;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
@@ -18,8 +19,6 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class PublicProjectService {
 
-    public static final int MAX_PAGE_SIZE = 50;
-
     private final ProjectRepository projects;
     private final ProjectOrderRepository orders;
     private final FormerProjectSlugs formerSlugs;
@@ -35,9 +34,7 @@ public class PublicProjectService {
     }
 
     public ProjectPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
-        }
+        PublicListPage.check(page, size);
         LocalDate today = today();
         if (beyondEveryOffset(page, size)) {
             return new ProjectPage(List.of(), page, size, projects.countVisible(today));

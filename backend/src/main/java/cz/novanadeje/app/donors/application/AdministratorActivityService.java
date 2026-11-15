@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.AdministratorActivityPage;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -22,9 +23,6 @@ import java.util.stream.Stream;
 @Transactional(readOnly = true)
 public class AdministratorActivityService {
 
-    public static final int DEFAULT_PAGE_SIZE = 50;
-    public static final int MAX_PAGE_SIZE = 200;
-
     private final AdminActionTrail trail;
     private final DonorRepository donors;
     private final Clock clock;
@@ -36,9 +34,7 @@ public class AdministratorActivityService {
     }
 
     public AdministratorActivity list(Optional<AdminActionCursor> before, int limit) {
-        if (limit < 1 || limit > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("The page size is between 1 and " + MAX_PAGE_SIZE);
-        }
+        AdministratorActivityPage.check(limit);
         List<AdminActionEntry> entries = before
                 .map(cursor -> cursor.beforeId()
                         .map(id -> trail.findPerformedBefore(cursor.before(), id, limit + 1))

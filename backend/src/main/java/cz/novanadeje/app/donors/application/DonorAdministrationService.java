@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.DonorSearchPage;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
@@ -18,9 +19,6 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class DonorAdministrationService {
 
-    public static final int SEARCH_LIMIT = 20;
-    public static final int MAX_SEARCH_LIMIT = 100;
-
     private final DonorRepository donors;
     private final SecondFactorRepository secondFactors;
     private final PasskeyRepository passkeys;
@@ -32,9 +30,7 @@ public class DonorAdministrationService {
     }
 
     public DonorSearchResult search(String query, int page, int limit) {
-        if (page < 0 || limit < 1 || limit > MAX_SEARCH_LIMIT) {
-            throw new IllegalArgumentException("A donor search page starts at zero and holds 1 to " + MAX_SEARCH_LIMIT + " donors");
-        }
+        DonorSearchPage.check(page, limit);
         String trimmed = query == null ? "" : query.trim();
         List<Donor> found = donors.search(trimmed, page * limit, limit + 1);
         List<Donor> shown = found.stream().limit(limit).toList();

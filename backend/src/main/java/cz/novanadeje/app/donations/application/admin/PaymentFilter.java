@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.application.admin;
 
 import cz.novanadeje.app.donations.domain.bank.BankPayment;
+import cz.novanadeje.app.donations.domain.bank.BankPaymentSearch;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 
@@ -16,9 +17,6 @@ import java.util.stream.Stream;
 
 public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorReference donor, int offset, Integer limit) {
 
-    public static final int MAX_TEXT_LENGTH = 100;
-    public static final int MAX_LIMIT = 500;
-
     private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}+");
     private static final Pattern SPACES = Pattern.compile("[\\s\\u00a0\\u202f]+");
     private static final long HELLERS_PER_CROWN = 100;
@@ -26,14 +24,14 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
 
     public PaymentFilter {
         text = text == null || text.isBlank() ? null : plain(text.trim());
-        if (text != null && text.length() > MAX_TEXT_LENGTH) {
-            throw new IllegalArgumentException("A payment filter text is at most " + MAX_TEXT_LENGTH + " characters");
+        if (text != null) {
+            BankPaymentSearch.checkText(text);
         }
         if (offset < 0) {
             throw new IllegalArgumentException("A payment filter offset is not negative");
         }
-        if (limit != null && (limit < 1 || limit > MAX_LIMIT)) {
-            throw new IllegalArgumentException("A payment filter limit is between 1 and " + MAX_LIMIT);
+        if (limit != null) {
+            BankPaymentSearch.checkLimit(limit);
         }
     }
 

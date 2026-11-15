@@ -4,7 +4,9 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecord;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordErased;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
+import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
+import cz.novanadeje.app.donations.domain.receipt.BulkYearlyReceipts;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
@@ -22,6 +24,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Year;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -143,6 +146,15 @@ class YearlyReceiptsServiceTest {
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, running, List.of(JANA))).isInstanceOf(YearNotYetCompleted.class);
         assertThatThrownBy(() -> service.candidates(running)).isInstanceOf(YearNotYetCompleted.class);
         verifyNoInteractions(issuer, donations);
+    }
+
+    @Test
+    @DisplayName("Given a run of more donors than one bulk run takes, when the yearly receipts are issued, then the run is refused before the issuer is asked and nothing is audited")
+    void should_refuse_before_issuing_when_issued_given_more_donors_than_a_run_takes() {
+        List<DonorReference> tooMany = Collections.nCopies(BulkYearlyReceipts.MAX_DONORS + 1, JANA);
+
+        assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, tooMany)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(issuer, events);
     }
 
     @Test
