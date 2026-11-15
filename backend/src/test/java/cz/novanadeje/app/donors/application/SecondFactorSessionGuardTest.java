@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorSessionRequired;
+import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -63,7 +64,7 @@ class SecondFactorSessionGuardTest {
     @Test
     @DisplayName("Given an administrator with the code from the app turned on in a session opened with the password only, when a factor is to change, then the second factor session is required")
     void should_require_second_factor_session_when_factor_changes_given_administrator_with_enabled_code_in_password_session() {
-        SecondFactor enabled = SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600), NOW.minusSeconds(540), null);
+        SecondFactor enabled = SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600), NOW.minusSeconds(540), Totp.stepAt(NOW.minusSeconds(540)));
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(enabled));
 
         assertThatThrownBy(() -> guard.requireForFactorChange(administrator(), false)).isInstanceOf(SecondFactorSessionRequired.class);

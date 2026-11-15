@@ -19,7 +19,7 @@ interface SecondFactorJpaRepository extends JpaRepository<SecondFactorJpaEntity,
     List<UUID> findDonorIdsWithConfirmedFactorAmong(@Param("donorIds") Collection<UUID> donorIds);
 
     @Modifying(flushAutomatically = true)
-    @Query("update SecondFactorJpaEntity f set f.lastUsedStep = :step where f.donorId = :donorId and (f.lastUsedStep is null or f.lastUsedStep < :step)")
+    @Query("update SecondFactorJpaEntity f set f.lastUsedStep = :step where f.donorId = :donorId and f.confirmedAt is not null and f.lastUsedStep < :step")
     int recordUse(@Param("donorId") UUID donorId, @Param("step") long step);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)

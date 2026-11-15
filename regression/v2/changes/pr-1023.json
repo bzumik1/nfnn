@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.infrastructure.persistence.JpaSecondFactorRepositoryTest > Given a confirmed factor no code was used with yet, when a use is recorded, then it is stored",
+    "replacement": "donors.infrastructure.persistence.JpaSecondFactorRepositoryTest > Given a pending factor, when a use is recorded for it, then it is refused and the factor stays pending without a step",
+    "reason": "Architecture audit #621 R4 (#1022): a confirmed factor always has its last used step, so a confirmed factor without one is broken server data that SecondFactor refuses at reconstitution; recordUse now moves the step of a confirmed factor only, which the replacement proves",
+    "contract": "docs/system-overview.md, shared, Database incidents (#441)"
+  }
+]
