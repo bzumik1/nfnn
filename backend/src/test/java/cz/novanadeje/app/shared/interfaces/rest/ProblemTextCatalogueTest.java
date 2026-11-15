@@ -262,7 +262,8 @@ class ProblemTextCatalogueTest {
             assertThat(catalogue.irregularCodes())
                     .containsExactlyInAnyOrder(PLANTED + "domain.RunTimeCode: donors/…", PLANTED + "domain.UppercaseCode: donors/Planted_Code",
                             PLANTED + "domain.BareCode: password-too-predictable", PLANTED + "domain.WeakWord: weak",
-                            PLANTED + "domain.WeakWord: donors/planted-weak ");
+                            PLANTED + "domain.WeakWord: donors/planted-weak ", PLANTED + "domain.RunTimeCode: a code a method call returns",
+                            PLANTED + "domain.StrippedCode: a code a method call returns");
         }
 
         @Test
@@ -287,10 +288,9 @@ class ProblemTextCatalogueTest {
         }
 
         @Test
-        @DisplayName("when the code arguments are read, then a code a method call changes on the way (code.strip()) is not reported, the limit the scan names")
-        void should_not_report_a_code_changed_by_a_method_call_when_read_given_the_documented_limit() {
-            assertThat(catalogue.failuresForwardingACode()).doesNotContain(PLANTED + "domain.StrippedCode");
-            assertThat(catalogue.irregularCodes()).noneMatch(entry -> entry.startsWith(PLANTED + "domain.StrippedCode"));
+        @DisplayName("when the code arguments are read, then a code a method call changes on the way (code.strip()) is reported, as any code a method call returns could come from the client")
+        void should_report_a_code_changed_by_a_method_call_when_read_given_a_constructor_that_strips_it() {
+            assertThat(catalogue.irregularCodes()).contains(PLANTED + "domain.StrippedCode: a code a method call returns");
         }
 
         @Test

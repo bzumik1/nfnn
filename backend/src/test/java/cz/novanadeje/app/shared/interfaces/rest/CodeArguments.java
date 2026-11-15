@@ -123,6 +123,7 @@ final class CodeArguments {
             case Parameter _ when !isForwardingAllowed(model, method, body, call, init) -> findings.failuresForwardingACode().add(caller);
             case FieldRead(String owner) when !isOfTheNestOf(owner, model.thisClass().asInternalName(), init.owner().asInternalName()) ->
                     findings.irregularCodes().add(caller + ": a code read from " + readable(owner));
+            case Computed _ -> findings.irregularCodes().add(caller + ": a code a method call returns");
             case Unseen(String source) -> findings.irregularCodes().add(caller + ": a code from " + source);
             default -> {
             }
