@@ -241,6 +241,40 @@ describe(
   },
 );
 
+describe('Given the backup the container takes when it starts', () => {
+  const startUp = (outcome) =>
+    runShell(
+      [
+        functionsOf(BACKUP_SCRIPT, 'take_scheduled_backup', 'take_start_up_backup'),
+        `take_backup() { return ${outcome}; }`,
+        'BACKUP_RETRIES=3',
+        'BACKUP_RETRY_SECONDS=900',
+        'backup_attempts_left=0',
+        'backup_retry_at=0',
+        'before=$(date +%s)',
+        'take_start_up_backup',
+        'echo "$backup_attempts_left $((backup_retry_at - before))"',
+      ].join('\n'),
+      {},
+    );
+
+  test('when it fails, as when the backend migrates the schema meanwhile, then it is tried again like a scheduled backup', () => {
+    const result = startUp(1);
+
+    assert.equal(result.status, 0, result.stderr);
+    const [left, wait] = result.stdout.trim().split(' ').map(Number);
+    assert.equal(left, 3);
+    assert.ok(wait >= 899 && wait <= 901, `retried after ${wait} s`);
+  });
+
+  test('when it succeeds, then nothing is tried again', () => {
+    const result = startUp(0);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim().split(' ')[0], '0');
+  });
+});
+
 describe(
   'Given a restore request the backup container did not take in time (backend entrypoint, as root)',
   { skip: LINUX_ONLY },

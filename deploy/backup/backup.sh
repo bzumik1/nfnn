@@ -33,7 +33,8 @@
 # backend's entrypoint makes it the server's backup key only when the two match.
 # The schedule is the one the backend writes to $BACKUPS/requests/schedule (chosen on /sprava/zalohy),
 # read again on every pass; a missing or invalid value keeps the default below, and the schedule in
-# use is reported in $BACKUPS/status/schedule. A scheduled backup that fails is tried again every
+# use is reported in $BACKUPS/status/schedule. A scheduled backup, and the one taken at start (which
+# can meet the backend migrating the schema), that fails is tried again every
 # $BACKUP_RETRY_SECONDS (15 minutes) at most $BACKUP_RETRIES more times; a retry that finds the database
 # not answering is not counted and waits another interval, so requests are still handled meanwhile, and
 # a requested backup that succeeds ends the retries.
@@ -644,6 +645,11 @@ take_scheduled_backup() {
   backup_retry_at=$(($(date +%s) + BACKUP_RETRY_SECONDS))
 }
 
+take_start_up_backup() {
+  backup_attempts_left=$((BACKUP_RETRIES + 1))
+  take_scheduled_backup
+}
+
 backup_attempts_left=0
 backup_retry_at=0
 mkdir -p "$STATUS" "$REQUESTS"
@@ -659,7 +665,7 @@ encrypt_older_backups
 recover_interrupted_restore
 restore_from_folder
 handle_requests
-take_backup "" ""
+take_start_up_backup
 
 last_backup_day=""
 if reached "$BACKUP_TIME"; then
