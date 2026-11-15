@@ -126,11 +126,11 @@ export class PeopleApi {
   }
 
   update(id: string, request: PersonRequest): Observable<PersonResponse> {
-    return this.http.put<PersonResponse>(`${ADMIN_PEOPLE}/${id}`, request);
+    return this.http.put<PersonResponse>(`${ADMIN_PEOPLE}/${encodeURIComponent(id)}`, request);
   }
 
   remove(id: string): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_PEOPLE}/${id}`);
+    return this.http.delete<void>(`${ADMIN_PEOPLE}/${encodeURIComponent(id)}`);
   }
 
   order(memberIds: string[]): Observable<PeopleResponse> {
@@ -162,10 +162,12 @@ export class PeopleApi {
   }
 
   setSignature(id: string, imageId: string): Observable<PersonResponse> {
-    return this.http.post<PersonResponse>(`${ADMIN_PEOPLE}/${id}/signature`, { imageId });
+    return this.http.post<PersonResponse>(`${ADMIN_PEOPLE}/${encodeURIComponent(id)}/signature`, {
+      imageId,
+    });
   }
 
   removeSignature(id: string): Observable<PersonResponse> {
-    return this.http.delete<PersonResponse>(`${ADMIN_PEOPLE}/${id}/signature`);
+    return this.http.delete<PersonResponse>(`${ADMIN_PEOPLE}/${encodeURIComponent(id)}/signature`);
   }
 }

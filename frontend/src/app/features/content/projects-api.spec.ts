@@ -27,6 +27,32 @@ describe('Given the projects API', () => {
 
   afterEach(() => http.verify());
 
+  it('when an address names a slug or id with a slash, a backslash or dots, then every request keeps it in one encoded segment of its own path', () => {
+    const planted = '..\\../donors/me';
+    const encoded = encodeURIComponent(planted);
+    api.publishedBySlug(planted).subscribe();
+    api.get(planted).subscribe();
+    api.update(planted, {} as never, 'v', null).subscribe();
+    api.publish(planted, '2026-10-20', 'v', null).subscribe();
+    api.unpublish(planted, 'v', null).subscribe();
+    api.delete(planted, 'v', null).subscribe();
+
+    const urls = http
+      .match(() => true)
+      .map((request) => {
+        request.flush({});
+        return request.request.url;
+      });
+    expect(urls).toEqual([
+      `/api/content/projects/${encoded}`,
+      `/api/admin/content/projects/${encoded}`,
+      `/api/admin/content/projects/${encoded}`,
+      `/api/admin/content/projects/${encoded}/publish`,
+      `/api/admin/content/projects/${encoded}/unpublish`,
+      `/api/admin/content/projects/${encoded}`,
+    ]);
+  });
+
   it("when published projects are read, then a page of them is one answer that ends and a project asks for the server's answer after a kept copy", () => {
     api.published(0, 50).subscribe();
     api.publishedBySlug('dominik').subscribe();

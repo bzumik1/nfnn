@@ -34,6 +34,28 @@ describe('Given the API of the people of the foundation', () => {
 
   afterEach(() => http.verify());
 
+  it('when a person is named by an id with a slash, a backslash or dots, then every request keeps it in one encoded segment of its own path', () => {
+    const planted = '..\\../order';
+    const encoded = encodeURIComponent(planted);
+    api.update(planted, {} as never).subscribe();
+    api.remove(planted).subscribe();
+    api.setSignature(planted, 'image').subscribe();
+    api.removeSignature(planted).subscribe();
+
+    const urls = http
+      .match(() => true)
+      .map((request) => {
+        request.flush({});
+        return `${request.request.method} ${request.request.url}`;
+      });
+    expect(urls).toEqual([
+      `PUT /api/admin/content/people/${encoded}`,
+      `DELETE /api/admin/content/people/${encoded}`,
+      `POST /api/admin/content/people/${encoded}/signature`,
+      `DELETE /api/admin/content/people/${encoded}/signature`,
+    ]);
+  });
+
   it('when the people are loaded, then it asks the administration and hands the members, the note and the line under the board on', () => {
     let received: PeopleResponse | undefined;
     api.load().subscribe((response) => (received = response));

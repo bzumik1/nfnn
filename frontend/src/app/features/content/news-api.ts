@@ -121,7 +121,7 @@ export const MEDIA_WIDTHS = [480, 960, 1440] as const;
 export const SMALL_MEDIA_WIDTH = MEDIA_WIDTHS[0];
 
 export function mediaUrl(imageId: string, width: number): string {
-  return `${PUBLIC_MEDIA}${imageId}?w=${width}`;
+  return `${PUBLIC_MEDIA}${encodeURIComponent(imageId)}?w=${width}`;
 }
 
 export function slugFromText(text: string): string {
@@ -144,7 +144,7 @@ export class NewsApi {
   }
 
   get(id: string): Observable<AdminNewsArticleResponse> {
-    return this.http.get<AdminNewsArticleResponse>(`${ADMIN_NEWS}/${id}`);
+    return this.http.get<AdminNewsArticleResponse>(`${ADMIN_NEWS}/${encodeURIComponent(id)}`);
   }
 
   create(request: NewsArticleRequest): Observable<AdminNewsArticleResponse> {
@@ -158,7 +158,7 @@ export class NewsApi {
     held: StoredNewsArticle | null,
   ): Observable<AdminNewsArticleResponse> {
     return this.http.put<AdminNewsArticleResponse>(
-      `${ADMIN_NEWS}/${id}`,
+      `${ADMIN_NEWS}/${encodeURIComponent(id)}`,
       request,
       ifMatch(version, held),
     );
@@ -171,7 +171,7 @@ export class NewsApi {
     held: StoredNewsArticle | null,
   ): Observable<AdminNewsArticleResponse> {
     return this.http.post<AdminNewsArticleResponse>(
-      `${ADMIN_NEWS}/${id}/publish`,
+      `${ADMIN_NEWS}/${encodeURIComponent(id)}/publish`,
       { publishedOn },
       ifMatch(version, held),
     );
@@ -183,7 +183,7 @@ export class NewsApi {
     held: StoredNewsArticle | null,
   ): Observable<AdminNewsArticleResponse> {
     return this.http.post<AdminNewsArticleResponse>(
-      `${ADMIN_NEWS}/${id}/unpublish`,
+      `${ADMIN_NEWS}/${encodeURIComponent(id)}/unpublish`,
       {},
       ifMatch(version, held),
     );
@@ -195,14 +195,17 @@ export class NewsApi {
     version: string,
   ): Observable<AdminNewsArticleResponse> {
     return this.http.put<AdminNewsArticleResponse>(
-      `${ADMIN_NEWS}/${id}/look-back-year`,
+      `${ADMIN_NEWS}/${encodeURIComponent(id)}/look-back-year`,
       { year },
       ifMatch(version),
     );
   }
 
   delete(id: string, version: string, held: StoredNewsArticle | null): Observable<void> {
-    return this.http.delete<void>(`${ADMIN_NEWS}/${id}`, ifMatch(version, held));
+    return this.http.delete<void>(
+      `${ADMIN_NEWS}/${encodeURIComponent(id)}`,
+      ifMatch(version, held),
+    );
   }
 
   uploadImage(file: File): Observable<UploadedImageResponse> {
@@ -227,6 +230,8 @@ export class NewsApi {
     slug: string,
     context: HttpContext = refreshedAfterKeptCopy(),
   ): Observable<NewsArticleResponse> {
-    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${slug}`, { context });
+    return this.http.get<NewsArticleResponse>(`${PUBLIC_NEWS}/${encodeURIComponent(slug)}`, {
+      context,
+    });
   }
 }
