@@ -68,7 +68,7 @@ class AfterCommitRulesTest {
             TransactionPhase.AFTER_COMPLETION.name());
     private static final Set<String> OUTSIDE_A_RUNNING_TRANSACTION = Set.of(Propagation.REQUIRES_NEW.name(), Propagation.NOT_SUPPORTED.name());
     private static final List<Class<?>> TRANSACTIONAL_LIBRARIES = List.of(Repository.class, EntityManager.class, JdbcOperations.class,
-            NamedParameterJdbcOperations.class, JdbcClient.class, TransactionOperations.class, TransactionManager.class, ApplicationEventPublisher.class);
+            NamedParameterJdbcOperations.class, JdbcClient.class, TransactionOperations.class, TransactionManager.class);
 
     private static final DescribedPredicate<JavaAnnotation<?>> AN_AFTER_COMMIT_LISTENER = describe(
             "@TransactionalEventListener(phase = AFTER_COMMIT)",
@@ -101,7 +101,8 @@ class AfterCommitRulesTest {
             .should(reachNoWorkThatJoinsTheFinishedTransaction())
             .because("backend.md, Contexts and layers: while an AFTER_COMMIT listener runs synchronously the finished transaction's resources are still "
                     + "bound to the thread, so whatever joins a running transaction there writes into one that never commits again, and an event "
-                    + "published there misses every transactional listener; such work runs behind REQUIRES_NEW, NOT_SUPPORTED or @Async");
+                    + "published there runs its fallback listeners inside it and skips the others; such work runs behind a REQUIRES_NEW or NOT_SUPPORTED "
+                    + "method, or the listener itself is @Async");
 
     @Test
     @DisplayName("Given planted @Async methods and an @Async class, when the rules check them, then each outside an AFTER_COMMIT listener is reported and the AFTER_COMMIT listeners are not")
@@ -206,7 +207,7 @@ class AfterCommitRulesTest {
                         import org.springframework.transaction.TransactionDefinition;
                         import org.springframework.transaction.support.TransactionOperations;
 
-                        class PlantedListeners extends PlantedListenerBase {
+                        class PlantedListeners extends PlantedListenerBase implements PlantedWriter {
 
                             private final PlantedWritingService writing;
                             private final PlantedPlainService plain;
@@ -216,11 +217,27 @@ class AfterCommitRulesTest {
                             private final TransactionOperations transactions;
                             private final PlatformTransactionManager manager;
                             private final ApplicationEventPublisher events;
+                            private final org.springframework.context.ApplicationContext context;
+                            private final org.springframework.jdbc.core.JdbcOperations jdbc;
+                            private final org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations namedJdbc;
+                            private final org.springframework.jdbc.core.simple.JdbcClient jdbcClient;
+                            private final cz.novanadeje.app.planteda.application.PlantedUnproxiedService unproxied;
+                            private final PlantedWriter otherWriter;
 
                             PlantedListeners(PlantedWritingService writing, PlantedPlainService plain, PlantedReadingService reading, PlantedRows rows,
                                              EntityManager entities, TransactionOperations transactions, PlatformTransactionManager manager,
-                                             ApplicationEventPublisher events) {
+                                             ApplicationEventPublisher events, org.springframework.context.ApplicationContext context,
+                                             org.springframework.jdbc.core.JdbcOperations jdbc,
+                                             org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations namedJdbc,
+                                             org.springframework.jdbc.core.simple.JdbcClient jdbcClient,
+                                             cz.novanadeje.app.planteda.application.PlantedUnproxiedService unproxied, PlantedWriter otherWriter) {
                                 super(writing);
+                                this.context = context;
+                                this.jdbc = jdbc;
+                                this.namedJdbc = namedJdbc;
+                                this.jdbcClient = jdbcClient;
+                                this.unproxied = unproxied;
+                                this.otherWriter = otherWriter;
                                 this.writing = writing;
                                 this.plain = plain;
                                 this.reading = reading;
@@ -239,6 +256,45 @@ class AfterCommitRulesTest {
                             @TransactionalEventListener
                             void publishes(java.math.BigInteger event) {
                                 events.publishEvent("published");
+                            }
+
+                            @TransactionalEventListener
+                            void readsAContextWithoutPublishing(java.math.BigInteger event) {
+                                context.getId();
+                            }
+
+                            @TransactionalEventListener
+                            void queriesByJdbc(java.net.URI event) {
+                                jdbc.queryForList("select 1");
+                            }
+
+                            @TransactionalEventListener
+                            void queriesByNamedJdbc(java.net.URL event) {
+                                namedJdbc.queryForList("select 1", java.util.Map.of());
+                            }
+
+                            @TransactionalEventListener
+                            void queriesByJdbcClient(java.util.UUID event) {
+                                jdbcClient.sql("select 1").query().listOfRows();
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAStaticNewTransaction(java.time.MonthDay event) {
+                                cz.novanadeje.app.planteda.application.PlantedUnproxiedService.staticSeparately(writing);
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAFinalNewTransaction(java.time.YearMonth event) {
+                                unproxied.finalSeparately();
+                            }
+
+                            @TransactionalEventListener
+                            void storesThroughAnInterfaceItAlsoImplements(java.time.ZoneId event) {
+                                otherWriter.store();
+                            }
+
+                            @Override
+                            public void store() {
                             }
 
                             @TransactionalEventListener
@@ -462,6 +518,42 @@ class AfterCommitRulesTest {
                             }
                         }
                         """),
+                Map.entry("cz.novanadeje.app.planteda.infrastructure.events.PlantedWriter", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import org.springframework.transaction.annotation.Transactional;
+
+                        interface PlantedWriter {
+
+                            @Transactional
+                            void store();
+                        }
+                        """),
+                Map.entry("cz.novanadeje.app.planteda.application.PlantedUnproxiedService", """
+                        package cz.novanadeje.app.planteda.application;
+
+                        import org.springframework.transaction.annotation.Propagation;
+                        import org.springframework.transaction.annotation.Transactional;
+
+                        public class PlantedUnproxiedService {
+
+                            private final PlantedWritingService writing;
+
+                            public PlantedUnproxiedService(PlantedWritingService writing) {
+                                this.writing = writing;
+                            }
+
+                            @Transactional(propagation = Propagation.REQUIRES_NEW)
+                            public static void staticSeparately(PlantedWritingService writing) {
+                                writing.write();
+                            }
+
+                            @Transactional(propagation = Propagation.REQUIRES_NEW)
+                            public final void finalSeparately() {
+                                writing.write();
+                            }
+                        }
+                        """),
                 Map.entry("cz.novanadeje.app.planteda.infrastructure.events.PlantedRows", """
                         package cz.novanadeje.app.planteda.infrastructure.events;
 
@@ -573,7 +665,7 @@ class AfterCommitRulesTest {
                         """)));
 
         assertThat(synchronous_after_completion_listeners_stay_out_of_the_finished_transaction.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(19)
+                .hasSize(25)
                 .anySatisfy(detail -> assertThat(detail).contains("writesDirectly").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAPlainServiceAndAPort").contains("PlantedPortAdapter.store()"))
                 .anySatisfy(detail -> assertThat(detail).contains("readsAfterARollback").contains("PlantedReadingService.read()"))
@@ -584,7 +676,13 @@ class AfterCommitRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughItsOwnNewTransaction").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesUnderAComposedListener").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("opensWithTheManager").contains("getTransaction"))
-                .anySatisfy(detail -> assertThat(detail).contains("publishes").contains("publishEvent"))
+                .anySatisfy(detail -> assertThat(detail).contains("publishes(").contains("publishEvent"))
+                .anySatisfy(detail -> assertThat(detail).contains("queriesByJdbc(").contains("JdbcOperations"))
+                .anySatisfy(detail -> assertThat(detail).contains("queriesByNamedJdbc").contains("NamedParameterJdbcOperations"))
+                .anySatisfy(detail -> assertThat(detail).contains("queriesByJdbcClient").contains("JdbcClient"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAStaticNewTransaction").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAFinalNewTransaction").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("storesThroughAnInterfaceItAlsoImplements").contains("PlantedWriter.store()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAConstructor(").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAConstructorReference").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAnAnonymousClass").contains("PlantedWritingService.write()"))
@@ -592,7 +690,7 @@ class AfterCommitRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAnInheritedNewTransaction").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesOutsideItsClassTransaction").contains("PlantedWritingService.write()"))
                 .noneSatisfy(detail -> assertThat(detail).containsAnyOf("writesSeparately", "writesWithoutATransaction", "writesLater", "staysInMemory",
-                        "writesBeforeTheCommit", "writesOnAnotherThread", "opensItsOwn", "writesInItsClassTransaction"))
+                        "writesBeforeTheCommit", "writesOnAnotherThread", "opensItsOwn", "writesInItsClassTransaction", "readsAContextWithoutPublishing"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesInALambda").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("referencesAWrite").contains("PlantedWritingService.writeOne"));
     }
@@ -607,7 +705,7 @@ class AfterCommitRulesTest {
                 while (!pending.isEmpty()) {
                     JavaCodeUnit caller = pending.poll();
                     for (JavaAccess<?> access : callsFrom(caller)) {
-                        if (TRANSACTIONAL_LIBRARIES.stream().anyMatch(library -> access.getTargetOwner().isAssignableTo(library))) {
+                        if (TRANSACTIONAL_LIBRARIES.stream().anyMatch(library -> access.getTargetOwner().isAssignableTo(library)) || publishesAnEvent(access)) {
                             events.add(joins(listener, pathTo(caller, reachedFrom), access.getTarget().getFullName()));
                             continue;
                         }
@@ -682,14 +780,17 @@ class AfterCommitRulesTest {
         return !declaring.isInterface() && ownClassesOf(caller).stream().anyMatch(own -> !own.equals(declaring) && own.isAssignableTo(declaring.getName()));
     }
 
+    private static boolean publishesAnEvent(JavaAccess<?> access) {
+        return access.getTargetOwner().isAssignableTo(ApplicationEventPublisher.class) && access.getName().equals("publishEvent");
+    }
+
     private static Optional<JavaAnnotation<?>> attributeOf(JavaCodeUnit codeUnit, Class<? extends Annotation> kind) {
-        Optional<JavaAnnotation<?>> own = declaredOn(codeUnit, kind);
-        if (own.isPresent()) {
-            return own;
+        boolean proxied = codeUnit instanceof JavaMethod
+                && Stream.of(JavaModifier.PRIVATE, JavaModifier.STATIC, JavaModifier.FINAL).noneMatch(codeUnit.getModifiers()::contains);
+        if (!proxied) {
+            return Optional.empty();
         }
-        boolean proxied = codeUnit instanceof JavaMethod && !codeUnit.getModifiers().contains(JavaModifier.PRIVATE)
-                && !codeUnit.getModifiers().contains(JavaModifier.STATIC);
-        return proxied ? declaredOn(codeUnit.getOwner(), kind) : Optional.empty();
+        return declaredOn(codeUnit, kind).or(() -> declaredOn(codeUnit.getOwner(), kind));
     }
 
     private static Optional<JavaAnnotation<?>> declaredOn(HasAnnotations<?> annotated, Class<? extends Annotation> kind) {
