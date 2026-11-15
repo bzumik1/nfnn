@@ -90,7 +90,7 @@ class AdminDonationsRowsTest {
         DonorRecord other = DonorRecord.registerPerson(new DonorReference(UuidV7.generate(NOW)), new DonorName("Petr Svoboda"),
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new VariableSymbol("7310945528"), LocaleCode.CS, NOW);
 
-        assertThatThrownBy(() -> rows.paidPayment(payment, gift, other)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> rows.paidPayment(payment, gift, other)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

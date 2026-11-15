@@ -9,6 +9,6 @@ public record ProjectPage(List<ProjectView> items, int page, int size, long tota
     }
 
     public boolean hasMore() {
-        return (long) (page + 1) * size < total;
+        return (page + 1L) * size < total;
     }
 }

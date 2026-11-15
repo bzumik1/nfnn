@@ -79,7 +79,7 @@ class JpaNewsArticleRepository implements NewsArticleRepository {
     @Override
     public List<NewsArticle> findVisibleNewestFirst(LocalDate today, int offset, int limit) {
         if (offset % limit != 0) {
-            throw new IllegalArgumentException("The offset is a multiple of the limit");
+            throw new IllegalStateException("The offset is a multiple of the limit");
         }
         return jpa.findVisible(today, PageRequest.of(offset / limit, limit)).stream().map(NewsArticleJpaEntity::toDomain).toList();
     }

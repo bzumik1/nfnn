@@ -39,6 +39,9 @@ public class PublicProjectService {
             throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
+        if (beyondEveryOffset(page, size)) {
+            return new ProjectPage(List.of(), page, size, projects.countVisible(today));
+        }
         List<ProjectView> items = views.of(projects.findVisible(today, orders.current(), page * size, size), today);
         return new ProjectPage(items, page, size, projects.countVisible(today));
     }
@@ -50,6 +53,10 @@ public class PublicProjectService {
                 .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new ProjectNotFound(slug));
         return views.of(project, today);
+    }
+
+    private static boolean beyondEveryOffset(int page, int size) {
+        return (long) page * size > Integer.MAX_VALUE;
     }
 
     private LocalDate today() {

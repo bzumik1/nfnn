@@ -68,7 +68,7 @@ class DonorSenderAccountJpaEntity {
 
     void updateFrom(SenderAccountLink link) {
         if (!link.id().value().equals(id) || !link.account().equals(new SenderAccount(accountNumber, bankCode))) {
-            throw new IllegalArgumentException("Sender account link " + link.id() + " cannot change its account");
+            throw new IllegalStateException("Sender account link " + link.id() + " cannot change its account");
         }
         this.status = link.status();
         this.learnedFromPaymentId = link.provedBy().map(BankPaymentId::value).orElse(null);

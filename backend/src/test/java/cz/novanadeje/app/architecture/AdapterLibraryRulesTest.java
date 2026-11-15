@@ -101,6 +101,10 @@ class AdapterLibraryRulesTest {
 
     private static JavaClasses planted;
 
+    static String[] persistenceAdapters() {
+        return PERSISTENCE_ADAPTERS.clone();
+    }
+
     @ArchTest
     static final ArchRule no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both = noClasses()
             .should().dependOnClassesThat()

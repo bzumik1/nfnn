@@ -54,7 +54,7 @@ class JpaProjectRepository implements ProjectRepository {
     @Override
     public List<Project> findVisible(LocalDate today, ProjectOrder order, int offset, int limit) {
         if (offset % limit != 0) {
-            throw new IllegalArgumentException("The offset is a multiple of the limit");
+            throw new IllegalStateException("The offset is a multiple of the limit");
         }
         return jpa.findVisible(today, categoryFirst(order), categoryWithinYear(order), PageRequest.of(offset / limit, limit)).stream()
                 .map(ProjectJpaEntity::toDomain).toList();

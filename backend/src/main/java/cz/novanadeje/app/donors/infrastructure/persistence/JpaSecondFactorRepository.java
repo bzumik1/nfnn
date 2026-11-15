@@ -27,7 +27,7 @@ class JpaSecondFactorRepository implements SecondFactorRepository {
 
     @Override
     public boolean recordUse(SecondFactor factor) {
-        long step = factor.lastUsedStep().orElseThrow(() -> new IllegalArgumentException("A use is recorded for a factor whose code was used"));
+        long step = factor.lastUsedStep().orElseThrow(() -> new IllegalStateException("A use is recorded for a factor whose code was used"));
         return jpa.recordUse(factor.donorId().value(), step) == 1;
     }
 

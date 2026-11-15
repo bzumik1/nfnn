@@ -318,7 +318,7 @@ class JpaDonorRecordRepositoryTest {
         donorRecords.saveSenderAccountLink(jana.id(), janas);
         flushAndClear();
 
-        assertThatThrownBy(() -> donorRecords.deleteSenderAccountLink(petr.id(), janas.id())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> donorRecords.deleteSenderAccountLink(petr.id(), janas.id())).isInstanceOf(IllegalStateException.class);
         donorRecords.deleteSenderAccountLink(jana.id(), janas.id());
         flushAndClear();
 
