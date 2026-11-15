@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "content/admin_content_sync: The people come without any receipt signature or printed portrait*",
+    "field": "$.chunks[*].rows[*].subjectId",
+    "reason": "PR #958 (security audit 2026-11-14, part of #915): ids generated within the same millisecond now count up in the UUIDv7 rand_a bits, so two audit entries written in one millisecond keep the order they were written in; on main the two UPLOAD_IMAGE entries of this scenario came in a random order",
+    "contract": "docs/system-overview.md, shared, Audit trail paging"
+  }
+]
