@@ -5,10 +5,20 @@ describe('Given the landing page, whose photo fills the screen and reaches under
   let heroHeight: number;
   let scrolledTo: number[];
   let release: () => void;
+  let jsdomScrollY: PropertyDescriptor | undefined;
+  let jsdomScrollTo: PropertyDescriptor | undefined;
 
   function scrollTo(top: number): void {
     Object.defineProperty(window, 'scrollY', { configurable: true, value: top });
     window.dispatchEvent(new Event('scroll'));
+  }
+
+  function restore(name: string, descriptor: PropertyDescriptor | undefined): void {
+    if (descriptor) {
+      Object.defineProperty(window, name, descriptor);
+    } else {
+      delete (window as unknown as Record<string, unknown>)[name];
+    }
   }
 
   function nextFrame(): Promise<void> {
@@ -25,6 +35,8 @@ describe('Given the landing page, whose photo fills the screen and reaches under
     hero.getBoundingClientRect = () => ({ height: heroHeight }) as DOMRect;
     document.body.append(hero);
     scrolledTo = [];
+    jsdomScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY');
+    jsdomScrollTo = Object.getOwnPropertyDescriptor(window, 'scrollTo');
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
     Object.defineProperty(window, 'scrollTo', {
       configurable: true,
@@ -40,8 +52,8 @@ describe('Given the landing page, whose photo fills the screen and reaches under
     release();
     hero.remove();
     document.getElementById('landing-stage-rule')?.remove();
-    delete (window as { scrollY?: number }).scrollY;
-    delete (window as { scrollTo?: unknown }).scrollTo;
+    restore('scrollY', jsdomScrollY);
+    restore('scrollTo', jsdomScrollTo);
   });
 
   it('when it opens, then the page takes the stage and rests scrolled past the photo above it', () => {

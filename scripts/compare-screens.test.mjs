@@ -6,7 +6,6 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   acceptedStates,
-  bothSides,
   compareImages,
   cropAround,
   declaredAppearance,
@@ -18,6 +17,7 @@ import {
   outsideRepository,
   PAGE_TOLERANCE_RATIO,
   pairShots,
+  sidesInTurn,
   publicRoute,
   readRoutes,
   reportMarkdown,
@@ -403,22 +403,34 @@ describe('Given shots with the routes they were taken at', () => {
   });
 });
 
-describe('Given the base and the head shot at the same time', () => {
-  it('when both runs end, then their results come back in the order of the sides', async () => {
-    const slowBase = new Promise((done) => setTimeout(() => done('base'), 20));
-    assert.deepEqual(await bothSides(slowBase, Promise.resolve('head')), ['base', 'head']);
+describe('Given the base and the head shot one after the other', () => {
+  it('when both runs end, then the head starts only after the base ended and the results come back in that order', async () => {
+    const started = [];
+    const side = (name) => () =>
+      new Promise((done) => {
+        started.push(`${name} started`);
+        setTimeout(() => {
+          started.push(`${name} ended`);
+          done(name);
+        }, 10);
+      });
+    assert.deepEqual(await sidesInTurn(side('base'), side('head')), ['base', 'head']);
+    assert.deepEqual(started, ['base started', 'base ended', 'head started', 'head ended']);
   });
 
-  it('when one side fails at once, then the failure comes only after the other side has ended', async () => {
-    let headEnded = false;
-    const head = new Promise((done) =>
-      setTimeout(() => {
-        headEnded = true;
-        done('head');
-      }, 20),
+  it('when the base fails, then its failure comes back and the head is never started', async () => {
+    let headStarted = false;
+    await assert.rejects(
+      sidesInTurn(
+        () => Promise.reject(new Error('the base build failed')),
+        async () => {
+          headStarted = true;
+          return 'head';
+        },
+      ),
+      /the base build failed/,
     );
-    await assert.rejects(bothSides(Promise.reject(new Error('the base build failed')), head), /the base build failed/);
-    assert.equal(headEnded, true);
+    assert.equal(headStarted, false);
   });
 });
 
