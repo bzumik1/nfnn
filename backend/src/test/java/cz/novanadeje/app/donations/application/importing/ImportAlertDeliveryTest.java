@@ -5,6 +5,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.application.report.ReportSettingsService;
+import cz.novanadeje.app.donations.domain.importing.ImportAlertId;
 import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
@@ -44,9 +45,9 @@ import static org.mockito.Mockito.when;
 class ImportAlertDeliveryTest {
 
     private static final Instant NOW = Instant.parse("2026-10-18T10:00:00Z");
-    private static final WaitingImportAlert OUTAGE = new WaitingImportAlert(UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831301"),
+    private static final WaitingImportAlert OUTAGE = new WaitingImportAlert(new ImportAlertId(UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831301")),
             new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(Instant.parse("2026-10-17T10:00:00Z")), NOW.minusSeconds(3600)));
-    private static final WaitingImportAlert RECOVERY = new WaitingImportAlert(UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831302"),
+    private static final WaitingImportAlert RECOVERY = new WaitingImportAlert(new ImportAlertId(UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831302")),
             new ImportRecovery(ImportFailureKind.TRANSPORT, 4, Optional.of(Instant.parse("2026-10-17T10:00:00Z")), NOW));
     private static final ReportRecipients RECIPIENTS = ReportRecipients.parse(List.of("pavel@example.cz", "info@nfnn.cz"));
 

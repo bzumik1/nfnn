@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.importing.ImportAlert;
+import cz.novanadeje.app.donations.domain.importing.ImportAlertId;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
@@ -57,9 +58,9 @@ class ImportAlertJpaEntity {
     protected ImportAlertJpaEntity() {
     }
 
-    static ImportAlertJpaEntity waiting(UUID id, ImportAlert alert, Instant createdAt) {
+    static ImportAlertJpaEntity waiting(ImportAlertId id, ImportAlert alert, Instant createdAt) {
         ImportAlertJpaEntity entity = new ImportAlertJpaEntity();
-        entity.id = id;
+        entity.id = id.value();
         entity.createdAt = createdAt;
         switch (alert) {
             case ImportOutage outage -> {
@@ -85,6 +86,6 @@ class ImportAlertJpaEntity {
             case OUTAGE -> new ImportOutage(failureKind, failures, Optional.ofNullable(lastSucceededAt), occurredAt);
             case RECOVERY -> new ImportRecovery(failureKind, failures, Optional.ofNullable(lastSucceededAt), occurredAt);
         };
-        return new WaitingImportAlert(id, alert);
+        return new WaitingImportAlert(new ImportAlertId(id), alert);
     }
 }

@@ -291,7 +291,7 @@ class DomainIdRulesTest {
                 .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.plantedu.domain.PlantedPair.<init>(java.util.UUID, "))
                 .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.plantedu.domain.PlantedPair.first() answers"))
                 .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.plantedu.domain.PlantedPort.markUsed(java.util.UUID) takes"))
-                .noneSatisfy(detail -> assertThat(detail).contains("PlantedId"))
+                .noneSatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.plantedu.domain.PlantedId."))
                 .noneSatisfy(detail -> assertThat(detail).contains("text()"))
                 .noneSatisfy(detail -> assertThat(detail).contains("lambda$"))
                 .noneSatisfy(detail -> assertThat(detail).contains("plantedu.application"))

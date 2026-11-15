@@ -1,14 +1,13 @@
 package cz.novanadeje.app.donations.infrastructure.persistence;
 
 import cz.novanadeje.app.donations.domain.importing.ImportAlert;
+import cz.novanadeje.app.donations.domain.importing.ImportAlertId;
 import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.WaitingImportAlert;
-import cz.novanadeje.app.shared.domain.UuidV7;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Repository
 class JpaImportAlertRepository implements ImportAlertRepository {
@@ -21,7 +20,7 @@ class JpaImportAlertRepository implements ImportAlertRepository {
 
     @Override
     public void add(ImportAlert alert, Instant at) {
-        jpa.save(ImportAlertJpaEntity.waiting(UuidV7.generate(at), alert, at));
+        jpa.save(ImportAlertJpaEntity.waiting(ImportAlertId.newId(at), alert, at));
     }
 
     @Override
@@ -30,8 +29,8 @@ class JpaImportAlertRepository implements ImportAlertRepository {
     }
 
     @Override
-    public void markSent(UUID id, Instant at) {
-        jpa.markSent(id, at);
+    public void markSent(ImportAlertId id, Instant at) {
+        jpa.markSent(id.value(), at);
     }
 
     @Override
