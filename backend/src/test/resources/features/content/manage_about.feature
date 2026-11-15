@@ -34,7 +34,7 @@ Feature: An administrator shows a photo in the About section of the home page an
       | photo.caption | Kde to všechno začalo                |
     And the admin action "CHANGE_ABOUT_PHOTO" by "Jana" on the image uploaded as "zakladatele.png" is recorded with details containing "nastavena"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action             | summary                        |
       | CHANGE_ABOUT_PHOTO | Nastavena fotka v sekci O nás. |
       | UPLOAD_IMAGE       | Nahrána fotka.                 |

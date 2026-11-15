@@ -34,7 +34,7 @@ Feature: An administrator shows a photo in the closing Přispět band and remove
       | photo.focalPoint |                               |
     And the admin action "CHANGE_DONATE_BAND_PHOTO" by "Jana" on the image uploaded as "pruh.png" is recorded with details containing "nastavena"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action                   | summary                          |
       | CHANGE_DONATE_BAND_PHOTO | Nastavena fotka v pruhu Přispět. |
       | UPLOAD_IMAGE             | Nahrána fotka.                   |

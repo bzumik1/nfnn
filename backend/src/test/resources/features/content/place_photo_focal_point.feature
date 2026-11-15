@@ -110,7 +110,7 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
     When "Jana" removes the focal point of the image uploaded as "zahrada.png"
     Then the response status is 200
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action                   | summary                                              |
       | CHANGE_PHOTO_FOCAL_POINT | Zrušen bod výřezu fotky.                             |
       | CHANGE_PHOTO_FOCAL_POINT | Nastaven bod výřezu fotky: 0 % zleva, 100 % shora.   |
@@ -170,7 +170,7 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
     Then the response status is 400
     And the problem type ends with "content/focal-point-on-person-image"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action       | summary                        |
       | ADD_PERSON   | Přidána osoba mezi lidi fondu. |
       | UPLOAD_IMAGE | Nahrána fotka.                 |
