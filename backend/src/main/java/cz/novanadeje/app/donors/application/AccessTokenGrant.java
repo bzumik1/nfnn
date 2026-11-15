@@ -22,5 +22,14 @@ public record AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience
         Objects.requireNonNull(latestExpiry, "latestExpiry");
         Objects.requireNonNull(connectedClient, "connectedClient");
         Objects.requireNonNull(session, "session");
+        if (connectedClient.isPresent() == scopes.isEmpty()) {
+            throw new IllegalStateException("A connected application's token carries scopes and no other token does");
+        }
+        if (session.isPresent() && connectedClient.isPresent()) {
+            throw new IllegalStateException("A token is either a browser session's or a connected application's");
+        }
+        if (latestExpiry.isPresent() && connectedClient.isEmpty()) {
+            throw new IllegalStateException("Only a connected application's exchanged token is capped by a latest expiry");
+        }
     }
 }
