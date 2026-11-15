@@ -55,7 +55,7 @@ public class ReceiptSigningKeys {
         if (row.filter(ReceiptSigningKey::isWithdrawn).isPresent() || history().isWithdrawn(current)) {
             return new CurrentKeyForIssuing(current, CurrentKeyForIssuing.State.WITHDRAWN);
         }
-        return new CurrentKeyForIssuing(current, row.filter(this::publishable).isPresent()
+        return new CurrentKeyForIssuing(current, row.filter(this::passesThePublicationChecks).isPresent()
                 ? CurrentKeyForIssuing.State.PUBLISHED : CurrentKeyForIssuing.State.UNPUBLISHED);
     }
 
@@ -64,6 +64,10 @@ public class ReceiptSigningKeys {
     }
 
     public boolean publishable(ReceiptSigningKey key) {
+        return passesThePublicationChecks(key);
+    }
+
+    private boolean passesThePublicationChecks(ReceiptSigningKey key) {
         return !testKeys.refuses(key.id()) && key.idMatchesPublicKey()
                 && seals.check(ReceiptSigningKey.SEAL_PURPOSE, key.sealedContent(), key.seal()) == SealVerdict.SEALED_HERE;
     }
@@ -76,7 +80,7 @@ public class ReceiptSigningKeys {
         return rows.stream()
                 .sorted(Comparator.comparing(ReceiptSigningKey::registeredAt).thenComparing(key -> key.id().value()))
                 .map(key -> new PublishedReceiptKey(key.id(), key.publicKey(), key.registeredAt(),
-                        history.isWithdrawn(key.id()) ? ReceiptSigningKeyStatus.REVOKED : key.status(), publishable(key), key.id().equals(signer.keyId())))
+                        history.isWithdrawn(key.id()) ? ReceiptSigningKeyStatus.REVOKED : key.status(), passesThePublicationChecks(key), key.id().equals(signer.keyId())))
                 .toList();
     }
 }

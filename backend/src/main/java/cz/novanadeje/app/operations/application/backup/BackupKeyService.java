@@ -57,6 +57,10 @@ public class BackupKeyService {
 
     @Transactional(readOnly = true)
     public BackupKeyView view() {
+        return currentView();
+    }
+
+    private BackupKeyView currentView() {
         Optional<BackupKey> key = keys.current();
         if (key.isEmpty()) {
             return BackupKeyView.unavailable();
@@ -103,7 +107,7 @@ public class BackupKeyService {
         events.publishEvent(new AdminActionPerformed(adminId, CONFIRM_BACKUP_KEY_ACTION, Optional.empty(),
                 "Potvrzeno uložení klíče k zálohám", now));
         log.info("Admin {} confirmed that the backup key is saved", adminId);
-        return view();
+        return currentView();
     }
 
     public Optional<RevealedBackupKey> keyForSetup() {
