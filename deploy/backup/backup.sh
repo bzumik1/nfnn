@@ -75,9 +75,19 @@ SCHEDULE="$REQUESTS/schedule"
 log() {
   log_line="$(date +%Y-%m-%dT%H:%M:%S%z) $*"
   echo "$log_line"
-  if [ -d "$LOGS" ]; then
-    echo "$log_line" >> "$LOGS/backup.log" 2>/dev/null || true
+  append_to_log_file "$log_line"
+}
+
+append_to_log_file() {
+  a_file="$LOGS/backup.log"
+  [ -d "$LOGS" ] || return 0
+  if [ -L "$a_file" ] || { [ -e "$a_file" ] && [ ! -f "$a_file" ]; }; then
+    rm -f "$a_file" 2>/dev/null
   fi
+  {
+    [ -f /proc/self/fd/3 ] && [ ! -L "$a_file" ] && [ /proc/self/fd/3 -ef "$a_file" ] \
+      && printf '%s\n' "$1" >> /proc/self/fd/3
+  } 2>/dev/null 3<> "$a_file" || true
 }
 
 now_utc() {
@@ -599,10 +609,22 @@ restore_requested() {
   rm -f "$RUNNING"
 }
 
+request_id_valid() {
+  case "$1" in
+    ''|*[!0-9a-z-]*) return 1 ;;
+  esac
+  [ ${#1} -le 64 ]
+}
+
 handle_requests() {
   for request in "$REQUESTS"/*.backup "$REQUESTS"/*.test-restore "$REQUESTS"/*.restore; do
     [ -e "$request" ] || continue
-    id=$(basename "$request")
+    id=${request##*/}
+    if ! request_id_valid "${id%.*}"; then
+      rm -f "$request"
+      log "a request file whose name is not a request id was removed"
+      continue
+    fi
     case "$id" in
       *.backup) rm -f "$request"; take_backup "-rucni" "${id%.backup}" && backup_attempts_left=0 ;;
       *.test-restore) rm -f "$request"; test_restore "${id%.test-restore}" ;;
