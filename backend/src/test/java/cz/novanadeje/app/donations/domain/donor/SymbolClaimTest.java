@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,9 +52,7 @@ class SymbolClaimTest {
     void should_allow_reset_when_reset_given_declined_claim() {
         SymbolClaim claim = claim(SymbolClaimAnswer.DECLINED);
 
-        claim.requireResettable();
-
-        assertThat(claim.answer()).isEqualTo(SymbolClaimAnswer.DECLINED);
+        assertThatCode(claim::requireResettable).doesNotThrowAnyException();
     }
 
     @Test
