@@ -6,7 +6,8 @@ import cz.novanadeje.app.content.application.people.PeopleAdminService;
 import cz.novanadeje.app.content.application.people.PeopleFootnoteService;
 import cz.novanadeje.app.content.domain.media.MediaId;
 import cz.novanadeje.app.content.domain.people.PersonId;
-import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
+import cz.novanadeje.app.shared.application.administration.ConnectedClient;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,8 +29,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/content/people")
 class AdminPeopleController {
-
-    private static final String SCOPE_CLAIM = "scope";
 
     private final PeopleAdminService people;
     private final FoundersNoteService notes;
@@ -74,8 +73,9 @@ class AdminPeopleController {
     }
 
     @PutMapping("/{id}")
-    PersonResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody PersonRequest request) {
-        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), jwt.hasClaim(SCOPE_CLAIM)));
+    PersonResponse update(@AuthenticationPrincipal Jwt jwt, AdministrationChannel channel, @PathVariable UUID id,
+                          @Valid @RequestBody PersonRequest request) {
+        return PersonResponse.from(people.update(admin(jwt), new PersonId(id), request.toCommand(), channel.isConnectedApplication()));
     }
 
     @DeleteMapping("/{id}")
@@ -85,18 +85,18 @@ class AdminPeopleController {
     }
 
     @PostMapping("/{id}/signature")
-    PersonResponse setSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody SignatureRequest request) {
-        return PersonResponse.from(people.setSignature(acting(jwt), new PersonId(id), new MediaId(request.imageId())));
+    PersonResponse setSignature(@AuthenticationPrincipal Jwt jwt, ConnectedClient client, @PathVariable UUID id,
+                                @Valid @RequestBody SignatureRequest request) {
+        return PersonResponse.from(people.setSignature(acting(jwt, client), new PersonId(id), new MediaId(request.imageId())));
     }
 
     @DeleteMapping("/{id}/signature")
-    PersonResponse removeSignature(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return PersonResponse.from(people.removeSignature(acting(jwt), new PersonId(id)));
+    PersonResponse removeSignature(@AuthenticationPrincipal Jwt jwt, ConnectedClient client, @PathVariable UUID id) {
+        return PersonResponse.from(people.removeSignature(acting(jwt, client), new PersonId(id)));
     }
 
-    private static ActingAdministrator acting(Jwt jwt) {
-        return new ActingAdministrator(admin(jwt),
-                Optional.ofNullable(jwt.getClaimAsString(JwtProperties.CLIENT_CLAIM)).filter(client -> !client.isBlank()));
+    private static ActingAdministrator acting(Jwt jwt, ConnectedClient client) {
+        return new ActingAdministrator(admin(jwt), client.name());
     }
 
     private static UUID admin(Jwt jwt) {
