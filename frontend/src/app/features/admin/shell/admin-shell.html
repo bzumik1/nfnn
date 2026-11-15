@@ -52,10 +52,19 @@
   }
   <app-side-nav navId="admin-nav" [groups]="groups" [label]="navLabel" [panel]="!compact()">
     <div class="admin-content">
-      <div class="admin-first-download" aria-live="polite">
+      <div class="admin-first-download">
+        <p class="visually-hidden" aria-live="polite">
+          @if (!lock.locked() && lock.firstDownload()) {
+            <span i18n="@@admin.lock.firstDownload.started">Ukládáme správu do zařízení.</span>
+          }
+        </p>
         @if (!lock.locked() && lock.firstDownload(); as progress) {
           <div class="ui-notice ui-notice--status first-download">
-            <p class="first-download__title" i18n="@@admin.lock.firstDownload.title">
+            <p
+              class="first-download__title"
+              aria-hidden="true"
+              i18n="@@admin.lock.firstDownload.title"
+            >
               Ukládáme správu do zařízení
             </p>
             @if (progress.total > 0) {
