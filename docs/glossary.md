@@ -31,7 +31,7 @@ UI „správce serveru“ (technical settings, backups, logs), also „technik�
 Whoever installs and runs the server and deploys new versions (today Jakub); not a role on the site.
 
 **Connected application**\
-UI „připojená aplikace“ (card „Připojené aplikace“, page „Připojení aplikace“ at `/pripojeni`); requirements also „konektor“ for it · Code: an OAuth client named by its `ClientId`, a token with a `scope` claim (`OAuthScope` `admin:read`, `admin:write`) and its name in the `client` claim (`ConnectedClient`, resolved from the token for a controller), `ConnectedAppsService`.\
+UI „připojená aplikace“ (card „Připojené aplikace“, page „Připojení aplikace“ at `/pripojeni`); requirements also „konektor“ for it · Code: an OAuth client named by its `ClientId`, a token with a `scope` claim (`OAuthScope` `admin:read`, `admin:write`) and its name in the `client` claim (read only by `ClientClaim.of`; `ConnectedClient`, resolved from the token for a controller), `ConnectedAppsService`.\
 An AI client (Claude on claude.ai or in Claude Code) that an administrator approved to act in the administration in their name, with reading only or reading and changes; the administrator disconnects it („odpojit“) on its card.\
 _Avoid_: integration, bot
 

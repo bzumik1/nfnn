@@ -1,7 +1,7 @@
 package cz.novanadeje.app.shared.infrastructure.audit;
 
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
-import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.shared.infrastructure.security.ClientClaim;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -35,7 +35,7 @@ class AdminActionLog {
     private static Optional<String> connectedClient() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication instanceof JwtAuthenticationToken token) {
-            return Optional.ofNullable(token.getToken().getClaimAsString(JwtProperties.CLIENT_CLAIM)).filter(client -> !client.isBlank());
+            return ClientClaim.of(token.getToken());
         }
         return Optional.empty();
     }

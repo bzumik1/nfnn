@@ -7,6 +7,7 @@ import cz.novanadeje.app.donors.domain.InvalidGrant;
 import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.infrastructure.security.AccessTokenDecoder;
+import cz.novanadeje.app.shared.infrastructure.security.ClientClaim;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
@@ -40,7 +41,7 @@ class JwtAccessTokenVerifier implements AccessTokenVerifier {
         Set<OAuthScope> scopes = scope == null || scope.isBlank() ? Set.of() : OAuthScope.parse(scope);
         return new VerifiedAccessToken(DonorId.of(jwt.getSubject()), roles(jwt.getClaimAsStringList(JwtProperties.ROLES_CLAIM)),
                 Set.copyOf(jwt.getAudience() == null ? List.of() : jwt.getAudience()), scopes, jwt.getExpiresAt(),
-                jwt.getClaimAsString(JwtProperties.CLIENT_CLAIM));
+                ClientClaim.of(jwt));
     }
 
     private static Set<Role> roles(List<String> names) {

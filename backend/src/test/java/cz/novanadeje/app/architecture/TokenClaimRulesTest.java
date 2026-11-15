@@ -137,7 +137,7 @@ class TokenClaimRulesTest {
     @Test
     @DisplayName("Given the main sources, when they are searched for the session claim, then only its parser, the issuer, the liveness check and the claim's own constant name it")
     void should_name_the_session_claim_only_where_it_is_parsed_or_signed_when_searched_given_the_main_sources() throws IOException {
-        assertThat(filesNamingTheSessionClaim(Path.of("src", "main", "java")))
+        assertThat(filesNaming("SESSION_CLAIM", Path.of("src", "main", "java")))
                 .map(file -> file.getFileName().toString())
                 .containsExactlyInAnyOrder("SessionClaim.java", "JwtProperties.java", "JwtAccessTokenIssuer.java", "LiveSessionValidator.java");
     }
@@ -149,18 +149,36 @@ class TokenClaimRulesTest {
                 "class PlantedSessionReader { Object v(org.springframework.security.oauth2.jwt.Jwt jwt) { return jwt.getClaimAsString(JwtProperties.SESSION_CLAIM); } }");
         Files.writeString(sources.resolve("Unrelated.java"), "class Unrelated { String n = \"scope\"; }");
 
-        assertThat(filesNamingTheSessionClaim(sources)).containsExactly(sources.resolve("PlantedSessionReader.java"));
+        assertThat(filesNaming("SESSION_CLAIM", sources)).containsExactly(sources.resolve("PlantedSessionReader.java"));
     }
 
-    private static List<Path> filesNamingTheSessionClaim(Path root) throws IOException {
+    @Test
+    @DisplayName("Given the main sources, when they are searched for the client claim, then only its reader, the issuer and the claim's own constant name it, so the audit, the token exchange and the connected client a controller gets name the same connection")
+    void should_name_the_client_claim_only_where_it_is_read_or_signed_when_searched_given_the_main_sources() throws IOException {
+        assertThat(filesNaming("CLIENT_CLAIM", Path.of("src", "main", "java")))
+                .map(file -> file.getFileName().toString())
+                .containsExactlyInAnyOrder("ClientClaim.java", "JwtProperties.java", "JwtAccessTokenIssuer.java");
+    }
+
+    @Test
+    @DisplayName("Given a planted source that reads the client claim itself, when the sources are searched, then it is found")
+    void should_find_a_planted_client_claim_read_when_searched_given_a_planted_source(@TempDir Path sources) throws IOException {
+        Files.writeString(sources.resolve("PlantedClientReader.java"),
+                "class PlantedClientReader { Object v(org.springframework.security.oauth2.jwt.Jwt jwt) { return jwt.getClaimAsString(JwtProperties.CLIENT_CLAIM); } }");
+        Files.writeString(sources.resolve("Unrelated.java"), "class Unrelated { String n = \"client\"; }");
+
+        assertThat(filesNaming("CLIENT_CLAIM", sources)).containsExactly(sources.resolve("PlantedClientReader.java"));
+    }
+
+    private static List<Path> filesNaming(String claimConstant, Path root) throws IOException {
         try (Stream<Path> files = Files.walk(root)) {
-            return files.filter(Files::isRegularFile).filter(TokenClaimRulesTest::namesTheSessionClaim).toList();
+            return files.filter(Files::isRegularFile).filter(file -> names(file, claimConstant)).toList();
         }
     }
 
-    private static boolean namesTheSessionClaim(Path file) {
+    private static boolean names(Path file, String claimConstant) {
         try {
-            return Files.readString(file).contains("SESSION_CLAIM");
+            return Files.readString(file).contains(claimConstant);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

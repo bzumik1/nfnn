@@ -222,6 +222,9 @@ public class AuthorizationServerService {
         if (subject.scopes().isEmpty()) {
             throw new InvalidGrant("the subject token carries no scope");
         }
+        if (subject.connectedClient().isEmpty()) {
+            throw new InvalidGrant("the subject token names no connected application");
+        }
         Donor donor = donors.findById(subject.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         Instant now = clock.instant();
         IssuedAccessToken issued = accessTokens.issue(new AccessTokenGrant(donor.id(), donor.sessionRoles(true), properties.apiResource(),
