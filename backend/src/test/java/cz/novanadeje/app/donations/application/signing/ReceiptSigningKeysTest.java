@@ -17,6 +17,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -132,6 +133,18 @@ class ReceiptSigningKeysTest {
 
         assertThat(keys.overview().mismatches())
                 .containsExactly(new ReceiptSigningKeyMismatch(new ReceiptSigningKeyId("39f713d0"), ReceiptSigningKeyMismatch.Kind.MISSING));
+    }
+
+    @Test
+    @DisplayName("Given a withdrawal in the trail whose details match no wording, when the overview is read, then it flags the entry as unreadable and no key as out of place")
+    void should_flag_unreadable_entry_when_overview_is_read_given_a_withdrawal_whose_details_match_no_wording() {
+        UUID entry = UUID.fromString("019a1c00-0000-7000-8000-0000000000e1");
+        trail.entries.add(ReceiptSigningKeyHistoryTest.registered("21fe31df"));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.unreadable(entry, ReceiptSigningKeyWithdrawal.ACTION, "Zneplatněn klíč 21fe31df"));
+
+        assertThat(keys.overview().unreadableEntries())
+                .containsExactly(new UnreadableKeyAuditEntry(entry, ReceiptSigningKeyWithdrawal.ACTION, Instant.parse("2026-11-13T11:00:00Z")));
+        assertThat(keys.overview().mismatches()).isEmpty();
     }
 
     @Test

@@ -37,7 +37,7 @@ export function registerReadingTools(server: McpServer, deps: ToolDependencies):
     {
       title: 'Stav serveru',
       description:
-        'The running backend build (revision: its commit; version: its release, YYYY.M.N, or dev) and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage, balance: the account balance the bank reported with the last successful import and when it was read, kept when a later import fails, historyImport: the last run of older payments that nfnn_import_history queued since the server started, with its status QUEUED, RUNNING, COMPLETED, HISTORY_LOCKED or FAILED and the payments added, or null, and defaultHistoryFrom, the day such a run starts from by default), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say, and release: running (the release the server runs, YYYY.M.N, or dev for a build outside the releases), latest (the newest release published on GitHub, its version and publishedAt, or null before the first successful daily check), checkedAt and succeededAt of that check, failure (why the last check failed, or null) and updateAvailable (true when the latest is newer than the running one: an administrator deploys it by hand in ZimaOS: the app settings, Save without a change), or unavailable when the backend did not say.',
+        'The running backend build (revision: its commit; version: its release, YYYY.M.N, or dev) and health, the Fio bank import state (covered period, last attempt and success, failures, reported outage, balance: the account balance the bank reported with the last successful import and when it was read, kept when a later import fails, historyImport: the last run of older payments that nfnn_import_history queued since the server started, with its status QUEUED, RUNNING, COMPLETED, HISTORY_LOCKED or FAILED and the payments added, or null, and defaultHistoryFrom, the day such a run starts from by default), the last backup and test restore, the key that signs the verification QR codes on receipts (its id, when the server registered it, whether it is published and whether an administrator withdrew it, and the keys whose row disagrees with the audit trail: missing when the trail registered, adopted or withdrew a key that has no row, reverted when the row of a withdrawn key is active again; and the audit entries of the keys whose details match no known wording, by entryId, action and performedAt, which the cross-check cannot read; attention is true when a key fails its seal and is not published, when the current key is withdrawn and the server has not yet started with a new seed, when a row disagrees with the audit trail, when an audit entry of the keys cannot be read, and when that part is unavailable, which leaves the rest of the status as it is), and receiptSignatory: ok when a person of the foundation is chosen to sign the receipts, missing when none is, so no receipt can be issued until an administrator chooses one at /sprava/lide-fondu, or unavailable when the backend did not say, and release: running (the release the server runs, YYYY.M.N, or dev for a build outside the releases), latest (the newest release published on GitHub, its version and publishedAt, or null before the first successful daily check), checkedAt and succeededAt of that check, failure (why the last check failed, or null) and updateAvailable (true when the latest is newer than the running one: an administrator deploys it by hand in ZimaOS: the app settings, Save without a change), or unavailable when the backend did not say.',
       annotations: READ_ONLY,
     },
     async (ctx) =>
@@ -874,6 +874,9 @@ function receiptSigningKeys(answer: unknown): Record<string, unknown> {
   const auditMismatches = Array.isArray(view['auditMismatches'])
     ? view['auditMismatches'].map(asRecord)
     : [];
+  const unreadableAuditEntries = Array.isArray(view['unreadableAuditEntries'])
+    ? view['unreadableAuditEntries'].map(asRecord)
+    : [];
   return {
     currentKeyId: view['currentKeyId'],
     currentKeyRegisteredAt: current?.['registeredAt'] ?? null,
@@ -881,10 +884,12 @@ function receiptSigningKeys(answer: unknown): Record<string, unknown> {
     currentKeyWithdrawn,
     unpublishedKeyIds: unpublished,
     auditMismatches,
+    unreadableAuditEntries,
     attention:
       view['currentKeyPublished'] !== true ||
       unpublished.length > 0 ||
       currentKeyWithdrawn ||
-      auditMismatches.length > 0,
+      auditMismatches.length > 0 ||
+      unreadableAuditEntries.length > 0,
   };
 }

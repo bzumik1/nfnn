@@ -1,0 +1,47 @@
+[
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "$.unreadableAuditEntries",
+    "reason": "#994 (Phase 2 gate, backend M1): an entry of the three key actions whose details match no wording the cross-check reads is no longer dropped silently but listed in unreadableAuditEntries, so /sprava, the key card and nfnn_status raise the alarm; the scenarios show the field, empty unless they plant such an entry",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "$.unreadableAuditEntries",
+    "reason": "#994 (Phase 2 gate, backend M1): an entry of the three key actions whose details match no wording the cross-check reads is no longer dropped silently but listed in unreadableAuditEntries, so /sprava, the key card and nfnn_status raise the alarm; the scenarios show the field, empty unless they plant such an entry",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key"
+  },
+  {
+    "path": "POST /api/admin/donations/receipt-signing-keys/{keyId}/withdrawal",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "field": "$.unreadableAuditEntries",
+    "reason": "#994: the withdrawal answers with the key list, which now carries unreadableAuditEntries",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys (Withdrawing a key)"
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptSigningKeyRegistration: Receipt signing key audit entry <id> of <enum> matches no known wording, so the cross-check of the keys with the audit trail cannot read it",
+    "reason": "#994: the ERROR line the start writes for every key entry of the audit trail whose details the cross-check cannot read; its slots are the entry's id, which the site generated, and its action, one of three constants, so it needs only the standing approval of closed slots",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the id of the audit entry (admin_action.id, a UUID the site generates); no name, e-mail or address",
+        "<enum>": "the entry's action: REGISTER_RECEIPT_SIGNING_KEY, ADOPT_RECEIPT_SIGNING_KEY or WITHDRAW_RECEIPT_SIGNING_KEY"
+      }
+    }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.application.signing.ReceiptSigningKeyHistoryTest > Given an entry of another action or details of another shape, when the history reads them, then it ignores them",
+    "replacement": "donations.application.signing.ReceiptSigningKeyHistoryTest > Given an entry of another action, when the history reads it, then it ignores it",
+    "reason": "#994: details of another shape in an entry of a key action are no longer ignored but reported as unreadable, so the test keeps only the entry of another action and a new test covers the unreadable entries",
+    "contract": "docs/system-overview.md, donations (Audit cross-check of the keys)"
+  }
+]

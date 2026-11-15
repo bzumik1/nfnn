@@ -316,7 +316,7 @@ describe('Given an administrator connected with the reading permission only', ()
       '/api/admin/donations/receipt-signing-keys',
     );
     expect(textOf(result)).toContain(
-      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":false,"unpublishedKeyIds":["39f713d0"],"auditMismatches":[],"attention":true}',
+      '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":false,"unpublishedKeyIds":["39f713d0"],"auditMismatches":[],"unreadableAuditEntries":[],"attention":true}',
     );
   });
 
@@ -355,7 +355,39 @@ describe('Given an administrator connected with the reading permission only', ()
     try {
       const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
       expect(textOf(result)).toContain(
-        '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":true,"unpublishedKeyIds":[],"auditMismatches":[{"keyId":"39f713d0","kind":"missing"}],"attention":true}',
+        '"receiptSigningKeys":{"currentKeyId":"21fe31df","currentKeyRegisteredAt":"2026-11-13T12:00:00+01:00","currentKeyPublished":true,"currentKeyWithdrawn":true,"unpublishedKeyIds":[],"auditMismatches":[{"keyId":"39f713d0","kind":"missing"}],"unreadableAuditEntries":[],"attention":true}',
+      );
+    } finally {
+      stack.backend.receiptSigningKeysAnswer = undefined;
+    }
+  });
+
+  it('when the status is asked while an audit entry of the keys cannot be read, then it names the entry in Prague time and needs attention', async () => {
+    stack.backend.receiptSigningKeysAnswer = {
+      currentKeyId: '21fe31df',
+      currentKeyPublished: true,
+      keys: [
+        {
+          keyId: '21fe31df',
+          status: 'active',
+          registeredAt: '2026-11-13T11:00:00Z',
+          published: true,
+          current: true,
+        },
+      ],
+      auditMismatches: [],
+      unreadableAuditEntries: [
+        {
+          entryId: '019a1c00-0000-7000-8000-0000000000e1',
+          action: 'WITHDRAW_RECEIPT_SIGNING_KEY',
+          performedAt: '2026-11-12T09:30:00Z',
+        },
+      ],
+    };
+    try {
+      const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
+      expect(textOf(result)).toContain(
+        '"unreadableAuditEntries":[{"entryId":"019a1c00-0000-7000-8000-0000000000e1","action":"WITHDRAW_RECEIPT_SIGNING_KEY","performedAt":"2026-11-12T10:30:00+01:00"}],"attention":true}',
       );
     } finally {
       stack.backend.receiptSigningKeysAnswer = undefined;
@@ -379,7 +411,9 @@ describe('Given an administrator connected with the reading permission only', ()
     };
     try {
       const result = await client.callTool({ name: 'nfnn_status', arguments: {} });
-      expect(textOf(result)).toContain('"auditMismatches":[],"attention":false}');
+      expect(textOf(result)).toContain(
+        '"auditMismatches":[],"unreadableAuditEntries":[],"attention":false}',
+      );
     } finally {
       stack.backend.receiptSigningKeysAnswer = undefined;
     }

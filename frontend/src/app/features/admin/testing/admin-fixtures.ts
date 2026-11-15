@@ -548,6 +548,7 @@ export function receiptSigningKeys(
     currentKeyPublished: current?.published ?? false,
     keys,
     auditMismatches: [],
+    unreadableAuditEntries: [],
   };
 }
 

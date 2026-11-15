@@ -2710,6 +2710,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
             currentKeyPublished: false,
             keys: [],
             auditMismatches: [],
+            unreadableAuditEntries: [],
           },
         }),
     );

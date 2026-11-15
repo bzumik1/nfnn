@@ -230,6 +230,7 @@ function adminRoute(request: RecordedRequest, url: URL, body: string): [number, 
             },
           ],
           auditMismatches: [],
+          unreadableAuditEntries: [],
         },
       ];
     case 'GET /api/admin/operations/backups':

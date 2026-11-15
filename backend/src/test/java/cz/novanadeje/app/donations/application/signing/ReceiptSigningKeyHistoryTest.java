@@ -22,6 +22,9 @@ class ReceiptSigningKeyHistoryTest {
     private static final byte[] EARLIER_PUBLIC_KEY = HexFormat.of().parseHex("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c");
     private static final Instant NOW = Instant.parse("2026-11-13T11:00:00Z");
     private static final UUID ADMIN = UUID.fromString("019a1c00-0000-7000-8000-00000000a001");
+    private static final UUID UNREADABLE_WITHDRAWAL = UUID.fromString("019a1c00-0000-7000-8000-0000000000e1");
+    private static final UUID UNREADABLE_REGISTRATION = UUID.fromString("019a1c00-0000-7000-8000-0000000000e2");
+    private static final UUID UNREADABLE_ADOPTION = UUID.fromString("019a1c00-0000-7000-8000-0000000000e3");
 
     static AdminActionEntry registered(String keyId) {
         return entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ACTION, ReceiptSigningKeyAuditDetails.registered(new ReceiptSigningKeyId(keyId)));
@@ -39,6 +42,10 @@ class ReceiptSigningKeyHistoryTest {
     static AdminActionEntry entryOf(AdminActionPerformed performed) {
         return new AdminActionEntry(UUID.randomUUID(), performed.adminId(), performed.action(), performed.subjectId(), performed.details(),
                 performed.performedAt(), Optional.empty());
+    }
+
+    static AdminActionEntry unreadable(UUID id, String action, String details) {
+        return new AdminActionEntry(id, ADMIN, action, Optional.empty(), details, NOW, Optional.empty());
     }
 
     private static AdminActionEntry entry(UUID adminId, String action, String details) {
@@ -96,14 +103,45 @@ class ReceiptSigningKeyHistoryTest {
     }
 
     @Test
-    @DisplayName("Given an entry of another action or details of another shape, when the history reads them, then it ignores them")
-    void should_ignore_other_actions_and_shapes_when_read_given_foreign_entries() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(
-                entry(ADMIN, "CHANGE_SETTINGS", "Změněna nastavení: 21fe31df"),
-                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč: 21fe31df")), Set.of());
+    @DisplayName("Given an entry of another action, when the history reads it, then it ignores it")
+    void should_ignore_other_actions_when_read_given_a_foreign_entry() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(entry(ADMIN, "CHANGE_SETTINGS", "Změněna nastavení: 21fe31df")), Set.of());
 
         assertThat(history.recorded()).isEmpty();
+        assertThat(history.unreadable()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given entries of the key actions whose details match no wording, when the history reads them, then each is reported as unreadable with its id, action and time, in the trail's order, and no key counts as recorded or withdrawn")
+    void should_report_unreadable_entries_when_read_given_key_entries_whose_details_match_no_wording() {
+        AdminActionEntry withdrawal = unreadable(UNREADABLE_WITHDRAWAL, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč: 21fe31df");
+        AdminActionEntry registration = unreadable(UNREADABLE_REGISTRATION, ReceiptSigningKeyRegistration.ACTION, "Server zaregistroval klíč 21fe31df");
+        AdminActionEntry adoption = unreadable(UNREADABLE_ADOPTION, ReceiptSigningKeyRegistration.ADOPT_ACTION, "Server převzal klíč k ověřovacím QR 39f713d0");
+
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("39f713d0"), withdrawal, registration, adoption), Set.of());
+
+        assertThat(history.unreadable()).containsExactly(
+                new UnreadableKeyAuditEntry(UNREADABLE_WITHDRAWAL, ReceiptSigningKeyWithdrawal.ACTION, NOW),
+                new UnreadableKeyAuditEntry(UNREADABLE_REGISTRATION, ReceiptSigningKeyRegistration.ACTION, NOW),
+                new UnreadableKeyAuditEntry(UNREADABLE_ADOPTION, ReceiptSigningKeyRegistration.ADOPT_ACTION, NOW));
+        assertThat(history.recorded()).extracting(ReceiptSigningKeyId::value).containsExactly("39f713d0");
         assertThat(history.isWithdrawn(new ReceiptSigningKeyId("21fe31df"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given entries of the key actions in every wording the server has written, spelled out, when the history reads them, then none is unreadable and each names its key")
+    void should_report_nothing_unreadable_when_read_given_every_wording_ever_written() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(
+                entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ACTION,
+                        "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df"),
+                entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ADOPT_ACTION,
+                        "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000001)"),
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Zneplatněn klíč k ověřovacím QR 39f713d0 (ověřeno druhým faktorem)"),
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč k ověřovacím QR dac073e0 (ověřeno druhým faktorem)")), Set.of());
+
+        assertThat(history.unreadable()).isEmpty();
+        assertThat(history.recorded()).extracting(ReceiptSigningKeyId::value).containsExactlyInAnyOrder("21fe31df", "39f713d0", "dac073e0");
+        assertThat(history.withdrawn()).extracting(ReceiptSigningKeyId::value).containsExactlyInAnyOrder("39f713d0", "dac073e0");
     }
 
     @Test

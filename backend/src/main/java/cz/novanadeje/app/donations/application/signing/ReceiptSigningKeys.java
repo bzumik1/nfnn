@@ -45,7 +45,7 @@ public class ReceiptSigningKeys {
         ReceiptSigningKeyHistory history = history();
         List<PublishedReceiptKey> all = listed(rows, history);
         boolean currentPublished = all.stream().anyMatch(key -> key.current() && key.published());
-        return new ReceiptSigningKeysOverview(signer.keyId(), currentPublished, all, history.mismatches(rows));
+        return new ReceiptSigningKeysOverview(signer.keyId(), currentPublished, all, history.mismatches(rows), history.unreadable());
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

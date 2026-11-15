@@ -5,15 +5,18 @@ import cz.novanadeje.app.donations.application.signing.ReceiptSigningKeysOvervie
 import java.util.List;
 
 record ReceiptSigningKeyWithdrawalResponse(boolean restarting, String currentKeyId, boolean currentKeyPublished,
-                                           List<AdminReceiptSigningKeysResponse.Key> keys, List<AdminReceiptSigningKeysResponse.Mismatch> auditMismatches) {
+                                           List<AdminReceiptSigningKeysResponse.Key> keys, List<AdminReceiptSigningKeysResponse.Mismatch> auditMismatches,
+                                           List<AdminReceiptSigningKeysResponse.UnreadableEntry> unreadableAuditEntries) {
 
     ReceiptSigningKeyWithdrawalResponse {
         keys = List.copyOf(keys);
         auditMismatches = List.copyOf(auditMismatches);
+        unreadableAuditEntries = List.copyOf(unreadableAuditEntries);
     }
 
     static ReceiptSigningKeyWithdrawalResponse of(boolean restarting, ReceiptSigningKeysOverview overview) {
         AdminReceiptSigningKeysResponse keys = AdminReceiptSigningKeysResponse.of(overview);
-        return new ReceiptSigningKeyWithdrawalResponse(restarting, keys.currentKeyId(), keys.currentKeyPublished(), keys.keys(), keys.auditMismatches());
+        return new ReceiptSigningKeyWithdrawalResponse(restarting, keys.currentKeyId(), keys.currentKeyPublished(), keys.keys(), keys.auditMismatches(),
+                keys.unreadableAuditEntries());
     }
 }

@@ -37,6 +37,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
@@ -362,6 +363,23 @@ class ReceiptSigningKeyRegistrationTest {
         assertThat(lines.written).filteredOn(line -> line.message().contains("39f713d0")).singleElement().satisfies(line -> {
             assertThat(line.level()).isEqualTo(Level.ERROR);
             assertThat(line.message()).isEqualTo("Receipt signing key 39f713d0 is in the audit trail but its row is missing");
+            assertThat(line.insideTransaction()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("Given a withdrawal in the audit trail whose details match no wording, when the server starts, then an ERROR after the transaction names the entry and its action")
+    void should_log_error_when_registering_given_a_key_entry_whose_details_match_no_wording() {
+        keys.stored.add(ReceiptSigningKey.register(OWN_PUBLIC_KEY, NOW, content -> seals.seal(ReceiptSigningKey.SEAL_PURPOSE, content)));
+        trail.entries.add(ReceiptSigningKeyHistoryTest.unreadable(UUID.fromString("019a1c00-0000-7000-8000-0000000000e1"), ReceiptSigningKeyWithdrawal.ACTION,
+                "Zneplatněn klíč 21fe31df"));
+
+        registration.registerOwnKey();
+
+        assertThat(lines.written).singleElement().satisfies(line -> {
+            assertThat(line.level()).isEqualTo(Level.ERROR);
+            assertThat(line.message()).isEqualTo("Receipt signing key audit entry 019a1c00-0000-7000-8000-0000000000e1 of WITHDRAW_RECEIPT_SIGNING_KEY"
+                    + " matches no known wording, so the cross-check of the keys with the audit trail cannot read it");
             assertThat(line.insideTransaction()).isFalse();
         });
     }

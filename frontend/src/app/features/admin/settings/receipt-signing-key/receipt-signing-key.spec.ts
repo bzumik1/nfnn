@@ -309,6 +309,33 @@ describe('Given the receipt signing key section of the receipt settings', () => 
     expect(buttons()).toEqual(['Zneplatnit klíč 21fe31df znovu…']);
   });
 
+  it('when an entry of the keys in the audit trail cannot be read, then an alert names its kind and time in Prague and offers no withdrawal for it', async () => {
+    await load({
+      ...receiptSigningKeys([receiptSigningKey()]),
+      unreadableAuditEntries: [
+        {
+          entryId: '019a1c00-0000-7000-8000-0000000000e1',
+          action: 'WITHDRAW_RECEIPT_SIGNING_KEY',
+          performedAt: '2026-11-12T09:30:00Z',
+        },
+      ],
+    });
+
+    expect(text('[role="alert"]')).toBe(
+      'Záznam „Zneplatnění klíče“ z 12. 11. 2026 10:30 v Historii změn neodpovídá žádnému známému znění, takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.',
+    );
+    expect(buttons()).toEqual(['Zneplatnit klíč serveru…']);
+  });
+
+  it('when an answer kept from before the unreadable entries were listed arrives without them, then the card shows the key without an alert', async () => {
+    const kept = receiptSigningKeys([receiptSigningKey()]);
+    delete kept.unreadableAuditEntries;
+    await load(kept);
+
+    expect(rows()['Stav']).toBe('Zveřejněný');
+    expect(text('[role="alert"]')).toBe('');
+  });
+
   describe('when the administrator asks to withdraw the key of the server', () => {
     beforeEach(async () => {
       await load(receiptSigningKeys([earlierKey(), receiptSigningKey()]));

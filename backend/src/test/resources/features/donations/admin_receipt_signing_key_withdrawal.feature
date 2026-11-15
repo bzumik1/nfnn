@@ -177,6 +177,20 @@ Feature: An administrator withdraws a leaked receipt signing key from the web, w
       | keyId    | kind    |
       | 39f713d0 | missing |
 
+  Scenario: A key entry of the audit trail whose details match no wording is flagged at the next start, because the cross-check of the keys cannot read it
+    Given "Jana" has the audit entry "019a1c00-0000-7000-8000-0000000000e1" of "WITHDRAW_RECEIPT_SIGNING_KEY" at "2026-11-12T09:30:00Z" with the details "Zneplatněn klíč 21fe31df"
+    When the server starts again
+    Then the server logged the error "Receipt signing key audit entry 019a1c00-0000-7000-8000-0000000000e1 of WITHDRAW_RECEIPT_SIGNING_KEY matches no known wording, so the cross-check of the keys with the audit trail cannot read it"
+    When "Jana" asks for the receipt signing keys
+    Then the response status is 200
+    And the receipt signing keys flag the unreadable audit entries:
+      | entryId                              | action                       | performedAt          |
+      | 019a1c00-0000-7000-8000-0000000000e1 | WITHDRAW_RECEIPT_SIGNING_KEY | 2026-11-12T09:30:00Z |
+    When a visitor asks for the receipt keys
+    Then the receipt keys are those of the foundation "Nová naděje - nadační fond" "27278794":
+      | keyId    | algorithm | publicKey                                   | status | registeredAt         |
+      | 21fe31df | Ed25519   | 11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo | active | 2026-11-13T11:00:00Z |
+
   Scenario: A donor without the administrator role and a visitor without a token cannot withdraw a key
     Given a person "Petr" is registered
     When "Petr" withdraws the receipt signing key "21fe31df" with the code "123456"

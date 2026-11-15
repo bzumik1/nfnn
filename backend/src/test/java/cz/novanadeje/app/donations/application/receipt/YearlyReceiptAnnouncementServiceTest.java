@@ -130,7 +130,7 @@ class YearlyReceiptAnnouncementServiceTest {
     }
 
     private static ReceiptSigningKeysOverview overview(boolean currentKeyPublished) {
-        return new ReceiptSigningKeysOverview(new ReceiptSigningKeyId("0a1b2c3d"), currentKeyPublished, List.of(), List.of());
+        return new ReceiptSigningKeysOverview(new ReceiptSigningKeyId("0a1b2c3d"), currentKeyPublished, List.of(), List.of(), List.of());
     }
 
     private static YearlyReceiptCandidates candidates(DonorReference... donors) {
