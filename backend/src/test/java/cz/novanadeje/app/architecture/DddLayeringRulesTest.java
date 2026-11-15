@@ -109,10 +109,10 @@ class DddLayeringRulesTest {
                     || type.getMethodsWithReturnTypeOfSelf().stream().anyMatch(method -> isInInfrastructure(method.getOwner())
                     && (method.isAnnotatedWith(Bean.class) || method.isMetaAnnotatedWith(Bean.class)))));
     private static final DescribedPredicate<Dependency> NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS = DescribedPredicate.describe(
-            "target no persistence port, except the one a persistence adapter outside the persistence packages implements itself",
+            "target no persistence port, except that a persistence adapter outside the persistence packages implements or extends one, "
+                    + "calling the constructor of the port it extends",
             dependency -> !PersistencePorts.PERSISTENCE_PORTS.test(dependency.getTargetClass())
-                    || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass())
-                    && dependency.getOriginClass().isAssignableTo(dependency.getTargetClass().getName()));
+                    || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass()) && isInheritanceOfItsOwnPort(dependency));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
@@ -525,6 +525,27 @@ class DddLayeringRulesTest {
                                 cz.novanadeje.app.planteda.domain.Gifts gifts;
                             }
                             """),
+                    planted("planteda.domain.GiftReads", "public interface GiftReads {}"),
+                    planted("planteda.domain.ReadableGifts", "public interface ReadableGifts extends GiftReads {}"),
+                    planted("planteda.infrastructure.persistence.JpaReadableGifts",
+                            "public class JpaReadableGifts implements cz.novanadeje.app.planteda.domain.ReadableGifts {}"),
+                    planted("planteda.infrastructure.mail.RepositoryDecorator", """
+                            @org.springframework.stereotype.Repository
+                            public class RepositoryDecorator implements cz.novanadeje.app.planteda.domain.Gifts {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.infrastructure.mail.ReadsDecorator", """
+                            @org.springframework.stereotype.Repository
+                            public class ReadsDecorator implements cz.novanadeje.app.planteda.domain.ReadableGifts {
+                                cz.novanadeje.app.planteda.domain.GiftReads reads;
+                            }
+                            """),
+                    planted("planteda.infrastructure.archive.SqlLedger", """
+                            public class SqlLedger extends cz.novanadeje.app.planteda.domain.Ledger {
+                                javax.sql.DataSource source;
+                            }
+                            """),
                     planted("planteda.application.SeedList", "public interface SeedList { int size(); }"),
                     planted("planteda.infrastructure.config.SeedConfiguration", """
                             public class SeedConfiguration {
@@ -721,8 +742,8 @@ class DddLayeringRulesTest {
         @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements (the audit "
                 + "trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a "
                 + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages and from a "
-                + "decorator that implements the port, and a persistence adapter on its own port wherever it lives, an adapter on a port "
-                + "persistence does not implement and a reviewed reader are not")
+                + "decorator that implements the port, a @Repository one included, and a persistence adapter that only implements or extends "
+                + "its port wherever it lives, an adapter on a port persistence does not implement and a reviewed reader are not")
         void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
             assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
@@ -734,6 +755,11 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("AnnotatedMailer").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator").contains("implements").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator.gifts").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RepositoryDecorator.gifts").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ReadsDecorator.reads").contains("planteda.domain.GiftReads"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("RepositoryDecorator").contains("implements"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ReadsDecorator").contains("implements"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("SqlLedger"))
                     .anySatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Gifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Shelf"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AnnotatedArchive"))
@@ -777,6 +803,18 @@ class DddLayeringRulesTest {
     private static boolean isWhatTheDomainMayUse(JavaClass type) {
         JavaClass element = type.isArray() ? type.getBaseComponentType() : type;
         return element.isPrimitive() || THE_DOMAIN_MAY_USE_AS_A_TYPE.test(element);
+    }
+
+    private static boolean isInheritanceOfItsOwnPort(Dependency dependency) {
+        JavaClass origin = dependency.getOriginClass();
+        JavaClass port = dependency.getTargetClass();
+        String description = dependency.getDescription();
+        boolean implemented = origin.getRawInterfaces().contains(port)
+                && description.startsWith("Class <" + origin.getName() + "> implements interface <" + port.getName() + ">");
+        boolean extended = origin.getRawSuperclass().filter(port::equals).isPresent()
+                && (description.startsWith("Class <" + origin.getName() + "> extends class <" + port.getName() + ">")
+                || description.startsWith("Constructor <" + origin.getName() + ".<init>(") && description.contains("> calls constructor <" + port.getName() + ".<init>("));
+        return implemented || extended;
     }
 
     private static boolean isInInfrastructure(JavaClass type) {
