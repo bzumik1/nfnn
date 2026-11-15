@@ -9,6 +9,7 @@ import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -31,13 +32,14 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.tngtech.archunit.base.DescribedPredicate.describe;
 import static com.tngtech.archunit.lang.conditions.ArchConditions.beMetaAnnotatedWith;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 
 @AnalyzeClasses(
         packagesOf = AppApplication.class,
@@ -47,13 +49,30 @@ class TransactionRulesTest {
 
     private static final String JAKARTA_TRANSACTIONAL = "jakarta.transaction.Transactional";
     private static final String ADAPTERS = "cz.novanadeje.app.*.infrastructure..";
+    private static final String SEPARATE = "backend.md, Application: REQUIRES_NEW only where a separate transaction is the point, each one more connection (database.md)";
     private static final String BOUNDARY = "backend.md, Application: the application service sets the transaction boundary and an adapter only joins it";
+    private static final String RECEIPT_ISSUER = "cz.novanadeje.app.donations.application.receipt.DonationReceiptIssuer";
+    private static final String DONOR = "cz.novanadeje.app.donations.domain.donor.DonorReference";
+    private static final String DONATION = "cz.novanadeje.app.donations.domain.donation.DonationId";
+    private static final String CHANNEL = "cz.novanadeje.app.shared.application.administration.AdministrationChannel";
+    private static final String ONE_ISSUE = "one issue numbers, freezes and signs a receipt and commits it on its own, even if a caller holds a transaction";
     private static final Map<String, String> SEPARATE_TRANSACTIONS = Map.of(
-            "cz.novanadeje.app.donations.application.receipt.DonationReceiptIssuer", "one transaction per issue",
-            "cz.novanadeje.app.donations.application.pairing.PaymentPairingService", "pairing called from an AFTER_COMMIT listener",
-            "cz.novanadeje.app.donations.application.report.MonthlyReportFigures", "a REPEATABLE READ snapshot inside the sending transaction",
-            "cz.novanadeje.app.operations.application.alerts.MailWatch", "the mail outage outlives a send that rolls its transaction back",
-            "cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals", "the audit of a refused reveal outlives the reveal");
+            RECEIPT_ISSUER + ".issueForDonation(" + DONOR + ", " + DONATION + ", java.time.LocalDate)", ONE_ISSUE,
+            RECEIPT_ISSUER + ".issueForYear(" + DONOR + ", java.time.Year, java.time.LocalDate)", ONE_ISSUE,
+            RECEIPT_ISSUER + ".issueForDonationByAdministrator(java.util.UUID, " + CHANNEL + ", " + DONOR + ", " + DONATION + ", java.time.LocalDate)",
+            ONE_ISSUE,
+            RECEIPT_ISSUER + ".issueForYearByAdministrator(java.util.UUID, " + CHANNEL + ", " + DONOR + ", java.time.Year, java.time.LocalDate)", ONE_ISSUE,
+            RECEIPT_ISSUER + ".issueForYearInBulk(java.util.UUID, " + CHANNEL + ", " + DONOR + ", java.time.Year, java.time.LocalDate)",
+            ONE_ISSUE + ", so an interrupted bulk run keeps what it issued",
+            "cz.novanadeje.app.donations.application.pairing.PaymentPairingService.pairPaymentsOf(" + DONOR + ", java.time.Instant)",
+            "pairing called from an AFTER_COMMIT listener, while the registration's committed transaction is still bound to the thread",
+            "cz.novanadeje.app.donations.application.report.MonthlyReportFigures.compile(cz.novanadeje.app.donations.domain.report.ReportMonth)",
+            "a REPEATABLE READ snapshot inside the READ COMMITTED sending transaction",
+            "cz.novanadeje.app.operations.application.alerts.MailWatch.<init>(cz.novanadeje.app.operations.application.alerts.OperationalAlertService, "
+                    + "org.springframework.transaction.PlatformTransactionManager)",
+            "the mail outage outlives a send that rolls its transaction back",
+            "cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals.record(java.util.UUID, java.time.Instant)",
+            "the audit of a refused reveal outlives the reveal");
     private static final DescribedPredicate<JavaAnnotation<?>> A_NEW_TRANSACTION = describe("@Transactional(propagation = REQUIRES_NEW)",
             annotation -> annotation.getRawType().isEquivalentTo(Transactional.class) && propagationOf(annotation).filter(Propagation.REQUIRES_NEW.name()::equals).isPresent());
     private static final DescribedPredicate<JavaAccess<?>> A_PROPAGATION_CHOICE = describe(
@@ -80,12 +99,12 @@ class TransactionRulesTest {
             .because("Spring's @Transactional carries the propagation the adapter rules check; jakarta.transaction.Transactional defaults to opening one");
 
     @ArchTest
-    static final ArchRule new_transactions_are_opened_only_where_backend_md_names_them = noCodeUnits()
-            .that().areDeclaredInClassesThat(describe("are not named in backend.md as opening a transaction of their own",
-                    type -> !SEPARATE_TRANSACTIONS.containsKey(type.getName())))
+    static final ArchRule new_transactions_are_opened_only_where_backend_md_names_them = newTransactionsOpenedOnlyIn(SEPARATE_TRANSACTIONS.keySet());
+
+    @ArchTest
+    static final ArchRule no_class_opens_a_new_transaction_for_all_its_methods = noClasses()
             .should(beMetaAnnotatedWith(A_NEW_TRANSACTION))
-            .orShould(chooseAPropagationInCode())
-            .because("backend.md, Application: REQUIRES_NEW only where a separate transaction is the point, each one more connection (database.md)");
+            .because(SEPARATE + ", named per method, so a class-level one would admit every method the class ever gets");
 
     @ArchTest
     static final ArchRule programmatic_transactions_belong_to_the_application = noClasses()
@@ -96,9 +115,14 @@ class TransactionRulesTest {
             .because(BOUNDARY + ", so an adapter or a controller never opens a transaction the MANDATORY rule cannot see");
 
     @Test
-    @DisplayName("Given the classes named as opening a transaction of their own, when they are read, then each exists, so the list names no class that is gone")
-    void should_find_every_named_class_when_read_given_the_separate_transactions() {
-        assertThat(SEPARATE_TRANSACTIONS.keySet()).allSatisfy(name -> assertThatCode(() -> Class.forName(name)).doesNotThrowAnyException());
+    @DisplayName("Given the methods named as opening a transaction of their own, when they are read, then each exists and still opens one, so the list names no method that is gone or joins")
+    void should_find_every_named_method_opening_a_new_transaction_when_read_given_the_separate_transactions() {
+        JavaClasses owners = new ClassFileImporter().importClasses(SEPARATE_TRANSACTIONS.keySet().stream().map(TransactionRulesTest::ownerOf).distinct().toList());
+        Map<String, JavaCodeUnit> codeUnits = owners.stream().flatMap(owner -> owner.getCodeUnits().stream())
+                .collect(Collectors.toMap(JavaCodeUnit::getFullName, codeUnit -> codeUnit));
+
+        assertThat(SEPARATE_TRANSACTIONS.keySet()).allSatisfy(name -> assertThat(codeUnits).hasEntrySatisfying(name,
+                codeUnit -> assertThat(opensANewTransaction(codeUnit)).as(name).isTrue()));
     }
 
     @Test
@@ -178,6 +202,52 @@ class TransactionRulesTest {
     }
 
     @Test
+    @DisplayName("Given a planted class with two new transactions, an overload of a named one and a class-level one, when only one method is named, then every other is reported and the named one is not")
+    void should_report_every_unnamed_method_when_checked_given_one_named_method_of_a_planted_class(@TempDir Path folder) throws IOException {
+        JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.application.PlantedIssuer", """
+                package cz.novanadeje.app.planteda.application;
+
+                import org.springframework.transaction.annotation.Propagation;
+                import org.springframework.transaction.annotation.Transactional;
+
+                class PlantedIssuer {
+
+                    @Transactional(propagation = Propagation.REQUIRES_NEW)
+                    void named(String reason) {
+                    }
+
+                    @Transactional(propagation = Propagation.REQUIRES_NEW)
+                    void named(int overload) {
+                    }
+
+                    @Transactional(propagation = Propagation.REQUIRES_NEW)
+                    void unnamed() {
+                    }
+                }
+                """, "cz.novanadeje.app.planteda.application.PlantedSeparateClass", """
+                package cz.novanadeje.app.planteda.application;
+
+                import org.springframework.transaction.annotation.Propagation;
+                import org.springframework.transaction.annotation.Transactional;
+
+                @Transactional(propagation = Propagation.REQUIRES_NEW)
+                class PlantedSeparateClass {
+
+                    void everyMethod() {
+                    }
+                }
+                """));
+
+        assertThat(newTransactionsOpenedOnlyIn(Set.of("cz.novanadeje.app.planteda.application.PlantedIssuer.named(java.lang.String)"))
+                .evaluate(planted).getFailureReport().getDetails())
+                .hasSize(2)
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.named(int)"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.unnamed()"));
+        assertThat(no_class_opens_a_new_transaction_for_all_its_methods.evaluate(planted).getFailureReport().getDetails())
+                .singleElement().satisfies(detail -> assertThat(detail).contains("PlantedSeparateClass"));
+    }
+
+    @Test
     @DisplayName("Given an adapter whose class and writes open their own transaction, directly, through an annotation or the Jakarta way, when the transaction rules check it, then each is reported and a joining write is not")
     void should_report_every_own_transaction_when_checked_given_a_planted_adapter(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.infrastructure.persistence.PlantedRows", """
@@ -233,6 +303,27 @@ class TransactionRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("persistence.Writes"));
         assertThat(transactions_are_springs.evaluate(planted).getFailureReport().getDetails())
                 .singleElement().satisfies(detail -> assertThat(detail).contains("opensOneTheJakartaWay"));
+    }
+
+    private static ArchRule newTransactionsOpenedOnlyIn(Set<String> namedCodeUnits) {
+        return noCodeUnits()
+                .that(describe("are not named in backend.md as opening a transaction of their own", codeUnit -> !namedCodeUnits.contains(codeUnit.getFullName())))
+                .should(beMetaAnnotatedWith(A_NEW_TRANSACTION))
+                .orShould(chooseAPropagationInCode())
+                .because(SEPARATE);
+    }
+
+    private static boolean opensANewTransaction(JavaCodeUnit codeUnit) {
+        return codeUnit.isMetaAnnotatedWith(A_NEW_TRANSACTION) || codeUnit.getAccessesFromSelf().stream().anyMatch(A_PROPAGATION_CHOICE);
+    }
+
+    private static Class<?> ownerOf(String codeUnitName) {
+        String owner = codeUnitName.substring(0, codeUnitName.lastIndexOf('.', codeUnitName.indexOf('(')));
+        try {
+            return Class.forName(owner);
+        } catch (ClassNotFoundException gone) {
+            throw new AssertionError("the class of " + codeUnitName + " is gone", gone);
+        }
     }
 
     private static ArchCondition<JavaCodeUnit> chooseAPropagationInCode() {
