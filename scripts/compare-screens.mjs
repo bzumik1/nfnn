@@ -502,7 +502,7 @@ async function shoot(root, checkout, side, out, screens) {
         'playwright',
         'test',
         '--project=baseline',
-        '--workers=2',
+        '--workers=4',
         '--reporter=line',
         '--update-snapshots=all',
       ],
@@ -524,13 +524,12 @@ async function shoot(root, checkout, side, out, screens) {
   }
 }
 
-export async function bothSides(...runs) {
-  const settled = await Promise.allSettled(runs);
-  const refused = settled.find((outcome) => outcome.status === 'rejected');
-  if (refused) {
-    throw refused.reason;
+export async function sidesInTurn(...sides) {
+  const results = [];
+  for (const side of sides) {
+    results.push(await side());
   }
-  return settled.map((outcome) => outcome.value);
+  return results;
 }
 
 export function readRoutes(...folders) {
@@ -690,9 +689,9 @@ async function main() {
       console.log(`base shots in ${baseRun.shots}`);
       return baseRun.status === 0 ? 0 : 1;
     }
-    const [baseRun, headRun] = await bothSides(
-      shoot(root, tree, 'base', out, screens),
-      shoot(root, root, 'head', out, screens),
+    const [baseRun, headRun] = await sidesInTurn(
+      () => shoot(root, tree, 'base', out, screens),
+      () => shoot(root, root, 'head', out, screens),
     );
     const routes = readRoutes(headRun.routes, baseRun.routes);
     const everything = compareFolders(baseRun.shots, headRun.shots, out);
