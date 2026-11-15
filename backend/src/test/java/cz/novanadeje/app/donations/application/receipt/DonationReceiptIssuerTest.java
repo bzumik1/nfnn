@@ -361,7 +361,7 @@ class DonationReceiptIssuerTest {
         assertThatThrownBy(() -> issuer.issueForDonation(JANA, MARCH.id(), TODAY))
                 .isInstanceOf(DonationOnYearlyReceipt.class)
                 .hasFieldOrPropertyWithValue("code", "donations/donation-on-yearly-receipt")
-                .hasMessageContaining("2027-000001");
+                .hasMessageContaining(MARCH.id().toString());
 
         InOrder order = inOrder(receipts, donations);
         order.verify(receipts).lockDonor(JANA);
@@ -935,8 +935,7 @@ class DonationReceiptIssuerTest {
             when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
 
             assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY))
-                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class)
-                    .hasMessageContaining("2027-000001");
+                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class);
 
             verify(receipts, never()).countReplacementsIssuedAfter(any(), any());
             verify(receipts, never()).nextSerial();
@@ -954,8 +953,7 @@ class DonationReceiptIssuerTest {
             when(receipts.findActiveSinglesFor(any())).thenReturn(List.of(marchSingle));
 
             assertThatThrownBy(() -> issuer.issueForYearByAdministrator(petr, CONNECTED_APPLICATION, JANA, YEAR_2026, TODAY))
-                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class)
-                    .hasMessageContaining("2027-000001");
+                    .isInstanceOf(ReceiptReplacementInBrowserOnly.class);
 
             verify(receipts, never()).nextSerial();
             verify(receipts, never()).save(any());

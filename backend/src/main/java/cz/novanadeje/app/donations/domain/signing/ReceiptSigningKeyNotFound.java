@@ -6,7 +6,7 @@ public class ReceiptSigningKeyNotFound extends NotFound {
 
     public static final String CODE = "donations/receipt-signing-key-not-found";
 
-    public ReceiptSigningKeyNotFound(ReceiptSigningKeyId id) {
-        super(CODE, "No published receipt signing key has the id " + id);
+    public ReceiptSigningKeyNotFound() {
+        super(CODE, "No published receipt signing key has the id asked for");
     }
 }

@@ -19,7 +19,7 @@ public record ReceiptFingerprint(String value) {
 
     public ReceiptFingerprint {
         if (value == null || !FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("A receipt fingerprint is 64 lowercase hex characters: " + value);
+            throw new IllegalArgumentException("A receipt fingerprint is 64 lowercase hex characters");
         }
     }
 

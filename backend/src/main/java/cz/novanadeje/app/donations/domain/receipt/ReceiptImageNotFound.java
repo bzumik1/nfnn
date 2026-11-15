@@ -6,7 +6,7 @@ public class ReceiptImageNotFound extends NotFound {
 
     public static final String CODE = "donations/receipt-image-not-found";
 
-    public ReceiptImageNotFound(ContentDigest digest) {
-        super(CODE, "No receipt of the donor shows the image " + digest);
+    public ReceiptImageNotFound() {
+        super(CODE, "No receipt of the donor shows the image");
     }
 }

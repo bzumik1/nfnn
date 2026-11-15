@@ -23,7 +23,7 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
             throw new IllegalArgumentException("Payment details need the account, the currency, the recipient, both messages and the verification amount");
         }
         if (recipientName.value().length() > SpaydText.RECIPIENT_NAME_LENGTH) {
-            throw new IllegalArgumentException("The recipient's SPAYD text holds at most " + SpaydText.RECIPIENT_NAME_LENGTH + " characters: " + recipientName);
+            throw new IllegalArgumentException("The recipient's SPAYD text holds at most " + SpaydText.RECIPIENT_NAME_LENGTH + " characters");
         }
         if (donationMessage.isEmpty() || accountVerificationMessage.isEmpty()) {
             throw new IllegalArgumentException("Payment details need a donation message and an account verification message that are not empty");

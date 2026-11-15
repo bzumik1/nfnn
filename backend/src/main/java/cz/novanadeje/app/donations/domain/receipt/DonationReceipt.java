@@ -64,7 +64,7 @@ public final class DonationReceipt {
         ReceiptWithdrawal withdrawn = new ReceiptWithdrawal(require(at, "Withdrawal time"), ReceiptWithdrawalReason.DONATIONS_CHANGED);
         requireActiveTo("be withdrawn");
         if (kind() != ReceiptKind.YEARLY) {
-            throw new IllegalStateException("Receipt " + number() + " is a single receipt, so it is not withdrawn because the donations changed");
+            throw new IllegalStateException("A single receipt is not withdrawn because the donations changed");
         }
         status = ReceiptStatus.WITHDRAWN;
         withdrawal = withdrawn;
@@ -148,7 +148,7 @@ public final class DonationReceipt {
 
     private void requireActiveTo(String change) {
         if (status != ReceiptStatus.ACTIVE) {
-            throw new IllegalStateException("Receipt " + number() + " is " + status + ", so it cannot " + change);
+            throw new IllegalStateException("The receipt is " + status + ", so it cannot " + change);
         }
     }
 

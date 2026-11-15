@@ -38,7 +38,7 @@ public record ReceiptTextSet(SortedMap<String, String> czech, Optional<SortedMap
         }
         texts.forEach((key, text) -> {
             if (key == null || !key.startsWith(PREFIX) || text == null || text.isBlank()) {
-                throw new IllegalArgumentException("A receipt text has a receipt.* key and a text: " + key);
+                throw new IllegalArgumentException("A receipt text has a receipt.* key and a text");
             }
         });
         return Collections.unmodifiableSortedMap(new TreeMap<>(texts));

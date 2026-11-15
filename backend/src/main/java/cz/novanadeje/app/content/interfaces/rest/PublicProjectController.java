@@ -35,7 +35,7 @@ class PublicProjectController {
         try {
             parsed = new Slug(slug);
         } catch (IllegalArgumentException malformed) {
-            throw new ProjectNotFound(slug);
+            throw new ProjectNotFound();
         }
         return ProjectResponse.from(projects.bySlug(parsed));
     }

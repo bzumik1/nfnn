@@ -112,7 +112,7 @@ public class ManualPairingService {
         Optional<DonationReceipt> withdrawn = receipts.findActiveForYear(donation.donor(), donation.receivedYear())
                 .filter(yearly -> yearly.lists(donation.id()));
         if (withdrawn.isPresent() && channel.isConnectedApplication()) {
-            throw new ReceiptWithdrawalInBrowserOnly(withdrawn.get().number());
+            throw new ReceiptWithdrawalInBrowserOnly();
         }
         withdrawn.ifPresent(yearly -> {
             yearly.withdrawBecauseDonationsChanged(now);

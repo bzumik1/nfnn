@@ -159,7 +159,7 @@ public class NewsAdminService {
 
     private NewsContent checked(NewsContent content, NewsArticleId id) {
         if (news.isSlugTakenByAnother(content.slug(), id)) {
-            throw new SlugTaken(content.slug());
+            throw new SlugTaken();
         }
         content.coverImage().ifPresent(media::lockForUse);
         content.coverImage().filter(image -> !media.exists(image)).ifPresent(image -> {

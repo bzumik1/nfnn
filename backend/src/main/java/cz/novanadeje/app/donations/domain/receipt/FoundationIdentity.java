@@ -13,7 +13,7 @@ public record FoundationIdentity(String name, String companyIdentifier, PostalAd
         name = requireText(name, "Foundation name");
         companyIdentifier = requireText(companyIdentifier, "Foundation company identifier");
         if (!COMPANY_IDENTIFIER.matcher(companyIdentifier).matches()) {
-            throw new IllegalArgumentException("The foundation's company identifier is eight digits: " + companyIdentifier);
+            throw new IllegalArgumentException("The foundation's company identifier is eight digits");
         }
         if (address == null) {
             throw new IllegalArgumentException("Foundation address is required");

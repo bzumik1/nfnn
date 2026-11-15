@@ -10,7 +10,6 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
 import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
-import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningPaused;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.DisplayName;
@@ -109,7 +108,7 @@ class YearlyReceiptsServiceTest {
         DonationReceipt issued = yearlyReceiptOf(JANA, YEAR_2026);
         when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY)).thenReturn(new AdministratorIssue(issued, Optional.empty()));
         when(issuer.issueForYearInBulk(PETR, BROWSER, ACME, YEAR_2026, TODAY))
-                .thenThrow(new ReceiptSigningPaused(new ReceiptSigningKeyId("21fe31df")));
+                .thenThrow(new ReceiptSigningPaused());
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
 
@@ -121,7 +120,7 @@ class YearlyReceiptsServiceTest {
     @DisplayName("Given a withdrawn signing key, when the yearly receipts are issued, then the whole run is refused as a single issue would be and nothing is audited")
     void should_refuse_whole_run_when_issued_given_signing_paused() {
         when(issuer.issueForYearInBulk(PETR, BROWSER, JANA, YEAR_2026, TODAY))
-                .thenThrow(new ReceiptSigningPaused(new ReceiptSigningKeyId("21fe31df")));
+                .thenThrow(new ReceiptSigningPaused());
 
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
         verifyNoInteractions(events);

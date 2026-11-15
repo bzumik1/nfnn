@@ -48,7 +48,7 @@ public class PublicNewsService {
         NewsArticle article = news.findBySlug(slug)
                 .or(() -> formerSlugs.newsArticle(slug).flatMap(news::findById))
                 .filter(found -> found.isVisibleOn(today))
-                .orElseThrow(() -> new NewsArticleNotFound(slug));
+                .orElseThrow(NewsArticleNotFound::new);
         return signers.view(article, today);
     }
 

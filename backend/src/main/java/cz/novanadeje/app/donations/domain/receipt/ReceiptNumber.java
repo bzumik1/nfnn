@@ -13,7 +13,7 @@ public record ReceiptNumber(String value) {
 
     public ReceiptNumber {
         if (value == null || !FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("A receipt number is YYYY-NNNNNN: " + value);
+            throw new IllegalArgumentException("A receipt number is YYYY-NNNNNN");
         }
     }
 

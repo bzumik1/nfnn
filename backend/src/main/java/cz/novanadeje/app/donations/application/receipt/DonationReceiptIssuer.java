@@ -120,9 +120,9 @@ public class DonationReceiptIssuer {
             case WITHDRAWN -> {
                 log.warn("No receipt is issued to donor {}: the receipt signing key {} of this server is withdrawn and no new seed has replaced it", donor,
                         key.id());
-                throw new ReceiptSigningPaused(key.id());
+                throw new ReceiptSigningPaused();
             }
-            case UNPUBLISHED -> throw new ReceiptSigningKeyUnpublished(key.id());
+            case UNPUBLISHED -> throw new ReceiptSigningKeyUnpublished();
         }
     }
 
@@ -137,7 +137,7 @@ public class DonationReceiptIssuer {
         if (channel.isConnectedApplication()) {
             Optional<DonationReceipt> replaced = active.or(() -> singles.stream().findFirst());
             if (replaced.isPresent()) {
-                throw new ReceiptReplacementInBrowserOnly(replaced.get().number());
+                throw new ReceiptReplacementInBrowserOnly();
             }
         }
         AdministratorIssue issue = new AdministratorIssue(issueNew(request, fingerprint, active, singles), active);
@@ -176,7 +176,7 @@ public class DonationReceiptIssuer {
             Optional<DonationReceipt> yearly = receipts.findActiveForYear(single.donor(), donation.receivedYear())
                     .filter(receipt -> receipt.lists(donation.id()));
             if (yearly.isPresent()) {
-                throw new DonationOnYearlyReceipt(donation.id(), yearly.get().number());
+                throw new DonationOnYearlyReceipt(donation.id());
             }
         }
     }

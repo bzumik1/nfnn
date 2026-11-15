@@ -10,7 +10,7 @@ public enum Currency {
         try {
             return Currency.valueOf(code.trim().toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException unknown) {
-            throw new IllegalArgumentException("Unsupported currency: " + code);
+            throw new IllegalArgumentException("Unsupported currency");
         }
     }
 }

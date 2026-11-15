@@ -9,7 +9,7 @@ public record OAuthProperties(String issuer, String authorizationPath, Duration 
     public OAuthProperties {
         issuer = requireAddress("issuer", issuer);
         if (authorizationPath == null || !authorizationPath.startsWith("/")) {
-            throw new IllegalArgumentException(PREFIX + "authorization-path must start with '/', but is '" + authorizationPath + "'");
+            throw new IllegalArgumentException(PREFIX + "authorization-path must start with '/'");
         }
         if (authorizationCodeTtl == null || authorizationCodeTtl.isZero() || authorizationCodeTtl.isNegative()) {
             throw new IllegalArgumentException(PREFIX + "authorization-code-ttl must be a positive duration, but is " + authorizationCodeTtl);
@@ -28,7 +28,7 @@ public record OAuthProperties(String issuer, String authorizationPath, Duration 
         }
         String trimmed = value.trim();
         if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-            throw new IllegalArgumentException(PREFIX + name + " must start with http:// or https://, but is '" + trimmed + "'");
+            throw new IllegalArgumentException(PREFIX + name + " must start with http:// or https://");
         }
         return trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
     }

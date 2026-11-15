@@ -16,7 +16,7 @@ public record ReceiptSigningKeyId(String value) {
 
     public ReceiptSigningKeyId {
         if (value == null || !FORMAT.matcher(value).matches()) {
-            throw new IllegalArgumentException("A receipt signing key id is 8 lowercase hex characters: " + value);
+            throw new IllegalArgumentException("A receipt signing key id is 8 lowercase hex characters");
         }
     }
 

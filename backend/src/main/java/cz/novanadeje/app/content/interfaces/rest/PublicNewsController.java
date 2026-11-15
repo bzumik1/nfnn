@@ -35,7 +35,7 @@ class PublicNewsController {
         try {
             parsed = new Slug(slug);
         } catch (IllegalArgumentException malformed) {
-            throw new NewsArticleNotFound(slug);
+            throw new NewsArticleNotFound();
         }
         return NewsArticleResponse.from(news.bySlug(parsed));
     }

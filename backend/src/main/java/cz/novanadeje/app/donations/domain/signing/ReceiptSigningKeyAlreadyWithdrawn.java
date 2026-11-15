@@ -6,7 +6,7 @@ public class ReceiptSigningKeyAlreadyWithdrawn extends Conflict {
 
     public static final String CODE = "donations/receipt-signing-key-already-withdrawn";
 
-    public ReceiptSigningKeyAlreadyWithdrawn(ReceiptSigningKeyId id) {
-        super(CODE, "The receipt signing key " + id + " is already withdrawn");
+    public ReceiptSigningKeyAlreadyWithdrawn() {
+        super(CODE, "The receipt signing key is already withdrawn");
     }
 }

@@ -72,9 +72,9 @@ public class AdminReceiptsService {
     @Transactional(readOnly = true)
     public StoredReceiptImage image(ContentDigest digest) {
         if (!receipts.anyShowsImage(digest)) {
-            throw new ReceiptImageNotFound(digest);
+            throw new ReceiptImageNotFound();
         }
-        return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));
+        return images.find(digest).orElseThrow(ReceiptImageNotFound::new);
     }
 
     public ReceiptYears receiptYears() {

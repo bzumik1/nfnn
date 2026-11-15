@@ -47,7 +47,8 @@ class BankImportPropertiesTest {
     void should_refuse_to_bind_when_created_given_history_from_that_is_not_a_date(String historyFrom) {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BankImportProperties(Period.ofDays(3), Period.ofDays(89), historyFrom, COOLDOWN))
-                .withMessage("FIO_HISTORY_FROM must be a date in the form YYYY-MM-DD, e.g. 2025-01-01, but is '" + historyFrom + "'");
+                .withMessage("FIO_HISTORY_FROM must be a date in the form YYYY-MM-DD, e.g. 2025-01-01")
+                .withNoCause();
     }
 
     @Test

@@ -1,13 +1,17 @@
 package cz.novanadeje.app.architecture;
 
+import com.sun.source.tree.AssignmentTree;
 import com.sun.source.tree.BinaryTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.CompoundAssignmentTree;
 import com.sun.source.tree.ConditionalExpressionTree;
 import com.sun.source.tree.ExpressionStatementTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
-import com.sun.source.tree.LineMap;
+import com.sun.source.tree.LambdaExpressionTree;
+import com.sun.source.tree.LiteralTree;
+import com.sun.source.tree.MemberReferenceTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodInvocationTree;
 import com.sun.source.tree.MethodTree;
@@ -17,6 +21,7 @@ import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeCastTree;
+import com.sun.source.tree.VariableTree;
 import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
@@ -46,7 +51,9 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -82,9 +89,12 @@ final class ExceptionMessageValues {
     private final Elements elements;
     private final TypeMirror throwable;
     private final Map<ExecutableElement, List<Forwarding>> forwardingsByConstructor = new HashMap<>();
-    private final Set<ExecutableElement> scannedConstructors = new HashSet<>();
+    private final Map<VariableElement, List<TreePath>> feedsByVariable = new HashMap<>();
+    private final Set<VariableElement> unsettledVariables = new HashSet<>();
+    private final Set<ExecutableElement> calledExecutables = new HashSet<>();
     private final Map<TypeElement, Boolean> openSiteTypes = new HashMap<>();
     private Set<ParameterSlot> messageParameters = Set.of();
+    private Set<VariableElement> closedVariables = Set.of();
 
     private ExceptionMessageValues(JavacTask task) {
         this.trees = Trees.instance(task);
@@ -93,13 +103,9 @@ final class ExceptionMessageValues {
         this.throwable = elements.getTypeElement("java.lang.Throwable").asType();
     }
 
-    static List<Path> domainAndApplicationSources(Path root) {
+    static List<Path> javaSources(Path root) {
         try (Stream<Path> files = Files.walk(root)) {
-            return files.filter(Files::isRegularFile)
-                    .filter(file -> file.toString().endsWith(".java"))
-                    .filter(ExceptionMessageValues::liesInAMessageLayer)
-                    .sorted()
-                    .toList();
+            return files.filter(Files::isRegularFile).filter(file -> file.toString().endsWith(".java")).sorted().toList();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -124,8 +130,8 @@ final class ExceptionMessageValues {
         }
     }
 
-    private static boolean liesInAMessageLayer(Path file) {
-        for (Path part : file) {
+    private static boolean liesInAMessageLayer(CompilationUnitTree unit) {
+        for (Path part : Path.of(unit.getSourceFile().toUri())) {
             if (MESSAGE_LAYERS.contains(part.toString())) {
                 return true;
             }
@@ -144,14 +150,15 @@ final class ExceptionMessageValues {
     }
 
     private List<String> reportsOf(List<CompilationUnitTree> units) {
-        units.forEach(unit -> new ConstructorForwardings(unit).scan(unit, null));
-        messageParameters = messageParametersOfScannedConstructors();
+        units.forEach(unit -> new Declarations().scan(unit, null));
+        messageParameters = messageParametersOfThrowableConstructors();
+        closedVariables = variablesFedOnlyClosedValues();
         List<String> reports = new ArrayList<>();
-        units.forEach(unit -> new MessageSites(unit, reports).scan(unit, null));
+        units.stream().filter(ExceptionMessageValues::liesInAMessageLayer).forEach(unit -> new MessageSites(unit, reports).scan(unit, null));
         return reports;
     }
 
-    private Set<ParameterSlot> messageParametersOfScannedConstructors() {
+    private Set<ParameterSlot> messageParametersOfThrowableConstructors() {
         Set<ParameterSlot> found = new HashSet<>();
         boolean grown = true;
         while (grown) {
@@ -170,21 +177,122 @@ final class ExceptionMessageValues {
     }
 
     private boolean reachesAMessage(ExecutableElement target, int argumentIndex, Set<ParameterSlot> knownMessages) {
-        if (scannedConstructors.contains(target)) {
+        if (forwardingsByConstructor.containsKey(target)) {
             return knownMessages.contains(new ParameterSlot(target, argumentIndex));
         }
         return argumentIndex < target.getParameters().size() && !isThrowable(target.getParameters().get(argumentIndex).asType());
     }
 
+    private Set<VariableElement> variablesFedOnlyClosedValues() {
+        Set<VariableElement> closed = new HashSet<>(feedsByVariable.keySet());
+        closed.removeAll(unsettledVariables);
+        closed.removeIf(variable -> variable.getKind() == ElementKind.PARAMETER && !calledExecutables.contains(variable.getEnclosingElement()));
+        closedVariables = closed;
+        boolean shrunk = true;
+        while (shrunk) {
+            shrunk = false;
+            for (VariableElement variable : List.copyOf(closed)) {
+                if (feedsByVariable.get(variable).stream().anyMatch(this::carriesAnOpenValue)) {
+                    closed.remove(variable);
+                    shrunk = true;
+                }
+            }
+        }
+        return Set.copyOf(closed);
+    }
+
     private boolean isMessageArgument(ExecutableElement constructor, int argumentIndex, TypeMirror argumentType) {
-        if (scannedConstructors.contains(constructor)) {
+        if (forwardingsByConstructor.containsKey(constructor)) {
             return messageParameters.contains(new ParameterSlot(constructor, argumentIndex));
         }
         return !isThrowable(argumentType);
     }
 
+    private boolean carriesAnOpenValue(TreePath path) {
+        ExpressionTree expression = (ExpressionTree) path.getLeaf();
+        if (isConstant(path)) {
+            return false;
+        }
+        return switch (expression) {
+            case ParenthesizedTree parenthesized -> carriesAnOpenValue(child(path, parenthesized.getExpression()));
+            case TypeCastTree cast -> carriesAnOpenValue(child(path, cast.getExpression()));
+            case ConditionalExpressionTree conditional ->
+                    carriesAnOpenValue(child(path, conditional.getTrueExpression())) || carriesAnOpenValue(child(path, conditional.getFalseExpression()));
+            case BinaryTree binary when binary.getKind() == Tree.Kind.PLUS ->
+                    carriesAnOpenValue(child(path, binary.getLeftOperand())) || carriesAnOpenValue(child(path, binary.getRightOperand()));
+            case BinaryTree ignored -> false;
+            case MethodInvocationTree invocation -> invocationCarriesAnOpenValue(path, invocation);
+            case NewClassTree creation -> !isThrowable(trees.getTypeMirror(path)) && anyCarriesAnOpenValue(path, creation.getArguments());
+            case NewArrayTree array -> array.getInitializers() != null && anyCarriesAnOpenValue(path, array.getInitializers());
+            case IdentifierTree ignored -> holdsAnOpenValue(path);
+            case MemberSelectTree ignored -> holdsAnOpenValue(path);
+            case LambdaExpressionTree ignored -> false;
+            case MemberReferenceTree ignored -> false;
+            default -> hasAnOpenType(path);
+        };
+    }
+
+    private boolean anyCarriesAnOpenValue(TreePath parent, List<? extends ExpressionTree> expressions) {
+        return expressions.stream().anyMatch(expression -> carriesAnOpenValue(child(parent, expression)));
+    }
+
+    private boolean invocationCarriesAnOpenValue(TreePath path, MethodInvocationTree invocation) {
+        if (!hasAnOpenType(path)) {
+            return false;
+        }
+        if (anyCarriesAnOpenValue(path, invocation.getArguments())) {
+            return true;
+        }
+        if (invocation.getMethodSelect() instanceof MemberSelectTree select) {
+            TreePath receiver = child(child(path, select), select.getExpression());
+            return !namesAType(receiver) && carriesAnOpenValue(receiver);
+        }
+        Element method = trees.getElement(path);
+        return method != null && !method.getModifiers().contains(Modifier.STATIC) && isOpen(method.getEnclosingElement().asType());
+    }
+
+    private boolean holdsAnOpenValue(TreePath path) {
+        Element element = trees.getElement(path);
+        if (element == null || element.getKind().isClass() || element.getKind().isInterface() || element.getKind() == ElementKind.PACKAGE) {
+            return false;
+        }
+        if (element instanceof VariableElement variable && closedVariables.contains(variable)) {
+            return false;
+        }
+        return hasAnOpenType(path);
+    }
+
+    private boolean hasAnOpenType(TreePath path) {
+        TypeMirror type = trees.getTypeMirror(path);
+        return type != null && isOpen(type);
+    }
+
+    private boolean namesAType(TreePath path) {
+        Element element = trees.getElement(path);
+        return element != null && (element.getKind().isClass() || element.getKind().isInterface() || element.getKind() == ElementKind.PACKAGE);
+    }
+
+    private boolean isConstant(TreePath path) {
+        return switch (path.getLeaf()) {
+            case LiteralTree ignored -> true;
+            case ParenthesizedTree parenthesized -> isConstant(child(path, parenthesized.getExpression()));
+            case BinaryTree binary -> isConstant(child(path, binary.getLeftOperand())) && isConstant(child(path, binary.getRightOperand()));
+            case IdentifierTree ignored -> namesAConstant(path);
+            case MemberSelectTree ignored -> namesAConstant(path);
+            default -> false;
+        };
+    }
+
+    private boolean namesAConstant(TreePath path) {
+        return trees.getElement(path) instanceof VariableElement variable && variable.getConstantValue() != null;
+    }
+
+    private static TreePath child(TreePath parent, Tree leaf) {
+        return new TreePath(parent, leaf);
+    }
+
     private boolean isThrowable(TypeMirror type) {
-        return type.getKind() == TypeKind.DECLARED && types.isAssignable(types.erasure(type), throwable);
+        return type != null && type.getKind() == TypeKind.DECLARED && types.isAssignable(types.erasure(type), throwable);
     }
 
     private boolean isOpen(TypeMirror type) {
@@ -193,8 +301,7 @@ final class ExceptionMessageValues {
 
     private boolean isOpen(TypeMirror type, Set<TypeElement> visiting) {
         return switch (type.getKind()) {
-            case BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, VOID, NULL -> false;
-            case CHAR -> false;
+            case BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, CHAR, VOID, NULL -> false;
             case ARRAY -> isOpenArray((ArrayType) type, visiting);
             case DECLARED -> isOpenDeclared((DeclaredType) type, visiting);
             default -> true;
@@ -223,9 +330,7 @@ final class ExceptionMessageValues {
     }
 
     private boolean isBoxOrNumber(DeclaredType type) {
-        TypeMirror number = elements.getTypeElement("java.lang.Number").asType();
-        TypeMirror erased = types.erasure(type);
-        if (types.isAssignable(erased, number)) {
+        if (types.isAssignable(types.erasure(type), elements.getTypeElement("java.lang.Number").asType())) {
             return true;
         }
         try {
@@ -262,29 +367,132 @@ final class ExceptionMessageValues {
         return open;
     }
 
+    private boolean overridesAnother(ExecutableElement method) {
+        TypeElement owner = (TypeElement) method.getEnclosingElement();
+        Deque<TypeMirror> supertypes = new ArrayDeque<>(types.directSupertypes(owner.asType()));
+        Set<Element> seen = new HashSet<>();
+        while (!supertypes.isEmpty()) {
+            Element supertype = types.asElement(supertypes.pop());
+            if (supertype == null || !seen.add(supertype)) {
+                continue;
+            }
+            for (ExecutableElement candidate : ElementFilter.methodsIn(supertype.getEnclosedElements())) {
+                if (elements.overrides(method, candidate, owner)) {
+                    return true;
+                }
+            }
+            supertypes.addAll(types.directSupertypes(supertype.asType()));
+        }
+        return false;
+    }
+
     private record ParameterSlot(ExecutableElement constructor, int index) {
     }
 
     private record Forwarding(int parameterIndex, ExecutableElement target, int argumentIndex) {
     }
 
-    private final class ConstructorForwardings extends TreePathScanner<Void, Void> {
-
-        private final CompilationUnitTree unit;
-
-        private ConstructorForwardings(CompilationUnitTree unit) {
-            this.unit = unit;
-        }
+    private final class Declarations extends TreePathScanner<Void, Void> {
 
         @Override
         public Void visitMethod(MethodTree method, Void unused) {
-            Element element = trees.getElement(getCurrentPath());
-            if (element instanceof ExecutableElement constructor && constructor.getKind() == ElementKind.CONSTRUCTOR
-                    && isThrowable(constructor.getEnclosingElement().asType())) {
-                scannedConstructors.add(constructor);
-                forwardingsByConstructor.put(constructor, forwardingsOf(constructor, method));
+            if (trees.getElement(getCurrentPath()) instanceof ExecutableElement executable) {
+                if (executable.getKind() == ElementKind.CONSTRUCTOR && isThrowable(executable.getEnclosingElement().asType())) {
+                    forwardingsByConstructor.put(executable, forwardingsOf(executable, method));
+                }
+                if (isReachedOutsideTheSources(executable)) {
+                    unsettledVariables.addAll(executable.getParameters());
+                }
             }
             return super.visitMethod(method, unused);
+        }
+
+        @Override
+        public Void visitMethodInvocation(MethodInvocationTree invocation, Void unused) {
+            feedParameters(trees.getElement(getCurrentPath()), invocation.getArguments());
+            return super.visitMethodInvocation(invocation, unused);
+        }
+
+        @Override
+        public Void visitNewClass(NewClassTree creation, Void unused) {
+            feedParameters(trees.getElement(getCurrentPath()), creation.getArguments());
+            return super.visitNewClass(creation, unused);
+        }
+
+        @Override
+        public Void visitLambdaExpression(LambdaExpressionTree lambda, Void unused) {
+            lambda.getParameters().forEach(parameter -> {
+                if (trees.getElement(child(getCurrentPath(), parameter)) instanceof VariableElement variable) {
+                    unsettledVariables.add(variable);
+                }
+            });
+            return super.visitLambdaExpression(lambda, unused);
+        }
+
+        @Override
+        public Void visitMemberReference(MemberReferenceTree reference, Void unused) {
+            if (trees.getElement(getCurrentPath()) instanceof ExecutableElement method) {
+                unsettledVariables.addAll(method.getParameters());
+            }
+            return super.visitMemberReference(reference, unused);
+        }
+
+        @Override
+        public Void visitAssignment(AssignmentTree assignment, Void unused) {
+            feed(child(getCurrentPath(), assignment.getVariable()), assignment.getExpression());
+            return super.visitAssignment(assignment, unused);
+        }
+
+        @Override
+        public Void visitCompoundAssignment(CompoundAssignmentTree assignment, Void unused) {
+            feed(child(getCurrentPath(), assignment.getVariable()), assignment.getExpression());
+            return super.visitCompoundAssignment(assignment, unused);
+        }
+
+        @Override
+        public Void visitVariable(VariableTree variable, Void unused) {
+            if (variable.getInitializer() != null && trees.getElement(getCurrentPath()) instanceof VariableElement field
+                    && field.getKind() == ElementKind.FIELD) {
+                addFeed(field, child(getCurrentPath(), variable.getInitializer()));
+            }
+            return super.visitVariable(variable, unused);
+        }
+
+        private boolean isReachedOutsideTheSources(ExecutableElement executable) {
+            return elements.isCanonicalConstructor(executable)
+                    || executable.getAnnotationMirrors().stream().anyMatch(annotation -> !isOverride(annotation.getAnnotationType()))
+                    || executable.getKind() == ElementKind.METHOD && overridesAnother(executable);
+        }
+
+        private boolean isOverride(DeclaredType annotation) {
+            return ((TypeElement) annotation.asElement()).getQualifiedName().contentEquals("java.lang.Override");
+        }
+
+        private void feedParameters(Element target, List<? extends ExpressionTree> arguments) {
+            if (!(target instanceof ExecutableElement executable) || executable.getParameters().isEmpty()) {
+                return;
+            }
+            calledExecutables.add(executable);
+            List<? extends VariableElement> parameters = executable.getParameters();
+            for (int index = 0; index < arguments.size(); index++) {
+                addFeed(parameters.get(Math.min(index, parameters.size() - 1)), child(getCurrentPath(), arguments.get(index)));
+            }
+        }
+
+        private void feed(TreePath target, ExpressionTree value) {
+            if (trees.getElement(target) instanceof VariableElement variable) {
+                addFeed(variable, child(getCurrentPath(), value));
+            }
+        }
+
+        private void addFeed(VariableElement variable, TreePath value) {
+            boolean tracked = variable.getKind() == ElementKind.PARAMETER || variable.getKind() == ElementKind.FIELD;
+            if (tracked && isOpen(variable.asType())) {
+                feedsByVariable.computeIfAbsent(variable, ignored -> new ArrayList<>()).add(value);
+                if (variable.getKind() == ElementKind.FIELD && !variable.getModifiers().contains(Modifier.FINAL)) {
+                    unsettledVariables.add(variable);
+                }
+            }
         }
 
         private List<Forwarding> forwardingsOf(ExecutableElement constructor, MethodTree method) {
@@ -297,11 +505,12 @@ final class ExceptionMessageValues {
                     || !callsAnotherConstructor(invocation)) {
                 return List.of();
             }
-            ExecutableElement target = (ExecutableElement) trees.getElement(TreePath.getPath(unit, invocation));
+            TreePath invocationPath = child(child(child(child(getCurrentPath(), method.getBody()), statement), statement.getExpression()), invocation);
+            ExecutableElement target = (ExecutableElement) trees.getElement(invocationPath);
             List<Forwarding> forwardings = new ArrayList<>();
             List<? extends ExpressionTree> arguments = invocation.getArguments();
             for (int argument = 0; argument < arguments.size(); argument++) {
-                int parameter = constructor.getParameters().indexOf(trees.getElement(TreePath.getPath(unit, arguments.get(argument))));
+                int parameter = constructor.getParameters().indexOf(trees.getElement(child(invocationPath, arguments.get(argument))));
                 if (parameter >= 0) {
                     forwardings.add(new Forwarding(parameter, target, argument));
                 }
@@ -327,10 +536,8 @@ final class ExceptionMessageValues {
 
         @Override
         public Void visitNewClass(NewClassTree creation, Void unused) {
-            TypeMirror created = trees.getTypeMirror(getCurrentPath());
-            if (created != null && isThrowable(created)) {
-                ExecutableElement constructor = (ExecutableElement) trees.getElement(getCurrentPath());
-                checkArguments(creation, constructor, creation.getArguments(), Set.of());
+            if (isThrowable(trees.getTypeMirror(getCurrentPath())) && trees.getElement(getCurrentPath()) instanceof ExecutableElement constructor) {
+                checkArguments(constructor, creation.getArguments(), Set.of());
             }
             return super.visitNewClass(creation, unused);
         }
@@ -338,20 +545,25 @@ final class ExceptionMessageValues {
         @Override
         public Void visitMethodInvocation(MethodInvocationTree invocation, Void unused) {
             if (callsAnotherConstructor(invocation)) {
-                Element element = trees.getElement(getCurrentPath());
                 ExecutableElement enclosing = enclosingConstructor();
-                if (element instanceof ExecutableElement target && enclosing != null && isThrowable(enclosing.getEnclosingElement().asType())) {
-                    checkArguments(invocation, target, invocation.getArguments(), Set.copyOf(enclosing.getParameters()));
+                if (enclosing != null && isThrowable(enclosing.getEnclosingElement().asType())
+                        && trees.getElement(getCurrentPath()) instanceof ExecutableElement target) {
+                    checkArguments(target, invocation.getArguments(), Set.copyOf(enclosing.getParameters()));
                 }
             }
             return super.visitMethodInvocation(invocation, unused);
         }
 
         private ExecutableElement enclosingConstructor() {
+            MethodTree method = enclosingMethod();
+            return method != null && trees.getElement(trees.getPath(unit, method)) instanceof ExecutableElement executable
+                    && executable.getKind() == ElementKind.CONSTRUCTOR ? executable : null;
+        }
+
+        private MethodTree enclosingMethod() {
             for (TreePath path = getCurrentPath(); path != null; path = path.getParentPath()) {
-                if (path.getLeaf() instanceof MethodTree) {
-                    Element element = trees.getElement(path);
-                    return element instanceof ExecutableElement constructor && constructor.getKind() == ElementKind.CONSTRUCTOR ? constructor : null;
+                if (path.getLeaf() instanceof MethodTree method) {
+                    return method;
                 }
                 if (path.getLeaf() instanceof ClassTree) {
                     return null;
@@ -360,102 +572,34 @@ final class ExceptionMessageValues {
             return null;
         }
 
-        private void checkArguments(Tree site, ExecutableElement constructor, List<? extends ExpressionTree> arguments,
-                Set<? extends VariableElement> forwardedParameters) {
+        private void checkArguments(ExecutableElement constructor, List<? extends ExpressionTree> arguments, Set<? extends VariableElement> forwarded) {
             for (int index = 0; index < arguments.size(); index++) {
-                ExpressionTree argument = arguments.get(index);
-                TreePath path = TreePath.getPath(unit, argument);
-                Element named = trees.getElement(path);
-                if (named != null && forwardedParameters.contains(named)) {
+                TreePath argument = child(getCurrentPath(), arguments.get(index));
+                if (trees.getElement(argument) instanceof VariableElement named && forwarded.contains(named)) {
                     continue;
                 }
-                if (isMessageArgument(constructor, index, trees.getTypeMirror(path)) && carriesAnOpenValue(argument)) {
-                    reports.add(locationOf(site) + " builds the message of " + constructor.getEnclosingElement().getSimpleName()
-                            + " from an open value: " + argument);
+                if (isMessageArgument(constructor, index, trees.getTypeMirror(argument)) && carriesAnOpenValue(argument)) {
+                    reports.add(siteName() + " builds the message of " + constructor.getEnclosingElement().getSimpleName()
+                            + " from an open value: " + arguments.get(index) + " (" + locationOfSite() + ")");
                 }
             }
         }
 
-        private boolean carriesAnOpenValue(ExpressionTree expression) {
-            if (isConstant(expression)) {
-                return false;
+        private String siteName() {
+            ClassTree owner = null;
+            for (TreePath path = getCurrentPath(); path != null && owner == null; path = path.getParentPath()) {
+                if (path.getLeaf() instanceof ClassTree type && !type.getSimpleName().isEmpty()) {
+                    owner = type;
+                }
             }
-            return switch (expression) {
-                case ParenthesizedTree parenthesized -> carriesAnOpenValue(parenthesized.getExpression());
-                case TypeCastTree cast -> carriesAnOpenValue(cast.getExpression());
-                case ConditionalExpressionTree conditional ->
-                        carriesAnOpenValue(conditional.getTrueExpression()) || carriesAnOpenValue(conditional.getFalseExpression());
-                case BinaryTree binary when binary.getKind() == Tree.Kind.PLUS ->
-                        carriesAnOpenValue(binary.getLeftOperand()) || carriesAnOpenValue(binary.getRightOperand());
-                case BinaryTree ignored -> false;
-                case MethodInvocationTree invocation -> invocationCarriesAnOpenValue(invocation);
-                case NewClassTree creation -> !isThrowable(trees.getTypeMirror(TreePath.getPath(unit, creation)))
-                        && creation.getArguments().stream().anyMatch(this::carriesAnOpenValue);
-                case NewArrayTree array -> array.getInitializers() != null && array.getInitializers().stream().anyMatch(this::carriesAnOpenValue);
-                case IdentifierTree identifier -> holdsAnOpenValue(identifier);
-                case MemberSelectTree select -> holdsAnOpenValue(select);
-                default -> false;
-            };
+            MethodTree method = enclosingMethod();
+            String className = owner == null ? "?" : owner.getSimpleName().toString();
+            return className + "." + (method == null ? "<initializer>" : method.getName().toString());
         }
 
-        private boolean invocationCarriesAnOpenValue(MethodInvocationTree invocation) {
-            TypeMirror result = trees.getTypeMirror(TreePath.getPath(unit, invocation));
-            if (result != null && !isOpen(result)) {
-                return false;
-            }
-            if (invocation.getArguments().stream().anyMatch(this::carriesAnOpenValue)) {
-                return true;
-            }
-            return switch (invocation.getMethodSelect()) {
-                case MemberSelectTree select -> !isTypeName(select.getExpression()) && carriesAnOpenValue(select.getExpression());
-                default -> implicitReceiverIsOpen(invocation);
-            };
-        }
-
-        private boolean implicitReceiverIsOpen(MethodInvocationTree invocation) {
-            Element method = trees.getElement(TreePath.getPath(unit, invocation));
-            if (method == null || method.getModifiers().contains(Modifier.STATIC)) {
-                return false;
-            }
-            return isOpen(method.getEnclosingElement().asType());
-        }
-
-        private boolean isTypeName(ExpressionTree expression) {
-            Element element = trees.getElement(TreePath.getPath(unit, expression));
-            return element != null && (element.getKind().isClass() || element.getKind().isInterface() || element.getKind() == ElementKind.PACKAGE);
-        }
-
-        private boolean holdsAnOpenValue(ExpressionTree variable) {
-            TreePath path = TreePath.getPath(unit, variable);
-            Element element = trees.getElement(path);
-            if (element != null && (element.getKind().isClass() || element.getKind().isInterface())) {
-                return false;
-            }
-            if (variable instanceof MemberSelectTree select && !isTypeName(select.getExpression()) && carriesAnOpenValue(select.getExpression())) {
-                return true;
-            }
-            TypeMirror type = trees.getTypeMirror(path);
-            return type != null && isOpen(type);
-        }
-
-        private boolean isConstant(ExpressionTree expression) {
-            return switch (expression) {
-                case ParenthesizedTree parenthesized -> isConstant(parenthesized.getExpression());
-                case BinaryTree binary -> isConstant(binary.getLeftOperand()) && isConstant(binary.getRightOperand());
-                case IdentifierTree identifier -> namesAConstant(identifier);
-                case MemberSelectTree select -> namesAConstant(select);
-                default -> expression.getKind() == Tree.Kind.STRING_LITERAL || expression instanceof com.sun.source.tree.LiteralTree;
-            };
-        }
-
-        private boolean namesAConstant(ExpressionTree variable) {
-            return trees.getElement(TreePath.getPath(unit, variable)) instanceof VariableElement field && field.getConstantValue() != null;
-        }
-
-        private String locationOf(Tree site) {
-            LineMap lines = unit.getLineMap();
-            long position = trees.getSourcePositions().getStartPosition(unit, site);
-            return unit.getSourceFile().getName().replaceFirst(".*/(?=[^/]+$)", "") + ":" + lines.getLineNumber(position);
+        private String locationOfSite() {
+            long position = trees.getSourcePositions().getStartPosition(unit, getCurrentPath().getLeaf());
+            return Path.of(unit.getSourceFile().toUri()).getFileName() + ":" + unit.getLineMap().getLineNumber(position);
         }
     }
 }

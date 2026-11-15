@@ -11,7 +11,7 @@ public record StoredDataChanged(LiveFeed feed, Optional<UUID> donor) {
         Objects.requireNonNull(feed, "feed");
         Objects.requireNonNull(donor, "donor");
         if ((feed.audience() == LiveFeed.Audience.DONOR) != donor.isPresent()) {
-            throw new IllegalArgumentException("Feed " + feed + " needs a donor exactly when it belongs to one");
+            throw new IllegalArgumentException("A feed for " + feed.audience() + " needs a donor exactly when it belongs to one");
         }
     }
 

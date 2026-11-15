@@ -59,7 +59,7 @@ public record SignedReceipt(ReceiptKind kind, ReceiptNumber number, LocalDate is
 
     private static void requireIssuedIn(ReceiptNumber number, LocalDate issuedOn) {
         if (!number.value().startsWith(String.format(Locale.ROOT, "%04d-", issuedOn.getYear()))) {
-            throw new IllegalArgumentException("The receipt " + number + " carries the year it was issued, " + issuedOn.getYear());
+            throw new IllegalArgumentException("The receipt number carries the year it was issued, " + issuedOn.getYear());
         }
     }
 }
