@@ -2,7 +2,6 @@ package cz.novanadeje.app.donors.infrastructure.mail;
 
 import cz.novanadeje.app.donors.application.DonorEmailVerificationProperties;
 import cz.novanadeje.app.donors.application.event.DonorEmailVerificationRequested;
-import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationReminderDue;
 import cz.novanadeje.app.donors.application.event.DonorRegistrationRepeated;
 import cz.novanadeje.app.shared.infrastructure.config.PublicUrlProperties;
@@ -84,7 +83,7 @@ class DonorRegistrationEmailSender {
         Locale locale = event.preferredLocale().toLocale();
         String link = publicUrl.link(VERIFICATION_PAGE + event.secret().value()).toString();
         long validHours = properties.tokenTtl().toHours();
-        long expiryDays = DonorRegistrationExpiryService.RETENTION.toDays();
+        long expiryDays = event.unconfirmedLifetime().toDays();
         String footer = text(REMINDER_KEYS, "footer", locale, sender.senderEmail());
         String plainText = paragraphs(
                 text(REMINDER_KEYS, "greeting", locale),

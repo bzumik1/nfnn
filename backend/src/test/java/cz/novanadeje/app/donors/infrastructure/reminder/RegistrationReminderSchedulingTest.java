@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.DonorRegistrationReminderService;
+import cz.novanadeje.app.donors.application.ExpiredRegistrations;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -21,6 +22,7 @@ import org.springframework.scheduling.config.ScheduledTaskHolder;
 import org.springframework.scheduling.support.SimpleTriggerContext;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -72,7 +74,10 @@ class RegistrationReminderSchedulingTest {
         logged.start();
         schedulerLog.addAppender(logged);
         try {
-            new RegistrationReminderScheduler(service, mock(DonorRegistrationExpiryService.class)).tendUnconfirmedRegistrations();
+            DonorRegistrationExpiryService expiry = mock(DonorRegistrationExpiryService.class);
+            when(expiry.expireUnconfirmed()).thenReturn(new ExpiredRegistrations(0, Duration.ofDays(30)));
+
+            new RegistrationReminderScheduler(service, expiry).tendUnconfirmedRegistrations();
 
             assertThat(logged.list).filteredOn(line -> line.getLevel().isGreaterOrEqual(Level.INFO)).singleElement().satisfies(line -> {
                 assertThat(line.getLevel()).isEqualTo(Level.ERROR);
@@ -88,7 +93,7 @@ class RegistrationReminderSchedulingTest {
     void should_delete_expired_before_reminding_and_log_counts_when_run_given_expired_registrations() {
         DonorRegistrationReminderService reminders = mock(DonorRegistrationReminderService.class);
         DonorRegistrationExpiryService expiry = mock(DonorRegistrationExpiryService.class);
-        when(expiry.expireUnconfirmed()).thenReturn(3);
+        when(expiry.expireUnconfirmed()).thenReturn(new ExpiredRegistrations(3, Duration.ofDays(30)));
         when(reminders.remindUnconfirmed()).thenReturn(2);
         Logger schedulerLog = (Logger) LoggerFactory.getLogger(RegistrationReminderScheduler.class);
         ListAppender<ILoggingEvent> logged = new ListAppender<>();
@@ -144,5 +149,25 @@ class RegistrationReminderSchedulingTest {
     @Configuration(proxyBeanMethods = false)
     @EnableScheduling
     static class Scheduling {
+    }
+
+    @Test
+    @DisplayName("Given the expiry deleted registrations under a lifetime other than thirty days, when the job runs, then its log names the lifetime the expiry reported")
+    void should_log_the_reported_lifetime_when_run_given_another_lifetime() {
+        DonorRegistrationReminderService reminders = mock(DonorRegistrationReminderService.class);
+        DonorRegistrationExpiryService expiry = mock(DonorRegistrationExpiryService.class);
+        when(expiry.expireUnconfirmed()).thenReturn(new ExpiredRegistrations(3, Duration.ofDays(45)));
+        Logger schedulerLog = (Logger) LoggerFactory.getLogger(RegistrationReminderScheduler.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        schedulerLog.addAppender(logged);
+        try {
+            new RegistrationReminderScheduler(reminders, expiry).tendUnconfirmedRegistrations();
+
+            assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+                    .contains("Deleted 3 unconfirmed registrations older than 45 days");
+        } finally {
+            schedulerLog.detachAppender(logged);
+        }
     }
 }

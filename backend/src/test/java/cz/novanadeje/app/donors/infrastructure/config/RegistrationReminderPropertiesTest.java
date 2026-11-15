@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.infrastructure.config;
 
-import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.RegistrationReminderProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,7 @@ class RegistrationReminderPropertiesTest {
     @DisplayName("Given a window that reaches the deletion of unconfirmed registrations, when the properties are made, then they fail naming the property")
     void should_fail_naming_window_when_made_given_window_reaching_registration_expiry() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new RegistrationReminderProperties("-", Duration.ofDays(1), DonorRegistrationExpiryService.RETENTION))
+                .isThrownBy(() -> new RegistrationReminderProperties("-", Duration.ofDays(1), Duration.ofDays(30)))
                 .withMessageContaining("app.donors.registration-reminder.window");
     }
 }

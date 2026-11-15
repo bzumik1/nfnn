@@ -309,4 +309,8 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
             return Optional.of(new AdminActionFacts(variant.isEmpty() ? action : action + "." + variant, values));
         }
     }
+
+    public static boolean keptOffADevice(String placeholder) {
+        return NEVER_ON_A_DEVICE.contains(placeholder);
+    }
 }

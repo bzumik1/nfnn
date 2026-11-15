@@ -26,16 +26,10 @@ class DonorRegistrationExpiryServiceTest {
     @Test
     @DisplayName("Given two unconfirmed registrations older than thirty days, when the expiry runs, then it deletes the unconfirmed ones registered more than thirty days ago and counts them")
     void should_delete_registrations_older_than_thirty_days_when_run_given_old_unconfirmed_registrations() {
-        when(donors.deleteUnconfirmedRegisteredBefore(NOW.minus(Duration.ofDays(30)))).thenReturn(2);
+        when(donors.deleteUnconfirmedRegisteredBefore(Instant.parse("2026-10-07T09:20:00Z"))).thenReturn(2);
 
-        int deleted = new DonorRegistrationExpiryService(donors, Clock.fixed(NOW, ZoneOffset.UTC)).expireUnconfirmed();
+        ExpiredRegistrations expired = new DonorRegistrationExpiryService(donors, Clock.fixed(NOW, ZoneOffset.UTC)).expireUnconfirmed();
 
-        assertThat(deleted).isEqualTo(2);
-    }
-
-    @Test
-    @DisplayName("Given the retention, when it is read, then an unconfirmed registration is kept thirty days")
-    void should_keep_unconfirmed_registration_thirty_days_when_read_given_retention() {
-        assertThat(DonorRegistrationExpiryService.RETENTION).isEqualTo(Duration.ofDays(30));
+        assertThat(expired).isEqualTo(new ExpiredRegistrations(2, Duration.ofDays(30)));
     }
 }

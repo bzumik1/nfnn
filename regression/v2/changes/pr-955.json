@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.application.DonorRegistrationExpiryServiceTest > Given the retention, when it is read, then an unconfirmed registration is kept thirty days",
+    "replacement": "donors.domain.UnconfirmedRegistrationTest > Given the lifetime of an unconfirmed registration, when it is read, then it is thirty days",
+    "reason": "Architecture audit #621 R4-A6 (#952): the lifetime of an unconfirmed registration moved from the application service's constant DonorRegistrationExpiryService.RETENTION to the domain rule UnconfirmedRegistration.LIFETIME, so its test moved with it; still thirty days",
+    "contract": "docs/system-overview.md, donors (registration expiry)"
+  }
+]

@@ -15,6 +15,7 @@ import cz.novanadeje.app.donors.domain.InvalidEmailVerificationToken;
 import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.donors.domain.NoPendingEmailChange;
 import cz.novanadeje.app.donors.domain.RegistrationReturn;
+import cz.novanadeje.app.donors.domain.UnconfirmedRegistration;
 import cz.novanadeje.app.shared.application.event.DonorRegistered;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
@@ -165,7 +166,7 @@ public class DonorEmailVerificationService {
     void issueReminderLink(Donor donor) {
         newLink(donor).ifPresent(link -> {
             events.publishEvent(new DonorRegistrationReminderDue(donor.id().value(), donor.email(), donor.preferredLocale(), link.secret(),
-                    link.expiresAt()));
+                    link.expiresAt(), UnconfirmedRegistration.LIFETIME));
             log.info("Registration reminder with a new verification link issued for donor {}", donor.id());
         });
     }
