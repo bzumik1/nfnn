@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import type { IssuedReceipt } from '../../receipt-pdf/frozen-receipt';
 import type { DonationListResponse, DonationSummaryResponse } from '../../donations-api';
 import type { DonorCopy, SyncOutcome } from '../donor-copy';
@@ -15,6 +15,7 @@ export class FakeDonorCopy implements DonorCopy {
   readonly open = this.opened.asReadonly();
   readonly view = this.shown.asReadonly();
   readonly firstSync = this.first.asReadonly();
+  readonly holdsData = computed(() => this.shown() !== null);
   readonly keepsOnDevice = this.keeps.asReadonly();
   readonly owner = this.owned.asReadonly();
   readonly pending: ((outcome: SyncOutcome) => void)[] = [];

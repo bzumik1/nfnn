@@ -244,5 +244,7 @@ function administrationLock(): AdministrationLock {
     panel: signal(AdministrationLockPanel).asReadonly(),
     keepsPage: lock.keepsPage,
     firstDownload: lock.firstDownload,
+    firstDownloadEnd: lock.firstDownloadEnd,
+    retryFirstDownload: () => lock.retryFirstDownload(),
   };
 }

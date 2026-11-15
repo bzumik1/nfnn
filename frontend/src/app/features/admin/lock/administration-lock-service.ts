@@ -29,7 +29,13 @@ export class AdministrationLockService {
     () => (this.auth.isAdmin() || this.leaving()) && !this.access.unlocked(),
   );
   readonly keepsPage = this.access.keepsPage;
-  readonly firstDownload = inject(AdministrationCopyDownload).firstDownload;
+  private readonly download = inject(AdministrationCopyDownload);
+  readonly firstDownload = this.download.firstDownload;
+  readonly firstDownloadEnd = this.download.firstDownloadEnd;
+
+  retryFirstDownload(): void {
+    void this.download.refresh();
+  }
 
   async passkeyUnlocks(): Promise<boolean> {
     const account = this.account();

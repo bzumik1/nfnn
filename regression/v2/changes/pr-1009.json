@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/first-sync-notice/first-sync-notice.spec.ts > Given the line about the first saving of the donor’s data on this device > when the first saving takes longer and fails, then the line goes without saying the gifts are saved",
+    "reason": "PR #1009 (#1002, Phase 2 gate UX m2): a first save that fails after its bar showed now says so with Uložit znovu instead of ending without a word",
+    "contract": "docs/frontend-overview.md, Donor area, first-sync-notice",
+    "replacement": "src/app/features/donors/dashboard/first-sync-notice/first-sync-notice.spec.ts > Given the line about the first saving of the donor’s data on this device > when the first saving takes longer and fails > then the bar says it could not be saved, that everything works online, and offers to save again, until something changes"
+  }
+]

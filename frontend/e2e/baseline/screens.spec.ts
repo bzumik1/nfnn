@@ -28,6 +28,8 @@ import {
   project,
   rememberedSession,
   servePaymentDetails,
+  serveAdministrationCopyOfAccounts,
+  serveEmptyAdministrationCopy,
   serveRecentDonors,
 } from './screen-mocks';
 import { openRequests, quietNetwork } from '../settled';
@@ -133,15 +135,22 @@ async function openUnlocked(page: Page, path: string): Promise<void> {
   await copied();
 }
 
+async function openAdminPage(
+  page: Page,
+  path: string,
+  serveCopy: (page: Page) => Promise<void> = serveEmptyAdministrationCopy,
+): Promise<void> {
+  await mockDonorApi(page, donorWithDonations);
+  await mockAdministration(page);
+  await serveCopy(page);
+  await rememberedSession(page);
+  await openUnlocked(page, path);
+}
+
 function adminPage(name: string, path: string, more: Partial<Screen> = {}): Screen {
   return {
     name,
-    open: async (page) => {
-      await mockDonorApi(page, donorWithDonations);
-      await mockAdministration(page);
-      await rememberedSession(page);
-      await openUnlocked(page, path);
-    },
+    open: (page) => openAdminPage(page, path),
     ...more,
   };
 }
@@ -274,6 +283,7 @@ const SCREENS: Screen[] = [
     open: async (page) => {
       await mockDonorApi(page, donorWithDonations);
       await mockAdministration(page);
+      await serveEmptyAdministrationCopy(page);
       await page.route(
         (url) => url.pathname === '/api/admin/donations/payments',
         (route) =>
@@ -286,11 +296,11 @@ const SCREENS: Screen[] = [
   adminPage('admin-donors', '/sprava/darci'),
   {
     name: 'admin-donors-search',
-    open: async (page, width) => {
-      await adminPage('admin-donors', '/sprava/darci').open(page, width);
+    open: async (page) => {
+      await openAdminPage(page, '/sprava/darci', serveAdministrationCopyOfAccounts);
       await page.locator('#donor-search').fill('Nov');
       await page.clock.setFixedTime(new Date(FIXED_TIME.getTime() + SEARCH_PAUSE_MS));
-      await expect(page.getByText('Petr Svoboda').first()).toBeVisible();
+      await expect(page.getByText('Nalezení dárci: 1')).toBeAttached();
     },
   },
   adminPage('admin-donor-detail', PETR_DETAIL_PATH),
@@ -517,9 +527,8 @@ const SCREENS_SINCE_V2: Screen[] = [
   },
   {
     name: 'admin-donors-recent',
-    open: async (page, width) => {
-      await serveRecentDonors(page);
-      await adminPage('admin-donors', '/sprava/darci').open(page, width);
+    open: async (page) => {
+      await openAdminPage(page, '/sprava/darci', serveRecentDonors);
       await expect(
         page.getByRole('heading', { level: 3, name: 'Naposledy přispěli' }),
       ).toBeVisible();

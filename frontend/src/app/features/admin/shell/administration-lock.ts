@@ -5,11 +5,15 @@ export interface FirstDownloadProgress {
   readonly total: number;
 }
 
+export type FirstDownloadEnd = 'stored' | 'failed';
+
 export interface AdministrationLock {
   readonly locked: Signal<boolean>;
   readonly panel: Signal<Type<unknown> | null>;
   readonly keepsPage: Signal<boolean>;
   readonly firstDownload: Signal<FirstDownloadProgress | null>;
+  readonly firstDownloadEnd: Signal<FirstDownloadEnd | null>;
+  retryFirstDownload(): void;
 }
 
 export const ADMINISTRATION_LOCK = new InjectionToken<AdministrationLock>('ADMINISTRATION_LOCK', {
@@ -19,5 +23,7 @@ export const ADMINISTRATION_LOCK = new InjectionToken<AdministrationLock>('ADMIN
     panel: signal(null).asReadonly(),
     keepsPage: signal(false).asReadonly(),
     firstDownload: signal(null).asReadonly(),
+    firstDownloadEnd: signal(null).asReadonly(),
+    retryFirstDownload: () => undefined,
   }),
 });

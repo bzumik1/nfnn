@@ -15,19 +15,29 @@ describe('Given the line about the first saving of the donor’s data on this de
   let running: ReturnType<typeof signal<boolean>>;
   let view: ReturnType<typeof signal<DonorCopyView | null>>;
   let keeps: ReturnType<typeof signal<boolean>>;
+  let open: ReturnType<typeof signal<boolean>>;
+  let holds: ReturnType<typeof signal<boolean>>;
+  let syncs: number;
 
   beforeEach(() => {
     vi.useFakeTimers();
     running = signal(false);
     view = signal<DonorCopyView | null>(null);
     keeps = signal(true);
+    open = signal(true);
+    holds = signal(false);
+    syncs = 0;
     const copy: DonorCopy = {
-      open: signal(true),
+      open,
       owner: signal<string | null>('jana'),
       view,
       firstSync: running,
+      holdsData: holds,
       keepsOnDevice: keeps,
-      sync: () => Promise.resolve<SyncOutcome>('stored'),
+      sync: () => {
+        syncs++;
+        return Promise.resolve<SyncOutcome>('stored');
+      },
       catchUp: () => Promise.resolve<SyncOutcome>('stored'),
     };
     TestBed.inject(DonorCopyLink).copy.set(copy);
@@ -100,11 +110,73 @@ describe('Given the line about the first saving of the donor’s data on this de
     expect(document.documentElement.classList).not.toContain('has-floating-notice');
   });
 
-  it('when the first saving takes longer and fails, then the line goes without saying the gifts are saved', () => {
+  describe('when the first saving takes longer and fails', () => {
+    beforeEach(() => {
+      running.set(true);
+      after(0);
+      after(FIRST_SYNC_NOTICE_DELAY_MS);
+      running.set(false);
+      after(0);
+    });
+
+    function retry(): HTMLButtonElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector('button');
+    }
+
+    it('then the bar says it could not be saved, that everything works online, and offers to save again, until something changes', () => {
+      expect(status()).toBe(
+        'Přehled vašich darů se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál. Uložit znovu',
+      );
+      expect(region()?.querySelector('.ui-notice--floating')).not.toBeNull();
+      expect(document.documentElement.classList).toContain('has-floating-notice');
+
+      after(STORED_NOTICE_MS * 10);
+      expect(status()).toContain('nepodařilo uložit');
+    });
+
+    it('and the donor saves again, then the saving runs at once and the bar says so without waiting a second', () => {
+      retry()!.click();
+      expect(syncs).toBe(1);
+
+      running.set(true);
+      after(0);
+      expect(status()).toBe('Ukládáme přehled vašich darů do tohoto zařízení…');
+
+      view.set(VIEW);
+      running.set(false);
+      after(0);
+      expect(status()).toBe('Přehled vašich darů je uložený v tomto zařízení.');
+    });
+
+    it('and a later saving stores the gifts, then the bar says they are saved', () => {
+      running.set(true);
+      after(0);
+      view.set(VIEW);
+      running.set(false);
+      after(0);
+
+      expect(status()).toBe('Přehled vašich darů je uložený v tomto zařízení.');
+    });
+  });
+
+  it('when the first saving takes longer and stores data the page cannot show, then the line goes without a word, as nothing failed', () => {
     running.set(true);
     after(0);
     after(FIRST_SYNC_NOTICE_DELAY_MS);
 
+    holds.set(true);
+    running.set(false);
+    after(0);
+
+    expect(status()).toBe('');
+  });
+
+  it('when the first saving takes longer and ends because the copy closed, as on signing out, then the line goes without a word', () => {
+    running.set(true);
+    after(0);
+    after(FIRST_SYNC_NOTICE_DELAY_MS);
+
+    open.set(false);
     running.set(false);
     after(0);
 

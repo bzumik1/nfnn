@@ -50,6 +50,8 @@ describe('Given an administrator anywhere in the administration', () => {
             panel: signal(LockPanel).asReadonly(),
             keepsPage: keepsPage.asReadonly(),
             firstDownload: firstDownload.asReadonly(),
+            firstDownloadEnd: signal(null).asReadonly(),
+            retryFirstDownload: () => undefined,
           },
         },
         provideRouter([
@@ -395,6 +397,8 @@ describe('Given an administrator who opened the administration on a phone over a
             panel: signal(LockPanel).asReadonly(),
             keepsPage: signal(false).asReadonly(),
             firstDownload: signal(null).asReadonly(),
+            firstDownloadEnd: signal(null).asReadonly(),
+            retryFirstDownload: () => undefined,
           },
         },
         provideRouter([
