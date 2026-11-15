@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/core/push/app-badge.spec.ts > Given the badge of the app icon > when the app starts without an administrator, then the badge is left as it is",
+    "replacement": "src/app/core/push/app-badge.spec.ts > Given the badge of the app icon > when the app starts while its session is still being restored, then the badge is left as it is",
+    "reason": "#1000 (Phase 2 gate, Angular m1): an app that starts and finds no session that may see alerts now clears the badge, so only a start whose session is still being restored leaves it as it is",
+    "contract": "docs/frontend-overview.md, core/push"
+  }
+]
