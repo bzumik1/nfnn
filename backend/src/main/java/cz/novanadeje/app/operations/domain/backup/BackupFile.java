@@ -10,6 +10,7 @@ public record BackupFile(String name, long sizeBytes, Instant createdAt) {
     public static final int MAX_NAME_LENGTH = 80;
 
     private static final Pattern NAME = Pattern.compile("nfnn-\\d{4}-\\d{2}-\\d{2}_\\d{4}(-[a-z0-9-]{1,40})?\\.dump\\.age");
+    private static final Pattern COUNTER = Pattern.compile("-\\d+$");
     private static final String REQUESTED_SUFFIX = "-rucni";
     private static final String BEFORE_RESTORE_SUFFIX = "-pred-obnovou";
 
@@ -32,7 +33,8 @@ public record BackupFile(String name, long sizeBytes, Instant createdAt) {
         if (!matcher.matches() || matcher.group(1) == null) {
             return BackupKind.DAILY;
         }
-        return switch (matcher.group(1)) {
+        return switch (COUNTER.matcher(matcher.group(1)).replaceFirst("")) {
+            case "" -> BackupKind.DAILY;
             case REQUESTED_SUFFIX -> BackupKind.REQUESTED;
             case BEFORE_RESTORE_SUFFIX -> BackupKind.BEFORE_RESTORE;
             default -> BackupKind.OTHER;

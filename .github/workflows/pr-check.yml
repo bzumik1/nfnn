@@ -1258,6 +1258,22 @@ jobs:
           grep -E '^tables=[1-9][0-9]*$' "$backups/status/test-restore" || { echo "::error::the test restore counted no tables"; exit 1; }
           full_dump=$(ls "$backups"/nfnn-*-rucni.dump.age | head -n 1)
 
+          echo "Two backups requested together are both written at once, the second of the same minute named with a counter"
+          docker exec nfnn-backend sh -c 'touch /backups/requests/ci-1a.backup /backups/requests/ci-1b.backup'
+          wait_for "grep -q '^request=ci-1b$' $backups/status/backup" 30 "the second of two requested backups did not run at once"
+          grep -q '^outcome=ok$' "$backups/status/backup" || { echo "::error::the second requested backup failed"; cat "$backups/status/backup"; exit 1; }
+          first_backup=$(grep -o 'backup written: .*' "$logs/backup.log" | tail -n 2 | head -n 1 | cut -d' ' -f3)
+          second_backup=$(sed -n 's/^file=//p' "$backups/status/backup")
+          name_part() { printf '%s' "$1" | sed -n "s/^nfnn-\([0-9-]*_[0-9]*\)-rucni\(-\([0-9]*\)\)\{0,1\}[.]dump[.]age\$/\\$2/p"; }
+          first_stamp=$(name_part "$first_backup" 1)
+          second_stamp=$(name_part "$second_backup" 1)
+          [ -n "$first_stamp" ] && [ -n "$second_stamp" ] || { echo "::error::the requested backups are not named -rucni: $first_backup, $second_backup"; exit 1; }
+          if [ "$first_stamp" = "$second_stamp" ]; then
+            first_count=$(name_part "$first_backup" 3)
+            [ "$(name_part "$second_backup" 3)" = "$(( ${first_count:-1} + 1 ))" ] || { echo "::error::the second backup of the minute is not named with the next counter: $first_backup, $second_backup"; exit 1; }
+          fi
+          [ -f "$backups/$first_backup" ] && [ -f "$backups/$second_backup" ] || { echo "::error::a requested backup file is missing: $first_backup, $second_backup"; ls "$backups"; exit 1; }
+
           echo "A request for a new receipt signing seed that names another key than the seed's, planted by the app user, is removed and changes nothing"
           secrets="$RUNNER_TEMP/nfnn/secrets"
           restore="$RUNNER_TEMP/nfnn/restore"
