@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.infrastructure.session;
 import cz.novanadeje.app.donors.application.SignedInDeviceCheck;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
+import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
 import cz.novanadeje.app.shared.application.event.DeviceSignedOut;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,7 +44,7 @@ class DeviceSessionLivenessTest {
 
         private void askOnce() {
             when(devices.isSignedIn(any(), any())).thenReturn(true);
-            liveness = new DeviceSessionLiveness(new SignedInDeviceCheck(devices, clock), clock);
+            liveness = new DeviceSessionLiveness(new SignedInDeviceCheck(mock(RefreshTokenRepository.class), devices, clock), clock);
             assertThat(liveness.isLive(PHONE.value())).isTrue();
         }
 

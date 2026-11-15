@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.push.DonorPushSubscription;
 import cz.novanadeje.app.operations.domain.push.DonorPushSubscriptionRepository;
 import cz.novanadeje.app.operations.domain.push.PushClientKeys;
 import cz.novanadeje.app.operations.domain.push.PushDeviceKeepsNothing;
+import cz.novanadeje.app.operations.domain.push.PushDeviceSignedOut;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
@@ -53,7 +54,7 @@ public class DonorPushService {
     @Transactional
     public DonorPushDeviceView subscribe(UUID donorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys clientKeys,
                                          DonorNotifications notifications) {
-        if (devices.holdSignedIn(donorId, deviceId).keepsNothing()) {
+        if (devices.holdSignedIn(donorId, deviceId).orElseThrow(PushDeviceSignedOut::new).keepsNothing()) {
             throw new PushDeviceKeepsNothing();
         }
         subscriptions.lockWrites();
