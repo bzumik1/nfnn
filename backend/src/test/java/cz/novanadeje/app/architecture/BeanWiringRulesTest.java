@@ -298,6 +298,13 @@ class BeanWiringRulesTest {
                                 return cz.novanadeje.app.planteda.application.GiftPairings.on(context.getBean(cz.novanadeje.app.planteda.application.PairingService.class));
                             }
                             """),
+                    configuration("planteda.infrastructure.config.NamedLookupConfiguration", """
+                            @org.springframework.context.annotation.Bean
+                            cz.novanadeje.app.planteda.application.GiftPairing pairing(org.springframework.context.ApplicationContext context) {
+                                return cz.novanadeje.app.planteda.application.GiftPairings.on(
+                                        (cz.novanadeje.app.planteda.application.PairingService) context.getBean("pairingService"));
+                            }
+                            """),
                     configuration("planteda.infrastructure.config.LazyFactoryConfiguration", """
                             private final cz.novanadeje.app.planteda.application.GiftPairing pairing;
                             public LazyFactoryConfiguration(org.springframework.beans.factory.ObjectProvider<cz.novanadeje.app.planteda.application.PairingService> services) {
@@ -533,7 +540,7 @@ class BeanWiringRulesTest {
 
         @Test
         @DisplayName("when the port rule checks methods, then a port of infrastructure built on a service in a lambda, by a method reference, by a static "
-                + "method reference alone, from a service parameter alone, from a provider of a service, from a bean looked up by its class, through a helper, through a method and field "
+                + "method reference alone, from a service parameter alone, from a provider of a service, from a bean looked up by its class or its name, through a helper, through a method and field "
                 + "of its own class, from a field its constructor set by a method reference, a factory or a factory over a provider, inside an Optional, of a port an application sub-interface extends, as an anonymous abstract port, as an interface extending the port, as a concrete adapter handed a helper's method reference and by a plain method of an adapter is reported, and a scheduler, "
                 + "a domain policy, a settings record, an application class on a service, a Runnable, a scheduler's helper returning a use case's sealed result, "
                 + "a reviewed driving port implementer, a policy reading a field beside a service the "
@@ -557,6 +564,7 @@ class BeanWiringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("PrecomputedFactoryConfiguration.pairing(").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("LazyFactoryConfiguration.pairing(").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("LookupPairingConfiguration.pairing(").contains("PairingService"))
+                    .anySatisfy(detail -> assertThat(detail).contains("NamedLookupConfiguration.pairing(").contains("PairingService"))
                     .noneSatisfy(detail -> assertThat(detail).contains("SeveralBeansConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("InheritingConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("CachedRegistry"))
@@ -608,7 +616,7 @@ class BeanWiringRulesTest {
 
     private static ArchCondition<JavaMethod> notReachAnApplicationServiceDirectlyOrThroughTheInfrastructureOfTheirContext() {
         return new ArchCondition<>("not reach " + DddLayeringRulesTest.APPLICATION_SERVICES.getDescription()
-                + " through their parameters (type arguments included), their code (lambdas and method references included) or the methods and fields "
+                + " through their parameters (type arguments included), their code (lambdas and method references included) with the parameters of what it calls, or the methods and fields "
                 + "of their own class it uses, and the class literals it names (for a field it reads, what the code that writes the field calls and references, with those targets' "
                 + "parameters), directly or through the infrastructure of their context") {
             @Override
@@ -637,9 +645,7 @@ class BeanWiringRulesTest {
                         followOwnMember(access, visit.asWriter(), pending, reached);
                     } else {
                         reached.add(access.getTargetOwner());
-                        if (visit.asWriter()) {
-                            reached.addAll(parameterTypesOf(access));
-                        }
+                        reached.addAll(parameterTypesOf(access));
                     }
                 }
             }
