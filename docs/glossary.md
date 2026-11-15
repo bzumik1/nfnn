@@ -251,7 +251,7 @@ UI „obnova hesla“ · Code: `PasswordResetToken`, `DonorPasswordResetService`
 Setting a new password from an e-mailed link; refused to an administrator who holds no second factor.
 
 **Device**\
-UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`.\
+UI „zařízení“ (card „Přihlášená zařízení“) · Code: `donors/domain/DonorDevice` (`donor_device`), `DeviceSignOuts`, `SessionRecordRetention` (an ended device is deleted after 400 days).\
 One sign-in of a browser or the installed app, named by platform and browser, or by platform and „aplikace“ for the installed app; signing it out ends its session within 30 seconds.
 
 **Session kind**\
@@ -336,7 +336,7 @@ Replacing the site's data with a backup (a backup is taken first); it signs ever
 _Avoid_: „obnova“ alone
 
 **Backup key**\
-UI „klíč k zálohám“ (24 Czech words) · Code: `BackupKey`, `BackupKeyWords`, `BACKUP_KEY`.\
+UI „klíč k zálohám“ (24 Czech words) · Code: `BackupKey`, `BackupKeyWords`, `BACKUP_KEY`, `BackupKeyWordChallenge` (the three words retyped to confirm it is saved), `BackupKeyRevealPause`.\
 The key the server generated to encrypt every backup, shown only as 24 words with a fresh second factor and needed to restore on another server.\
 _Avoid_: „klíč“ alone
 

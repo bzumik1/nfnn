@@ -1,12 +1,12 @@
 package cz.novanadeje.app.operations.application.backup;
 
 import cz.novanadeje.app.operations.domain.backup.BackupKeyConfirmationExpired;
+import cz.novanadeje.app.operations.domain.backup.BackupKeyWordChallenge;
 import cz.novanadeje.app.operations.domain.backup.BackupKeyWordPositions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -16,11 +16,8 @@ import java.util.random.RandomGenerator;
 @Component
 public class BackupKeyWordChallenges {
 
-    static final Duration VALID_FOR = Duration.ofMinutes(30);
-    static final int ATTEMPTS = 5;
-
     private final RandomGenerator random;
-    private final Map<UUID, Challenge> open = new ConcurrentHashMap<>();
+    private final Map<UUID, BackupKeyWordChallenge> open = new ConcurrentHashMap<>();
 
     @Autowired
     public BackupKeyWordChallenges() {
@@ -34,7 +31,7 @@ public class BackupKeyWordChallenges {
     public BackupKeyWordPositions issue(UUID adminId, Instant now) {
         open.values().removeIf(challenge -> challenge.expiredAt(now));
         BackupKeyWordPositions positions = draw();
-        open.put(adminId, new Challenge(positions, now.plus(VALID_FOR), ATTEMPTS));
+        open.put(adminId, BackupKeyWordChallenge.issue(positions, now));
         return positions;
     }
 
@@ -43,7 +40,7 @@ public class BackupKeyWordChallenges {
     }
 
     public BackupKeyWordPositions asked(UUID adminId, Instant now) {
-        Challenge challenge = open.get(adminId);
+        BackupKeyWordChallenge challenge = open.get(adminId);
         if (challenge == null || challenge.expiredAt(now)) {
             open.remove(adminId);
             throw new BackupKeyConfirmationExpired();
@@ -52,21 +49,10 @@ public class BackupKeyWordChallenges {
     }
 
     public void refused(UUID adminId) {
-        open.computeIfPresent(adminId, (admin, challenge) -> challenge.attemptsLeft() <= 1 ? null : challenge.afterRefusal());
+        open.computeIfPresent(adminId, (admin, challenge) -> challenge.afterRefusal().orElse(null));
     }
 
     public void settled(UUID adminId) {
         open.remove(adminId);
-    }
-
-    private record Challenge(BackupKeyWordPositions positions, Instant validUntil, int attemptsLeft) {
-
-        boolean expiredAt(Instant now) {
-            return now.isAfter(validUntil);
-        }
-
-        Challenge afterRefusal() {
-            return new Challenge(positions, validUntil, attemptsLeft - 1);
-        }
     }
 }
