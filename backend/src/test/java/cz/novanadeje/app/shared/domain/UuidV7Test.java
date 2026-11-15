@@ -4,6 +4,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,5 +36,34 @@ class UuidV7Test {
         Instant instant = Instant.parse("2026-10-17T10:00:00Z");
 
         assertThat(UuidV7.generate(instant)).isNotEqualTo(UuidV7.generate(instant));
+    }
+
+    @Test
+    @DisplayName("Given the same instant, when ids are generated one after another, then they sort in the order they were generated")
+    void should_sort_in_generation_order_when_generated_given_same_instant() {
+        Instant instant = Instant.parse("2026-10-17T10:00:00Z");
+        List<String> generated = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            generated.add(UuidV7.generate(instant).toString());
+        }
+
+        assertThat(generated).isSortedAccordingTo(String::compareTo);
+    }
+
+    @Test
+    @DisplayName("Given the same instant, when ids are generated one after another, then the random tail of the next one does not follow from the previous one")
+    void should_keep_random_tail_when_generated_given_same_instant() {
+        Instant instant = Instant.parse("2026-10-17T10:00:00Z");
+        UUID previous = UuidV7.generate(instant);
+        int followers = 0;
+        for (int i = 0; i < 100; i++) {
+            UUID next = UuidV7.generate(instant);
+            if (next.getLeastSignificantBits() == previous.getLeastSignificantBits() + 1) {
+                followers++;
+            }
+            previous = next;
+        }
+
+        assertThat(followers).isZero();
     }
 }
