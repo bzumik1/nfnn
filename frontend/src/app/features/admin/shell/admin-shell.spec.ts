@@ -343,10 +343,27 @@ describe('Given an administrator anywhere in the administration', () => {
       firstDownload.set({ done: 18, total: 40 });
       await settle();
 
-      expect(clean(element('main#obsah .admin-first-download')?.textContent)).toBe(
+      expect(clean(element('main#obsah .first-download')?.textContent)).toBe(
         'Ukládáme správu do zařízení 18 z 40',
       );
-      expect(element('main#obsah .admin-first-download')?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('then screen readers hear that it started once, and never each stored part', async () => {
+      firstDownload.set({ done: 0, total: 40 });
+      await settle();
+      const live = element('main#obsah .admin-first-download [aria-live="polite"]')!;
+      expect(clean(live.textContent)).toBe('Ukládáme správu do zařízení.');
+
+      firstDownload.set({ done: 18, total: 40 });
+      await settle();
+
+      expect(clean(live.textContent)).toBe('Ukládáme správu do zařízení.');
+      expect(element('main#obsah .admin-first-download [aria-live="polite"]')).toBe(live);
+      const count = element('main#obsah .first-download__count')!;
+      expect(clean(count.textContent)).toBe('18 z 40');
+      expect(live.contains(count)).toBe(false);
+      expect(count.closest('[aria-live]')).toBeNull();
+      expect(count.closest('[aria-hidden="true"]')).toBeNull();
     });
 
     it('and it is stored, then the bar goes', async () => {

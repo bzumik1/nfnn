@@ -598,7 +598,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
   return async () => {
     await expect(page.locator('.admin-page h1')).toBeVisible();
     await synced;
-    await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
+    await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
   };
 }
 
@@ -616,5 +616,5 @@ export async function openUnlockedAdministrationPage(
       { timeout: 10_000 },
     ),
   ]);
-  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD)).toBeHidden();
+  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
 }
