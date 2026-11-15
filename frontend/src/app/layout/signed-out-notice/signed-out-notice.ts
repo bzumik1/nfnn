@@ -22,7 +22,7 @@ import { keepRoomForFloatingNotice } from '../../shared/ui/floating-notice/float
 })
 export class SignedOutNotice {
   protected readonly notice = inject(SignedOutNoticeState);
-  private readonly auth = inject(AuthStore);
+  protected readonly auth = inject(AuthStore);
   private readonly document = inject(DOCUMENT);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
 

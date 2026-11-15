@@ -3,7 +3,12 @@ import { HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { AdministrationAccess } from './administration-access';
-import { AuthStore, CONNECTION_CHECK_AFTER_MS, SESSION_HINT_KEY } from './auth-store';
+import {
+  AuthStore,
+  CONNECTION_CHECK_AFTER_MS,
+  SESSION_HINT_KEY,
+  SIGN_OUT_PENDING_KEY,
+} from './auth-store';
 import { Donor } from './donor';
 import { PasskeyAuthenticator } from './passkey-authenticator';
 import { TimeoutError } from 'rxjs';
@@ -248,6 +253,31 @@ describe('Given the auth store', () => {
     expect(store.currentAccessToken()).toBeNull();
     expect(store.status()).toBe('anonymous');
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+    expect(store.signOutPending()).toBe(true);
+    expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBe('1');
+  });
+
+  it('when the server answers the sign-out, or refuses it as a request it understood, then no sign-out is left pending', () => {
+    for (const status of [204, 401]) {
+      signIn();
+
+      store.logout().subscribe();
+      http.expectOne('/api/donors/auth/logout').flush(null, { status, statusText: String(status) });
+
+      expect(store.signOutPending()).toBe(false);
+      expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBeNull();
+    }
+  });
+
+  it('when a donor signs in while a sign-out is still pending, then the new session replaced the old cookie and nothing is pending', () => {
+    signIn();
+    store.logout().subscribe();
+    http.expectOne('/api/donors/auth/logout').flush(null, { status: 503, statusText: 'Busy' });
+
+    signIn('token-2');
+
+    expect(store.signOutPending()).toBe(false);
+    expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBeNull();
   });
 
   it('when a donor who chose the dark appearance signs out, then the site follows the device again, so the next visitor of the device does not inherit the choice (Jakub 2026-11-14)', () => {
@@ -382,6 +412,57 @@ describe('Given the auth store', () => {
     http.expectOne({ method: 'GET', url: '/api/donors/me' }).flush(sampleDonor());
 
     expect(store.donor()?.pendingEmailChange).toBeNull();
+  });
+});
+
+describe('Given a sign-out the server did not hear before the app was closed', () => {
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem(SIGN_OUT_PENDING_KEY, '1');
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: new FakePasskeyAuthenticator() },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
+
+  it('when the app starts with a session hint someone set, then it sends the sign-out, refreshes nothing and the visitor stays anonymous', async () => {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
+    const store = TestBed.inject(AuthStore);
+    TestBed.tick();
+
+    await store.restore();
+
+    http.expectNone('/api/donors/auth/refresh');
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(store.status()).toBe('anonymous');
+    expect(store.signOutPending()).toBe(false);
+    expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBeNull();
+    expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+  });
+
+  it('when the sign-out again gets no answer, then it stays pending for the next start', () => {
+    const store = TestBed.inject(AuthStore);
+    TestBed.tick();
+
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    expect(store.signOutPending()).toBe(true);
+    expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBe('1');
   });
 });
 
