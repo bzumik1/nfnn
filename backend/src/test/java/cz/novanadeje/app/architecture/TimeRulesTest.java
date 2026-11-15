@@ -245,9 +245,6 @@ class TimeRulesTest {
             TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         }
 
-        abstract static class PlantedClock extends Clock {
-        }
-
         List<Object> readsTheGivenClock(Clock clock, ZoneId zone) {
             return List.of(
                     Instant.now(clock),
@@ -255,6 +252,9 @@ class TimeRulesTest {
                     Clock.tick(clock, Duration.ofSeconds(1)),
                     Clock.fixed(Instant.EPOCH, zone),
                     new Date(0L));
+        }
+
+        abstract static class PlantedClock extends Clock {
         }
     }
 }
