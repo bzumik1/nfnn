@@ -4,7 +4,7 @@ import cz.novanadeje.app.donations.application.importing.ImportAlertSender;
 import cz.novanadeje.app.donations.domain.importing.ImportAlert;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
-import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
 import cz.novanadeje.app.shared.infrastructure.mail.BrandedEmails;
 import cz.novanadeje.app.shared.infrastructure.mail.EmailDraft;
 import cz.novanadeje.app.shared.infrastructure.mail.ObservedMailSender;
@@ -32,24 +32,22 @@ class ImportAlertEmailSender implements ImportAlertSender {
     private final ObservedMailSender mailSender;
     private final BrandedEmails emails;
     private final MessageSource messages;
-    private final ReportSettingsRepository settings;
 
-    ImportAlertEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages, ReportSettingsRepository settings) {
+    ImportAlertEmailSender(ObservedMailSender mailSender, BrandedEmails emails, MessageSource messages) {
         this.mailSender = mailSender;
         this.emails = emails;
         this.messages = messages;
-        this.settings = settings;
     }
 
     @Override
-    public boolean send(ImportAlert alert) {
+    public boolean send(ImportAlert alert, ReportRecipients recipients) {
         return switch (alert) {
-            case ImportOutage outage -> sendOutage(outage);
-            case ImportRecovery recovery -> sendRecovery(recovery);
+            case ImportOutage outage -> sendOutage(outage, recipients);
+            case ImportRecovery recovery -> sendRecovery(recovery, recipients);
         };
     }
 
-    private boolean sendOutage(ImportOutage outage) {
+    private boolean sendOutage(ImportOutage outage, ReportRecipients recipients) {
         String kind = outage.kind().name();
         String intro = outage.tokenRejected()
                 ? text("outage.intro.token", MonthlyReportFormats.time(outage.detectedAt()))
@@ -61,18 +59,18 @@ class ImportAlertEmailSender implements ImportAlertSender {
         String next = text("outage.next");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, reason, action, lastSuccess, consequence, next, text("signature"), footer);
-        return send("outage " + kind, new EmailDraft(CZECH, settings.current().recipients().values(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
+        return send("outage " + kind, new EmailDraft(CZECH, recipients.values(), text("outage.subject"), text("outage.title"), OUTAGE_TEMPLATE,
                 Map.of("intro", intro, "reason", reason, "action", action, "lastSuccess", lastSuccess, "consequence", consequence, "next", next),
                 plainText, footer));
     }
 
-    private boolean sendRecovery(ImportRecovery recovery) {
+    private boolean sendRecovery(ImportRecovery recovery, ReportRecipients recipients) {
         String intro = text("recovery.intro", MonthlyReportFormats.time(recovery.recoveredAt()), recovery.failures());
         String lastSuccess = lastSuccess("recovery", recovery.lastSucceededBefore());
         String caughtUp = text("recovery.caughtUp");
         String footer = text("footer");
         String plainText = paragraphs(text("greeting"), intro, lastSuccess, caughtUp, text("signature"), footer);
-        return send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, settings.current().recipients().values(), text("recovery.subject"),
+        return send("recovery from " + recovery.outageKind(), new EmailDraft(CZECH, recipients.values(), text("recovery.subject"),
                 text("recovery.title"), RECOVERY_TEMPLATE, Map.of("intro", intro, "lastSuccess", lastSuccess, "caughtUp", caughtUp),
                 plainText, footer));
     }

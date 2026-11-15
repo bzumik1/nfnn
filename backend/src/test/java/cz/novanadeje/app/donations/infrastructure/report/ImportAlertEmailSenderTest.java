@@ -7,9 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
-import cz.novanadeje.app.donations.domain.report.ReportSettings;
-import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
-import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
 import cz.novanadeje.app.support.Emails;
 import cz.novanadeje.app.support.MailContents;
 import cz.novanadeje.app.support.MailPreviews;
@@ -46,17 +44,16 @@ class ImportAlertEmailSenderTest {
     private static final Instant DETECTED_AT = Instant.parse("2026-10-22T13:00:00Z");
     private static final Instant RECOVERED_AT = Instant.parse("2026-10-22T14:00:00Z");
 
+    private static final ReportRecipients RECIPIENTS = ReportRecipients.parse(List.of("prehled@nfnn.cz"));
+
     private final JavaMailSender mailSender = mock(JavaMailSender.class);
-    private final ReportSettingsRepository settings = mock(ReportSettingsRepository.class);
     private final ImportAlertEmailSender sender = new ImportAlertEmailSender(ObservedMailSenders.of(mailSender),
-            Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages(),
-            settings);
+            Emails.branded(mailSender, "info@nfnn.cz", "https://nfnn.cz"), Emails.messages());
     private ListAppender<ILoggingEvent> log;
 
     @BeforeEach
     void prepareMail() {
         when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
-        when(settings.current()).thenReturn(ReportSettings.defaults(new EmailAddress("prehled@nfnn.cz")));
         log = new ListAppender<>();
         log.start();
         logger().addAppender(log);
@@ -70,7 +67,7 @@ class ImportAlertEmailSenderTest {
     @Test
     @DisplayName("Given three transport failures after a success, when the outage is sent, then the report recipient reads how often it failed, why, what to do and the last success")
     void should_describe_repeated_failures_when_outage_sent_given_transport_outage() throws Exception {
-        assertThat(sender.send(new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), DETECTED_AT))).isTrue();
+        assertThat(sender.send(new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), DETECTED_AT), RECIPIENTS)).isTrue();
 
         MimeMessage email = MailContents.asReceived(sentEmail());
         assertThat(email.getSubject()).isEqualTo("Stahování plateb z banky selhává – Nová naděje");
@@ -100,7 +97,7 @@ class ImportAlertEmailSenderTest {
     @Test
     @DisplayName("Given a rejected token on a state that never succeeded, when the outage is sent, then the e-mail names the token, the renewal steps and no last success")
     void should_describe_token_renewal_when_outage_sent_given_rejected_token() {
-        assertThat(sender.send(new ImportOutage(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), DETECTED_AT))).isTrue();
+        assertThat(sender.send(new ImportOutage(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), DETECTED_AT), RECIPIENTS)).isTrue();
 
         assertThat(plainText()).contains(
                 "Fio 22. 10. 2026 15:00 odmítlo token, kterým web Nová naděje stahuje platby z účtu fondu.",
@@ -114,7 +111,7 @@ class ImportAlertEmailSenderTest {
     @Test
     @DisplayName("Given a recovery after three failures, when it is sent, then the e-mail tells when the import worked again, how many attempts failed and the success before")
     void should_describe_recovery_when_sent_given_three_failures() throws Exception {
-        assertThat(sender.send(new ImportRecovery(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), RECOVERED_AT))).isTrue();
+        assertThat(sender.send(new ImportRecovery(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), RECOVERED_AT), RECIPIENTS)).isTrue();
 
         MimeMessage email = MailContents.asReceived(sentEmail());
         assertThat(email.getSubject()).isEqualTo("Stahování plateb z banky zase funguje – Nová naděje");
@@ -130,10 +127,26 @@ class ImportAlertEmailSenderTest {
     }
 
     @Test
+    @DisplayName("Given three recipients handed in, when the outage and the recovery are sent, then each e-mail goes to all three in their order")
+    void should_address_every_recipient_in_order_when_sent_given_three_recipients() throws Exception {
+        ReportRecipients three = ReportRecipients.parse(List.of("pavel@example.cz", "prehled@nfnn.cz", "jakub@example.cz"));
+
+        assertThat(sender.send(new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), DETECTED_AT), three)).isTrue();
+        assertThat(sender.send(new ImportRecovery(ImportFailureKind.TRANSPORT, 3, Optional.of(LAST_SUCCESS), RECOVERED_AT), three)).isTrue();
+
+        ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender, times(2)).send(sent.capture());
+        for (MimeMessage email : sent.getAllValues()) {
+            assertThat(MailContents.asReceived(email).getRecipients(Message.RecipientType.TO)).extracting(Object::toString)
+                    .containsExactly("pavel@example.cz", "prehled@nfnn.cz", "jakub@example.cz");
+        }
+    }
+
+    @Test
     @DisplayName("Given recoveries after one and after five failures, when they are sent, then the Czech plural fits the count")
     void should_decline_attempts_when_recovery_sent_given_other_counts() {
-        assertThat(sender.send(new ImportRecovery(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), RECOVERED_AT))).isTrue();
-        assertThat(sender.send(new ImportRecovery(ImportFailureKind.UNEXPECTED, 5, Optional.of(LAST_SUCCESS), RECOVERED_AT))).isTrue();
+        assertThat(sender.send(new ImportRecovery(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), RECOVERED_AT), RECIPIENTS)).isTrue();
+        assertThat(sender.send(new ImportRecovery(ImportFailureKind.UNEXPECTED, 5, Optional.of(LAST_SUCCESS), RECOVERED_AT), RECIPIENTS)).isTrue();
 
         ArgumentCaptor<MimeMessage> sent = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender, times(2)).send(sent.capture());
@@ -147,7 +160,7 @@ class ImportAlertEmailSenderTest {
     void should_log_error_when_outage_sent_given_refused_mail() {
         doThrow(new MailSendException("refused")).when(mailSender).send(any(MimeMessage.class));
 
-        assertThat(sender.send(new ImportOutage(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), DETECTED_AT))).isFalse();
+        assertThat(sender.send(new ImportOutage(ImportFailureKind.UNAUTHORIZED, 1, Optional.empty(), DETECTED_AT), RECIPIENTS)).isFalse();
 
         assertThat(log.list).filteredOn(event -> event.getLevel() == Level.ERROR).extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly("The Fio import alert e-mail (outage UNAUTHORIZED) could not be sent: MailSendException");

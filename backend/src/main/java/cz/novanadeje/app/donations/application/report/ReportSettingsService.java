@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.FoundationCalendar;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
 import cz.novanadeje.app.donations.domain.report.ReportRecipientsInBrowserOnly;
 import cz.novanadeje.app.donations.domain.report.ReportSections;
 import cz.novanadeje.app.donations.domain.report.ReportSettings;
@@ -60,6 +61,11 @@ public class ReportSettingsService {
         Optional<Instant> changedAt = settings.lastChangedAt();
         return new ReportAdministrationView(current, changedAt, sent, NextReport.after(current, sent, today), ReportMonth.previousTo(today),
                 rows.reportSettingsVersion(new StoredReportSettings(current, changedAt)));
+    }
+
+    @Transactional(readOnly = true)
+    public ReportRecipients recipients() {
+        return settings.current().recipients();
     }
 
     @Transactional
