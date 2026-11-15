@@ -66,6 +66,11 @@ export class ChunkLoadRecovery {
     }
   }
 
+  handleImportFailure(error: unknown): void {
+    this.reporter.report(isChunkLoadError(error) ? 'chunk-load' : 'unexpected', 'global', error);
+    this.failed.set({ url: this.router.url, initial: false });
+  }
+
   reload(): void {
     const failure = this.failed();
     if (failure !== null) {

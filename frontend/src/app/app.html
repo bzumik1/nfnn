@@ -9,5 +9,7 @@
 }
 
 @if (loginDialog.isOpen()) {
-  <app-login-dialog />
+  @if (loginDialogView(); as dialog) {
+    <ng-container *ngComponentOutlet="dialog" />
+  }
 }

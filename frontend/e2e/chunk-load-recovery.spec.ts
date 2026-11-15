@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import {
   article,
   donorWithDonations,
@@ -125,11 +127,14 @@ test.describe('Given a visitor with the sign-in dialog open and no session stora
   test('when a page they opened before the dialog cannot be loaded, then the dialog announces the message in its own status region, since the focus stays in the dialog', async ({
     page,
   }) => {
-    const chunks = await openAboutThenLoseNewChunks(page);
+    const chunks = await LostChunks.watch(page);
+    await chunks.open('/o-nas');
+    await openSignInThenClose(page);
+    chunks.loseEveryChunkNotLoadedYet();
     const release = chunks.hold();
 
     await openPolicyFromContact(page);
-    await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
+    await signInButton(page).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     release();
@@ -142,6 +147,29 @@ test.describe('Given a visitor with the sign-in dialog open and no session stora
       chunkLoadMessage,
     );
     expect(chunks.documents).toEqual([]);
+  });
+});
+
+test.describe('Given a visitor whose open tab is older than the deployed version and who never opened the sign-in dialog', () => {
+  test('when they open the sign-in dialog whose code is gone, then no dialog stays open and a bar offers a reload that loads the page again', async ({
+    page,
+  }) => {
+    await withoutSessionStorage(page);
+    const chunks = await openAboutThenLoseNewChunks(page);
+
+    await signInButton(page).click();
+
+    await expect(chunkLoadNotice(page)).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(chunks.documents).toEqual([]);
+
+    chunks.bringBack();
+    await chunkLoadNotice(page).getByRole('button', { name: 'Načíst znovu' }).click();
+
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    expect(chunks.documents).toEqual(['/o-nas']);
+    await signInButton(page).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
   });
 });
 
@@ -222,3 +250,15 @@ test.describe('Given an administrator with unsaved changes in the news editor', 
     expect(browserQuestions).toEqual([]);
   });
 });
+
+function signInButton(page: Page) {
+  return page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' });
+}
+
+async function openSignInThenClose(page: Page): Promise<void> {
+  await signInButton(page).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+}

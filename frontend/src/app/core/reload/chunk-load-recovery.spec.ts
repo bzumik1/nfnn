@@ -211,6 +211,34 @@ describe('Given the chunk-load recovery', () => {
     });
   });
 
+  describe('when the code the visitor asked for outside the router fails to load', () => {
+    beforeEach(async () => {
+      await showPage();
+      recovery.handleImportFailure(CHROME);
+    });
+
+    it('then it reports the lost chunk to the server as chunk-load in the global place', () => {
+      expect(report).toHaveBeenCalledWith('chunk-load', 'global', CHROME);
+    });
+
+    it('then it offers a reload of the page still shown, without reloading by itself', () => {
+      expect(recovery.failure()).toEqual({ url: '/jinam', initial: false });
+      expect(reloadWouldLand).not.toHaveBeenCalled();
+      expect(claim).not.toHaveBeenCalled();
+      expect(loadFromServer).not.toHaveBeenCalled();
+    });
+  });
+
+  it('when code asked for outside the router fails for another reason, then it reports an unexpected error and still offers a reload', async () => {
+    await showPage();
+    const error = new TypeError("Cannot read properties of undefined (reading 'id')");
+
+    recovery.handleImportFailure(error);
+
+    expect(report).toHaveBeenCalledWith('unexpected', 'global', error);
+    expect(recovery.failure()).toEqual({ url: '/jinam', initial: false });
+  });
+
   it('when a navigation fails for another reason, then it neither reloads nor offers anything', async () => {
     await recovery.handleNavigationError(failure(new Error('guard failed')));
 
