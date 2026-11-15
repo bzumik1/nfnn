@@ -199,7 +199,7 @@ services:
       mcp:
         condition: service_started
     ports:
-      - "8089:80"
+      - "0.0.0.0:8089:80"
     volumes:
       - /DATA/AppData/nfnn/logs:/logs
     healthcheck:
