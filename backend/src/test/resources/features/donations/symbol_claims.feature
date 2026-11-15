@@ -384,9 +384,11 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     And no bank payment 1001 is stored
     And "Jana" asks for her bank accounts
     And bank account "1234567/0800" asks about symbol "6123456789" with 1 payment from "2026-09" to "2026-09"
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
     And the bank history is unlocked
     And 1 days pass
-    And the older bank payments are loaded from 2025-01-01
+    And "Andrea" asks for older bank payments from 2025-01-01
     When "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     Then the response status is 409
     And the problem type ends with "donations/symbol-offer-not-available"
@@ -406,11 +408,15 @@ Feature: A donor is asked whether an old variable symbol from their verified acc
     And no bank payment 1001 is stored
     And "Jana" confirms symbol "6123456789" at bank account "1234567/0800"
     And the confirmation paired 1 payment and changed no yearly receipt
+    And a person "Andrea" is registered
+    And "Andrea" is an administrator
     And the bank history is unlocked
     When 1 days pass
-    And the older bank payments are loaded from 2025-01-01
-    Then bank payment 1001 is paired with "Jana" by confirmed symbol
-    And the import paired 0 by symbol, 0 by account and 1 by confirmed symbol
+    And "Andrea" asks for older bank payments from 2025-01-01
+    Then the history import says:
+      | status | COMPLETED |
+      | added  | 1         |
+    And bank payment 1001 is paired with "Jana" by confirmed symbol
 
   Scenario: A confirmation that adds donations to a year with an issued yearly receipt says so, never for a year before the first receipt year, and the next download replaces the receipt
     Given today is 2027-01-15

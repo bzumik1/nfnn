@@ -161,11 +161,6 @@ public class FioImportStepDefinitions {
         runImport(ImportTrigger.STARTUP);
     }
 
-    @When("the older bank payments are loaded from {date}")
-    public void theOlderBankPaymentsAreLoadedFrom(LocalDate from) {
-        reports.add(importService.importIncomingPayments(ImportTrigger.HISTORY, settings.withHistoryFrom(from)));
-    }
-
     @When("the hourly import runs")
     public void theHourlyImportRuns() {
         runImport(ImportTrigger.HOURLY);

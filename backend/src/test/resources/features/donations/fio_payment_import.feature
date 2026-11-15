@@ -63,12 +63,18 @@ Feature: Incoming bank payments are imported from Fio
     Then Fio was asked for movements from 2026-10-14 to 2026-10-17
     And 1 bank payments are stored
     And the bank movements are covered from 2026-07-20 to 2026-10-17
-    Given the bank history is unlocked
+    Given a person "Jana" is registered
+    And "Jana" is an administrator
+    And the bank history is unlocked
     And the bank reports the period 2025-01-01 to 2026-10-17
-    When the older bank payments are loaded from 2025-01-01
+    When "Jana" asks for older bank payments from 2025-01-01
+    And the queued history import runs
     Then Fio was asked for movements from 2025-01-01 to 2026-10-17
     And 2 bank payments are stored
-    And the bank movements are covered from 2025-01-01 to 2026-10-17
+    When "Jana" asks for the import state
+    Then the import state says:
+      | coveredFrom | 2025-01-01 |
+      | coveredTo   | 2026-10-17 |
 
   Scenario: An hourly import asks only for the days since the last run with a three-day overlap
     Given today is 2026-10-17
