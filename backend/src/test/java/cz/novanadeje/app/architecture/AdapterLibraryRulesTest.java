@@ -61,7 +61,7 @@ class AdapterLibraryRulesTest {
             "cz.novanadeje.app.donors.infrastructure.mail..", "cz.novanadeje.app.donations.infrastructure.report..",
             "cz.novanadeje.app.operations.infrastructure.backup..", "cz.novanadeje.app.operations.infrastructure.settings..",
             "cz.novanadeje.app.donations.infrastructure.signing.."};
-    static final String[] PERSISTENCE_ADAPTERS = {
+    private static final String[] PERSISTENCE_ADAPTERS = {
             "..infrastructure.persistence..", "cz.novanadeje.app.shared.infrastructure.audit..", "cz.novanadeje.app.shared.infrastructure.lock.."};
     private static final String[] JDBC_USERS = {
             "..infrastructure.persistence..", "cz.novanadeje.app.operations.infrastructure.settings..", "cz.novanadeje.app.operations.infrastructure.diagnostics.."};
@@ -100,6 +100,10 @@ class AdapterLibraryRulesTest {
             "io.github.openhtmltopdf.pdfboxout.PdfRendererBuilder", "package io.github.openhtmltopdf.pdfboxout;\npublic class PdfRendererBuilder {}\n");
 
     private static JavaClasses planted;
+
+    static String[] persistenceAdapters() {
+        return PERSISTENCE_ADAPTERS.clone();
+    }
 
     @ArchTest
     static final ArchRule no_class_draws_a_pdf_or_a_qr_code_since_the_browser_draws_both = noClasses()

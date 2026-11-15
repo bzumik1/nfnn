@@ -11,9 +11,6 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.shared.domain.error.DomainException;
-import jakarta.persistence.Converter;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Entity;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
@@ -31,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
+import static com.tngtech.archunit.core.domain.properties.CanBeAnnotated.Predicates.annotatedWith;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,16 +64,15 @@ class DomainFailureRulesTest {
                     + "generically around library calls; a failure of its own is a DomainException when the client caused it, and when the server did a named RuntimeException subclass "
                     + "or, for a broken invariant, a plain IllegalStateException");
 
-    private static final DescribedPredicate<JavaClass> PERSISTENCE_ADAPTER = DescribedPredicate.describe(
-            "a class of the persistence adapter packages AdapterLibraryRulesTest confines JPA and Spring Data to, other than a configuration record, "
-                    + "or a JPA entity, embeddable or converter, a @Repository or a Spring Data repository wherever it lives",
-            type -> resideInAnyPackage(AdapterLibraryRulesTest.PERSISTENCE_ADAPTERS).test(type) && !type.isAnnotatedWith(ConfigurationProperties.class)
-                    || type.isAnnotatedWith(Entity.class) || type.isAnnotatedWith(Embeddable.class) || type.isAnnotatedWith(Converter.class)
-                    || type.isAnnotatedWith(Repository.class) || type.isAssignableTo(org.springframework.data.repository.Repository.class));
+    private static final DescribedPredicate<JavaClass> PERSISTENCE_ADAPTER = resideInAnyPackage(AdapterLibraryRulesTest.persistenceAdapters())
+            .and(DescribedPredicate.not(annotatedWith(ConfigurationProperties.class)))
+            .or(annotatedWith(Repository.class))
+            .as("a class of the persistence adapter packages AdapterLibraryRulesTest confines JPA and Spring Data to, other than a configuration record, "
+                    + "or a @Repository wherever it lives");
 
     private static final DescribedPredicate<AccessTarget> AN_ARGUMENT_ASSERTION = DescribedPredicate.describe(
             "a method of Spring's Assert other than state, which throws IllegalArgumentException",
-            target -> target.getOwner().getName().equals("org.springframework.util.Assert") && !target.getName().equals("state"));
+            target -> target.getOwner().isAssignableTo("org.springframework.util.Assert") && !target.getName().equals("state"));
 
     @ArchTest
     static final ArchRule persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error = noClasses()
@@ -174,6 +171,14 @@ class DomainFailureRulesTest {
                 planted("argument assertion", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
                         "donations.infrastructure.persistence.PlantedAssertingRepository",
                         "public class PlantedAssertingRepository { void read(int offset) { org.springframework.util.Assert.isTrue(offset >= 0, \"planted\"); } }"),
+                planted("repository bean outside the adapter packages", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "donations.infrastructure.importing.PlantedRepositoryBean",
+                        "@org.springframework.stereotype.Repository public class PlantedRepositoryBean { void read(int offset) { "
+                                + "if (offset < 0) { throw new IllegalArgumentException(\"planted\"); } } }"),
+                planted("assertion through a subclass", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "shared.infrastructure.lock.PlantedLockAssertions",
+                        "public class PlantedLockAssertions { static abstract class Checks extends org.springframework.util.Assert { } "
+                                + "void take(long key) { Checks.isTrue(key > 0, \"planted\"); } }"),
                 planted("audit trail over a Spring Data repository", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
                         "shared.infrastructure.audit.PlantedAuditTrail",
                         "public class PlantedAuditTrail { private final org.springframework.data.repository.Repository<Object, java.util.UUID> rows; "
