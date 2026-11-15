@@ -48,6 +48,7 @@ describe('Given a donor signed in on a public computer', () => {
     expect(logout).toHaveBeenCalledTimes(1);
     expect(navigateByUrl).toHaveBeenCalledWith('/');
     expect(TestBed.inject(SignedOutNotice).shown()).toBe(true);
+    expect(TestBed.inject(SignedOutNotice).reason()).toBe('idle');
   });
 
   it('when the donor presses a key before the hour is up, then the hour starts again from that key', async () => {

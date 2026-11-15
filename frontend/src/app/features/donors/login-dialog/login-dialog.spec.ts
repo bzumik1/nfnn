@@ -781,7 +781,7 @@ describe('Given the sign-in dialog', () => {
       expect(box.checked).toBe(true);
       expect(element('.session-check').textContent).toContain('Cizí počítač, nic neukládat');
       expect(element('#session-public-hint').textContent).toContain(
-        'Po zavření prohlížeče tu nic nezůstane.',
+        'Po hodině bez používání vás odhlásíme a po zavření prohlížeče tu nic nezůstane.',
       );
       expect(box.getAttribute('aria-describedby')).toBe('session-public-hint');
       expect((await signIn())['session']).toBe('PUBLIC');

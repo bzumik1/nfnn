@@ -145,7 +145,7 @@ export class PublicSessionIdle {
     this.unwatch();
     this.store
       .logout()
-      .subscribe(() => void this.router.navigateByUrl('/').then(() => this.signedOut.show()));
+      .subscribe(() => void this.router.navigateByUrl('/').then(() => this.signedOut.show('idle')));
   }
 }
 
