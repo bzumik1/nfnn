@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.TransactionRulesTest > Given a planted service that opens a new transaction by annotation, by its enum and by a programmatic template, and an adapter with a template, when the rules check them, then each is reported and a plain service is not",
+    "reason": "#1045: a propagation is chosen only by annotation, per listed method, so the planted service now also chooses one in code in every way and a template that joins is the case left unreported",
+    "replacement": "architecture.TransactionRulesTest > Given a planted service that opens a new transaction by annotation and chooses a propagation in code in every way, and adapters with a template, when the rules check them, then each is reported and a joining template is not",
+    "contract": "docs/system-overview.md, the transaction rules"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.TransactionRulesTest > Given the classes named as opening a transaction of their own, when they are read, then each exists, so the list names no class that is gone",
+    "reason": "#1045: REQUIRES_NEW and NOT_SUPPORTED are admitted per method instead of per class, so the stale-entry check reads methods and also refuses a listed method that joins",
+    "replacement": "architecture.TransactionRulesTest > Given the methods named as opening a transaction of their own, when they are read, then each exists and still opens one, so the list names no method that is gone or joins",
+    "contract": "docs/system-overview.md, the transaction rules"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "operations.application.alerts.MailWatchTest > Given working mail, when a send fails, then the mail alert opens in a transaction of its own, so a refused send that rolls back its caller still counts",
+    "reason": "#1045: MailWatch no longer opens the transaction through a template; MailAlertRecorder's annotated REQUIRES_NEW methods do, which the transaction rules check and push_alerts.feature proves against a rolled-back monthly report, so the unit test keeps only the opening of the alert",
+    "replacement": "operations.application.alerts.MailWatchTest > Given working mail, when a send fails, then the mail alert opens",
+    "contract": "docs/system-overview.md, operations alerts"
+  }
+]

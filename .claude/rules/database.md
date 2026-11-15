@@ -32,7 +32,7 @@ What a change to the schema, a query, a lock, a transaction or the datasource mu
 
 ## Connections and waits
 - The limits of `reliability.md` bind only the backend's pooled sessions, through pgjdbc `options` in `spring.datasource.hikari.data-source-properties`, never `ALTER ROLE` or a server setting (a restore as `novanadeje_app` would inherit it); Liquibase keeps its own connection (`MigrationDataSourceConfiguration`). A new datasource or connection sets the same `options` and `logServerErrorDetail=false` (`DatabaseWaitLimitsTest`).
-- No connection is held across work that needs none (BCrypt, a network call, image decoding): split into short transactions as `DonorAuthenticationService.login` does, reading again and checking the row is unchanged before writing. Each `REQUIRES_NEW` under a caller's transaction is one more connection; count them (#449).
+- No connection is held across work that needs none (BCrypt, a network call, image decoding): split into short transactions as `DonorAuthenticationService.login` does, reading again and checking the row is unchanged before writing. Each `REQUIRES_NEW` under a caller's transaction is one more connection, and so is the work a `NOT_SUPPORTED` method runs while it suspends its caller's; count them (#449, `docs/system-overview.md` "Separate transactions").
 
 ## Reading
 - No query per row: load a page's related rows by their ids in one query and group them in Java (`PasskeyRepository.countByDonors`), `@BatchSize` on a collection read per row (`DonorJpaEntity.roles`), never `join fetch` with paging. A test with Hibernate statistics proves a page of many takes as many statements as a page of one (`DonorAdministrationSearchStatementsTest`, #465).
