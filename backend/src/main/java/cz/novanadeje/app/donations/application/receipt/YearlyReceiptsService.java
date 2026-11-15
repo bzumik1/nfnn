@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
 @Service
 public class YearlyReceiptsService {
 
-    public static final int MAX_DONORS_PER_RUN = 50;
     static final String ISSUE_ACTION = "ISSUE_RECEIPTS";
 
     private final DonationReceiptIssuer issuer;

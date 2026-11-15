@@ -18,9 +18,7 @@ final class PreconditionHeaders {
     }
 
     static ExpectedVersion expected(String ifMatch) {
-        String version = unquoted(ifMatch);
-        boolean matchable = !version.isEmpty() && version.length() <= ExpectedVersion.MAX_LENGTH;
-        return ExpectedVersion.of(matchable ? version : ExpectedVersion.UNMATCHABLE);
+        return ExpectedVersion.sent(unquoted(ifMatch));
     }
 
     static boolean fromConnectedApplication() {

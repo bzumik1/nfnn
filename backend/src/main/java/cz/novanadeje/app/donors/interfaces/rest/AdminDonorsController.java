@@ -5,7 +5,9 @@ import cz.novanadeje.app.donors.application.AdministratorActivityService;
 import cz.novanadeje.app.donors.application.AdministratorService;
 import cz.novanadeje.app.donors.application.DonorAdministrationService;
 import cz.novanadeje.app.donors.application.DonorErasureService;
+import cz.novanadeje.app.donors.domain.AdministratorActivityPage;
 import cz.novanadeje.app.donors.domain.DonorId;
+import cz.novanadeje.app.donors.domain.DonorSearchPage;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -36,6 +38,8 @@ class AdminDonorsController {
 
     static final int MAX_QUERY_LENGTH = 254;
     static final int MAX_PAGE = 100_000;
+    private static final int DONOR_SEARCH_LIMIT = 20;
+    private static final int ACTIVITY_PAGE_SIZE = 50;
 
     private final AdministratorService administrators;
     private final AdministratorActivityService activity;
@@ -55,8 +59,8 @@ class AdminDonorsController {
     @GetMapping
     DonorAccountListResponse search(@RequestParam(defaultValue = "") @Size(max = MAX_QUERY_LENGTH) String query,
                                     @RequestParam(defaultValue = "0") @Min(0) @Max(MAX_PAGE) int page,
-                                    @RequestParam(defaultValue = "" + DonorAdministrationService.SEARCH_LIMIT)
-                                    @Min(1) @Max(DonorAdministrationService.MAX_SEARCH_LIMIT) int limit) {
+                                    @RequestParam(defaultValue = "" + DONOR_SEARCH_LIMIT)
+                                    @Min(1) @Max(DonorSearchPage.MAX_LIMIT) int limit) {
         return DonorAccountListResponse.from(donors.search(query, page, limit));
     }
 
@@ -109,8 +113,8 @@ class AdminDonorsController {
     AdminActionListResponse actions(
             @RequestParam(required = false) Instant before,
             @RequestParam(required = false) UUID beforeId,
-            @RequestParam(defaultValue = "" + AdministratorActivityService.DEFAULT_PAGE_SIZE)
-            @Min(1) @Max(AdministratorActivityService.MAX_PAGE_SIZE) int limit
+            @RequestParam(defaultValue = "" + ACTIVITY_PAGE_SIZE)
+            @Min(1) @Max(AdministratorActivityPage.MAX_SIZE) int limit
     ) throws MissingServletRequestParameterException {
         return AdminActionListResponse.from(activity.list(cursor(before, beforeId), limit), summaries, LocaleContextHolder.getLocale());
     }

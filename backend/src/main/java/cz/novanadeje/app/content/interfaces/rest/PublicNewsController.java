@@ -1,6 +1,7 @@
 package cz.novanadeje.app.content.interfaces.rest;
 
 import cz.novanadeje.app.content.application.news.PublicNewsService;
+import cz.novanadeje.app.content.domain.PublicListPage;
 import cz.novanadeje.app.content.domain.news.NewsArticleNotFound;
 import cz.novanadeje.app.content.domain.Slug;
 import jakarta.validation.constraints.Max;
@@ -25,7 +26,7 @@ class PublicNewsController {
 
     @GetMapping
     NewsPageResponse list(@RequestParam(defaultValue = "0") @Min(0) int page,
-                          @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) @Min(1) @Max(PublicNewsService.MAX_PAGE_SIZE) int size) {
+                          @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) @Min(1) @Max(PublicListPage.MAX_SIZE) int size) {
         return NewsPageResponse.from(news.list(page, size));
     }
 

@@ -14,14 +14,21 @@ import cz.novanadeje.app.AppApplication;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,7 +60,50 @@ class ApplicationValueRulesTest {
                     && !(call.getTargetOwner().isEnum() && ENUM_LOOKUPS.contains(call.getName()))
                     && call.getTarget().resolveMember().map(method -> method.getModifiers().contains(JavaModifier.STATIC)).orElse(false));
 
+    private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
+
+    private static final String PORT_VALUE = "a bound the value record of a port checks in its own constructor; the adapter that implements the "
+            + "port produces or accepts values within it, so the bound is the port's contract, not a rule the adapter keeps";
+
+    private static final String EVENT_COLUMN = "a column sized to the bound the value's own constructor checks, so the table holds every value the "
+            + "constructor admits";
+
+    private static final Map<String, String> REVIEWED_CONSTANT_READS = Map.ofEntries(
+            Map.entry("cz.novanadeje.app.content.infrastructure.media.PrintPortraits reads cz.novanadeje.app.shared.application.people.PrintPortrait.SIDE",
+                    PORT_VALUE + " (FoundationPeople.printPortraitOf: the content adapter draws the square to the side PrintPortrait accepts)"),
+            Map.entry("cz.novanadeje.app.content.infrastructure.media.PrintSignatures reads cz.novanadeje.app.shared.application.people.PrintSignature.MAX_HEIGHT",
+                    PORT_VALUE + " (FoundationPeople.printSignatureOf: the content adapter scales the signature into the box PrintSignature accepts)"),
+            Map.entry("cz.novanadeje.app.content.infrastructure.media.PrintSignatures reads cz.novanadeje.app.shared.application.people.PrintSignature.MAX_WIDTH",
+                    PORT_VALUE + " (FoundationPeople.printSignatureOf: the content adapter scales the signature into the box PrintSignature accepts)"),
+            Map.entry("cz.novanadeje.app.donations.infrastructure.banklogo.BankLogoPictures reads "
+                            + "cz.novanadeje.app.donations.application.banklogo.FetchedBankLogo.MAX_BYTES",
+                    PORT_VALUE + " (BankLogoSource: the converted WebP is checked against the size FetchedBankLogo accepts, to fail as the adapter's "
+                            + "own undecodable picture)"),
+            Map.entry("cz.novanadeje.app.operations.infrastructure.backup.BackupStoreFinishedRestores reads "
+                            + "cz.novanadeje.app.shared.application.restore.FinishedRestore.MAX_ID_LENGTH",
+                    PORT_VALUE + " (FinishedRestores: a status file naming a longer request id confirms no restore instead of failing the start)"),
+            Map.entry("cz.novanadeje.app.donations.infrastructure.persistence.ReceiptSigningKeyAdoptionJpaEntity reads "
+                            + "cz.novanadeje.app.shared.application.restore.FinishedRestore.MAX_ID_LENGTH",
+                    EVENT_COLUMN + " (receipt_signing_key_adoption.restore_id holds a FinishedRestore id)"),
+            Map.entry("cz.novanadeje.app.shared.infrastructure.audit.AdminActionJpaEntity reads "
+                            + "cz.novanadeje.app.shared.application.event.AdminActionPerformed.MAX_ACTION_LENGTH",
+                    EVENT_COLUMN + " (admin_action.action holds the action of the shared event AdminActionPerformed)"),
+            Map.entry("cz.novanadeje.app.shared.infrastructure.audit.AdminActionJpaEntity reads "
+                            + "cz.novanadeje.app.shared.application.event.AdminActionPerformed.MAX_DETAILS_LENGTH",
+                    EVENT_COLUMN + " (admin_action.details holds the details of the shared event AdminActionPerformed)"),
+            Map.entry("cz.novanadeje.app.shared.infrastructure.json.CanonicalRowVersions reads cz.novanadeje.app.shared.application.version.RowVersions.VERSION_FIELD",
+                    "the contract of the RowVersions port itself: the name of the field its implementation leaves out of the form it hashes"),
+            Map.entry("cz.novanadeje.app.donors.interfaces.rest.AdminActionSummaries reads cz.novanadeje.app.donors.application.AdminActionFacts.DONOR",
+                    "the key of a fact AdminActionFacts reads from the audit details, which the summaries fill with the donor's name; one spelling "
+                            + "of one key on both sides, not a value of a rule"));
+
+    private static final Pattern PLANTED_TYPE = Pattern.compile("(?:class|record|interface|enum|@interface) (\\w+)");
+
     private static JavaClasses planted;
+
+    private static Set<String> plantedReads;
+
+    private static Set<String> mainReads;
 
     @ArchTest
     static final ArchRule adapters_read_no_static_value_of_the_application = noClasses()
@@ -62,8 +112,8 @@ class ApplicationValueRulesTest {
             .orShould().callMethodWhere(A_STATIC_VALUE_GETTER_OF_THE_APPLICATION)
             .because("backend.md, Application: a value of a business rule (a lifetime, a limit, a set of kinds) belongs to the domain, and an adapter gets it "
                     + "from the event, command or result of the use case; read from an application class's static field, the rule spreads over the "
-                    + "scheduler and the mail adapter (#621 R4-A6). javac inlines a compile-time constant (a String or a primitive), which the rule cannot see "
-                    + "(#961)");
+                    + "scheduler and the mail adapter (#621 R4-A6). javac inlines a compile-time constant (a String or a primitive), which this rule "
+                    + "cannot see, so the source scan below reads those (#961)");
 
     @BeforeAll
     static void plantAdaptersReadingApplicationValues(@TempDir Path folder) throws IOException {
@@ -87,6 +137,252 @@ class ApplicationValueRulesTest {
     void should_report_nothing_when_checked_given_an_allowed_read(ArchRule rule, String className) {
         assertThat(rule.evaluate(planted).getFailureReport().getDetails())
                 .isNotEmpty().noneSatisfy(detail -> assertThat(detail).contains(className + "."));
+    }
+
+    @Test
+    @DisplayName("Given the main sources, when the adapters and REST classes are read for compile-time constants of application classes, then each read is a reviewed one")
+    void should_read_only_reviewed_constants_when_read_given_the_main_sources() {
+        assertThat(mainSourceReads()).as("compile-time constants of application classes that adapters and REST classes read, which javac inlines; "
+                        + "move the value to the domain, the event, command or result, or review it in REVIEWED_CONSTANT_READS with its reason")
+                .isSubsetOf(REVIEWED_CONSTANT_READS.keySet());
+    }
+
+    @Test
+    @DisplayName("Given the reviewed constant reads, when the main sources are read, then every one still happens")
+    void should_still_happen_when_read_given_every_reviewed_constant_read() {
+        assertThat(REVIEWED_CONSTANT_READS.keySet()).as("reviewed reads the main sources no longer make; remove them from REVIEWED_CONSTANT_READS")
+                .isSubsetOf(mainSourceReads());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("plantedConstantReads")
+    @DisplayName("Given a planted adapter or REST class that reads a compile-time constant of an application class, when the sources are read, then exactly that read is reported")
+    void should_report_the_planted_read_when_read_given_an_inlined_constant_of_the_application(String label, String read) {
+        assertThat(plantedReads).contains(read);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("allowedConstantReads")
+    @DisplayName("Given a planted class that reads a domain constant, its own constant, a static value that is no compile-time constant, an enum constant, a package merely named like the application, or an application constant from the application, when the sources are read, then nothing of it is reported")
+    void should_report_nothing_when_read_given_an_allowed_constant_read(String label, String reader) {
+        assertThat(plantedReads).noneSatisfy(read -> assertThat(read).startsWith(reader + " "));
+    }
+
+    @Test
+    @DisplayName("Given the planted sources, when they are read, then exactly the planted reads are reported")
+    void should_report_exactly_the_planted_reads_when_read_given_the_planted_sources() {
+        assertThat(plantedReads).containsExactlyInAnyOrderElementsOf(plantedConstantReads().map(arguments -> (String) arguments.get()[1]).toList());
+    }
+
+    private static Set<String> mainSourceReads() {
+        if (mainReads == null) {
+            mainReads = InlinedApplicationConstants.readsIn(ExceptionMessageValues.javaSources(MAIN_SOURCES));
+        }
+        return mainReads;
+    }
+
+    static Stream<Arguments> plantedConstantReads() {
+        return Stream.of(
+                Arguments.of("qualified read in a scheduler", "cz.novanadeje.app.donors.infrastructure.reminder.PlantedConstantScheduler reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLifetimes.LIFETIME_DAYS"),
+                Arguments.of("static import in a mail adapter", "cz.novanadeje.app.donors.infrastructure.mail.PlantedStaticImportSender reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLifetimes.REMINDER_DAYS"),
+                Arguments.of("annotation attribute of a column", "cz.novanadeje.app.donors.infrastructure.persistence.PlantedSizedEntity reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.MAX_NAME_LENGTH"),
+                Arguments.of("string constant in a REST parameter default", "cz.novanadeje.app.donors.interfaces.rest.PlantedPagedController reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.DEFAULT_PAGE"),
+                Arguments.of("switch label in a REST class", "cz.novanadeje.app.donors.interfaces.rest.PlantedKeyedRenderer reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.KEY"),
+                Arguments.of("nested and anonymous classes of an adapter", "cz.novanadeje.app.donors.infrastructure.mail.PlantedNestedSender reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLifetimes.LIFETIME_DAYS"),
+                Arguments.of("constant of an interface of the application", "cz.novanadeje.app.donors.infrastructure.json.PlantedPortImplementation reads "
+                        + "cz.novanadeje.app.donors.application.PlantedPort.FIELD"),
+                Arguments.of("constant of the shared application", "cz.novanadeje.app.shared.infrastructure.audit.PlantedSharedReader reads "
+                        + "cz.novanadeje.app.shared.application.event.PlantedSharedEvent.MAX_LENGTH"));
+    }
+
+    static Stream<Arguments> allowedConstantReads() {
+        return Stream.of(
+                Arguments.of("domain constant", "cz.novanadeje.app.donors.infrastructure.reminder.PlantedDomainConstantScheduler"),
+                Arguments.of("the adapter's own constant", "cz.novanadeje.app.donors.infrastructure.mail.PlantedOwnConstantSender"),
+                Arguments.of("static final value that is no compile-time constant", "cz.novanadeje.app.donors.infrastructure.mail.PlantedComputedSender"),
+                Arguments.of("enum constant", "cz.novanadeje.app.donors.interfaces.rest.PlantedEnumController"),
+                Arguments.of("package merely named like the application", "cz.novanadeje.app.donors.infrastructure.mail.PlantedLookalikeConstantSender"),
+                Arguments.of("application reading the application", "cz.novanadeje.app.donors.application.PlantedReminderPolicy"));
+    }
+
+    private static final List<String> PLANTED_SOURCES = List.of(
+            """
+            package cz.novanadeje.app.donors.application;
+            public final class PlantedLifetimes {
+                public static final long LIFETIME_DAYS = 30;
+                public static final int REMINDER_DAYS = 7;
+                public static final java.time.Duration COMPUTED = java.time.Duration.ofDays(LIFETIME_DAYS);
+                private PlantedLifetimes() { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.application;
+            public record PlantedLimits(String name) {
+                public static final int MAX_NAME_LENGTH = 120;
+                public static final int DEFAULT_PAGE = 20;
+                public static final String KEY = "donor";
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.application;
+            public interface PlantedPort {
+                String FIELD = "version";
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.application;
+            public enum PlantedKind { FIRST }
+            """,
+            """
+            package cz.novanadeje.app.donors.application;
+            public final class PlantedReminderPolicy {
+                private PlantedReminderPolicy() { }
+                public static boolean fits(long days) { return days < PlantedLifetimes.LIFETIME_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.applications;
+            public final class PlantedRetention {
+                public static final long DAYS = 30;
+                private PlantedRetention() { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.domain;
+            public final class PlantedLifetime {
+                public static final long DAYS = 30;
+                private PlantedLifetime() { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.shared.application.event;
+            public record PlantedSharedEvent(String action) {
+                public static final int MAX_LENGTH = 64;
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.reminder;
+            class PlantedConstantScheduler {
+                long days() { return cz.novanadeje.app.donors.application.PlantedLifetimes.LIFETIME_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            import static cz.novanadeje.app.donors.application.PlantedLifetimes.REMINDER_DAYS;
+            class PlantedStaticImportSender {
+                int days() { return REMINDER_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.persistence;
+            import cz.novanadeje.app.donors.application.PlantedLimits;
+            class PlantedSizedEntity {
+                @PlantedColumn(length = PlantedLimits.MAX_NAME_LENGTH)
+                String name;
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.persistence;
+            @interface PlantedColumn { int length(); }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            import cz.novanadeje.app.donors.application.PlantedLimits;
+            class PlantedPagedController {
+                @PlantedParameter(defaultValue = "" + PlantedLimits.DEFAULT_PAGE)
+                void list(int page) { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            @interface PlantedParameter { String defaultValue(); }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            import cz.novanadeje.app.donors.application.PlantedLimits;
+            class PlantedKeyedRenderer {
+                String render(String name) {
+                    return switch (name) {
+                        case PlantedLimits.KEY -> "someone";
+                        default -> name;
+                    };
+                }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            import cz.novanadeje.app.donors.application.PlantedLifetimes;
+            class PlantedNestedSender {
+                static final class Body {
+                    Runnable later() {
+                        return new Runnable() {
+                            public void run() { System.out.println(PlantedLifetimes.LIFETIME_DAYS); }
+                        };
+                    }
+                }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.json;
+            class PlantedPortImplementation implements cz.novanadeje.app.donors.application.PlantedPort {
+                String left() { return FIELD; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.shared.infrastructure.audit;
+            class PlantedSharedReader {
+                int length() { return cz.novanadeje.app.shared.application.event.PlantedSharedEvent.MAX_LENGTH; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.reminder;
+            class PlantedDomainConstantScheduler {
+                long days() { return cz.novanadeje.app.donors.domain.PlantedLifetime.DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            class PlantedOwnConstantSender {
+                static final int WINDOW_DAYS = 7;
+                int days() { return WINDOW_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            class PlantedComputedSender {
+                long days() { return cz.novanadeje.app.donors.application.PlantedLifetimes.COMPUTED.toDays(); }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            class PlantedEnumController {
+                Object kind() { return cz.novanadeje.app.donors.application.PlantedKind.FIRST; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            class PlantedLookalikeConstantSender {
+                long days() { return cz.novanadeje.app.donors.applications.PlantedRetention.DAYS; }
+            }
+            """);
+
+    @BeforeAll
+    static void readPlantedConstantReads(@TempDir Path folder) throws IOException {
+        List<Path> sources = new ArrayList<>();
+        for (String source : PLANTED_SOURCES) {
+            String packageName = source.lines().findFirst().orElseThrow().replace("package ", "").replace(";", "").strip();
+            Matcher type = PLANTED_TYPE.matcher(source);
+            assertThat(type.find()).as("a planted source declares its type").isTrue();
+            Path file = Files.createDirectories(folder.resolve(packageName.replace('.', '/'))).resolve(type.group(1) + ".java");
+            sources.add(Files.writeString(file, source));
+        }
+        plantedReads = InlinedApplicationConstants.readsIn(sources);
     }
 
     static Stream<PlantedClass> plantedClasses() {

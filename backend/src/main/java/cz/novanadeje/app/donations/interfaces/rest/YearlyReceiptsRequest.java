@@ -1,7 +1,7 @@
 package cz.novanadeje.app.donations.interfaces.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import cz.novanadeje.app.donations.application.receipt.YearlyReceiptsService;
+import cz.novanadeje.app.donations.domain.receipt.BulkYearlyReceipts;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -17,7 +17,7 @@ import static cz.novanadeje.app.donations.interfaces.rest.DonorDonationsControll
 
 record YearlyReceiptsRequest(
         @NotNull @Min(FIRST_FOUR_DIGIT_YEAR) @Max(LAST_FOUR_DIGIT_YEAR) Integer year,
-        @NotNull @Size(min = 1, max = YearlyReceiptsService.MAX_DONORS_PER_RUN) List<@NotNull UUID> donorIds
+        @NotNull @Size(min = 1, max = BulkYearlyReceipts.MAX_DONORS) List<@NotNull UUID> donorIds
 ) {
 
     @JsonIgnore

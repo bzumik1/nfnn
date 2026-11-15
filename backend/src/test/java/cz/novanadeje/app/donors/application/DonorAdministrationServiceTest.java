@@ -4,6 +4,7 @@ import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorNotFound;
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.DonorSearchPage;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.PasskeyRepository;
@@ -35,6 +36,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DonorAdministrationServiceTest {
 
+    private static final int SEARCH_LIMIT = 20;
+
     private static final Instant NOW = Instant.parse("2026-10-22T21:00:00Z");
     private static final DonorId JANA = DonorId.newId(NOW.minusSeconds(300));
     private static final DonorId PETR = DonorId.newId(NOW.minusSeconds(200));
@@ -59,11 +62,11 @@ class DonorAdministrationServiceTest {
     void should_describe_each_match_when_searched_given_two_matching_donors() {
         Donor jana = donor(JANA, "Jana Nováková", "jana@example.cz", Set.of(Role.DONOR, Role.ADMIN));
         Donor petr = donor(PETR, "Petr Svoboda", "petr@example.cz", Set.of(Role.DONOR));
-        when(donors.search("nov", 0, DonorAdministrationService.SEARCH_LIMIT + 1)).thenReturn(List.of(jana, petr));
+        when(donors.search("nov", 0, SEARCH_LIMIT + 1)).thenReturn(List.of(jana, petr));
         when(secondFactors.findDonorsWithEnabledFactorAmong(List.of(JANA, PETR))).thenReturn(Set.of(JANA));
         when(passkeys.countByDonors(List.of(JANA, PETR))).thenReturn(Map.of(JANA, 2));
 
-        DonorSearchResult result = service.search("  nov ", 0, DonorAdministrationService.SEARCH_LIMIT);
+        DonorSearchResult result = service.search("  nov ", 0, SEARCH_LIMIT);
 
         assertThat(result.items()).containsExactly(new DonorAccountView(jana, true, 2), new DonorAccountView(petr, false, 0));
         assertThat(result.hasMore()).isFalse();
@@ -89,7 +92,7 @@ class DonorAdministrationServiceTest {
     void should_refuse_when_searched_given_bad_page() {
         assertThatThrownBy(() -> service.search("", -1, 20)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.search("", 0, 0)).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.search("", 0, DonorAdministrationService.MAX_SEARCH_LIMIT + 1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("", 0, DonorSearchPage.MAX_LIMIT + 1)).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(donors, secondFactors, passkeys);
     }
 

@@ -24,6 +24,11 @@ public record ExpectedVersion(Optional<String> value) {
         return new ExpectedVersion(Optional.of(version));
     }
 
+    public static ExpectedVersion sent(String version) {
+        boolean matchable = !version.isEmpty() && version.length() <= MAX_LENGTH;
+        return of(matchable ? version : UNMATCHABLE);
+    }
+
     public boolean admits(String current) {
         return value.map(current::equals).orElse(true);
     }
