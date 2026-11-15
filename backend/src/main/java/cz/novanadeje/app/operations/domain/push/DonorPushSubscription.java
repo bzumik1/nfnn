@@ -18,12 +18,6 @@ public record DonorPushSubscription(PushSubscriptionId id, UUID donorId, UUID de
         }
     }
 
-    public static void requireRoomBeside(List<DonorPushSubscription> ofAccount) {
-        if (ofAccount.size() >= MAX_PER_DONOR) {
-            throw new PushSubscriptionLimitReached();
-        }
-    }
-
     public static DonorPushSubscription subscribe(UUID donorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys keys,
                                                   DonorNotifications notifications, Instant now) {
         return new DonorPushSubscription(PushSubscriptionId.generate(now), donorId, deviceId, endpoint, keys, notifications, now, Optional.empty(), 0);
@@ -35,6 +29,16 @@ public record DonorPushSubscription(PushSubscriptionId id, UUID donorId, UUID de
 
     public boolean belongsTo(UUID donor) {
         return donorId.equals(donor);
+    }
+
+    public void requireRoomAmong(List<DonorPushSubscription> others) {
+        if (others.stream().filter(this::keptBeside).count() >= MAX_PER_DONOR) {
+            throw new PushSubscriptionLimitReached();
+        }
+    }
+
+    private boolean keptBeside(DonorPushSubscription other) {
+        return other.belongsTo(donorId) && !other.endpoint().equals(endpoint) && !other.deviceId().equals(deviceId);
     }
 
     @Override

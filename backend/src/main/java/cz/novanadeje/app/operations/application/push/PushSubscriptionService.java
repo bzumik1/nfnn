@@ -61,13 +61,13 @@ public class PushSubscriptionService {
         Instant now = clock.instant();
         devices.holdSignedIn(administratorId, deviceId).orElseThrow(PushDeviceSignedOut::new);
         subscriptions.lockWrites();
+        PushSubscription subscription = PushSubscription.subscribe(administratorId, deviceId, endpoint, clientKeys, alerts, now);
+        subscription.requireRoomAmong(subscriptions.findAllOf(administratorId));
         List<PushSubscription> displaced = subscriptions.findByEndpointOrDevice(endpoint, deviceId);
         subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
-        PushSubscription.requireRoomBeside(subscriptions.findAllOf(administratorId));
         displaced.stream().filter(other -> !other.belongsTo(administratorId)).forEach(other -> events.publishEvent(new AdminActionPerformed(
                 administratorId, REMOVE_ACTION, Optional.of(other.id().value()), "Upozornění přes push jiného správce vypnuta na zařízení ("
                 + PushServiceNames.of(other.endpoint().service()) + "), protože si je ve stejném prohlížeči zapnul tento správce", now)));
-        PushSubscription subscription = PushSubscription.subscribe(administratorId, deviceId, endpoint, clientKeys, alerts, now);
         subscriptions.save(subscription);
         events.publishEvent(new AdminActionPerformed(administratorId, SUBSCRIBE_ACTION, Optional.of(subscription.id().value()),
                 "Upozornění přes push zapnuta na zařízení (" + PushServiceNames.of(endpoint.service()) + "), " + PushAlertNames.describe(alerts), now));

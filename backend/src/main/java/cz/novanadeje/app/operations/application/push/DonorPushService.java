@@ -57,9 +57,9 @@ public class DonorPushService {
             throw new PushDeviceKeepsNothing();
         }
         subscriptions.lockWrites();
-        subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
-        DonorPushSubscription.requireRoomBeside(subscriptions.findAllOf(donorId));
         DonorPushSubscription subscription = DonorPushSubscription.subscribe(donorId, deviceId, endpoint, clientKeys, notifications, clock.instant());
+        subscription.requireRoomAmong(subscriptions.findAllOf(donorId));
+        subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
         subscriptions.save(subscription);
         return DonorPushDeviceView.of(subscription);
     }

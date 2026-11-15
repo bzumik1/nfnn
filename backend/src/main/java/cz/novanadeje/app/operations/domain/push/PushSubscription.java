@@ -19,12 +19,6 @@ public record PushSubscription(PushSubscriptionId id, UUID administratorId, UUID
         }
     }
 
-    public static void requireRoomBeside(List<PushSubscription> ofAccount) {
-        if (ofAccount.size() >= MAX_PER_ADMINISTRATOR) {
-            throw new PushSubscriptionLimitReached();
-        }
-    }
-
     public static PushSubscription subscribe(UUID administratorId, UUID deviceId, PushEndpoint endpoint, PushClientKeys keys, PushAlerts alerts,
                                              Instant now) {
         return new PushSubscription(PushSubscriptionId.generate(now), administratorId, deviceId, endpoint, keys, alerts, now, Optional.empty(), 0);
@@ -40,6 +34,16 @@ public record PushSubscription(PushSubscriptionId id, UUID administratorId, UUID
 
     public boolean belongsTo(UUID administrator) {
         return administratorId.equals(administrator);
+    }
+
+    public void requireRoomAmong(List<PushSubscription> others) {
+        if (others.stream().filter(this::keptBeside).count() >= MAX_PER_ADMINISTRATOR) {
+            throw new PushSubscriptionLimitReached();
+        }
+    }
+
+    private boolean keptBeside(PushSubscription other) {
+        return other.belongsTo(administratorId) && !other.endpoint().equals(endpoint) && !other.deviceId().equals(deviceId);
     }
 
     @Override
