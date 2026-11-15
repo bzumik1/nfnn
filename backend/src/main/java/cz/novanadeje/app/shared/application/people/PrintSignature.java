@@ -6,7 +6,6 @@ public record PrintSignature(byte[] png, int width, int height) {
 
     public static final int MAX_WIDTH = 1200;
     public static final int MAX_HEIGHT = 600;
-    public static final String MEDIA_TYPE = "image/png";
     private static final byte[] PNG_SIGNATURE = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
 
     public PrintSignature {

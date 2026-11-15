@@ -18,8 +18,6 @@ import java.util.List;
 
 final class CanonicalSignatureVectors {
 
-    static final String MEDIA_TYPE = "application/json";
-
     private static final JsonMapper JSON = JsonMapper.builder()
             .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .build();

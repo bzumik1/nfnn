@@ -134,7 +134,8 @@ values ('0190a000-0000-7000-8000-000000000054', '0190a000-0000-7000-8000-0000000
         'MANUAL', 'RECEIVED', null, '2026-01-02T10:00:00Z', null, 'GENERAL', null);
 insert into receipt_image (sha256, media_type, content, first_used_at)
 values (repeat('2', 64), 'image/png', '\x89504e47', '2026-01-09T10:00:00Z'),
-       (repeat('3', 64), 'image/jpeg', '\xffd8ffe0', '2026-01-09T10:00:00Z');
+       (repeat('3', 64), 'image/jpeg', '\xffd8ffe0', '2026-01-09T10:00:00Z'),
+       (repeat('4', 64), 'application/json', '\x7b7d', '2026-01-09T10:00:00Z');
 insert into donation_receipt_signature (id, image_sha256, width, height, uploaded_at)
 values (1, repeat('2', 64), 600, 200, '2026-01-09T10:00:00Z');
 insert into donation_receipt_signatory (id, person_id, receipt_role, chosen_at)

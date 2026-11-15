@@ -5,7 +5,6 @@ import java.util.Arrays;
 public record PrintPortrait(byte[] jpeg, int side) {
 
     public static final int SIDE = 600;
-    public static final String MEDIA_TYPE = "image/jpeg";
 
     public PrintPortrait {
         if (jpeg == null || jpeg.length < 3 || (jpeg[0] & 0xff) != 0xff || (jpeg[1] & 0xff) != 0xd8) {

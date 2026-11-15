@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptPage;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptQuery;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageMediaType;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
 import cz.novanadeje.app.donations.domain.receipt.YearNotYetCompleted;
 import org.junit.jupiter.api.DisplayName;
@@ -148,7 +149,7 @@ class AdminReceiptsServiceTest {
     @Test
     @DisplayName("Given a receipt image, when an administrator fetches it, then it comes only while some receipt shows it")
     void should_serve_image_only_when_fetched_given_some_receipt_names_it() {
-        StoredReceiptImage image = new StoredReceiptImage(new byte[]{1, 2, 3}, "image/png");
+        StoredReceiptImage image = new StoredReceiptImage(new byte[]{1, 2, 3}, ReceiptImageMediaType.PNG);
         ContentDigest unnamed = new ContentDigest("b".repeat(64));
         when(receipts.anyShowsImage(SIGNATURE)).thenReturn(true);
         when(images.find(SIGNATURE)).thenReturn(Optional.of(image));
