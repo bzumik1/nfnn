@@ -3,6 +3,7 @@ name: Safari
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "frontend/**"
       - ".github/workflows/safari.yml"
@@ -19,6 +20,7 @@ concurrency:
 
 jobs:
   safari:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: macos-15
     timeout-minutes: 90
     defaults:

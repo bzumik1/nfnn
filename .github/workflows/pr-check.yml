@@ -3,6 +3,7 @@ name: PR check
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
     paths:
@@ -27,6 +28,7 @@ jobs:
       pull-requests: read
     outputs:
       code: ${{ steps.files.outputs.code }}
+      full: ${{ steps.draft.outputs.full }}
       appearance: ${{ steps.appearance.outputs.lines }}
       context-growth: ${{ steps.context-growth.outputs.lines }}
     steps:
@@ -49,6 +51,18 @@ jobs:
           else
             echo "The pull request changes only docs/, .claude/ or Markdown, so only the agent context job runs before the gate."
             echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find whether the pull request is a draft, which runs only the build, unit and integration tests
+        id: draft
+        env:
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          if [ "$DRAFT" = true ]; then
+            echo "The pull request is a draft: only backend, frontend, mcp and the agent context run, and gate fails until it is marked Ready for review."
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Read the look the description declares, for the visual comparison
@@ -198,7 +212,7 @@ jobs:
   acceptance:
     name: Cucumber
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event_name == 'push' && 35 || 25 }}
     defaults:
@@ -340,7 +354,7 @@ jobs:
   e2e:
     name: e2e (${{ matrix.browser }} ${{ matrix.shard }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -405,7 +419,7 @@ jobs:
   pwa:
     name: Web jako aplikace
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -495,7 +509,7 @@ jobs:
   visual:
     name: Vzhled
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -544,7 +558,7 @@ jobs:
   main-recording:
     name: Nahrávka main
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -759,7 +773,7 @@ jobs:
   stack:
     name: stack (${{ matrix.part }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -1735,7 +1749,7 @@ jobs:
   release:
     name: Zkouška vydání
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.full == 'true'
     uses: ./.github/workflows/release-rehearsal.yml
 
   gate:
@@ -1798,10 +1812,15 @@ jobs:
         if: always()
         env:
           CODE: ${{ needs.changes.outputs.code }}
+          FULL: ${{ needs.changes.outputs.full }}
           NEEDS: ${{ toJSON(needs) }}
           SHARDS: ${{ steps.shards.outcome }}
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$NEEDS"
+          if [ "$CODE" = true ] && [ "$FULL" != true ]; then
+            echo "::error::the pull request is a draft, so only backend, frontend, mcp and the agent context ran (results above); mark it Ready for review to run the full check"
+            exit 1
+          fi
           if [ "$CODE" = true ]; then expected=success; else expected=skipped; fi
           if ! jq -e --arg expected "$expected" '.changes.result == "success" and .["agent-context"].result == "success" and ([del(.changes, .["agent-context"])[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
             echo "::error::the agent context and every other job must pass on a change to code (and only the agent context run on a change to docs/, .claude/ or Markdown only); see the results above"
