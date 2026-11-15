@@ -26,7 +26,7 @@ import java.util.Map;
 class ContactMessageEmailForwarder {
 
     private static final Locale FOUNDATION_LOCALE = Locale.forLanguageTag("cs");
-    private static final DateTimeFormatter RECEIVED_AT = DateTimeFormatter.ofPattern("d. M. yyyy H:mm");
+    private static final DateTimeFormatter RECEIVED_AT = DateTimeFormatter.ofPattern("d. M. yyyy H:mm", FOUNDATION_LOCALE);
     private static final String KEYS = "contact.email.";
     private static final String TEMPLATE = "email/contact/message-received";
 

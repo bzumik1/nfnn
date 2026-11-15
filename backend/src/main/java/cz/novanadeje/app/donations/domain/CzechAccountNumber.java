@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.domain;
 
 import java.math.BigInteger;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,7 +45,7 @@ public record CzechAccountNumber(String value) {
         String prefix = parts.group(1) == null ? "" : parts.group(1);
         String basicBankAccountNumber = parts.group(3) + zeroPadded(prefix, PREFIX_DIGITS) + zeroPadded(parts.group(2), NUMBER_DIGITS);
         int checkDigits = IBAN_CHECK_BASE - new BigInteger(basicBankAccountNumber + COUNTRY_AS_DIGITS).mod(IBAN_MODULUS).intValue();
-        return new Iban(COUNTRY + String.format("%02d", checkDigits) + basicBankAccountNumber);
+        return new Iban(COUNTRY + String.format(Locale.ROOT, "%02d", checkDigits) + basicBankAccountNumber);
     }
 
     private static boolean passesModulo11(String digits) {

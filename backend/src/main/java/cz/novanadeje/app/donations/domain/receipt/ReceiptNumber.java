@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
 import java.time.Year;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public record ReceiptNumber(String value) {
@@ -23,7 +24,7 @@ public record ReceiptNumber(String value) {
         if (serial < FIRST_SERIAL || serial > LAST_SERIAL) {
             throw new IllegalArgumentException("A receipt serial is between " + FIRST_SERIAL + " and " + LAST_SERIAL + ": " + serial);
         }
-        return new ReceiptNumber("%04d-%06d".formatted(issuedIn.getValue(), serial));
+        return new ReceiptNumber(String.format(Locale.ROOT, "%04d-%06d", issuedIn.getValue(), serial));
     }
 
     @Override

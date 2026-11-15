@@ -7,6 +7,7 @@ import tools.jackson.databind.JsonNode;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class CanonicalRows {
@@ -89,7 +90,7 @@ public final class CanonicalRows {
                 case '\t' -> text.append("\\t");
                 default -> {
                     if (character < FIRST_PRINTABLE || isLoneSurrogate(value, index)) {
-                        text.append(String.format("\\u%04x", (int) character));
+                        text.append(String.format(Locale.ROOT, "\\u%04x", (int) character));
                     } else {
                         text.append(character);
                     }

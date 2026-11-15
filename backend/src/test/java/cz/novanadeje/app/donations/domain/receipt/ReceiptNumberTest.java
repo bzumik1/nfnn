@@ -1,6 +1,9 @@
 package cz.novanadeje.app.donations.domain.receipt;
 
+import cz.novanadeje.app.support.ArabicDigitsDefaultLocale;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.Test;
 
 import java.time.Year;
@@ -39,5 +42,19 @@ class ReceiptNumberTest {
         assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptNumber("2026-42"));
         assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptNumber("26-000042"));
         assertThatIllegalArgumentException().isThrownBy(() -> new ReceiptNumber(null));
+    }
+
+    @Nested
+    @DisplayName("Given the JVM's default locale writes Arabic-Indic digits")
+    class GivenADefaultLocaleWithOtherDigits {
+
+        @RegisterExtension
+        final ArabicDigitsDefaultLocale locale = new ArabicDigitsDefaultLocale();
+
+        @Test
+        @DisplayName("when a number is made, then it is the year and the serial in ASCII digits")
+        void should_write_ascii_digits_when_made_given_a_default_locale_with_other_digits() {
+            assertThat(ReceiptNumber.of(Year.of(2027), 42).value()).isEqualTo("2027-000042");
+        }
     }
 }

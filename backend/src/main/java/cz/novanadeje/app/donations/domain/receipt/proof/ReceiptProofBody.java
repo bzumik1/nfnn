@@ -13,6 +13,7 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -117,7 +118,7 @@ public final class ReceiptProofBody {
             if (code > LARGEST_POSTAL_CODE) {
                 throw new InvalidReceiptProof(ReceiptProofRejection.INVALID_VALUE);
             }
-            String digits = String.format("%05d", code);
+            String digits = String.format(Locale.ROOT, "%05d", code);
             postalCode = digits.substring(0, 3) + " " + digits.substring(3);
         } else {
             postalCode = reader.text();
@@ -128,7 +129,7 @@ public final class ReceiptProofBody {
             if (identifier > LARGEST_COMPANY_IDENTIFIER) {
                 throw new InvalidReceiptProof(ReceiptProofRejection.INVALID_VALUE);
             }
-            companyIdentifier = Optional.of(String.format("%08d", identifier));
+            companyIdentifier = Optional.of(String.format(Locale.ROOT, "%08d", identifier));
         }
         return new SignedDonor(companyIdentifier.isPresent() ? DonorType.COMPANY : DonorType.PERSON, name, street, city, postalCode,
                 companyIdentifier);

@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -24,7 +25,7 @@ final class BackupScheduleFiles {
     private static final String TEST_RESTORE_TIME = "test_restore_time";
     private static final Pattern TIME = Pattern.compile("([01][0-9]|2[0-3]):[0-5][0-9]");
     private static final Pattern DAY = Pattern.compile("[1-7]");
-    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     private static final Logger log = LoggerFactory.getLogger(BackupScheduleFiles.class);
 
