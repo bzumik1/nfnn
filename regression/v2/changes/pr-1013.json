@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/admin/device-copy/administration-page-reads.spec.ts > Given the content, settings, history and backups pages reading through the copy on this device > when a copy that holds every part is open > then the stories, the About section, the band, the people and the settings come from the copy",
+    "replacement": "src/app/features/admin/device-copy/administration-page-reads.spec.ts > Given the content, settings, history and backups pages reading through the copy on this device > when a copy that holds every part is open > then the editors whose writes name no version, the project order, the About section, the band and the people, come from the server while online",
+    "reason": "Phase 2 gate #992, architecture M2 (#993): the project order, About, the Přispět band and the people save without a row version, so their pages read the server first while online and the copy only offline; the test of the reads from the copy keeps the stories and the settings",
+    "contract": "docs/frontend-overview.md, admin device-copy (AdministrationPageReads)"
+  }
+]

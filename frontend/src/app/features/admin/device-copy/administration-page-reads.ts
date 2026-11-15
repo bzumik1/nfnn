@@ -127,28 +127,28 @@ export class AdministrationPageReads {
   }
 
   projectOrder(): Observable<ProjectOrderResponse> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => this.fromContent(this.projectOrders, (rows) => rows[0] ?? null),
       () => this.projectsApi.order(),
     );
   }
 
   about(): Observable<AboutResponse> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => this.fromContent(this.aboutRows, (rows) => rows[0] ?? null),
       () => this.aboutApi.load(),
     );
   }
 
   donateBand(): Observable<DonateBandResponse> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => this.fromContent(this.bandRows, (rows) => rows[0] ?? null),
       () => this.donateBandApi.load(),
     );
   }
 
   people(): Observable<PeopleResponse> {
-    return this.reads.copyFirst(
+    return this.reads.serverFirst(
       () => this.fromContent(this.peopleRows, (rows) => rows[0] ?? null),
       () => this.peopleApi.load(),
     );

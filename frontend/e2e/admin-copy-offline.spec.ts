@@ -227,7 +227,15 @@ const COPY_READS = [
   '/api/admin/donors/actions',
 ];
 
-const SERVER_FIRST_READS = ['/api/admin/donors/actions', '/api/admin/operations/backups'];
+const SERVER_FIRST_READS = [
+  '/api/admin/content/project-order',
+  '/api/admin/content/about',
+  '/api/admin/content/donate-band',
+  '/api/admin/content/people',
+  '/api/admin/donors/actions',
+  '/api/admin/operations/backups',
+  '/api/admin/content/people',
+];
 
 interface Chunk {
   readonly id: string;
@@ -305,6 +313,16 @@ test.describe('Given an administrator whose device keeps the administration copy
     context,
   }) => {
     test.setTimeout(90_000);
+    const server: Record<string, unknown> = {
+      '/api/admin/content/project-order': { order: 'YEAR_THEN_CATEGORY' },
+      '/api/admin/content/about': { photo: null },
+      '/api/admin/content/donate-band': { photo: null },
+      '/api/admin/content/people': people,
+    };
+    await page.route(
+      (url) => Object.hasOwn(server, url.pathname),
+      (route) => route.fulfill({ json: server[new URL(route.request().url()).pathname] }),
+    );
     await page.route(
       (url) => url.pathname === '/api/admin/donors/actions',
       (route) =>
