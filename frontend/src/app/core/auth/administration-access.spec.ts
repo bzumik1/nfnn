@@ -3,6 +3,7 @@ import { DirtyForms } from '../updates/dirty-forms';
 import {
   ACCESS_CLOCK,
   ADMINISTRATION_LOCK_AFTER_MS,
+  ADMINISTRATION_PRESENCE_CHECK_MS,
   AdministrationAccess,
 } from './administration-access';
 
@@ -39,6 +40,19 @@ describe('Given the administration access of this tab', () => {
   });
 
   it('when the app starts, then the administration is locked', () => {
+    expect(access.unlocked()).toBe(false);
+  });
+
+  it('when the app starts locked, then nothing checks on the page', () => {
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('when it is unlocked in a hidden tab and stays away for five minutes, then it locks while still away', () => {
+    visibility = 'hidden';
+
+    access.unlock();
+    vi.advanceTimersByTime(ADMINISTRATION_LOCK_AFTER_MS);
+
     expect(access.unlocked()).toBe(false);
   });
 
@@ -117,6 +131,96 @@ describe('Given the administration access of this tab', () => {
       document.dispatchEvent(new Event('resume'));
 
       expect(access.unlocked()).toBe(true);
+    });
+
+    it('and the computer slept with the page open for five minutes, then it locks at the first check after waking', () => {
+      wall += ADMINISTRATION_LOCK_AFTER_MS;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the computer slept with the page open for just under five minutes, then it stays unlocked', () => {
+      wall += ADMINISTRATION_LOCK_AFTER_MS - 1;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+
+      expect(access.unlocked()).toBe(true);
+    });
+
+    it('and the computer slept with the page open while its page clock kept counting, then it locks at the first check after waking', () => {
+      now += ADMINISTRATION_LOCK_AFTER_MS;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the page stays open and in use for an hour, then it stays unlocked', () => {
+      for (let elapsed = 0; elapsed < 60 * 60 * 1000; elapsed += ADMINISTRATION_PRESENCE_CHECK_MS) {
+        now += ADMINISTRATION_PRESENCE_CHECK_MS;
+        wall += ADMINISTRATION_PRESENCE_CHECK_MS;
+        vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+      }
+
+      expect(access.unlocked()).toBe(true);
+    });
+
+    it('and the page stays open for four minutes before a five-minute sleep, then the sleep alone locks it', () => {
+      for (let elapsed = 0; elapsed < 4 * 60 * 1000; elapsed += ADMINISTRATION_PRESENCE_CHECK_MS) {
+        now += ADMINISTRATION_PRESENCE_CHECK_MS;
+        wall += ADMINISTRATION_PRESENCE_CHECK_MS;
+        vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+      }
+      wall += ADMINISTRATION_LOCK_AFTER_MS - 1;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+      expect(access.unlocked()).toBe(true);
+
+      wall += ADMINISTRATION_LOCK_AFTER_MS;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the wall clock was set back with the page open, then it locks at the next check', () => {
+      wall -= 60 * 60 * 1000;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the computer wakes after five minutes with the page open and resumes it before the next check, then it locks', () => {
+      wall += ADMINISTRATION_LOCK_AFTER_MS;
+      document.dispatchEvent(new Event('resume'));
+
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the computer wakes after five minutes and the page goes hidden before the next check, then it locks', () => {
+      wall += ADMINISTRATION_LOCK_AFTER_MS;
+      becomes('hidden');
+
+      expect(access.unlocked()).toBe(false);
+    });
+
+    it('and the app was away for four minutes and then stays open, then the time away does not count towards a later sleep', () => {
+      becomes('hidden');
+      now += 4 * 60 * 1000;
+      wall += 4 * 60 * 1000;
+      becomes('visible');
+      wall += 2 * 60 * 1000;
+      vi.advanceTimersByTime(ADMINISTRATION_PRESENCE_CHECK_MS);
+
+      expect(access.unlocked()).toBe(true);
+    });
+
+    it('and it locks, then nothing keeps checking on the page', () => {
+      access.lock();
+
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('and the session ends, then nothing keeps checking on the page', () => {
+      access.ended();
+
+      expect(vi.getTimerCount()).toBe(0);
     });
 
     it('and it locks with nothing half-typed, then the page is not kept under the panel', () => {
