@@ -2,10 +2,10 @@ package cz.novanadeje.app.donations.domain.receipt;
 
 import java.util.Arrays;
 
-public record StoredReceiptImage(byte[] content, String mediaType) {
+public record StoredReceiptImage(byte[] content, ReceiptImageMediaType mediaType) {
 
     public StoredReceiptImage {
-        if (content == null || content.length == 0 || mediaType == null || mediaType.isBlank()) {
+        if (content == null || content.length == 0 || mediaType == null) {
             throw new IllegalArgumentException("A stored receipt image has its content and media type");
         }
         content = content.clone();
@@ -32,6 +32,6 @@ public record StoredReceiptImage(byte[] content, String mediaType) {
 
     @Override
     public String toString() {
-        return "StoredReceiptImage[" + content.length + " bytes, " + mediaType + "]";
+        return "StoredReceiptImage[" + content.length + " bytes, " + mediaType.value() + "]";
     }
 }

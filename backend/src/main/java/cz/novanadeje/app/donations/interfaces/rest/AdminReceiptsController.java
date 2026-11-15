@@ -86,7 +86,7 @@ class AdminReceiptsController {
         StoredReceiptImage image = receipts.image(new ContentDigest(sha256));
         byte[] content = image.content();
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(image.mediaType()))
+                .contentType(MediaType.parseMediaType(image.mediaType().value()))
                 .contentLength(content.length)
                 .header(HttpHeaders.CACHE_CONTROL, NOT_STORED_BY_ANY_CACHE)
                 .body(content);

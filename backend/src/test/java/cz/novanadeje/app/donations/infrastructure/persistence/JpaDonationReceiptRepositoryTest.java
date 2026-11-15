@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.receipt.FoundationIdentity;
 import cz.novanadeje.app.donations.domain.receipt.FrozenReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptDocument;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptFingerprint;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageMediaType;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptKind;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptLine;
@@ -98,9 +99,9 @@ class JpaDonationReceiptRepositoryTest {
     private static final ReceiptTextSet CZECH = ReceiptTextSet.czechOnly(Map.of("receipt.title.single", "Potvrzení o přijetí daru"));
     private static final ReceiptTextSet BILINGUAL = ReceiptTextSet.bilingual(Map.of("receipt.title.single", "Potvrzení o přijetí daru"),
             Map.of("receipt.title.single", "Confirmation of a donation received"));
-    private static final StoredReceiptImage SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 2}, "image/png");
-    private static final StoredReceiptImage OTHER_SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 3}, "image/png");
-    private static final StoredReceiptImage PORTRAIT = new StoredReceiptImage(new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 4}, "image/jpeg");
+    private static final StoredReceiptImage SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 2}, ReceiptImageMediaType.PNG);
+    private static final StoredReceiptImage OTHER_SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 3}, ReceiptImageMediaType.PNG);
+    private static final StoredReceiptImage PORTRAIT = new StoredReceiptImage(new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 4}, ReceiptImageMediaType.JPEG);
 
     @Autowired
     private DonationReceiptRepository receipts;
@@ -853,10 +854,40 @@ class JpaDonationReceiptRepositoryTest {
     void should_find_stored_image_when_found_given_digest() {
         assertThat(images.find(SIGNATURE.digest())).hasValueSatisfying(image -> {
             assertThat(image.content()).isEqualTo(SIGNATURE.content());
-            assertThat(image.mediaType()).isEqualTo("image/png");
+            assertThat(image.mediaType()).isEqualTo(ReceiptImageMediaType.PNG);
             assertThat(image.digest()).isEqualTo(SIGNATURE.digest());
         });
         assertThat(images.find(new ContentDigest("e".repeat(64)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a vector signature an earlier release stored as its canonical JSON, when it is found by its digest, then it comes back as JSON")
+    void should_find_vector_json_when_found_given_a_vector_signature_an_earlier_release_stored() {
+        byte[] vector = "{\"viewBox\":[0,0,10,10],\"paths\":[]}".getBytes(StandardCharsets.UTF_8);
+        ContentDigest digest = ContentDigest.of(vector);
+        storeRow(digest.value(), "application/json", vector);
+
+        assertThat(images.find(digest)).hasValueSatisfying(image -> assertThat(image.mediaType()).isEqualTo(ReceiptImageMediaType.VECTOR_JSON));
+    }
+
+    @Test
+    @DisplayName("Given the receipt image store, when it is stored with a media type outside the closed set, then the schema refuses the row")
+    void should_refuse_the_row_when_stored_given_a_media_type_outside_the_closed_set() {
+        assertThatThrownBy(() -> storeRow("f".repeat(64), "image/svg+xml", new byte[] {1}))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("ck_receipt_image_media_type");
+    }
+
+    @Test
+    @DisplayName("Given a stored receipt image whose media type is outside the closed set, when it is found, then it is a server fault naming only the digest and never served")
+    void should_be_a_server_fault_when_found_given_a_stored_media_type_outside_the_closed_set() {
+        jdbc.sql("alter table receipt_image drop constraint ck_receipt_image_media_type").update();
+        storeRow("f".repeat(64), "text/html", new byte[] {1});
+
+        assertThatThrownBy(() -> images.find(new ContentDigest("f".repeat(64))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("f".repeat(64))
+                .hasMessageNotContaining("text/html");
     }
 
     @Test
@@ -992,7 +1023,11 @@ class JpaDonationReceiptRepositoryTest {
     }
 
     private void storeImage(StoredReceiptImage image) {
+        storeRow(image.digest().value(), image.mediaType().value(), image.content());
+    }
+
+    private void storeRow(String sha256, String mediaType, byte[] content) {
         jdbc.sql("insert into receipt_image (sha256, media_type, content, first_used_at) values (?, ?, ?, ?)")
-                .params(image.digest().value(), image.mediaType(), image.content(), Timestamp.from(NOW)).update();
+                .params(sha256, mediaType, content, Timestamp.from(NOW)).update();
     }
 }

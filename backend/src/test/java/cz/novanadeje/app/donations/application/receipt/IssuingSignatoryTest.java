@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatory;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryMissing;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptSignatoryRepository;
 import cz.novanadeje.app.donations.domain.receipt.Signatory;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageMediaType;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
 import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
@@ -58,10 +59,10 @@ class IssuingSignatoryTest {
         assertThat(resolved.portraitImage()).contains(ContentDigest.of(JPEG));
         ArgumentCaptor<StoredReceiptImage> stored = ArgumentCaptor.forClass(StoredReceiptImage.class);
         verify(images, times(2)).storeIfAbsent(stored.capture(), eq(NOW));
-        assertThat(stored.getAllValues()).extracting(StoredReceiptImage::mediaType).containsExactlyInAnyOrder("image/png", "image/jpeg");
-        assertThat(stored.getAllValues()).filteredOn(image -> image.mediaType().equals("image/png")).singleElement()
+        assertThat(stored.getAllValues()).extracting(StoredReceiptImage::mediaType).containsExactlyInAnyOrder(ReceiptImageMediaType.PNG, ReceiptImageMediaType.JPEG);
+        assertThat(stored.getAllValues()).filteredOn(image -> image.mediaType() == ReceiptImageMediaType.PNG).singleElement()
                 .satisfies(image -> assertThat(image.content()).isEqualTo(PNG));
-        assertThat(stored.getAllValues()).filteredOn(image -> image.mediaType().equals("image/jpeg")).singleElement()
+        assertThat(stored.getAllValues()).filteredOn(image -> image.mediaType() == ReceiptImageMediaType.JPEG).singleElement()
                 .satisfies(image -> assertThat(image.content()).isEqualTo(JPEG));
     }
 

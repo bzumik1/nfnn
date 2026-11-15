@@ -7,6 +7,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptImageNotFound;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptImageRepository;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptNotFound;
+import cz.novanadeje.app.donations.domain.receipt.ReceiptImageMediaType;
 import cz.novanadeje.app.donations.domain.receipt.StoredReceiptImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.when;
 
 class DonorReceiptsServiceTest {
 
-    private static final StoredReceiptImage SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 1}, "image/png");
+    private static final StoredReceiptImage SIGNATURE = new StoredReceiptImage(new byte[] {(byte) 0x89, 'P', 'N', 'G', 1}, ReceiptImageMediaType.PNG);
 
     private final DonationReceiptRepository receipts = mock(DonationReceiptRepository.class);
     private final ReceiptImageRepository images = mock(ReceiptImageRepository.class);
@@ -74,7 +75,7 @@ class DonorReceiptsServiceTest {
         StoredReceiptImage image = service.imageOf(JANA, SIGNATURE.digest());
 
         assertThat(image.content()).isEqualTo(SIGNATURE.content());
-        assertThat(image.mediaType()).isEqualTo("image/png");
+        assertThat(image.mediaType()).isEqualTo(ReceiptImageMediaType.PNG);
     }
 
     @Test
