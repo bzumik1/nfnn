@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.push;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +34,16 @@ public record PushSubscription(PushSubscriptionId id, UUID administratorId, UUID
 
     public boolean belongsTo(UUID administrator) {
         return administratorId.equals(administrator);
+    }
+
+    public void requireRoomAmong(List<PushSubscription> others) {
+        if (others.stream().filter(this::keptBeside).count() >= MAX_PER_ADMINISTRATOR) {
+            throw new PushSubscriptionLimitReached();
+        }
+    }
+
+    private boolean keptBeside(PushSubscription other) {
+        return other.belongsTo(administratorId) && !other.endpoint().equals(endpoint) && !other.deviceId().equals(deviceId);
     }
 
     @Override
