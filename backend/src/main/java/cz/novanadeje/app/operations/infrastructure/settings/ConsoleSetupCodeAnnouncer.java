@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.settings.SetupCode;
 import org.springframework.stereotype.Component;
 
 import java.io.PrintStream;
+import java.util.Locale;
 
 @Component
 class ConsoleSetupCodeAnnouncer implements SetupCodeAnnouncer {
@@ -21,7 +22,7 @@ class ConsoleSetupCodeAnnouncer implements SetupCodeAnnouncer {
 
     @Override
     public void announce(SetupCode code) {
-        console.println("""
+        console.println(String.format(Locale.ROOT, """
 
                 ============================================================
                  První nastavení webu / First setup
@@ -33,7 +34,7 @@ class ConsoleSetupCodeAnnouncer implements SetupCodeAnnouncer {
                  Kód platí do dokončení nastavení nebo do restartu.
                  The code is valid until the setup is done or a restart.
                 ============================================================
-                """.formatted(code.display()));
+                """, code.display()));
         console.flush();
     }
 }

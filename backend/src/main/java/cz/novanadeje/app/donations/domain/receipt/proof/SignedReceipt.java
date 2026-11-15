@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.receipt.ReplacedReceipt;
 import java.time.LocalDate;
 import java.time.Year;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 public record SignedReceipt(ReceiptKind kind, ReceiptNumber number, LocalDate issuedOn, Optional<Year> year, Optional<ReplacedReceipt> replaces,
@@ -57,7 +58,7 @@ public record SignedReceipt(ReceiptKind kind, ReceiptNumber number, LocalDate is
     }
 
     private static void requireIssuedIn(ReceiptNumber number, LocalDate issuedOn) {
-        if (!number.value().startsWith(String.format("%04d-", issuedOn.getYear()))) {
+        if (!number.value().startsWith(String.format(Locale.ROOT, "%04d-", issuedOn.getYear()))) {
             throw new IllegalArgumentException("The receipt " + number + " carries the year it was issued, " + issuedOn.getYear());
         }
     }

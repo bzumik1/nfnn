@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,7 +22,7 @@ public class BackupScheduleService {
 
     static final String CHANGE_BACKUP_SCHEDULE_ACTION = "CHANGE_BACKUP_SCHEDULE";
 
-    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
     private static final Map<DayOfWeek, String> ON_DAY = Map.of(
             DayOfWeek.MONDAY, "v pondělí",
             DayOfWeek.TUESDAY, "v úterý",

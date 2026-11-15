@@ -5,6 +5,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.OptionalLong;
 import java.util.regex.Pattern;
 
@@ -31,7 +32,7 @@ public final class Totp {
             byte[] hash = mac.doFinal(ByteBuffer.allocate(Long.BYTES).putLong(step).array());
             int offset = hash[hash.length - 1] & 0x0f;
             int binary = (hash[offset] & 0x7f) << 24 | (hash[offset + 1] & 0xff) << 16 | (hash[offset + 2] & 0xff) << 8 | hash[offset + 3] & 0xff;
-            return String.format("%0" + DIGITS + "d", binary % MODULUS);
+            return String.format(Locale.ROOT, "%0" + DIGITS + "d", binary % MODULUS);
         } catch (GeneralSecurityException unavailable) {
             throw new IllegalStateException("HMAC-SHA1 is not available", unavailable);
         }
