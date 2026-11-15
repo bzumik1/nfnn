@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.liquibase.autoconfigure.LiquibaseDataSource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -81,6 +82,14 @@ class DatabaseWaitLimitsTest {
             assertThat(setting(connection, "statement_timeout")).isEqualTo("0");
         }
         assertThat(jdbc.sql("select count(*) from databasechangelog").query(Long.class).single()).isPositive();
+    }
+
+    @Test
+    @DisplayName("Given the migrations' connection, when its settings are read, then opening a connection gives up after ten seconds")
+    void should_give_up_opening_after_ten_seconds_when_settings_read_given_migration_connection() throws SQLException {
+        DriverManagerDataSource migration = migrationDataSource.unwrap(DriverManagerDataSource.class);
+
+        assertThat(migration.getConnectionProperties()).containsEntry("loginTimeout", "10");
     }
 
     @Test

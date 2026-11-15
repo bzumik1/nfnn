@@ -13,6 +13,8 @@ import java.util.Properties;
 @Configuration(proxyBeanMethods = false)
 class MigrationDataSourceConfiguration {
 
+    private static final String LOGIN_TIMEOUT_SECONDS = "10";
+
     @Bean(defaultCandidate = false)
     @LiquibaseDataSource
     DataSource migrationDataSource(JdbcConnectionDetails connection, MigrationSessionProperties session) {
@@ -23,6 +25,7 @@ class MigrationDataSourceConfiguration {
         Optional.ofNullable(connection.getPassword()).ifPresent(password -> properties.setProperty("password", password));
         properties.setProperty("logServerErrorDetail", "false");
         properties.setProperty("options", session.sessionOptions());
+        properties.setProperty("loginTimeout", LOGIN_TIMEOUT_SECONDS);
         dataSource.setConnectionProperties(properties);
         return dataSource;
     }
