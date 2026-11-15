@@ -20,6 +20,9 @@ public record ClientMetadata(ClientId clientId, String clientName, List<URI> red
         if (redirectUri == null || !redirectUri.isAbsolute() || redirectUri.getHost() == null) {
             return false;
         }
+        if (redirectUri.getRawFragment() != null || redirectUri.getRawUserInfo() != null) {
+            return false;
+        }
         return redirectUris.stream().anyMatch(registered -> matches(registered, redirectUri));
     }
 
