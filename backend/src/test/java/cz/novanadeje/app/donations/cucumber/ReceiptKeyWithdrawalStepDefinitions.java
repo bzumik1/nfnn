@@ -22,11 +22,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -188,6 +190,18 @@ public class ReceiptKeyWithdrawalStepDefinitions {
         assertThat(jdbc.sql("delete from receipt_signing_key where key_id = ?").param(keyId).update()).isEqualTo(1);
     }
 
+    @Given("{string} has the audit entry {string} of {string} at {string} with the details {string}")
+    public void hasTheAuditEntry(String alias, String entryId, String action, String performedAt, String details) {
+        jdbc.sql("insert into admin_action (id, admin_id, action, subject_id, details, performed_at) values (?, ?, ?, ?, ?, ?)")
+                .params(UUID.fromString(entryId), donors.idOf(alias), action, null, details, Timestamp.from(Instant.parse(performedAt)))
+                .update();
+    }
+
+    @Then("the receipt signing keys flag the unreadable audit entries:")
+    public void theReceiptSigningKeysFlagUnreadableEntries(DataTable expected) {
+        assertThat(unreadableEntries()).isEqualTo(expected.asMaps());
+    }
+
     @Then("the receipt signing keys flag in the audit trail:")
     public void theReceiptSigningKeysFlag(DataTable expected) {
         assertThat(mismatches()).isEqualTo(expected.asMaps());
@@ -196,6 +210,16 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     @Then("the receipt signing keys flag nothing in the audit trail")
     public void theReceiptSigningKeysFlagNothing() {
         assertThat(mismatches()).isEmpty();
+        assertThat(unreadableEntries()).isEmpty();
+    }
+
+    private List<Map<String, String>> unreadableEntries() {
+        JsonNode answer = api.lastResponseJson();
+        assertThat(api.lastResponse().getStatusCode().value()).isEqualTo(200);
+        return answer.get("unreadableAuditEntries").values().stream()
+                .map(entry -> Map.of("entryId", entry.get("entryId").asString(), "action", entry.get("action").asString(),
+                        "performedAt", entry.get("performedAt").asString()))
+                .toList();
     }
 
     private List<Map<String, String>> mismatches() {

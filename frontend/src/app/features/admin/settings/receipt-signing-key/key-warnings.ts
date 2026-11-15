@@ -1,6 +1,11 @@
 /// <reference types="@angular/localize" />
 
-import { ReceiptSigningKeyMismatch, ReceiptSigningKeysResponse } from '../../admin-api';
+import { formatBankTime } from '../../../donations/donation-date';
+import {
+  ReceiptSigningKeyMismatch,
+  ReceiptSigningKeysResponse,
+  ReceiptSigningKeyUnreadableEntry,
+} from '../../admin-api';
 
 export function withdrawnCurrentKeyId(answer: ReceiptSigningKeysResponse): string | null {
   const current = answer.keys.find((key) => key.current);
@@ -17,10 +22,35 @@ export function mismatchSentence(mismatch: ReceiptSigningKeyMismatch): string {
     : $localize`:@@admin.signingKey.mismatch.missing:Klíč ${mismatch.keyId}:key: je v historii správy, ale jeho záznam v databázi chybí (změna mimo web). QR kódy jím podepsané se neověří; obraťte se na technika serveru.`;
 }
 
+export function unreadableEntrySentence(entry: ReceiptSigningKeyUnreadableEntry): string {
+  const performedAt = formatBankTime(entry.performedAt);
+  return $localize`:@@admin.signingKey.unreadableEntry:Záznam „${keyActionName(entry.action)}:action:“ z ${performedAt}:performedAt: v Historii změn nejde přečíst (změna mimo web), takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.`;
+}
+
+export function auditSentences(answer: ReceiptSigningKeysResponse): string[] {
+  return [
+    ...answer.auditMismatches.map(mismatchSentence),
+    ...(answer.unreadableAuditEntries ?? []).map(unreadableEntrySentence),
+  ];
+}
+
 export function signingKeyWarnings(answer: ReceiptSigningKeysResponse): string[] {
   const withdrawn = withdrawnCurrentKeyId(answer);
   return [
     ...(withdrawn === null ? [] : [withdrawnCurrentKeySentence(withdrawn)]),
-    ...answer.auditMismatches.map(mismatchSentence),
+    ...auditSentences(answer),
   ];
+}
+
+function keyActionName(action: string): string {
+  switch (action) {
+    case 'REGISTER_RECEIPT_SIGNING_KEY':
+      return $localize`:@@admin.signingKey.unreadableEntry.register:Registrace klíče`;
+    case 'ADOPT_RECEIPT_SIGNING_KEY':
+      return $localize`:@@admin.signingKey.unreadableEntry.adopt:Převzetí klíče ze zálohy`;
+    case 'WITHDRAW_RECEIPT_SIGNING_KEY':
+      return $localize`:@@admin.signingKey.unreadableEntry.withdraw:Zneplatnění klíče`;
+    default:
+      return $localize`:@@admin.signingKey.unreadableEntry.other:Klíč k ověřovacím QR kódům`;
+  }
 }

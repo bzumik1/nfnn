@@ -71,6 +71,9 @@ public class ReceiptSigningKeyRegistration {
                         mismatch.keyId());
             }
         });
+        outcome.unreadable().forEach(entry -> log.error(
+                "Receipt signing key audit entry {} of {} matches no known wording, so the cross-check of the keys with the audit trail cannot read it",
+                entry.entryId(), entry.action()));
         if (outcome.ownKeyWithdrawn()) {
             log.error("Receipt signing key {} of this server is withdrawn, so the server signs no receipt until it starts with a new seed", signer.keyId());
         }
@@ -105,7 +108,8 @@ public class ReceiptSigningKeyRegistration {
         Optional<ReceiptSigningKey> ownRow = stored.stream().filter(key -> key.id().equals(own)).findFirst();
         boolean ownKeyWithdrawn = history.isWithdrawn(own) || ownRow.filter(ReceiptSigningKey::isWithdrawn).isPresent();
         Optional<ReceiptSigningKeyId> registered = ownRow.isPresent() || ownKeyWithdrawn ? Optional.empty() : Optional.of(registerOwn(now));
-        return new Registration(testKeyRows, broken, unconfirmed, adopted, registered, history.mismatches(keys.findAll()), ownKeyWithdrawn);
+        return new Registration(testKeyRows, broken, unconfirmed, adopted, registered, history.mismatches(keys.findAll()), history.unreadable(),
+                ownKeyWithdrawn);
     }
 
     private Optional<FinishedRestore> restoreToAdoptFrom(Instant now) {
@@ -131,6 +135,7 @@ public class ReceiptSigningKeyRegistration {
     }
 
     private record Registration(List<ReceiptSigningKeyId> testKeys, List<ReceiptSigningKeyId> broken, List<ReceiptSigningKeyId> unconfirmed, List<ReceiptSigningKeyId> adopted,
-                                Optional<ReceiptSigningKeyId> registered, List<ReceiptSigningKeyMismatch> mismatches, boolean ownKeyWithdrawn) {
+                                Optional<ReceiptSigningKeyId> registered, List<ReceiptSigningKeyMismatch> mismatches,
+                                List<UnreadableKeyAuditEntry> unreadable, boolean ownKeyWithdrawn) {
     }
 }

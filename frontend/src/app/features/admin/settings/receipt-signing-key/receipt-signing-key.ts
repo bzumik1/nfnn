@@ -25,11 +25,7 @@ import {
 } from '../../admin-api';
 import { KeyRenewal, watchKeyRenewal } from './key-renewal';
 import { KeyWithdrawalDialog } from './key-withdrawal-dialog';
-import {
-  mismatchSentence,
-  withdrawnCurrentKeyId,
-  withdrawnCurrentKeySentence,
-} from './key-warnings';
+import { auditSentences, withdrawnCurrentKeyId, withdrawnCurrentKeySentence } from './key-warnings';
 import { unpublishedKeyIds, unpublishedKeysSentence } from './unpublished-keys';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { reloadWhenOnlineAgain } from '../../device-copy/online-again';
@@ -102,7 +98,7 @@ export class ReceiptSigningKey {
     return [
       ...(ids.length === 0 ? [] : [unpublishedKeysSentence(ids)]),
       ...(withdrawn === null ? [] : [withdrawnCurrentKeySentence(withdrawn)]),
-      ...keys.auditMismatches.map(mismatchSentence),
+      ...auditSentences(keys),
     ];
   });
   protected readonly offers = computed<WithdrawalOffer[]>(() =>

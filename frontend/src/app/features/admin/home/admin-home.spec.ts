@@ -866,6 +866,30 @@ describe('Given an administrator on the administration home', () => {
       expect(links()).toEqual(['/sprava/nastaveni#klic-k-overovacim-qr']);
     });
 
+    it('then an entry of the keys in the audit trail that cannot be read gets an urgent row leading to the settings', async () => {
+      await sources(
+        paymentList([]),
+        [administrator()],
+        backupsView(),
+        importState({ lastSucceededAt: '2026-10-18T08:05:30Z' }),
+        {
+          ...receiptSigningKeys([receiptSigningKey()]),
+          unreadableAuditEntries: [
+            {
+              entryId: '019a1c00-0000-7000-8000-0000000000e1',
+              action: 'ADOPT_RECEIPT_SIGNING_KEY',
+              performedAt: '2026-11-12T09:30:00Z',
+            },
+          ],
+        },
+      );
+
+      expect(items()).toEqual([
+        'Naléhavé: Klíč k ověřovacím QR kódům potřebuje kontrolu Záznam „Převzetí klíče ze zálohy“ z 12. 11. 2026 10:30 v Historii změn nejde přečíst (změna mimo web), takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.',
+      ]);
+      expect(links()).toEqual(['/sprava/nastaveni#klic-k-overovacim-qr']);
+    });
+
     it('then receipts nobody signs get an urgent row leading to the people of the foundation', async () => {
       await sources();
       http.expectOne(SIGNATORY_URL).flush(noReceiptSignatory());

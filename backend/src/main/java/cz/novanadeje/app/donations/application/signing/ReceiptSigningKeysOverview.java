@@ -5,10 +5,11 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import java.util.List;
 
 public record ReceiptSigningKeysOverview(ReceiptSigningKeyId currentKeyId, boolean currentKeyPublished, List<PublishedReceiptKey> keys,
-                                         List<ReceiptSigningKeyMismatch> mismatches) {
+                                         List<ReceiptSigningKeyMismatch> mismatches, List<UnreadableKeyAuditEntry> unreadableEntries) {
 
     public ReceiptSigningKeysOverview {
         keys = List.copyOf(keys);
         mismatches = List.copyOf(mismatches);
+        unreadableEntries = List.copyOf(unreadableEntries);
     }
 }

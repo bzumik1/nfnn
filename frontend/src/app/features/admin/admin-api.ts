@@ -593,11 +593,18 @@ export interface ReceiptSigningKeyMismatch {
   kind: ReceiptSigningKeyMismatchKind;
 }
 
+export interface ReceiptSigningKeyUnreadableEntry {
+  entryId: string;
+  action: string;
+  performedAt: string;
+}
+
 export interface ReceiptSigningKeysResponse {
   currentKeyId: string;
   currentKeyPublished: boolean;
   keys: ReceiptSigningKeyResponse[];
   auditMismatches: ReceiptSigningKeyMismatch[];
+  unreadableAuditEntries?: ReceiptSigningKeyUnreadableEntry[];
 }
 
 export interface ReceiptSigningKeyWithdrawalResponse extends ReceiptSigningKeysResponse {
