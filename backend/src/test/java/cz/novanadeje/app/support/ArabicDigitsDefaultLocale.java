@@ -11,10 +11,14 @@ public final class ArabicDigitsDefaultLocale implements BeforeEachCallback, Afte
     public static final Locale ARABIC_EGYPT = Locale.forLanguageTag("ar-EG");
 
     private Locale previous;
+    private Locale previousFormat;
+    private Locale previousDisplay;
 
     @Override
     public void beforeEach(ExtensionContext context) {
         previous = Locale.getDefault();
+        previousFormat = Locale.getDefault(Locale.Category.FORMAT);
+        previousDisplay = Locale.getDefault(Locale.Category.DISPLAY);
         Locale.setDefault(ARABIC_EGYPT);
         if (String.format("%d", 7).equals("7")) {
             throw new IllegalStateException("The JDK no longer writes Arabic-Indic digits for " + ARABIC_EGYPT.toLanguageTag()
@@ -25,5 +29,7 @@ public final class ArabicDigitsDefaultLocale implements BeforeEachCallback, Afte
     @Override
     public void afterEach(ExtensionContext context) {
         Locale.setDefault(previous);
+        Locale.setDefault(Locale.Category.FORMAT, previousFormat);
+        Locale.setDefault(Locale.Category.DISPLAY, previousDisplay);
     }
 }
