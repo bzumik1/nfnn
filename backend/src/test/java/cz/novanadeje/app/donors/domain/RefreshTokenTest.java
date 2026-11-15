@@ -131,12 +131,12 @@ class RefreshTokenTest {
     }
 
     @Test
-    @DisplayName("Given a used token of a connected application, when it is presented within the grace, then it may not be reissued")
-    void should_refuse_reissue_when_presented_within_the_grace_given_a_connected_application_token() {
+    @DisplayName("Given a used token of a connected application with a recorded successor, when it is presented within the grace, then it may be reissued")
+    void should_allow_reissue_when_presented_within_the_grace_given_a_connected_application_token() {
         RefreshToken token = rotated(new ClientId("https://claude.ai/.well-known/oauth-client"), NOW.minusSeconds(10), null,
                 UUID.randomUUID());
 
-        assertThat(token.mayBeReissuedAt(NOW)).isFalse();
+        assertThat(token.mayBeReissuedAt(NOW)).isTrue();
     }
 
     @Test

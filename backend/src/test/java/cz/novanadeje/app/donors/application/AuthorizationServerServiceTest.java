@@ -47,6 +47,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -364,6 +365,98 @@ class AuthorizationServerServiceTest {
             assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
 
             verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+        }
+
+        @Test
+        @DisplayName("when the client refreshes, then the new token is recorded as the successor of the presented one")
+        void should_record_successor_when_refreshed_given_right_client() {
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
+            when(refreshTokens.markUsed(token.id(), NOW)).thenReturn(true);
+
+            service.refresh(secret.value(), CLAUDE.value());
+
+            ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
+            verify(refreshTokens).save(saved.capture());
+            verify(refreshTokens).recordSuccessor(token.id(), saved.getValue().id());
+        }
+
+        @Test
+        @DisplayName("when a used token whose successor was never used is presented again within 60 seconds, then the successor is superseded and new tokens are issued")
+        void should_supersede_successor_and_reissue_when_refreshed_within_the_grace_given_unused_successor() {
+            RefreshToken used = usedWithSuccessor(NOW.minusSeconds(30));
+            UUID successor = used.successorId().orElseThrow();
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(accessTokens.issue(any(AccessTokenGrant.class))).thenReturn(new IssuedAccessToken("connector", NOW.plusSeconds(900)));
+            when(refreshTokens.supersedeIfUnused(successor, NOW)).thenReturn(true);
+
+            OAuthTokens tokens = service.refresh(secret.value(), CLAUDE.value());
+
+            verify(signOuts, never()).endAllOf(any(), any(), any());
+            verify(refreshTokens, never()).markUsed(any(), any());
+            ArgumentCaptor<RefreshToken> saved = ArgumentCaptor.forClass(RefreshToken.class);
+            verify(refreshTokens).save(saved.capture());
+            RefreshToken reissued = saved.getValue();
+            assertThat(reissued.secretHash()).isEqualTo(RefreshTokenSecret.fromValue(tokens.refreshToken()).hash());
+            assertThat(reissued.grantedAt()).isEqualTo(NOW.minus(Duration.ofDays(2)));
+            assertThat(reissued.clientId()).contains(CLAUDE);
+            assertThat(tokens.scopes()).containsExactly(OAuthScope.ADMIN_READ);
+            verify(refreshTokens).recordSuccessor(used.id(), reissued.id());
+        }
+
+        @Test
+        @DisplayName("when a used token whose successor was used meanwhile is presented again within 60 seconds, then every session of the donor ends")
+        void should_end_every_session_when_refreshed_within_the_grace_given_used_successor() {
+            RefreshToken used = usedWithSuccessor(NOW.minusSeconds(30));
+            when(donors.findById(DONOR)).thenReturn(Optional.of(administrator()));
+            when(refreshTokens.supersedeIfUnused(used.successorId().orElseThrow(), NOW)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
+        }
+
+        @Test
+        @DisplayName("when a used token is presented again 60 seconds after its use, then every session of the donor ends and its successor stays")
+        void should_end_every_session_when_refreshed_after_the_grace_given_unused_successor() {
+            usedWithSuccessor(NOW.minusSeconds(60));
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+            verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        }
+
+        @Test
+        @DisplayName("when another client presents a used token within 60 seconds, then every session of the donor ends")
+        void should_end_every_session_when_refreshed_within_the_grace_given_other_client() {
+            usedWithSuccessor(NOW.minusSeconds(30));
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), "https://claude.ai/oauth/claude-code-client-metadata"))
+                    .isInstanceOf(InvalidGrant.class);
+
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+            verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+        }
+
+        @Test
+        @DisplayName("when a superseded token is presented, then every session of the donor ends")
+        void should_end_every_session_when_refreshed_given_superseded_token() {
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(SpentCredentials.superseded(token, NOW.minusSeconds(10))));
+
+            assertThatThrownBy(() -> service.refresh(secret.value(), CLAUDE.value())).isInstanceOf(InvalidGrant.class);
+
+            verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.REPLAY, NOW);
+            verify(refreshTokens, never()).supersedeIfUnused(any(), any());
+            verify(accessTokens, never()).issue(any(AccessTokenGrant.class));
+        }
+
+        private RefreshToken usedWithSuccessor(Instant usedAt) {
+            RefreshToken used = RefreshToken.reconstitute(token.id(), DONOR, secret.hash(), token.issuedAt(), token.expiresAt(), true, CLAUDE,
+                    Set.of(OAuthScope.ADMIN_READ), token.grantedAt(), usedAt, null, UUID.randomUUID(), null, null);
+            when(refreshTokens.findBySecretHashForUpdate(secret.hash())).thenReturn(Optional.of(used));
+            return used;
         }
 
         @Test

@@ -34,6 +34,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -137,7 +138,7 @@ public class AuthorizationServerService {
         }
         Donor donor = donors.findById(code.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         log.info("Client {} exchanged a code of donor {}", clientId.host(), donor.id());
-        return issue(donor, clientId, code.scopes(), code.resource(), code.secondFactorVerified(), now, now);
+        return issue(donor, clientId, code.scopes(), code.resource(), code.secondFactorVerified(), now, now).tokens();
     }
 
     @Transactional(noRollbackFor = InvalidGrant.class)
@@ -154,10 +155,11 @@ public class AuthorizationServerService {
         DonorId donorId = refreshTokens.findDonorOfSecretHash(secretHash).orElseThrow(() -> new InvalidGrant("unknown refresh token"));
         refreshTokens.lockSessionsOf(donorId);
         RefreshToken token = refreshTokens.findBySecretHashForUpdate(secretHash).orElseThrow(() -> new InvalidGrant("unknown refresh token"));
+        if (token.isSuperseded()) {
+            throw replay(token, now);
+        }
         if (token.isUsed()) {
-            signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
-            log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
-            throw new InvalidGrant("the refresh token was used before");
+            return reissueWithinReuseGrace(token, clientId, now);
         }
         if (!token.isUsableAt(now) || !token.belongsToClient(clientId)) {
             throw new InvalidGrant("the refresh token expired, was revoked or belongs to another client");
@@ -173,7 +175,33 @@ public class AuthorizationServerService {
             log.warn("A refresh token of donor {} was presented twice at once by a client; every session of the donor is ended", token.donorId());
             throw new InvalidGrant("the refresh token was used before");
         }
-        return issue(donor, clientId, token.scopes(), properties.mcpResource(), token.secondFactorVerified(), token.grantedAt(), now);
+        return rotate(token, donor, clientId, now);
+    }
+
+    private OAuthTokens reissueWithinReuseGrace(RefreshToken token, ClientId clientId, Instant now) {
+        if (!token.mayBeReissuedAt(now) || !token.belongsToClient(clientId)) {
+            throw replay(token, now);
+        }
+        Donor donor = donors.findById(token.donorId()).filter(found -> !found.isErased() && found.isAdministrator())
+                .orElseThrow(() -> replay(token, now));
+        UUID successor = token.successorId().orElseThrow(() -> replay(token, now));
+        if (!refreshTokens.supersedeIfUnused(successor, now)) {
+            throw replay(token, now);
+        }
+        return rotate(token, donor, clientId, now);
+    }
+
+    private InvalidGrant replay(RefreshToken token, Instant now) {
+        signOuts.endAllOf(token.donorId(), DeviceSignOutReason.REPLAY, now);
+        log.warn("A used refresh token of donor {} was presented by a client; every session of the donor is ended", token.donorId());
+        return new InvalidGrant("the refresh token was used before");
+    }
+
+    private OAuthTokens rotate(RefreshToken token, Donor donor, ClientId clientId, Instant now) {
+        IssuedClientTokens successor = issue(donor, clientId, token.scopes(), properties.mcpResource(), token.secondFactorVerified(),
+                token.grantedAt(), now);
+        refreshTokens.recordSuccessor(token.id(), successor.refreshTokenId());
+        return successor.tokens();
     }
 
     @Transactional(readOnly = true)
@@ -196,13 +224,17 @@ public class AuthorizationServerService {
         return new ExchangedAccessToken(issued.token(), issued.expiresAt(), subject.scopes());
     }
 
-    private OAuthTokens issue(Donor donor, ClientId clientId, Set<OAuthScope> scopes, String audience, boolean secondFactorVerified, Instant grantedAt,
-                              Instant now) {
+    private IssuedClientTokens issue(Donor donor, ClientId clientId, Set<OAuthScope> scopes, String audience, boolean secondFactorVerified,
+                                     Instant grantedAt, Instant now) {
         IssuedAccessToken access = accessTokens.issue(new AccessTokenGrant(donor.id(), donor.sessionRoles(secondFactorVerified), audience, scopes, now,
                 null, clientId.host()));
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
-        refreshTokens.save(RefreshToken.issueForClient(secret, donor.id(), clientId, scopes, grantedAt, now, sessionProperties.refreshTokenTtl()));
-        return new OAuthTokens(access.token(), access.expiresAt(), secret.value(), scopes);
+        RefreshToken refresh = RefreshToken.issueForClient(secret, donor.id(), clientId, scopes, grantedAt, now, sessionProperties.refreshTokenTtl());
+        refreshTokens.save(refresh);
+        return new IssuedClientTokens(refresh.id(), new OAuthTokens(access.token(), access.expiresAt(), secret.value(), scopes));
+    }
+
+    private record IssuedClientTokens(UUID refreshTokenId, OAuthTokens tokens) {
     }
 
     private static URI registeredRedirect(ClientMetadata metadata, String redirectUri) {

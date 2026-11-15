@@ -63,6 +63,8 @@ public class ConnectedAppsStepDefinitions {
     private String connectorAccessToken;
     private String connectorRefreshToken;
     private String previousRefreshToken;
+    private String keptRefreshToken;
+    private String lostRefreshToken;
     private String apiAccessToken;
     private String lastSecondFactorCode;
 
@@ -436,6 +438,29 @@ public class ConnectedAppsStepDefinitions {
     @When("the application refreshes its tokens with the previous refresh token")
     public void theApplicationRefreshesItsTokensWithThePreviousRefreshToken() {
         refresh(previousRefreshToken, clientId);
+    }
+
+    @Given("the application keeps its refresh token aside")
+    public void theApplicationKeepsItsRefreshTokenAside() {
+        keptRefreshToken = connectorRefreshToken;
+    }
+
+    @When("the application refreshes its tokens with the kept refresh token")
+    public void theApplicationRefreshesItsTokensWithTheKeptRefreshToken() {
+        refresh(keptRefreshToken, clientId);
+    }
+
+    @When("the application refreshes its tokens but the answer is lost")
+    public void theApplicationRefreshesItsTokensButTheAnswerIsLost() {
+        refresh(connectorRefreshToken, clientId);
+        if (api.lastResponse().getStatusCode().value() == 200) {
+            lostRefreshToken = api.lastResponseJson().get("refresh_token").asString();
+        }
+    }
+
+    @When("the application refreshes its tokens with the refresh token of the lost answer")
+    public void theApplicationRefreshesItsTokensWithTheRefreshTokenOfTheLostAnswer() {
+        refresh(lostRefreshToken, clientId);
     }
 
     @When("the application refreshes its tokens as the client {string}")

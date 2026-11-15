@@ -1,0 +1,33 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donors.domain.RefreshTokenTest > Given a used token of a connected application, when it is presented within the grace, then it may not be reissued",
+    "replacement": "donors.domain.RefreshTokenTest > Given a used token of a connected application with a recorded successor, when it is presented within the grace, then it may be reissued",
+    "reason": "PR #900 (#840, Jakub 2026-11-14): the 60 s reuse grace of decision D28 covers a connected application's refresh token under the same conditions as a browser token",
+    "contract": "docs/security-overview.md, Tokens; Connected applications"
+  },
+  {
+    "path": "POST /api/donors/oauth/token #3",
+    "scenario": "donors/connected_apps: The application refreshes its tokens and a replayed refresh token ends every session of the administrator*",
+    "kind": "status",
+    "reason": "PR #900 (#840, Jakub 2026-11-14): the 60 s reuse grace of decision D28 covers a connected application's refresh token, so the scenario uses the successor before it presents the first token again; the third token request is now that refresh of the successor (200) and the replay of the first token comes after it",
+    "contract": "docs/api-contract.md, Connected applications (Tokens); docs/security-overview.md, Tokens"
+  },
+  {
+    "path": "POST /api/donors/oauth/token #3",
+    "scenario": "donors/connected_apps: The application refreshes its tokens and a replayed refresh token ends every session of the administrator*",
+    "kind": "body",
+    "field": "$.error*",
+    "reason": "PR #900 (#840, Jakub 2026-11-14): the 60 s reuse grace of decision D28 covers a connected application's refresh token, so the scenario uses the successor before it presents the first token again; the third token request is now that refresh of the successor (200) and the replay of the first token comes after it",
+    "contract": "docs/api-contract.md, Connected applications (Tokens); docs/security-overview.md, Tokens"
+  },
+  {
+    "path": "POST /api/donors/oauth/token #3",
+    "scenario": "donors/connected_apps: The application refreshes its tokens and a replayed refresh token ends every session of the administrator*",
+    "kind": "added",
+    "field": "$.*",
+    "reason": "PR #900 (#840, Jakub 2026-11-14): the 60 s reuse grace of decision D28 covers a connected application's refresh token, so the scenario uses the successor before it presents the first token again; the third token request is now that refresh of the successor (200) and the replay of the first token comes after it",
+    "contract": "docs/api-contract.md, Connected applications (Tokens); docs/security-overview.md, Tokens"
+  }
+]
