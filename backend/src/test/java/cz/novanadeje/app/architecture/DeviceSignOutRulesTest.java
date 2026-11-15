@@ -2,6 +2,8 @@ package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaConstructor;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -12,6 +14,7 @@ import cz.novanadeje.app.AppApplication;
 import cz.novanadeje.app.donors.application.CredentialChanges;
 import cz.novanadeje.app.donors.application.DeviceSignOuts;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
+import cz.novanadeje.app.donors.domain.DonorDevice;
 import cz.novanadeje.app.donors.domain.DonorDeviceRepository;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.RefreshTokenRepository;
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -47,6 +51,8 @@ class DeviceSignOutRulesTest {
     private static final String LOCK_ALL = "lockAllOf";
     private static final Set<String> DEVICE_ENDINGS = Set.of("endIfActive", "directWipe", "directWipeOfDonor", "reduceErasedOf");
 
+    private static final Set<String> DEVICE_END_STATE = Set.of("endedAt", "endReason", "wipe");
+
     private static final String PERSISTENCE = "cz.novanadeje.app.donors.infrastructure.persistence.";
     private static final String TOKEN_ADAPTER = PERSISTENCE + "JpaRefreshTokenRepository";
     private static final String DEVICE_ADAPTER = PERSISTENCE + "JpaDonorDeviceRepository";
@@ -70,6 +76,18 @@ class DeviceSignOutRulesTest {
 
     private static final DescribedPredicate<JavaAccess<?>> FROM_THE_MATCHING_ADAPTER_METHOD = DescribedPredicate.describe(
             "from the adapter method of the same name", access -> fromTheTokenAdapter(access) || fromTheDeviceAdapter(access));
+
+    private static final DescribedPredicate<JavaFieldAccess> A_WRITE_OF_THE_END_STATE_OF_A_DEVICE_OUTSIDE_ITS_CONSTRUCTION = DescribedPredicate.describe(
+            "a write of " + DonorDevice.class.getSimpleName() + "'s " + String.join(", ", DEVICE_END_STATE.stream().sorted().toList())
+                    + " outside its own constructor",
+            access -> writesTheEndStateOfADevice(access) && !fromTheConstructorOfADevice(access));
+
+    @ArchTest
+    static final ArchRule a_device_ends_only_through_its_repository_never_in_memory = noClasses()
+            .should().setFieldWhere(A_WRITE_OF_THE_END_STATE_OF_A_DEVICE_OUTSIDE_ITS_CONSTRUCTION)
+            .because("the adapter maps these columns updatable = false and ends a device only by a conditional update, so an end set in memory"
+                    + " and saved is silently dropped: the device stays signed in, no token is revoked and no DeviceSignedOut is published"
+                    + " (architecture audit #621)");
 
     @ArchTest
     static final ArchRule every_session_of_a_donor_or_a_device_ends_only_through_the_device_sign_outs = noClasses()
@@ -110,6 +128,20 @@ class DeviceSignOutRulesTest {
         assertThat(methodNamesOf(Class.forName(DEVICE_ROWS))).containsAll(DEVICE_ENDINGS);
         assertThat(Class.forName(TOKEN_ADAPTER)).isAssignableTo(RefreshTokenRepository.class);
         assertThat(Class.forName(DEVICE_ADAPTER)).isAssignableTo(DonorDeviceRepository.class);
+    }
+
+    @Test
+    @DisplayName("Given the device's end state, when the device is read, then it declares each guarded field, so the rule watches no name that is gone")
+    void should_declare_every_guarded_field_when_read_given_the_device() {
+        assertThat(Arrays.stream(DonorDevice.class.getDeclaredFields()).map(Field::getName)).containsAll(DEVICE_END_STATE);
+    }
+
+    private static boolean writesTheEndStateOfADevice(JavaFieldAccess access) {
+        return access.getTargetOwner().getName().equals(DonorDevice.class.getName()) && DEVICE_END_STATE.contains(access.getTarget().getName());
+    }
+
+    private static boolean fromTheConstructorOfADevice(JavaFieldAccess access) {
+        return access.getOrigin() instanceof JavaConstructor && access.getOriginOwner().getName().equals(DonorDevice.class.getName());
     }
 
     private static boolean fromTheTokenAdapter(JavaAccess<?> access) {
@@ -179,6 +211,61 @@ class DeviceSignOutRulesTest {
 
             assertThat(the_rows_of_tokens_and_devices_are_signed_out_only_by_their_adapters.evaluate(planted).getFailureReport().getDetails())
                     .singleElement().asString().contains("PlantedDonorRows");
+        }
+    }
+
+    @Nested
+    @DisplayName("Given a planted device that ends itself in memory")
+    class GivenAPlantedDeviceThatEndsItself {
+
+        @Test
+        @DisplayName("when the rule checks it, then each method writing an end field is reported and neither the constructor nor the recorded use is")
+        void should_report_each_end_field_write_and_neither_the_constructor_nor_the_use_when_checked_given_a_planted_device(@TempDir Path folder)
+                throws IOException {
+            JavaClasses planted = PlantedClasses.compiled(folder, Map.of(DonorDevice.class.getName(), """
+                    package cz.novanadeje.app.donors.domain;
+
+                    import java.time.Instant;
+
+                    public final class DonorDevice {
+
+                        private Instant lastUsedAt;
+                        private Instant endedAt;
+                        private DeviceSignOutReason endReason;
+                        private DeviceWipe wipe;
+
+                        public DonorDevice(Instant at, Instant endedAt, DeviceSignOutReason endReason, DeviceWipe wipe) {
+                            this.lastUsedAt = at;
+                            this.endedAt = endedAt;
+                            this.endReason = endReason;
+                            this.wipe = wipe;
+                        }
+
+                        public void recordUse(Instant at) {
+                            lastUsedAt = at;
+                        }
+
+                        void endAt(Instant at) {
+                            endedAt = at;
+                        }
+
+                        void endFor(DeviceSignOutReason reason) {
+                            endReason = reason;
+                        }
+
+                        void orderWipe(DeviceWipe order) {
+                            wipe = order;
+                        }
+                    }
+                    """));
+
+            assertThat(a_device_ends_only_through_its_repository_never_in_memory.evaluate(planted).getFailureReport().getDetails())
+                    .hasSize(3)
+                    .anySatisfy(line -> assertThat(line).contains("endAt(").contains("endedAt"))
+                    .anySatisfy(line -> assertThat(line).contains("endFor(").contains("endReason"))
+                    .anySatisfy(line -> assertThat(line).contains("orderWipe(").contains("wipe"))
+                    .noneSatisfy(line -> assertThat(line).contains("lastUsedAt"))
+                    .noneSatisfy(line -> assertThat(line).contains("<init>"));
         }
     }
 
