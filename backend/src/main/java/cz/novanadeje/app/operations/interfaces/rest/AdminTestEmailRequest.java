@@ -20,10 +20,6 @@ record AdminTestEmailRequest(@NotBlank @Size(max = TestEmailRequests.MAX_HOST_LE
         return TestEmailRequests.server(host, port, username, password, auth, startTls);
     }
 
-    boolean typesPassword() {
-        return password != null && !password.isBlank();
-    }
-
     @Override
     public String toString() {
         return "AdminTestEmailRequest[" + host + ":" + port + "]";

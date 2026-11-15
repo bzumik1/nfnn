@@ -53,9 +53,6 @@ class AdminSettingsController {
     TestEmailResponse sendTestEmail(HttpServletRequest http, @AuthenticationPrincipal Jwt jwt, AdministrationChannel channel,
                                     @Valid @RequestBody AdminTestEmailRequest request) {
         testEmailRateLimiter.check(http.getRemoteAddr());
-        if (channel.isConnectedApplication() && request.typesPassword()) {
-            throw new SecretSettingsInBrowserOnly();
-        }
-        return TestEmailResponse.from(settings.sendTestEmail(UUID.fromString(jwt.getSubject()), request.toServer(), request.sender()));
+        return TestEmailResponse.from(settings.sendTestEmail(UUID.fromString(jwt.getSubject()), channel, request.toServer(), request.sender()));
     }
 }
