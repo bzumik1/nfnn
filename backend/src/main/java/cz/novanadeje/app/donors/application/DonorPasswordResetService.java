@@ -70,7 +70,7 @@ public class DonorPasswordResetService {
             log.info("Password reset for donor {} not sent: the e-mail is not verified", donor.id());
             return;
         }
-        if (isAdministratorWithoutSecondFactor(donor)) {
+        if (!mayResetByLink(donor)) {
             return;
         }
         Instant now = clock.instant();
@@ -117,10 +117,10 @@ public class DonorPasswordResetService {
     }
 
     private Donor resettableDonor(Optional<Donor> found) {
-        return found.filter(donor -> !isAdministratorWithoutSecondFactor(donor)).orElseThrow(InvalidPasswordResetToken::new);
+        return found.filter(this::mayResetByLink).orElseThrow(InvalidPasswordResetToken::new);
     }
 
-    private boolean isAdministratorWithoutSecondFactor(Donor donor) {
-        return donor.isAdministrator() && !holdings.holdsAny(donor.id());
+    private boolean mayResetByLink(Donor donor) {
+        return donor.mayResetPasswordByLink(holdings.holdsAny(donor.id()));
     }
 }

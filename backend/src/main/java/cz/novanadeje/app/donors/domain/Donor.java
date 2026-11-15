@@ -241,6 +241,19 @@ public final class Donor {
         }
     }
 
+    public void requirePasskeyRecoverableByLink() {
+        if (erasedAt != null || emailVerifiedAt == null) {
+            throw new InvalidPasswordResetToken();
+        }
+        if (isAdministrator()) {
+            throw new AdministratorRecoveryRefused(id);
+        }
+    }
+
+    public boolean mayResetPasswordByLink(boolean holdsSecondFactor) {
+        return !isAdministrator() || holdsSecondFactor;
+    }
+
     public Instant registeredAt() {
         return registeredAt;
     }

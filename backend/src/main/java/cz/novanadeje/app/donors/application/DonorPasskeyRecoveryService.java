@@ -84,12 +84,11 @@ public class DonorPasskeyRecoveryService {
     }
 
     private Donor recoverableDonor(Donor donor) {
-        if (donor.isErased() || !donor.isEmailVerified()) {
-            throw new InvalidPasswordResetToken();
-        }
-        if (donor.isAdministrator()) {
+        try {
+            donor.requirePasskeyRecoverableByLink();
+        } catch (AdministratorRecoveryRefused refused) {
             log.warn("Passkey recovery by e-mail refused for administrator {}", donor.id());
-            throw new AdministratorRecoveryRefused(donor.id());
+            throw refused;
         }
         return donor;
     }

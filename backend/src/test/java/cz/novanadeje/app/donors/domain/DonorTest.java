@@ -315,6 +315,71 @@ class DonorTest {
         assertThatThrownBy(donor::revokeAdministration).isInstanceOf(NotAdministrator.class);
     }
 
+    @Nested
+    @DisplayName("Given a reset link")
+    class RecoveryByLink {
+
+        @Test
+        @DisplayName("when a confirmed plain donor recovers a passkey by it, then it is allowed")
+        void should_allow_passkey_recovery_when_recovered_by_link_given_confirmed_plain_donor() {
+            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+            donor.verifyEmail(NOW);
+
+            donor.requirePasskeyRecoverableByLink();
+
+            assertThat(donor.isAdministrator()).isFalse();
+        }
+
+        @Test
+        @DisplayName("when a donor who has not confirmed the e-mail recovers a passkey by it, then the link is refused as invalid")
+        void should_refuse_link_when_passkey_recovered_by_link_given_unconfirmed_email() {
+            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+            assertThatThrownBy(donor::requirePasskeyRecoverableByLink)
+                    .isInstanceOf(InvalidPasswordResetToken.class)
+                    .hasFieldOrPropertyWithValue("code", "donors/invalid-password-reset-token");
+        }
+
+        @Test
+        @DisplayName("when an erased donor recovers a passkey by it, then the link is refused as invalid")
+        void should_refuse_link_when_passkey_recovered_by_link_given_erased_donor() {
+            DonorId id = DonorId.newId(NOW);
+            Donor donor = Donor.reconstitute(id, DonorType.PERSON, ErasedPersonalData.NAME, null, ErasedPersonalData.ADDRESS,
+                    ErasedPersonalData.emailFor(id.value()), HASH, SYMBOL, LocaleCode.CS, Set.of(), NOW, NOW, NOW.plusSeconds(5));
+
+            assertThatThrownBy(donor::requirePasskeyRecoverableByLink).isInstanceOf(InvalidPasswordResetToken.class);
+        }
+
+        @Test
+        @DisplayName("when an administrator recovers a passkey by it, then the administrator's recovery is refused")
+        void should_refuse_administrator_when_passkey_recovered_by_link_given_administrator() {
+            Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                    Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
+
+            assertThatThrownBy(admin::requirePasskeyRecoverableByLink)
+                    .isInstanceOf(AdministratorRecoveryRefused.class)
+                    .hasFieldOrPropertyWithValue("code", "donors/administrator-recovery-refused");
+        }
+
+        @Test
+        @DisplayName("when an administrator who holds no second factor resets the password by it, then it is not allowed, and with a second factor it is")
+        void should_allow_password_reset_only_with_second_factor_when_reset_by_link_given_administrator() {
+            Donor admin = Donor.reconstitute(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS,
+                    Set.of(Role.DONOR, Role.ADMIN), NOW, NOW, null);
+
+            assertThat(admin.mayResetPasswordByLink(false)).isFalse();
+            assertThat(admin.mayResetPasswordByLink(true)).isTrue();
+        }
+
+        @Test
+        @DisplayName("when a plain donor who holds no second factor resets the password by it, then it is allowed")
+        void should_allow_password_reset_when_reset_by_link_given_plain_donor_without_second_factor() {
+            Donor donor = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+
+            assertThat(donor.mayResetPasswordByLink(false)).isTrue();
+        }
+    }
+
     @Test
     @DisplayName("Given a verified company donor, when erased, then every personal detail is a placeholder, the password no longer matches anything known, the roles are gone and the time is kept")
     void should_replace_personal_data_when_erased_given_verified_company() {

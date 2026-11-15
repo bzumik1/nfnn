@@ -141,7 +141,7 @@ public class DonorSessionService {
         if (token.clientId().isPresent()) {
             throw replay(token, now);
         }
-        if (usedWithinReuseGrace(token, now) && deviceEnded(token)) {
+        if (token.wasUsedWithinReuseGraceAt(now) && deviceEnded(token)) {
             throw new InvalidRefreshToken();
         }
         if (!token.mayBeReissuedAt(now)) {
@@ -172,10 +172,6 @@ public class DonorSessionService {
         Issued successor = issue(IssuingDevice.known(device), token.secondFactorVerified(), donor.sessionRoles(token.secondFactorVerified()), now);
         refreshTokens.recordSuccessor(token.id(), successor.refreshTokenId());
         return new RefreshedSession(donor, successor.tokens());
-    }
-
-    private static boolean usedWithinReuseGrace(RefreshToken token, Instant now) {
-        return token.usedAt().filter(used -> now.isBefore(used.plus(RefreshToken.REUSE_GRACE))).isPresent();
     }
 
     private boolean deviceEnded(RefreshToken token) {

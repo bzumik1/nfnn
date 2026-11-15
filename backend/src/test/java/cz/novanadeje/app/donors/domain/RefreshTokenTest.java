@@ -148,6 +148,30 @@ class RefreshTokenTest {
     }
 
     @Test
+    @DisplayName("Given a token used 59 seconds ago, when it is checked for the reuse grace, then it was used within the grace even when revoked and without a successor")
+    void should_count_as_used_within_the_grace_when_checked_given_a_token_used_59_seconds_ago() {
+        RefreshToken token = rotated(null, NOW.minusSeconds(59), NOW.minusSeconds(5), null);
+
+        assertThat(token.wasUsedWithinReuseGraceAt(NOW)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a token used 60 seconds ago, when it is checked for the reuse grace, then it was not used within the grace")
+    void should_not_count_as_used_within_the_grace_when_checked_given_a_token_used_60_seconds_ago() {
+        RefreshToken token = rotated(null, NOW.minusSeconds(60), null, UUID.randomUUID());
+
+        assertThat(token.wasUsedWithinReuseGraceAt(NOW)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Given an unused token, when it is checked for the reuse grace, then it was not used within the grace")
+    void should_not_count_as_used_within_the_grace_when_checked_given_an_unused_token() {
+        RefreshToken token = RefreshToken.issue(RefreshTokenSecret.generate(), DONOR, DeviceId.newId(NOW.minusSeconds(10)), NOW.minusSeconds(10), Duration.ofDays(14), false);
+
+        assertThat(token.wasUsedWithinReuseGraceAt(NOW)).isFalse();
+    }
+
+    @Test
     @DisplayName("Given a used token whose own lifetime ended, when it is presented within the grace, then it may not be reissued")
     void should_refuse_reissue_when_presented_within_the_grace_given_an_expired_token() {
         Instant issued = NOW.minus(Duration.ofDays(14));
