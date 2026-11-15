@@ -48,8 +48,11 @@ export class UnhandledRejections {
     for (let turn = 0; turn < 3; turn++) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
-    nodeProcess().off('unhandledRejection', this.listener);
     return this.reasons;
+  }
+
+  stop(): void {
+    nodeProcess().off('unhandledRejection', this.listener);
   }
 }
 

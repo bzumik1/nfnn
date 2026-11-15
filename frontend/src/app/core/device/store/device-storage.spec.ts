@@ -349,6 +349,7 @@ describe('Given the IndexedDB device storage lost its connection', () => {
   });
 
   afterEach(async () => {
+    unhandled.stop();
     connections.reopenWorks();
     await storage.destroy();
   });
@@ -387,12 +388,27 @@ describe('Given the IndexedDB device storage lost its connection', () => {
   });
 
   it('when the reopen fails too, then the read rejects with the lost connection and no rejection is left unhandled', async () => {
+    const opensBefore = connections.opens;
     connections.lose('fails');
 
     await expect(storage.entries()).rejects.toMatchObject({ name: 'UnknownError' });
+    await expect(storage.entries()).rejects.toMatchObject({ name: 'UnknownError' });
 
+    expect(connections.opens - opensBefore).toBe(2);
     expect(await unhandled.settled()).toEqual([]);
     connections.reopenWorks();
     expect(await storage.entries()).toEqual([entry('a')]);
+  });
+
+  it('when a write finds the connection lost, then it fails without a retry and the next write opens a new connection', async () => {
+    connections.lose();
+
+    await expect(storage.write({ deviceSalt: 'bmV1' })).rejects.toMatchObject({
+      name: 'UnknownError',
+    });
+    await storage.write({ deviceSalt: 'bmV1' });
+
+    expect(await storage.deviceSalt()).toBe('bmV1');
+    expect(await unhandled.settled()).toEqual([]);
   });
 });

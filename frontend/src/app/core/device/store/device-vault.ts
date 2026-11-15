@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   DestroyRef,
   effect,
@@ -168,6 +169,7 @@ export class DeviceVault implements SessionDevice {
   private readonly access = inject(AdministrationAccess);
   private readonly statusSource = inject(DEVICE_STATUS_SOURCE);
   private readonly signedOutNotice = inject(SignedOutNotice);
+  private readonly document = inject(DOCUMENT);
   private readonly openedCopy = signal<OpenedCopy | null>(null);
   private readonly currentMode = signal<VaultMode | null>(null);
   private readonly lockedCopy = signal(false);
@@ -187,6 +189,7 @@ export class DeviceVault implements SessionDevice {
   private pendingSalt: string | null = null;
   private sessionsWritten = new Set<string>();
   private sessionGeneration = 0;
+  private sessionsLeftToEnd = false;
   private openedSessionWrap: string | null = null;
   private readonly copies = new WeakMap<AccountStore, OpenCopy>();
 
@@ -196,7 +199,9 @@ export class DeviceVault implements SessionDevice {
   readonly administration = this.openedAdministration.asReadonly();
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.closeOpen());
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.closeOpen());
+    this.endLeftSessionsOnReturn(destroyRef);
     effect(() => {
       if (!this.access.unlocked()) {
         untracked(() => {
@@ -244,6 +249,7 @@ export class DeviceVault implements SessionDevice {
     deviceSecret?: string,
   ): Promise<void> {
     this.sessionGeneration++;
+    this.sessionsLeftToEnd = false;
     return this.run(async () => {
       try {
         await this.withMemoryFallback(() =>
@@ -259,6 +265,7 @@ export class DeviceVault implements SessionDevice {
   }
 
   restored(account: DeviceAccount, storeNothing = false): Promise<void> {
+    this.sessionsLeftToEnd = false;
     return this.run(() =>
       this.withMemoryFallback(() =>
         storeNothing ? this.openInMemoryAtRestore(account) : this.openAtRestore(account),
@@ -293,18 +300,20 @@ export class DeviceVault implements SessionDevice {
 
   signedOut(account: DeviceAccount): Promise<void> {
     this.sessionGeneration++;
+    this.sessionsLeftToEnd = false;
     return this.run(async () => {
       const storage = await this.storageOf(account);
       this.closeOpen();
-      await this.endSessionsOrAtNextStart(storage);
+      await this.endSessionsOrLater(storage);
     }).then(() => this.checkStatus(true));
   }
 
   sessionLost(): Promise<void> {
     this.sessionGeneration++;
+    this.sessionsLeftToEnd = false;
     return this.run(async () => {
       this.closeOpen();
-      await this.endSessionsOrAtNextStart(await this.presentStorage().catch(() => null));
+      await this.endSessionsOrLater(await this.presentStorage().catch(() => null));
     }).then(() => this.checkStatus(true));
   }
 
@@ -1302,12 +1311,38 @@ export class DeviceVault implements SessionDevice {
     await this.afterRemoval(storage);
   }
 
-  private async endSessionsOrAtNextStart(storage: DeviceStorage | null): Promise<void> {
+  private async endSessionsOrLater(storage: DeviceStorage | null): Promise<void> {
     try {
       await this.endSessions(storage);
     } catch {
+      this.sessionsLeftToEnd = true;
+    }
+  }
+
+  private async endLeftSessions(): Promise<void> {
+    if (!this.sessionsLeftToEnd) {
       return;
     }
+    this.sessionsLeftToEnd = false;
+    await this.endSessionsOrLater(await this.presentStorage().catch(() => null));
+  }
+
+  private endLeftSessionsOnReturn(destroyRef: DestroyRef): void {
+    const view = this.document.defaultView;
+    if (view === null) {
+      return;
+    }
+    const returned = () => {
+      if (this.sessionsLeftToEnd && this.document.visibilityState === 'visible') {
+        void this.run(async () => undefined);
+      }
+    };
+    this.document.addEventListener('visibilitychange', returned);
+    view.addEventListener('pageshow', returned);
+    destroyRef.onDestroy(() => {
+      this.document.removeEventListener('visibilitychange', returned);
+      view.removeEventListener('pageshow', returned);
+    });
   }
 
   private async dropSessionsWritten(storage: DeviceStorage): Promise<void> {
@@ -1387,9 +1422,12 @@ export class DeviceVault implements SessionDevice {
   }
 
   private run<T>(work: () => Promise<T>): Promise<T> {
+    const afterLeftSessions = () => this.endLeftSessions().then(work);
     const locked = () => {
       const locks = this.locks;
-      return locks === null ? work() : (locks.request(VAULT_LOCK_NAME, work) as Promise<T>);
+      return locks === null
+        ? afterLeftSessions()
+        : (locks.request(VAULT_LOCK_NAME, afterLeftSessions) as Promise<T>);
     };
     const next = this.queue.then(locked, locked);
     this.queue = next.catch(() => undefined);

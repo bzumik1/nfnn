@@ -25,6 +25,7 @@ import {
 } from './device-vault';
 import { openIdbDeviceStorage } from './idb-device-storage';
 import { ChannelBus, NamedLocks } from './testing/fake-device';
+import { LostConnections, UnhandledRejections } from './testing/lost-connection';
 
 const PETR_DONOR = sampleDonor({
   id: '01a18e56-bdb0-775a-bd0a-000000000002',
@@ -93,5 +94,79 @@ describe('Given the auth store of one tab over the real device vault', () => {
       await reloaded.restored(PETR);
       expect(reloaded.opened()?.store.copyId).toBe(vault.opened()?.store.copyId);
     });
+  });
+});
+
+describe('Given the auth store over the real device vault and a device storage that loses its connection', () => {
+  let connections: LostConnections;
+  let unhandled: UnhandledRejections;
+  let store: AuthStore;
+  let vault: DeviceVault;
+  let http: HttpTestingController;
+
+  async function sessionWraps(): Promise<number> {
+    const storage = await openIdbDeviceStorage();
+    const entries = await storage.entries();
+    storage.close();
+    return entries.flatMap((entry) => entry.wraps).filter((wrap) => wrap.kind === 'session').length;
+  }
+
+  beforeEach(async () => {
+    const factory = new IDBFactory();
+    globalThis.indexedDB = factory;
+    localStorage.clear();
+    connections = new LostConnections(factory);
+    const channel = new FakeSessionChannel();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: PasskeyAuthenticator, useValue: new FakePasskeyAuthenticator() },
+        { provide: SESSION_CHANNEL, useValue: () => channel },
+        { provide: DEVICE_STORAGE_OPENER, useValue: () => openIdbDeviceStorage() },
+        { provide: PASSWORD_KEY_DERIVATION, useValue: new SmallArgon2Derivation() },
+        { provide: COPY_CHANNELS, useValue: new ChannelBus().factory },
+        { provide: STORAGE_PERSISTENCE, useValue: vi.fn() },
+        { provide: TAB_LOCKS, useValue: new NamedLocks() },
+        { provide: ErrorReporter, useValue: { report: vi.fn() } },
+        { provide: SESSION_DEVICE, useExisting: DeviceVault },
+      ],
+    });
+    store = TestBed.inject(AuthStore);
+    vault = TestBed.inject(DeviceVault);
+    http = TestBed.inject(HttpTestingController);
+    store.login('jana@example.cz', 'correct horse battery').subscribe();
+    http.expectOne('/api/donors/auth/login').flush(authResponse('token-1'));
+    await vi.waitFor(() => expect(vault.opened()).not.toBeNull());
+    unhandled = new UnhandledRejections();
+  });
+
+  afterEach(() => {
+    unhandled.stop();
+    connections.reopenWorks();
+    http.verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('when the refresh is refused and the storage cannot be reopened, then the next start removes the session wraps', async () => {
+    connections.lose('fails');
+    store.refresh().subscribe({ error: () => undefined });
+    await vi.waitFor(() =>
+      http
+        .expectOne('/api/donors/auth/refresh')
+        .flush(null, { status: 401, statusText: 'Unauthorized' }),
+    );
+    await vi.waitFor(() => expect(vault.opened()).toBeNull());
+    expect(await unhandled.settled()).toEqual([]);
+    connections.reopenWorks();
+    expect(await sessionWraps()).toBe(1);
+
+    const nextStart = createEnvironmentInjector(
+      [AuthStore, DeviceVault, { provide: SESSION_DEVICE, useExisting: DeviceVault }],
+      TestBed.inject(EnvironmentInjector),
+    ).get(AuthStore);
+    await nextStart.restore();
+
+    await vi.waitFor(async () => expect(await sessionWraps()).toBe(0));
   });
 });

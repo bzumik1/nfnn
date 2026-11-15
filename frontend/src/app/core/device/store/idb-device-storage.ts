@@ -99,68 +99,16 @@ export class IdbDeviceStorage implements DeviceStorage {
   }
 
   async write(change: StorageChange): Promise<void> {
-    const database = await this.opened();
-    const transaction = database.transaction(
-      ['meta', 'copies', 'session-keys', 'records', 'drafts'],
-      'readwrite',
-    );
-    const done = transaction.done;
-    const writes: Promise<unknown>[] = [];
+    const opening = this.opened();
+    const database = await opening;
     try {
-      const meta = transaction.objectStore('meta');
-      const copies = transaction.objectStore('copies');
-      const sessionKeys = transaction.objectStore('session-keys');
-      const records = transaction.objectStore('records');
-      const drafts = transaction.objectStore('drafts');
-      if (change.deviceSalt === null) {
-        writes.push(meta.delete(DEVICE_SALT));
-      } else if (change.deviceSalt !== undefined) {
-        writes.push(meta.put(change.deviceSalt, DEVICE_SALT));
-      }
-      for (const copyId of change.deleteCopies ?? []) {
-        writes.push(copies.delete(copyId), sessionKeys.delete(copyId));
-        writes.push(deleteRecordsOf(records, copyId), deleteRecordsOf(drafts, copyId));
-      }
-      for (const entry of change.putEntries ?? []) {
-        writes.push(copies.put(entry));
-      }
-      for (const copyId of change.deleteSessionKeys ?? []) {
-        writes.push(sessionKeys.delete(copyId));
-      }
-      for (const sessionKey of change.putSessionKeys ?? []) {
-        writes.push(sessionKeys.put(sessionKey));
-      }
-      const replacement = change.replaceRecords;
-      if (replacement !== undefined) {
-        await deleteRecordsOf(records, replacement.copyId);
-        for (const record of replacement.records) {
-          if (record.copyId !== replacement.copyId) {
-            throw new RangeError('A replacement holds records of its own copy only');
-          }
-          writes.push(records.put(record));
-        }
-      }
-      for (const { copyId, recordId } of change.deleteDrafts ?? []) {
-        writes.push(drafts.delete([copyId, recordId]));
-      }
-      const deleted = new Set(change.deleteCopies ?? []);
-      const added = new Set((change.putEntries ?? []).map((entry) => entry.copyId));
-      for (const draft of change.putDrafts ?? []) {
-        if (
-          deleted.has(draft.copyId) ||
-          (!added.has(draft.copyId) && !(await copies.get(draft.copyId)))
-        ) {
-          throw new RangeError('A draft belongs to a copy the registry holds');
-        }
-        writes.push(drafts.put(draft));
-      }
-      await Promise.all(writes);
+      await writeChange(database, change);
     } catch (failure: unknown) {
-      abortQuietly(transaction);
-      await Promise.allSettled([...writes, done]);
+      if (isLostConnection(failure)) {
+        this.closeIfCurrent(opening);
+      }
       throw failure;
     }
-    await done;
   }
 
   async destroy(): Promise<void> {
@@ -178,14 +126,22 @@ export class IdbDeviceStorage implements DeviceStorage {
     name: Name,
     request: (store: ReadStore<Name>) => Promise<Value>,
   ): Promise<Value> {
+    const opening = this.opened();
+    const database = await opening;
     try {
-      return await readOnce(await this.opened(), name, request);
+      return await readOnce(database, name, request);
     } catch (failure: unknown) {
       if (!isLostConnection(failure)) {
         throw failure;
       }
-      this.close();
+      this.closeIfCurrent(opening);
       return readOnce(await this.opened(), name, request);
+    }
+  }
+
+  private closeIfCurrent(opening: Promise<DeviceDatabase>): void {
+    if (this.database === opening) {
+      this.close();
     }
   }
 
@@ -226,6 +182,70 @@ export class IdbDeviceStorage implements DeviceStorage {
     }
     return this.database;
   }
+}
+
+async function writeChange(database: DeviceDatabase, change: StorageChange): Promise<void> {
+  const transaction = database.transaction(
+    ['meta', 'copies', 'session-keys', 'records', 'drafts'],
+    'readwrite',
+  );
+  const done = transaction.done;
+  const writes: Promise<unknown>[] = [];
+  try {
+    const meta = transaction.objectStore('meta');
+    const copies = transaction.objectStore('copies');
+    const sessionKeys = transaction.objectStore('session-keys');
+    const records = transaction.objectStore('records');
+    const drafts = transaction.objectStore('drafts');
+    if (change.deviceSalt === null) {
+      writes.push(meta.delete(DEVICE_SALT));
+    } else if (change.deviceSalt !== undefined) {
+      writes.push(meta.put(change.deviceSalt, DEVICE_SALT));
+    }
+    for (const copyId of change.deleteCopies ?? []) {
+      writes.push(copies.delete(copyId), sessionKeys.delete(copyId));
+      writes.push(deleteRecordsOf(records, copyId), deleteRecordsOf(drafts, copyId));
+    }
+    for (const entry of change.putEntries ?? []) {
+      writes.push(copies.put(entry));
+    }
+    for (const copyId of change.deleteSessionKeys ?? []) {
+      writes.push(sessionKeys.delete(copyId));
+    }
+    for (const sessionKey of change.putSessionKeys ?? []) {
+      writes.push(sessionKeys.put(sessionKey));
+    }
+    const replacement = change.replaceRecords;
+    if (replacement !== undefined) {
+      await deleteRecordsOf(records, replacement.copyId);
+      for (const record of replacement.records) {
+        if (record.copyId !== replacement.copyId) {
+          throw new RangeError('A replacement holds records of its own copy only');
+        }
+        writes.push(records.put(record));
+      }
+    }
+    for (const { copyId, recordId } of change.deleteDrafts ?? []) {
+      writes.push(drafts.delete([copyId, recordId]));
+    }
+    const deleted = new Set(change.deleteCopies ?? []);
+    const added = new Set((change.putEntries ?? []).map((entry) => entry.copyId));
+    for (const draft of change.putDrafts ?? []) {
+      if (
+        deleted.has(draft.copyId) ||
+        (!added.has(draft.copyId) && !(await copies.get(draft.copyId)))
+      ) {
+        throw new RangeError('A draft belongs to a copy the registry holds');
+      }
+      writes.push(drafts.put(draft));
+    }
+    await Promise.all(writes);
+  } catch (failure: unknown) {
+    abortQuietly(transaction);
+    await Promise.allSettled([...writes, done]);
+    throw failure;
+  }
+  await done;
 }
 
 async function readOnce<Name extends StoreName, Value>(

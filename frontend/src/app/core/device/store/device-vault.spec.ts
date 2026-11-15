@@ -1168,6 +1168,7 @@ describe('Given the password key derivation the device copy uses', () => {
 
 describe('Given the device storage lost its connection', () => {
   let connections: LostConnections;
+  let unhandled: UnhandledRejections;
   let reporter: { report: ReturnType<typeof vi.fn> };
   let vault: DeviceVault;
 
@@ -1195,15 +1196,16 @@ describe('Given the device storage lost its connection', () => {
     });
     vault = TestBed.inject(DeviceVault);
     await vault.signedIn(JANA, { kind: 'password', password: PASSWORD });
+    unhandled = new UnhandledRejections();
   });
 
   afterEach(() => {
+    unhandled.stop();
     connections.reopenWorks();
     TestBed.resetTestingModule();
   });
 
   it("when the donor's session ends, then the session wraps are removed after one reopen and no rejection is left unhandled", async () => {
-    const unhandled = new UnhandledRejections();
     const opensBefore = connections.opens;
     connections.lose();
 
@@ -1216,7 +1218,6 @@ describe('Given the device storage lost its connection', () => {
   });
 
   it("when the donor's session ends and the reopen fails too, then nothing is left unhandled and the next start removes the session wraps", async () => {
-    const unhandled = new UnhandledRejections();
     connections.lose('fails');
 
     await vault.signedOut(JANA);
@@ -1229,5 +1230,53 @@ describe('Given the device storage lost its connection', () => {
     await nextStart().sessionLost();
 
     expect(await wrapsOf(vault)).toEqual(['password']);
+  });
+
+  it('when the session is lost and the reopen fails too, then nothing is left unhandled and the session wraps stay for later', async () => {
+    connections.lose('fails');
+
+    await vault.sessionLost();
+
+    expect(await unhandled.settled()).toEqual([]);
+    expect(vault.opened()).toBeNull();
+    connections.reopenWorks();
+    expect(await wrapsOf(vault)).toEqual(['password', 'session']);
+  });
+
+  describe('and a sign-out could not remove the session wraps', () => {
+    beforeEach(async () => {
+      connections.lose('fails');
+      await vault.signedOut(JANA);
+      await unhandled.settled();
+    });
+
+    it.each([
+      [
+        'the app becomes visible again',
+        () => document.dispatchEvent(new Event('visibilitychange')),
+      ],
+      ['the page is shown again', () => window.dispatchEvent(new Event('pageshow'))],
+      ['the vault is asked again', () => void vault.prfInput()],
+    ])('when %s, then the session wraps are removed', async (_occasion, occasion) => {
+      connections.reopenWorks();
+
+      occasion();
+
+      await vi.waitFor(async () => expect(await wrapsOf(vault)).toEqual(['password']));
+    });
+
+    it('when the app becomes visible again and the storage still fails, then it tries once and waits for the next occasion', async () => {
+      const opensBefore = connections.opens;
+
+      document.dispatchEvent(new Event('visibilitychange'));
+      await unhandled.settled();
+
+      expect(connections.opens - opensBefore).toBe(1);
+      expect(unhandled.reasons).toEqual([]);
+      connections.reopenWorks();
+      expect(await wrapsOf(vault)).toEqual(['password', 'session']);
+      window.dispatchEvent(new Event('pageshow'));
+      await vi.waitFor(async () => expect(await wrapsOf(vault)).toEqual(['password']));
+    });
   });
 });
