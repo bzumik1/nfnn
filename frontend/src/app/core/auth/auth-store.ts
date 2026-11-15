@@ -88,6 +88,7 @@ export class AuthStore {
   private readonly fromCopy = signal(false);
   private readonly acceptedAt = signal<string | null>(null);
   private readonly pendingSignOut = signal(hasPendingSignOut(this.jar));
+  private readonly waitingSignedOut = signal(false);
   private finishingSignOut = false;
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
@@ -105,6 +106,7 @@ export class AuthStore {
   readonly fromDevice = this.fromCopy.asReadonly();
   readonly sessionAcceptedAt = this.acceptedAt.asReadonly();
   readonly signOutPending = this.pendingSignOut.asReadonly();
+  readonly waitsSignedOut = this.waitingSignedOut.asReadonly();
   readonly installed = this.jar.installed;
 
   constructor() {
@@ -462,11 +464,13 @@ export class AuthStore {
     this.currentSession.set(opening.session.kind);
     this.acceptedAt.set(null);
     this.fromCopy.set(true);
+    this.waitingSignedOut.set(false);
     this.currentStatus.set('signed-in');
   }
 
   private waitSignedOut(): void {
     if (this.currentStatus() === 'unknown') {
+      this.waitingSignedOut.set(true);
       this.currentStatus.set('anonymous');
     }
   }
@@ -537,6 +541,7 @@ export class AuthStore {
     this.acceptedAt.set(new Date().toISOString());
     this.accessToken = response.accessToken;
     this.currentDonor.set(response.user);
+    this.waitingSignedOut.set(false);
     this.currentStatus.set('signed-in');
     this.currentSession.set(response.session ?? null);
     rememberSession(this.jar, response.session ?? null);
@@ -559,6 +564,7 @@ export class AuthStore {
     this.acceptedAt.set(null);
     this.accessToken = null;
     this.currentDonor.set(null);
+    this.waitingSignedOut.set(false);
     this.currentStatus.set('anonymous');
     this.currentSession.set(null);
     forgetSession(this.jar);

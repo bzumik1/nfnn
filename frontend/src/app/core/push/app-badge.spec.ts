@@ -2,7 +2,7 @@ import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 
-import { AuthStore } from '../auth/auth-store';
+import { AuthStatus, AuthStore } from '../auth/auth-store';
 
 import { AppBadge } from './app-badge';
 import { NO_PUSH, SERVICE_WORKER_PUSH } from './service-worker-push';
@@ -10,21 +10,42 @@ import { NO_PUSH, SERVICE_WORKER_PUSH } from './service-worker-push';
 describe('Given the badge of the app icon', () => {
   let messages: Subject<unknown>;
   let isAdmin: WritableSignal<boolean>;
+  let status: WritableSignal<AuthStatus>;
+  let waitsSignedOut: WritableSignal<boolean>;
 
   beforeEach(() => {
     messages = new Subject<unknown>();
     isAdmin = signal(false);
+    status = signal<AuthStatus>('unknown');
+    waitsSignedOut = signal(false);
     TestBed.configureTestingModule({
       providers: [
         { provide: SERVICE_WORKER_PUSH, useValue: { ...NO_PUSH, messages } },
-        { provide: AuthStore, useValue: { isAdmin } },
+        { provide: AuthStore, useValue: { isAdmin, status, waitsSignedOut } },
       ],
     });
   });
 
+  function startApp(): void {
+    TestBed.inject(AppBadge).start();
+    TestBed.tick();
+  }
+
+  function resume(): void {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+
+  function restoreAdministrator(): void {
+    status.set('signed-in');
+    isAdmin.set(true);
+    TestBed.tick();
+  }
+
   afterEach(() => {
     Reflect.deleteProperty(navigator, 'setAppBadge');
     Reflect.deleteProperty(navigator, 'clearAppBadge');
+    vi.restoreAllMocks();
   });
 
   function withBadging() {
@@ -66,9 +87,8 @@ describe('Given the badge of the app icon', () => {
 
   it('when the administrator signs out or loses the role, then the badge is cleared', () => {
     const badge = withBadging();
-    isAdmin.set(true);
-    TestBed.inject(AppBadge).start();
-    TestBed.tick();
+    startApp();
+    restoreAdministrator();
 
     expect(badge.clearAppBadge).not.toHaveBeenCalled();
 
@@ -78,10 +98,71 @@ describe('Given the badge of the app icon', () => {
     expect(badge.clearAppBadge).toHaveBeenCalledTimes(1);
   });
 
-  it('when the app starts without an administrator, then the badge is left as it is', () => {
+  it('when the app starts while its session is still being restored, then the badge is left as it is', () => {
     const badge = withBadging();
-    TestBed.inject(AppBadge).start();
+    startApp();
+
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('when the app starts and an administrator session is restored, then the badge is left for the open alerts', () => {
+    const badge = withBadging();
+    startApp();
+    restoreAdministrator();
+
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('when the app starts and finds the session ended while it was closed, then the badge is cleared', () => {
+    const badge = withBadging();
+    startApp();
+
+    status.set('anonymous');
     TestBed.tick();
+
+    expect(badge.clearAppBadge).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the app starts and the restored session lost the administrator role while it was closed, then the badge is cleared', () => {
+    const badge = withBadging();
+    startApp();
+
+    status.set('signed-in');
+    TestBed.tick();
+
+    expect(badge.clearAppBadge).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the app starts and the server cannot say whether the session still holds, then the badge is left as it is', () => {
+    const badge = withBadging();
+    startApp();
+
+    waitsSignedOut.set(true);
+    status.set('anonymous');
+    TestBed.tick();
+
+    expect(badge.clearAppBadge).not.toHaveBeenCalled();
+  });
+
+  it('when the app resumes without a session that may see alerts, then the badge is cleared again', () => {
+    const badge = withBadging();
+    startApp();
+    status.set('anonymous');
+    TestBed.tick();
+    badge.clearAppBadge.mockClear();
+
+    resume();
+
+    expect(badge.clearAppBadge).toHaveBeenCalledTimes(1);
+  });
+
+  it('when the app resumes with an administrator session or before its session is known, then the badge is left as it is', () => {
+    const badge = withBadging();
+    startApp();
+
+    resume();
+    restoreAdministrator();
+    resume();
 
     expect(badge.clearAppBadge).not.toHaveBeenCalled();
   });

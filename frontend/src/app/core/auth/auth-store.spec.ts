@@ -214,6 +214,7 @@ describe('Given the auth store', () => {
     http.expectNone('/api/donors/auth/refresh');
     expect(store.status()).toBe('anonymous');
     expect(store.signedIn()).toBe(false);
+    expect(store.waitsSignedOut()).toBe(false);
   });
 
   it('when the refresh is refused, then the visitor is anonymous and the hint is dropped', async () => {
@@ -229,6 +230,7 @@ describe('Given the auth store', () => {
     expect(store.donor()).toBeNull();
     expect(store.currentAccessToken()).toBeNull();
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
+    expect(store.waitsSignedOut()).toBe(false);
   });
 
   it('when two refreshes overlap, then only one request is sent and both get the new token', () => {
@@ -664,6 +666,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     await first;
 
     expect(store.status()).toBe('anonymous');
+    expect(store.waitsSignedOut()).toBe(true);
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
 
     const second = store.restore();
@@ -672,6 +675,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     );
     await second;
     expect(store.currentAccessToken()).toBe('token-8');
+    expect(store.waitsSignedOut()).toBe(false);
   });
 
   describe('when the app knows it is offline', () => {
@@ -689,6 +693,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
 
       http.expectNone('/api/donors/auth/refresh');
       expect(store.status()).toBe('anonymous');
+      expect(store.waitsSignedOut()).toBe(true);
       expect(localStorage.getItem(SESSION_HINT_KEY)).toBe('1');
       probe.error(new ProgressEvent('error'), { status: 0 });
     });
