@@ -101,11 +101,15 @@ public class DonationReceiptIssuer {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DonationReceipt issueForYearByAdministrator(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
-        return issueForYearInBulk(adminId, channel, donor, year, today).receipt();
+        return issueForYearOf(adminId, channel, donor, year, today).receipt();
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AdministratorIssue issueForYearInBulk(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
+        return issueForYearOf(adminId, channel, donor, year, today);
+    }
+
+    private AdministratorIssue issueForYearOf(UUID adminId, AdministrationChannel channel, DonorReference donor, Year year, LocalDate today) {
         refuseUnlessOwnKeyIsPublished(donor);
         receipts.lockDonor(donor);
         requests.requireLiveRecord(donor);
