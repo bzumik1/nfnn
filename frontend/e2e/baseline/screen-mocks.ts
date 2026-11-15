@@ -600,6 +600,17 @@ export async function mockAdministration(page: RouteTarget): Promise<void> {
   );
 }
 
+export async function serveEmptyAdministrationCopy(page: RouteTarget): Promise<void> {
+  await serveAdministrationCopy(page, { donations: {}, donors: {} });
+}
+
+export async function serveAdministrationCopyOfAccounts(page: RouteTarget): Promise<void> {
+  await serveAdministrationCopy(page, {
+    donations: {},
+    donors: { 'accounts:2026-10': [janaAccount, petrAccount] },
+  });
+}
+
 export async function serveRecentDonors(page: RouteTarget): Promise<void> {
   await serveAdministrationCopy(page, {
     donations: {
