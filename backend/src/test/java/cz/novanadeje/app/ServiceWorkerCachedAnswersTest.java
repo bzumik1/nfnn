@@ -226,7 +226,7 @@ class ServiceWorkerCachedAnswersTest {
     }
 
     private String bearer(Set<Role> roles) {
-        return "Bearer " + accessTokens.issue(new AccessTokenGrant(new DonorId(UuidV7.generate(clock.instant())), roles, jwt.audience(), Set.of(), clock.instant(), null, null)).token();
+        return "Bearer " + accessTokens.issue(new AccessTokenGrant(new DonorId(UuidV7.generate(clock.instant())), roles, jwt.audience(), Set.of(), clock.instant(), Optional.empty(), Optional.empty(), Optional.empty())).token();
     }
 
     private Answer answer(MockHttpServletRequestBuilder request) throws Exception {

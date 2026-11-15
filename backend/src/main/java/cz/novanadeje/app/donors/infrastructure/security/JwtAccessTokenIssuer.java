@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -33,7 +34,7 @@ class JwtAccessTokenIssuer implements AccessTokenIssuer {
 
     @Override
     public IssuedAccessToken issue(DonorId donorId, Set<Role> roles, DeviceId device, Instant issuedAt) {
-        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, null, null, device));
+        return issue(new AccessTokenGrant(donorId, roles, properties.audience(), Set.of(), issuedAt, Optional.empty(), Optional.empty(), Optional.of(device)));
     }
 
     @Override

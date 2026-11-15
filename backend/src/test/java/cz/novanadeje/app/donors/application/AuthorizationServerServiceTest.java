@@ -531,7 +531,7 @@ class AuthorizationServerServiceTest {
             ArgumentCaptor<AccessTokenGrant> grant = ArgumentCaptor.forClass(AccessTokenGrant.class);
             verify(accessTokens).issue(grant.capture());
             assertThat(grant.getValue()).isEqualTo(new AccessTokenGrant(DONOR, Set.of(Role.DONOR, Role.ADMIN), API, Set.of(OAuthScope.ADMIN_READ), NOW,
-                    subjectExpiry, "claude.ai"));
+                    Optional.of(subjectExpiry), Optional.of("claude.ai"), Optional.empty()));
             assertThat(exchanged).isEqualTo(new ExchangedAccessToken("api", subjectExpiry, Set.of(OAuthScope.ADMIN_READ)));
         }
 

@@ -6,26 +6,30 @@ import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt, Instant notAfter,
-                               String client, DeviceId device) {
+public record AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt,
+                               Optional<Instant> latestExpiry, Optional<String> connectedClient, Optional<DeviceId> session) {
 
-    public AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt, Instant notAfter,
-                            String client) {
-        this(donorId, roles, audience, scopes, issuedAt, notAfter, client, null);
-    }
-
-    public Optional<Instant> latestExpiry() {
-        return Optional.ofNullable(notAfter);
-    }
-
-    public Optional<String> connectedClient() {
-        return Optional.ofNullable(client);
-    }
-
-    public Optional<DeviceId> session() {
-        return Optional.ofNullable(device);
+    public AccessTokenGrant {
+        Objects.requireNonNull(donorId, "donorId");
+        Objects.requireNonNull(roles, "roles");
+        Objects.requireNonNull(audience, "audience");
+        Objects.requireNonNull(scopes, "scopes");
+        Objects.requireNonNull(issuedAt, "issuedAt");
+        Objects.requireNonNull(latestExpiry, "latestExpiry");
+        Objects.requireNonNull(connectedClient, "connectedClient");
+        Objects.requireNonNull(session, "session");
+        if (connectedClient.isPresent() == scopes.isEmpty()) {
+            throw new IllegalStateException("A connected application's token carries scopes and no other token does");
+        }
+        if (session.isPresent() && connectedClient.isPresent()) {
+            throw new IllegalStateException("A token is either a browser session's or a connected application's");
+        }
+        if (latestExpiry.isPresent() && connectedClient.isEmpty()) {
+            throw new IllegalStateException("Only a connected application's exchanged token is capped by a latest expiry");
+        }
     }
 }
