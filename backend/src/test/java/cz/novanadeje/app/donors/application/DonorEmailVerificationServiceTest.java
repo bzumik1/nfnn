@@ -30,6 +30,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,6 +78,8 @@ class DonorEmailVerificationServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private DonorSessionService sessions;
     @Mock
     private SecondFactorRepository secondFactors;
@@ -89,7 +92,7 @@ class DonorEmailVerificationServiceTest {
     void setUp() {
         service = new DonorEmailVerificationService(donors, tokens, sessions, new DonorViews(secondFactors, tokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())),
                 new DonorEmailVerificationProperties(TTL, 3),
-                Clock.fixed(NOW, ZoneOffset.UTC), events, signOuts);
+                Clock.fixed(NOW, ZoneOffset.UTC), events, new CredentialChanges(signOuts, tokens, resetTokens));
     }
 
     @Test
@@ -449,6 +452,8 @@ class DonorEmailVerificationServiceTest {
         order.verify(donors).save(donor);
         order.verify(tokens).deleteAllOf(DONOR);
         order.verify(signOuts).endAllOf(DONOR, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(tokens).deleteChangeLinksOf(DONOR);
+        verify(resetTokens).deleteAllOf(DONOR);
         order.verify(events).publishEvent(new DonorEmailChanged(DONOR.value(), EMAIL, NEW_EMAIL, LocaleCode.CS));
         assertThat(donor.email()).isEqualTo(NEW_EMAIL);
         verify(events, never()).publishEvent(any(DonorRegistered.class));

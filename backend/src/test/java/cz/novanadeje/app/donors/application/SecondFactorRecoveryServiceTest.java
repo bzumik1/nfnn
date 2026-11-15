@@ -32,6 +32,8 @@ import cz.novanadeje.app.shared.domain.SecondFactorRecoveryCode;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,6 +88,10 @@ class SecondFactorRecoveryServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private SecondFactorRecoveryTargets targets;
     @Mock
     private ApplicationEventPublisher events;
@@ -95,7 +101,7 @@ class SecondFactorRecoveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new SecondFactorRecoveryService(donors, secondFactors, challenges, recoveries, targets,
-                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", RECOVERY_TTL), events, Clock.fixed(NOW, ZoneOffset.UTC), signOuts);
+                new DonorSecondFactorProperties(Duration.ofMinutes(5), 5, "Nová naděje", RECOVERY_TTL), events, Clock.fixed(NOW, ZoneOffset.UTC), new CredentialChanges(signOuts, verificationTokens, resetTokens));
     }
 
     @Test
@@ -228,6 +234,8 @@ class SecondFactorRecoveryServiceTest {
         order.verify(recoveries).markUsed(recovery.id(), NOW);
         order.verify(secondFactors).delete(JANA);
         order.verify(signOuts).endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(JANA);
+        verify(resetTokens).deleteAllOf(JANA);
         order.verify(events).publishEvent(new DonorSecondFactorRecovered(JANA.value(), jana.email(), LocaleCode.CS, "…5399/0800"));
         order.verifyNoMoreInteractions();
     }

@@ -1,6 +1,5 @@
 package cz.novanadeje.app.donors.application;
 
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorPasswordChanged;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
@@ -38,14 +37,14 @@ public class DonorCredentialsService {
     private final DonorViews views;
     private final ApplicationEventPublisher events;
     private final Clock clock;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
     private final TransactionTemplate reads;
     private final TransactionTemplate writes;
 
     public DonorCredentialsService(DonorRepository donors, PasswordHasher passwordHasher, PasswordPolicy passwordPolicy, DonorConfirmations confirmations, PasskeyRepository passkeys,
                                    DonorSessionService sessions, DonorViews views, DonorEmailVerificationService emailVerification,
-                                   ApplicationEventPublisher events, Clock clock, DeviceSignOuts signOuts, PlatformTransactionManager transactions) {
-        this.signOuts = signOuts;
+                                   ApplicationEventPublisher events, Clock clock, CredentialChanges credentialChanges, PlatformTransactionManager transactions) {
+        this.credentialChanges = credentialChanges;
         this.donors = donors;
         this.passwordHasher = passwordHasher;
         this.passwordPolicy = passwordPolicy;
@@ -72,7 +71,7 @@ public class DonorCredentialsService {
             Instant now = clock.instant();
             donor.changePassword(newHash);
             donors.save(donor);
-            signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+            credentialChanges.endEveryOtherSessionAndLinkOf(donor.id(), device.session(), now);
             events.publishEvent(new DonorPasswordChanged(donor.id().value(), donor.email(), donor.preferredLocale()));
             log.info("Password of donor {} changed, every session revoked", donor.id());
             return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
@@ -88,7 +87,7 @@ public class DonorCredentialsService {
             sessions.requireLasting(donor, device);
             Instant now = clock.instant();
             donors.save(donor);
-            signOuts.endAllOf(donor.id(), device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+            credentialChanges.endEveryOtherSessionAndLinkOf(donor.id(), device.session(), now);
             log.info("Password of donor {} removed, every session revoked", donor.id());
             return views.authenticated(donor, sessions.continueOn(donor, secondFactorVerified, device));
         });

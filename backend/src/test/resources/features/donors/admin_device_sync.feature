@@ -15,9 +15,9 @@ Feature: An administrator's device keeps a copy of the accounts and the administ
     And "Jana" enables the second factor
     And "Jana" keeps a passkey stored as "jana-phone-credential-0001"
     And "Jana" asks to recover the second factor by payment
-    And a password reset is asked for "petr@example.cz"
     And "Andrea" approved the connection for "https://claude.ai/.well-known/oauth-client"
     And "Petr" enables the second factor
+    And a password reset is asked for "petr@example.cz"
     And "Andrea" made "Petr" an administrator
     And 1 minute passes
     And "Andrea" removes "Petr" from the administrators

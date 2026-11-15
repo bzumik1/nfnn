@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "request",
+    "path": "POST /api/donors/auth/password-reset/request",
+    "scenario": "donors/admin_device_sync: A device gets every account by registration month and the trail by month without its details, and no stored secret*",
+    "reason": "PR #946 (security audit 2026-11-14, AUTH-2 and AUTH-3): turning the second factor on spends the donor's live password reset links, so the scenario asks for Petr's reset after Petr enables the second factor and the device copy still has a stored reset link to leave out; the request now goes with Petr's session header, its body and answer are the same",
+    "contract": "docs/security-overview.md, Donor authentication, Links that outlive a change of the credentials"
+  }
+]

@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SecondFactorCodesPaused;
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorDisabled;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorEnabled;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -41,7 +40,7 @@ public class DonorSecondFactorService {
     private final DonorSecondFactorProperties properties;
     private final ApplicationEventPublisher events;
     private final Clock clock;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
     private final SecondFactorCodes codes;
     private final TransactionTemplate reads;
     private final TransactionTemplate writes;
@@ -49,8 +48,8 @@ public class DonorSecondFactorService {
 
     public DonorSecondFactorService(DonorRepository donors, SecondFactorRepository secondFactors, DonorConfirmations confirmations, DonorSessionService sessions, DonorViews views,
                                     SecondFactorSessionGuard sessionGuard, DonorSecondFactorProperties properties, ApplicationEventPublisher events,
-                                    Clock clock, DeviceSignOuts signOuts, SecondFactorCodes codes, PlatformTransactionManager transactions) {
-        this.signOuts = signOuts;
+                                    Clock clock, CredentialChanges credentialChanges, SecondFactorCodes codes, PlatformTransactionManager transactions) {
+        this.credentialChanges = credentialChanges;
         this.codes = codes;
         this.donors = donors;
         this.secondFactors = secondFactors;
@@ -94,7 +93,7 @@ public class DonorSecondFactorService {
         codes.confirm(factor, code, now);
         sessions.requireLasting(donor, device);
         secondFactors.save(factor);
-        signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEveryOtherSessionAndLinkOf(donorId, device.session(), now);
         events.publishEvent(new DonorSecondFactorEnabled(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Second factor enabled for donor {}, every session revoked", donorId);
         return views.authenticated(donor, sessions.continueOn(donor, true, device));
@@ -110,7 +109,7 @@ public class DonorSecondFactorService {
             codes.check(factor, code, now);
             sessions.requireLasting(donor, device);
             secondFactors.delete(donorId);
-            signOuts.endAllOf(donorId, device.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+            credentialChanges.endEveryOtherSessionAndLinkOf(donorId, device.session(), now);
             events.publishEvent(new DonorSecondFactorDisabled(donorId.value(), donor.email(), donor.preferredLocale()));
             log.info("Second factor disabled for donor {}, every session revoked", donorId);
             return views.authenticated(donor, sessions.continueOn(donor, false, device));

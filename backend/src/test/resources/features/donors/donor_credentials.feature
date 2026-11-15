@@ -122,6 +122,65 @@ Feature: Donor changes the password or the e-mail while signed in
     Then the response status is 401
     And the problem type ends with "auth/second-factor-required"
 
+  Scenario: A password reset spends the pending e-mail change, so its link no longer switches the account
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And the donor keeps the link from the e-mail
+    Given the donor asked for a password reset for "jana@example.cz"
+    When the donor sets the new password "a brand new passphrase" with the link from e-mail 2
+    Then the response status is 204
+    When the donor confirms the e-mail change with the kept link
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+    When the donor signs in with email "jana@example.cz" and password "a brand new passphrase"
+    Then the response status is 200
+    And the donor profile shows type "PERSON", name "Jana Nováková" and email "jana@example.cz"
+    And the donor profile shows no pending e-mail change
+
+  Scenario: Changing the password spends the pending e-mail change, so its link no longer switches the account
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    Then the response status is 202
+    And the donor keeps the link from the e-mail
+    When the donor changes the password from "correct horse battery" to "a brand new passphrase"
+    Then the response status is 200
+    And the donor profile shows no pending e-mail change
+    When the donor confirms the e-mail change with the kept link
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-email-verification-token"
+    When the donor signs in with email "jana@example.cz" and password "a brand new passphrase"
+    Then the response status is 200
+
+  Scenario: Confirming an e-mail change spends the password reset links sent to the old address
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor asked for a password reset for "jana@example.cz"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor asks to change the e-mail to "jana.nova@example.cz" with password "correct horse battery"
+    And the donor confirms the e-mail change with the link from e-mail 2
+    Then the response status is 204
+    And 0 password reset links are stored
+    When the donor sets the new password "a brand new passphrase" with the link from e-mail 1
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-password-reset-token"
+    When the donor signs in with email "jana.nova@example.cz" and password "correct horse battery"
+    Then the response status is 200
+
+  Scenario: Changing the password spends the password reset links sent before, so none of them replaces the new password
+    Given a person registered with email "jana@example.cz" and password "correct horse battery"
+    And the donor asked for a password reset for "jana@example.cz"
+    And the donor signed in with email "jana@example.cz" and password "correct horse battery"
+    When the donor changes the password from "correct horse battery" to "a brand new passphrase"
+    Then the response status is 200
+    And 0 password reset links are stored
+    When the donor sets the new password "yet another passphrase" with the link from e-mail 1
+    Then the response status is 400
+    And the problem type ends with "donors/invalid-password-reset-token"
+    When the donor signs in with email "jana@example.cz" and password "a brand new passphrase"
+    Then the response status is 200
+
   Scenario: A change link is no registration link: the registration confirmation refuses it and leaves it usable
     Given a person registered with email "jana@example.cz" and password "correct horse battery"
     And the donor signed in with email "jana@example.cz" and password "correct horse battery"

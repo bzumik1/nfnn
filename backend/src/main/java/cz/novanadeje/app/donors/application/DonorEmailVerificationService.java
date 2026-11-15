@@ -1,7 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SessionKind;
-import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.application.event.DonorEmailAddressInUse;
 import cz.novanadeje.app.donors.application.event.DonorEmailChangeRequested;
@@ -41,11 +40,11 @@ public class DonorEmailVerificationService {
     private final DonorEmailVerificationProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
-    private final DeviceSignOuts signOuts;
+    private final CredentialChanges credentialChanges;
 
     public DonorEmailVerificationService(DonorRepository donors, EmailVerificationTokenRepository tokens, DonorSessionService sessions, DonorViews views, DonorEmailVerificationProperties properties,
-                                         Clock clock, ApplicationEventPublisher events, DeviceSignOuts signOuts) {
-        this.signOuts = signOuts;
+                                         Clock clock, ApplicationEventPublisher events, CredentialChanges credentialChanges) {
+        this.credentialChanges = credentialChanges;
         this.donors = donors;
         this.tokens = tokens;
         this.sessions = sessions;
@@ -120,7 +119,7 @@ public class DonorEmailVerificationService {
         donor.changeEmail(newEmail);
         donors.save(donor);
         tokens.deleteAllOf(donor.id());
-        signOuts.endAllOf(donor.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, now);
+        credentialChanges.endEverySessionAndLinkOf(donor.id(), now);
         events.publishEvent(new DonorEmailChanged(donor.id().value(), previousEmail, newEmail, donor.preferredLocale()));
         log.info("E-mail of donor {} changed", donor.id());
     }

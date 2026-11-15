@@ -32,6 +32,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.PasswordResetTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,6 +85,8 @@ class DonorCredentialsServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private PasswordResetTokenRepository resetTokens;
+    @Mock
     private DonorSessionService sessions;
     @Mock
     private SecondFactorRepository secondFactors;
@@ -107,7 +110,7 @@ class DonorCredentialsServiceTest {
     void setUp() {
         service = new DonorCredentialsService(donors, passwordHasher, CommonPasswords.POLICY,
                 new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, Clock.fixed(NOW, ZoneOffset.UTC)), passkeys, sessions, new DonorViews(secondFactors, verificationTokens, Clock.fixed(NOW, ZoneOffset.UTC), new ProfileVersions(RowVersionsFixture.canonical())), emailVerification, events,
-                Clock.fixed(NOW, ZoneOffset.UTC), signOuts, transactions);
+                Clock.fixed(NOW, ZoneOffset.UTC), new CredentialChanges(signOuts, verificationTokens, resetTokens), transactions);
     }
 
     @Test
@@ -125,6 +128,8 @@ class DonorCredentialsServiceTest {
         InOrder order = inOrder(donors, signOuts, sessions);
         order.verify(donors).save(donor);
         order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(DONOR);
+        verify(resetTokens).deleteAllOf(DONOR);
         order.verify(sessions).continueOn(donor, false, DEVICE);
         assertThat(donor.passwordHash()).contains(NEW_HASH);
         assertThat(result.tokens()).isEqualTo(TOKENS);
@@ -202,6 +207,8 @@ class DonorCredentialsServiceTest {
         InOrder order = inOrder(donors, signOuts, sessions);
         order.verify(donors).save(donor);
         order.verify(signOuts).endAllOf(DONOR, DEVICE.session(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+        verify(verificationTokens).deleteChangeLinksOf(DONOR);
+        verify(resetTokens).deleteAllOf(DONOR);
         order.verify(sessions).continueOn(donor, true, DEVICE);
         assertThat(result.tokens()).isEqualTo(TOKENS);
     }

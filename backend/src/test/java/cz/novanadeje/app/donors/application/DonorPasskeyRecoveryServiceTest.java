@@ -26,6 +26,7 @@ import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.junit.jupiter.api.BeforeEach;
+import cz.novanadeje.app.donors.domain.EmailVerificationTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,6 +67,8 @@ class DonorPasskeyRecoveryServiceTest {
     @Mock
     private DeviceSignOuts signOuts;
     @Mock
+    private EmailVerificationTokenRepository verificationTokens;
+    @Mock
     private PasskeyRepository passkeys;
     @Mock
     private PasskeyChallengeRepository challenges;
@@ -87,7 +90,7 @@ class DonorPasskeyRecoveryServiceTest {
                 new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, new OpenTransactions(), clock), ceremonies,
                 new PasskeyProperties(Duration.ofMinutes(5), 10, "Nová naděje"), new SecondFactorSessionGuard(secondFactors, passkeys), events,
                 clock, new OpenTransactions());
-        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, signOuts, new SecondFactorCodes(secondFactors, wrongCodes));
+        service = new DonorPasskeyRecoveryService(tokens, donors, secondFactors, passkeyService, clock, new CredentialChanges(signOuts, verificationTokens, tokens), new SecondFactorCodes(secondFactors, wrongCodes));
     }
 
     @Test
