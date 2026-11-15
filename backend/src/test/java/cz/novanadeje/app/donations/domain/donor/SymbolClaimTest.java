@@ -11,6 +11,7 @@ import java.util.Optional;
 
 import static cz.novanadeje.app.donations.BankPayments.payment;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -34,6 +35,24 @@ class SymbolClaimTest {
         assertThat(claim.confirms(payment(5, Optional.of(ACCOUNT), null))).isFalse();
         assertThat(claim.confirms(payment(6, Optional.empty(), "6123456789"))).isFalse();
         assertThat(claim.isConfirmed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a confirmed claim, when an administrator resets it, then it refuses as still confirmed")
+    void should_refuse_as_still_confirmed_when_reset_given_confirmed_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.CONFIRMED);
+
+        assertThatThrownBy(claim::requireResettable)
+                .isInstanceOf(SymbolClaimStillConfirmed.class)
+                .hasFieldOrPropertyWithValue("code", "donations/symbol-claim-still-confirmed");
+    }
+
+    @Test
+    @DisplayName("Given a declined claim, when an administrator resets it, then it may be reset")
+    void should_allow_reset_when_reset_given_declined_claim() {
+        SymbolClaim claim = claim(SymbolClaimAnswer.DECLINED);
+
+        assertThatCode(claim::requireResettable).doesNotThrowAnyException();
     }
 
     @Test

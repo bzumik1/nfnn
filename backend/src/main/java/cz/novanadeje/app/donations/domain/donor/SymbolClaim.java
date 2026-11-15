@@ -45,6 +45,12 @@ public final class SymbolClaim {
         return new SymbolClaim(id, donor, account, symbol, SymbolClaimAnswer.DECLINED, at);
     }
 
+    public void requireResettable() {
+        if (isConfirmed()) {
+            throw new SymbolClaimStillConfirmed(id);
+        }
+    }
+
     public boolean confirms(BankPayment payment) {
         return isConfirmed()
                 && require(payment, "Payment").sender().filter(account::equals).isPresent()

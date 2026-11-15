@@ -16,7 +16,6 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimHasReceipt;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimNotFound;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
-import cz.novanadeje.app.donations.domain.donor.SymbolClaimStillConfirmed;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
@@ -103,9 +102,7 @@ public class AdminSymbolClaimsService {
         Instant now = clock.instant();
         SymbolClaim claim = claims.findById(claimId).orElseThrow(() -> new SymbolClaimNotFound(claimId));
         requireUnchanged(claim, expected);
-        if (claim.isConfirmed()) {
-            throw new SymbolClaimStillConfirmed(claimId);
-        }
+        claim.requireResettable();
         claims.delete(claimId);
         events.publishEvent(new AdminActionPerformed(adminId, RESET_ACTION, Optional.of(claimId.value()),
                 "Odpověď Ne " + claimId + " dárce " + claim.donor() + " u symbolu " + claim.symbol().value()
