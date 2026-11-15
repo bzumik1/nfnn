@@ -50,11 +50,23 @@ describe('Given the line about the first saving of the administration on this de
   afterEach(() => vi.useRealTimers());
 
   function region(): HTMLElement | null {
-    return (fixture.nativeElement as HTMLElement).querySelector('[aria-live="polite"]');
+    return (fixture.nativeElement as HTMLElement).querySelector('.admin-first-download');
+  }
+
+  function live(): HTMLElement | null {
+    return region()?.querySelector('[aria-live="polite"]') ?? null;
+  }
+
+  function clean(text: string | null | undefined): string {
+    return (text ?? '').replace(/\s+/g, ' ').trim();
   }
 
   function said(): string {
-    return (region()?.textContent ?? '').replace(/\s+/g, ' ').trim();
+    return clean(region()?.querySelector('.first-download')?.textContent);
+  }
+
+  function heard(): string {
+    return clean(live()?.textContent);
   }
 
   function after(ms: number): void {
@@ -68,16 +80,19 @@ describe('Given the line about the first saving of the administration on this de
     after(0);
   }
 
-  it('when nothing is being saved, then the region is there and says nothing', () => {
+  it('when nothing is being saved, then the region and its live line are there and say nothing', () => {
     expect(region()).not.toBeNull();
+    expect(live()).not.toBeNull();
     expect(said()).toBe('');
+    expect(heard()).toBe('');
   });
 
-  it('when the saving runs, then the bar says how much of it is stored', () => {
+  it('when the saving runs, then the bar says how much of it is stored, and screen readers hear only that it started', () => {
     progress.set({ done: 18, total: 40 });
     after(0);
 
     expect(said()).toBe('Ukládáme správu do zařízení 18 z 40');
+    expect(heard()).toBe('Ukládáme správu do zařízení.');
   });
 
   it('when the saving took longer than a second and is stored, then the bar says so for a few seconds and goes', () => {
@@ -85,13 +100,20 @@ describe('Given the line about the first saving of the administration on this de
     after(0);
     after(FIRST_DOWNLOAD_ENDING_AFTER_MS);
 
+    const line = live();
     ends('stored');
     expect(said()).toBe('Správa je uložená v tomto zařízení.');
+    expect(heard()).toBe('Správa je uložená v tomto zařízení.');
+    expect(live()).toBe(line);
+    expect(region()!.querySelector('.first-download__title')!.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
 
     after(FIRST_DOWNLOAD_STORED_MS - 1);
     expect(said()).toBe('Správa je uložená v tomto zařízení.');
     after(1);
     expect(said()).toBe('');
+    expect(heard()).toBe('');
   });
 
   it('when the saving is stored within a second, then the bar goes without a word, as it was barely seen', () => {
@@ -102,6 +124,7 @@ describe('Given the line about the first saving of the administration on this de
     ends('stored');
 
     expect(said()).toBe('');
+    expect(heard()).toBe('');
   });
 
   describe('when the saving fails', () => {
@@ -118,6 +141,15 @@ describe('Given the line about the first saving of the administration on this de
 
       after(FIRST_DOWNLOAD_STORED_MS * 10);
       expect(said()).toContain('nepodařilo uložit');
+    });
+
+    it('then screen readers hear the failure once in the live line, and can still reach the button', () => {
+      expect(heard()).toBe(
+        'Správu se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.',
+      );
+      const button = region()!.querySelector('button')!;
+      expect(button.closest('[aria-hidden="true"]')).toBeNull();
+      expect(live()!.contains(button)).toBe(false);
     });
 
     it('and the administrator saves again, then the saving is asked for once', () => {
@@ -141,6 +173,7 @@ describe('Given the line about the first saving of the administration on this de
       after(0);
 
       expect(said()).toBe('Ukládáme správu do zařízení');
+      expect(heard()).toBe('Ukládáme správu do zařízení.');
     });
   });
 
@@ -149,9 +182,11 @@ describe('Given the line about the first saving of the administration on this de
     locked.set(true);
     after(0);
     expect(said()).toBe('');
+    expect(heard()).toBe('');
 
     ends('failed');
     expect(said()).toBe('');
+    expect(heard()).toBe('');
   });
 
   it('when the saving ends for another reason, such as another account, then the bar goes without a word', () => {
@@ -162,5 +197,6 @@ describe('Given the line about the first saving of the administration on this de
     ends(null);
 
     expect(said()).toBe('');
+    expect(heard()).toBe('');
   });
 });

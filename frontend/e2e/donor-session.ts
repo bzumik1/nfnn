@@ -594,7 +594,9 @@ const FIRST_DOWNLOAD_STORED_WAIT_MS = 10_000;
 
 async function administrationFirstDownloadEnded(page: Page): Promise<void> {
   await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
-  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED)).toBeHidden({
+  await expect(
+    page.locator('.first-download').getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED),
+  ).toBeHidden({
     timeout: FIRST_DOWNLOAD_STORED_WAIT_MS,
   });
 }
