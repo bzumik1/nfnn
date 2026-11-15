@@ -1,0 +1,52 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "donations.domain.importing.ImportPlannerTest > Given a history start before the coverage, when the startup run plans, then it attempts the deep history again",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): the STARTUP Fio import no longer reaches back to FIO_HISTORY_FROM when it lies before the covered period, because Fio refused it at every deploy without the history unlock; a start plans only the overlap like the hourly run, and older payments come only on request (Načíst starší platby, HISTORY); the test now says what a start does instead",
+    "replacement": "donations.domain.importing.ImportPlannerTest > Given a coverage and a history start before it, when the startup run plans, then it asks only for the overlap window",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/fio_payment_import.feature > Incoming bank payments are imported from Fio - The deep history is attempted again at the next start until it is filled",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): the STARTUP Fio import no longer reaches back to FIO_HISTORY_FROM when it lies before the covered period, because Fio refused it at every deploy without the history unlock; a start plans only the overlap like the hourly run, and older payments come only on request (Načíst starší platby, HISTORY); the test now says what a start does instead",
+    "replacement": "feature_classpath_features/donations/fio_payment_import.feature > Incoming bank payments are imported from Fio - A later start asks only for the overlap and leaves the older payments to an administrator's request",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/symbol_claims.feature > A donor is asked whether an old variable symbol from their verified account is theirs, and payments with a confirmed one are paired with them - A deeper import that brings a second old symbol from before the verification withdraws an open question",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): a later start no longer reaches back to FIO_HISTORY_FROM, so the older payments in these scenarios are no longer loaded by a second start but on an administrator's request (POST /api/admin/donations/import/history, Načíst starší platby, a HISTORY run), and the scenario's name says so",
+    "replacement": "feature_classpath_features/donations/symbol_claims.feature > A donor is asked whether an old variable symbol from their verified account is theirs, and payments with a confirmed one are paired with them - Older payments loaded on request that bring a second old symbol from before the verification withdraw an open question",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/symbol_claims.feature > A donor is asked whether an old variable symbol from their verified account is theirs, and payments with a confirmed one are paired with them - After the confirmation a deeper import pairs the older payments with the confirmed symbol in the same run",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): a later start no longer reaches back to FIO_HISTORY_FROM, so the older payments in these scenarios are no longer loaded by a second start but on an administrator's request (POST /api/admin/donations/import/history, Načíst starší platby, a HISTORY run), and the scenario's name says so",
+    "replacement": "feature_classpath_features/donations/symbol_claims.feature > A donor is asked whether an old variable symbol from their verified account is theirs, and payments with a confirmed one are paired with them - After the confirmation the older payments loaded on request are paired with the confirmed symbol in the same run",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "scenario": "donations/fio_payment_import: The deep history is attempted again at the next start until it is filled*",
+    "kind": "removed",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): the STARTUP Fio import no longer reaches back to FIO_HISTORY_FROM when it lies before the covered period, because Fio refused it at every deploy without the history unlock; a start plans only the overlap like the hourly run, and older payments come only on request (Načíst starší platby, HISTORY); the scenario relied on a later start reaching back, so it is replaced by one that loads the older payments on request (a HISTORY run, whose completion line is the shape declared in 2.33)",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "scenario": "donations/symbol_claims: A deeper import that brings a second old symbol from before the verification withdraws an open question*",
+    "kind": "removed",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): the STARTUP Fio import no longer reaches back to FIO_HISTORY_FROM when it lies before the covered period, because Fio refused it at every deploy without the history unlock; a start plans only the overlap like the hourly run, and older payments come only on request (Načíst starší platby, HISTORY); the scenario relied on a later start reaching back, so it is replaced by one that loads the older payments on request (a HISTORY run, whose completion line is the shape declared in 2.33)",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  },
+  {
+    "scenario": "donations/symbol_claims: After the confirmation a deeper import pairs the older payments with the confirmed symbol in the same run*",
+    "kind": "removed",
+    "reason": "Jakub 2026-11-14 (log audit #640, #904): the STARTUP Fio import no longer reaches back to FIO_HISTORY_FROM when it lies before the covered period, because Fio refused it at every deploy without the history unlock; a start plans only the overlap like the hourly run, and older payments come only on request (Načíst starší platby, HISTORY); the scenario relied on a later start reaching back, so it is replaced by one that loads the older payments on request (a HISTORY run, whose completion line is the shape declared in 2.33)",
+    "contract": "docs/system-overview.md, donations (Fio import); docs/api-contract.md, Fio import and pairing"
+  }
+]
