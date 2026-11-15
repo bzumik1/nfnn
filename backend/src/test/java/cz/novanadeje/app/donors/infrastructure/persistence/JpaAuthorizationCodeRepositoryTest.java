@@ -120,8 +120,8 @@ class JpaAuthorizationCodeRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a used and an unused code of a donor and an unused code of another, when the donor's unused codes are spent, then only that one is spent, the used one keeps its time and the other donor's stays usable")
-    void should_spend_only_the_donors_unused_codes_when_spent_given_two_donors() {
+    @DisplayName("Given a used, an unused and an expired code of a donor and an unused code of another, when the donor's unused codes are spent, then only the unused live one is spent, the used one keeps its time, the expired one is left to the cleanup and the other donor's stays usable")
+    void should_spend_only_the_donors_unused_live_codes_when_spent_given_two_donors() {
         Donor petr = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Petr Svoboda"), null,
                 new PostalAddress("Dlouhá 12", "Ústí nad Labem", "400 01"), new EmailAddress("petr@example.cz"), new PasswordHash("$hash"),
                 new VariableSymbol("4821937561"), LocaleCode.CS, NOW);
@@ -129,6 +129,7 @@ class JpaAuthorizationCodeRepositoryTest {
         AuthorizationCode redeemed = issue(jana, NOW);
         AuthorizationCode pending = issue(jana, NOW);
         AuthorizationCode petrs = issue(petr.id(), NOW);
+        AuthorizationCode abandoned = issue(jana, NOW.minus(Duration.ofDays(31)));
         flushAndClear();
         codes.markUsed(redeemed.id(), NOW.plusSeconds(5));
 
@@ -138,6 +139,7 @@ class JpaAuthorizationCodeRepositoryTest {
         assertThat(codes.findBySecretHash(redeemed.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(5));
         assertThat(codes.findBySecretHash(pending.secretHash()).orElseThrow().usedAt()).contains(NOW.plusSeconds(30));
         assertThat(codes.findBySecretHash(petrs.secretHash()).orElseThrow().usedAt()).isEmpty();
+        assertThat(codes.findBySecretHash(abandoned.secretHash()).orElseThrow().usedAt()).isEmpty();
     }
 
     private AuthorizationCode issue(DonorId donor, Instant at) {
