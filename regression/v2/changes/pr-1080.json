@@ -1,0 +1,958 @@
+[
+  {
+    "kind": "logs",
+    "scenario": "content/admin_content_sync: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/choose_project_order: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/clean_up_unused_photos: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/home_content: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/look_back_on_a_year: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/manage_about: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/manage_donate_band: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/manage_news: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/manage_people: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/manage_projects: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/place_photo_focal_point: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/stale_content_writes: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/stale_people_texts: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_bank_logos: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_device_sync: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_donor_accounts: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_donor_erasure: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_history_import: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_monthly_report: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_payments: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_receipt_signature: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_receipts: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_sent_monthly_report: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_stale_writes: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_symbol_claims: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/admin_yearly_receipts: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/bank_logos: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/donation_receipts_frozen: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/donor_device_sync: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/fio_payment_import: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/receipt_keys: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/symbol_claims: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/admin_actions: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/admin_administrators: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/admin_device_sync: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/admin_donor_erasure: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/admin_donors: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/administration_device_lock: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/connected_apps: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/device_status: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/donor_passkeys: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/donor_password_reset: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/erasure_and_role_removal_across_devices: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "donors/second_factor_recovery: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/admin_operations_sync: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/admin_push: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/backup_key: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/backups: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/diagnostics: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/donor_gift_notifications: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/donor_push: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/plan_backups: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/push_alerts: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/restore: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/settings: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "logs",
+    "scenario": "operations/stale_settings_writes: *",
+    "line": "shared.infrastructure.audit.AdminActionLog: Admin *",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "<client>": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.infrastructure.audit.AdminActionTrailWriter: Admin <id> performed <enum> on <id>",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.infrastructure.audit.AdminActionTrailWriter: Admin <id> performed <enum> on nothing",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.infrastructure.audit.AdminActionTrailWriter: Admin <id> performed <enum> on <id> through claude.ai",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #253, Jakub 2026-10-31",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "claude.ai": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "shared.infrastructure.audit.AdminActionTrailWriter: Admin <id> performed <enum> on nothing through claude.ai",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/glossary.md, Audit trail; docs/api-contract.md, Audit trail; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #612, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the administrator's donor id and the subject's id, UUIDs the site generated, as before",
+        "<enum>": "the action, a value of the closed list of audit actions, as before",
+        "claude.ai": "the client claim, the host of the connected application's client metadata address, as before"
+      }
+    }
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.audit.AdminActionLogTest > Given an admin action published inside a transaction, when it commits, then the action is in admin_action with who, what, on what and when",
+    "replacement": "shared.infrastructure.audit.AdminActionTrailWriterTest > Given an admin action published inside a transaction, when it commits, then the action is in admin_action with who, what, on what and when",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/api-contract.md, Audit trail"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.audit.AdminActionLogTest > Given an admin action published inside a transaction that rolls back, when it ends, then nothing is stored",
+    "replacement": "shared.infrastructure.audit.AdminActionTrailWriterTest > Given an admin action published inside a transaction that rolls back, when it ends, then nothing is stored",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/api-contract.md, Audit trail"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.audit.AdminActionLogTest > Given an admin action with facts, when it commits, then its facts are stored as a JSON object of the summary key and the values",
+    "replacement": "shared.infrastructure.audit.AdminActionTrailWriterTest > Given an admin action with facts, when it commits, then its facts are stored as a JSON object of the summary key and the values",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/api-contract.md, Audit trail"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "shared.infrastructure.audit.AdminActionLogTest > Given an admin action without facts, when it commits, then its facts column stays null",
+    "replacement": "shared.infrastructure.audit.AdminActionTrailWriterTest > Given an admin action without facts, when it commits, then its facts column stays null",
+    "reason": "PR #1080 (architecture audit #621, #1077): the audit trail's writer AdminActionLog is renamed AdminActionTrailWriter, because the glossary avoids \"log\" for the audit trail; its INFO line keeps its text and slots, only the logger name changes",
+    "contract": "docs/api-contract.md, Audit trail"
+  }
+]

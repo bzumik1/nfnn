@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTest
-class AdminActionLogTest {
+class AdminActionTrailWriterTest {
 
     private static final UUID SUBJECT = UUID.fromString("0192f0f1-0000-7000-8000-000000000001");
     private static final Instant AT = Instant.parse("2026-10-22T10:00:00Z");

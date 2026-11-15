@@ -14,13 +14,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.util.Optional;
 
 @Component
-class AdminActionLog {
+class AdminActionTrailWriter {
 
-    private static final Logger log = LoggerFactory.getLogger(AdminActionLog.class);
+    private static final Logger log = LoggerFactory.getLogger(AdminActionTrailWriter.class);
 
     private final AdminActionJpaRepository actions;
 
-    AdminActionLog(AdminActionJpaRepository actions) {
+    AdminActionTrailWriter(AdminActionJpaRepository actions) {
         this.actions = actions;
     }
 
