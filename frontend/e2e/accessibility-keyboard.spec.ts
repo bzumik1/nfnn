@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 import { mockDonorApi, openDonorSection, openSignInDialog, signIn } from './donor-session';
 import {
   chunkLoadNotice,
+  LostChunks,
   openAboutThenLoseNewChunks,
   openPolicyFromContact,
   withoutSessionStorage,
@@ -463,10 +464,12 @@ for (const width of [320, 390, 1280]) {
   test.describe(`Given a visitor ${width} px wide whose next page could not be loaded`, () => {
     test.use({ viewport: { width, height: 800 } });
 
+    let chunks: LostChunks;
+
     test.beforeEach(async ({ page }) => {
       await mockDonorApi(page);
       await withoutSessionStorage(page);
-      await openAboutThenLoseNewChunks(page);
+      chunks = await openAboutThenLoseNewChunks(page);
       await openPolicyFromContact(page);
       await expect(chunkLoadNotice(page)).toBeVisible();
     });
@@ -526,6 +529,7 @@ for (const width of [320, 390, 1280]) {
       await page.setViewportSize({ width, height: 560 });
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       const before = await page.evaluate(() => window.scrollY);
+      chunks.bringBack();
 
       await page.getByRole('banner').getByRole('button', { name: 'Přihlásit se' }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
