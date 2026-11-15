@@ -9,6 +9,6 @@ public record NewsPage(List<NewsArticleView> items, int page, int size, long tot
     }
 
     public boolean hasMore() {
-        return (long) (page + 1) * size < total;
+        return (page + 1L) * size < total;
     }
 }

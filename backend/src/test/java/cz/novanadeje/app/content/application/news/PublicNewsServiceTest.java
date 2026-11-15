@@ -47,6 +47,7 @@ class PublicNewsServiceTest {
         NewsPage page = service().list(Integer.MAX_VALUE / 2 + 1, 2);
 
         assertThat(page).isEqualTo(new NewsPage(List.of(), Integer.MAX_VALUE / 2 + 1, 2, 12));
+        assertThat(page.hasMore()).isFalse();
         verify(news, never()).findVisibleNewestFirst(any(), anyInt(), anyInt());
         verifyNoInteractions(signers);
     }

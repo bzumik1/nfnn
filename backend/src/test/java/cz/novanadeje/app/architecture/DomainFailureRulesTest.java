@@ -2,7 +2,6 @@ package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.AccessTarget;
-import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -31,6 +30,7 @@ import java.nio.file.Path;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,32 +63,29 @@ class DomainFailureRulesTest {
             .should().beAssignableTo(IllegalArgumentException.class)
             .orShould().beAssignableTo(IllegalStateException.class)
             .because("the API answers every IllegalArgumentException with 400 as the client's error, and adapters catch IllegalStateException "
-                    + "generically around library calls; a failure of its own is a DomainException when the client caused it and a plain RuntimeException when the server did");
-
-    private static final DescribedPredicate<JavaClass> PERSISTENCE_CLASS = DescribedPredicate.describe(
-            "a class of an infrastructure.persistence package, a JPA entity, embeddable or converter, a @Repository or a Spring Data repository",
-            DomainFailureRulesTest::isPersistenceClass);
+                    + "generically around library calls; a failure of its own is a DomainException when the client caused it, and when the server did a named RuntimeException subclass "
+                    + "or, for a broken invariant, a plain IllegalStateException");
 
     private static final DescribedPredicate<JavaClass> PERSISTENCE_ADAPTER = DescribedPredicate.describe(
-            PERSISTENCE_CLASS.getDescription() + ", or a class that uses one or jakarta.persistence directly, other than a configuration record",
-            type -> !type.isAnnotatedWith(ConfigurationProperties.class)
-                    && (isPersistenceClass(type) || type.getDirectDependenciesFromSelf().stream().map(Dependency::getTargetClass)
-                    .anyMatch(target -> isPersistenceClass(target) || target.getPackageName().startsWith("jakarta.persistence"))));
+            "a class of the persistence adapter packages AdapterLibraryRulesTest confines JPA and Spring Data to, other than a configuration record, "
+                    + "or a JPA entity, embeddable or converter, a @Repository or a Spring Data repository wherever it lives",
+            type -> resideInAnyPackage(AdapterLibraryRulesTest.PERSISTENCE_ADAPTERS).test(type) && !type.isAnnotatedWith(ConfigurationProperties.class)
+                    || type.isAnnotatedWith(Entity.class) || type.isAnnotatedWith(Embeddable.class) || type.isAnnotatedWith(Converter.class)
+                    || type.isAnnotatedWith(Repository.class) || type.isAssignableTo(org.springframework.data.repository.Repository.class));
+
+    private static final DescribedPredicate<AccessTarget> AN_ARGUMENT_ASSERTION = DescribedPredicate.describe(
+            "a method of Spring's Assert other than state, which throws IllegalArgumentException",
+            target -> target.getOwner().getName().equals("org.springframework.util.Assert") && !target.getName().equals("state"));
 
     @ArchTest
     static final ArchRule persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error = noClasses()
             .that(PERSISTENCE_ADAPTER)
             .should().accessTargetWhere(JavaAccess.Predicates.target(constructorOf(IllegalArgumentException.class)))
+            .orShould().accessTargetWhere(JavaAccess.Predicates.target(AN_ARGUMENT_ASSERTION))
             .because("a client's input is refused before it reaches persistence, so a check there guards the server's own data or code, "
                     + "and an IllegalArgumentException would answer that server fault with 400 and log it as the client's error; "
-                    + "throw IllegalStateException, which answers 500. The rule sees only what such a class constructs, a lambda's body "
-                    + "included, not an IllegalArgumentException a call throws (valueOf, fromString, a value object's check, Assert)");
-
-    private static boolean isPersistenceClass(JavaClass type) {
-        return type.getPackageName().matches(".*\\.infrastructure\\.persistence(\\..*)?")
-                || type.isAnnotatedWith(Entity.class) || type.isAnnotatedWith(Embeddable.class) || type.isAnnotatedWith(Converter.class)
-                || type.isAnnotatedWith(Repository.class) || type.isAssignableTo(org.springframework.data.repository.Repository.class);
-    }
+                    + "throw IllegalStateException, which answers 500. The rule sees what such a class constructs, a lambda's body "
+                    + "included, and Spring's Assert, not an IllegalArgumentException another call throws (valueOf, fromString, a value object's check; #939)");
 
     private static DescribedPredicate<AccessTarget> constructorOf(Class<? extends RuntimeException> failure) {
         return DescribedPredicate.describe("a constructor of " + failure.getSimpleName() + " or of a subclass",
@@ -111,7 +108,7 @@ class DomainFailureRulesTest {
     }
 
     @Test
-    @DisplayName("Given a planted configuration record of a persistence package that refuses its value as an argument and a row class that throws a server fault, when the persistence rule checks them, then neither is reported, because a configuration record is bound at startup and never answers a request")
+    @DisplayName("Given a planted configuration record of a persistence package that refuses its value as an argument and a row class that asserts a server fault with Assert.state, when the persistence rule checks them, then neither is reported, because a configuration record is bound at startup and never answers a request")
     void should_report_neither_when_checked_given_a_configuration_record_and_a_server_fault_in_a_persistence_package(@TempDir Path folder) throws IOException {
         JavaClasses settings = PlantedClasses.compiled(folder, java.util.Map.of("cz.novanadeje.app.shared.infrastructure.persistence.PlantedSessionProperties", """
                 package cz.novanadeje.app.shared.infrastructure.persistence;
@@ -129,9 +126,7 @@ class DomainFailureRulesTest {
 
                 public class PlantedRow {
                     void check(String id) {
-                        if (id == null) {
-                            throw new IllegalStateException("planted");
-                        }
+                        org.springframework.util.Assert.state(id != null, "planted");
                     }
                 }
                 """));
@@ -172,6 +167,13 @@ class DomainFailureRulesTest {
                         "shared.infrastructure.audit.PlantedAuditEntity",
                         "@jakarta.persistence.Entity public class PlantedAuditEntity { void check(String action) { "
                                 + "if (action == null) { throw new IllegalArgumentException(\"planted\"); } } }"),
+                planted("audit row", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "shared.infrastructure.audit.PlantedAuditRow",
+                        "public record PlantedAuditRow(String action) { public PlantedAuditRow { "
+                                + "if (action == null) { throw new IllegalArgumentException(\"planted\"); } } }"),
+                planted("argument assertion", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
+                        "donations.infrastructure.persistence.PlantedAssertingRepository",
+                        "public class PlantedAssertingRepository { void read(int offset) { org.springframework.util.Assert.isTrue(offset >= 0, \"planted\"); } }"),
                 planted("audit trail over a Spring Data repository", persistence_adapters_never_answer_a_broken_invariant_as_the_clients_error,
                         "shared.infrastructure.audit.PlantedAuditTrail",
                         "public class PlantedAuditTrail { private final org.springframework.data.repository.Repository<Object, java.util.UUID> rows; "

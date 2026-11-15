@@ -51,6 +51,7 @@ class PublicProjectServiceTest {
         ProjectPage page = service().list(Integer.MAX_VALUE / 3 + 1, 3);
 
         assertThat(page).isEqualTo(new ProjectPage(List.of(), Integer.MAX_VALUE / 3 + 1, 3, 7));
+        assertThat(page.hasMore()).isFalse();
         verify(projects, never()).findVisible(any(), any(), anyInt(), anyInt());
         verifyNoInteractions(orders, views);
     }
