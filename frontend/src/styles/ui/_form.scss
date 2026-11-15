@@ -136,6 +136,12 @@
     color: var(--color-sheet-text);
     font-size: var(--text-sheet-body);
   }
+
+  app-password-reveal .password-reveal {
+    height: 100%;
+
+    @include touch-target.reaches-finger-size($positioned: true);
+  }
 }
 
 .ui-field-group + .ui-field-group {
