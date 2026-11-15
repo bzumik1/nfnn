@@ -1,8 +1,6 @@
 package cz.novanadeje.app.donations.domain.importing;
 
-import java.util.UUID;
-
-public record WaitingImportAlert(UUID id, ImportAlert alert) {
+public record WaitingImportAlert(ImportAlertId id, ImportAlert alert) {
 
     public WaitingImportAlert {
         if (id == null || alert == null) {

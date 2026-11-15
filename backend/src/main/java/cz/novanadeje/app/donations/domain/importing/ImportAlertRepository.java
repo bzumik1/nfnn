@@ -2,7 +2,6 @@ package cz.novanadeje.app.donations.domain.importing;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 public interface ImportAlertRepository {
 
@@ -10,7 +9,7 @@ public interface ImportAlertRepository {
 
     List<WaitingImportAlert> waiting();
 
-    void markSent(UUID id, Instant at);
+    void markSent(ImportAlertId id, Instant at);
 
     void dropWaitingOutages(Instant at);
 }
