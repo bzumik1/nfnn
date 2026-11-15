@@ -9,7 +9,6 @@ import cz.novanadeje.app.operations.domain.push.PushDeviceSignedOut;
 import cz.novanadeje.app.operations.domain.push.PushEndpoint;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
-import cz.novanadeje.app.operations.domain.push.PushSubscriptionLimitReached;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionNotFound;
 import cz.novanadeje.app.shared.application.session.SignedInDevices;
 import org.springframework.stereotype.Service;
@@ -59,9 +58,7 @@ public class DonorPushService {
         }
         subscriptions.lockWrites();
         subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
-        if (subscriptions.findAllOf(donorId).size() >= DonorPushSubscription.MAX_PER_DONOR) {
-            throw new PushSubscriptionLimitReached();
-        }
+        DonorPushSubscription.requireRoomBeside(subscriptions.findAllOf(donorId));
         DonorPushSubscription subscription = DonorPushSubscription.subscribe(donorId, deviceId, endpoint, clientKeys, notifications, clock.instant());
         subscriptions.save(subscription);
         return DonorPushDeviceView.of(subscription);

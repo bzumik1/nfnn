@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.push;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +16,12 @@ public record PushSubscription(PushSubscriptionId id, UUID administratorId, UUID
         if (id == null || administratorId == null || deviceId == null || endpoint == null || keys == null || alerts == null
                 || createdAt == null || lastDeliveredAt == null || failuresInARow < 0) {
             throw new IllegalArgumentException("A push subscription names its administrator, device, endpoint, keys, alerts and times");
+        }
+    }
+
+    public static void requireRoomBeside(List<PushSubscription> ofAccount) {
+        if (ofAccount.size() >= MAX_PER_ADMINISTRATOR) {
+            throw new PushSubscriptionLimitReached();
         }
     }
 

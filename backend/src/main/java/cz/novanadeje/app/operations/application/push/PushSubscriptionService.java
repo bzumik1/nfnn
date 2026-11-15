@@ -9,7 +9,6 @@ import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
-import cz.novanadeje.app.operations.domain.push.PushSubscriptionLimitReached;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionNotFound;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
@@ -64,9 +63,7 @@ public class PushSubscriptionService {
         subscriptions.lockWrites();
         List<PushSubscription> displaced = subscriptions.findByEndpointOrDevice(endpoint, deviceId);
         subscriptions.deleteByEndpointOrDevice(endpoint, deviceId);
-        if (subscriptions.findAllOf(administratorId).size() >= PushSubscription.MAX_PER_ADMINISTRATOR) {
-            throw new PushSubscriptionLimitReached();
-        }
+        PushSubscription.requireRoomBeside(subscriptions.findAllOf(administratorId));
         displaced.stream().filter(other -> !other.belongsTo(administratorId)).forEach(other -> events.publishEvent(new AdminActionPerformed(
                 administratorId, REMOVE_ACTION, Optional.of(other.id().value()), "Upozornění přes push jiného správce vypnuta na zařízení ("
                 + PushServiceNames.of(other.endpoint().service()) + "), protože si je ve stejném prohlížeči zapnul tento správce", now)));

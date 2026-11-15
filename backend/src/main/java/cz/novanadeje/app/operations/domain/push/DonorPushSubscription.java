@@ -1,6 +1,7 @@
 package cz.novanadeje.app.operations.domain.push;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +15,12 @@ public record DonorPushSubscription(PushSubscriptionId id, UUID donorId, UUID de
         if (id == null || donorId == null || deviceId == null || endpoint == null || keys == null || notifications == null
                 || createdAt == null || lastDeliveredAt == null || failuresInARow < 0) {
             throw new IllegalArgumentException("A donor's push subscription names its donor, device, endpoint, keys, notifications and times");
+        }
+    }
+
+    public static void requireRoomBeside(List<DonorPushSubscription> ofAccount) {
+        if (ofAccount.size() >= MAX_PER_DONOR) {
+            throw new PushSubscriptionLimitReached();
         }
     }
 
