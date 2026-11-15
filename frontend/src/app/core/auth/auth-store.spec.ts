@@ -52,6 +52,7 @@ describe('Given the auth store', () => {
     });
     store = TestBed.inject(AuthStore);
     http = TestBed.inject(HttpTestingController);
+    TestBed.tick();
   });
 
   afterEach(() => http.verify());
@@ -487,6 +488,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     });
     store = TestBed.inject(AuthStore);
     http = TestBed.inject(HttpTestingController);
+    TestBed.tick();
   });
 
   afterEach(() => {
@@ -888,6 +890,9 @@ describe('Given the auth store in one of several tabs of the browser', () => {
     expect(locks.isHeld).toBe(false);
     expect(store.signedIn()).toBe(false);
     expect(channel.posted).toEqual([signedOut()]);
+    TestBed.tick();
+    http.expectNone('/api/donors/auth/logout');
+    expect(store.signOutPending()).toBe(true);
   });
 
   it('when another tab signs out, then this tab forgets the session and its hint', () => {
