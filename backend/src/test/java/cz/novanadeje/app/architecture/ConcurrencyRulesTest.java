@@ -8,13 +8,17 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -83,11 +87,14 @@ class ConcurrencyRulesTest {
             .orShould().accessTargetWhere(A_THREAD_START)
             .orShould().accessTargetWhere(A_SLEEP)
             .orShould().accessTargetWhere(A_SHARED_POOL_TASK)
+            .orShould(declareAnAsyncMethod())
             .because("fan-out, pacing and the choice of thread are a transport's concern: an adapter behind a port decides how many run at once "
-                    + "and on which executor, so a use case states what to do and never which thread does it, nor sleeps on its caller's");
+                    + "and on which executor, so a use case states what to do and never which thread does it, nor sleeps on its caller's; "
+                    + "an @Async listener runs on the application executor, so it sits on an adapter that calls the use case "
+                    + "(an @Async class is refused everywhere by AfterCommitRulesTest)");
 
     @Test
-    @DisplayName("Given planted application and domain classes that each fan out, pace, cap, sleep, run on a shared pool, start a thread or pick an executor in one way, when the rule checks them, then each is reported and the same code in an adapter, a read of the current thread or sequential work is not")
+    @DisplayName("Given planted application and domain classes that each fan out, pace, cap, sleep, run on a shared pool, start a thread, pick an executor or declare an @Async method, directly or through a composed annotation, in one way, when the rule checks them, then each is reported and the same code in an adapter, a read of the current thread or sequential work is not")
     void should_report_thread_machinery_when_checked_given_planted_application_and_domain_classes(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.ofEntries(
                 planted("application", "PlantedExecutor", """
@@ -331,6 +338,52 @@ class ConcurrencyRulesTest {
                             }
                         }
                         """),
+                planted("application", "PlantedAsyncListener", """
+                        import org.springframework.scheduling.annotation.Async;
+                        import org.springframework.transaction.event.TransactionPhase;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        class PlantedAsyncListener {
+
+                            @Async
+                            @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+                            public void on(String changed) {
+                            }
+                        }
+                        """),
+                planted("domain", "PlantedComposedAsync", """
+                        import cz.novanadeje.app.planteda.infrastructure.PlantedFireAndForget;
+
+                        class PlantedComposedAsync {
+
+                            @PlantedFireAndForget
+                            public void on(String changed) {
+                            }
+                        }
+                        """),
+                planted("infrastructure", "PlantedFireAndForget", """
+                        import java.lang.annotation.Retention;
+                        import java.lang.annotation.RetentionPolicy;
+                        import org.springframework.scheduling.annotation.Async;
+
+                        @Retention(RetentionPolicy.RUNTIME)
+                        @Async
+                        public @interface PlantedFireAndForget {
+                        }
+                        """),
+                planted("infrastructure", "PlantedAsyncAdapter", """
+                        import org.springframework.scheduling.annotation.Async;
+                        import org.springframework.transaction.event.TransactionPhase;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        class PlantedAsyncAdapter {
+
+                            @Async
+                            @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+                            public void on(String changed) {
+                            }
+                        }
+                        """),
                 planted("infrastructure", "PlantedAdapter", """
                         import org.springframework.beans.factory.annotation.Qualifier;
                         import org.springframework.scheduling.TaskScheduler;
@@ -376,7 +429,7 @@ class ConcurrencyRulesTest {
                         "PlantedBuilderParameter", "PlantedTimer", "PlantedScheduler", "PlantedVirtualBuilder", "PlantedPlatformBuilder",
                         "PlantedVirtualStart", "PlantedThreadCreation", "PlantedThreadReference", "PlantedThreadSubclass", "PlantedThreadSleep",
                         "PlantedTimeUnitSleep", "PlantedParallelStream", "PlantedParallelOnStream", "PlantedRunAsync", "PlantedSupplyAsync",
-                        "PlantedParallelSort", "PlantedForkedTask");
+                        "PlantedParallelSort", "PlantedForkedTask", "PlantedAsyncListener", "PlantedComposedAsync");
     }
 
     private static Map.Entry<String, String> planted(String layer, String simpleName, String body) {
@@ -390,6 +443,18 @@ class ConcurrencyRulesTest {
                 .filter(Matcher::find)
                 .map(origin -> origin.group(1))
                 .collect(Collectors.toSet());
+    }
+
+    private static ArchCondition<JavaClass> declareAnAsyncMethod() {
+        return new ArchCondition<>("declare a method meta-annotated with @Async") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                javaClass.getMethods().stream()
+                        .filter(method -> method.isMetaAnnotatedWith(Async.class))
+                        .forEach(method -> events.add(SimpleConditionEvent.satisfied(method,
+                                method.getDescription() + " is meta-annotated with @Async in " + method.getSourceCodeLocation())));
+            }
+        };
     }
 
     private static DescribedPredicate<JavaAccess<?>> codeUnitOf(Class<?> owner, Predicate<String> named) {
