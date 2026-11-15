@@ -1,6 +1,5 @@
 @use 'breakpoints' as bp;
-@use 'pressed';
-@use 'touch-target';
+@use 'sheet';
 
 :host {
   --list-group-title-top: calc(var(--header-height) + var(--safe-area-top));
@@ -12,11 +11,9 @@
 }
 
 :host(.admin-shell--sheet) {
-  --list-group-title-top: calc(
-    var(--safe-area-top) + var(--sheet-close-inset) * 2 + var(--sheet-close-size)
-  );
+  --list-group-title-top: calc(#{sheet.$top} + var(--sheet-close-inset) + var(--sheet-close-size));
 
-  padding-top: calc(var(--safe-area-top) + var(--sheet-top-gap));
+  padding-top: sheet.$top;
   background: transparent;
 }
 
@@ -30,62 +27,30 @@
 }
 
 .admin-sheet {
-  --color-group-cell: var(--color-sheet-group);
+  @include sheet.edge;
+  @include sheet.grouped;
 
   position: relative;
   z-index: 1;
-  min-height: calc(var(--full-screen-height) - var(--safe-area-top) - var(--sheet-top-gap));
+  min-height: calc(var(--full-screen-height) - #{sheet.$top});
   margin-inline: auto;
-  max-width: var(--sheet-max-width);
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  background: var(--color-sheet-grouped);
-  box-shadow: var(--shadow-sheet);
-  color: var(--color-sheet-text);
-  font-family: var(--font-sheet);
+}
+
+.admin-sheet-cover {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: calc(#{sheet.$top} + var(--radius-sheet));
+  background: linear-gradient(var(--color-backdrop), var(--color-backdrop)), var(--color-surface);
+  backdrop-filter: blur(var(--blur-backdrop));
+  -webkit-backdrop-filter: blur(var(--blur-backdrop));
 }
 
 .admin-sheet-head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  justify-content: space-between;
-  padding: calc(var(--safe-area-top) + var(--sheet-close-inset))
-    max(var(--sheet-inset-inline), env(safe-area-inset-right)) 0
-    max(var(--sheet-inset-inline), env(safe-area-inset-left), var(--window-controls-inset-inline));
-  margin-top: calc(-1 * var(--safe-area-top));
-  pointer-events: none;
-  transition: background var(--duration-base);
-}
+  --sheet-head-top: #{sheet.$top};
 
-.admin-sheet-head--scrolled {
-  padding-bottom: var(--space-2);
-  background: var(--color-sheet-grouped);
-}
-
-.admin-sheet-button {
-  display: grid;
-  place-items: center;
-  width: var(--sheet-close-size);
-  height: var(--sheet-close-size);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-sheet-close);
-  box-shadow: var(--shadow-sheet-close);
-  color: var(--color-on-sheet-close);
-  cursor: pointer;
-  pointer-events: auto;
-  @include touch-target.reaches-finger-size;
-
-  @include pressed.when-pressed {
-    @include pressed.tints;
-  }
-
-  svg {
-    width: var(--sheet-close-icon-size);
-    height: var(--sheet-close-icon-size);
-  }
+  box-shadow: var(--shadow-sheet);
+  clip-path: inset(-100vh -100vw 0);
 }
 
 .admin-content {

@@ -9,26 +9,13 @@
   (dismissed)="close()"
 >
   @if (section(); as item) {
-    <div class="account-section-head">
-      <button type="button" class="account-back" [attr.aria-label]="backLabel" (click)="back()">
-        <svg
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <h2 id="account-section-title" class="account-section-title" tabindex="-1">
-        {{ item.label }}
-      </h2>
-    </div>
+    <app-sheet-head
+      class="account-section-head"
+      titleId="account-section-title"
+      [title]="item.label"
+      (backPressed)="back()"
+      (closePressed)="closeSection()"
+    />
     <div class="account-section-body">
       <app-account-section [path]="item.path" />
     </div>
@@ -335,7 +322,7 @@
     </div>
   }
 </app-dialog>
-@if (discardAsked()) {
+@if (discardAsked() !== null) {
   <app-dialog
     labelledBy="account-discard-title"
     [pushesHistory]="false"

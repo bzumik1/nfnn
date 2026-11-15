@@ -145,7 +145,7 @@ export class Dialog implements AfterViewInit, OnDestroy {
     }
   }
 
-  protected dismiss(): void {
+  dismiss(): void {
     if (!this.dismissible() || this.leaving()) {
       return;
     }

@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   DOCUMENT,
   effect,
   ElementRef,
@@ -26,6 +25,7 @@ import { AppHeader } from '../../../layout/app-header/app-header';
 import { AlertsOffer } from '../alerts/offer/alerts-offer';
 import { DIALOG_PRESENTATION } from '../../../shared/ui/dialog/dialog-presentation';
 import { SuspendsDialogs } from '../../../shared/ui/dialog/dialog-suspension';
+import { SheetHead } from '../../../shared/ui/sheet-head/sheet-head';
 import { SideNav } from '../../../shared/ui/side-nav/side-nav';
 import { ADMIN_SECTIONS } from './admin-sections';
 import { ADMINISTRATION_LOCK } from './administration-lock';
@@ -39,6 +39,7 @@ import { FirstDownloadNotice } from './first-download-notice/first-download-noti
     FirstDownloadNotice,
     NgComponentOutlet,
     RouterOutlet,
+    SheetHead,
     SideNav,
     SuspendsDialogs,
   ],
@@ -68,7 +69,7 @@ export class AdminShell {
     { initialValue: framedFullScreen(this.router.routerState.snapshot.root) },
   );
   protected readonly sheet = computed(() => this.compact() && !this.fullScreen());
-  protected readonly scrolled = signal(false);
+  protected readonly pageTitle = signal('');
   private entryDepth: number | null = null;
   private focusBeforeLock: Element | null = null;
   private wasLocked = false;
@@ -83,10 +84,12 @@ export class AdminShell {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.keepEntry());
-    const view = this.document.defaultView;
-    const followScroll = (): void => this.scrolled.set((view?.scrollY ?? 0) > 0);
-    view?.addEventListener('scroll', followScroll, { passive: true });
-    inject(DestroyRef).onDestroy(() => view?.removeEventListener('scroll', followScroll));
+    effect((onCleanup) => {
+      const page = this.sheet() ? this.page()?.nativeElement : undefined;
+      if (page !== undefined) {
+        onCleanup(this.followPageTitle(page));
+      }
+    });
     effect(() => {
       const locked = this.lock.locked();
       untracked(() => this.followLock(locked));
@@ -105,6 +108,15 @@ export class AdminShell {
     } else {
       void this.router.navigateByUrl('/', { replaceUrl: true, info: BACK_NAVIGATION });
     }
+  }
+
+  private followPageTitle(page: HTMLElement): () => void {
+    const read = (): void =>
+      this.pageTitle.set(page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? '');
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(page, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
   }
 
   private keptEntry(): number | null {

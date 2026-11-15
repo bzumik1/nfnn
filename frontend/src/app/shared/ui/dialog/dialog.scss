@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'sheet';
 @use 'touch-target';
 
 .dialog {
@@ -51,12 +52,9 @@
   }
 
   &--grouped {
-    --color-group-cell: var(--color-sheet-group);
-    --color-surface-alt: var(--color-fill);
+    @include sheet.grouped;
 
-    background: var(--color-sheet-grouped);
-    color: var(--color-sheet-text);
-    font-family: var(--font-sheet);
+    --color-surface-alt: var(--color-fill);
   }
 }
 
@@ -144,16 +142,15 @@
   }
 
   .dialog--sheet .dialog-panel {
-    max-width: var(--sheet-max-width);
+    @include sheet.edge;
+
     min-height: 0;
     max-height: calc(100dvh - var(--space-12));
     overflow-y: auto;
     overscroll-behavior: contain;
-    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
     padding: var(--space-10) max(var(--space-5), env(safe-area-inset-right))
       calc(var(--space-8) + env(safe-area-inset-bottom))
       max(var(--space-5), env(safe-area-inset-left));
-    box-shadow: var(--shadow-sheet);
     animation: sheetIn var(--duration-sheet) ease both;
     transition: translate var(--duration-base) ease;
   }
@@ -167,11 +164,10 @@
   }
 
   .dialog--sheet .dialog-panel--tall {
-    height: calc(100dvh - var(--safe-area-top) - var(--sheet-top-gap));
+    height: calc(100dvh - #{sheet.$top});
     max-height: none;
-    padding: var(--sheet-close-inset) max(var(--sheet-inset-inline), env(safe-area-inset-right))
-      calc(var(--space-8) + env(safe-area-inset-bottom))
-      max(var(--sheet-inset-inline), env(safe-area-inset-left));
+    padding: var(--sheet-close-inset) sheet.$inline-end
+      calc(var(--space-8) + env(safe-area-inset-bottom)) sheet.$inline-start;
   }
 
   .dialog--sheet .dialog-panel--tall .dialog-grabber::before {
@@ -180,7 +176,7 @@
 
   .dialog--sheet .dialog-close {
     top: var(--sheet-close-inset);
-    right: max(var(--sheet-inset-inline), env(safe-area-inset-right));
+    right: sheet.$inline-end;
     width: var(--sheet-close-size);
     height: var(--sheet-close-size);
     border-radius: var(--radius-pill);

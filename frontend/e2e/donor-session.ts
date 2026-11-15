@@ -423,7 +423,7 @@ export async function signIn(page: Page, user: typeof donor = donor): Promise<vo
 
 export async function showAccountList(page: Page): Promise<Locator> {
   const sheet = page.getByRole('dialog');
-  const sectionBack = sheet.locator('.account-back');
+  const sectionBack = sheet.getByRole('button', { name: 'Zpět' });
   if (await sectionBack.isVisible()) {
     await sectionBack.click();
   } else {

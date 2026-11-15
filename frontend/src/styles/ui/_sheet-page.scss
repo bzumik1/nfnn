@@ -1,0 +1,13 @@
+@use 'visually-hidden';
+
+.ui-sheet-page {
+  padding-top: var(--sheet-header-gap);
+
+  .ui-page {
+    padding-top: 0;
+  }
+
+  .ui-page-title {
+    @include visually-hidden.hides;
+  }
+}
