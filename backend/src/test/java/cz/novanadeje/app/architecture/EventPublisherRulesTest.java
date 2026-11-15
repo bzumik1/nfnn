@@ -5,6 +5,7 @@ import com.tngtech.archunit.core.domain.AccessTarget.CodeUnitAccessTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.ConstructorCallTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.ConstructorReferenceTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.FieldAccessTarget;
+import com.tngtech.archunit.core.domain.AccessTarget.MethodReferenceTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -145,7 +146,8 @@ class EventPublisherRulesTest {
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaGifts", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaOrders", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaPayments", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
-                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaRefunds", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"));
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaRefunds", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"));
 
         private static JavaClasses planted;
 
@@ -166,6 +168,9 @@ class EventPublisherRulesTest {
                                         new cz.novanadeje.app.planteda.application.event.GiftPaired(0);
                                 public static cz.novanadeje.app.planteda.application.event.GiftPaired paired() {
                                     return new cz.novanadeje.app.planteda.application.event.GiftPaired(1);
+                                }
+                                public static void announce(java.util.function.Consumer<Object> publish) {
+                                    publish.accept(paired());
                                 }
                                 public static java.util.Optional<cz.novanadeje.app.planteda.application.event.GiftPaired> maybePaired() {
                                     return java.util.Optional.of(paired());
@@ -244,6 +249,16 @@ class EventPublisherRulesTest {
                                 private final org.springframework.context.ApplicationEventPublisher events;
                                 public JpaPayments(org.springframework.context.ApplicationEventPublisher events) { this.events = events; }
                                 public void relay(cz.novanadeje.app.planteda.application.event.GiftPaired paired) { events.publishEvent(paired); }
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.JpaAnnouncements", """
+                            public class JpaAnnouncements {
+                                private final org.springframework.context.ApplicationEventPublisher events;
+                                public JpaAnnouncements(org.springframework.context.ApplicationEventPublisher events) { this.events = events; }
+                                public void save() {
+                                    events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announce(events::publishEvent);
+                                }
                             }
                             """),
                     planted("planteda.infrastructure.persistence.JpaRefunds", """
@@ -347,7 +362,8 @@ class EventPublisherRulesTest {
         @Test
         @DisplayName("when the publish rule checks them, then an unlisted adapter publishing through the publisher, the application context, a method "
                 + "reference and the multicaster is reported, a listed adapter that handles an event it is not listed for, as a parameter, inside an "
-                + "Optional or by building it, is reported, and a listed adapter's own event and the application are not")
+                + "Optional or by building it, is reported, a listed adapter handing a method reference of the publisher to the application is reported, "
+                + "and a listed adapter's own event and the application are not")
         void should_report_every_unlisted_publisher_when_checked_given_planted_relays() {
             List<String> details = eventsPublishedOutsideApplicationOnlyBy(PLANTED_PUBLISHERS).evaluate(planted).getFailureReport().getDetails();
 
@@ -362,6 +378,9 @@ class EventPublisherRulesTest {
                             .contains("GiftPaired").contains("JpaRefunds.relay("))
                     .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaOrders publishes and depends on")
                             .contains("GiftPaired"))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements hands publishing on")
+                            .contains("JpaAnnouncements.save()").contains("publishEvent"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JpaAnnouncements publishes"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("GiftsChanged,"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingService"));
@@ -414,11 +433,13 @@ class EventPublisherRulesTest {
     }
 
     private static ArchCondition<JavaClass> publishOnlyIfListedAndHandleNoOtherEvent(Map<String, Set<String>> eventsByPublisher) {
-        return new ArchCondition<>("publish only when listed, and then depend on no event but the listed ones (as a parameter, a field, a return "
-                + "value or a type argument such as an Optional of one)") {
+        return new ArchCondition<>("publish only when listed, by a call and never by a method reference that would let other code publish, "
+                + "and then depend on no event but the listed ones (as a parameter, a field, a return value or a type argument such as an Optional of one)") {
             @Override
             public void check(JavaClass type, ConditionEvents events) {
                 List<JavaAccess<?>> publishing = type.getAccessesFromSelf().stream().filter(PUBLISHING).toList();
+                publishing.stream().filter(access -> access.getTarget() instanceof MethodReferenceTarget).forEach(access -> events.add(
+                        SimpleConditionEvent.violated(type, type.getName() + " hands publishing on by a method reference in " + access.getDescription())));
                 if (publishing.isEmpty()) {
                     return;
                 }
@@ -437,7 +458,7 @@ class EventPublisherRulesTest {
 
     private static ArchCondition<JavaClass> buildOnlyTheEventsListedFor(Map<String, Set<String>> eventsByPublisher) {
         return new ArchCondition<>("build or obtain only the events listed for them (by a constructor, a constructor reference, a method or "
-                + "method reference returning one, an Optional or other type of one included, or a field holding one)") {
+                + "method reference returning one, an Optional or other type of one included, or a field holding one, read or written, so an adapter keeps no event it heard either)") {
             @Override
             public void check(JavaClass type, ConditionEvents events) {
                 Set<String> listed = eventsByPublisher.getOrDefault(type.getName(), Set.of());
