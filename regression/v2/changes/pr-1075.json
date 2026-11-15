@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.ConcurrencyRulesTest > Given planted application and domain classes that each fan out, pace, cap, sleep, run on a shared pool, start a thread or pick an executor in one way, when the rule checks them, then each is reported and the same code in an adapter, a read of the current thread or sequential work is not",
+    "reason": "PR #1075 (#897, architecture audit #621): the rule also refuses an @Async method in application and domain code, directly or through a composed annotation, so its planted test names that too; the planted classes it checked before are unchanged",
+    "replacement": "architecture.ConcurrencyRulesTest > Given planted application and domain classes that each fan out, pace, cap, sleep, run on a shared pool, start a thread, pick an executor or declare an @Async method, directly or through a composed annotation, in one way, when the rule checks them, then each is reported and the same code in an adapter, a read of the current thread or sequential work is not",
+    "contract": ".claude/rules/backend.md, Configuration and operations (threads are an adapter's concern)"
+  }
+]

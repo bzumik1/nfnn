@@ -1,7 +1,7 @@
 package cz.novanadeje.app.operations.application.push;
 
 import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
-import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
+import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import cz.novanadeje.app.operations.domain.push.PushMessage;
 import cz.novanadeje.app.operations.domain.push.PushMessageKind;
 import cz.novanadeje.app.operations.domain.push.PushSubscription;
@@ -9,10 +9,7 @@ import cz.novanadeje.app.operations.domain.push.PushSubscriptionId;
 import cz.novanadeje.app.operations.domain.push.PushSubscriptionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -43,29 +40,27 @@ public class PushAlertDispatcher {
         this.clock = clock;
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void on(OperationalAlertChanged changed) {
-        attempt(changed, 1, Optional.empty());
+    public void alertChanged(MonitoredArea area, boolean opened, long changes, int openCount) {
+        attempt(area, changes, new PushMessage(PushMessageKind.of(area, opened), openCount), 1, Optional.empty());
     }
 
-    void attempt(OperationalAlertChanged changed, int attempt, Optional<Set<PushSubscriptionId>> only) {
-        PushMessageKind kind = PushMessageKind.of(changed.area(), changed.opened());
+    void attempt(MonitoredArea area, long changes, PushMessage message, int attempt, Optional<Set<PushSubscriptionId>> only) {
+        PushMessageKind kind = message.kind();
         try {
-            if (!alerts.unchangedSince(changed.area(), changed.changes())) {
+            if (!alerts.unchangedSince(area, changes)) {
                 return;
             }
-            List<PushSubscription> recipients = subscriptions.findAllWithAlert(changed.area()).stream()
+            List<PushSubscription> recipients = subscriptions.findAllWithAlert(area).stream()
                     .filter(subscription -> only.map(ids -> ids.contains(subscription.id())).orElse(true)).toList();
             if (recipients.isEmpty()) {
                 return;
             }
-            PushAttempt sent = sender.toAdministrators(recipients, new PushMessage(kind, changed.openCount()));
+            PushAttempt sent = sender.toAdministrators(recipients, message);
             log.info("Push alert {} attempt {}: {} delivered, {} failed, {} removed", kind, attempt, sent.report().delivered(),
                     sent.report().failed(), sent.report().removed());
             if (!sent.failed().isEmpty() && attempt <= RETRY_DELAYS.size()) {
                 Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), PushPace.AT_ONCE, () -> attempt(changed, attempt + 1, Optional.of(failed)));
+                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), PushPace.AT_ONCE, () -> attempt(area, changes, message, attempt + 1, Optional.of(failed)));
             }
         } catch (RuntimeException failure) {
             log.warn("Push alert {} attempt {} could not be sent: {}", kind, attempt, failure.getClass().getSimpleName());

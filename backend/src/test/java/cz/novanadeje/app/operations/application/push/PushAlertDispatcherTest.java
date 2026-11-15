@@ -2,7 +2,6 @@ package cz.novanadeje.app.operations.application.push;
 
 import cz.novanadeje.app.operations.application.alerts.InMemoryOperationalAlerts;
 import cz.novanadeje.app.operations.application.alerts.OperationalAlertService;
-import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
 import cz.novanadeje.app.operations.application.settings.CarriedSettingsKeyService;
 import cz.novanadeje.app.operations.application.settings.ReversibleSealer;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
@@ -70,7 +69,7 @@ class PushAlertDispatcherTest {
         PushSubscription wants = subscribed("wants", PushAlerts.ALL);
         subscribed("mail-only", new PushAlerts(false, false, true));
 
-        dispatcher.on(opened(MonitoredArea.BANK_IMPORT));
+        dispatchOpening(MonitoredArea.BANK_IMPORT);
 
         assertThat(delivered).containsExactly(new Delivered(wants.endpoint(), new PushMessage(PushMessageKind.BANK_IMPORT_OUTAGE, 1)));
         assertThat(timer.scheduled()).isEmpty();
@@ -84,7 +83,7 @@ class PushAlertDispatcherTest {
         alerts.record(MonitoredArea.BACKUPS, true, NOW);
         alerts.record(MonitoredArea.MAIL, false, NOW);
 
-        dispatcher.on(new OperationalAlertChanged(MonitoredArea.MAIL, false, 2, 1, NOW));
+        dispatcher.alertChanged(MonitoredArea.MAIL, false, 2, 1);
 
         assertThat(delivered).containsExactly(new Delivered(device.endpoint(), new PushMessage(PushMessageKind.MAIL_RECOVERED, 1)));
     }
@@ -95,9 +94,7 @@ class PushAlertDispatcherTest {
         PushSubscription working = subscribed("working", PushAlerts.ALL);
         PushSubscription failing = subscribed("failing", PushAlerts.ALL);
         outcomes.put(failing.endpoint(), PushOutcome.FAILED);
-        OperationalAlertChanged changed = opened(MonitoredArea.BACKUPS);
-
-        dispatcher.on(changed);
+        dispatchOpening(MonitoredArea.BACKUPS);
         assertThat(timer.scheduled()).extracting(RecordingRetryTimer.Scheduled::pace).containsExactly(PushPace.AT_ONCE);
         assertThat(timer.scheduled()).extracting(RecordingRetryTimer.Scheduled::when).containsExactly(NOW.plus(Duration.ofMinutes(1)));
         timer.fireNext();
@@ -116,7 +113,7 @@ class PushAlertDispatcherTest {
     void should_stop_retrying_when_delivered_given_retry_waiting() {
         PushSubscription device = subscribed("device", PushAlerts.ALL);
         outcomes.put(device.endpoint(), PushOutcome.FAILED);
-        dispatcher.on(opened(MonitoredArea.MAIL));
+        dispatchOpening(MonitoredArea.MAIL);
         outcomes.remove(device.endpoint());
 
         timer.fireNext();
@@ -130,7 +127,7 @@ class PushAlertDispatcherTest {
     void should_drop_retry_when_due_given_alert_changed_meanwhile() {
         PushSubscription device = subscribed("device", PushAlerts.ALL);
         outcomes.put(device.endpoint(), PushOutcome.FAILED);
-        dispatcher.on(opened(MonitoredArea.BANK_IMPORT));
+        dispatchOpening(MonitoredArea.BANK_IMPORT);
         alerts.record(MonitoredArea.BANK_IMPORT, false, NOW.plusSeconds(30));
 
         timer.fireNext();
@@ -144,7 +141,7 @@ class PushAlertDispatcherTest {
     void should_send_nothing_when_retried_given_device_gone_meanwhile() {
         PushSubscription device = subscribed("device", PushAlerts.ALL);
         outcomes.put(device.endpoint(), PushOutcome.FAILED);
-        dispatcher.on(opened(MonitoredArea.MAIL));
+        dispatchOpening(MonitoredArea.MAIL);
         subscriptions.delete(device.id());
 
         timer.fireNext();
@@ -157,15 +154,15 @@ class PushAlertDispatcherTest {
     void should_send_nothing_when_opened_given_no_device() {
         subscribed("backups-only", new PushAlerts(false, true, false));
 
-        dispatcher.on(opened(MonitoredArea.BANK_IMPORT));
+        dispatchOpening(MonitoredArea.BANK_IMPORT);
 
         assertThat(delivered).isEmpty();
     }
 
-    private OperationalAlertChanged opened(MonitoredArea area) {
+    private void dispatchOpening(MonitoredArea area) {
         alerts.record(area, true, NOW);
         long changes = alertRows.find(area).orElseThrow().changes();
-        return new OperationalAlertChanged(area, true, changes, (int) alerts.open().size(), NOW);
+        dispatcher.alertChanged(area, true, changes, alerts.open().size());
     }
 
     private PushSubscription subscribed(String name, PushAlerts wanted) {
