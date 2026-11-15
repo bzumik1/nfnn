@@ -12,6 +12,7 @@ import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
@@ -261,9 +262,11 @@ class SettingsServiceTest {
         String now = settings.view().version();
 
         assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.of(read)))
-                .isInstanceOfSatisfying(SettingsChangedMeanwhile.class, refused -> {
-                    assertThat(refused.code()).isEqualTo("operations/changed-meanwhile");
-                    assertThat(refused.extensions()).containsEntry("version", now).containsEntry("current", new SettingsVersions.StoredSettings(List.of(
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refused -> {
+                    assertThat(refused.staleWrite()).isInstanceOf(SettingsChangedMeanwhile.class);
+                    assertThat(refused.staleWrite().code()).isEqualTo("operations/changed-meanwhile");
+                    assertThat(refused.staleWrite().version()).contains(now);
+                    assertThat(refused.current()).isEqualTo(new SettingsVersions.StoredSettings(List.of(
                             new SettingsVersions.StoredSettingRow("FIO_TOKEN", null, true, NOW),
                             new SettingsVersions.StoredSettingRow("MAIL_HOST", "smtp-relay.brevo.com", false, NOW))));
                 });
@@ -281,7 +284,7 @@ class SettingsServiceTest {
 
         assertThat(settings.view().version()).isEqualTo(version);
         assertThatThrownBy(() -> settings.change(ADMIN, List.of(new SettingChange(Setting.RECEIPT_FIRST_YEAR, "2025")), ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(SettingsChangedMeanwhile.class, refused -> assertThat(refused.extensions()).containsEntry("current",
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refused -> assertThat(refused.current()).isEqualTo(
                         new SettingsVersions.StoredSettings(List.of(new SettingsVersions.StoredSettingRow("MAIL_HOST", "smtp-relay.brevo.com", false, NOW)))));
     }
 

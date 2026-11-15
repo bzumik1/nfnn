@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.people.PersonId;
 import cz.novanadeje.app.content.domain.project.Project;
 import cz.novanadeje.app.content.domain.project.ProjectCategory;
 import cz.novanadeje.app.shared.application.version.RowVersions;
+import cz.novanadeje.app.shared.application.version.StoredRecord;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -41,7 +42,7 @@ public class ContentVersions {
         return versions.versionOf(List.of(StoredPageText.ofFootnote(footnote)));
     }
 
-    public record StoredPageText(String text, Instant updatedAt) {
+    public record StoredPageText(String text, Instant updatedAt) implements StoredRecord {
 
         public static StoredPageText ofNote(Optional<FoundersNote> note) {
             return new StoredPageText(note.flatMap(FoundersNote::text).orElse(null), note.map(FoundersNote::updatedAt).orElse(null));
@@ -54,7 +55,7 @@ public class ContentVersions {
 
     public record StoredNewsArticle(UUID id, String slug, String title, String tag, String perex, String body, UUID coverImage,
                                     String coverImageAlt, UUID signer, LocalDate publishedOn, Integer lookBackYear, Instant createdAt,
-                                    Instant updatedAt) {
+                                    Instant updatedAt) implements StoredRecord {
 
         public static StoredNewsArticle of(NewsArticle article) {
             return new StoredNewsArticle(article.id().value(), article.slug().value(), article.content().title(),
@@ -66,7 +67,7 @@ public class ContentVersions {
     }
 
     public record StoredProject(UUID id, String slug, String title, int year, ProjectCategory category, String tag, String perex, String body,
-                                UUID coverImage, String coverImageAlt, LocalDate publishedOn, Instant createdAt, Instant updatedAt) {
+                                UUID coverImage, String coverImageAlt, LocalDate publishedOn, Instant createdAt, Instant updatedAt) implements StoredRecord {
 
         public static StoredProject of(Project project) {
             return new StoredProject(project.id().value(), project.slug().value(), project.content().title(), project.content().year(),

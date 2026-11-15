@@ -13,6 +13,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -133,8 +134,8 @@ public class BankLogoAdminService {
         }
     }
 
-    private ChangedMeanwhile changedMeanwhile(BankLogo current) {
-        return new ChangedMeanwhile(versions.of(current), row(current, bankNames()));
+    private StaleWriteRefusal changedMeanwhile(BankLogo current) {
+        return new StaleWriteRefusal(new ChangedMeanwhile(versions.of(current)), row(current, bankNames()));
     }
 
     private void audit(UUID adminId, String action, String details, Instant at) {

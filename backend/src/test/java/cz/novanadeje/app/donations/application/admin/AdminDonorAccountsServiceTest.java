@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
@@ -181,7 +182,7 @@ class AdminDonorAccountsServiceTest {
         String current = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords).link(record, link).version();
 
         assertThatThrownBy(() -> service.disconnect(ADMIN, PETR, link.id(), ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, link, current));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> assertRefusedWith(refusal, link, current));
 
         InOrder order = inOrder(lock, donorRecords);
         order.verify(lock).acquire();
@@ -199,16 +200,17 @@ class AdminDonorAccountsServiceTest {
         String current = new AdminDonationsRows(RowVersionsFixture.canonical(), donations, donorRecords).link(record, disconnected).version();
 
         assertThatThrownBy(() -> service.reconnect(ADMIN, PETR, disconnected.id(), ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, disconnected, current));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> assertRefusedWith(refusal, disconnected, current));
 
         verify(lock).acquire();
         verify(donorRecords, never()).saveSenderAccountLink(any(), any());
         verify(events, never()).publishEvent(any());
     }
 
-    private static void assertRefusedWith(ChangedMeanwhile refusal, SenderAccountLink link, String current) {
-        assertThat(refusal.extensions()).containsEntry("version", current);
-        assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(LinkRow.class, row -> {
+    private static void assertRefusedWith(StaleWriteRefusal refusal, SenderAccountLink link, String current) {
+        assertThat(refusal.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+        assertThat(refusal.staleWrite().version()).contains(current);
+        assertThat(refusal.current()).isInstanceOfSatisfying(LinkRow.class, row -> {
             assertThat(row.id()).isEqualTo(link.id().value());
             assertThat(row.donorId()).isEqualTo(PETR.value());
             assertThat(row.status()).isEqualTo(link.status());

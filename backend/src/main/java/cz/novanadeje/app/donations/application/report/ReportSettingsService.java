@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.report.SentReport;
 import cz.novanadeje.app.donations.domain.report.StoredReportSettings;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -69,7 +70,7 @@ public class ReportSettingsService {
         if (!expected.admits(version)) {
             List<SentReport> sent = reportLog.sentReportsNewestFirst();
             LocalDate today = FoundationCalendar.today(clock);
-            throw new ChangedMeanwhile(version, rows.reportSettings(current, sent, NextReport.after(current.settings(), sent, today), ReportMonth.previousTo(today)));
+            throw new StaleWriteRefusal(new ChangedMeanwhile(version), rows.reportSettings(current, sent, NextReport.after(current.settings(), sent, today), ReportMonth.previousTo(today)));
         }
         if (channel.isConnectedApplication() && !changed.recipients().sameAddressesAs(current.settings().recipients())) {
             throw new ReportRecipientsInBrowserOnly();

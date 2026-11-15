@@ -292,6 +292,10 @@ UI „Historie změn“ · Code: `shared/application/audit/AdminActionTrail`, ev
 The record of every change by an administrator or a connected application, as a Czech sentence with who and when.\
 _Avoid_: log (logs are the server's files under „Logy a diagnostika“)
 
+**Stale write**\
+UI „Mezitím se to změnilo“ · Code: `shared/domain/error/StaleWrite` (`content/domain/ChangedMeanwhile`, `donations/domain/ChangedMeanwhile`, `donors/domain/ProfileChangedMeanwhile`, `operations/domain/settings/SettingsChangedMeanwhile`), `shared/application/version/StaleWriteRefusal` carrying a `StoredRecord`, `ExpectedVersion` from `If-Match`.\
+A change sent from a view of a version the record no longer has: refused with 409, the version stored now and the record as stored now, so nobody overwrites another's change unseen.
+
 **Monthly report**\
 UI „Měsíční e-mail“ (route `/sprava/prehledy`), also „měsíční report“ and „měsíční přehled“ · Code: `donations/domain/report/MonthlyReport`, `MonthlyReportScheduler`.\
 The e-mail with the previous month's donors, donations, unpaired payments and import status, sent to the report's recipients, who also receive the alerts.

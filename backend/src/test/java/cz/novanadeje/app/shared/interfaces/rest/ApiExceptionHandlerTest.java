@@ -4,6 +4,9 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
+import cz.novanadeje.app.shared.application.version.StoredRecord;
+import cz.novanadeje.app.shared.domain.error.ProbeStaleWrite;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.Valid;
@@ -78,10 +81,18 @@ class ApiExceptionHandlerTest {
             return "ok";
         }
 
+        @GetMapping("/stale-write")
+        String staleWrite() {
+            throw new StaleWriteRefusal(new ProbeStaleWrite("content/changed-meanwhile", "0123456789abcdef"), new ProbeRow("Jaro", 3));
+        }
+
         @PostMapping("/probe-body")
         String probeBody(@Valid @RequestBody ProbeBody body) {
             return "ok";
         }
+    }
+
+    record ProbeRow(String title, int position) implements StoredRecord {
     }
 
     record ProbeBody(
@@ -216,6 +227,21 @@ class ApiExceptionHandlerTest {
             assertThat(line.getFormattedMessage()).isEqualTo("A multipart body could not be read (IOException)");
             assertThat(line.getThrowableProxy()).isNull();
         });
+    }
+
+    @Test
+    @DisplayName("Given a stale write refused with the record as stored now, when answered, then the problem of the refusal's code carries its version and that record as current")
+    void should_answer_refusal_with_version_and_current_record_when_answered_given_stale_write() throws Exception {
+        mockMvc.perform(inCzech("/stale-write"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.type").value("https://nfnn.cz/problems/content/changed-meanwhile"))
+                .andExpect(jsonPath("$.title").value("Mezitím se to změnilo"))
+                .andExpect(jsonPath("$.detail").value("Někdo jiný to mezitím upravil. Podívejte se na jeho verzi, nebo uložte svou místo ní."))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.version").value("0123456789abcdef"))
+                .andExpect(jsonPath("$.current.title").value("Jaro"))
+                .andExpect(jsonPath("$.current.position").value(3));
     }
 
     private static Logger handlerLogger() {

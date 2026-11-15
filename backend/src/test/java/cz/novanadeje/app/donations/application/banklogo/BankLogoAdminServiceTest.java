@@ -16,6 +16,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
@@ -129,9 +130,10 @@ class BankLogoAdminServiceTest {
         images.answer(NEW_WEBP);
 
         for (WritePrecondition stale : List.of(WritePrecondition.matching(ExpectedVersion.of("0123456789abcdef")), WritePrecondition.absent())) {
-            assertThatThrownBy(() -> service.set(ADMIN, SITE, stale)).isInstanceOfSatisfying(ChangedMeanwhile.class, refused -> {
-                assertThat(refused.extensions()).containsEntry("version", versions.of(old));
-                assertThat(refused.extensions().get("current")).isInstanceOf(BankLogoAdminRow.class);
+            assertThatThrownBy(() -> service.set(ADMIN, SITE, stale)).isInstanceOfSatisfying(StaleWriteRefusal.class, refused -> {
+                assertThat(refused.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+                assertThat(refused.staleWrite().version()).contains(versions.of(old));
+                assertThat(refused.current()).isInstanceOf(BankLogoAdminRow.class);
             });
         }
 
@@ -155,7 +157,8 @@ class BankLogoAdminServiceTest {
                 new TransactionTemplate(transactions), new MutableClock(NOW, ZoneOffset.UTC));
         images.answer(NEW_WEBP);
 
-        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, WritePrecondition.absent())).isInstanceOf(ChangedMeanwhile.class);
+        assertThatThrownBy(() -> racingService.set(ADMIN, ARTWORK, WritePrecondition.absent()))
+                .isInstanceOf(StaleWriteRefusal.class).hasCauseInstanceOf(ChangedMeanwhile.class);
 
         assertThat(racing.find(CSAS)).contains(theirs);
         assertThat(events).isEmpty();
@@ -264,7 +267,8 @@ class BankLogoAdminServiceTest {
     void should_remove_logo_and_image_when_removed_given_current_version() {
         BankLogo old = storeOldLogo();
 
-        assertThatThrownBy(() -> service.remove(ADMIN, CSAS, ExpectedVersion.of("0123456789abcdef"))).isInstanceOf(ChangedMeanwhile.class);
+        assertThatThrownBy(() -> service.remove(ADMIN, CSAS, ExpectedVersion.of("0123456789abcdef")))
+                .isInstanceOf(StaleWriteRefusal.class).hasCauseInstanceOf(ChangedMeanwhile.class);
         assertThat(logos.find(CSAS)).isPresent();
 
         service.remove(ADMIN, CSAS, ExpectedVersion.of(versions.of(old)));

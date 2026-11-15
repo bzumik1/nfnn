@@ -10,6 +10,7 @@ import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
+import cz.novanadeje.app.shared.application.version.StoredRecord;
 import cz.novanadeje.app.shared.domain.Currency;
 
 import java.time.Instant;
@@ -39,19 +40,19 @@ public final class AdminSyncRows {
         }
     }
 
-    public record PaymentWithGift(PaymentRow payment, DonationRow donation) {
+    public record PaymentWithGift(PaymentRow payment, DonationRow donation) implements StoredRecord {
     }
 
     public record LinkRow(UUID id, UUID donorId, String accountNumber, SenderAccountLinkStatus status, UUID learnedFromPaymentId, Instant learnedAt,
-                          LocalDate validFrom, LocalDate validTo, Instant createdAt, Instant disconnectedAt, String version) {
+                          LocalDate validFrom, LocalDate validTo, Instant createdAt, Instant disconnectedAt, String version) implements StoredRecord {
     }
 
     public record SymbolClaimRow(UUID id, UUID donorId, String accountNumber, String variableSymbol, SymbolClaimAnswer answer, Instant answeredAt,
-                                 String version) {
+                                 String version) implements StoredRecord {
     }
 
     public record ReportSettingsRow(List<String> recipients, int sendDay, int sendHour, ReportSectionsRow sections, Instant changedAt,
-                                    List<SentReportRow> sentReports, NextReportRow nextReport, String lastEndedMonth, String version) {
+                                    List<SentReportRow> sentReports, NextReportRow nextReport, String lastEndedMonth, String version) implements StoredRecord {
     }
 
     public record NextReportRow(String month, LocalDate dueOn) {

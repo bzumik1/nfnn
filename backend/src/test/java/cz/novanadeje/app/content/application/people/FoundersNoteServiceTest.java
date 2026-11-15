@@ -7,6 +7,7 @@ import cz.novanadeje.app.content.application.Versioned;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -132,10 +133,11 @@ class FoundersNoteServiceTest {
         when(notes.find()).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> service().change(ADMIN, Optional.of("Nový text."), ExpectedVersion.of(VERSIONS.ofFoundersNote(Optional.empty()))))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refused -> {
-                    assertThat(refused.code()).isEqualTo("content/changed-meanwhile");
-                    assertThat(refused.extensions()).containsEntry("version", VERSIONS.ofFoundersNote(Optional.of(stored)))
-                            .containsEntry("current", new ContentVersions.StoredPageText("Děkujeme.", BEFORE));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refused -> {
+                    assertThat(refused.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+                    assertThat(refused.staleWrite().code()).isEqualTo("content/changed-meanwhile");
+                    assertThat(refused.staleWrite().version()).contains(VERSIONS.ofFoundersNote(Optional.of(stored)));
+                    assertThat(refused.current()).isEqualTo(new ContentVersions.StoredPageText("Děkujeme.", BEFORE));
                 });
         verify(notes, never()).save(any());
         verify(events, never()).publishEvent(any(Object.class));

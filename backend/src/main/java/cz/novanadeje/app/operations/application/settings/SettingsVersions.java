@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.application.settings;
 
 import cz.novanadeje.app.operations.domain.settings.StoredSetting;
 import cz.novanadeje.app.shared.application.version.RowVersions;
+import cz.novanadeje.app.shared.application.version.StoredRecord;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -21,7 +22,7 @@ public class SettingsVersions {
         return versions.versionOf(List.of(stored));
     }
 
-    public record StoredSettings(List<StoredSettingRow> settings) {
+    public record StoredSettings(List<StoredSettingRow> settings) implements StoredRecord {
 
         public StoredSettings {
             settings = List.copyOf(settings);

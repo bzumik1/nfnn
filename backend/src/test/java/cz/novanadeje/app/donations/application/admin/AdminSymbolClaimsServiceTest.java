@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donations.application.admin;
 
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.donations.application.admincopy.AdminDonationsRows;
@@ -220,9 +221,9 @@ class AdminSymbolClaimsServiceTest {
         String declinedNow = rows.symbolClaim(declined).version();
 
         assertThatThrownBy(() -> service.reverse(ADMIN, confirmed.id(), ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, confirmed, confirmedNow));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> assertRefusedWith(refusal, confirmed, confirmedNow));
         assertThatThrownBy(() -> service.reset(ADMIN, declined.id(), ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> assertRefusedWith(refusal, declined, declinedNow));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> assertRefusedWith(refusal, declined, declinedNow));
 
         InOrder order = inOrder(lock, claims);
         order.verify(lock).acquire();
@@ -234,9 +235,10 @@ class AdminSymbolClaimsServiceTest {
         verify(events, never()).publishEvent(any());
     }
 
-    private static void assertRefusedWith(ChangedMeanwhile refusal, SymbolClaim claim, String current) {
-        assertThat(refusal.extensions()).containsEntry("version", current);
-        assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(SymbolClaimRow.class, row -> {
+    private static void assertRefusedWith(StaleWriteRefusal refusal, SymbolClaim claim, String current) {
+        assertThat(refusal.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+        assertThat(refusal.staleWrite().version()).contains(current);
+        assertThat(refusal.current()).isInstanceOfSatisfying(SymbolClaimRow.class, row -> {
             assertThat(row.id()).isEqualTo(claim.id().value());
             assertThat(row.answer()).isEqualTo(claim.answer());
             assertThat(row.version()).isEqualTo(current);

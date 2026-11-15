@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donors.domain.Donor;
@@ -92,10 +93,11 @@ class DonorProfileServiceTest {
 
         assertThatThrownBy(() -> service.updateProfile(DONOR, Set.of(Role.DONOR), new UpdateDonorProfileCommand("Jana Malá", null, null, null, null),
                 ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ProfileChangedMeanwhile.class, refused -> {
-                    assertThat(refused.code()).isEqualTo("donors/changed-meanwhile");
-                    assertThat(refused.extensions()).containsEntry("version", PROFILES.of(stored))
-                            .containsEntry("current", new ProfileVersions.StoredProfile("Jana Nováková", "Dlouhá 12", "Ústí nad Labem", "400 01", "cs"));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refused -> {
+                    assertThat(refused.staleWrite()).isInstanceOf(ProfileChangedMeanwhile.class);
+                    assertThat(refused.staleWrite().code()).isEqualTo("donors/changed-meanwhile");
+                    assertThat(refused.staleWrite().version()).contains(PROFILES.of(stored));
+                    assertThat(refused.current()).isEqualTo(new ProfileVersions.StoredProfile("Jana Nováková", "Dlouhá 12", "Ústí nad Labem", "400 01", "cs"));
                 });
         verify(donors, never()).save(any());
         verify(events, never()).publishEvent(any(Object.class));
