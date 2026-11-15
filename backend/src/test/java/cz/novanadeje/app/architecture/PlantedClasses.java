@@ -20,7 +20,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-final class PlantedClasses {
+public final class PlantedClasses {
 
     private PlantedClasses() {
     }
@@ -30,6 +30,12 @@ final class PlantedClasses {
     }
 
     static JavaClasses compiled(Path folder, Map<String, String> sourcesByClassName, List<Class<?>> mainClasses) throws IOException {
+        Set<Location> imported = new HashSet<>(Set.of(Location.of(compiledInto(folder, sourcesByClassName))));
+        mainClasses.forEach(mainClass -> imported.addAll(Locations.ofClass(mainClass)));
+        return new ClassFileImporter().importLocations(imported);
+    }
+
+    public static Path compiledInto(Path folder, Map<String, String> sourcesByClassName) throws IOException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         assertThat(compiler).as("javac of the JDK toolchain").isNotNull();
         Path classes = Files.createDirectories(folder.resolve("classes"));
@@ -40,9 +46,7 @@ final class PlantedClasses {
             boolean compiled = compiler.getTask(errors, files, null, options, null, files.getJavaFileObjectsFromPaths(sources)).call();
             assertThat(compiled).as("compiling the planted classes: %s", errors).isTrue();
         }
-        Set<Location> imported = new HashSet<>(Set.of(Location.of(classes)));
-        mainClasses.forEach(mainClass -> imported.addAll(Locations.ofClass(mainClass)));
-        return new ClassFileImporter().importLocations(imported);
+        return classes;
     }
 
     private static List<Path> written(Path folder, Map<String, String> sourcesByClassName) throws IOException {

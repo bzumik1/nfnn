@@ -48,17 +48,13 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -72,8 +68,10 @@ class ProblemTextsTest {
     private static final String CLIENT_METHOD = "NFNN-CLIENT-VALUE";
     private static final String EXCEPTION_TEXT = "nfnn-exception-text";
     private static final List<String> LANGUAGES = List.of("cs", "en", "de");
-    private static final Pattern PROBLEM_CODE = Pattern.compile("\"((?:auth|contact|content|donations|donors|operations)/[a-z0-9-]+)\"");
-    private static final Pattern DOMAIN_EXCEPTION = Pattern.compile("extends (RuleViolation|NotFound|Conflict|AuthenticationFailure|AccessDenied)\\b");
+    private static final Map<String, String> TEXTS_KEPT_WITHOUT_A_READER = Map.of(
+            "problem.donations/unsupported-signature-vector.detail.",
+            "the reasons of the SVG signature parser, kept with the parser for the step that brings the vector to the one signature "
+                    + "(docs/api-contract.md, Vector signature); nothing answers them since API generation 5 removed the upload");
 
     private static final Map<String, Supplier<Exception>> FAILURES = Map.ofEntries(
             Map.entry("illegal-argument", () -> new IllegalArgumentException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
@@ -268,45 +266,46 @@ class ProblemTextsTest {
 
     @Test
     @DisplayName("Given every problem code a domain failure is raised with, when the bundles are read, then each has a Czech and an English title and detail")
-    void should_find_czech_and_english_texts_when_bundles_read_given_every_domain_problem_code() throws IOException {
-        List<String> codes;
-        try (Stream<Path> sources = Files.walk(Path.of("src/main/java"))) {
-            codes = sources.filter(path -> path.toString().endsWith(".java"))
-                    .map(ProblemTextsTest::read)
-                    .filter(source -> DOMAIN_EXCEPTION.matcher(source).find())
-                    .flatMap(ProblemTextsTest::problemCodes)
-                    .distinct()
-                    .sorted()
-                    .toList();
-        }
+    void should_find_czech_and_english_texts_when_bundles_read_given_every_domain_problem_code() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses();
 
-        assertThat(codes).contains("donors/donor-not-found", "operations/invalid-settings");
-        assertThat(codes.stream().flatMap(this::missingTexts).toList()).isEmpty();
+        assertThat(catalogue.codes()).contains("donors/donor-not-found", "operations/invalid-settings", "donors/password-too-common",
+                "operations/changed-meanwhile", "auth/invalid-credentials");
+        assertThat(catalogue.keysRead()).contains("problem.validation.title", "problem.app.update-required.detail", "problem.server-busy.detail");
+        assertThat(catalogue.keyPrefixesRead()).contains("problem.donations/bank-logo-unavailable.detail.");
+        assertThat(catalogue.missingTexts(Map.of("cs", bundle("cs"), "en", bundle("en")))).isEmpty();
     }
 
-    private Stream<String> missingTexts(String code) {
-        return Stream.of(Locale.forLanguageTag("cs"), Locale.ENGLISH)
-                .flatMap(locale -> Stream.of("title", "detail")
-                        .map(part -> "problem." + code + "." + part)
-                        .filter(key -> messages.getMessage(key, null, null, locale) == null)
-                        .map(key -> key + " (" + locale + ")"));
+    @Test
+    @DisplayName("Given every domain failure, when its codes are read from its class file, then each is one constant code and every concrete failure holds its own")
+    void should_find_only_constant_codes_of_their_own_when_read_given_every_domain_failure() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses();
+
+        assertThat(catalogue.irregularCodes()).isEmpty();
+        assertThat(catalogue.failuresWithoutCode()).isEmpty();
     }
 
-    private static Stream<String> problemCodes(String source) {
-        Matcher matcher = PROBLEM_CODE.matcher(source);
-        Stream.Builder<String> codes = Stream.builder();
-        while (matcher.find()) {
-            codes.add(matcher.group(1));
-        }
-        return codes.build();
+    @Test
+    @DisplayName("Given the problem texts of the Czech and English bundles, when each is matched with the codes and the keys the handlers read, then none is an orphan beyond the reviewed ones")
+    void should_find_no_orphan_text_when_matched_given_the_problem_texts_of_both_bundles() {
+        List<String> orphans = ProblemTextCatalogue.ofMainClasses().orphanTexts(List.of(bundle("cs"), bundle("en")), TEXTS_KEPT_WITHOUT_A_READER.keySet());
+
+        assertThat(orphans).isEmpty();
     }
 
-    private static String read(Path path) {
-        try {
-            return Files.readString(path);
-        } catch (IOException unreadable) {
-            throw new UncheckedIOException(unreadable);
-        }
+    @Test
+    @DisplayName("Given the reviewed texts kept without a reader, when the bundles and the handlers are read, then each prefix still has texts that nothing reads, so the list names nothing that is gone or read again")
+    void should_find_texts_nothing_reads_under_every_kept_prefix_when_read_given_the_reviewed_list() {
+        ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses();
+
+        List<String> orphans = catalogue.orphanTexts(List.of(bundle("cs"), bundle("en")), Set.of());
+
+        assertThat(TEXTS_KEPT_WITHOUT_A_READER.keySet())
+                .allSatisfy(prefix -> assertThat(orphans).anySatisfy(orphan -> assertThat(orphan).startsWith(prefix)));
+    }
+
+    private static Properties bundle(String language) {
+        return ProblemTextCatalogue.bundle(ProblemTextsTest.class.getResourceAsStream("/i18n/messages_" + language + ".properties"));
     }
 
     private static RequestBuilder withLanguage(RequestBuilder builder, String language) {
