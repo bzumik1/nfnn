@@ -42,7 +42,7 @@ public class AdministratorActivityService {
                 .orElseGet(() -> trail.findPerformedBefore(clock.instant().plusSeconds(1), limit + 1));
         List<AdminActionEntry> page = entries.size() > limit ? entries.subList(0, limit) : entries;
         Map<UUID, Optional<AdminActionFacts>> factsById = page.stream()
-                .collect(Collectors.toMap(AdminActionEntry::id, entry -> AdminActionFacts.read(entry.action(), entry.details())));
+                .collect(Collectors.toMap(AdminActionEntry::id, AdminActionFacts::of));
         List<DonorId> named = Stream.concat(page.stream().map(AdminActionEntry::adminId),
                         factsById.values().stream().flatMap(Optional::stream).map(AdminActionFacts::donor).flatMap(Optional::stream))
                 .distinct()

@@ -1,5 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,9 +45,16 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
             "settings", settings -> String.join(",", settings.split(",\\s*")));
 
     private static final Map<String, List<Shape>> SHAPES = shapes();
+    private static final Pattern DONOR_SHAPE = Pattern.compile(UUID_PATTERN);
 
     public AdminActionFacts {
         values = Map.copyOf(values);
+    }
+
+    public static Optional<AdminActionFacts> of(AdminActionEntry entry) {
+        return entry.facts()
+                .map(stored -> new AdminActionFacts(stored.summaryKey(), stored.values()))
+                .or(() -> read(entry.action(), entry.details()));
     }
 
     public static Optional<AdminActionFacts> read(String action, String details) {
@@ -55,12 +64,19 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
                 .findFirst();
     }
 
+    static List<String> frozenShapes() {
+        return SHAPES.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .flatMap(shapes -> shapes.getValue().stream().map(shape -> shapes.getKey() + " " + shape.variant() + " " + shape.pattern().pattern()))
+                .toList();
+    }
+
     public Optional<String> value(String name) {
         return Optional.ofNullable(values.get(name));
     }
 
     public Optional<UUID> donor() {
-        return value(DONOR).map(UUID::fromString);
+        return value(DONOR).filter(DONOR_SHAPE.asMatchPredicate()).map(UUID::fromString);
     }
 
     public AdminActionFacts onADevice() {

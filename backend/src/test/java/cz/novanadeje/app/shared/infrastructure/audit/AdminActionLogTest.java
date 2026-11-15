@@ -57,4 +57,32 @@ class AdminActionLogTest {
 
         assertThat(jdbc.sql("select count(*) from admin_action where admin_id = ?").param(admin).query(Long.class).single()).isZero();
     }
+
+    @Test
+    @DisplayName("Given an admin action with facts, when it commits, then its facts are stored as a JSON object of the summary key and the values")
+    void should_store_facts_as_json_when_transaction_commits_given_facts() {
+        UUID admin = UUID.randomUUID();
+        AdminActionPerformed.Facts facts = AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearly",
+                Map.of("number", "2027-000002", "year", "2026", "donor", SUBJECT.toString()));
+        transactions.executeWithoutResult(status -> events.publishEvent(new AdminActionPerformed(admin, "ISSUE_RECEIPT", Optional.of(SUBJECT),
+                "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + SUBJECT, facts, AT)));
+
+        Map<String, Object> row = jdbc.sql("""
+                        select jsonb_typeof(facts) as kind, facts ->> 'summaryKey' as summary_key, facts -> 'values' ->> 'number' as number,
+                               facts -> 'values' ->> 'year' as year, facts -> 'values' ->> 'donor' as donor, (select count(*) from jsonb_object_keys(facts -> 'values')) as value_count
+                        from admin_action where admin_id = ?""")
+                .param(admin).query().singleRow();
+        assertThat(row).containsEntry("kind", "object").containsEntry("summary_key", "ISSUE_RECEIPT.yearly").containsEntry("number", "2027-000002")
+                .containsEntry("year", "2026").containsEntry("donor", SUBJECT.toString()).containsEntry("value_count", 3L);
+    }
+
+    @Test
+    @DisplayName("Given an admin action without facts, when it commits, then its facts column stays null")
+    void should_store_no_facts_when_transaction_commits_given_none() {
+        UUID admin = UUID.randomUUID();
+        transactions.executeWithoutResult(status -> events.publishEvent(
+                new AdminActionPerformed(admin, "SUBSCRIBE_PUSH", Optional.empty(), "details", AT)));
+
+        assertThat(jdbc.sql("select facts is null from admin_action where admin_id = ?").param(admin).query(Boolean.class).single()).isTrue();
+    }
 }

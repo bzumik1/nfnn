@@ -24,8 +24,8 @@ interface AdminActionJpaRepository extends JpaRepository<AdminActionJpaEntity, U
     List<AdminActionJpaEntity> findByActionInOrderByPerformedAtAscIdAsc(Collection<String> actions);
 
     @Query("""
-            select new cz.novanadeje.app.shared.infrastructure.audit.AdminActionEntryRow(a.id, a.adminId, a.action, a.subjectId, a.details, a.performedAt,
-                a.client)
+            select new cz.novanadeje.app.shared.infrastructure.audit.AdminActionEntryRow(a.id, a.adminId, a.action, a.subjectId, a.details, a.facts,
+                a.performedAt, a.client)
             from AdminActionJpaEntity a
             order by a.performedAt desc, a.id desc""")
     List<AdminActionEntryRow> findAllNewestFirst();

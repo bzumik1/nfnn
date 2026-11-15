@@ -1,12 +1,18 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.domain.Sha256;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -18,6 +24,7 @@ class AdminActionFactsTest {
     private static final String DONOR = "0192f0f1-0000-7000-8000-00000000000d";
     private static final String OTHER = "0192f0f1-0000-7000-8000-0000000000aa";
     private static final String LINK = "0192f0f1-0000-7000-8000-0000000000bb";
+    private static final String FROZEN_SHAPES_SHA256 = "4e9b519cd0be12769fb0159dccb2b38d1686d57669d4e320d3b09183811fa2f4";
 
     static Stream<Arguments> czechAndEnglishRecords() {
         return Stream.of(
@@ -368,5 +375,62 @@ class AdminActionFactsTest {
         AdminActionFacts read = AdminActionFacts.read("GRANT_ADMINISTRATION", "Role správce udělena dárci " + DONOR).orElseThrow();
 
         assertThat(read.onADevice()).isEqualTo(read);
+    }
+
+    @Test
+    @DisplayName("Given an entry stored with facts, when its facts are taken, then they are the stored ones, whatever its details say")
+    void should_take_the_stored_facts_when_taken_given_an_entry_with_facts() {
+        AdminActionPerformed.Facts stored = AdminActionPerformed.Facts.of("GRANT_ADMINISTRATION", Map.of("donor", DONOR));
+        AdminActionEntry entry = entry("GRANT_ADMINISTRATION", "Role správce udělena dárci " + OTHER + " novými slovy", Optional.of(stored));
+
+        AdminActionFacts facts = AdminActionFacts.of(entry).orElseThrow();
+
+        assertThat(facts.summaryKey()).isEqualTo("GRANT_ADMINISTRATION");
+        assertThat(facts.values()).containsExactly(Map.entry("donor", DONOR));
+        assertThat(facts.donor()).contains(UUID.fromString(DONOR));
+    }
+
+    @Test
+    @DisplayName("Given an entry stored with facts under a variant, when its facts are taken, then the summary key keeps the variant")
+    void should_keep_the_variant_when_taken_given_facts_under_a_variant() {
+        AdminActionPerformed.Facts stored = AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearly", Map.of("number", "2027-000002", "year", "2026", "donor", DONOR));
+
+        AdminActionFacts facts = AdminActionFacts.of(entry("ISSUE_RECEIPT", "anything", Optional.of(stored))).orElseThrow();
+
+        assertThat(facts.summaryKey()).isEqualTo("ISSUE_RECEIPT.yearly");
+        assertThat(facts.values()).containsExactlyInAnyOrderEntriesOf(Map.of("number", "2027-000002", "year", "2026", "donor", DONOR));
+    }
+
+    @Test
+    @DisplayName("Given an older entry stored without facts, when its facts are taken, then they are read from its details by the frozen shapes")
+    void should_read_the_details_when_taken_given_an_older_entry_without_facts() {
+        AdminActionEntry entry = entry("GRANT_ADMINISTRATION", "Administrator role granted to donor " + DONOR, Optional.empty());
+
+        AdminActionFacts facts = AdminActionFacts.of(entry).orElseThrow();
+
+        assertThat(facts.summaryKey()).isEqualTo("GRANT_ADMINISTRATION");
+        assertThat(facts.donor()).contains(UUID.fromString(DONOR));
+    }
+
+    @Test
+    @DisplayName("Given an older entry without facts whose details have no known shape, when its facts are taken, then there are none")
+    void should_take_no_facts_when_taken_given_an_older_entry_of_no_known_shape() {
+        assertThat(AdminActionFacts.of(entry("SUBSCRIBE_PUSH", "Odběr upozornění zapnut", Optional.empty()))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given the frozen shapes of older details, when they are listed, then they are exactly the shapes of 15 November 2026, because a new action publishes facts instead")
+    void should_list_the_shapes_of_15_november_2026_when_listed_given_the_frozen_parser() {
+        String shapes = String.join("\n", AdminActionFacts.frozenShapes());
+
+        assertThat(Sha256.hex(shapes.getBytes(StandardCharsets.UTF_8)))
+                .as("The prose parser of older details is frozen (architecture audit #621, B1): a new or reworded action publishes its facts on"
+                        + " AdminActionPerformed instead of a new shape here")
+                .isEqualTo(FROZEN_SHAPES_SHA256);
+    }
+
+    private static AdminActionEntry entry(String action, String details, Optional<AdminActionPerformed.Facts> facts) {
+        return new AdminActionEntry(UUID.fromString(LINK), UUID.fromString(OTHER), action, Optional.empty(), details, facts,
+                Instant.parse("2026-11-15T10:00:00Z"), Optional.empty());
     }
 }

@@ -41,15 +41,15 @@ class ReceiptSigningKeyHistoryTest {
 
     static AdminActionEntry entryOf(AdminActionPerformed performed) {
         return new AdminActionEntry(UUID.randomUUID(), performed.adminId(), performed.action(), performed.subjectId(), performed.details(),
-                performed.performedAt(), Optional.empty());
+                performed.facts(), performed.performedAt(), Optional.empty());
     }
 
     static AdminActionEntry unreadable(UUID id, String action, String details) {
-        return new AdminActionEntry(id, ADMIN, action, Optional.empty(), details, NOW, Optional.empty());
+        return new AdminActionEntry(id, ADMIN, action, Optional.empty(), details, Optional.empty(), NOW, Optional.empty());
     }
 
     private static AdminActionEntry entry(UUID adminId, String action, String details) {
-        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.empty(), details, NOW, Optional.empty());
+        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.empty(), details, Optional.empty(), NOW, Optional.empty());
     }
 
     private static ReceiptSigningKey active(byte[] publicKey) {

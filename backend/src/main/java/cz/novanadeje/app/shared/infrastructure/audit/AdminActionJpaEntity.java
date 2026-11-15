@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -33,6 +34,10 @@ class AdminActionJpaEntity {
     @Column(name = "details", nullable = false, length = AdminActionPerformed.MAX_DETAILS_LENGTH)
     private String details;
 
+    @Column(name = "facts", columnDefinition = "jsonb")
+    @ColumnTransformer(write = "cast(? as jsonb)")
+    private String facts;
+
     @Column(name = "performed_at", nullable = false)
     private Instant performedAt;
 
@@ -49,12 +54,14 @@ class AdminActionJpaEntity {
         entity.action = event.action();
         entity.subjectId = event.subjectId().orElse(null);
         entity.details = event.details();
+        entity.facts = event.facts().map(AdminActionFactsColumn::write).orElse(null);
         entity.performedAt = event.performedAt();
         entity.client = client.map(name -> name.length() > MAX_CLIENT_LENGTH ? name.substring(0, MAX_CLIENT_LENGTH) : name).orElse(null);
         return entity;
     }
 
     AdminActionEntry toEntry() {
-        return new AdminActionEntry(id, adminId, action, Optional.ofNullable(subjectId), details, performedAt, Optional.ofNullable(client));
+        return new AdminActionEntry(id, adminId, action, Optional.ofNullable(subjectId), details, AdminActionFactsColumn.read(id, facts), performedAt,
+                Optional.ofNullable(client));
     }
 }
