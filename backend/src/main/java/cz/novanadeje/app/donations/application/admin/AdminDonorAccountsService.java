@@ -25,6 +25,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -143,7 +144,7 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = record.senderAccountLink(linkId).orElseThrow(() -> new SenderAccountLinkNotFound(linkId));
         LinkRow current = rows.link(record, link);
         if (!expected.admits(current.version())) {
-            throw new ChangedMeanwhile(current.version(), current);
+            throw new StaleWriteRefusal(new ChangedMeanwhile(current.version()), current);
         }
         return link;
     }

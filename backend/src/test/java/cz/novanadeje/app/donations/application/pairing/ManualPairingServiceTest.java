@@ -33,6 +33,7 @@ import cz.novanadeje.app.donations.application.admincopy.AdminSyncRows;
 import cz.novanadeje.app.donations.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import org.junit.jupiter.api.BeforeEach;
@@ -378,11 +379,12 @@ class ManualPairingServiceTest {
         String currentVersion = rows.currentPayment(unknownSymbol).version();
 
         assertThatThrownBy(() -> service.pair(ADMIN, unknownSymbol.id(), janaId, ExpectedVersion.of(readVersion)))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
-                    assertThat(refusal.code()).isEqualTo("donations/changed-meanwhile");
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> {
+                    assertThat(refusal.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+                    assertThat(refusal.staleWrite().code()).isEqualTo("donations/changed-meanwhile");
                     assertThat(currentVersion).isNotEqualTo(readVersion);
-                    assertThat(refusal.extensions()).containsEntry("version", currentVersion);
-                    assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(AdminSyncRows.PaymentWithGift.class, current -> {
+                    assertThat(refusal.staleWrite().version()).contains(currentVersion);
+                    assertThat(refusal.current()).isInstanceOfSatisfying(AdminSyncRows.PaymentWithGift.class, current -> {
                         assertThat(current.payment().version()).isEqualTo(currentVersion);
                         assertThat(current.donation()).isNotNull();
                     });

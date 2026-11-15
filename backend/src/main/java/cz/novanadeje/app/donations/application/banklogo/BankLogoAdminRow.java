@@ -5,12 +5,13 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogo;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoFailure;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 
+import cz.novanadeje.app.shared.application.version.StoredRecord;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 public record BankLogoAdminRow(String code, String bankName, String sourceUrl, boolean sourceAllowed, String version, UUID imageId, String imageSha256, Instant fetchedAt,
-                               Instant checkedAt, String lastFailure) {
+                               Instant checkedAt, String lastFailure) implements StoredRecord {
 
     static BankLogoAdminRow of(BankLogo logo, Optional<BankName> bankName, String version) {
         return new BankLogoAdminRow(logo.code().value(), bankName.map(BankName::value).orElse(null), logo.source().url(), logo.source().allowed(), version,

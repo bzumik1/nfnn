@@ -16,6 +16,7 @@ import cz.novanadeje.app.content.domain.news.FormerNewsSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -192,7 +193,7 @@ public class NewsAdminService {
         NewsArticle current = news.findByIdForUpdate(id).orElseThrow(() -> new NewsArticleNotFound(id));
         String version = versions.of(current);
         if (!expected.admits(version)) {
-            throw new ChangedMeanwhile(version, ContentVersions.StoredNewsArticle.of(current));
+            throw new StaleWriteRefusal(new ChangedMeanwhile(version), ContentVersions.StoredNewsArticle.of(current));
         }
         return current;
     }

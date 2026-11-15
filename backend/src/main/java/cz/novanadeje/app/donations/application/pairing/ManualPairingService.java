@@ -28,6 +28,7 @@ import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptWithdrawalInBrowserOnly;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -133,7 +134,7 @@ public class ManualPairingService {
         PaymentRow current = rows.currentPayment(payment);
         if (!expected.admits(current.version())) {
             DonationRow gift = donations.findByBankPayment(payment.id()).map(DonationRow::from).orElse(null);
-            throw new ChangedMeanwhile(current.version(), new PaymentWithGift(current, gift));
+            throw new StaleWriteRefusal(new ChangedMeanwhile(current.version()), new PaymentWithGift(current, gift));
         }
     }
 

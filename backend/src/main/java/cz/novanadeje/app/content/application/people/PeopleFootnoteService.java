@@ -7,6 +7,7 @@ import cz.novanadeje.app.content.application.Versioned;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +46,7 @@ public class PeopleFootnoteService {
         Optional<PeopleFootnote> stored = footnotes.find();
         String version = versions.ofFootnote(stored);
         if (!expected.admits(version)) {
-            throw new ChangedMeanwhile(version, ContentVersions.StoredPageText.ofFootnote(stored));
+            throw new StaleWriteRefusal(new ChangedMeanwhile(version), ContentVersions.StoredPageText.ofFootnote(stored));
         }
         Instant now = clock.instant();
         PeopleFootnote next = new PeopleFootnote(text, now);

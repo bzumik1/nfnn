@@ -18,6 +18,7 @@ import cz.novanadeje.app.content.application.ContentVersions;
 import cz.novanadeje.app.content.domain.ChangedMeanwhile;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -290,10 +291,11 @@ class ProjectAdminServiceTest {
         when(projects.findByIdForUpdate(read.id())).thenReturn(Optional.of(edited));
 
         assertThatThrownBy(() -> service().update(ADMIN, read.id(), ExpectedVersion.of(readVersion), command("Dominik", Optional.of("dominik"), Optional.empty())))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
-                    assertThat(refusal.code()).isEqualTo("content/changed-meanwhile");
-                    assertThat(refusal.extensions()).containsEntry("version", versions().of(edited))
-                            .containsEntry("current", ContentVersions.StoredProject.of(edited));
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> {
+                    assertThat(refusal.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+                    assertThat(refusal.staleWrite().code()).isEqualTo("content/changed-meanwhile");
+                    assertThat(refusal.staleWrite().version()).contains(versions().of(edited));
+                    assertThat(refusal.current()).isEqualTo(ContentVersions.StoredProject.of(edited));
                 });
 
         verify(projects, never()).save(any());

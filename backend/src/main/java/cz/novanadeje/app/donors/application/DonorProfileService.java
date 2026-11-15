@@ -9,6 +9,7 @@ import cz.novanadeje.app.donors.domain.ProfileChangedMeanwhile;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.shared.application.event.DonorProfileChanged;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
@@ -46,7 +47,7 @@ public class DonorProfileService {
         }
         String version = profiles.of(donor);
         if (!expected.admits(version)) {
-            throw new ProfileChangedMeanwhile(version, ProfileVersions.StoredProfile.of(donor));
+            throw new StaleWriteRefusal(new ProfileChangedMeanwhile(version), ProfileVersions.StoredProfile.of(donor));
         }
         DonorName name = command.name() == null ? donor.name() : new DonorName(command.name());
         PostalAddress address = command.street() == null && command.city() == null && command.postalCode() == null

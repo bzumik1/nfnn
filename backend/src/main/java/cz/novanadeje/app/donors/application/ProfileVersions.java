@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.shared.application.version.RowVersions;
+import cz.novanadeje.app.shared.application.version.StoredRecord;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class ProfileVersions {
         return versions.versionOf(List.of(StoredProfile.of(donor)));
     }
 
-    public record StoredProfile(String name, String street, String city, String postalCode, String preferredLocale) {
+    public record StoredProfile(String name, String street, String city, String postalCode, String preferredLocale) implements StoredRecord {
 
         public static StoredProfile of(Donor donor) {
             return new StoredProfile(donor.name().value(), donor.address().street(), donor.address().city(), donor.address().postalCode(),

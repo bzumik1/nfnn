@@ -16,6 +16,7 @@ import cz.novanadeje.app.content.domain.project.FormerProjectSlugs;
 import cz.novanadeje.app.content.domain.SlugTaken;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,7 +157,7 @@ public class ProjectAdminService {
         Project current = projects.findByIdForUpdate(id).orElseThrow(() -> new ProjectNotFound(id));
         String version = versions.of(current);
         if (!expected.admits(version)) {
-            throw new ChangedMeanwhile(version, ContentVersions.StoredProject.of(current));
+            throw new StaleWriteRefusal(new ChangedMeanwhile(version), ContentVersions.StoredProject.of(current));
         }
         return current;
     }

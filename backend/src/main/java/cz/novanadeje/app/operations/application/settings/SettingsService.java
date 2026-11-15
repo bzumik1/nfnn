@@ -12,6 +12,7 @@ import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.administration.AdministrationChannel;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +93,7 @@ public class SettingsService {
         SettingsVersions.StoredSettings stored = SettingsVersions.StoredSettings.of(writer.stored());
         String version = versions.of(stored);
         if (!expected.admits(version)) {
-            throw new SettingsChangedMeanwhile(version, stored);
+            throw new StaleWriteRefusal(new SettingsChangedMeanwhile(version), stored);
         }
         requireTheMailServerUnchangedSince(checked, changes);
         requirePasswordForAnotherMailServer(changes);

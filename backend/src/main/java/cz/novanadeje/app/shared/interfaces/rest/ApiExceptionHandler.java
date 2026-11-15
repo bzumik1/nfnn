@@ -1,5 +1,6 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.error.AccessDenied;
 import cz.novanadeje.app.shared.domain.error.AuthenticationFailure;
 import cz.novanadeje.app.shared.domain.error.Conflict;
@@ -115,6 +116,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         problem.setTitle(message("problem." + ex.code() + ".title", status.getReasonPhrase()));
         problem.setDetail(texts.find("problem." + ex.code() + ".detail").orElse(null));
         ex.extensions().forEach(problem::setProperty);
+        return problem;
+    }
+
+    @ExceptionHandler(StaleWriteRefusal.class)
+    ProblemDetail handleStaleWrite(StaleWriteRefusal ex) {
+        ProblemDetail problem = handleDomainException(ex.staleWrite());
+        problem.setProperty("current", ex.current());
         return problem;
     }
 

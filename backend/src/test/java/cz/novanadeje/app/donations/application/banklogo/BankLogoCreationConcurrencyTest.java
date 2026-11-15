@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoImageId;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoRepository;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.application.version.WritePrecondition;
 import cz.novanadeje.app.support.DatabaseCleaner;
 import cz.novanadeje.app.support.FakeBankLogoSource;
@@ -94,7 +95,7 @@ class BankLogoCreationConcurrencyTest {
 
             assertThatThrownBy(() -> mine.get(30, TimeUnit.SECONDS))
                     .isInstanceOf(ExecutionException.class)
-                    .hasCauseInstanceOf(ChangedMeanwhile.class);
+                    .cause().isInstanceOf(StaleWriteRefusal.class).hasCauseInstanceOf(ChangedMeanwhile.class);
         } finally {
             release.countDown();
             callers.shutdownNow();

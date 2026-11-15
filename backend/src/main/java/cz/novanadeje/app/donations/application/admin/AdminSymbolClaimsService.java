@@ -19,6 +19,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimStillConfirmed;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -115,7 +116,7 @@ public class AdminSymbolClaimsService {
     private void requireUnchanged(SymbolClaim claim, ExpectedVersion expected) {
         SymbolClaimRow current = rows.symbolClaim(claim);
         if (!expected.admits(current.version())) {
-            throw new ChangedMeanwhile(current.version(), current);
+            throw new StaleWriteRefusal(new ChangedMeanwhile(current.version()), current);
         }
     }
 }

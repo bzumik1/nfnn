@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donation.DonationRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.report.NextReport;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
+import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.donations.domain.report.MonthlyReportLog;
 import cz.novanadeje.app.donations.domain.report.ReportMonth;
@@ -152,9 +153,10 @@ class ReportSettingsServiceTest {
         String stored = view.settingsVersion();
 
         assertThatThrownBy(() -> service.change(ADMIN, AdministrationChannel.BROWSER, CHANGED, ExpectedVersion.of("0000000000000000")))
-                .isInstanceOfSatisfying(ChangedMeanwhile.class, refusal -> {
-                    assertThat(refusal.extensions()).containsEntry("version", stored);
-                    assertThat(refusal.extensions().get("current")).isInstanceOfSatisfying(ReportSettingsRow.class, row -> {
+                .isInstanceOfSatisfying(StaleWriteRefusal.class, refusal -> {
+                    assertThat(refusal.staleWrite()).isInstanceOf(ChangedMeanwhile.class);
+                    assertThat(refusal.staleWrite().version()).contains(stored);
+                    assertThat(refusal.current()).isInstanceOfSatisfying(ReportSettingsRow.class, row -> {
                         assertThat(row.recipients()).containsExactly("info@nfnn.cz");
                         assertThat(row.version()).isEqualTo(stored);
                         assertThat(row.nextReport().month()).isEqualTo(view.nextReport().month().toString());
