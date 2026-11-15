@@ -30,6 +30,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -132,7 +133,8 @@ public class SecondFactorRecoveryService {
     private void tellTheOtherAdministrators(Donor administrator, String senderAccount, Instant now) {
         events.publishEvent(new AdminActionPerformed(administrator.id().value(), RECOVER_SECOND_FACTOR_ACTION, Optional.of(administrator.id().value()),
                 "Dvoufaktorové ověření správce " + administrator.id() + " vypnuto platbou 1 Kč z ověřeného účtu " + senderAccount
-                        + "; všechna přihlášení ukončena", now));
+                        + "; všechna přihlášení ukončena",
+                AdminActionPerformed.Facts.of(RECOVER_SECOND_FACTOR_ACTION, Map.of(AdminActionFacts.DONOR, administrator.id().toString(), AdminActionFacts.ACCOUNT, senderAccount)), now));
         List<AdministratorSecondFactorRecovered.Recipient> others = donors.findAdministrators().stream()
                 .filter(other -> !other.id().equals(administrator.id()))
                 .map(other -> new AdministratorSecondFactorRecovered.Recipient(other.email(), other.preferredLocale()))

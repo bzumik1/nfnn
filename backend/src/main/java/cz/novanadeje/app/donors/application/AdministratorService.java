@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -35,6 +36,7 @@ public class AdministratorService {
     static final String REVOKE_ACTION = "REVOKE_ADMINISTRATION";
     static final String RESET_SECOND_FACTOR_ACTION = "RESET_SECOND_FACTOR";
     static final String REMOVE_PASSKEYS_ACTION = "REMOVE_PASSKEYS";
+    private static final String DONOR_FACT = AdminActionFacts.DONOR;
 
     private static final Logger log = LoggerFactory.getLogger(AdministratorService.class);
 
@@ -83,7 +85,7 @@ public class AdministratorService {
         donor.grantAdministration(holdings.holdsAny(donor.id()));
         donors.save(donor);
         events.publishEvent(new AdminActionPerformed(adminId.value(), GRANT_ACTION, Optional.of(donor.id().value()),
-                "Role správce udělena dárci " + donor.id(), clock.instant()));
+                "Role správce udělena dárci " + donor.id(), AdminActionPerformed.Facts.of(GRANT_ACTION, Map.of(DONOR_FACT, donor.id().toString())), clock.instant()));
         log.info("Administrator {} granted the administrator role to donor {}", adminId, donor.id());
         return view(donor);
     }
@@ -99,7 +101,8 @@ public class AdministratorService {
         donors.forgetSignIns(donorId);
         events.publishEvent(new AdministrationRevoked(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), REVOKE_ACTION, Optional.of(donorId.value()),
-                "Role správce odebrána dárci " + donorId + "; všechna přihlášení dárce ukončena", now));
+                "Role správce odebrána dárci " + donorId + "; všechna přihlášení dárce ukončena", AdminActionPerformed.Facts.of(REVOKE_ACTION, Map.of(DONOR_FACT, donorId.toString())),
+                now));
         log.info("Administrator {} took the administrator role from donor {}", adminId, donorId);
     }
 
@@ -113,7 +116,8 @@ public class AdministratorService {
         Instant now = clock.instant();
         credentialChanges.endEverySessionAndLinkOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), RESET_SECOND_FACTOR_ACTION, Optional.of(donorId.value()),
-                "Dvoufaktorové ověření dárce " + donorId + " vypnuto; všechna přihlášení dárce ukončena", now));
+                "Dvoufaktorové ověření dárce " + donorId + " vypnuto; všechna přihlášení dárce ukončena",
+                AdminActionPerformed.Facts.of(RESET_SECOND_FACTOR_ACTION, Map.of(DONOR_FACT, donorId.toString())), now));
         events.publishEvent(new DonorSecondFactorReset(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Administrator {} turned off the second factor of donor {}", adminId, donorId);
     }
@@ -128,7 +132,8 @@ public class AdministratorService {
         Instant now = clock.instant();
         credentialChanges.endEverySessionAndLinkOf(donorId, now);
         events.publishEvent(new AdminActionPerformed(adminId.value(), REMOVE_PASSKEYS_ACTION, Optional.of(donorId.value()),
-                "Odebrané přístupové klíče dárce " + donorId + ": " + removed + "; všechna přihlášení dárce ukončena", now));
+                "Odebrané přístupové klíče dárce " + donorId + ": " + removed + "; všechna přihlášení dárce ukončena",
+                AdminActionPerformed.Facts.of(REMOVE_PASSKEYS_ACTION, Map.of(DONOR_FACT, donorId.toString(), "count", String.valueOf(removed))), now));
         events.publishEvent(new DonorPasskeysRemoved(donorId.value(), donor.email(), donor.preferredLocale()));
         log.info("Administrator {} removed {} passkeys of donor {}", adminId, removed, donorId);
     }

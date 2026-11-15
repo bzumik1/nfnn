@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -75,7 +76,7 @@ public class DonorErasureService {
         events.publishEvent(new DonorErased(donorId.value(), now));
         events.publishEvent(new AdminActionPerformed(adminId.value(), ERASE_ACTION, Optional.of(donorId.value()),
                 "Osobní údaje dárce " + donorId + " vymazány: účet anonymizován, všechna přihlášení ukončena, bankovní účty a odpovědi o starších symbolech"
-                        + " smazány; dary a potvrzení zůstávají", now));
+                        + " smazány; dary a potvrzení zůstávají", AdminActionPerformed.Facts.of(ERASE_ACTION, Map.of(AdminActionFacts.DONOR, donorId.toString())), now));
         events.publishEvent(new DonorAccountErased(donorId.value(), formerEmail, locale));
         log.info("Administrator {} erased the personal data of donor {}", adminId, donorId);
     }

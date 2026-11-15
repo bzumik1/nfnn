@@ -1,5 +1,9 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.DeviceBrowser;
+import cz.novanadeje.app.donors.domain.DeviceDescription;
+import cz.novanadeje.app.donors.domain.DeviceId;
+import cz.novanadeje.app.donors.domain.DevicePlatform;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -15,16 +19,19 @@ import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.donors.domain.WrongPassword;
 import cz.novanadeje.app.donors.infrastructure.config.CommonPasswords;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,11 +39,13 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -76,6 +85,21 @@ class AdministrationDeviceServiceTest {
         service = new AdministrationDeviceService(donors, secondFactors,
                 new DonorConfirmations(passwordHasher, CommonPasswords.POLICY, passkeys, challenges, ceremonies, transactions, clock),
                 new SecondFactorCodes(secondFactors, wrongCodes), events, clock, transactions);
+    }
+
+    @Test
+    @DisplayName("Given a device with or without its session, when an administrator records a stored copy of the administration, then the action carries the platform and the browser as facts")
+    void should_record_platform_and_browser_as_facts_when_a_stored_copy_is_recorded_given_a_device() {
+        DeviceDescription iphoneSafari = new DeviceDescription(DevicePlatform.IPHONE, DeviceBrowser.SAFARI);
+
+        service.storedCopy(ADMIN, new RequestingDevice(Optional.of(DeviceId.newId(NOW)), iphoneSafari));
+        service.storedCopy(ADMIN, new RequestingDevice(Optional.empty(), iphoneSafari));
+
+        ArgumentCaptor<AdminActionPerformed> recorded = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events, times(2)).publishEvent(recorded.capture());
+        assertThat(recorded.getAllValues()).extracting(AdminActionPerformed::facts).containsOnly(Optional.of(AdminActionPerformed.Facts.of(
+                "STORE_ADMINISTRATION_COPY", Map.of("platform", "IPHONE", "browser", "SAFARI"))));
+        recorded.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
     }
 
     @Test

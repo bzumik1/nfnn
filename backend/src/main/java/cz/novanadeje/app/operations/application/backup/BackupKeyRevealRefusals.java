@@ -39,7 +39,7 @@ public class BackupKeyRevealRefusals {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(UUID adminId, Instant at) {
         events.publishEvent(new AdminActionPerformed(adminId, REFUSED_ACTION, Optional.empty(),
-                "Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil", at));
+                "Klíč k zálohám se nezobrazil: druhý faktor nesouhlasil", AdminActionPerformed.Facts.of(REFUSED_ACTION), at));
         log.warn("Admin {} was refused the backup key: the second factor did not match", adminId);
     }
 }

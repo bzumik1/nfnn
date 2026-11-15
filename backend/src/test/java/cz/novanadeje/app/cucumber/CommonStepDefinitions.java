@@ -5,6 +5,7 @@ import cz.novanadeje.app.donations.application.importing.HistoryImportTracker;
 import cz.novanadeje.app.donors.infrastructure.ares.CompanyRegistryBreaker;
 import cz.novanadeje.app.operations.application.backup.BackupKeyWordChallenges;
 import cz.novanadeje.app.operations.application.clienterrors.ClientErrorCap;
+import cz.novanadeje.app.support.AdminActionFactsWatch;
 import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.BackupKeyWordDraws;
 import cz.novanadeje.app.support.ClientErrorCapWindows;
@@ -27,6 +28,7 @@ import cz.novanadeje.app.support.ServerReceiptSigningKey;
 import cz.novanadeje.app.support.SwitchablePublicBackupKeyPolicy;
 import cz.novanadeje.app.support.SwitchablePublicTestKeyPolicy;
 import cz.novanadeje.app.support.SynchronousBankImportRequests;
+import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.BeforeAll;
 import io.cucumber.java.en.Then;
@@ -76,6 +78,7 @@ public class CommonStepDefinitions {
     @Before
     public void isolateScenario() {
         asyncTasks.awaitIdleAfter("the previous scenario", ASYNC_WORK_WAIT);
+        context.getBean(AdminActionFactsWatch.class).takeDisagreements();
         database.emptyAllTables();
         mailSender.clear();
         mailSender.startScenario();
@@ -97,6 +100,12 @@ public class CommonStepDefinitions {
         context.getBean(FakeLatestReleaseSource.class).reset();
         context.getBean(ResettableReleaseChecks.class).reset();
         context.getBean(FakeBankLogoSource.class).reset();
+    }
+
+    @After
+    public void auditedActionsPublishedTheirFacts() {
+        assertThat(context.getBean(AdminActionFactsWatch.class).takeDisagreements())
+                .as("audited actions whose facts disagree with what the frozen shapes read from their details").isEmpty();
     }
 
     @When("{int} second(s) pass(es)")

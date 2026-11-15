@@ -57,7 +57,8 @@ public class BackupScheduleService {
         schedules.save(schedule);
         store.publishSchedule(schedule);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_BACKUP_SCHEDULE_ACTION, Optional.empty(),
-                "Plán záloh změněn z „" + describe(before) + "“ na „" + describe(schedule) + "“", clock.instant()));
+                "Plán záloh změněn z „" + describe(before) + "“ na „" + describe(schedule) + "“",
+                AdminActionPerformed.Facts.of(CHANGE_BACKUP_SCHEDULE_ACTION, Map.of("from", describe(before), "to", describe(schedule))), clock.instant()));
         log.info("Admin {} changed the backup schedule", adminId);
         return schedule;
     }

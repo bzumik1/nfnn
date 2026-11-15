@@ -19,9 +19,7 @@ public final class AdminActionFactsAgreement {
     public static Optional<String> disagreement(AdminActionPerformed event) {
         Optional<AdminActionFacts> read = AdminActionFacts.read(event.action(), event.details());
         if (read.isEmpty()) {
-            return event.facts().isPresent()
-                    ? Optional.of(event.action() + " publishes facts, but the frozen shapes read none from its details")
-                    : Optional.of(event.action() + " publishes no facts, and the frozen shapes read none from its details");
+            return event.facts().map(published -> event.action() + " publishes " + published + ", but the frozen shapes read none from its details");
         }
         if (event.facts().isEmpty()) {
             return Optional.of(event.action() + " publishes no facts, though the frozen shapes read " + read.get() + " from its details");

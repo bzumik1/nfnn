@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.InputStream;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,7 +62,8 @@ public class BackupRestoreService {
         RestoreRequest request = new RestoreRequest(UuidV7.generate(now).toString(), RestoreSource.BACKUP, fileName, Optional.of(adminId), now);
         store.requestRestore(request);
         events.publishEvent(new AdminActionPerformed(adminId, RESTORE_BACKUP_ACTION, Optional.empty(),
-                "Vyžádána obnova ze zálohy " + fileName + " (požadavek " + request.id() + "); backend se restartuje a počká na kontejner záloh", now));
+                "Vyžádána obnova ze zálohy " + fileName + " (požadavek " + request.id() + "); backend se restartuje a počká na kontejner záloh",
+                AdminActionPerformed.Facts.of(RESTORE_BACKUP_ACTION, Map.of("file", fileName)), now));
         restarter.restartAfterCommitForRestore();
         log.info("Admin {} requested a restore of {} as request {}; the backend restarts", adminId, fileName, request.id());
         return request;
@@ -101,14 +104,38 @@ public class BackupRestoreService {
                             + run.carriedForward().map(BackupRestoreService::carried).orElse(""))
                     .orElse("");
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORED_ACTION, Optional.empty(),
-                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked, now));
+                    "Databáze obnovena ze zálohy " + file + " (požadavek " + requestId + ")" + tables + revoked, restoredFacts(run, file), now));
             log.info("The restore of {} (request {}) finished and is recorded in the administration history", file, requestId);
         } else {
             events.publishEvent(new AdminActionPerformed(run.requestedBy().orElseThrow(), BACKUP_RESTORE_FAILED_ACTION, Optional.empty(),
                     truncated("Obnova ze zálohy " + file + " (požadavek " + requestId + ") selhala: " + run.error().orElse("neznámá chyba")
-                            + "; data zůstala, jak byla"), now));
+                            + "; data zůstala, jak byla"), AdminActionPerformed.Facts.of(BACKUP_RESTORE_FAILED_ACTION, Map.of("file", file)), now));
             log.warn("The restore of {} (request {}) failed; the data stayed as they were", file, requestId);
         }
+    }
+
+    private static AdminActionPerformed.Facts restoredFacts(BackupRun run, String file) {
+        Map<String, String> values = new HashMap<>();
+        values.put("file", file);
+        if (run.tables().isEmpty()) {
+            return AdminActionPerformed.Facts.of(BACKUP_RESTORED_ACTION, values);
+        }
+        values.put("tables", run.tables().get().toString());
+        if (run.revocations().isEmpty()) {
+            return AdminActionPerformed.Facts.of(BACKUP_RESTORED_ACTION + ".withTables", values);
+        }
+        values.put("sessions", String.valueOf(run.revocations().get().sessions()));
+        values.put("secrets", String.valueOf(run.revocations().get().oneTimeSecrets()));
+        if (run.carriedForward().isEmpty()) {
+            return AdminActionPerformed.Facts.of(BACKUP_RESTORED_ACTION + ".withRevocations", values);
+        }
+        RestoreCarryForward carried = run.carriedForward().get();
+        values.put("erasures", String.valueOf(carried.erasures()));
+        values.put("credentials", String.valueOf(carried.credentials()));
+        values.put("roles", String.valueOf(carried.roles()));
+        values.put("adminActions", String.valueOf(carried.adminActions()));
+        values.put("receiptNumbersSkipped", String.valueOf(carried.receiptNumbersSkipped()));
+        return AdminActionPerformed.Facts.of(BACKUP_RESTORED_ACTION + ".withCarriedForward", values);
     }
 
     private static String carried(RestoreCarryForward carried) {

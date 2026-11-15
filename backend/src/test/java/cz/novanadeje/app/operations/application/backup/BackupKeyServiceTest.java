@@ -15,6 +15,7 @@ import cz.novanadeje.app.operations.application.event.BackupKeyRevealed;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactor;
 import cz.novanadeje.app.shared.application.secondfactor.FreshSecondFactorProof;
 import cz.novanadeje.app.shared.domain.error.RuleViolation;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -104,6 +105,7 @@ class BackupKeyServiceTest {
         verify(freshSecondFactor).require(ADMIN, CODE);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.VIEW_BACKUP_KEY_ACTION);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().details()).doesNotContain(KEY.value()).doesNotContain(WORDS.getFirst());
@@ -153,6 +155,7 @@ class BackupKeyServiceTest {
         assertThat(confirmations.find()).contains(BackupKeyConfirmation.of(KEY, clock.instant(), Optional.of(ADMIN)));
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, times(2)).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.CONFIRM_BACKUP_KEY_ACTION);
         assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked))).isInstanceOf(BackupKeyConfirmationExpired.class);
     }

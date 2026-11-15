@@ -4,6 +4,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 import cz.novanadeje.app.operations.domain.backup.BackupScheduleRepository;
 import cz.novanadeje.app.operations.domain.backup.BackupsUnavailable;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,7 @@ class BackupScheduleServiceTest {
         verify(store).publishSchedule(EARLIER);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().action()).isEqualTo("CHANGE_BACKUP_SCHEDULE");
         assertThat(audit.getValue().performedAt()).isEqualTo(NOW);

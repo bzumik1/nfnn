@@ -711,6 +711,7 @@ public class AdministrationDeviceStepDefinitions {
                     facts.value(AdminActionFacts.ACCOUNT).ifPresent(values::add);
                     facts.value(AdminActionFacts.RECIPIENTS).ifPresent(recipients -> values.addAll(Arrays.asList(recipients.split(",\\s*"))));
                 });
+        values.addAll(jdbc.sql("select facts -> 'values' ->> 'account' from admin_action where facts -> 'values' ->> 'account' is not null").query(String.class).list());
         return values.stream().filter(value -> value.strip().length() >= PERSONAL_VALUE_MINIMUM_LENGTH).toList();
     }
 

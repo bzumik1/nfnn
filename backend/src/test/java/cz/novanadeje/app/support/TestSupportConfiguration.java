@@ -125,6 +125,11 @@ public class TestSupportConfiguration {
     }
 
     @Bean
+    public AdminActionFactsWatch adminActionFactsWatch() {
+        return new AdminActionFactsWatch();
+    }
+
+    @Bean
     @Primary
     public RecordingPushTransport recordingPushTransport() {
         return new RecordingPushTransport();

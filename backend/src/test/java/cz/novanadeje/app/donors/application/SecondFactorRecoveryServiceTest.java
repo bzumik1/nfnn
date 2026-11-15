@@ -19,6 +19,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorRecoveryUnavailable;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryPaymentText;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTarget;
 import cz.novanadeje.app.shared.application.recovery.SecondFactorRecoveryTargets;
@@ -261,6 +262,7 @@ class SecondFactorRecoveryServiceTest {
         assertThat(published.getAllValues()).hasExactlyElementsOfTypes(DonorSecondFactorRecovered.class, AdminActionPerformed.class,
                 AdministratorSecondFactorRecovered.class);
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().get(1);
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("RECOVER_SECOND_FACTOR");
         assertThat(action.subjectId()).contains(JANA.value());
