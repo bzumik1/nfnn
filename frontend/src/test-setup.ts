@@ -14,17 +14,20 @@ if (
   };
 }
 
-const jsdomWindowProperties = new Map(
-  [
-    'scrollTo',
-    'scrollX',
-    'scrollY',
-    'innerWidth',
-    'innerHeight',
-    'matchMedia',
-    'visualViewport',
-  ].map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const),
-);
+const jsdomWindowProperties =
+  typeof window === 'undefined'
+    ? new Map<string, PropertyDescriptor | undefined>()
+    : new Map(
+        [
+          'scrollTo',
+          'scrollX',
+          'scrollY',
+          'innerWidth',
+          'innerHeight',
+          'matchMedia',
+          'visualViewport',
+        ].map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const),
+      );
 
 beforeEach(() => {
   for (const [name, descriptor] of jsdomWindowProperties) {
