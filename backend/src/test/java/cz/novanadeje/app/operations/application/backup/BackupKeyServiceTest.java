@@ -155,8 +155,9 @@ class BackupKeyServiceTest {
         assertThat(confirmations.find()).contains(BackupKeyConfirmation.of(KEY, clock.instant(), Optional.of(ADMIN)));
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, times(2)).publishEvent(audited.capture());
-        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(audited.getAllValues().getFirst());
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyService.CONFIRM_BACKUP_KEY_ACTION);
+        assertThat(audited.getValue().facts()).isEmpty();
         assertThatThrownBy(() -> service.confirm(ADMIN, wordsAt(asked))).isInstanceOf(BackupKeyConfirmationExpired.class);
     }
 

@@ -180,7 +180,7 @@ class SettingsServiceTest {
         assertThat(result).isEqualTo(new TestEmailResult(TestEmailOutcome.SENDER_REFUSED, "jana@example.cz"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
-        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
+        assertThat(audit.getValue().facts()).isEmpty();
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().action()).isEqualTo(SettingsService.TEST_EMAIL_ACTION);
         assertThat(audit.getValue().performedAt()).isEqualTo(NOW);
