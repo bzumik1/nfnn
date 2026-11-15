@@ -21,9 +21,12 @@ export const serviceWorkerBypassInterceptor: HttpInterceptorFn = (request, next)
 };
 
 export function mayComeFromServiceWorker(request: HttpRequest<unknown>): boolean {
+  return !request.headers.has(SERVICE_WORKER_BYPASS) && answersTheSameForEveryone(request);
+}
+
+export function answersTheSameForEveryone(request: HttpRequest<unknown>): boolean {
   return (
     request.method === 'GET' &&
-    !request.headers.has(SERVICE_WORKER_BYPASS) &&
     ANSWERS_THE_SAME_FOR_EVERYONE.some((answer) => answer.test(request.urlWithParams))
   );
 }
