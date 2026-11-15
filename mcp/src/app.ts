@@ -191,10 +191,7 @@ async function discovered(deps: AppDependencies): Promise<AuthorizationServer | 
       deps.logger.info(`Authorization server discovered: ${server.issuer}`);
     }
     return server;
-  } catch (failure: unknown) {
-    deps.logger.warn(
-      `The authorization server metadata could not be read: ${failure instanceof Error ? failure.message : 'unknown failure'}`,
-    );
+  } catch {
     return undefined;
   }
 }

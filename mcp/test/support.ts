@@ -54,9 +54,9 @@ export async function startApp(): Promise<TestApp> {
     info: (message) => logLines.push(`INFO ${message}`),
     warn: (message) => logLines.push(`WARN ${message}`),
   };
-  const discovery = new AuthorizationServerDiscovery(backend.url, fetch);
-  const photos = new FakePhotoSource();
   const clock: TestClock = { now: Date.now() };
+  const discovery = new AuthorizationServerDiscovery(backend.url, fetch, logger, () => clock.now);
+  const photos = new FakePhotoSource();
   const app = createApp({
     discovery,
     verifier: new TokenExchangeVerifier(discovery, backend.url, fetch, logger, () => clock.now),

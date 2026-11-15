@@ -2,6 +2,39 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ISSUER, READ_TOKEN } from './fake-backend.js';
 import { connect, MCP_URL, startApp, type TestApp } from './support.js';
 
+const FAILURE_REMEMBERED_MS = 5_000;
+const METADATA_PATH = '/.well-known/oauth-authorization-server';
+
+describe('Given a connector started while the backend is down', () => {
+  let stack: TestApp;
+
+  beforeEach(async () => {
+    stack = await startApp();
+    stack.backend.metadataAvailable = false;
+  });
+
+  afterEach(async () => {
+    await stack.stop();
+  });
+
+  it('when ten requests arrive within five seconds, then the metadata is fetched once and one warning is logged', async () => {
+    const started = stack.clock.now;
+    const statuses: number[] = [];
+    for (let request = 0; request < 10; request += 1) {
+      stack.clock.now = started + request * 499;
+      statuses.push((await stack.app.fetch(new Request(MCP_URL, { method: 'POST' }))).status);
+    }
+
+    expect(statuses).toEqual(Array.from({ length: 10 }, () => 503));
+    expect(stack.backend.requests.filter((request) => request.path === METADATA_PATH)).toHaveLength(
+      1,
+    );
+    expect(stack.logLines.filter((line) => line.startsWith('WARN'))).toEqual([
+      'WARN The authorization server metadata could not be read: the backend answered 503 to /.well-known/oauth-authorization-server',
+    ]);
+  });
+});
+
 describe('Given the MCP connector in front of the administration', () => {
   let stack: TestApp;
 
@@ -18,6 +51,7 @@ describe('Given the MCP connector in front of the administration', () => {
     expect((await stack.app.fetch(new Request(`${ISSUER}/health`))).status).toBe(503);
     expect((await stack.app.fetch(new Request(MCP_URL, { method: 'POST' }))).status).toBe(503);
     stack.backend.metadataAvailable = true;
+    stack.clock.now += FAILURE_REMEMBERED_MS;
     expect((await stack.app.fetch(new Request(`${ISSUER}/health`))).status).toBe(200);
     await stack.app.fetch(new Request(`${ISSUER}/health`));
     expect(
