@@ -53,6 +53,7 @@ const ACTION_NAMES: Record<string, string> = {
   ISSUE_RECEIPT: $localize`:@@admin.actions.action.issueReceipt:Vystavení potvrzení o daru`,
   ISSUE_RECEIPTS: $localize`:@@admin.actions.action.issueReceipts:Hromadné vystavení ročních potvrzení`,
   WITHDRAW_RECEIPT: $localize`:@@admin.actions.action.withdrawReceipt:Zrušení potvrzení o daru`,
+  UPLOAD_IMAGE: $localize`:@@admin.actions.action.uploadImage:Nahrání fotky`,
   CHANGE_ABOUT_PHOTO: $localize`:@@admin.actions.action.changeAboutPhoto:Nastavení fotky v sekci O nás`,
   REMOVE_ABOUT_PHOTO: $localize`:@@admin.actions.action.removeAboutPhoto:Odebrání fotky ze sekce O nás`,
   ADD_PERSON: $localize`:@@admin.actions.action.addPerson:Přidání osoby mezi lidi fondu`,

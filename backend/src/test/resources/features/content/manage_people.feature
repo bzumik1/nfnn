@@ -221,12 +221,13 @@ Feature: An administrator keeps the people of the foundation that the About sect
     Then the response status is 400
     And the problem type ends with "content/people-order-mismatch"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action               | summary                        |
       | ORDER_PEOPLE         | Změněno pořadí lidí fondu.     |
       | CHANGE_FOUNDERS_NOTE | Upraveno slovo zakladatelů.    |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
+      | UPLOAD_IMAGE         | Nahrána fotka.                 |
       | ADD_PERSON           | Přidána osoba mezi lidi fondu. |
 
   Scenario: The founders note keeps its paragraphs, and emptying it removes it

@@ -1,0 +1,58 @@
+[
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "content/manage_about: *",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry",
+    "contract": "docs/api-contract.md, content (POST /api/admin/content/media) and Audit trail"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "content/manage_donate_band: *",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry",
+    "contract": "docs/api-contract.md, content (POST /api/admin/content/media) and Audit trail"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "content/manage_people: The order an administrator sets*",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry",
+    "contract": "docs/api-contract.md, content (POST /api/admin/content/media) and Audit trail"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/actions",
+    "scenario": "content/place_photo_focal_point: *",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry",
+    "contract": "docs/api-contract.md, content (POST /api/admin/content/media) and Audit trail"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/sync",
+    "scenario": "content/admin_content_sync: The people come without any receipt signature or printed portrait*",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry; the device copy's trail chunk counts and carries the two uploads of the scenario",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donors/sync)"
+  },
+  {
+    "kind": "body",
+    "path": "GET /api/admin/donors/sync/chunks",
+    "scenario": "content/admin_content_sync: The people come without any receipt signature or printed portrait*",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry; the device copy's trail chunk counts and carries the two uploads of the scenario",
+    "contract": "docs/api-contract.md, Device sync of the administration (/api/admin/donors/sync)"
+  },
+  {
+    "kind": "logs",
+    "scenario": "content/admin_content_sync: The people come without any receipt signature or printed portrait*",
+    "line": "donations.application.pairing.PaymentPairingService: Donor <id:1> learned sender account link <id:10> from bank payment 2001",
+    "reason": "PR #944 (security audit 2026-11-14, AUTHZ-3, part of #915): an upload of a photo by an administrator or a connected application is audited as UPLOAD_IMAGE with the photo as its subject, so the audit trail of a scenario that uploads a photo has one more entry; the two new audit ids come before the sender account link in the transcript, so the masked index of the link's id moves from <id:10> to <id:12>; the line itself is unchanged",
+    "contract": "docs/system-overview.md, donations (pairing); .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<id>": "the donor's id and the sender account link's id, UUIDs the site generated (the account itself is never logged)",
+        "<n>": "the bank transaction id of the fixture payment, a number the bank assigned to the movement, no personal data"
+      }
+    }
+  }
+]

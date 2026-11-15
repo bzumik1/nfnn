@@ -34,9 +34,10 @@ Feature: An administrator shows a photo in the closing Přispět band and remove
       | photo.focalPoint |                               |
     And the admin action "CHANGE_DONATE_BAND_PHOTO" by "Jana" on the image uploaded as "pruh.png" is recorded with details containing "nastavena"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action                   | summary                          |
       | CHANGE_DONATE_BAND_PHOTO | Nastavena fotka v pruhu Přispět. |
+      | UPLOAD_IMAGE             | Nahrána fotka.                   |
     When someone without a token asks for the home content
     Then the response status is 200
     And the home donate band says:
@@ -164,6 +165,7 @@ Feature: An administrator shows a photo in the closing Přispět band and remove
       | action                   | client    |
       | REMOVE_DONATE_BAND_PHOTO | claude.ai |
       | CHANGE_DONATE_BAND_PHOTO | claude.ai |
+      | UPLOAD_IMAGE             |           |
 
   Scenario: A connected application with the reading permission only reads the donate band but cannot change it
     Given "Jana" uploads a 1600 by 900 pixel PNG image named "pruh.png"

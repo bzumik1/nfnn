@@ -54,6 +54,15 @@ public class MediaStepDefinitions {
         }
     }
 
+    @When("the exchanged API token uploads a {int} by {int} pixel PNG image named {string}")
+    public void theExchangedApiTokenUploadsAPixelPngImageNamed(int width, int height, String fileName) {
+        actAsExchangedApiToken();
+        api.postFile(ADMIN_MEDIA, "file", fileName, "image/png", png(width, height));
+        if (api.lastResponse().getStatusCode().value() == 201) {
+            images.remember(fileName, api.lastResponseJson().get("id").asString());
+        }
+    }
+
     @When("{string} uploads a text file as an image")
     public void uploadsATextFileAsAnImage(String alias) {
         sessions.actAs(alias);

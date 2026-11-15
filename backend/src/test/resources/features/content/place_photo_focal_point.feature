@@ -110,12 +110,13 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
     When "Jana" removes the focal point of the image uploaded as "zahrada.png"
     Then the response status is 200
     When "Jana" asks for the admin actions
-    Then the admin actions are:
+    Then the admin actions are, in any order of those performed at the same moment:
       | action                   | summary                                              |
       | CHANGE_PHOTO_FOCAL_POINT | Zrušen bod výřezu fotky.                             |
       | CHANGE_PHOTO_FOCAL_POINT | Nastaven bod výřezu fotky: 0 % zleva, 100 % shora.   |
       | CHANGE_PHOTO_FOCAL_POINT | Nastaven bod výřezu fotky: 42 % zleva, 18 % shora.   |
       | CREATE_NEWS              | Napsána aktualita „Zahrada pro děti“.                |
+      | UPLOAD_IMAGE             | Nahrána fotka.                                       |
 
   Scenario: A replaced photo starts without a focal point
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "prvni.png"
@@ -169,9 +170,10 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
     Then the response status is 400
     And the problem type ends with "content/focal-point-on-person-image"
     When "Jana" asks for the admin actions
-    Then the admin actions are:
-      | action     | summary                        |
-      | ADD_PERSON | Přidána osoba mezi lidi fondu. |
+    Then the admin actions are, in any order of those performed at the same moment:
+      | action       | summary                        |
+      | ADD_PERSON   | Přidána osoba mezi lidi fondu. |
+      | UPLOAD_IMAGE | Nahrána fotka.                 |
 
   Scenario: An unknown photo has no focal point to place
     When "Jana" places the focal point of the image "0199f3e0-0000-7000-8000-000000000000" at 50 % from the left and 50 % from the top
@@ -201,6 +203,7 @@ Feature: An administrator marks on a photo the spot that must stay visible, and 
       | action                   | client    |
       | CHANGE_PHOTO_FOCAL_POINT | claude.ai |
       | CHANGE_PHOTO_FOCAL_POINT | claude.ai |
+      | UPLOAD_IMAGE             |           |
 
   Scenario: A connected application with the reading permission only cannot place a focal point
     Given "Jana" uploads a 1600 by 1000 pixel PNG image named "zahrada.png"
