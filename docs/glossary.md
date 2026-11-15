@@ -288,7 +288,7 @@ UI „karta dárce“ · Code: `frontend/src/app/features/admin/donor-detail/`.\
 The administration page of one donor: account, bank accounts, donations, receipts and the actions on them.
 
 **Audit trail**\
-UI „Historie změn“ · Code: `shared/application/audit/AdminActionTrail`, event `AdminActionPerformed`, `admin_action`; its facts `AdminActionPerformed.Facts` (`admin_action.facts`), read by `donors/application/AdminActionFacts`.\
+UI „Historie změn“ · Code: `shared/application/audit/AdminActionTrail` (read), `shared/infrastructure/audit/AdminActionTrailWriter` (write), event `AdminActionPerformed`, `admin_action`; its facts `AdminActionPerformed.Facts` (`admin_action.facts`), read by `donors/application/AdminActionFacts`.\
 The record of every change by an administrator or a connected application, as a Czech sentence with who and when, written from the facts each change publishes (a summary key and named values).\
 _Avoid_: log (logs are the server's files under „Logy a diagnostika“)
 
