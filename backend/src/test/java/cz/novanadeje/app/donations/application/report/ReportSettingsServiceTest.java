@@ -66,6 +66,14 @@ class ReportSettingsServiceTest {
     }
 
     @Test
+    @DisplayName("Given saved recipients, when the report's recipients are asked for, then they are the saved ones in their order")
+    void should_answer_with_the_saved_recipients_when_asked_given_saved_settings() {
+        when(settings.current()).thenReturn(CHANGED);
+
+        assertThat(service.recipients()).isEqualTo(ReportRecipients.parse(List.of("pavel@example.cz", "jakub@example.cz")));
+    }
+
+    @Test
     @DisplayName("Given nothing saved and no report sent, when the view is asked for, then it shows the defaults and September due on the 1st of October")
     void should_show_defaults_and_overdue_september_when_viewed_given_nothing_saved() {
         ReportAdministrationView view = service.view();

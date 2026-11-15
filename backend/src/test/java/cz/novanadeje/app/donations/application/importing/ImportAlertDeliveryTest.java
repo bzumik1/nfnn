@@ -9,6 +9,10 @@ import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportOutage;
 import cz.novanadeje.app.donations.domain.importing.ImportRecovery;
 import cz.novanadeje.app.donations.domain.importing.WaitingImportAlert;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportSettings;
+import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
+import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,9 +50,13 @@ class ImportAlertDeliveryTest {
             new ImportOutage(ImportFailureKind.TRANSPORT, 3, Optional.of(Instant.parse("2026-10-17T10:00:00Z")), NOW.minusSeconds(3600)));
     private static final WaitingImportAlert RECOVERY = new WaitingImportAlert(UUID.fromString("01a18e56-bdb0-775a-bd0a-a60756831302"),
             new ImportRecovery(ImportFailureKind.TRANSPORT, 4, Optional.of(Instant.parse("2026-10-17T10:00:00Z")), NOW));
+    private static final ReportRecipients RECIPIENTS = ReportRecipients.parse(List.of("pavel@example.cz", "info@nfnn.cz"));
+    private static final ReportSettings SETTINGS = withRecipients(RECIPIENTS);
 
     @Mock
     private ImportAlertRepository alerts;
+    @Mock
+    private ReportSettingsRepository settings;
     @Mock
     private ImportAlertSender sender;
 
@@ -59,7 +67,7 @@ class ImportAlertDeliveryTest {
     @BeforeEach
     void setUp() {
         transactions = new RecordingTransactions();
-        delivery = new ImportAlertDelivery(alerts, sender, transactions, new MutableClock(NOW, ZoneId.of("UTC")));
+        delivery = new ImportAlertDelivery(alerts, settings, sender, transactions, new MutableClock(NOW, ZoneId.of("UTC")));
         logged = new ListAppender<>();
         logged.start();
         logger().addAppender(logged);
@@ -77,7 +85,7 @@ class ImportAlertDeliveryTest {
 
         delivery.deliverWaiting();
 
-        verifyNoInteractions(sender);
+        verifyNoInteractions(sender, settings);
         verify(alerts, never()).markSent(any(), any());
     }
 
@@ -85,22 +93,41 @@ class ImportAlertDeliveryTest {
     @DisplayName("Given two waiting alerts, when both are accepted, then they are sent oldest first and each is marked sent after its sending")
     void should_send_oldest_first_and_mark_each_when_delivered_given_mail_server_accepts() {
         when(alerts.waiting()).thenReturn(List.of(OUTAGE, RECOVERY));
-        when(sender.send(any())).thenReturn(true);
+        when(settings.current()).thenReturn(SETTINGS);
+        when(sender.send(any(), any())).thenReturn(true);
 
         delivery.deliverWaiting();
 
         InOrder order = inOrder(sender, alerts);
-        order.verify(sender).send(OUTAGE.alert());
+        order.verify(sender).send(OUTAGE.alert(), RECIPIENTS);
         order.verify(alerts).markSent(OUTAGE.id(), NOW);
-        order.verify(sender).send(RECOVERY.alert());
+        order.verify(sender).send(RECOVERY.alert(), RECIPIENTS);
         order.verify(alerts).markSent(RECOVERY.id(), NOW);
+    }
+
+    @Test
+    @DisplayName("Given two waiting alerts and the report's recipients, when the alerts are delivered, then the recipients are read once inside a transaction and both alerts go to them")
+    void should_send_every_alert_to_the_report_recipients_read_in_a_transaction_when_delivered_given_two_waiting_alerts() {
+        when(alerts.waiting()).thenReturn(List.of(OUTAGE, RECOVERY));
+        when(settings.current()).thenAnswer(reading -> {
+            assertThat(transactions.open()).as("recipients read inside a transaction").isTrue();
+            return SETTINGS;
+        });
+        when(sender.send(any(), any())).thenReturn(true);
+
+        delivery.deliverWaiting();
+
+        verify(settings).current();
+        verify(sender).send(OUTAGE.alert(), RECIPIENTS);
+        verify(sender).send(RECOVERY.alert(), RECIPIENTS);
     }
 
     @Test
     @DisplayName("Given a waiting alert, when it is delivered, then it is sent outside any transaction and marked sent inside one")
     void should_send_outside_and_mark_inside_a_transaction_when_delivered_given_a_waiting_alert() {
         when(alerts.waiting()).thenReturn(List.of(OUTAGE));
-        when(sender.send(OUTAGE.alert())).thenAnswer(sending -> !transactions.open());
+        when(settings.current()).thenReturn(SETTINGS);
+        when(sender.send(OUTAGE.alert(), RECIPIENTS)).thenAnswer(sending -> !transactions.open());
         doAnswer(marking -> {
             assertThat(transactions.open()).as("marked inside a transaction").isTrue();
             return null;
@@ -115,11 +142,12 @@ class ImportAlertDeliveryTest {
     @DisplayName("Given a mail server that refuses the first alert, when the alerts are delivered, then nothing is marked, the later alert waits too and a warning says it is retried")
     void should_keep_every_alert_waiting_when_delivered_given_mail_server_refuses() {
         when(alerts.waiting()).thenReturn(List.of(OUTAGE, RECOVERY));
-        when(sender.send(OUTAGE.alert())).thenReturn(false);
+        when(settings.current()).thenReturn(SETTINGS);
+        when(sender.send(OUTAGE.alert(), RECIPIENTS)).thenReturn(false);
 
         delivery.deliverWaiting();
 
-        verify(sender, never()).send(RECOVERY.alert());
+        verify(sender, never()).send(RECOVERY.alert(), RECIPIENTS);
         verify(alerts, never()).markSent(any(), any());
         assertThat(logged.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
@@ -144,6 +172,11 @@ class ImportAlertDeliveryTest {
         boolean open() {
             return open;
         }
+    }
+
+    private static ReportSettings withRecipients(ReportRecipients recipients) {
+        ReportSettings defaults = ReportSettings.defaults(new EmailAddress("info@nfnn.cz"));
+        return new ReportSettings(recipients, defaults.sendDay(), defaults.sendHour(), defaults.sections());
     }
 
     private static Logger logger() {

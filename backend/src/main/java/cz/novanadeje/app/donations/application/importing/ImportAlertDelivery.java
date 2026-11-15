@@ -2,12 +2,15 @@ package cz.novanadeje.app.donations.application.importing;
 
 import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.WaitingImportAlert;
+import cz.novanadeje.app.donations.domain.report.ReportRecipients;
+import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Clock;
+import java.util.List;
 
 @Service
 public class ImportAlertDelivery {
@@ -15,24 +18,32 @@ public class ImportAlertDelivery {
     private static final Logger log = LoggerFactory.getLogger(ImportAlertDelivery.class);
 
     private final ImportAlertRepository alerts;
+    private final ReportSettingsRepository reportSettings;
     private final ImportAlertSender sender;
     private final TransactionOperations transactions;
     private final Clock clock;
 
-    public ImportAlertDelivery(ImportAlertRepository alerts, ImportAlertSender sender, TransactionOperations transactions, Clock clock) {
+    public ImportAlertDelivery(ImportAlertRepository alerts, ReportSettingsRepository reportSettings, ImportAlertSender sender,
+                               TransactionOperations transactions, Clock clock) {
         this.alerts = alerts;
+        this.reportSettings = reportSettings;
         this.sender = sender;
         this.transactions = transactions;
         this.clock = clock;
     }
 
     public void deliverWaiting() {
-        for (WaitingImportAlert waiting : alerts.waiting()) {
-            if (!sender.send(waiting.alert())) {
-                log.warn("Fio import alert {} was not delivered; it is sent again after the next import", waiting.id());
+        List<WaitingImportAlert> waiting = alerts.waiting();
+        if (waiting.isEmpty()) {
+            return;
+        }
+        ReportRecipients recipients = transactions.execute(status -> reportSettings.current().recipients());
+        for (WaitingImportAlert alert : waiting) {
+            if (!sender.send(alert.alert(), recipients)) {
+                log.warn("Fio import alert {} was not delivered; it is sent again after the next import", alert.id());
                 return;
             }
-            transactions.executeWithoutResult(status -> alerts.markSent(waiting.id(), clock.instant()));
+            transactions.executeWithoutResult(status -> alerts.markSent(alert.id(), clock.instant()));
         }
     }
 }
