@@ -12,6 +12,10 @@ import {
 } from './device-storage';
 
 const DEVICE_SALT = 'device-salt';
+const LOST_CONNECTION_FAILURES: ReadonlySet<string> = new Set([
+  'UnknownError',
+  'InvalidStateError',
+]);
 
 interface DeviceSchema extends DBSchema {
   meta: { key: string; value: string };
@@ -22,7 +26,9 @@ interface DeviceSchema extends DBSchema {
 }
 
 type DeviceDatabase = IDBPDatabase<DeviceSchema>;
-type StoreNames = ('meta' | 'copies' | 'session-keys' | 'records' | 'drafts')[];
+type StoreName = 'meta' | 'copies' | 'session-keys' | 'records' | 'drafts';
+type StoreNames = StoreName[];
+type ReadStore<Name extends StoreName> = IDBPObjectStore<DeviceSchema, [Name], Name, 'readonly'>;
 type RecordStore<Name extends 'records' | 'drafts'> = IDBPObjectStore<
   DeviceSchema,
   StoreNames,
@@ -73,88 +79,36 @@ export class IdbDeviceStorage implements DeviceStorage {
   }
 
   async deviceSalt(): Promise<string | null> {
-    return (await (await this.opened()).get('meta', DEVICE_SALT)) ?? null;
+    return (await this.read('meta', (store) => store.get(DEVICE_SALT))) ?? null;
   }
 
-  async entries(): Promise<readonly RegistryEntry[]> {
-    return (await this.opened()).getAll('copies');
+  entries(): Promise<readonly RegistryEntry[]> {
+    return this.read('copies', (store) => store.getAll());
   }
 
   async sessionKey(copyId: string): Promise<CryptoKey | null> {
-    return (await (await this.opened()).get('session-keys', copyId))?.key ?? null;
+    return (await this.read('session-keys', (store) => store.get(copyId)))?.key ?? null;
   }
 
-  async records(copyId: string): Promise<readonly StoredRecord[]> {
-    return (await this.opened()).getAllFromIndex('records', 'copyId', copyId);
+  records(copyId: string): Promise<readonly StoredRecord[]> {
+    return this.read('records', (store) => store.index('copyId').getAll(copyId));
   }
 
-  async drafts(copyId: string): Promise<readonly StoredRecord[]> {
-    return (await this.opened()).getAllFromIndex('drafts', 'copyId', copyId);
+  drafts(copyId: string): Promise<readonly StoredRecord[]> {
+    return this.read('drafts', (store) => store.index('copyId').getAll(copyId));
   }
 
   async write(change: StorageChange): Promise<void> {
-    const database = await this.opened();
-    const transaction = database.transaction(
-      ['meta', 'copies', 'session-keys', 'records', 'drafts'],
-      'readwrite',
-    );
-    const done = transaction.done;
-    const writes: Promise<unknown>[] = [];
+    const opening = this.opened();
+    const database = await opening;
     try {
-      const meta = transaction.objectStore('meta');
-      const copies = transaction.objectStore('copies');
-      const sessionKeys = transaction.objectStore('session-keys');
-      const records = transaction.objectStore('records');
-      const drafts = transaction.objectStore('drafts');
-      if (change.deviceSalt === null) {
-        writes.push(meta.delete(DEVICE_SALT));
-      } else if (change.deviceSalt !== undefined) {
-        writes.push(meta.put(change.deviceSalt, DEVICE_SALT));
-      }
-      for (const copyId of change.deleteCopies ?? []) {
-        writes.push(copies.delete(copyId), sessionKeys.delete(copyId));
-        writes.push(deleteRecordsOf(records, copyId), deleteRecordsOf(drafts, copyId));
-      }
-      for (const entry of change.putEntries ?? []) {
-        writes.push(copies.put(entry));
-      }
-      for (const copyId of change.deleteSessionKeys ?? []) {
-        writes.push(sessionKeys.delete(copyId));
-      }
-      for (const sessionKey of change.putSessionKeys ?? []) {
-        writes.push(sessionKeys.put(sessionKey));
-      }
-      const replacement = change.replaceRecords;
-      if (replacement !== undefined) {
-        await deleteRecordsOf(records, replacement.copyId);
-        for (const record of replacement.records) {
-          if (record.copyId !== replacement.copyId) {
-            throw new RangeError('A replacement holds records of its own copy only');
-          }
-          writes.push(records.put(record));
-        }
-      }
-      for (const { copyId, recordId } of change.deleteDrafts ?? []) {
-        writes.push(drafts.delete([copyId, recordId]));
-      }
-      const deleted = new Set(change.deleteCopies ?? []);
-      const added = new Set((change.putEntries ?? []).map((entry) => entry.copyId));
-      for (const draft of change.putDrafts ?? []) {
-        if (
-          deleted.has(draft.copyId) ||
-          (!added.has(draft.copyId) && !(await copies.get(draft.copyId)))
-        ) {
-          throw new RangeError('A draft belongs to a copy the registry holds');
-        }
-        writes.push(drafts.put(draft));
-      }
-      await Promise.all(writes);
+      await writeChange(database, change);
     } catch (failure: unknown) {
-      abortQuietly(transaction);
-      await Promise.allSettled([...writes, done]);
+      if (isLostConnection(failure)) {
+        this.closeIfCurrent(opening);
+      }
       throw failure;
     }
-    await done;
   }
 
   async destroy(): Promise<void> {
@@ -166,6 +120,29 @@ export class IdbDeviceStorage implements DeviceStorage {
     const database = this.database;
     this.database = null;
     void database?.then((opened) => opened.close()).catch(() => undefined);
+  }
+
+  private async read<Name extends StoreName, Value>(
+    name: Name,
+    request: (store: ReadStore<Name>) => Promise<Value>,
+  ): Promise<Value> {
+    const opening = this.opened();
+    const database = await opening;
+    try {
+      return await readOnce(database, name, request);
+    } catch (failure: unknown) {
+      if (!isLostConnection(failure)) {
+        throw failure;
+      }
+      this.closeIfCurrent(opening);
+      return readOnce(await this.opened(), name, request);
+    }
+  }
+
+  private closeIfCurrent(opening: Promise<DeviceDatabase>): void {
+    if (this.database === opening) {
+      this.close();
+    }
   }
 
   private opened(): Promise<DeviceDatabase> {
@@ -205,6 +182,84 @@ export class IdbDeviceStorage implements DeviceStorage {
     }
     return this.database;
   }
+}
+
+async function writeChange(database: DeviceDatabase, change: StorageChange): Promise<void> {
+  const transaction = database.transaction(
+    ['meta', 'copies', 'session-keys', 'records', 'drafts'],
+    'readwrite',
+  );
+  const done = transaction.done;
+  const writes: Promise<unknown>[] = [];
+  try {
+    const meta = transaction.objectStore('meta');
+    const copies = transaction.objectStore('copies');
+    const sessionKeys = transaction.objectStore('session-keys');
+    const records = transaction.objectStore('records');
+    const drafts = transaction.objectStore('drafts');
+    if (change.deviceSalt === null) {
+      writes.push(meta.delete(DEVICE_SALT));
+    } else if (change.deviceSalt !== undefined) {
+      writes.push(meta.put(change.deviceSalt, DEVICE_SALT));
+    }
+    for (const copyId of change.deleteCopies ?? []) {
+      writes.push(copies.delete(copyId), sessionKeys.delete(copyId));
+      writes.push(deleteRecordsOf(records, copyId), deleteRecordsOf(drafts, copyId));
+    }
+    for (const entry of change.putEntries ?? []) {
+      writes.push(copies.put(entry));
+    }
+    for (const copyId of change.deleteSessionKeys ?? []) {
+      writes.push(sessionKeys.delete(copyId));
+    }
+    for (const sessionKey of change.putSessionKeys ?? []) {
+      writes.push(sessionKeys.put(sessionKey));
+    }
+    const replacement = change.replaceRecords;
+    if (replacement !== undefined) {
+      await deleteRecordsOf(records, replacement.copyId);
+      for (const record of replacement.records) {
+        if (record.copyId !== replacement.copyId) {
+          throw new RangeError('A replacement holds records of its own copy only');
+        }
+        writes.push(records.put(record));
+      }
+    }
+    for (const { copyId, recordId } of change.deleteDrafts ?? []) {
+      writes.push(drafts.delete([copyId, recordId]));
+    }
+    const deleted = new Set(change.deleteCopies ?? []);
+    const added = new Set((change.putEntries ?? []).map((entry) => entry.copyId));
+    for (const draft of change.putDrafts ?? []) {
+      if (
+        deleted.has(draft.copyId) ||
+        (!added.has(draft.copyId) && !(await copies.get(draft.copyId)))
+      ) {
+        throw new RangeError('A draft belongs to a copy the registry holds');
+      }
+      writes.push(drafts.put(draft));
+    }
+    await Promise.all(writes);
+  } catch (failure: unknown) {
+    abortQuietly(transaction);
+    await Promise.allSettled([...writes, done]);
+    throw failure;
+  }
+  await done;
+}
+
+async function readOnce<Name extends StoreName, Value>(
+  database: DeviceDatabase,
+  name: Name,
+  request: (store: ReadStore<Name>) => Promise<Value>,
+): Promise<Value> {
+  const transaction = database.transaction(name, 'readonly');
+  const [value] = await Promise.all([request(transaction.store), transaction.done]);
+  return value;
+}
+
+function isLostConnection(failure: unknown): boolean {
+  return failure instanceof DOMException && LOST_CONNECTION_FAILURES.has(failure.name);
 }
 
 async function deleteRecordsOf(
