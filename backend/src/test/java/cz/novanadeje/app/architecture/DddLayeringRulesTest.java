@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -136,7 +137,7 @@ class DddLayeringRulesTest {
             type -> layerOf(type).filter("infrastructure"::equals).isPresent()
                     && !DRIVING_PORT_IMPLEMENTERS.containsKey(type.getName())
                     && portsOf(type).anyMatch(port -> isPortOfTheContextOf(port, type)));
-    private static final DescribedPredicate<JavaClass> APPLICATION_SERVICES = DescribedPredicate.describe(
+    static final DescribedPredicate<JavaClass> APPLICATION_SERVICES = DescribedPredicate.describe(
             "are application services (Spring beans of an application package)",
             type -> !type.isInterface() && layerOf(type).filter("application"::equals).isPresent() && type.isMetaAnnotatedWith(Component.class));
 
@@ -852,7 +853,7 @@ class DddLayeringRulesTest {
         return layerOf(type).filter("infrastructure"::equals).isPresent();
     }
 
-    private static Optional<String> layerOf(JavaClass type) {
+    static Optional<String> layerOf(JavaClass type) {
         Matcher matcher = CONTEXT_OF_PACKAGE.matcher(type.getPackageName());
         return matcher.matches() ? Optional.of(matcher.group(2)) : Optional.empty();
     }
@@ -861,7 +862,7 @@ class DddLayeringRulesTest {
         return Stream.concat(type.getAllRawInterfaces().stream(), type.getAllRawSuperclasses().stream());
     }
 
-    private static boolean isPortOfTheContextOf(JavaClass port, JavaClass adapter) {
+    static boolean isPortOfTheContextOf(JavaClass port, JavaClass adapter) {
         Matcher portPackage = CONTEXT_OF_PACKAGE.matcher(port.getPackageName());
         Matcher adapterPackage = CONTEXT_OF_PACKAGE.matcher(adapter.getPackageName());
         if (!portPackage.matches() || !adapterPackage.matches() || "infrastructure".equals(portPackage.group(2))) {
@@ -881,22 +882,35 @@ class DddLayeringRulesTest {
         return new ArchCondition<>("depend on " + APPLICATION_SERVICES.getDescription() + ", directly or through the infrastructure of their context") {
             @Override
             public void check(JavaClass adapter, ConditionEvents events) {
-                Set<JavaClass> seen = new HashSet<>(Set.of(adapter));
-                Deque<JavaClass> pending = new ArrayDeque<>(Set.of(adapter));
-                while (!pending.isEmpty()) {
-                    JavaClass current = pending.poll();
-                    for (Dependency dependency : current.getDirectDependenciesFromSelf()) {
-                        JavaClass target = dependency.getTargetClass();
-                        if (APPLICATION_SERVICES.test(target)) {
-                            String through = current.equals(adapter) ? "" : " through " + current.getName();
-                            events.add(SimpleConditionEvent.satisfied(adapter, adapter.getName() + through + " depends on " + target.getName()));
-                        } else if (inTheInfrastructureOfTheContextOf(target, adapter) && seen.add(target)) {
-                            pending.add(target);
-                        }
-                    }
-                }
+                List<JavaClass> dependencies = adapter.getDirectDependenciesFromSelf().stream().map(Dependency::getTargetClass).toList();
+                applicationServicesReachedFrom(dependencies, adapter)
+                        .forEach(reach -> events.add(SimpleConditionEvent.satisfied(adapter, adapter.getName() + " depends on " + reach)));
             }
         };
+    }
+
+    static List<String> applicationServicesReachedFrom(List<JavaClass> targets, JavaClass origin) {
+        List<String> reaches = new ArrayList<>();
+        Set<JavaClass> seen = new HashSet<>(Set.of(origin));
+        Deque<JavaClass> pending = new ArrayDeque<>();
+        collectReaches(targets, "", origin, seen, pending, reaches);
+        while (!pending.isEmpty()) {
+            JavaClass current = pending.poll();
+            List<JavaClass> dependencies = current.getDirectDependenciesFromSelf().stream().map(Dependency::getTargetClass).toList();
+            collectReaches(dependencies, " through " + current.getName(), origin, seen, pending, reaches);
+        }
+        return reaches;
+    }
+
+    private static void collectReaches(List<JavaClass> targets, String through, JavaClass origin, Set<JavaClass> seen, Deque<JavaClass> pending,
+                                       List<String> reaches) {
+        for (JavaClass target : targets) {
+            if (APPLICATION_SERVICES.test(target)) {
+                reaches.add(target.getName() + through);
+            } else if (inTheInfrastructureOfTheContextOf(target, origin) && seen.add(target)) {
+                pending.add(target);
+            }
+        }
     }
 
     private static boolean inTheInfrastructureOfTheContextOf(JavaClass type, JavaClass adapter) {
