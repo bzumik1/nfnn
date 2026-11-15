@@ -78,6 +78,7 @@ test.describe('Given the app whose own service worker controls the page with not
     context,
     site,
   }) => {
+    await expect.poll(() => badges(page)).toEqual([null]);
     const cdp = await context.newCDPSession(page);
     const origin = new URL(site.url).origin;
     const registrationId = await workerRegistrationId(cdp, `${origin}/`);
@@ -101,7 +102,7 @@ test.describe('Given the app whose own service worker controls the page with not
           data: outage.notification.data,
         },
       ]);
-    await expect.poll(() => badges(page)).toEqual([1]);
+    await expect.poll(() => badges(page)).toEqual([null, 1]);
 
     const recovered = alertMessage('backups-recovered', 0);
     recovered.notification.title = 'Zálohy zase fungují';
@@ -122,7 +123,7 @@ test.describe('Given the app whose own service worker controls the page with not
           data: recovered.notification.data,
         },
       ]);
-    await expect.poll(() => badges(page)).toEqual([1, null]);
+    await expect.poll(() => badges(page)).toEqual([null, 1, null]);
     await cdp.detach();
   });
 });

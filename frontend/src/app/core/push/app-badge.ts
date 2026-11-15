@@ -1,5 +1,13 @@
 import { DOCUMENT } from '@angular/common';
-import { DestroyRef, effect, inject, Injectable, Injector } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  Injector,
+  untracked,
+} from '@angular/core';
 
 import { AuthStore } from '../auth/auth-store';
 
@@ -13,14 +21,17 @@ interface BadgeNavigator {
 
 @Injectable({ providedIn: 'root' })
 export class AppBadge {
-  private readonly navigator = inject(DOCUMENT).defaultView?.navigator as
+  private readonly document = inject(DOCUMENT);
+  private readonly navigator = this.document.defaultView?.navigator as
     (Navigator & BadgeNavigator) | undefined;
   private readonly push = inject(SERVICE_WORKER_PUSH);
   private readonly auth = inject(AuthStore);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private started = false;
-  private wasAdmin = false;
+  private readonly seesNoAlerts = computed(
+    () => this.auth.status() !== 'unknown' && !this.auth.waitsSignedOut() && !this.auth.isAdmin(),
+  );
 
   start(): void {
     if (this.started) {
@@ -33,14 +44,21 @@ export class AppBadge {
         this.show(count);
       }
     });
-    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+    const resumed = (): void => {
+      if (this.document.visibilityState === 'visible' && this.seesNoAlerts()) {
+        this.show(0);
+      }
+    };
+    this.document.addEventListener('visibilitychange', resumed);
+    this.destroyRef.onDestroy(() => {
+      subscription.unsubscribe();
+      this.document.removeEventListener('visibilitychange', resumed);
+    });
     effect(
       () => {
-        const admin = this.auth.isAdmin();
-        if (this.wasAdmin && !admin) {
-          this.show(0);
+        if (this.seesNoAlerts()) {
+          untracked(() => this.show(0));
         }
-        this.wasAdmin = admin;
       },
       { injector: this.injector },
     );
