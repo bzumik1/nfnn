@@ -13,6 +13,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.ConversionNotSupportedException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.core.MethodParameter;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -27,6 +29,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.method.MethodValidationException;
+import org.springframework.validation.method.MethodValidationResult;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.ErrorResponseException;
@@ -36,20 +41,25 @@ import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.UnsatisfiedServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +90,20 @@ class ProblemTextsTest {
             HttpRequestMethodNotSupportedException.class, HttpMediaTypeNotSupportedException.class, ConversionNotSupportedException.class,
             HttpMessageNotReadableException.class);
 
+    private static final Map<Class<? extends Exception>, String> SPRING_ANSWERS_WITH_SPRING_TEXTS = Map.of(
+            HttpMediaTypeNotAcceptableException.class,
+            "406 names the media types the server produces or that the Accept header could not be parsed, never the header itself",
+            MissingPathVariableException.class, "500 names the handler's own path variable, a server's mistake the client cannot cause",
+            MissingServletRequestPartException.class, "400 names the part the handler requires, never what the client sent",
+            ServletRequestBindingException.class,
+            "400 names the header, cookie or parameter the handler requires and its conditions, never the value the client sent",
+            AsyncRequestTimeoutException.class, "503 with Spring's status title and no detail",
+            HttpMessageNotWritableException.class, "500 with Spring's fixed sentence, which names no value",
+            MethodValidationException.class, "500 with Spring's fixed sentence, which names no value",
+            AsyncRequestNotUsableException.class, "the client went away, so no answer is written");
+
+    private static final List<String> KEYS_READ_WITHOUT_THE_CZECH_FALLBACK = List.of("problem.validation.title", "problem.validation.detail");
+
     private static final Map<String, Supplier<Exception>> FAILURES = Map.ofEntries(
             Map.entry("illegal-argument", () -> new IllegalArgumentException(EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
             Map.entry("rule-without-texts", () -> new ProbeRuleViolation("donors/probe-without-texts", EXCEPTION_TEXT + ": " + CLIENT_VALUE)),
@@ -108,7 +132,8 @@ class ProblemTextsTest {
             Map.entry("error-response", ProblemTextsTest::errorResponseWithDetail),
             Map.entry("missing-parameter", () -> new MissingServletRequestParameterException("mode", "String")),
             Map.entry("missing-path-variable", () -> new MissingPathVariableException("kind", probeParameter())),
-            Map.entry("missing-part", () -> new MissingServletRequestPartException("file")));
+            Map.entry("missing-part", () -> new MissingServletRequestPartException("file")),
+            Map.entry("method-validation", () -> new MethodValidationException(methodValidationResult())));
 
     private static final Map<String, RequestBuilder> REQUESTS = Map.of(
             "invalid-field", post("/probe/record").contentType(MediaType.APPLICATION_JSON).content("{\"value\": \"" + CLIENT_VALUE + "\"}"),
@@ -330,6 +355,28 @@ class ProblemTextsTest {
     }
 
     @Test
+    @DisplayName("Given the base bundle a third language falls back to, when the texts Spring's own answers and UndecodableTargetFilter read without the Czech fallback are looked up in it, then it holds each")
+    void should_hold_every_text_read_without_the_czech_fallback_when_looked_up_given_the_base_bundle() {
+        List<String> missing = ProblemTextCatalogue.missingWithoutTheCzechFallback(baseBundle(), SPRING_ANSWERS_WITH_SITE_TEXTS,
+                KEYS_READ_WITHOUT_THE_CZECH_FALLBACK);
+
+        assertThat(missing).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given every failure Spring's ResponseEntityExceptionHandler answers, when each is classified, then it has site texts, a handler of ApiExceptionHandler or a reviewed reason to keep Spring's text")
+    void should_classify_every_failure_when_classified_given_the_failures_spring_answers() throws NoSuchMethodException {
+        List<Class<? extends Throwable>> answered = List.of(ResponseEntityExceptionHandler.class
+                .getMethod("handleException", Exception.class, WebRequest.class).getAnnotation(ExceptionHandler.class).value());
+
+        assertThat(answered).filteredOn(type -> !SPRING_ANSWERS_WITH_SITE_TEXTS.contains(type) && !SPRING_ANSWERS_WITH_SPRING_TEXTS.containsKey(type)
+                && !answeredByAnOverride(type)).isEmpty();
+        assertThat(SPRING_ANSWERS_WITH_SPRING_TEXTS.keySet()).allSatisfy(type -> assertThat(answered).contains(type))
+                .noneMatch(type -> SPRING_ANSWERS_WITH_SITE_TEXTS.contains(type) || answeredByAnOverride(type));
+        assertThat(SPRING_ANSWERS_WITH_SITE_TEXTS).allSatisfy(type -> assertThat(answered).contains(type));
+    }
+
+    @Test
     @DisplayName("Given the reviewed texts kept without a reader, when the bundles and the handlers are read, then each prefix still has texts that nothing reads, so the list names nothing that is gone or read again")
     void should_find_texts_nothing_reads_under_every_kept_prefix_when_read_given_the_reviewed_list() {
         ProblemTextCatalogue catalogue = ProblemTextCatalogue.ofMainClasses(SPRING_ANSWERS_WITH_SITE_TEXTS);
@@ -338,6 +385,14 @@ class ProblemTextsTest {
 
         assertThat(TEXTS_KEPT_WITHOUT_A_READER.keySet())
                 .allSatisfy(prefix -> assertThat(orphans).anySatisfy(orphan -> assertThat(orphan).startsWith(prefix)));
+    }
+
+    private static boolean answeredByAnOverride(Class<?> failure) {
+        return Stream.of(ResponseEntityExceptionHandler.class.getDeclaredMethods())
+                .filter(method -> !method.getName().equals("handleException") && method.getParameterCount() > 0 && method.getParameterTypes()[0] == failure)
+                .anyMatch(method -> Stream.of(ApiExceptionHandler.class.getDeclaredMethods())
+                        .anyMatch(override -> override.getName().equals(method.getName())
+                                && Arrays.equals(override.getParameterTypes(), method.getParameterTypes())));
     }
 
     private static Properties bundle(String language) {
@@ -370,6 +425,13 @@ class ProblemTextsTest {
         } catch (NoSuchMethodException missing) {
             throw new IllegalStateException(missing);
         }
+    }
+
+    private static MethodValidationResult methodValidationResult() {
+        MessageSourceResolvable error = new DefaultMessageSourceResolvable(new String[]{"Size"}, EXCEPTION_TEXT + ": " + CLIENT_VALUE);
+        ParameterValidationResult parameter = new ParameterValidationResult(probeParameter(), CLIENT_VALUE, List.of(error), null, null, null,
+                (resolvable, type) -> null);
+        return MethodValidationResult.create(new ProbeController(), probeParameter().getMethod(), List.of(parameter));
     }
 
     private static String bodyOf(MvcResult result) throws Exception {

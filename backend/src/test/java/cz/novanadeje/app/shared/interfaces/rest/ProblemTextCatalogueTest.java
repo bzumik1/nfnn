@@ -47,6 +47,14 @@ class ProblemTextCatalogueTest {
             problem.donors/planted-nested.detail=Vnořený kód
             problem.donors/planted-own.title=Vlastní
             problem.donors/planted-own.detail=Vlastní kód
+            problem.donors/planted-weak.title=Slabé
+            problem.donors/planted-weak.detail=Slabé heslo
+            problem.donors/planted-stripped.title=Oříznuté
+            problem.donors/planted-stripped.detail=Oříznutý kód
+            problem.donors/planted-checked.title=Ověřené
+            problem.donors/planted-checked.detail=Ověřený kód
+            problem.donors/planted-factory.title=Z továrny
+            problem.donors/planted-factory.detail=Kód z továrny
             problemDetail.title.org.springframework.web.servlet.resource.NoResourceFoundException=Nenalezeno
             problemDetail.org.springframework.web.servlet.resource.NoResourceFoundException=Na této adrese nic není.
             problemDetail.title.cz.novanadeje.app.planted.GoneException=Pryč
@@ -65,6 +73,14 @@ class ProblemTextCatalogueTest {
             problem.donors/planted-nested.detail=Nested code
             problem.donors/planted-own.title=Own
             problem.donors/planted-own.detail=Own code
+            problem.donors/planted-weak.title=Weak
+            problem.donors/planted-weak.detail=Weak password
+            problem.donors/planted-stripped.title=Stripped
+            problem.donors/planted-stripped.detail=Stripped code
+            problem.donors/planted-checked.title=Checked
+            problem.donors/planted-checked.detail=Checked code
+            problem.donors/planted-factory.title=Factory
+            problem.donors/planted-factory.detail=Factory code
             problemDetail.title.org.springframework.web.servlet.resource.NoResourceFoundException=Not found
             problemDetail.org.springframework.web.servlet.resource.NoResourceFoundException=There is nothing at this address.
             problemDetail.title.cz.novanadeje.app.planted.interfaces.rest.PlantedUnavailable=Unavailable
@@ -113,6 +129,36 @@ class ProblemTextCatalogueTest {
                                 public static final String CODE = "donors/planted-own";
                                 public OwnCodeForwarded() { this(CODE); }
                                 public OwnCodeForwarded(String code) { super(code, "Not found"); }
+                            }
+                            """),
+                    planted("domain.WeakWord", """
+                            public class WeakWord extends cz.novanadeje.app.shared.domain.error.RuleViolation {
+                                private WeakWord(String code, String message) { super(code, message); }
+                                public static WeakWord tooShort() { return new WeakWord("donors/planted-weak", "Too short"); }
+                                public static WeakWord weak() { return new WeakWord("weak", "Too weak"); }
+                                public static WeakWord spaced() { return new WeakWord("donors/planted-weak ", "Too weak"); }
+                            }
+                            """),
+                    planted("domain.StrippedCode", """
+                            public class StrippedCode extends cz.novanadeje.app.shared.domain.error.Conflict {
+                                public static final String CODE = "donors/planted-stripped";
+                                public StrippedCode() { this(CODE); }
+                                public StrippedCode(String code) { super(code.strip(), "Refused"); }
+                            }
+                            """),
+                    planted("domain.CheckedCode", """
+                            public class CheckedCode extends cz.novanadeje.app.shared.domain.error.Conflict {
+                                public static final String CODE = "donors/planted-checked";
+                                public CheckedCode() { this(CODE); }
+                                public CheckedCode(String code) { super(java.util.Objects.requireNonNull(code), "Refused"); }
+                            }
+                            """),
+                    planted("domain.FactoryForwarded", """
+                            public class FactoryForwarded extends cz.novanadeje.app.shared.domain.error.NotFound {
+                                public static final String CODE = "donors/planted-factory";
+                                private FactoryForwarded(String code) { super(code, "Not found"); }
+                                public static FactoryForwarded of(String code) { return new FactoryForwarded(code); }
+                                public static FactoryForwarded planted() { return of(CODE); }
                             }
                             """),
                     planted("interfaces.rest.PlantedUnavailable", """
@@ -193,7 +239,8 @@ class ProblemTextCatalogueTest {
         void should_find_every_constant_code_when_read_given_codes_the_source_pattern_missed() {
             assertThat(catalogue.codes())
                     .containsExactlyInAnyOrder("operations/backup-v2/too-old", "shared/planted-refusal", "donors/planted-stale", "donors/planted-joined",
-                            "donors/planted-nested", "donors/planted-own");
+                            "donors/planted-nested", "donors/planted-own", "donors/planted-weak", "donors/planted-stripped", "donors/planted-checked",
+                            "donors/planted-factory");
         }
 
         @Test
@@ -214,7 +261,8 @@ class ProblemTextCatalogueTest {
         void should_report_irregular_codes_when_read_given_a_code_built_at_run_time_and_one_with_uppercase() {
             assertThat(catalogue.irregularCodes())
                     .containsExactlyInAnyOrder(PLANTED + "domain.RunTimeCode: donors/…", PLANTED + "domain.UppercaseCode: donors/Planted_Code",
-                            PLANTED + "domain.BareCode: password-too-predictable");
+                            PLANTED + "domain.BareCode: password-too-predictable", PLANTED + "domain.WeakWord: weak",
+                            PLANTED + "domain.WeakWord: donors/planted-weak ");
         }
 
         @Test
@@ -227,7 +275,22 @@ class ProblemTextCatalogueTest {
         @Test
         @DisplayName("when the constructors are read, then a concrete failure whose open constructor passes its own parameter as the code is reported, even beside a code of its own, and an abstract one is not")
         void should_report_a_constructor_forwarding_its_parameter_as_the_code_when_read_given_open_constructors() {
-            assertThat(catalogue.failuresForwardingACode()).containsExactlyInAnyOrder(PLANTED + "domain.ForwardedCode", PLANTED + "domain.OwnCodeForwarded");
+            assertThat(catalogue.failuresForwardingACode()).containsExactlyInAnyOrder(PLANTED + "domain.ForwardedCode", PLANTED + "domain.OwnCodeForwarded",
+                    PLANTED + "domain.CheckedCode", PLANTED + "domain.FactoryForwarded");
+        }
+
+        @Test
+        @DisplayName("when the code arguments are read where each failure is built, then a bare word and a code with a stray space passed to a private constructor are reported, and the private constructor that forwards them is not")
+        void should_report_a_code_argument_that_is_no_code_when_read_given_factories_of_a_private_forwarding_constructor() {
+            assertThat(catalogue.irregularCodes()).contains(PLANTED + "domain.WeakWord: weak", PLANTED + "domain.WeakWord: donors/planted-weak ");
+            assertThat(catalogue.failuresForwardingACode()).doesNotContain(PLANTED + "domain.WeakWord");
+        }
+
+        @Test
+        @DisplayName("when the code arguments are read, then a code a method call changes on the way (code.strip()) is not reported, the limit the scan names")
+        void should_not_report_a_code_changed_by_a_method_call_when_read_given_the_documented_limit() {
+            assertThat(catalogue.failuresForwardingACode()).doesNotContain(PLANTED + "domain.StrippedCode");
+            assertThat(catalogue.irregularCodes()).noneMatch(entry -> entry.startsWith(PLANTED + "domain.StrippedCode"));
         }
 
         @Test
@@ -254,6 +317,15 @@ class ProblemTextCatalogueTest {
                     "problemDetail.title." + UNAVAILABLE + " (cs)",
                     "problemDetail." + UNAVAILABLE + " (cs)");
             assertThat(bundle("messages_cs.properties").getProperty("problem.shared/planted-refusal.detail")).isEqualTo("Odmítnuto na dvou řádcích");
+        }
+
+        @Test
+        @DisplayName("when the base bundle is checked for the texts read without the Czech fallback, then an answer of Spring's with site texts whose texts it lacks is reported, and a key it holds is not")
+        void should_report_texts_the_base_lacks_when_checked_given_texts_read_without_the_czech_fallback() throws IOException {
+            List<String> missing = ProblemTextCatalogue.missingWithoutTheCzechFallback(bundle("messages.properties"), List.of(NoResourceFoundException.class),
+                    List.of("problem.donors/planted-stale.detail"));
+
+            assertThat(missing).containsExactlyInAnyOrder("problemDetail.title." + NO_RESOURCE, "problemDetail." + NO_RESOURCE);
         }
 
         @Test
