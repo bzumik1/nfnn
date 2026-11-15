@@ -89,6 +89,20 @@ class DddLayeringRulesTest {
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
             "its BankImportRequests methods only queue a run on the scheduler thread, which then drives the import as a scheduler");
+    private static final Map<String, String> PERSISTENCE_PORT_READERS = Map.of(
+            "cz.novanadeje.app.donors.infrastructure.account.AccountEmailsAdapter",
+            "answers the shared AccountEmails, which only application services of other contexts call, inside their own transactions",
+            "cz.novanadeje.app.donors.infrastructure.account.AdministrationHoldersAdapter",
+            "answers the shared AdministrationHolders, which only the sync services of other contexts call, inside their snapshot",
+            "cz.novanadeje.app.content.infrastructure.people.ContentFoundationPeople",
+            "answers the shared FoundationPeople, which only application services call, inside their transactions; findForUpdate locks the person "
+                    + "in the receipt issuer's transaction (backend.md, Application, deliberate exceptions) and the print images it prepares are adapter work",
+            "cz.novanadeje.app.operations.infrastructure.settings.SettingsKeyRecordSeals",
+            "checks a seal against the settings key a restored backup carried: key material for a cryptographic check, not a rule of a use case",
+            "cz.novanadeje.app.operations.infrastructure.settings.SettingsConfiguration",
+            "only hands the carried settings keys to SettingsKeyRecordSeals when it builds the RecordSeals bean");
+    private static final DescribedPredicate<JavaClass> REVIEWED_PERSISTENCE_PORT_READERS_APART = DescribedPredicate.describe(
+            "are not one of the reviewed persistence port readers", type -> !PERSISTENCE_PORT_READERS.containsKey(type.getName()));
     private static final DescribedPredicate<JavaClass> DRIVEN_ADAPTERS = DescribedPredicate.describe(
             "implement a port of their own context (an interface or abstract class of its application or domain, or a shared port its application "
                     + "or domain uses), the reviewed driving port implementers apart",
@@ -167,6 +181,15 @@ class DddLayeringRulesTest {
             .because(LAYERS);
 
     @ArchTest
+    static final ArchRule only_persistence_adapters_use_persistence_ports = noClasses()
+            .that().resideInAPackage("..infrastructure..")
+            .and().resideOutsideOfPackages(AdapterLibraryRulesTest.persistenceAdapters())
+            .and(REVIEWED_PERSISTENCE_PORT_READERS_APART)
+            .should().dependOnClassesThat(PORTS_THAT_PERSISTENCE_IMPLEMENTS)
+            .because("backend.md, Application: an adapter that is not a persistence adapter renders, sends or drives; what it needs from the "
+                    + "database an application service reads inside its transaction and hands it, so no rule hides in a mail or other adapter");
+
+    @ArchTest
     static final ArchRule driven_adapters_must_not_drive_a_use_case = noClasses()
             .that(DRIVEN_ADAPTERS)
             .should(dependOnAnApplicationServiceDirectlyOrThroughTheirInfrastructure())
@@ -187,6 +210,14 @@ class DddLayeringRulesTest {
     void should_find_every_driving_port_implementer_when_read_given_the_list() throws ClassNotFoundException {
         for (String implementer : DRIVING_PORT_IMPLEMENTERS.keySet()) {
             assertThat(Class.forName(implementer)).as(implementer).isNotNull();
+        }
+    }
+
+    @Test
+    @DisplayName("Given the reviewed persistence port readers, when they are read, then each exists, so the list names no class that is gone")
+    void should_find_every_reviewed_persistence_port_reader_when_read_given_the_list() throws ClassNotFoundException {
+        for (String reader : PERSISTENCE_PORT_READERS.keySet()) {
+            assertThat(Class.forName(reader)).as(reader).isNotNull();
         }
     }
 
@@ -296,6 +327,26 @@ class DddLayeringRulesTest {
                     planted("planteda.application.WebGiftService", "public class WebGiftService { org.springframework.http.HttpStatus status; }"),
                     planted("planteda.application.TextGiftService", "public class TextGiftService { org.springframework.context.MessageSource texts; }"),
                     planted("planteda.infrastructure.mail.GiftMailer", "public class GiftMailer {}"),
+                    planted("planteda.infrastructure.mail.GiftRecipientsMailer", """
+                            public class GiftRecipientsMailer {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.infrastructure.mail.PairingMailer", """
+                            public class PairingMailer {
+                                cz.novanadeje.app.planteda.application.GiftPairing pairing;
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.CachingGifts", """
+                            public class CachingGifts {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("donors.infrastructure.account.AccountEmailsAdapter", """
+                            class AccountEmailsAdapter {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
                     planted("planteda.infrastructure.mail.GiftRow", "@jakarta.persistence.Entity class GiftRow {}"),
                     planted("planteda.infrastructure.persistence.JpaGifts", "public class JpaGifts implements cz.novanadeje.app.planteda.domain.Gifts {}"),
                     planted("planteda.interfaces.rest.GiftController", """
@@ -398,6 +449,17 @@ class DddLayeringRulesTest {
         void should_report_controller_on_a_persistence_port_when_checked_given_a_port_without_the_repository_suffix() {
             assertThat(reportOf(rest_controllers_must_not_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"));
+        }
+
+        @Test
+        @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port persistence implements is reported, and a "
+                + "persistence adapter, an adapter on a port persistence does not implement and a reviewed reader are not")
+        void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
+            assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("CachingGifts"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("PairingMailer"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("AccountEmailsAdapter"));
         }
 
         @Test
