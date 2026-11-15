@@ -109,9 +109,10 @@ class DddLayeringRulesTest {
                     || type.getMethodsWithReturnTypeOfSelf().stream().anyMatch(method -> isInInfrastructure(method.getOwner())
                     && (method.isAnnotatedWith(Bean.class) || method.isMetaAnnotatedWith(Bean.class)))));
     private static final DescribedPredicate<Dependency> NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS = DescribedPredicate.describe(
-            "target no persistence port, except one the class itself implements",
+            "target no persistence port, except the one a persistence adapter outside the persistence packages implements itself",
             dependency -> !PersistencePorts.PERSISTENCE_PORTS.test(dependency.getTargetClass())
-                    || dependency.getOriginClass().isAssignableTo(dependency.getTargetClass().getName()));
+                    || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass())
+                    && dependency.getOriginClass().isAssignableTo(dependency.getTargetClass().getName()));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
@@ -519,6 +520,11 @@ class DddLayeringRulesTest {
                                 cz.novanadeje.app.planteda.domain.Gifts gifts;
                             }
                             """),
+                    planted("planteda.infrastructure.mail.GiftsDecorator", """
+                            public class GiftsDecorator implements cz.novanadeje.app.planteda.domain.Gifts {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
                     planted("planteda.application.SeedList", "public interface SeedList { int size(); }"),
                     planted("planteda.infrastructure.config.SeedConfiguration", """
                             public class SeedConfiguration {
@@ -714,9 +720,9 @@ class DddLayeringRulesTest {
         @Test
         @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements (the audit "
                 + "trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a "
-                + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages, and a "
-                + "persistence adapter on its own port wherever it lives, an adapter on a port persistence does not implement and a reviewed reader "
-                + "are not")
+                + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages and from a "
+                + "decorator that implements the port, and a persistence adapter on its own port wherever it lives, an adapter on a port "
+                + "persistence does not implement and a reviewed reader are not")
         void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
             assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
@@ -726,6 +732,8 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("PaperMailer").contains("planteda.domain.PaperRepository"))
                     .anySatisfy(detail -> assertThat(detail).contains("JpaGiftsMailer").contains("planteda.infrastructure.persistence.JpaGifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("AnnotatedMailer").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator").contains("implements").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator.gifts").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Gifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Shelf"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AnnotatedArchive"))
