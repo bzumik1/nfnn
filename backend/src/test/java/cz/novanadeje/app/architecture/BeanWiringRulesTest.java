@@ -54,13 +54,14 @@ class BeanWiringRulesTest {
             "a member of an application service (a call, a method reference or a field access, in a lambda too)",
             access -> DddLayeringRulesTest.APPLICATION_SERVICES.test(access.getTargetOwner()));
     private static final DescribedPredicate<JavaMethod> RETURN_A_PORT_OF_THEIR_CONTEXT = DescribedPredicate.describe(
-            "are methods of infrastructure (a @Bean method among them) that return a port of their own context (an interface or abstract class "
-                    + "of its application or domain, or a shared port its application or domain uses, or an abstract type extending one), so the "
-                    + "lambda, method reference or object they return is a driven adapter",
+            "are methods of infrastructure (a @Bean method among them) that return a port of their own context, or a type that is, extends or "
+                    + "implements one (a port: an interface or abstract class of its application or domain, or a shared port its application or "
+                    + "domain uses, that no class of an application or domain package implements, so a use case's sealed result is none), the "
+                    + "reviewed driving port implementers apart, so the lambda, method reference or object they return is a driven adapter",
             method -> DddLayeringRulesTest.layerOf(method.getOwner()).filter("infrastructure"::equals).isPresent()
-                    && isAbstractType(method.getRawReturnType())
+                    && !DddLayeringRulesTest.DRIVING_PORT_IMPLEMENTERS.containsKey(method.getRawReturnType().getName())
                     && Stream.concat(Stream.of(method.getRawReturnType()), DddLayeringRulesTest.portsOf(method.getRawReturnType()))
-                    .anyMatch(port -> DddLayeringRulesTest.isPortOfTheContextOf(port, method.getOwner())));
+                    .anyMatch(type -> isAPortOfTheContextOf(type, method.getOwner())));
 
     @ArchTest
     static final ArchRule wiring_never_drives_a_use_case = noClasses()
@@ -95,10 +96,50 @@ class BeanWiringRulesTest {
                             public class PairingService {
                                 public static int pairedCount;
                                 public static void pairAll() {}
+                                public PairingOutcome outcome() { return new PairingOutcome.Skipped(); }
                                 public void pair() {}
                             }
                             """),
                     planted("planteda.application.PairingSettings", "public record PairingSettings(int batch) {}"),
+                    planted("planteda.application.PairingOutcome", """
+                            public sealed interface PairingOutcome {
+                                record Paired(int count) implements PairingOutcome {}
+                                record Skipped() implements PairingOutcome {}
+                            }
+                            """),
+                    planted("planteda.application.GiftRegistry", "public interface GiftRegistry { boolean knows(long gift); }"),
+                    planted("planteda.infrastructure.pairing.RegistryBreaker", """
+                            public class RegistryBreaker implements cz.novanadeje.app.planteda.application.GiftRegistry {
+                                public RegistryBreaker(Runnable onTrip) {}
+                                public boolean knows(long gift) { return false; }
+                            }
+                            """),
+                    planted("planteda.infrastructure.pairing.OutcomeScheduler", """
+                            public class OutcomeScheduler {
+                                private final cz.novanadeje.app.planteda.application.PairingService service;
+                                public OutcomeScheduler(cz.novanadeje.app.planteda.application.PairingService service) { this.service = service; }
+                                public void tick() { runPairing(); }
+                                private cz.novanadeje.app.planteda.application.PairingOutcome runPairing() { return service.outcome(); }
+                            }
+                            """),
+                    planted("donations.application.PlantedImportRequests", "public interface PlantedImportRequests { void request(); }"),
+                    planted("donations.application.PlantedImportService", """
+                            @org.springframework.stereotype.Service
+                            public class PlantedImportService { public void importAll() {} }
+                            """),
+                    planted("donations.infrastructure.fio.FioImportScheduler", """
+                            public class FioImportScheduler implements cz.novanadeje.app.donations.application.PlantedImportRequests {
+                                private final cz.novanadeje.app.donations.application.PlantedImportService service;
+                                public FioImportScheduler(cz.novanadeje.app.donations.application.PlantedImportService service) { this.service = service; }
+                                public void request() {}
+                            }
+                            """),
+                    configuration("donations.infrastructure.fio.PlantedImportConfiguration", """
+                            @org.springframework.context.annotation.Bean
+                            FioImportScheduler scheduler(cz.novanadeje.app.donations.application.PlantedImportService service) {
+                                return new FioImportScheduler(service);
+                            }
+                            """),
                     planted("planteda.application.GiftPairings", """
                             public final class GiftPairings {
                                 private GiftPairings() {}
@@ -207,6 +248,12 @@ class BeanWiringRulesTest {
                             cz.novanadeje.app.planteda.application.GiftPairing pairing(
                                     org.springframework.beans.factory.ObjectProvider<cz.novanadeje.app.planteda.application.PairingService> services) {
                                 return cz.novanadeje.app.planteda.application.GiftPairings.on(services.getObject());
+                            }
+                            """),
+                    configuration("planteda.infrastructure.config.BreakerConfiguration", """
+                            @org.springframework.context.annotation.Bean
+                            cz.novanadeje.app.planteda.infrastructure.pairing.RegistryBreaker breaker(cz.novanadeje.app.planteda.infrastructure.pairing.PairingHelper helper) {
+                                return new cz.novanadeje.app.planteda.infrastructure.pairing.RegistryBreaker(helper::run);
                             }
                             """),
                     configuration("planteda.infrastructure.config.ExtendedPortConfiguration", """
@@ -370,8 +417,9 @@ class BeanWiringRulesTest {
         @Test
         @DisplayName("when the port rule checks methods, then a port of infrastructure built on a service in a lambda, by a method reference, by a static "
                 + "method reference alone, from a service parameter alone, from a provider of a service, through a helper, through a method and field "
-                + "of its own class, as an anonymous abstract port, as an interface extending the port and by a plain method of an adapter is reported, and a scheduler, "
-                + "a domain policy, a settings record, an application class on a service, a Runnable and a @Bean method of the application layer are not")
+                + "of its own class, as an anonymous abstract port, as an interface extending the port, as a concrete adapter handed a helper's method reference and by a plain method of an adapter is reported, and a scheduler, "
+                + "a domain policy, a settings record, an application class on a service, a Runnable, a scheduler's helper returning a use case's sealed result, "
+                + "a reviewed driving port implementer and a @Bean method of the application layer are not")
         void should_report_every_port_built_on_a_use_case_when_checked_given_planted_bean_methods() {
             assertThat(reportOf(infrastructure_methods_build_no_port_on_a_use_case))
                     .anySatisfy(detail -> assertThat(detail).contains("LambdaPairingConfiguration.pairing(").contains("PairingService"))
@@ -386,6 +434,9 @@ class BeanWiringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("ProviderPairingConfiguration.pairing(").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("ExtendedPortConfiguration.pairing(").contains("PairingService"))
                     .anySatisfy(detail -> assertThat(detail).contains("PairingFactory.pairing(").contains("PairingService"))
+                    .anySatisfy(detail -> assertThat(detail).contains("BreakerConfiguration.breaker(").contains("PairingHelper").contains("PairingService"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("OutcomeScheduler"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("PlantedImportConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("OwnMethodPairingConfiguration.task("))
                     .noneSatisfy(detail -> assertThat(detail).contains("WiringConfiguration"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingWiring"))
@@ -415,6 +466,13 @@ class BeanWiringRulesTest {
 
     private static Stream<JavaClass> enclosingChainOf(JavaClass type) {
         return Stream.iterate(Optional.of(type), Optional::isPresent, current -> current.flatMap(JavaClass::getEnclosingClass)).map(Optional::orElseThrow);
+    }
+
+    private static boolean isAPortOfTheContextOf(JavaClass type, JavaClass owner) {
+        return isAbstractType(type)
+                && type.getAllSubclasses().stream().noneMatch(implementation -> DddLayeringRulesTest.layerOf(implementation)
+                        .filter(layer -> layer.equals("application") || layer.equals("domain")).isPresent())
+                && DddLayeringRulesTest.isPortOfTheContextOf(type, owner);
     }
 
     private static boolean isAbstractType(JavaClass type) {

@@ -40,6 +40,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -115,7 +116,7 @@ class DddLayeringRulesTest {
             dependency -> !PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(dependency.getTargetClass())
                     || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass()) && isInheritanceOfItsOwnPort(dependency));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
-    private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
+    static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
             "its BankImportRequests methods only queue a run on the scheduler thread, which then drives the import as a scheduler");
     private static final Map<String, String> PERSISTENCE_PORT_READERS = Map.of(
@@ -899,7 +900,7 @@ class DddLayeringRulesTest {
             List<JavaClass> dependencies = current.getDirectDependenciesFromSelf().stream().map(Dependency::getTargetClass).toList();
             collectReaches(dependencies, " through " + current.getName(), origin, seen, pending, reaches);
         }
-        return reaches;
+        return List.copyOf(new LinkedHashSet<>(reaches));
     }
 
     private static void collectReaches(List<JavaClass> targets, String through, JavaClass origin, Set<JavaClass> seen, Deque<JavaClass> pending,
