@@ -87,6 +87,10 @@ html.contact-in-view body {
   background: var(--color-surface-inverse);
 }
 
+html.contact-in-view app-root {
+  background: var(--color-surface);
+}
+
 :focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 2px;
