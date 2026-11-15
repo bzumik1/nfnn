@@ -402,52 +402,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  e2e-report:
-    name: Zařízení
-    needs: [changes, e2e]
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - run: npm ci
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: e2e-blob-*
-          merge-multiple: true
-          path: frontend/blob-reports
-
-      - name: Merge the shards into the device report
-        run: npx playwright merge-reports --reporter=./e2e/devices/device-report.ts,json blob-reports
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/e2e-merged.json
-
-      - name: Keep the screens of the phones and tablets with their layout checks
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: zarizeni
-          path: frontend/test-results/device-report/
-          if-no-files-found: ignore
-          retention-days: 3
-
-      - name: Every listed end-to-end test ran in exactly one shard
-        run: |
-          npx playwright test --list --reporter=json > "$RUNNER_TEMP/e2e-listed.json"
-          node scripts/check-e2e-shards.mjs "$RUNNER_TEMP/e2e-listed.json" "$RUNNER_TEMP/e2e-merged.json"
-
   pwa:
     name: Web jako aplikace
     needs: changes
@@ -1786,18 +1740,74 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, agent-context, backend, acceptance, frontend, e2e, e2e-report, pwa, visual, mcp, main-recording, compare-v2, stack, release]
+    needs: [changes, agent-context, backend, acceptance, frontend, e2e, pwa, visual, mcp, main-recording, compare-v2, stack, release]
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true' && needs.e2e.result != 'skipped' && needs.e2e.result != 'cancelled'
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: needs.changes.outputs.code == 'true' && needs.e2e.result != 'skipped' && needs.e2e.result != 'cancelled'
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the frontend's dependencies for the device report
+        id: report-dependencies
+        if: needs.changes.outputs.code == 'true' && needs.e2e.result != 'skipped' && needs.e2e.result != 'cancelled'
+        working-directory: frontend
+        run: npm ci
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: steps.report-dependencies.outcome == 'success'
+        with:
+          pattern: e2e-blob-*
+          merge-multiple: true
+          path: frontend/blob-reports
+
+      - name: Merge the shards into the device report
+        id: device-report
+        if: steps.report-dependencies.outcome == 'success'
+        working-directory: frontend
+        run: npx playwright merge-reports --reporter=./e2e/devices/device-report.ts,json blob-reports
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/e2e-merged.json
+
+      - name: Keep the screens of the phones and tablets with their layout checks
+        if: ${{ !cancelled() && steps.device-report.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zarizeni
+          path: frontend/test-results/device-report/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Every listed end-to-end test ran in exactly one shard
+        id: shards
+        if: ${{ !cancelled() && steps.device-report.outcome == 'success' }}
+        working-directory: frontend
+        run: |
+          npx playwright test --list --reporter=json > "$RUNNER_TEMP/e2e-listed.json"
+          node scripts/check-e2e-shards.mjs "$RUNNER_TEMP/e2e-listed.json" "$RUNNER_TEMP/e2e-merged.json"
+
       - name: Every job passed, or the change touches no code and only the agent context ran
+        if: always()
         env:
           CODE: ${{ needs.changes.outputs.code }}
           NEEDS: ${{ toJSON(needs) }}
+          SHARDS: ${{ steps.shards.outcome }}
         run: |
           jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<<"$NEEDS"
           if [ "$CODE" = true ]; then expected=success; else expected=skipped; fi
           if ! jq -e --arg expected "$expected" '.changes.result == "success" and .["agent-context"].result == "success" and ([del(.changes, .["agent-context"])[] | .result] | all(. == $expected))' <<<"$NEEDS" > /dev/null; then
             echo "::error::the agent context and every other job must pass on a change to code (and only the agent context run on a change to docs/, .claude/ or Markdown only); see the results above"
+            exit 1
+          fi
+          if [ "$CODE" = true ] && [ "$SHARDS" != success ]; then
+            echo "::error::the device report and the shard check must pass on a change to code (steps above)"
             exit 1
           fi
