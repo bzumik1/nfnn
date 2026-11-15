@@ -1,7 +1,7 @@
 [
   {
     "kind": "removed",
-    "scenario": "donations/donation_receipts_frozen: A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering",
+    "scenario": "donations/donation_receipts_frozen: A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering #*",
     "reason": "Security audit 2026-11-14 (#915, LOGIC-3): a receipt whose proof cannot fit its verification QR code is now refused before it takes a number, so the scenario no longer leaves a gap in the numbering; it is renamed to say so, asks twice and expects the next receipt to take 2027-000001",
     "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
   },
@@ -15,7 +15,7 @@
   },
   {
     "kind": "logs",
-    "scenario": "donations/donation_receipts_frozen: A replacement refused for its too long proof leaves the active yearly receipt active",
+    "scenario": "donations/donation_receipts_frozen: A replacement refused for its too long proof leaves the active yearly receipt active #*",
     "line": "donations.application.signing.ReceiptProofs: Receipt * needs a verification proof of * bytes, more than a QR code holds, so it is not issued",
     "reason": "Security audit 2026-11-14 (#915, LOGIC-3): the fit is checked before a number is taken, so the refusal's ERROR line names no receipt number any more and says that no number was taken",
     "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations",
