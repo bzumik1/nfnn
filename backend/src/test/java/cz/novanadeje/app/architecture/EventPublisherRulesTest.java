@@ -41,8 +41,10 @@ import org.springframework.data.domain.DomainEvents;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -61,6 +63,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventPublisherRulesTest {
 
     private static final String SITE = "cz.novanadeje.app.";
+    private static final Set<String> OBJECT_METHODS = Set.of("equals[java.lang.Object]", "hashCode[]", "toString[]");
     private static final String APPLICATION = "cz.novanadeje.app.*.application..";
     private static final String STORED_DATA_CHANGED = "a live hint that says only which feed to read again, no business fact: the persistence adapters "
             + "that save or delete what a feed shows publish it, so every writer of those tables, present or future, hints, and the import "
@@ -189,6 +192,18 @@ class EventPublisherRulesTest {
                                 }
                                 public static void storeAll(Iterable<?> rows) {
                                 }
+                                public static void describe(java.util.Map<String, Object> facts) {
+                                }
+                                public static void supply(java.util.function.Supplier<Object> source) {
+                                }
+                                public static void order(java.util.Comparator<Object> order) {
+                                    order.compare(paired(), paired());
+                                }
+                                public static void collect(java.util.List<Object> rows) {
+                                }
+                                public static void announceRecords(java.util.function.Consumer<Record> publish) {
+                                    publish.accept(paired());
+                                }
                                 public static void storeObjects(Iterable<? extends Object> rows) {
                                 }
                                 public static void announceWider(java.util.function.Consumer<? super cz.novanadeje.app.planteda.application.event.GiftPaired> publish) {
@@ -309,6 +324,11 @@ class EventPublisherRulesTest {
                                     cz.novanadeje.app.planteda.application.GiftEvents.announceTyped(paired -> events.publishEvent(paired));
                                     cz.novanadeje.app.planteda.application.GiftEvents.announceThrough(events::publishEvent);
                                     cz.novanadeje.app.planteda.application.GiftEvents.announceWider(paired -> events.publishEvent(paired));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announceRecords(events::publishEvent);
+                                    cz.novanadeje.app.planteda.application.GiftEvents.order((first, second) -> {
+                                        events.publishEvent(first);
+                                        return 0;
+                                    });
                                 }
                             }
                             """),
@@ -323,6 +343,12 @@ class EventPublisherRulesTest {
                                     cz.novanadeje.app.planteda.application.GiftEvents.storeAll(java.util.List.of("row"));
                                     cz.novanadeje.app.planteda.application.GiftEvents.storeObjects(java.util.List.of("row"));
                                     cz.novanadeje.app.planteda.application.GiftEvents.rank("first");
+                                    cz.novanadeje.app.planteda.application.GiftEvents.describe(java.util.Map.of("k", "v"));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.supply(() -> "row");
+                                    cz.novanadeje.app.planteda.application.GiftEvents.collect(java.util.List.of("row"));
+                                    later(new Runnable() {
+                                        public void run() { events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null)); }
+                                    });
                                     relayLater(events::publishEvent);
                                     later(() -> events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null)));
                                 }
@@ -425,6 +451,7 @@ class EventPublisherRulesTest {
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaPayments"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("FeedsAdapter"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JpaQuietGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingService"));
         }
 
@@ -432,8 +459,8 @@ class EventPublisherRulesTest {
         @DisplayName("when the publish rule checks them, then an unlisted adapter publishing through the publisher, the application context, a method "
                 + "reference and the multicaster is reported, a listed adapter that handles an event it is not listed for, as a parameter, inside an "
                 + "Optional or by building it, is reported, a listed adapter handing the application a callback of an Object or an event, by a "
-                + "method reference, a lambda or an interface of the site, is reported, and a listed adapter's own event, its own publishing through a list, an Optional or a "
-                + "private helper, a callback of a number or to its own method, rows of a type variable or a wildcard, a raw library interface and the application are not")
+                + "method reference, a lambda, a comparator or an interface of the site, typed by an Object, a record or an event, is reported, and a listed adapter's own event, its own publishing through a list, an Optional or a "
+                + "private helper, a callback of a number or to its own method, rows of a type variable or a wildcard, a raw library interface, a map or list of objects, a supplier of objects, an anonymous class of a listed adapter and the application are not")
         void should_report_every_unlisted_publisher_when_checked_given_planted_relays() {
             List<String> details = eventsPublishedOutsideApplicationOnlyBy(PLANTED_PUBLISHERS).evaluate(planted).getFailureReport().getDetails();
 
@@ -458,6 +485,10 @@ class EventPublisherRulesTest {
                             .contains("GiftEvents.announceThrough("))
                     .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
                             .contains("GiftEvents.announceWider("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
+                            .contains("GiftEvents.announceRecords("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
+                            .contains("GiftEvents.order("))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaQuietGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaRefunds publishes and hands"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaGifts"))
@@ -523,7 +554,7 @@ class EventPublisherRulesTest {
                 }
                 type.getAccessesFromSelf().stream().filter(access -> handsOnACallbackOfAnObjectOrAnEvent(access, type)).forEach(access -> events.add(
                         SimpleConditionEvent.violated(type, type.getName() + " publishes and hands another class a callback in " + access.getDescription())));
-                Set<String> listed = eventsByPublisher.get(type.getName());
+                Set<String> listed = eventsByPublisher.get(topLevelOf(type).getName());
                 if (listed == null) {
                     publishing.forEach(access -> events.add(SimpleConditionEvent.violated(type, type.getName() + " publishes in " + access.getDescription())));
                     return;
@@ -547,20 +578,35 @@ class EventPublisherRulesTest {
 
     private static boolean isACallbackOfAnObjectOrAnEvent(JavaType parameter) {
         JavaClass raw = parameter.toErasure();
-        if (!raw.isInterface()) {
+        Optional<JavaMethod> callback = theOneAbstractMethodOf(raw).filter(method -> !method.getRawParameterTypes().isEmpty());
+        if (callback.isEmpty()) {
             return false;
         }
         if (parameter instanceof JavaParameterizedType parameterized) {
             return parameterized.getActualTypeArguments().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent);
         }
-        return raw.getPackageName().startsWith(SITE) && raw.getAllMethods().stream()
-                .filter(method -> method.getModifiers().contains(JavaModifier.ABSTRACT))
-                .anyMatch(method -> method.getRawParameterTypes().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent));
+        return raw.getPackageName().startsWith(SITE)
+                && callback.get().getRawParameterTypes().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent);
+    }
+
+    private static Optional<JavaMethod> theOneAbstractMethodOf(JavaClass type) {
+        if (!type.isInterface()) {
+            return Optional.empty();
+        }
+        Map<String, JavaMethod> abstractMethods = new HashMap<>();
+        type.getAllMethods().stream()
+                .filter(method -> method.getModifiers().contains(JavaModifier.ABSTRACT) && !OBJECT_METHODS.contains(signatureOf(method)))
+                .forEach(method -> abstractMethods.putIfAbsent(signatureOf(method), method));
+        return abstractMethods.size() == 1 ? abstractMethods.values().stream().findFirst() : Optional.empty();
+    }
+
+    private static String signatureOf(JavaMethod method) {
+        return method.getName() + method.getRawParameterTypes().stream().map(JavaClass::getName).toList();
     }
 
     private static boolean namesAnObjectOrAnEvent(JavaType type) {
         if (type instanceof JavaClass named) {
-            return named.isEquivalentTo(Object.class) || EVENT.test(named);
+            return named.isEquivalentTo(Object.class) || named.isEquivalentTo(Record.class) || EVENT.test(named);
         }
         if (type instanceof JavaParameterizedType parameterized) {
             return namesAnObjectOrAnEvent(parameterized.toErasure())
@@ -583,7 +629,7 @@ class EventPublisherRulesTest {
                 + "method reference returning one, an Optional or other type of one included, or a field holding one, read or written, so an adapter keeps no event it heard either)") {
             @Override
             public void check(JavaClass type, ConditionEvents events) {
-                Set<String> listed = eventsByPublisher.getOrDefault(type.getName(), Set.of());
+                Set<String> listed = eventsByPublisher.getOrDefault(topLevelOf(type).getName(), Set.of());
                 for (JavaAccess<?> access : type.getAccessesFromSelf()) {
                     eventsObtainedBy(access).filter(event -> !listed.contains(event.getName())).distinct().forEach(event -> events.add(SimpleConditionEvent.violated(
                             type, type.getName() + " builds or obtains " + event.getName() + " in " + access.getDescription())));
