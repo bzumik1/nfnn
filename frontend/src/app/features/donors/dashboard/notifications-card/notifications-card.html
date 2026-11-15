@@ -1,4 +1,8 @@
-<section class="ui-card notifications" aria-labelledby="notifications-title">
+<section
+  class="ui-card notifications"
+  [class.notifications--noticed]="notice() !== null"
+  aria-labelledby="notifications-title"
+>
   <h2
     #heading
     id="notifications-title"
@@ -15,7 +19,7 @@
 
   @switch (state()) {
     @case ('loading') {
-      <p class="ui-group-note notifications-inset" i18n="@@donor.notifications.loading">
+      <p class="ui-card__intro notifications-inset" i18n="@@donor.notifications.loading">
         Načítáme…
       </p>
     }
@@ -81,7 +85,7 @@
             </button>
           </li>
         </ul>
-        <p class="ui-group-note notifications-inset">
+        <p class="ui-card__intro notifications-inset notifications-note">
           @if (lastDelivery(here); as delivered) {
             <span i18n="@@donor.notifications.lastDelivered"
               >Naposledy doručeno {{ delivered }}.</span
@@ -92,7 +96,7 @@
         </p>
         @if (offer() === 'denied') {
           <p
-            class="ui-group-note ui-group-note--warning notifications-inset"
+            class="ui-callout ui-callout--warning notifications-warning"
             i18n="@@donor.notifications.lostDenied"
           >
             Prohlížeč ale upozornění tohoto webu teď blokuje, takže žádné nedorazí. Povolte je v
@@ -100,7 +104,7 @@
           </p>
         } @else if (lost()) {
           <p
-            class="ui-group-note ui-group-note--warning notifications-inset"
+            class="ui-callout ui-callout--warning notifications-warning"
             i18n="@@donor.notifications.lost"
           >
             Prohlížeč ale upozornění od tohoto webu už nepřijímá (například po smazání dat webu),
@@ -155,7 +159,7 @@
             </ul>
             <p
               id="notifications-offer"
-              class="ui-group-note notifications-inset"
+              class="ui-card__intro notifications-inset notifications-note"
               i18n="@@donor.notifications.offer"
             >
               Prohlížeč se zeptá, jestli mu upozornění dovolíte. Potom vám pošleme zkušební
@@ -207,5 +211,5 @@
       }
     }
   }
-  <app-live-notice look="note" [notice]="notice()" />
+  <app-live-notice look="footer" [notice]="notice()" />
 </section>

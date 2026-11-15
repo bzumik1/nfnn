@@ -1,5 +1,5 @@
 <section class="ui-card accounts-card" aria-labelledby="bank-accounts-title">
-  <div class="accounts-head">
+  <div class="ui-card__bar accounts-head">
     <h2
       #title
       id="bank-accounts-title"
@@ -12,7 +12,7 @@
     <button
       #helpToggle
       type="button"
-      class="ui-group-aside accounts-help"
+      class="ui-card__aside accounts-help"
       aria-controls="accounts-help-panel"
       [attr.aria-expanded]="helpOpen()"
       (click)="toggleHelp()"
@@ -30,7 +30,7 @@
     (closeRequested)="closeHelp()"
   />
 
-  <ul class="ui-list accounts-list">
+  <ul class="ui-list accounts-list" [class.accounts-list--after-help]="helpOpen()">
     @if (state() === 'ready') {
       @for (account of accounts(); track account.id) {
         <li class="account" [class.account--disconnected]="account.status === 'DISCONNECTED'">

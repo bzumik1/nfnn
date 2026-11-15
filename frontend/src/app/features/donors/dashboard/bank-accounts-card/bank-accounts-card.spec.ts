@@ -416,12 +416,11 @@ describe('Given the bank accounts card in the overview', () => {
     const card = element('section');
     expect(card?.classList).toContain('ui-card');
     expect(card?.classList).not.toContain('ui-card--padded');
-    expect(card?.querySelector('h2')?.classList).toContain('ui-card__title');
-    expect(card?.querySelector('h2')?.classList).not.toContain('ui-card__title--large');
+    expect(card?.querySelector('h2')?.className).toBe('ui-card__title accounts-title');
     const list = element('ul:has(> li.account)');
     expect(list?.classList).toContain('ui-list');
     expect(list?.classList).not.toContain('ui-list--inset');
-    expect(element('.ui-group-title, .ui-group-head, .ui-group-note')).toBeNull();
+    expect(element('.ui-group-title, .ui-group-note')).toBeNull();
   });
 
   it('when the donor has no known account, then the card explains it in its footer under Přidat účet, the last part of the card, after the status line', async () => {
@@ -624,6 +623,12 @@ describe('Given the bank accounts card in the overview', () => {
       expect(button.getAttribute('aria-expanded')).toBe('false');
       expect(button.getAttribute('aria-controls')).toBe('accounts-help-panel');
       expect(helpPanel().hidden).toBe(true);
+    });
+
+    it('then the title and the button share the bar of the card, the button styled as an aside of the card', () => {
+      const bar = element('.ui-card > .ui-card__bar') as HTMLElement;
+      expect(bar.querySelector(':scope > h2.ui-card__title')).not.toBeNull();
+      expect(bar.querySelector(':scope > .ui-card__aside')).toBe(helpButton());
     });
 
     it("and presses the help button, then the labelled panel opens under the head with the donor's symbol", async () => {

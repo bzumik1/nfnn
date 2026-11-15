@@ -13,12 +13,7 @@
     <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
   </svg>
   @if (view() === 'locked') {
-    <h1
-      #heading
-      id="zamek-spravy-titulek"
-      class="ui-card__title ui-card__title--large"
-      tabindex="-1"
-    >
+    <h1 #heading id="zamek-spravy-titulek" class="ui-card__title" tabindex="-1">
       <ng-container i18n="@@admin.lock.title">Správa je zamčená</ng-container>
     </h1>
     @if (online()) {
@@ -89,12 +84,7 @@
       </p>
     }
   } @else {
-    <h1
-      #heading
-      id="zamek-spravy-titulek"
-      class="ui-card__title ui-card__title--large"
-      tabindex="-1"
-    >
+    <h1 #heading id="zamek-spravy-titulek" class="ui-card__title" tabindex="-1">
       <ng-container i18n="@@admin.lock.password.title">Odemknout heslem</ng-container>
     </h1>
     <form

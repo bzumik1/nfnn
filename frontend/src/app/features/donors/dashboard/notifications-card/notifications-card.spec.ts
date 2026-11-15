@@ -171,6 +171,13 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
       expect(TestBed.inject(DonorNotifiedDevices).ids()).toEqual(new Set(['device-other']));
     });
 
+    it('then the line under the offer is a plain line of the card, with no grouped note left', () => {
+      const offer = fixture.nativeElement.querySelector('#notifications-offer') as HTMLElement;
+      expect(offer.textContent).toContain('Prohlížeč se zeptá');
+      expect(offer.classList).toContain('ui-card__intro');
+      expect(fixture.nativeElement.querySelector('.ui-group-note')).toBeNull();
+    });
+
     it('then a tap asks the browser, subscribes this device with every kind on, sends the confirmation and shows the switches', async () => {
       button('Zapnout na tomto zařízení')!.click();
       await settle();
@@ -230,6 +237,30 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
       expect(switchNamed('Dar dorazil').checked).toBe(true);
       expect(text()).toContain('Naposledy doručeno 13. 11. 2026 9:05.');
       expect(text()).toContain('Upozornění neříkají jména ani částky.');
+    });
+
+    it('then when it last delivered is a plain line of the card, with no grouped note left', () => {
+      const delivered = Array.from(
+        fixture.nativeElement.querySelectorAll('p') as NodeListOf<HTMLElement>,
+      ).find((line) => line.textContent?.includes('Naposledy doručeno'));
+      expect(delivered?.classList).toContain('ui-card__intro');
+      expect(fixture.nativeElement.querySelector('.ui-group-note')).toBeNull();
+    });
+
+    it('then a saved switch is said in the footer of the card, inside its status region', async () => {
+      const gifts = switchNamed('Dar dorazil');
+      gifts.checked = false;
+      gifts.dispatchEvent(new Event('change'));
+      await settle();
+      http
+        .expectOne({ method: 'PUT', url: `${PUSH_URL}/device/notifications` })
+        .flush(device({ notifications: { gifts: false, yearlyReceipts: true } }));
+      await settle();
+
+      const line = fixture.nativeElement.querySelector('[role="status"] > p') as HTMLElement;
+      expect(line.textContent?.trim()).toBe('Uloženo: Dar dorazil – vypnuto.');
+      expect(line.classList).toContain('ui-card__footer');
+      expect(line.closest('section')?.lastElementChild).toBe(line.closest('app-live-notice'));
     });
 
     it('then switching gifts off saves only the switches and says so', async () => {
@@ -386,6 +417,18 @@ describe('Given a donor on Údaje a zabezpečení with the notifications card', 
 
     expect(text()).toContain('Prohlížeč ale upozornění od tohoto webu už nepřijímá');
     expect(button('Zapnout znovu')).toBeTruthy();
+  });
+
+  it('when the server lists this device but the browser lost its subscription, then the warning is a callout of the card', async () => {
+    withPushApi('granted');
+    push.browserSubscription = () =>
+      Promise.resolve<BrowserPushSubscriptionState>('not-subscribed');
+    await signIn('APP');
+    await open(pushView({ device: device(), devices: ['device-here'] }));
+
+    const warning = fixture.nativeElement.querySelector('.ui-callout--warning') as HTMLElement;
+    expect(warning.className).toContain('ui-callout ui-callout--warning');
+    expect(warning.textContent).toContain('Prohlížeč ale upozornění od tohoto webu už nepřijímá');
   });
 
   it('when the sign-in names no device, then the card says why and offers nothing', async () => {

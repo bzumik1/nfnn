@@ -142,4 +142,15 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
       page.getByRole('main').getByRole('button', { name: 'Zkontrolovat nové platby' }),
     );
   });
+
+  test('when a signed-in donor taps near the edge of Jak přiřazujeme platby? on Bankovní účty, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/ucty');
+    const main = page.getByRole('main');
+
+    await expectFingerSized(main.getByRole('button', { name: 'Jak přiřazujeme platby?' }));
+  });
 });

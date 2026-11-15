@@ -1039,8 +1039,7 @@ describe('Given a signed-in donor in the donor area', () => {
       expect(card.classList).toContain('ui-card');
       expect(card.classList).toContain('ui-card--padded');
       const title = card.querySelector('h2') as HTMLElement;
-      expect(title.classList).toContain('ui-card__title');
-      expect(title.classList).not.toContain('ui-card__title--large');
+      expect(title.className).toBe('ui-card__title send-gift-title');
       expect(card.querySelector('.ui-list--inset, .ui-group-title, .ui-group-note')).toBeNull();
       expect(card.getAttribute('aria-labelledby')).toBe(title.id);
     });
@@ -1465,9 +1464,7 @@ describe('Given a signed-in donor in the donor area', () => {
         expect(normalized(all.textContent ?? '')).toBe('Všechny dary');
         expect(card.querySelector('app-donations-table')?.closest('.ui-card')).toBe(card);
         expect(
-          card.querySelector(
-            '.ui-list--inset, .ui-group-title, .ui-group-head, .ui-group-aside, .ui-card .ui-card',
-          ),
+          card.querySelector('.ui-list--inset, .ui-group-title, .ui-card .ui-card'),
         ).toBeNull();
       });
     }
@@ -2535,6 +2532,21 @@ describe('Given a signed-in donor in the donor area', () => {
       const link = element('.verify-card a');
       expect(link?.textContent?.trim()).toBe('Ověřit potvrzení');
       expect(link?.getAttribute('href')).toBe('/overit');
+    });
+
+    it('then its three cards carry the one card title size of every donor card', async () => {
+      await open('/darce/potvrzeni');
+      await respond(twoYearSummary(), twoYearDonations());
+
+      const titles = [...document.querySelectorAll<HTMLElement>('.ui-card > h2')];
+      expect(titles.map((title) => title.textContent?.trim())).toEqual([
+        'Roční potvrzení o darech',
+        'Potvrzení k jednotlivému daru',
+        'Ověřit potvrzení',
+      ]);
+      for (const title of titles) {
+        expect(title.className).toBe('ui-card__title');
+      }
     });
 
     it('then the card to verify a receipt is there even while the donations load', async () => {

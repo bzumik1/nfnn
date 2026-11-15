@@ -6,8 +6,24 @@
   padding-bottom: var(--space-5);
 }
 
+.notifications--noticed {
+  padding-bottom: 0;
+}
+
+.notifications--noticed > p:nth-last-child(2) {
+  margin-bottom: var(--space-4);
+}
+
 .notifications-inset {
   padding-inline: var(--space-6);
+}
+
+.notifications-note {
+  margin-top: var(--space-2);
+}
+
+.notifications-warning {
+  margin-inline: var(--space-6);
 }
 
 .notifications .ui-list {
@@ -15,11 +31,7 @@
   border-block: 1px solid var(--color-divider);
 }
 
-.ui-group-note.notifications-inset {
-  padding-inline: var(--space-6);
-}
-
-app-live-notice {
-  display: block;
-  padding-inline: var(--space-6);
+.notifications--noticed .notifications-again {
+  margin-bottom: 0;
+  border-bottom: 0;
 }

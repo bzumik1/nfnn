@@ -110,6 +110,10 @@ describe('Given the panel of the locked administration', () => {
       ]);
     });
 
+    it('then its heading is the title of the card', () => {
+      expect(element('h1')?.className).toBe('ui-card__title');
+    });
+
     it('then the focus moves to its heading, so a screen reader says at once that the administration locked', () => {
       expect(document.activeElement).toBe(element('h1'));
     });
@@ -250,6 +254,10 @@ describe('Given the panel of the locked administration', () => {
       beforeEach(async () => {
         element('button.lock-use-password')!.click();
         await settle();
+      });
+
+      it('then its heading stays the title of the card', () => {
+        expect(element('h1')?.className).toBe('ui-card__title');
       });
 
       it('then the password and the code from the app are asked, with the account name for the password manager', () => {
