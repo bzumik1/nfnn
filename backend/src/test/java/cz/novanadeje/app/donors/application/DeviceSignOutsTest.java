@@ -1,6 +1,7 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.DeviceDescription;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DeviceWipe;
@@ -40,10 +41,12 @@ class DeviceSignOutsTest {
     @Mock
     private RefreshTokenRepository refreshTokens;
     @Mock
+    private AuthorizationCodeRepository authorizationCodes;
+    @Mock
     private ApplicationEventPublisher events;
 
     private DeviceSignOuts signOuts() {
-        return new DeviceSignOuts(devices, refreshTokens, events);
+        return new DeviceSignOuts(devices, refreshTokens, authorizationCodes, events);
     }
 
     private static DonorDevice device() {
@@ -71,6 +74,24 @@ class DeviceSignOutsTest {
         order.verify(refreshTokens).revokeAllOfDevice(laptop.id(), NOW);
         order.verify(devices).endIfActive(laptop.id(), DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
         order.verify(events).publishEvent(new DeviceSignedOut(JANA.value(), laptop.id().value(), NOW));
+    }
+
+    @Test
+    @DisplayName("Given an approved connection whose code is not redeemed yet, when every session of the donor ends, then the unused codes are spent under the sessions lock, so the code gives no connection afterwards")
+    void should_spend_unused_authorization_codes_when_all_end() {
+        signOuts().endAllOf(JANA, DeviceSignOutReason.CREDENTIALS_CHANGED, NOW);
+
+        InOrder order = inOrder(refreshTokens, authorizationCodes);
+        order.verify(refreshTokens).lockSessionsOf(JANA);
+        order.verify(authorizationCodes).spendUnusedOf(JANA, NOW);
+    }
+
+    @Test
+    @DisplayName("Given an approved connection whose code is not redeemed yet, when the other devices are signed out, then the code stays, as the connected applications do")
+    void should_keep_authorization_codes_when_others_signed_out() {
+        signOuts().endOthersOf(JANA, Optional.empty(), NOW);
+
+        verify(authorizationCodes, never()).spendUnusedOf(any(), any());
     }
 
     @Test

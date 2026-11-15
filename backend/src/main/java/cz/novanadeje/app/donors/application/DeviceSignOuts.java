@@ -1,5 +1,6 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.donors.domain.AuthorizationCodeRepository;
 import cz.novanadeje.app.donors.domain.DeviceId;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.domain.DeviceWipe;
@@ -21,11 +22,14 @@ public class DeviceSignOuts {
 
     private final DonorDeviceRepository devices;
     private final RefreshTokenRepository refreshTokens;
+    private final AuthorizationCodeRepository authorizationCodes;
     private final ApplicationEventPublisher events;
 
-    public DeviceSignOuts(DonorDeviceRepository devices, RefreshTokenRepository refreshTokens, ApplicationEventPublisher events) {
+    public DeviceSignOuts(DonorDeviceRepository devices, RefreshTokenRepository refreshTokens, AuthorizationCodeRepository authorizationCodes,
+                          ApplicationEventPublisher events) {
         this.devices = devices;
         this.refreshTokens = refreshTokens;
+        this.authorizationCodes = authorizationCodes;
         this.events = events;
     }
 
@@ -38,6 +42,7 @@ public class DeviceSignOuts {
     public void endAllOf(DonorId donorId, Optional<DeviceId> continuing, DeviceSignOutReason reason, Instant at) {
         refreshTokens.lockSessionsOf(donorId);
         refreshTokens.revokeAllOf(donorId, at);
+        authorizationCodes.spendUnusedOf(donorId, at);
         devices.findActiveOf(donorId).stream()
                 .filter(device -> continuing.filter(device.id()::equals).isEmpty())
                 .forEach(device -> end(device, reason, at));

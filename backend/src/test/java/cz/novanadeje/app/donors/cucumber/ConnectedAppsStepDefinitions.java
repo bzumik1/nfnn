@@ -40,6 +40,7 @@ public class ConnectedAppsStepDefinitions {
     private static final String AUTHORIZE_PATH = "/api/donors/oauth/authorize";
     private static final String TOKEN_PATH = "/api/donors/oauth/token";
     private static final String CONNECTIONS_PATH = "/api/donors/me/connections";
+    private static final String PASSWORD_PATH = "/api/donors/me/password";
     private static final String BACKUPS_PATH = "/api/admin/operations/backups";
     private static final String REFRESH_PATH = "/api/donors/auth/refresh";
     private static final String ADMIN_PATH = "/api/admin/donors";
@@ -487,6 +488,15 @@ public class ConnectedAppsStepDefinitions {
         assertThat(api.lastResponseJson().get("error").asString()).isEqualTo(error);
         assertThat(api.lastResponseJson().get("error_description").asString()).isEqualTo(TOKEN_ERROR_DESCRIPTIONS.get(error));
         assertThat(api.lastResponse().getHeaders().getCacheControl()).isEqualTo("no-store");
+    }
+
+    @When("{string} changes the password to {string}")
+    public void changesThePasswordTo(String alias, String password) {
+        sessions.actAs(alias);
+        api.put(PASSWORD_PATH, Map.of("currentPassword", scenarioDonors.credentialsOf(alias).password(), "newPassword", password));
+        if (api.lastResponse().getStatusCode().value() == 200) {
+            scenarioDonors.rememberCredentials(alias, scenarioDonors.credentialsOf(alias).email(), password);
+        }
     }
 
     @When("{string} lists the connected applications")

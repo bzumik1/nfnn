@@ -124,6 +124,7 @@ public class AuthorizationServerService {
         if (!code.isUsableAt(now)) {
             throw new InvalidGrant("the code expired or was used");
         }
+        refreshTokens.lockSessionsOf(code.donorId());
         if (!codes.markUsed(code.id(), now)) {
             throw new InvalidGrant("the code expired or was used");
         }
@@ -137,6 +138,10 @@ public class AuthorizationServerService {
             throw new InvalidTarget(exchange.resource());
         }
         Donor donor = donors.findById(code.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
+        if (!donor.isAdministrator()) {
+            log.info("Donor {} is no administrator any more; the authorization code gives no connection", donor.id());
+            throw new InvalidGrant("the donor is no administrator any more");
+        }
         log.info("Client {} exchanged a code of donor {}", clientId.host(), donor.id());
         return issue(donor, clientId, code.scopes(), code.resource(), code.secondFactorVerified(), now, now).tokens();
     }
