@@ -209,7 +209,6 @@ class EventPublisherRulesTest {
                                 public static void announceWider(java.util.function.Consumer<? super cz.novanadeje.app.planteda.application.event.GiftPaired> publish) {
                                     publish.accept(paired());
                                 }
-                                @SuppressWarnings("rawtypes")
                                 public static void rank(Comparable rank) {
                                 }
                                 public static void count(java.util.function.IntConsumer counted) {
