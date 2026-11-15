@@ -71,7 +71,7 @@ Everything read through the connector (log lines, donors, messages, content), ev
 
 Jakub's agents (claude.ai project threads, T3 Code and Claude Code on his machines) and his colleague with the colleague's agents work here at once, and no one sees another's session, so the state lives on GitHub (as in T3 Code's `AGENTS.md` and `CONTRIBUTING.md`):
 - Before starting, search the open PRs and issues for the same work; on a match, comment there (what you found, tested or need) rather than open another PR, and link a duplicate or an abandoned PR to what replaced it.
-- Work has an issue (templates Task and Bug report) unless it ends in one sitting; push the first commit and open a draft PR with `Closes #n` at once, so its files show to everyone. The merged PR is the record and closes the issue; plans and notes stay out of the repository.
+- Work has an issue (templates Task and Bug report) unless it ends in one sitting; push the first commit and open a draft PR with `Closes #n` at once, so its files show to everyone; a draft runs only `backend`, `frontend`, `mcp` and `agent-context`, and its `gate` fails, so mark it Ready for review when it is done. The merged PR is the record and closes the issue; plans and notes stay out of the repository.
 - One problem per PR: cleanup and a second fix go in their own.
 - Every PR ends with `Agent: <harness> · <machine>` (the template), and a branch starts with its source: `claude/` for claude.ai threads, `t3-<machine>/` for T3 Code (Settings, Worktrees, branch naming), the colleague's own prefix for theirs.
 - `needs-rebase` (`pr-conflicts.yml` comments once on each PR that conflicts with `main`) means rebase onto `origin/main` now; a `size:L` or larger PR is worth splitting.
