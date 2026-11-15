@@ -5,10 +5,12 @@ import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaFieldAccess.AccessType;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -26,14 +28,17 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
@@ -46,20 +51,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DomainMutatorRulesTest {
 
     private static final Pattern DOMAIN_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.[^.]+\\.domain(\\..*)?$");
-    private static final Map<String, Optional<String>> CHANGES_BY_METHOD = new ConcurrentHashMap<>();
+    private static final Set<String> CONTAINER_CHANGES = Set.of("add", "addAll", "addFirst", "addLast", "remove", "removeAll", "removeIf",
+            "removeFirst", "removeLast", "retainAll", "clear", "put", "putAll", "putIfAbsent", "replace", "replaceAll", "compute", "computeIfAbsent",
+            "computeIfPresent", "merge", "set", "sort", "offer", "offerFirst", "offerLast", "poll", "pollFirst", "pollLast", "push", "pop");
+    private static final Map<JavaMethod, Optional<String>> CHANGES_BY_METHOD = new ConcurrentHashMap<>();
 
     @ArchTest
     static final ArchRule controllers_change_no_domain_object = classes()
             .that().resideInAPackage("cz.novanadeje.app.*.interfaces..")
             .should(changeNoDomainObject())
-            .because("backend.md, Domain: an aggregate changes only inside a use case, where the application service holds its transaction, "
+            .because("backend.md, REST: an aggregate changes only inside a use case, where the application service holds its transaction, "
                     + "locks and events; a controller reads domain values and hands every change to an application service");
 
     private static ArchCondition<JavaClass> changeNoDomainObject() {
-        return new ArchCondition<>("call or reference no mutator of a domain class and write no field of one (a mutator writes a field "
-                + "of a domain class it reaches through its receiver, parameters and their fields, directly or through the domain methods it calls, an override's "
-                + "included, or is a transition: an instance method of an entity, a class that is no record or enum and holds a domain record "
-                + "named …Id or …Reference, returning its own kind, alone or inside a generic type)") {
+        return new ArchCondition<>("call or reference no mutator of a domain class and write no field of one (a mutator writes a field of a "
+                + "domain class it reaches through its receiver, parameters and their fields, or changes a collection or map such a field holds "
+                + "on the line that reads it, directly or through the domain methods it calls, an override's included, or is a transition: an "
+                + "instance method of an entity, a class or record that is no enum and holds its own id, a field id of a domain record named "
+                + "…Id or …Reference, returning its own kind, alone or inside a generic type)") {
             @Override
             public void check(JavaClass controller, ConditionEvents events) {
                 for (JavaAccess<?> access : controller.getAccessesFromSelf()) {
@@ -79,7 +88,11 @@ class DomainMutatorRulesTest {
         return target.resolveMember()
                 .filter(JavaMethod.class::isInstance)
                 .map(JavaMethod.class::cast)
-                .flatMap(method -> CHANGES_BY_METHOD.computeIfAbsent(method.getFullName(), name -> firstChangeMadeBy(method)));
+                .flatMap(DomainMutatorRulesTest::changeMadeBy);
+    }
+
+    private static Optional<String> changeMadeBy(JavaMethod method) {
+        return CHANGES_BY_METHOD.computeIfAbsent(method, DomainMutatorRulesTest::firstChangeMadeBy);
     }
 
     private static Optional<String> firstChangeMadeBy(JavaMethod start) {
@@ -97,32 +110,55 @@ class DomainMutatorRulesTest {
     }
 
     private static boolean isEntity(JavaClass type) {
-        return !type.isInterface() && !type.isRecord() && !type.isEnum() && type.getAllFields().stream()
-                .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC))
-                .map(field -> field.getRawType())
-                .anyMatch(fieldType -> fieldType.isRecord() && isDomain(fieldType) && (fieldType.getSimpleName().endsWith("Id") || fieldType.getSimpleName().endsWith("Reference")));
+        return !type.isInterface() && !type.isEnum() && type.getAllFields().stream()
+                .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC) && field.getName().equals("id"))
+                .map(JavaField::getRawType)
+                .anyMatch(idType -> idType.isRecord() && isDomain(idType)
+                        && (idType.getSimpleName().endsWith("Id") || idType.getSimpleName().endsWith("Reference")));
     }
 
     private static Optional<String> firstWriteReachedFrom(JavaMethod start, Set<JavaClass> reachable) {
-        Set<String> seen = new HashSet<>(Set.of(start.getFullName()));
+        Set<JavaMethod> seen = new HashSet<>(Set.of(start));
         Deque<JavaMethod> pending = new ArrayDeque<>(List.of(start));
         while (!pending.isEmpty()) {
             JavaMethod method = pending.poll();
-            for (JavaFieldAccess write : method.getFieldAccesses()) {
-                if (write.getAccessType() == AccessType.SET && writesAFieldOfOneOf(write, reachable)) {
-                    String through = method.equals(start) ? "" : " through " + method.getFullName();
-                    return Optional.of("writes " + write.getTarget().getFullName() + through);
-                }
+            String through = method.equals(start) ? "" : " through " + method.getFullName();
+            Optional<String> change = fieldWriteIn(method, reachable).or(() -> heldContainerChangeIn(method, reachable));
+            if (change.isPresent()) {
+                return change.map(found -> found + through);
             }
             Stream.concat(overridesOf(method), calledDomainMethodsOf(method))
-                    .filter(next -> seen.add(next.getFullName()))
+                    .filter(seen::add)
                     .forEach(pending::add);
         }
         return Optional.empty();
     }
 
-    private static boolean writesAFieldOfOneOf(JavaFieldAccess write, Set<JavaClass> reachable) {
-        JavaClass owner = write.getTargetOwner();
+    private static Optional<String> fieldWriteIn(JavaMethod method, Set<JavaClass> reachable) {
+        return method.getFieldAccesses().stream()
+                .filter(access -> access.getAccessType() == AccessType.SET && isOfOneOf(access.getTargetOwner(), reachable))
+                .findFirst()
+                .map(write -> "writes " + write.getTarget().getFullName());
+    }
+
+    private static Optional<String> heldContainerChangeIn(JavaMethod method, Set<JavaClass> reachable) {
+        Set<Integer> linesReadingAHeldContainer = method.getFieldAccesses().stream()
+                .filter(access -> access.getAccessType() == AccessType.GET && isOfOneOf(access.getTargetOwner(), reachable)
+                        && access.getTarget().resolveMember().map(field -> isContainer(field.getRawType())).orElse(false))
+                .map(JavaAccess::getLineNumber)
+                .collect(Collectors.toSet());
+        return method.getAccessesFromSelf().stream()
+                .filter(access -> access.getTarget() instanceof CodeUnitAccessTarget && CONTAINER_CHANGES.contains(access.getName())
+                        && isContainer(access.getTargetOwner()) && linesReadingAHeldContainer.contains(access.getLineNumber()))
+                .findFirst()
+                .map(change -> "changes a collection or map it holds through " + change.getTarget().getFullName() + " on line " + change.getLineNumber());
+    }
+
+    private static boolean isContainer(JavaClass type) {
+        return type.isAssignableTo(Collection.class) || type.isAssignableTo(Map.class) || type.isAssignableTo(Iterator.class);
+    }
+
+    private static boolean isOfOneOf(JavaClass owner, Set<JavaClass> reachable) {
         return reachable.stream().anyMatch(type -> type.isAssignableTo(owner.getName()) || owner.isAssignableTo(type.getName()));
     }
 
@@ -138,7 +174,6 @@ class DomainMutatorRulesTest {
             JavaClass type = pending.poll();
             if (isDomain(type) && reachable.add(type)) {
                 pending.addAll(type.getAllSubclasses());
-                type.getAllRawSuperclasses().forEach(pending::add);
                 type.getAllFields().stream()
                         .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC))
                         .flatMap(field -> field.getType().getAllInvolvedRawTypes().stream())
@@ -168,6 +203,38 @@ class DomainMutatorRulesTest {
     }
 
     @Nested
+    @DisplayName("Given today's domain")
+    class GivenTodaysDomain {
+
+        private static final JavaClasses SITE = new ClassFileImporter().withImportOption(new ImportOption.DoNotIncludeTests())
+                .importPackagesOf(AppApplication.class);
+
+        @Test
+        @DisplayName("when the mutators are found, then a change by a field write, through a field's object, through a held set and map, an "
+                + "entity's transition and a record aggregate's transition are among them, and a copy, a filtered list and an accessor are not")
+        void should_find_the_known_state_changes_when_found_given_todays_domain() {
+            assertThat(Map.of(
+                    "cz.novanadeje.app.donors.domain.Donor.changeEmail", true,
+                    "cz.novanadeje.app.donors.domain.Donor.grantFirstAdministration", true,
+                    "cz.novanadeje.app.donations.domain.donor.DonorRecord.learnSenderAccountFrom", true,
+                    "cz.novanadeje.app.donations.domain.donor.DonorRecord.reconnectSenderAccount", true,
+                    "cz.novanadeje.app.donations.domain.donation.Donation.withoutPairingSources", true,
+                    "cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey.withdrawn", true,
+                    "cz.novanadeje.app.donors.domain.Donor.sessionRoles", false,
+                    "cz.novanadeje.app.donations.domain.donation.DonationList.inYear", false,
+                    "cz.novanadeje.app.donors.domain.Donor.email", false))
+                    .allSatisfy((method, mutator) -> assertThat(changeMadeBy(methodNamed(method)))
+                            .as(method).matches(change -> change.isPresent() == mutator));
+        }
+
+        private static JavaMethod methodNamed(String fullName) {
+            String owner = fullName.substring(0, fullName.lastIndexOf('.'));
+            String name = fullName.substring(fullName.lastIndexOf('.') + 1);
+            return SITE.get(owner).getMethods().stream().filter(method -> method.getName().equals(name)).findFirst().orElseThrow();
+        }
+    }
+
+    @Nested
     @DisplayName("Given planted controllers on planted domain classes")
     class GivenPlantedControllers {
 
@@ -188,6 +255,27 @@ class DomainMutatorRulesTest {
                                 public void forget() { java.util.List.of(1).forEach(each -> this.name = null); }
                                 public static void renameAll(java.util.List<Gift> gifts) { gifts.forEach(gift -> gift.rename("all")); }
                                 public boolean named() { return name != null && withName(name).name() != null; }
+                                private final java.util.Set<String> tags = new java.util.HashSet<>();
+                                private final GiftTag tag = new GiftTag();
+                                public void tagWith(String label) { tags.add(label); }
+                                public java.util.Set<String> tagsWith(String label) {
+                                    java.util.Set<String> copy = new java.util.HashSet<>(tags);
+                                    copy.add(label);
+                                    return copy;
+                                }
+                                public void retag() { tag.rename(); }
+                            }
+                            """),
+                    planted("planteda.domain.GiftTag", "public class GiftTag { private String label; void rename() { label = \"renamed\"; } }"),
+                    planted("planteda.domain.WishId", "public record WishId(java.util.UUID value) {}"),
+                    planted("planteda.domain.Wish", "public record Wish(WishId id, String text) { public Wish granted() { return new Wish(id, \"granted\"); } }"),
+                    planted("planteda.domain.WishView",
+                            "public record WishView(WishId wish, String text) { public WishView retitled() { return new WishView(wish, \"retitled\"); } }"),
+                    planted("planteda.domain.GiftNote", """
+                            public final class GiftNote {
+                                private final String id;
+                                public GiftNote(String id) { this.id = id; }
+                                public GiftNote copied() { return new GiftNote(id); }
                             }
                             """),
                     planted("planteda.domain.GiftPolicy", """
@@ -196,11 +284,13 @@ class DomainMutatorRulesTest {
                                 public boolean allows(Gift gift) { return gift.named(); }
                             }
                             """),
-                    planted("planteda.domain.Item", "public abstract class Item { public abstract void touch(); public abstract String label(); }"),
+                    planted("planteda.domain.Item", "public abstract class Item { public abstract void touch(); public abstract void touchTag(); public abstract String label(); }"),
                     planted("planteda.domain.TouchedItem", """
                             public class TouchedItem extends Item {
                                 private int touches;
+                                private final GiftTag tag = new GiftTag();
                                 public void touch() { touches++; }
+                                public void touchTag() { tag.rename(); }
                                 public String label() { return "item"; }
                             }
                             """),
@@ -261,6 +351,10 @@ class DomainMutatorRulesTest {
                                 void tagging(cz.novanadeje.app.planteda.domain.Tagged tagged) { tagged.tag(); }
                                 java.util.function.Consumer<cz.novanadeje.app.planteda.domain.Item> toucher() { return cz.novanadeje.app.planteda.domain.Item::touch; }
                                 void counting(cz.novanadeje.app.planteda.domain.Gift gift) { gift.count = 2; }
+                                void labelling(cz.novanadeje.app.planteda.domain.Gift gift) { gift.tagWith("label"); }
+                                void retagging(cz.novanadeje.app.planteda.domain.Gift gift) { gift.retag(); }
+                                void touchingTag(cz.novanadeje.app.planteda.domain.Item item) { item.touchTag(); }
+                                String granting(cz.novanadeje.app.planteda.domain.Wish wish) { return wish.granted().text(); }
                                 int withdrawing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.withdrawn().amount(); }
                                 boolean renewing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.renewed().isPresent(); }
                                 char stepping(cz.novanadeje.app.planteda.domain.GiftCursor cursor) { return cursor.next(); }
@@ -269,6 +363,9 @@ class DomainMutatorRulesTest {
                                             + new cz.novanadeje.app.planteda.domain.GiftPolicy().allows(gift)
                                             + new cz.novanadeje.app.planteda.domain.GiftValue("value").renamed("other").name()
                                             + new cz.novanadeje.app.planteda.domain.Pledge(1).amount()
+                                            + gift.tagsWith("label")
+                                            + new cz.novanadeje.app.planteda.domain.GiftNote("note").copied()
+                                            + new cz.novanadeje.app.planteda.domain.WishView(new cz.novanadeje.app.planteda.domain.WishId(java.util.UUID.randomUUID()), "wish").retitled()
                                             + new cz.novanadeje.app.planteda.domain.PledgeList(java.util.List.of()).large()
                                             + cz.novanadeje.app.planteda.domain.GiftKind.ONE.next()
                                             + cz.novanadeje.app.planteda.domain.GiftParser.parse("ab").name()
@@ -281,8 +378,8 @@ class DomainMutatorRulesTest {
         @Test
         @DisplayName("when the rule checks the controller, then each change of a domain object is reported: a direct write, one through another "
                 + "method, in a lambda, through a static method on its parameter, through another domain class, through an override of an abstract "
-                + "method and of an interface, by a method reference, by writing a field, and a transition of an entity (a class holding a domain …Id or …Reference) "
-                + "returning its own kind, alone and in an Optional")
+                + "method and of an interface, by a method reference, by writing a field, in a held set, in the object of a field, of a subclass's "
+                + "field, and a transition of an entity class or record (one with its own id) returning its own kind, alone and in an Optional")
         void should_report_every_change_when_checked_given_a_controller_that_changes_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.renaming(").contains("Gift.rename("))
@@ -296,12 +393,17 @@ class DomainMutatorRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.counting(").contains("writes the field").contains("Gift.count"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.withdrawing(").contains("returns its own kind"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.renewing(").contains("returns its own kind"))
-                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.stepping(").contains("GiftCursor.at"));
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.stepping(").contains("GiftCursor.at"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.labelling(").contains("changes a collection or map"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.retagging(").contains("GiftTag.label"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.touchingTag(").contains("GiftTag.label"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.granting(").contains("returns its own kind"));
         }
 
         @Test
         @DisplayName("when the rule checks the controller, then reading accessors, a public field and a domain service's check, a record's copy, "
-                + "an enum's next value, a filtered copy of a list that is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
+                + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, an enum's next value, a filtered copy of a list that "
+                + "is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
         void should_report_no_read_when_checked_given_a_controller_that_reads_and_creates_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object)).noneSatisfy(detail -> assertThat(detail).contains("GiftController.reading("));
         }
