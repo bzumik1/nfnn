@@ -164,6 +164,7 @@ class DonorEmailVerificationServiceTest {
         assertThat(event.email()).isEqualTo(EMAIL);
         assertThat(event.preferredLocale()).isEqualTo(LocaleCode.CS);
         assertThat(event.expiresAt()).isEqualTo(NOW.plus(TTL));
+        assertThat(event.unconfirmedLifetime()).isEqualTo(Duration.ofDays(30));
         assertThat(event.toString()).doesNotContain(event.secret().value());
     }
 

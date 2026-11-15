@@ -4,8 +4,10 @@ import cz.novanadeje.app.donors.domain.LinkSecret;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-public record DonorRegistrationReminderDue(UUID donorId, EmailAddress email, LocaleCode preferredLocale, LinkSecret secret, Instant expiresAt) {
+public record DonorRegistrationReminderDue(UUID donorId, EmailAddress email, LocaleCode preferredLocale, LinkSecret secret, Instant expiresAt,
+                                          Duration unconfirmedLifetime) {
 }

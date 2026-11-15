@@ -200,6 +200,19 @@ class DonorRegistrationEmailSenderTest {
     }
 
     @Test
+    @DisplayName("Given a reminder event naming a lifetime of forty-five days, when the reminder is sent in Czech or English, then both parts name the forty-five days of the event")
+    void should_name_the_lifetime_of_the_event_when_sent_given_a_reminder_naming_forty_five_days() {
+        reminderSent(LocaleCode.CS, Duration.ofDays(45), email -> {
+            assertThat(MailContents.plainText(email)).contains("nepotvrzenou registraci i s jejími údaji smažeme 45 dní po jejím založení");
+            assertThat(MailContents.html(email)).contains("nepotvrzenou registraci i s jejími údaji smažeme 45 dní po jejím založení");
+        });
+        reminderSent(LocaleCode.EN, Duration.ofDays(45), email -> {
+            assertThat(MailContents.plainText(email)).contains("we delete an unconfirmed registration with its details 45 days after it was made");
+            assertThat(MailContents.html(email)).contains("we delete an unconfirmed registration with its details 45 days after it was made");
+        });
+    }
+
+    @Test
     @DisplayName("Given an unconfirmed donor, when the reminder is sent in Czech or English, then both parts say the registration is deleted thirty days after it was made")
     void should_name_deletion_after_thirty_days_when_sent_given_unconfirmed_donor() {
         reminderSent(LocaleCode.CS, email -> {
@@ -297,9 +310,14 @@ class DonorRegistrationEmailSenderTest {
     }
 
     private void reminderSent(LocaleCode locale, ThrowingAssertion assertion) {
+        reminderSent(locale, Duration.ofDays(30), assertion);
+    }
+
+    private void reminderSent(LocaleCode locale, Duration unconfirmedLifetime, ThrowingAssertion assertion) {
         RecordingMailSender recording = new RecordingMailSender();
         contexts.withBean(JavaMailSender.class, () -> recording).run(context -> {
-            sender(context, Duration.ofHours(24)).sendReminder(new DonorRegistrationReminderDue(DONOR_ID, EMAIL, locale, SECRET, EXPIRES_AT));
+            sender(context, Duration.ofHours(24)).sendReminder(new DonorRegistrationReminderDue(DONOR_ID, EMAIL, locale, SECRET, EXPIRES_AT,
+                    unconfirmedLifetime));
 
             assertThat(recording.sent()).hasSize(1);
             assertion.accept(MailContents.asReceived(recording.sent().getFirst()));

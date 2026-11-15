@@ -85,11 +85,11 @@ class UnconfirmedRegistrationExpiryConcurrencyTest {
     @Test
     @DisplayName("Given an old registration confirmed but not committed yet, when the expiry runs meanwhile, then it deletes nothing and the confirmed account stays")
     void should_keep_account_when_expiry_runs_during_confirmation_given_old_registration() throws Exception {
-        Future<Integer> deletion = whileHeldBy(
+        Future<ExpiredRegistrations> deletion = whileHeldBy(
                 () -> emailVerification.confirm(link.value(), DeviceDescription.UNKNOWN, SessionKind.REMEMBERED),
                 expiry::expireUnconfirmed);
 
-        assertThat(deletion.get(30, TimeUnit.SECONDS)).isZero();
+        assertThat(deletion.get(30, TimeUnit.SECONDS).deleted()).isZero();
         assertThat(jdbc.sql("select email_verified_at is not null from donor where id = ?").param(jana.id().value()).query(Boolean.class).single())
                 .isTrue();
     }

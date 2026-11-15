@@ -215,7 +215,7 @@ A donor's registration on the site with e-mail, profile, sign-in methods, device
 _Avoid_: „účet“ where a bank account is meant
 
 **Registration**\
-UI „registrace“, „Založit účet“ · Code: `DonorRegistered`, `RegistrationReminders`, `RegistrationReturn`.\
+UI „registrace“, „Založit účet“ · Code: `DonorRegistered`, `RegistrationReminders`, `RegistrationReturn`, `UnconfirmedRegistration` (its lifetime before deletion).\
 Creating a donor account as a person or a company; the account works only after the e-mail confirmation, and a donor who does not confirm by the next day gets one reminder.
 
 **E-mail confirmation**\

@@ -1,16 +1,14 @@
 package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.domain.DonorRepository;
+import cz.novanadeje.app.donors.domain.UnconfirmedRegistration;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
-import java.time.Duration;
 
 @Service
 public class DonorRegistrationExpiryService {
-
-    public static final Duration RETENTION = Duration.ofDays(30);
 
     private final DonorRepository donors;
     private final Clock clock;
@@ -21,7 +19,8 @@ public class DonorRegistrationExpiryService {
     }
 
     @Transactional
-    public int expireUnconfirmed() {
-        return donors.deleteUnconfirmedRegisteredBefore(clock.instant().minus(RETENTION));
+    public ExpiredRegistrations expireUnconfirmed() {
+        int deleted = donors.deleteUnconfirmedRegisteredBefore(UnconfirmedRegistration.expiredWhenRegisteredBefore(clock.instant()));
+        return new ExpiredRegistrations(deleted, UnconfirmedRegistration.LIFETIME);
     }
 }

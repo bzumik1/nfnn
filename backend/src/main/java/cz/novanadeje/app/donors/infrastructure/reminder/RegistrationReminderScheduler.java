@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.infrastructure.reminder;
 
 import cz.novanadeje.app.donors.application.DonorRegistrationExpiryService;
 import cz.novanadeje.app.donors.application.DonorRegistrationReminderService;
+import cz.novanadeje.app.donors.application.ExpiredRegistrations;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +30,9 @@ class RegistrationReminderScheduler {
 
     private void deleteExpiredRegistrations() {
         try {
-            int deleted = expiry.expireUnconfirmed();
-            if (deleted > 0) {
-                log.info("Deleted {} unconfirmed registrations older than {} days", deleted, DonorRegistrationExpiryService.RETENTION.toDays());
+            ExpiredRegistrations expired = expiry.expireUnconfirmed();
+            if (expired.deleted() > 0) {
+                log.info("Deleted {} unconfirmed registrations older than {} days", expired.deleted(), expired.lifetime().toDays());
             } else {
                 log.debug("No unconfirmed registration to delete");
             }
