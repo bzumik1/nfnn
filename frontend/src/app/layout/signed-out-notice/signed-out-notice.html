@@ -6,6 +6,10 @@
           <p class="ui-notice__text" i18n="@@layout.signedOut.deviceDataDeleted">
             Data z tohoto zařízení jsme smazali a odhlásili jsme vás.
           </p>
+        } @else if (notice.reason() === 'idle') {
+          <p class="ui-notice__text" i18n="@@layout.signedOut.idle">
+            Po hodině bez používání jsme vás z bezpečnosti odhlásili.
+          </p>
         } @else {
           <p class="ui-notice__text" i18n="@@layout.signedOut.message">Odhlásili jste se.</p>
         }

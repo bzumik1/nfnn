@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type SignedOutReason = 'signed-out' | 'device-data-deleted';
+export type SignedOutReason = 'signed-out' | 'idle' | 'device-data-deleted';
 
 @Injectable({ providedIn: 'root' })
 export class SignedOutNotice {

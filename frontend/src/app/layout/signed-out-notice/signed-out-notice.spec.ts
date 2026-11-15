@@ -68,6 +68,16 @@ describe('Given the notice shown after signing out', () => {
     expect(status().textContent).not.toContain('Odhlásili jste se.');
   });
 
+  it('when an hour without use on a public computer signed the donor out, then the notice says it was the hour and not the donor', async () => {
+    state.show('idle');
+    await settle();
+
+    expect(status().textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      'Po hodině bez používání jsme vás z bezpečnosti odhlásili.',
+    );
+    expect(status().textContent).not.toContain('Odhlásili jste se.');
+  });
+
   it('when the server did not hear the sign-out, then the notice says it will be finished once connected and to close the browser on a borrowed computer', async () => {
     const auth = TestBed.inject(AuthStore);
     auth.login('jana@example.cz', 'correct horse battery').subscribe();

@@ -83,7 +83,7 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
     await expect(publicChoice).toBeChecked();
     await expect(publicChoice).toBeFocused();
     await expect(publicChoice).toHaveAccessibleDescription(
-      'Po zavření prohlížeče tu nic nezůstane.',
+      'Po hodině bez používání vás odhlásíme a po zavření prohlížeče tu nic nezůstane.',
     );
     const openedAtSignIn = copyOpened(page);
     await submitPassword(page);
@@ -116,6 +116,10 @@ test.describe('Given a visitor with the sign-in dialog open in a browser tab', (
     const remember = page.getByRole('checkbox', { name: 'Zapamatovat si mě' });
     await expect(remember).not.toBeChecked();
     await expect(remember).toBeFocused();
-    await expect(page.getByText('Po zavření prohlížeče tu nic nezůstane.')).toHaveCount(0);
+    await expect(
+      page.getByText(
+        'Po hodině bez používání vás odhlásíme a po zavření prohlížeče tu nic nezůstane.',
+      ),
+    ).toHaveCount(0);
   });
 });
