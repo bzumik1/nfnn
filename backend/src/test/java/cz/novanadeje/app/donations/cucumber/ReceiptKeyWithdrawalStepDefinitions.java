@@ -200,11 +200,13 @@ public class ReceiptKeyWithdrawalStepDefinitions {
     @Then("the receipt signing keys flag the unreadable audit entries:")
     public void theReceiptSigningKeysFlagUnreadableEntries(DataTable expected) {
         assertThat(unreadableEntries()).isEqualTo(expected.asMaps());
+        assertThat(mismatches()).isEmpty();
     }
 
     @Then("the receipt signing keys flag in the audit trail:")
     public void theReceiptSigningKeysFlag(DataTable expected) {
         assertThat(mismatches()).isEqualTo(expected.asMaps());
+        assertThat(unreadableEntries()).isEmpty();
     }
 
     @Then("the receipt signing keys flag nothing in the audit trail")

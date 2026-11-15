@@ -129,12 +129,19 @@ class ReceiptSigningKeyHistoryTest {
     }
 
     @Test
-    @DisplayName("Given entries of the key actions in their current and earlier wordings, when the history reads them, then none is unreadable")
-    void should_report_nothing_unreadable_when_read_given_every_known_wording() {
-        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(registered("21fe31df"), adopted("39f713d0"), withdrawn("39f713d0"),
-                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč k ověřovacím QR 21fe31df (ověřeno druhým faktorem)")), Set.of());
+    @DisplayName("Given entries of the key actions in every wording the server has written, spelled out, when the history reads them, then none is unreadable and each names its key")
+    void should_report_nothing_unreadable_when_read_given_every_wording_ever_written() {
+        ReceiptSigningKeyHistory history = ReceiptSigningKeyHistory.of(List.of(
+                entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ACTION,
+                        "Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df"),
+                entry(AdminActionPerformed.SERVER, ReceiptSigningKeyRegistration.ADOPT_ACTION,
+                        "Server převzal klíč k ověřovacím QR 39f713d0 z obnovené zálohy (obnova 019a1b2c-0000-7000-8000-000000000001)"),
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Zneplatněn klíč k ověřovacím QR 39f713d0 (ověřeno druhým faktorem)"),
+                entry(ADMIN, ReceiptSigningKeyWithdrawal.ACTION, "Stažen klíč k ověřovacím QR dac073e0 (ověřeno druhým faktorem)")), Set.of());
 
         assertThat(history.unreadable()).isEmpty();
+        assertThat(history.recorded()).extracting(ReceiptSigningKeyId::value).containsExactlyInAnyOrder("21fe31df", "39f713d0", "dac073e0");
+        assertThat(history.withdrawn()).extracting(ReceiptSigningKeyId::value).containsExactlyInAnyOrder("39f713d0", "dac073e0");
     }
 
     @Test

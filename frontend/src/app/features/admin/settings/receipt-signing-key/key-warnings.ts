@@ -24,7 +24,7 @@ export function mismatchSentence(mismatch: ReceiptSigningKeyMismatch): string {
 
 export function unreadableEntrySentence(entry: ReceiptSigningKeyUnreadableEntry): string {
   const performedAt = formatBankTime(entry.performedAt);
-  return $localize`:@@admin.signingKey.unreadableEntry:Záznam „${keyActionName(entry.action)}:action:“ z ${performedAt}:performedAt: v Historii změn nejde přečíst (změna mimo web), takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.`;
+  return $localize`:@@admin.signingKey.unreadableEntry:Záznam „${keyActionName(entry.action)}:action:“ z ${performedAt}:performedAt: v Historii změn neodpovídá žádnému známému znění, takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.`;
 }
 
 export function auditSentences(answer: ReceiptSigningKeysResponse): string[] {

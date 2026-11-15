@@ -885,7 +885,7 @@ describe('Given an administrator on the administration home', () => {
       );
 
       expect(items()).toEqual([
-        'Naléhavé: Klíč k ověřovacím QR kódům potřebuje kontrolu Záznam „Převzetí klíče ze zálohy“ z 12. 11. 2026 10:30 v Historii změn nejde přečíst (změna mimo web), takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.',
+        'Naléhavé: Klíč k ověřovacím QR kódům potřebuje kontrolu Záznam „Převzetí klíče ze zálohy“ z 12. 11. 2026 10:30 v Historii změn neodpovídá žádnému známému znění, takže podle něj web nemůže zkontrolovat klíče k ověřovacím QR kódům. Obraťte se na technika serveru.',
       ]);
       expect(links()).toEqual(['/sprava/nastaveni#klic-k-overovacim-qr']);
     });
