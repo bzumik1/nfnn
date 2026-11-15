@@ -24,7 +24,11 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.repository.Repository;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.TransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -63,8 +67,8 @@ class AfterCommitRulesTest {
     private static final Set<String> AFTER_COMPLETION_PHASES = Set.of(TransactionPhase.AFTER_COMMIT.name(), TransactionPhase.AFTER_ROLLBACK.name(),
             TransactionPhase.AFTER_COMPLETION.name());
     private static final Set<String> OUTSIDE_A_RUNNING_TRANSACTION = Set.of(Propagation.REQUIRES_NEW.name(), Propagation.NOT_SUPPORTED.name());
-    private static final List<Class<?>> TRANSACTIONAL_LIBRARIES = List.of(Repository.class, EntityManager.class, TransactionOperations.class,
-            TransactionManager.class);
+    private static final List<Class<?>> TRANSACTIONAL_LIBRARIES = List.of(Repository.class, EntityManager.class, JdbcOperations.class,
+            NamedParameterJdbcOperations.class, JdbcClient.class, TransactionOperations.class, TransactionManager.class, ApplicationEventPublisher.class);
 
     private static final DescribedPredicate<JavaAnnotation<?>> AN_AFTER_COMMIT_LISTENER = describe(
             "@TransactionalEventListener(phase = AFTER_COMMIT)",
@@ -82,7 +86,8 @@ class AfterCommitRulesTest {
             .that().areMetaAnnotatedWith(Async.class)
             .should(beMetaAnnotatedWith(AN_AFTER_COMMIT_LISTENER))
             .because("backend.md, Contexts and layers: @Async runs a side effect after the commit it follows, so it sits only on an AFTER_COMMIT "
-                    + "listener; on any other method it would fire before or regardless of the outcome of the caller's transaction");
+                    + "listener; on a plain method or a plain or BEFORE_COMMIT listener it would fire before the caller's transaction ends, and the "
+                    + "site has no work to run on another thread after a rollback");
 
     @ArchTest
     static final ArchRule no_class_is_async = noClasses()
@@ -95,8 +100,8 @@ class AfterCommitRulesTest {
             .that(SYNCHRONOUS_AFTER_COMPLETION_LISTENERS)
             .should(reachNoWorkThatJoinsTheFinishedTransaction())
             .because("backend.md, Contexts and layers: while an AFTER_COMMIT listener runs synchronously the finished transaction's resources are still "
-                    + "bound to the thread, so whatever joins a running transaction there writes into one that never commits again; such work runs "
-                    + "behind REQUIRES_NEW, NOT_SUPPORTED or @Async");
+                    + "bound to the thread, so whatever joins a running transaction there writes into one that never commits again, and an event "
+                    + "published there misses every transactional listener; such work runs behind REQUIRES_NEW, NOT_SUPPORTED or @Async");
 
     @Test
     @DisplayName("Given planted @Async methods and an @Async class, when the rules check them, then each outside an AFTER_COMMIT listener is reported and the AFTER_COMMIT listeners are not")
@@ -196,9 +201,12 @@ class AfterCommitRulesTest {
                         import org.springframework.transaction.annotation.Transactional;
                         import org.springframework.transaction.event.TransactionPhase;
                         import org.springframework.transaction.event.TransactionalEventListener;
+                        import org.springframework.context.ApplicationEventPublisher;
+                        import org.springframework.transaction.PlatformTransactionManager;
+                        import org.springframework.transaction.TransactionDefinition;
                         import org.springframework.transaction.support.TransactionOperations;
 
-                        class PlantedListeners {
+                        class PlantedListeners extends PlantedListenerBase {
 
                             private final PlantedWritingService writing;
                             private final PlantedPlainService plain;
@@ -206,15 +214,63 @@ class AfterCommitRulesTest {
                             private final PlantedRows rows;
                             private final EntityManager entities;
                             private final TransactionOperations transactions;
+                            private final PlatformTransactionManager manager;
+                            private final ApplicationEventPublisher events;
 
                             PlantedListeners(PlantedWritingService writing, PlantedPlainService plain, PlantedReadingService reading, PlantedRows rows,
-                                             EntityManager entities, TransactionOperations transactions) {
+                                             EntityManager entities, TransactionOperations transactions, PlatformTransactionManager manager,
+                                             ApplicationEventPublisher events) {
+                                super(writing);
                                 this.writing = writing;
                                 this.plain = plain;
                                 this.reading = reading;
                                 this.rows = rows;
                                 this.entities = entities;
                                 this.transactions = transactions;
+                                this.manager = manager;
+                                this.events = events;
+                            }
+
+                            @TransactionalEventListener
+                            void opensWithTheManager(java.math.BigDecimal event) {
+                                manager.getTransaction(TransactionDefinition.withDefaults());
+                            }
+
+                            @TransactionalEventListener
+                            void publishes(java.math.BigInteger event) {
+                                events.publishEvent("published");
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAConstructor(java.time.Instant event) {
+                                new cz.novanadeje.app.planteda.application.PlantedWriteOnCreation(writing);
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAConstructorReference(java.time.LocalTime event) {
+                                java.util.function.Function<PlantedWritingService, Object> creation =
+                                        cz.novanadeje.app.planteda.application.PlantedWriteOnCreation::new;
+                                creation.apply(writing);
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAnAnonymousClass(java.time.Duration event) {
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ownSeparately();
+                                    }
+                                }.run();
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAStaticHelper(java.time.LocalDate event) {
+                                cz.novanadeje.app.planteda.application.PlantedSeparateService.writeStatically(writing);
+                            }
+
+                            @TransactionalEventListener
+                            void writesThroughAnInheritedNewTransaction(java.time.Year event) {
+                                inheritedSeparately();
                             }
 
                             @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -333,6 +389,79 @@ class AfterCommitRulesTest {
                         @interface AfterCommit {
                         }
                         """),
+                Map.entry("cz.novanadeje.app.planteda.infrastructure.events.PlantedListenerBase", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import cz.novanadeje.app.planteda.application.PlantedWritingService;
+                        import org.springframework.transaction.annotation.Propagation;
+                        import org.springframework.transaction.annotation.Transactional;
+
+                        abstract class PlantedListenerBase {
+
+                            private final PlantedWritingService inheritedWriting;
+
+                            PlantedListenerBase(PlantedWritingService inheritedWriting) {
+                                this.inheritedWriting = inheritedWriting;
+                            }
+
+                            @Transactional(propagation = Propagation.REQUIRES_NEW)
+                            void inheritedSeparately() {
+                                inheritedWriting.write();
+                            }
+                        }
+                        """),
+                Map.entry("cz.novanadeje.app.planteda.infrastructure.events.PlantedPrivateListener", """
+                        package cz.novanadeje.app.planteda.infrastructure.events;
+
+                        import cz.novanadeje.app.planteda.application.PlantedWritingService;
+                        import org.springframework.transaction.annotation.Propagation;
+                        import org.springframework.transaction.annotation.Transactional;
+                        import org.springframework.transaction.event.TransactionalEventListener;
+
+                        @Transactional(propagation = Propagation.REQUIRES_NEW)
+                        class PlantedPrivateListener {
+
+                            private final PlantedWritingService writing;
+
+                            PlantedPrivateListener(PlantedWritingService writing) {
+                                this.writing = writing;
+                            }
+
+                            @TransactionalEventListener
+                            private void writesOutsideItsClassTransaction(String event) {
+                                writing.write();
+                            }
+
+                            @TransactionalEventListener
+                            void writesInItsClassTransaction(Integer event) {
+                                writing.write();
+                            }
+                        }
+                        """),
+                Map.entry("cz.novanadeje.app.planteda.application.PlantedWriteOnCreation", """
+                        package cz.novanadeje.app.planteda.application;
+
+                        public class PlantedWriteOnCreation {
+
+                            public PlantedWriteOnCreation(PlantedWritingService writing) {
+                                writing.write();
+                            }
+                        }
+                        """),
+                Map.entry("cz.novanadeje.app.planteda.application.PlantedSeparateService", """
+                        package cz.novanadeje.app.planteda.application;
+
+                        import org.springframework.transaction.annotation.Propagation;
+                        import org.springframework.transaction.annotation.Transactional;
+
+                        @Transactional(propagation = Propagation.REQUIRES_NEW)
+                        public class PlantedSeparateService {
+
+                            public static void writeStatically(PlantedWritingService writing) {
+                                writing.write();
+                            }
+                        }
+                        """),
                 Map.entry("cz.novanadeje.app.planteda.infrastructure.events.PlantedRows", """
                         package cz.novanadeje.app.planteda.infrastructure.events;
 
@@ -444,7 +573,7 @@ class AfterCommitRulesTest {
                         """)));
 
         assertThat(synchronous_after_completion_listeners_stay_out_of_the_finished_transaction.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(11)
+                .hasSize(19)
                 .anySatisfy(detail -> assertThat(detail).contains("writesDirectly").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAPlainServiceAndAPort").contains("PlantedPortAdapter.store()"))
                 .anySatisfy(detail -> assertThat(detail).contains("readsAfterARollback").contains("PlantedReadingService.read()"))
@@ -454,6 +583,16 @@ class AfterCommitRulesTest {
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughAHelper").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesThroughItsOwnNewTransaction").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesUnderAComposedListener").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("opensWithTheManager").contains("getTransaction"))
+                .anySatisfy(detail -> assertThat(detail).contains("publishes").contains("publishEvent"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAConstructor(").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAConstructorReference").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAnAnonymousClass").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAStaticHelper").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesThroughAnInheritedNewTransaction").contains("PlantedWritingService.write()"))
+                .anySatisfy(detail -> assertThat(detail).contains("writesOutsideItsClassTransaction").contains("PlantedWritingService.write()"))
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("writesSeparately", "writesWithoutATransaction", "writesLater", "staysInMemory",
+                        "writesBeforeTheCommit", "writesOnAnotherThread", "opensItsOwn", "writesInItsClassTransaction"))
                 .anySatisfy(detail -> assertThat(detail).contains("writesInALambda").contains("PlantedWritingService.write()"))
                 .anySatisfy(detail -> assertThat(detail).contains("referencesAWrite").contains("PlantedWritingService.writeOne"));
     }
@@ -473,7 +612,8 @@ class AfterCommitRulesTest {
                             continue;
                         }
                         for (JavaCodeUnit target : codeUnitsRunBy(access)) {
-                            boolean throughTheProxy = !ownClassesOf(caller.getOwner()).contains(target.getOwner());
+                            boolean throughTheProxy = !ownClassesOf(caller.getOwner()).contains(target.getOwner())
+                                    && !inheritedBy(caller.getOwner(), target.getOwner());
                             if (throughTheProxy && attributeOf(target, Async.class).isPresent()) {
                                 continue;
                             }
@@ -528,7 +668,7 @@ class AfterCommitRulesTest {
         }
         JavaCodeUnit codeUnit = declared.get();
         List<String> parameters = codeUnit.getRawParameterTypes().stream().map(JavaClass::getName).toList();
-        Stream<JavaCodeUnit> overrides = codeUnit instanceof JavaMethod && !codeUnit.getModifiers().contains(JavaModifier.STATIC)
+        Stream<JavaCodeUnit> overrides = codeUnit instanceof JavaMethod
                 ? codeUnit.getOwner().getAllSubclasses().stream()
                 .flatMap(subclass -> subclass.getMethods().stream())
                 .filter(method -> method.getName().equals(codeUnit.getName())
@@ -536,6 +676,10 @@ class AfterCommitRulesTest {
                 .map(JavaCodeUnit.class::cast)
                 : Stream.empty();
         return Stream.concat(Stream.of(codeUnit), overrides).toList();
+    }
+
+    private static boolean inheritedBy(JavaClass caller, JavaClass declaring) {
+        return !declaring.isInterface() && ownClassesOf(caller).stream().anyMatch(own -> !own.equals(declaring) && own.isAssignableTo(declaring.getName()));
     }
 
     private static Optional<JavaAnnotation<?>> attributeOf(JavaCodeUnit codeUnit, Class<? extends Annotation> kind) {
