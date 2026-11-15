@@ -81,6 +81,10 @@ class ApplicationValueRulesTest {
             Map.entry("cz.novanadeje.app.donations.infrastructure.persistence.ReceiptSigningKeyAdoptionJpaEntity reads "
                             + "cz.novanadeje.app.shared.application.restore.FinishedRestore.MAX_ID_LENGTH",
                     EVENT_COLUMN + " (receipt_signing_key_adoption.restore_id holds a FinishedRestore id)"),
+            Map.entry("cz.novanadeje.app.donations.infrastructure.persistence.JpaReceiptSigningKeyRepository reads "
+                            + "cz.novanadeje.app.shared.application.restore.FinishedRestore.MAX_ID_LENGTH",
+                    EVENT_COLUMN + " (receipt_signing_key_adoption.restore_id: the adapter refuses a longer id as a broken invariant before the "
+                            + "write, since FinishedRestore admits none)"),
             Map.entry("cz.novanadeje.app.shared.infrastructure.audit.AdminActionJpaEntity reads "
                             + "cz.novanadeje.app.shared.application.event.AdminActionPerformed.MAX_ACTION_LENGTH",
                     EVENT_COLUMN + " (admin_action.action holds the action of the shared event AdminActionPerformed)"),
@@ -157,7 +161,7 @@ class ApplicationValueRulesTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("allowedConstantReads")
-    @DisplayName("Given a planted class that reads a domain constant, its own constant, a static value that is no compile-time constant, an enum constant, a package merely named like the application, or an application constant from the application, when the sources are read, then nothing of it is reported")
+    @DisplayName("Given a planted class that reads a domain constant, its own constant, a static value that is no compile-time constant, an enum constant, a package merely named like the application or an adapter, an application constant from the application or a package below it, a constant of an application package below an adapter, or only imports one, when the sources are read, then nothing of it is reported")
     void should_report_nothing_when_read_given_an_allowed_constant_read(String label, String reader) {
         assertThat(plantedReads).noneSatisfy(read -> assertThat(read).startsWith(reader + " "));
     }
@@ -192,7 +196,19 @@ class ApplicationValueRulesTest {
                 Arguments.of("constant of an interface of the application", "cz.novanadeje.app.donors.infrastructure.json.PlantedPortImplementation reads "
                         + "cz.novanadeje.app.donors.application.PlantedPort.FIELD"),
                 Arguments.of("constant of the shared application", "cz.novanadeje.app.shared.infrastructure.audit.PlantedSharedReader reads "
-                        + "cz.novanadeje.app.shared.application.event.PlantedSharedEvent.MAX_LENGTH"));
+                        + "cz.novanadeje.app.shared.application.event.PlantedSharedEvent.MAX_LENGTH"),
+                Arguments.of("constant passed on, read where it is passed on", "cz.novanadeje.app.donors.infrastructure.persistence.PlantedPassingEntity reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.PASSED_ON"),
+                Arguments.of("constant passed on through an adapter's constant", "cz.novanadeje.app.donors.infrastructure.persistence.PlantedPassedOnRepository reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.PASSED_ON"),
+                Arguments.of("constant passed on twice through constants outside every layer", "cz.novanadeje.app.donors.interfaces.rest.PlantedPassedOnController reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.PASSED_OUTSIDE"),
+                Arguments.of("annotation of a package", "cz.novanadeje.app.donors.infrastructure.packaged.package-info reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.PACKAGE_LIMIT"),
+                Arguments.of("annotation of a record component", "cz.novanadeje.app.donors.interfaces.rest.PlantedSizedRequest reads "
+                        + "cz.novanadeje.app.donors.application.PlantedLimits.COMPONENT_LIMIT"),
+                Arguments.of("constant instance field", "cz.novanadeje.app.donors.infrastructure.mail.PlantedInstanceLimitSender reads "
+                        + "cz.novanadeje.app.donors.application.PlantedInstanceLimits.MAX"));
     }
 
     static Stream<Arguments> allowedConstantReads() {
@@ -202,7 +218,11 @@ class ApplicationValueRulesTest {
                 Arguments.of("static final value that is no compile-time constant", "cz.novanadeje.app.donors.infrastructure.mail.PlantedComputedSender"),
                 Arguments.of("enum constant", "cz.novanadeje.app.donors.interfaces.rest.PlantedEnumController"),
                 Arguments.of("package merely named like the application", "cz.novanadeje.app.donors.infrastructure.mail.PlantedLookalikeConstantSender"),
-                Arguments.of("application reading the application", "cz.novanadeje.app.donors.application.PlantedReminderPolicy"));
+                Arguments.of("application reading the application", "cz.novanadeje.app.donors.application.PlantedReminderPolicy"),
+                Arguments.of("unused static import", "cz.novanadeje.app.donors.infrastructure.mail.PlantedUnusedImportSender"),
+                Arguments.of("package merely named like an adapter", "cz.novanadeje.app.donors.infrastructures.mail.PlantedLookalikeLayerSender"),
+                Arguments.of("adapter package below the application", "cz.novanadeje.app.donors.application.infrastructure.PlantedNestedLayerReader"),
+                Arguments.of("constant of an application package below an adapter", "cz.novanadeje.app.donors.infrastructure.mail.PlantedNestedSettingsSender"));
     }
 
     private static final List<String> PLANTED_SOURCES = List.of(
@@ -221,6 +241,16 @@ class ApplicationValueRulesTest {
                 public static final int MAX_NAME_LENGTH = 120;
                 public static final int DEFAULT_PAGE = 20;
                 public static final String KEY = "donor";
+                public static final int PASSED_ON = 40;
+                public static final int PASSED_OUTSIDE = 41;
+                public static final int PACKAGE_LIMIT = 42;
+                public static final int COMPONENT_LIMIT = 43;
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.application;
+            public final class PlantedInstanceLimits {
+                public final int MAX = 44;
             }
             """,
             """
@@ -332,6 +362,88 @@ class ApplicationValueRulesTest {
             package cz.novanadeje.app.shared.infrastructure.audit;
             class PlantedSharedReader {
                 int length() { return cz.novanadeje.app.shared.application.event.PlantedSharedEvent.MAX_LENGTH; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.persistence;
+            class PlantedPassingEntity {
+                static final int RESTORE_ID_LENGTH = cz.novanadeje.app.donors.application.PlantedLimits.PASSED_ON;
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.persistence;
+            class PlantedPassedOnRepository {
+                boolean fits(String id) { return id.length() <= PlantedPassingEntity.RESTORE_ID_LENGTH; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.config;
+            public final class PlantedPassedOnLimits {
+                public static final int OUTSIDE = cz.novanadeje.app.donors.application.PlantedLimits.PASSED_OUTSIDE;
+                public static final int TWICE = OUTSIDE * 2;
+                private PlantedPassedOnLimits() { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            class PlantedPassedOnController {
+                int twice() { return cz.novanadeje.app.config.PlantedPassedOnLimits.TWICE; }
+            }
+            """,
+            """
+            @PlantedPackageLimit(cz.novanadeje.app.donors.application.PlantedLimits.PACKAGE_LIMIT)
+            package cz.novanadeje.app.donors.infrastructure.packaged;
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.packaged;
+            @java.lang.annotation.Target(java.lang.annotation.ElementType.PACKAGE)
+            @interface PlantedPackageLimit { int value(); }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            import cz.novanadeje.app.donors.application.PlantedLimits;
+            record PlantedSizedRequest(@PlantedSize(max = PlantedLimits.COMPONENT_LIMIT) String name) { }
+            """,
+            """
+            package cz.novanadeje.app.donors.interfaces.rest;
+            @interface PlantedSize { int max(); }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            class PlantedInstanceLimitSender {
+                int max(cz.novanadeje.app.donors.application.PlantedInstanceLimits limits) { return limits.MAX; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            import static cz.novanadeje.app.donors.application.PlantedLifetimes.REMINDER_DAYS;
+            class PlantedUnusedImportSender {
+                int days() { return 7; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructures.mail;
+            class PlantedLookalikeLayerSender {
+                long days() { return cz.novanadeje.app.donors.application.PlantedLifetimes.LIFETIME_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.application.infrastructure;
+            class PlantedNestedLayerReader {
+                long days() { return cz.novanadeje.app.donors.application.PlantedLifetimes.LIFETIME_DAYS; }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.application;
+            public final class PlantedAdapterSettings {
+                public static final int DAYS = 3;
+                private PlantedAdapterSettings() { }
+            }
+            """,
+            """
+            package cz.novanadeje.app.donors.infrastructure.mail;
+            class PlantedNestedSettingsSender {
+                int days() { return cz.novanadeje.app.donors.infrastructure.application.PlantedAdapterSettings.DAYS; }
             }
             """,
             """

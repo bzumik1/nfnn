@@ -12,10 +12,8 @@ import java.time.Instant;
 @Table(name = "receipt_signing_key_adoption")
 class ReceiptSigningKeyAdoptionJpaEntity {
 
-    static final int MAX_RESTORE_ID_LENGTH = FinishedRestore.MAX_ID_LENGTH;
-
     @Id
-    @Column(name = "restore_id", length = MAX_RESTORE_ID_LENGTH)
+    @Column(name = "restore_id", length = FinishedRestore.MAX_ID_LENGTH)
     private String restoreId;
 
     @Column(name = "adopted_at", nullable = false)

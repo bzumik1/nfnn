@@ -3,6 +3,7 @@ package cz.novanadeje.app.donations.infrastructure.persistence;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyRepository;
+import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 
@@ -50,8 +51,8 @@ class JpaReceiptSigningKeyRepository implements ReceiptSigningKeyRepository {
 
     @Override
     public boolean recordRestoreAdoption(String restoreId, Instant adoptedAt) {
-        if (restoreId.length() > ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH) {
-            throw new IllegalStateException("A restore id is at most " + ReceiptSigningKeyAdoptionJpaEntity.MAX_RESTORE_ID_LENGTH + " characters");
+        if (restoreId.length() > FinishedRestore.MAX_ID_LENGTH) {
+            throw new IllegalStateException("A restore id is at most " + FinishedRestore.MAX_ID_LENGTH + " characters");
         }
         return adoptions.insertIfAbsent(restoreId, adoptedAt) == 1;
     }
