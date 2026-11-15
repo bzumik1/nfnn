@@ -1,7 +1,7 @@
 package cz.novanadeje.app.shared.interfaces.rest;
 
 import cz.novanadeje.app.shared.application.administration.ConnectedClient;
-import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.shared.infrastructure.security.ClientClaim;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +30,6 @@ final class ConnectedClientArgumentResolver implements HandlerMethodArgumentReso
         if (!(authentication instanceof JwtAuthenticationToken token)) {
             return Optional.empty();
         }
-        return Optional.ofNullable(token.getToken().getClaimAsString(JwtProperties.CLIENT_CLAIM)).filter(client -> !client.isBlank());
+        return ClientClaim.of(token.getToken());
     }
 }
