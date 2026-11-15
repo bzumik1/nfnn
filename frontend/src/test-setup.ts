@@ -1,4 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { restoreWindowProperties, windowPropertiesOf } from './testing/window-properties';
+
+type KeptWindowProperties = WeakMap<object, Map<string, PropertyDescriptor | undefined>>;
+
+const KEPT_WINDOW_PROPERTIES = Symbol.for('nfnn.keptWindowProperties');
 
 if (
   typeof HTMLDialogElement !== 'undefined' &&
@@ -16,28 +21,17 @@ if (
   };
 }
 
-const jsdomWindowProperties =
-  typeof window === 'undefined'
-    ? new Map<string, PropertyDescriptor | undefined>()
-    : new Map(
-        [
-          'scrollTo',
-          'scrollX',
-          'scrollY',
-          'innerWidth',
-          'innerHeight',
-          'matchMedia',
-          'visualViewport',
-        ].map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const),
-      );
+const keptWindowProperties = ((globalThis as { [KEPT_WINDOW_PROPERTIES]?: KeptWindowProperties })[
+  KEPT_WINDOW_PROPERTIES
+] ??= new WeakMap());
+
+if (typeof window !== 'undefined') {
+  windowPropertiesOf(window, keptWindowProperties);
+}
 
 beforeEach(() => {
-  for (const [name, descriptor] of jsdomWindowProperties) {
-    if (descriptor) {
-      Object.defineProperty(window, name, descriptor);
-    } else {
-      delete (window as unknown as Record<string, unknown>)[name];
-    }
+  if (typeof window !== 'undefined') {
+    restoreWindowProperties(window, windowPropertiesOf(window, keptWindowProperties));
   }
 });
 
