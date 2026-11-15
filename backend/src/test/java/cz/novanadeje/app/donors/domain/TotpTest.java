@@ -1,6 +1,9 @@
 package cz.novanadeje.app.donors.domain;
 
+import cz.novanadeje.app.support.ArabicDigitsDefaultLocale;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.Test;
@@ -50,5 +53,22 @@ class TotpTest {
         assertThat(Totp.matchingStep(RFC_SECRET, "05O471", now)).isEmpty();
         assertThat(Totp.matchingStep(RFC_SECRET, null, now)).isEmpty();
         assertThat(Totp.matchingStep(RFC_SECRET, "000000", now)).isEmpty();
+    }
+
+    @Nested
+    @DisplayName("Given the JVM's default locale writes Arabic-Indic digits")
+    class GivenADefaultLocaleWithOtherDigits {
+
+        @RegisterExtension
+        final ArabicDigitsDefaultLocale locale = new ArabicDigitsDefaultLocale();
+
+        @Test
+        @DisplayName("when a code is computed and the authenticator app's code is checked, then the code is in ASCII digits and matches")
+        void should_compute_and_match_ascii_digits_when_checked_given_a_default_locale_with_other_digits() {
+            Instant now = Instant.ofEpochSecond(1111111111);
+
+            assertThat(Totp.codeAt(RFC_SECRET, Totp.stepAt(now))).isEqualTo("050471");
+            assertThat(Totp.matchingStep(RFC_SECRET, "050471", now)).hasValue(Totp.stepAt(now));
+        }
     }
 }

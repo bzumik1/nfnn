@@ -4,6 +4,7 @@ import cz.novanadeje.app.shared.domain.PrintableText;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Year;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
@@ -46,7 +47,7 @@ public record ReceiptProperties(String foundationName, String foundationCompanyI
         PrintableText text = PrintableText.of(required(value, name));
         if (!text.prints()) {
             throw new IllegalArgumentException(name + " holds characters a receipt cannot print: " + text.outside().stream()
-                    .map(codePoint -> String.format("U+%04X", codePoint)).collect(Collectors.joining(", ")));
+                    .map(codePoint -> String.format(Locale.ROOT, "U+%04X", codePoint)).collect(Collectors.joining(", ")));
         }
         return text.text();
     }

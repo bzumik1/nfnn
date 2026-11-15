@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { jsdomWindowProperties, restoreJsdomWindow } from './testing/jsdom-window';
 
 if (
@@ -26,4 +27,14 @@ afterEach(() => {
   } catch {
     return;
   }
+});
+
+beforeEach(() => {
+  try {
+    globalThis.localStorage?.clear();
+  } catch {
+    TestBed.resetTestingModule();
+    return;
+  }
+  TestBed.resetTestingModule();
 });

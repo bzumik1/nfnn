@@ -4,10 +4,11 @@ import cz.novanadeje.app.operations.application.backup.BackupScheduleView;
 import cz.novanadeje.app.operations.domain.backup.BackupSchedule;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 record BackupScheduleResponse(String backupTime, int testRestoreDay, String testRestoreTime, Plan applied) {
 
-    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter HOURS_AND_MINUTES = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
     static BackupScheduleResponse from(BackupScheduleView view) {
         Plan planned = Plan.from(view.planned());

@@ -15,7 +15,10 @@ import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.ArabicDigitsDefaultLocale;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.Test;
 
 import java.text.Normalizer;
@@ -142,5 +145,23 @@ class SignedReceiptTest {
                 .isThrownBy(() -> new SignedDonor(DonorType.COMPANY, "Pekárna s.r.o.", "Mlýnská 7", "Turnov", "511 01", Optional.of("4527464X")))
                 .withMessage("A company identifier is eight digits")
                 .satisfies(refused -> assertThat(refused.getMessage()).doesNotContain("4527464"));
+    }
+
+    @Nested
+    @DisplayName("Given the JVM's default locale writes Arabic-Indic digits")
+    class GivenADefaultLocaleWithOtherDigits {
+
+        @RegisterExtension
+        final ArabicDigitsDefaultLocale locale = new ArabicDigitsDefaultLocale();
+
+        @Test
+        @DisplayName("when a company's receipt with a Czech postal code is made, encoded and parsed back, then its year check passes and the postal code and company identifier come back in ASCII digits")
+        void should_parse_back_ascii_digits_when_encoded_given_a_default_locale_with_other_digits() {
+            SignedDonor company = new SignedDonor(DonorType.COMPANY, "Pekárna s.r.o.", "Mlýnská 7", "Turnov", "511 01", Optional.of("01234567"));
+            SignedReceipt receipt = new SignedReceipt(ReceiptKind.SINGLE, new ReceiptNumber("2026-000042"), LocalDate.parse("2026-11-05"), Optional.empty(),
+                    Optional.empty(), company, List.of(new SignedGift(LocalDate.parse("2026-11-03"), 250000)), 250000);
+
+            assertThat(ReceiptProofBody.parse(ReceiptProofBody.encode(receipt, KEY)).donor()).isEqualTo(company);
+        }
     }
 }
