@@ -259,11 +259,14 @@ describe('Given the account sheet of a signed-in donor', () => {
         await settle();
       });
 
-      it('then the sheet stays open and a dialog asks whether to discard what is written', () => {
+      it('then the sheet stays open and a dialog asks whether to discard what is written, without speaking of going back', () => {
         expect(closed).toBe(0);
         expect(sheet.querySelector('#account-section-title')).not.toBeNull();
         expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
           'Zahodit rozepsané údaje?',
+        );
+        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
+          'Co jste do formuláře napsali, se neuloží.',
         );
       });
 
@@ -308,6 +311,9 @@ describe('Given the account sheet of a signed-in donor', () => {
         expect(history.steps.at(-1)).toBe(1);
         expect(document.querySelector('#account-discard-title')?.textContent?.trim()).toBe(
           'Zahodit rozepsané údaje?',
+        );
+        expect(document.querySelector('.account-discard-lead')?.textContent?.trim()).toBe(
+          'Když se teď vrátíte, co jste vyplnili, se neuloží.',
         );
       });
 

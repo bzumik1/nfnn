@@ -2,6 +2,12 @@
 @use 'sheet';
 @use 'touch-target';
 
+$inline-start: max(
+  var(--sheet-inset-inline),
+  env(safe-area-inset-left),
+  var(--window-controls-inset-inline)
+);
+
 :host {
   --sheet-head-top: 0;
 
@@ -12,7 +18,7 @@
   grid-template-columns: var(--sheet-close-size) minmax(0, 1fr) var(--sheet-close-size);
   align-items: center;
   gap: var(--space-2);
-  padding: var(--sheet-close-inset) sheet.$inline-end 0 sheet.$head-inline-start;
+  padding: var(--sheet-close-inset) sheet.$inline-end 0 $inline-start;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-sheet-grouped);
   color: var(--color-sheet-text);
@@ -41,12 +47,20 @@
     width: var(--sheet-close-icon-size);
     height: var(--sheet-close-icon-size);
   }
+
+  @media (forced-colors: active) {
+    border: 1px solid ButtonText;
+  }
 }
 
 .sheet-head-title {
+  min-width: 0;
   margin: 0;
-  overflow-wrap: anywhere;
-  font-size: var(--text-sheet-body);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-sheet-head);
+  line-height: var(--leading-snug);
   font-weight: var(--weight-semibold);
   text-align: center;
 

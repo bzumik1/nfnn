@@ -17,13 +17,17 @@
   background: transparent;
 }
 
-.admin-sheet-backdrop {
+.admin-sheet-backdrop,
+.admin-sheet-cover {
   position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: var(--color-backdrop);
+  background: linear-gradient(var(--color-backdrop), var(--color-backdrop)), var(--color-surface);
   backdrop-filter: blur(var(--blur-backdrop));
   -webkit-backdrop-filter: blur(var(--blur-backdrop));
+}
+
+.admin-sheet-backdrop {
+  inset: 0;
+  z-index: 0;
 }
 
 .admin-sheet {
@@ -37,13 +41,9 @@
 }
 
 .admin-sheet-cover {
-  position: fixed;
   inset: 0 0 auto;
   z-index: 2;
   height: calc(#{sheet.$top} + var(--radius-sheet));
-  background: linear-gradient(var(--color-backdrop), var(--color-backdrop)), var(--color-surface);
-  backdrop-filter: blur(var(--blur-backdrop));
-  -webkit-backdrop-filter: blur(var(--blur-backdrop));
 }
 
 .admin-sheet-head {

@@ -331,9 +331,15 @@
     <h2 id="account-discard-title" class="ui-dialog__title" i18n="@@layout.account.discard.title">
       Zahodit rozepsané údaje?
     </h2>
-    <p class="account-discard-lead" i18n="@@layout.account.discard.lead">
-      Když se teď vrátíte, co jste vyplnili, se neuloží.
-    </p>
+    @if (discardAsked() === 'close') {
+      <p class="account-discard-lead" i18n="@@ui.dialog.discard.lead">
+        Co jste do formuláře napsali, se neuloží.
+      </p>
+    } @else {
+      <p class="account-discard-lead" i18n="@@layout.account.discard.lead">
+        Když se teď vrátíte, co jste vyplnili, se neuloží.
+      </p>
+    }
     <div class="ui-dialog__actions">
       <button
         type="button"

@@ -1,7 +1,10 @@
+@use 'sheet';
 @use 'visually-hidden';
 
 .ui-sheet-page {
   padding-top: var(--sheet-header-gap);
+  padding-inline: calc(#{sheet.$inline-start} - var(--space-4))
+    calc(#{sheet.$inline-end} - var(--space-4));
 
   .ui-page {
     padding-top: 0;

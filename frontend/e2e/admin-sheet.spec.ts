@@ -181,6 +181,28 @@ test.describe('Given an administrator on a phone', () => {
     });
   }
 
+  test('when Správa scrolls in the app on the home screen, then the head stays at the top edge of the sheet and nothing of the page shows under the status bar', async ({
+    page,
+  }) => {
+    const copied = whenAdministrationCopied(page);
+    await page.goto('/sprava');
+    await copied();
+    await page.addStyleTag({ content: ':root { --safe-area-top: 78px; }' });
+    const head = page.getByRole('banner');
+    const before = (await head.boundingBox())!;
+
+    await page.evaluate(() => window.scrollTo(0, 400));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    expect((await head.boundingBox())!.y).toBe(before.y);
+    const underStatusBar = await page.evaluate(() =>
+      [20, 60, 195, 330, 370].map(
+        (x) => document.elementFromPoint(x, 39)?.closest('.admin-page, app-side-nav') !== null,
+      ),
+    );
+    expect(underStatusBar).toEqual([false, false, false, false, false]);
+  });
+
   test('when Správa opened by its address and they press Zavřít, then the site opens at home', async ({
     page,
   }) => {

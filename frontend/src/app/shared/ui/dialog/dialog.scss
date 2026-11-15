@@ -185,6 +185,12 @@
     color: var(--color-on-sheet-close);
   }
 
+  .dialog--sheet .dialog-close {
+    @media (forced-colors: active) {
+      border: 1px solid ButtonText;
+    }
+  }
+
   .dialog--sheet .dialog-close-icon {
     display: block;
     width: var(--sheet-close-icon-size);

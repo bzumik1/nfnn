@@ -2,11 +2,6 @@ $top: calc(var(--safe-area-top) + var(--sheet-top-gap));
 
 $inline-start: max(var(--sheet-inset-inline), env(safe-area-inset-left));
 $inline-end: max(var(--sheet-inset-inline), env(safe-area-inset-right));
-$head-inline-start: max(
-  var(--sheet-inset-inline),
-  env(safe-area-inset-left),
-  var(--window-controls-inset-inline)
-);
 
 @mixin edge {
   max-width: var(--sheet-max-width);

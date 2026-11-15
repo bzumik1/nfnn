@@ -505,6 +505,17 @@ const JANA_PORTRAIT_ID = '019a1c00-0000-7000-8000-00000000c101';
 
 export const PETR_DETAIL_PATH = `/sprava/darci/${PETR_ID}`;
 
+export async function renamePetr(page: RouteTarget, name: string): Promise<void> {
+  await page.route(
+    (url) => url.pathname === `/api/admin/donors/${PETR_ID}`,
+    (route) => route.fulfill({ json: { ...petrAccount, name } }),
+  );
+  await page.route(
+    (url) => url.pathname === `/api/admin/donations/donors/${PETR_ID}`,
+    (route) => route.fulfill({ json: { ...petrDetail, donor: { ...petrDetail.donor, name } } }),
+  );
+}
+
 interface PaymentDetailsCase {
   name: string;
   expected: object;
