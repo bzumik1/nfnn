@@ -249,14 +249,42 @@ describe('Given the content, settings, history and backups pages reading through
       ).toEqual({ ...ARTICLE, id: 'news-9' });
     });
 
-    it('then the stories, the About section, the band, the people and the settings come from the copy', async () => {
+    it('then the stories and the settings come from the copy', async () => {
       expect(await firstValueFrom(reads.projectList())).toEqual({ items: [PROJECT] });
       expect(await firstValueFrom(reads.project('project-1'))).toEqual(PROJECT);
-      expect(await firstValueFrom(reads.projectOrder())).toEqual({ order: 'YEAR' });
-      expect(await firstValueFrom(reads.about())).toEqual(ABOUT);
-      expect(await firstValueFrom(reads.donateBand())).toEqual(BAND);
-      expect(await firstValueFrom(reads.people())).toEqual(PEOPLE);
       expect(await firstValueFrom(reads.settings())).toEqual(SETTINGS);
+    });
+
+    it('then the editors whose writes name no version, the project order, the About section, the band and the people, come from the server while online', async () => {
+      const serverPeople = { ...PEOPLE, footnote: 'Změněno konektorem' };
+
+      expect(
+        await fromServer(firstValueFrom(reads.projectOrder()), '/api/admin/content/project-order', {
+          order: 'CATEGORY',
+        }),
+      ).toEqual({ order: 'CATEGORY' });
+      expect(
+        await fromServer(firstValueFrom(reads.about()), '/api/admin/content/about', {
+          photo: null,
+        }),
+      ).toEqual({ photo: null });
+      expect(
+        await fromServer(firstValueFrom(reads.donateBand()), '/api/admin/content/donate-band', {
+          photo: null,
+        }),
+      ).toEqual({ photo: null });
+      expect(
+        await fromServer(firstValueFrom(reads.people()), '/api/admin/content/people', serverPeople),
+      ).toEqual(serverPeople);
+    });
+
+    it('then those editors come from the copy when the server cannot be reached', async () => {
+      const about = firstValueFrom(reads.about());
+      await vi.waitFor(() =>
+        http.expectOne('/api/admin/content/about').error(new ProgressEvent('error'), { status: 0 }),
+      );
+
+      expect(await about).toEqual(ABOUT);
     });
 
     it('then the backups without their run errors come from the copy for the overview', async () => {
