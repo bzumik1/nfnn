@@ -279,10 +279,59 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     });
   });
 
+  for (const screen of SCREENS.filter((each) => each.width < 480 && each.height > 500)) {
+    test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test('then Přispět alone stands on the photo across the width of its text, and leads to the donate page', async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        const hero = page.locator('#uvod');
+        await expect(hero.getByRole('link')).toHaveCount(1);
+        const donate = hero.getByRole('link', { name: 'Přispět' });
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+        const column = await hero.locator('.hero-content').evaluate((content) => {
+          const box = content.getBoundingClientRect();
+          const style = getComputedStyle(content);
+          return {
+            left: box.left + parseFloat(style.paddingLeft),
+            right: box.right - parseFloat(style.paddingRight),
+          };
+        });
+        const button = (await donate.boundingBox())!;
+        expect(button.x).toBeCloseTo(column.left, 0);
+        expect(button.x + button.width).toBeCloseTo(column.right, 0);
+
+        await donate.click();
+        await expect(page).toHaveURL(/\/prispet$/);
+      });
+    });
+  }
+
+  test.describe('when it opens on an iPad upright', () => {
+    test.use({ viewport: { width: 820, height: 1180 } });
+
+    test('then Přispět alone stands on the photo as the compact button of the computer', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      const hero = page.locator('#uvod');
+      await expect(hero.getByRole('link')).toHaveCount(1);
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+      const button = (await hero.getByRole('link', { name: 'Přispět' }).boundingBox())!;
+      expect(button.width).toBeLessThan(820 / 3);
+    });
+  });
+
   test.describe('when a phone wider than a tablet lies on its side', () => {
     test.use({ viewport: { width: 956, height: 440 } });
 
-    test('then the hero leaves Přispět and Kde pomáháme to the tab bar, as on a phone upright', async ({
+    test('then the hero leaves Přispět and Kde pomáháme to the tab bar, because a window that short has no room for them', async ({
       page,
     }) => {
       await page.goto('/');

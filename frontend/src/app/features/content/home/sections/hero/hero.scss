@@ -92,10 +92,39 @@
     padding-bottom: calc(var(--tab-bar-clearance) + var(--floating-room) + var(--space-6));
     padding-left: max(var(--space-5), env(safe-area-inset-left));
   }
+}
+
+@include bp.down(phone) {
+  .hero-content {
+    padding-bottom: calc(var(--tab-bar-clearance) + var(--floating-room) + var(--space-4));
+  }
+
+  .hero-title {
+    margin-bottom: var(--space-4);
+  }
+
+  .hero-lead {
+    margin-bottom: var(--space-5);
+  }
 
   .hero-btns {
     flex-direction: column;
-    gap: var(--space-3);
+  }
+
+  .hero-btns .ui-cta {
+    text-align: center;
+  }
+}
+
+@include bp.down(phone) {
+  .hero-eyebrow {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }
 

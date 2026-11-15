@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/first-screen.spec.ts > Given the landing page, whose photo shows a child looking at the visitor > when a phone wider than a tablet lies on its side > then the hero leaves Přispět and Kde pomáháme to the tab bar, as on a phone upright",
+    "replacement": "e2e/first-screen.spec.ts > Given the landing page, whose photo shows a child looking at the visitor > when a phone wider than a tablet lies on its side > then the hero leaves Přispět and Kde pomáháme to the tab bar, because a window that short has no room for them",
+    "reason": "PR #914 (#908, design plan J4, Jakub): a phone upright now shows Přispět on the photo, so a short window keeps no actions for its own reason",
+    "contract": "docs/frontend-overview.md, home"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/hero/hero.spec.ts > Given the hero > when the layout is compact, then it shows no actions, because the tab bar under it offers Přispět and Pomáháme",
+    "replacement": "src/app/features/content/home/sections/hero/hero.spec.ts > Given the hero > when the layout is compact, then it shows Přispět alone, because the tab bar under it offers Pomáháme",
+    "reason": "PR #914 (#908, design plan J4, Jakub): below nav the hero shows Přispět alone instead of no action",
+    "contract": "docs/frontend-overview.md, home"
+  }
+]
