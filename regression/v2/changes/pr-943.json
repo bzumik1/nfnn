@@ -1,0 +1,41 @@
+[
+  {
+    "kind": "removed",
+    "scenario": "donations/donation_receipts_frozen: A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering #*",
+    "reason": "Security audit 2026-11-14 (#915, LOGIC-3): a receipt whose proof cannot fit its verification QR code is now refused before it takes a number, so the scenario no longer leaves a gap in the numbering; it is renamed to say so, asks twice and expects the next receipt to take 2027-000001",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-cucumber",
+    "test": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A yearly receipt with more gifts than its verification QR code holds is refused, stores nothing and leaves a gap in the numbering",
+    "replacement": "feature_classpath_features/donations/donation_receipts_frozen.feature > A donor issues receipts of their donations as frozen, signed data - A yearly receipt with more gifts than its verification QR code holds is refused before it takes a number and stores nothing",
+    "reason": "Security audit 2026-11-14 (#915, LOGIC-3): the scenario is renamed because a receipt too long for its QR code no longer takes a number",
+    "contract": "docs/api-contract.md, Receipts"
+  },
+  {
+    "kind": "logs",
+    "scenario": "donations/donation_receipts_frozen: A replacement refused for its too long proof leaves the active yearly receipt active #*",
+    "line": "donations.application.signing.ReceiptProofs: Receipt * needs a verification proof of * bytes, more than a QR code holds, so it is not issued",
+    "reason": "Security audit 2026-11-14 (#915, LOGIC-3): the fit is checked before a number is taken, so the refusal's ERROR line names no receipt number any more and says that no number was taken",
+    "contract": "docs/api-contract.md, Receipts; docs/system-overview.md, donations",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<n>": "the proof's length in bytes, a count"
+      }
+    }
+  },
+  {
+    "kind": "log-field",
+    "line": "donations.application.signing.ReceiptProofs: A receipt needs a verification proof of <n> bytes, more than a QR code holds, so it is not issued and takes no number",
+    "reason": "Security audit 2026-11-14 (#915, LOGIC-3): the ERROR line of a receipt refused before numbering; its one slot is a count, so it needs only the standing approval of closed slots",
+    "contract": "docs/api-contract.md, Receipts; .claude/rules/security.md, Logs",
+    "security": {
+      "approvedIn": "PR #803, Jakub 2026-11-14",
+      "fields": {
+        "<n>": "the proof's length in bytes, a count"
+      }
+    }
+  }
+]

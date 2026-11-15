@@ -29,7 +29,11 @@ import static cz.novanadeje.app.donations.domain.receipt.Receipts.verificationOf
 import static cz.novanadeje.app.donations.domain.receipt.Receipts.yearlyDocument;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ReceiptFreezerTest {
@@ -75,6 +79,16 @@ class ReceiptFreezerTest {
         assertThat(frozen.texts()).isEqualTo(BILINGUAL_TEXTS);
         assertThat(frozen.signatureImage()).isEmpty();
         assertThat(frozen.portraitImage()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Given a receipt whose proof does not fit a QR code, when its fit is checked, then the refusal of the proofs propagates")
+    void should_refuse_when_fit_checked_given_proof_too_long() {
+        ReceiptDocument document = singleDocument(jana(), MARCH);
+        doThrow(new ReceiptTooLong()).when(proofs).requireFits(SignedReceipt.of(document));
+
+        assertThatThrownBy(() -> freezer.refuseUnlessItFits(document)).isInstanceOf(ReceiptTooLong.class);
+        verify(proofs, never()).prove(any());
     }
 
     @Test

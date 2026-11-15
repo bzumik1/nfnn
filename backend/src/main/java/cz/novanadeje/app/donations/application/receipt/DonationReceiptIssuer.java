@@ -197,14 +197,17 @@ public class DonationReceiptIssuer {
         if (replaced.isPresent()) {
             refuseBeyondReplacementCaps(request.donor(), issuedAt);
         }
+        LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
+        Optional<ReplacedReceipt> replaces = replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn()));
+        Year issuedIn = Year.from(request.today());
+        freezer.refuseUnlessItFits(request.document(foundation, signatory.signatory(), ReceiptNumber.of(issuedIn, ReceiptNumber.LAST_SERIAL), locale,
+                replaces));
         long serial = receipts.nextSerial();
-        ReceiptNumber number = ReceiptNumber.of(Year.from(request.today()), serial);
+        ReceiptNumber number = ReceiptNumber.of(issuedIn, serial);
         if (serial >= SERIAL_WORTH_A_WARNING) {
             log.warn("Receipt serial {} has passed 90 % of the numbering, which ends at {}", serial, ReceiptNumber.LAST_SERIAL);
         }
-        LocaleCode locale = replaced.map(DonationReceipt::locale).orElse(request.record().preferredLocale());
-        ReceiptDocument document = request.document(foundation, signatory.signatory(), number, locale,
-                replaced.map(old -> new ReplacedReceipt(old.number(), old.issuedOn())));
+        ReceiptDocument document = request.document(foundation, signatory.signatory(), number, locale, replaces);
         FrozenReceipt frozen = freezer.freeze(document, signatory.signatureImage(), signatory.portraitImage());
         DonationReceipt issued = DonationReceipt.issue(DonationReceiptId.newId(issuedAt), request.donor(), issuedAt, fingerprint, frozen,
                 replaced.map(DonationReceipt::id));

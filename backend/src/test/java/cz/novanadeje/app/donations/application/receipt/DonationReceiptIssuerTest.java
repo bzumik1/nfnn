@@ -85,6 +85,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -544,6 +545,43 @@ class DonationReceiptIssuerTest {
     }
 
     @Test
+    @DisplayName("Given a yearly receipt whose proof does not fit a QR code, when it is issued, then it is refused before a number is taken and nothing is saved")
+    void should_take_no_number_when_issued_given_proof_too_long() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        doThrow(new ReceiptTooLong()).when(freezer).refuseUnlessItFits(any());
+
+        assertThatThrownBy(() -> issuer.issueForYear(JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptTooLong.class);
+
+        verify(receipts, never()).nextSerial();
+        verify(freezer, never()).freeze(any(), any(), any());
+        verify(receipts, never()).save(any());
+        assertThat(active.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Given a yearly receipt with changed data, when it is issued, then its fit in a QR code is checked on the same document under the last serial before its number is taken")
+    void should_check_fit_on_same_document_before_numbering_when_issued_given_changed_data() {
+        DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
+        givenDonationsOfJana(jana(), JUNE, MARCH);
+        when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.of(active));
+        when(receipts.nextSerial()).thenReturn(4L);
+        givenFreezer();
+        ArgumentCaptor<ReceiptDocument> checked = ArgumentCaptor.forClass(ReceiptDocument.class);
+        ArgumentCaptor<ReceiptDocument> frozen = ArgumentCaptor.forClass(ReceiptDocument.class);
+
+        issuer.issueForYear(JANA, YEAR_2026, TODAY);
+
+        InOrder order = inOrder(freezer, receipts);
+        order.verify(freezer).refuseUnlessItFits(checked.capture());
+        order.verify(receipts).nextSerial();
+        order.verify(freezer).freeze(frozen.capture(), any(), any());
+        assertThat(checked.getValue().number()).isEqualTo(ReceiptNumber.of(Year.from(TODAY), ReceiptNumber.LAST_SERIAL));
+        assertThat(checked.getValue()).usingRecursiveComparison().ignoringFields("number").isEqualTo(frozen.getValue());
+    }
+
+    @Test
     @DisplayName("Given 20 replacements issued to the donor in the last 24 hours, when a receipt with changed data is issued, then it is refused before a number is taken and the active receipt stays active")
     void should_refuse_before_numbering_when_issued_given_twenty_replacements_in_a_day() {
         DonationReceipt active = yearlyReceipt(ReceiptDocumentFactory.fingerprintForYear(jana(), YEAR_2026, List.of(MARCH)), LocaleCode.CS);
@@ -768,6 +806,20 @@ class DonationReceiptIssuerTest {
             InOrder order = inOrder(receipts);
             order.verify(receipts).lockDonor(JANA);
             order.verify(receipts).findActiveForYear(JANA, YEAR_2026);
+            verifyNoInteractions(events);
+        }
+
+        @Test
+        @DisplayName("when a bulk issue finds a yearly receipt whose proof does not fit a QR code, then it is refused before a number is taken and nothing is audited")
+        void should_take_no_number_when_issued_in_bulk_given_proof_too_long() {
+            givenDonationsOfJana(jana(), JUNE, MARCH);
+            when(receipts.findActiveForYear(JANA, YEAR_2026)).thenReturn(Optional.empty());
+            doThrow(new ReceiptTooLong()).when(freezer).refuseUnlessItFits(any());
+
+            assertThatThrownBy(() -> issuer.issueForYearInBulk(petr, BROWSER, JANA, YEAR_2026, TODAY)).isInstanceOf(ReceiptTooLong.class);
+
+            verify(receipts, never()).nextSerial();
+            verify(receipts, never()).save(any());
             verifyNoInteractions(events);
         }
 
