@@ -10,6 +10,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.Role;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
+import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -68,7 +69,7 @@ class DonorAdministrationSearchStatementsTest {
             }
             donors.save(donor);
             if (index % 2 == 0) {
-                secondFactors.save(SecondFactor.reconstitute(donor.id(), TotpSecret.generate(), NOW, NOW, null));
+                secondFactors.save(SecondFactor.reconstitute(donor.id(), TotpSecret.generate(), NOW, NOW, Totp.stepAt(NOW)));
             } else if (index % 5 == 1) {
                 secondFactors.save(SecondFactor.enrol(donor.id(), TotpSecret.generate(), NOW));
             }

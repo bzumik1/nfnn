@@ -19,6 +19,9 @@ public final class SecondFactor {
         this.donorId = require(donorId, "Donor id");
         this.secret = require(secret, "Secret");
         this.createdAt = require(createdAt, "Creation time");
+        if ((confirmedAt == null) != (lastUsedStep == null)) {
+            throw new IllegalStateException("The second factor of donor " + donorId + " is confirmed only together with its last used step");
+        }
         this.confirmedAt = confirmedAt;
         this.lastUsedStep = lastUsedStep;
     }

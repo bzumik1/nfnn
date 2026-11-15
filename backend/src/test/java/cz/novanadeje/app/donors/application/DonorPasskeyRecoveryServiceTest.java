@@ -114,7 +114,7 @@ class DonorPasskeyRecoveryServiceTest {
     void should_refuse_when_new_passkey_asked_for_given_code_on_and_missing_or_wrong() {
         LinkSecret link = liveLinkOf(donor());
         when(secondFactors.findByDonor(DONOR)).thenReturn(Optional.of(SecondFactor.reconstitute(DONOR, SECRET, NOW.minusSeconds(600),
-                NOW.minusSeconds(540), null)));
+                NOW.minusSeconds(540), Totp.stepAt(NOW) - 2)));
 
         assertThatThrownBy(() -> service.options(link.value(), null)).isInstanceOf(SecondFactorCodeRequired.class);
         assertThatThrownBy(() -> service.options(link.value(), " ")).isInstanceOf(SecondFactorCodeRequired.class);

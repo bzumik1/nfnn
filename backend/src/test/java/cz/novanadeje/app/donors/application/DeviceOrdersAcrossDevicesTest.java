@@ -14,6 +14,7 @@ import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.donors.domain.SecondFactor;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.SessionKind;
+import cz.novanadeje.app.donors.domain.Totp;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -443,7 +444,7 @@ class DeviceOrdersAcrossDevicesTest {
                     new EmailAddress(email), new PasswordHash("$hash"), new VariableSymbol(symbol), LocaleCode.CS, now);
             donor.verifyEmail(now);
             donors.save(donor);
-            secondFactors.save(SecondFactor.reconstitute(donor.id(), AUTHENTICATOR_SECRET, now, now, null));
+            secondFactors.save(SecondFactor.reconstitute(donor.id(), AUTHENTICATOR_SECRET, now, now, Totp.stepAt(now)));
             return donor.id();
         }
     }

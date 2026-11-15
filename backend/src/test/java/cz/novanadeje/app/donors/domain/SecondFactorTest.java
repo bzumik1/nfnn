@@ -129,4 +129,27 @@ class SecondFactorTest {
         assertThat(factor.isEnabled()).isTrue();
         assertThat(factor.lastUsedStep()).hasValue(42L);
     }
+
+    @Test
+    @DisplayName("Given a stored confirmed factor without its last used step, when it is reconstituted, then it is refused as broken server data")
+    void should_refuse_when_reconstituted_given_confirmed_factor_without_last_used_step() {
+        assertThatThrownBy(() -> SecondFactor.reconstitute(DONOR, SECRET, NOW, NOW.plusSeconds(30), null))
+                .isExactlyInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given a stored pending factor with a last used step, when it is reconstituted, then it is refused as broken server data")
+    void should_refuse_when_reconstituted_given_pending_factor_with_last_used_step() {
+        assertThatThrownBy(() -> SecondFactor.reconstitute(DONOR, SECRET, NOW, null, 42L))
+                .isExactlyInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("Given a stored pending factor without a last used step, when it is reconstituted, then it is pending")
+    void should_be_pending_when_reconstituted_given_neither_confirmation_nor_last_used_step() {
+        SecondFactor factor = SecondFactor.reconstitute(DONOR, SECRET, NOW, null, null);
+
+        assertThat(factor.isEnabled()).isFalse();
+        assertThat(factor.lastUsedStep()).isEmpty();
+    }
 }

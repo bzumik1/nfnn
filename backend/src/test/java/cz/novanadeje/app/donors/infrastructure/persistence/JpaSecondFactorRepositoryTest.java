@@ -98,15 +98,17 @@ class JpaSecondFactorRepositoryTest {
     }
 
     @Test
-    @DisplayName("Given a confirmed factor no code was used with yet, when a use is recorded, then it is stored")
-    void should_store_first_use_when_use_recorded_given_unused_factor() {
-        secondFactors.save(SecondFactor.reconstitute(jana, SECRET, NOW, NOW, null));
+    @DisplayName("Given a pending factor, when a use is recorded for it, then it is refused and the factor stays pending without a step")
+    void should_refuse_use_when_use_recorded_given_pending_factor() {
+        secondFactors.save(SecondFactor.enrol(jana, SECRET, NOW));
         flushAndClear();
 
-        assertThat(secondFactors.recordUse(SecondFactor.reconstitute(jana, SECRET, NOW, NOW, 7L))).isTrue();
+        assertThat(secondFactors.recordUse(SecondFactor.reconstitute(jana, SECRET, NOW, NOW, 7L))).isFalse();
         flushAndClear();
 
-        assertThat(secondFactors.findByDonor(jana).orElseThrow().lastUsedStep()).hasValue(7L);
+        SecondFactor found = secondFactors.findByDonor(jana).orElseThrow();
+        assertThat(found.isEnabled()).isFalse();
+        assertThat(found.lastUsedStep()).isEmpty();
     }
 
     @Test
