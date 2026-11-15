@@ -14,6 +14,28 @@ if (
   };
 }
 
+const jsdomWindowProperties = new Map(
+  [
+    'scrollTo',
+    'scrollX',
+    'scrollY',
+    'innerWidth',
+    'innerHeight',
+    'matchMedia',
+    'visualViewport',
+  ].map((name) => [name, Object.getOwnPropertyDescriptor(window, name)] as const),
+);
+
+beforeEach(() => {
+  for (const [name, descriptor] of jsdomWindowProperties) {
+    if (descriptor) {
+      Object.defineProperty(window, name, descriptor);
+    } else {
+      delete (window as unknown as Record<string, unknown>)[name];
+    }
+  }
+});
+
 afterEach(() => {
   try {
     globalThis.localStorage?.clear();
