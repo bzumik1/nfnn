@@ -16,6 +16,7 @@ describe('Given the line about the first saving of the donor’s data on this de
   let view: ReturnType<typeof signal<DonorCopyView | null>>;
   let keeps: ReturnType<typeof signal<boolean>>;
   let open: ReturnType<typeof signal<boolean>>;
+  let holds: ReturnType<typeof signal<boolean>>;
   let syncs: number;
 
   beforeEach(() => {
@@ -24,12 +25,14 @@ describe('Given the line about the first saving of the donor’s data on this de
     view = signal<DonorCopyView | null>(null);
     keeps = signal(true);
     open = signal(true);
+    holds = signal(false);
     syncs = 0;
     const copy: DonorCopy = {
       open,
       owner: signal<string | null>('jana'),
       view,
       firstSync: running,
+      holdsData: holds,
       keepsOnDevice: keeps,
       sync: () => {
         syncs++;
@@ -154,6 +157,18 @@ describe('Given the line about the first saving of the donor’s data on this de
 
       expect(status()).toBe('Přehled vašich darů je uložený v tomto zařízení.');
     });
+  });
+
+  it('when the first saving takes longer and stores data the page cannot show, then the line goes without a word, as nothing failed', () => {
+    running.set(true);
+    after(0);
+    after(FIRST_SYNC_NOTICE_DELAY_MS);
+
+    holds.set(true);
+    running.set(false);
+    after(0);
+
+    expect(status()).toBe('');
   });
 
   it('when the first saving takes longer and ends because the copy closed, as on signing out, then the line goes without a word', () => {

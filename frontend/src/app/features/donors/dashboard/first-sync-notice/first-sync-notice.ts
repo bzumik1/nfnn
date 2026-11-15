@@ -61,7 +61,10 @@ export class FirstSyncNotice {
       }
       const copy = untracked(this.copy);
       if (untracked(() => copy?.view() ?? null) === null) {
-        this.shown.set(untracked(() => copy?.open() && copy.keepsOnDevice()) ? 'failed' : null);
+        const failed = untracked(
+          () => copy !== null && copy.open() && copy.keepsOnDevice() && !copy.holdsData(),
+        );
+        this.shown.set(failed ? 'failed' : null);
         return;
       }
       this.shown.set('stored');

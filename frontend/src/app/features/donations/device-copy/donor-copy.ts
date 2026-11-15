@@ -8,6 +8,7 @@ export interface DonorCopy {
   readonly owner: Signal<string | null>;
   readonly view: Signal<DonorCopyView | null>;
   readonly firstSync: Signal<boolean>;
+  readonly holdsData: Signal<boolean>;
   readonly keepsOnDevice: Signal<boolean>;
   sync(): Promise<SyncOutcome>;
   catchUp(): Promise<SyncOutcome>;

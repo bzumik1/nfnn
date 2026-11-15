@@ -240,6 +240,7 @@ describe('Given the sync of the donor copy', () => {
     open('empty');
 
     await vi.waitFor(() => expect(sync.firstSync()).toBe(true));
+    expect(sync.holdsData()).toBe(false);
     await vi.waitFor(() => answerManifest([gifts2025, gifts2026]));
     await answerChunks(['donations:2025', 'donations:2026'], [gifts2025, gifts2026]);
     await settled();
@@ -251,6 +252,7 @@ describe('Given the sync of the donor copy', () => {
       'donations:2026',
     ]);
     expect(sync.firstSync()).toBe(false);
+    expect(sync.holdsData()).toBe(true);
     expect(sync.view()?.items.map((item) => item.id)).toEqual(['gift-2', 'gift-1']);
   });
 
