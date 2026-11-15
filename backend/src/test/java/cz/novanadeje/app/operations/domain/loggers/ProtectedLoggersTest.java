@@ -11,10 +11,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ProtectedLoggersTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {"org.hibernate.orm.jdbc.bind", "org.hibernate.orm.jdbc.extract.Values", "org.hibernate.internal.util.EntityPrinter",
+    @ValueSource(strings = {"org.hibernate.orm.jdbc.bind", "org.hibernate.orm.jdbc.extract.Values", "org.hibernate.orm.core",
             "org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor", "org.springframework.web.client.RestTemplate",
             "org.apache.coyote.http11.Http11InputBuffer", "org.postgresql.core.v3", "jakarta.mail",
-            "org.springframework.web.method.HandlerMethod", "org.springframework.web.method.support.InvocableHandlerMethod"})
+            "org.springframework.web.method.HandlerMethod", "org.springframework.web.method.support.InvocableHandlerMethod",
+            "org.eclipse.angus.mail", "org.eclipse.angus.mail.smtp"})
     @DisplayName("Given a logger that would write bound values, bodies, raw requests or mail traffic, when it is checked, then it is protected")
     void should_protect_when_checked_given_logger_that_writes_data(String name) {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isTrue();
@@ -22,10 +23,18 @@ class ProtectedLoggersTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ROOT", "cz.novanadeje.app", "org.hibernate", "org.hibernate.SQL", "org.hibernate.orm.jdbcx", "org.springframework.web",
-            "org.springframework.security", "org.apache", "liquibase"})
+            "org.springframework.security", "org.apache", "liquibase", "org.hibernate.orm", "org.hibernate.orm.event", "org.eclipse", "org.eclipse.angus"})
     @DisplayName("Given a logger above or beside the protected ones, when it is checked, then it may be raised")
     void should_allow_when_checked_given_parent_or_unrelated_logger(String name) {
         assertThat(ProtectedLoggers.covers(new LoggerName(name))).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.hibernate.orm.core", "org.eclipse.angus.mail"})
+    @DisplayName("Given the logger Hibernate lists whole entities under at a flush or the one Angus Mail writes recipients and the SMTP user under, when its pin is looked up, then it is INFO and DEBUG is refused")
+    void should_pin_at_info_and_refuse_debug_when_looked_up_given_entity_listing_or_mail_traffic_logger(String name) {
+        assertThat(ProtectedLoggers.PINS).containsEntry(name, LogLevel.INFO);
+        assertThat(ProtectedLoggers.refuses(new LoggerName(name), LogLevel.DEBUG)).isTrue();
     }
 
     @Test
