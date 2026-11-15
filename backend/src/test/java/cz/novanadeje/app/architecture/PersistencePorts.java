@@ -24,6 +24,11 @@ final class PersistencePorts {
                     + "or a type assignable to one of these)",
             type -> type.isAssignableTo(DescribedPredicate.describe("a persistence port itself", PersistencePorts::isPersistencePortItself)));
 
+    static final DescribedPredicate<JavaClass> PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT = DescribedPredicate.describe(
+            "a persistence port, or an interface of any library that a class of a persistence adapter package implements",
+            type -> PERSISTENCE_PORTS.test(type)
+                    || type.isInterface() && type.getAllSubclasses().stream().anyMatch(IN_A_PERSISTENCE_ADAPTER_PACKAGE::test));
+
     private PersistencePorts() {
     }
 

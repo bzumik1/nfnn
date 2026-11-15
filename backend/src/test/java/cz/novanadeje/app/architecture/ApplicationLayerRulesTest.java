@@ -63,7 +63,6 @@ class ApplicationLayerRulesTest {
     @ArchTest
     static final ArchRule application_and_domain_code_takes_no_repository_parameter = noCodeUnits()
             .that().areDeclaredInClassesThat().resideInAnyPackage("cz.novanadeje.app..application..", "cz.novanadeje.app..domain..")
-            .and().areDeclaredInClassesThat(DescribedPredicate.not(PersistencePorts.PERSISTENCE_PORTS))
             .and(DescribedPredicate.describe("are methods, or constructors of a record or of a class Spring does not inject",
                     codeUnit -> codeUnit.isMethod() || codeUnit.getOwner().isRecord() || !isSpringBean(codeUnit.getOwner())))
             .should(takeARepository())
@@ -185,6 +184,8 @@ class ApplicationLayerRulesTest {
                                 + "return false; } }"),
                 planted(REPOSITORY_PARAMETER, "operations.application.PlantedPoolRead",
                         "public final class PlantedPoolRead { static int size(cz.novanadeje.app.operations.domain.PlantedPool pool) { return 0; } }"),
+                planted(REPOSITORY_PARAMETER, "shared.application.PlantedHoldingPort",
+                        "public interface PlantedHoldingPort { void hold(cz.novanadeje.app.donors.domain.DonorRepository donors); }"),
                 planted(REPOSITORY_PARAMETER, "shared.application.PlantedLockRead",
                         "public final class PlantedLockRead { static boolean held(cz.novanadeje.app.shared.application.PlantedLockPort lock) { "
                                 + "return false; } }"));
@@ -213,6 +214,9 @@ class ApplicationLayerRulesTest {
                 planted(REPOSITORY_PARAMETER, "operations.infrastructure.diagnostics.PlantedPoolSource",
                         "class PlantedPoolSource implements cz.novanadeje.app.operations.domain.PlantedPool { javax.sql.DataSource source; }"),
                 planted(REPOSITORY_PARAMETER, "shared.application.PlantedLockPort", "public interface PlantedLockPort { }"),
+                planted(REPOSITORY_PARAMETER, "shared.infrastructure.lock.PlantedHoldingLock",
+                        "class PlantedHoldingLock implements cz.novanadeje.app.shared.application.PlantedHoldingPort { "
+                                + "public void hold(cz.novanadeje.app.donors.domain.DonorRepository donors) { } }"),
                 planted(REPOSITORY_PARAMETER, "shared.infrastructure.lock.PlantedPlainLock",
                         "class PlantedPlainLock implements cz.novanadeje.app.shared.application.PlantedLockPort { }"),
                 planted(REPOSITORY_PARAMETER, "shared.infrastructure.audit.PlantedJpaTrail",

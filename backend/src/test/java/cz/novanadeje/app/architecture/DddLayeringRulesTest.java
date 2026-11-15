@@ -111,7 +111,7 @@ class DddLayeringRulesTest {
     private static final DescribedPredicate<Dependency> NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS = DescribedPredicate.describe(
             "target no persistence port, except that a persistence adapter outside the persistence packages implements or extends one that "
                     + "no class of those packages implements and that is no persistence adapter itself, calling the constructor of the port it extends",
-            dependency -> !PersistencePorts.PERSISTENCE_PORTS.test(dependency.getTargetClass())
+            dependency -> !PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(dependency.getTargetClass())
                     || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass()) && isInheritanceOfItsOwnPort(dependency));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
@@ -217,7 +217,7 @@ class DddLayeringRulesTest {
     @ArchTest
     static final ArchRule rest_controllers_must_not_use_persistence_ports = noClasses()
             .that().resideInAPackage("..interfaces..")
-            .should().dependOnClassesThat(PersistencePorts.PERSISTENCE_PORTS)
+            .should().dependOnClassesThat(PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT)
             .because(LAYERS);
 
     @ArchTest
@@ -551,6 +551,16 @@ class DddLayeringRulesTest {
                             "@org.springframework.stereotype.Repository public class InheritingMailer extends cz.novanadeje.app.planteda.infrastructure.persistence.JpaGifts {}"),
                     planted("planteda.infrastructure.cache.RepositoryCache",
                             "@org.springframework.stereotype.Repository public class RepositoryCache implements cz.novanadeje.app.planteda.domain.Gifts {}"),
+                    planted("planteda.infrastructure.persistence.JpaCount",
+                            "public class JpaCount implements java.util.function.IntSupplier { public int getAsInt() { return 0; } }"),
+                    planted("planteda.infrastructure.mail.CountMailer", "public class CountMailer { java.util.function.IntSupplier count; }"),
+                    planted("planteda.interfaces.rest.CountController", "public class CountController { java.util.function.IntSupplier count; }"),
+                    planted("planteda.domain.Rack", "public interface Rack extends Gifts {}"),
+                    planted("planteda.infrastructure.cache.RackCache",
+                            "@org.springframework.stereotype.Repository public class RackCache implements cz.novanadeje.app.planteda.domain.Rack {}"),
+                    planted("planteda.domain.Crate", "public abstract class Crate implements Gifts {}"),
+                    planted("planteda.infrastructure.cache.CrateCache",
+                            "@org.springframework.stereotype.Repository public class CrateCache extends cz.novanadeje.app.planteda.domain.Crate {}"),
                     planted("planteda.application.SeedList", "public interface SeedList { int size(); }"),
                     planted("planteda.infrastructure.config.SeedConfiguration", """
                             public class SeedConfiguration {
@@ -718,13 +728,15 @@ class DddLayeringRulesTest {
 
         @Test
         @DisplayName("when the port rule checks controllers on persistence ports, then a port persistence implements whatever it is called, the audit "
-                + "trail's port, an abstract port and a concrete adapter of the shared lock are each reported")
+                + "trail's port, an abstract port, a concrete adapter of the shared lock and a library interface persistence implements are each "
+                + "reported")
         void should_report_controller_on_a_persistence_port_when_checked_given_planted_ports() {
             assertThat(reportOf(rest_controllers_must_not_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftLogController").contains("planteda.domain.GiftLog"))
                     .anySatisfy(detail -> assertThat(detail).contains("LedgerController").contains("planteda.domain.Ledger"))
-                    .anySatisfy(detail -> assertThat(detail).contains("LockController").contains("shared.infrastructure.lock.PlantedLock"));
+                    .anySatisfy(detail -> assertThat(detail).contains("LockController").contains("shared.infrastructure.lock.PlantedLock"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CountController").contains("java.util.function.IntSupplier"));
         }
 
         @Test
@@ -748,8 +760,8 @@ class DddLayeringRulesTest {
                 + "trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a "
                 + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages and from a "
                 + "decorator that implements the port, a @Repository one included, and from a @Repository class that implements a port of the "
-                + "persistence packages or extends one of their adapters, and a @Repository or JDBC class that only implements or extends a port "
-                + "of its own, an adapter on a port persistence does not implement and a reviewed reader are not")
+                + "persistence packages, a port below one or a library interface they implement, or extends one of their adapters, and a "
+                + "@Repository or JDBC class that only implements or extends a port of its own, an adapter on a port persistence does not implement and a reviewed reader are not")
         void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
             assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
@@ -767,6 +779,9 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("ReadsDecorator").contains("implements"))
                     .anySatisfy(detail -> assertThat(detail).contains("InheritingMailer").contains("extends").contains("JpaGifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("RepositoryCache").contains("implements").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CountMailer").contains("java.util.function.IntSupplier"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RackCache").contains("implements").contains("planteda.domain.Rack"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CrateCache").contains("extends").contains("planteda.domain.Crate"))
                     .noneSatisfy(detail -> assertThat(detail).contains("SqlLedger"))
                     .anySatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Gifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Shelf"))
@@ -826,8 +841,11 @@ class DddLayeringRulesTest {
     }
 
     private static boolean isOnlyAPortOutsideThePersistencePackages(JavaClass port) {
-        return !PersistencePorts.PERSISTENCE_ADAPTERS.test(port)
-                && port.getAllSubclasses().stream().noneMatch(resideInAnyPackage(AdapterLibraryRulesTest.persistenceAdapters())::test);
+        return Stream.of(Stream.of(port), port.getAllRawSuperclasses().stream(), port.getAllRawInterfaces().stream())
+                .flatMap(types -> types)
+                .filter(type -> type.equals(port) || PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(type))
+                .allMatch(type -> !PersistencePorts.PERSISTENCE_ADAPTERS.test(type)
+                        && type.getAllSubclasses().stream().noneMatch(resideInAnyPackage(AdapterLibraryRulesTest.persistenceAdapters())::test));
     }
 
     private static boolean isInInfrastructure(JavaClass type) {
