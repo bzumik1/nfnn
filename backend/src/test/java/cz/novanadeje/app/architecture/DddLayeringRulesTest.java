@@ -48,7 +48,9 @@ import java.util.stream.Stream;
 
 import static com.tngtech.archunit.base.DescribedPredicate.alwaysTrue;
 import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.assignableTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.belongToAnyOf;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
@@ -67,11 +69,23 @@ class DddLayeringRulesTest {
     private static final String SHARED_KERNEL = "cz.novanadeje.app.shared..";
     private static final String CONTEXT_LAYERS = "cz.novanadeje.app.*.(domain|application|infrastructure|interfaces)..";
     private static final String DOMAIN = "cz.novanadeje.app.*.domain..";
-    private static final DescribedPredicate<JavaClass> WHAT_THE_DOMAIN_MAY_USE = resideInAnyPackage(
-            "java.lang", "java.util", "java.util.function", "java.util.regex", "java.util.stream", "java.util.random", "java.time..", "java.math",
+    private static final DescribedPredicate<JavaClass> VALUE_LEVEL_JAVA_LANG = belongToAnyOf(
+            Object.class, String.class, StringBuilder.class, CharSequence.class, Character.class, Boolean.class, Byte.class, Short.class,
+            Integer.class, Long.class, Float.class, Double.class, Number.class, Void.class, Math.class, StrictMath.class, Enum.class, Record.class,
+            Comparable.class, Iterable.class, Override.class, FunctionalInterface.class, SuppressWarnings.class, Deprecated.class, SafeVarargs.class)
+            .or(resideInAPackage("java.lang").and(assignableTo(Throwable.class)))
+            .or(equivalentTo(System.class));
+    private static final DescribedPredicate<JavaClass> THE_DOMAIN_MAY_USE_AS_A_TYPE = resideInAnyPackage(
+            "java.util", "java.util.function", "java.util.regex", "java.util.stream", "java.util.random", "java.time..", "java.math",
             "java.text", "java.security", "java.nio", "java.nio.charset", "javax.crypto..", DOMAIN)
-            .or(belongToAnyOf(URI.class, URISyntaxException.class, URLEncoder.class, ByteArrayOutputStream.class))
-            .as("the JDK's core or a domain package");
+            .or(VALUE_LEVEL_JAVA_LANG)
+            .or(belongToAnyOf(URI.class, URISyntaxException.class, URLEncoder.class, ByteArrayOutputStream.class));
+    private static final DescribedPredicate<JavaClass> WHAT_THE_DOMAIN_MAY_USE = DescribedPredicate.describe(
+            "the JDK's core (of java.lang its values, boxes, maths, exceptions and System for arraycopy only) or a domain package, or arrays of them",
+            DddLayeringRulesTest::isWhatTheDomainMayUse);
+    private static final DescribedPredicate<JavaAccess<?>> A_SYSTEM_MEMBER_BUT_ARRAYCOPY = DescribedPredicate.describe(
+            "a member of System other than arraycopy (the environment, properties, clocks, console streams, exit, native libraries)",
+            access -> access.getTargetOwner().isEquivalentTo(System.class) && !"arraycopy".equals(access.getName()));
     private static final Pattern CLASSPATH_READS = Pattern.compile("(get(System)?Resources?(AsStream)?|resources|systemResources)");
     private static final Map<String, Pattern> RESOURCE_READS_BY_OWNER = Map.of(
             Class.class.getName(), CLASSPATH_READS,
@@ -152,6 +166,12 @@ class DddLayeringRulesTest {
             .that().resideInAPackage(DOMAIN)
             .should().onlyDependOnClassesThat(WHAT_THE_DOMAIN_MAY_USE)
             .because(LAYERS);
+
+    @ArchTest
+    static final ArchRule domain_uses_system_only_to_copy_arrays = noClasses()
+            .that().resideInAPackage(DOMAIN)
+            .should().accessTargetWhere(A_SYSTEM_MEMBER_BUT_ARRAYCOPY)
+            .because(LAYERS + ": the domain computes on values it is handed; what the process, the machine or the clock says reaches it through an adapter");
 
     @ArchTest
     static final ArchRule domain_must_not_read_classpath_resources = noClasses()
@@ -248,6 +268,82 @@ class DddLayeringRulesTest {
                     planted("planteda.domain.ConcurrentGift", "public class ConcurrentGift { java.util.concurrent.ConcurrentHashMap<String, String> map; }"),
                     planted("planteda.domain.ReflectiveGift", "public class ReflectiveGift { java.lang.reflect.Method method; }"),
                     planted("planteda.domain.NetworkGift", "public class NetworkGift { java.net.Socket socket; }"),
+                    planted("planteda.domain.EnvironmentGift", """
+                            public class EnvironmentGift {
+                                String token() { return System.getenv("FIO_TOKEN"); }
+                                String home() { return System.getProperty("user.home"); }
+                                long ticks() { return System.nanoTime(); }
+                                void print() { System.out.println("gift"); }
+                            }
+                            """),
+                    planted("planteda.domain.ExitingGift", """
+                            public class ExitingGift {
+                                void stop() { System.exit(1); }
+                                java.util.function.IntConsumer stopper() { return System::exit; }
+                                void halt() { Runtime.getRuntime().halt(1); }
+                            }
+                            """),
+                    planted("planteda.domain.ThreadedGift", """
+                            public class ThreadedGift {
+                                ThreadLocal<String> current;
+                                InheritableThreadLocal<String> inherited;
+                                ScopedValue<String> scoped;
+                                Thread[] threads;
+                                boolean interrupted() { return Thread.currentThread().isInterrupted(); }
+                            }
+                            """),
+                    planted("planteda.domain.ProcessGift", "public class ProcessGift { ProcessBuilder builder; ProcessHandle handle; }"),
+                    planted("planteda.domain.LoadingGift", """
+                            public class LoadingGift {
+                                Object load() throws ClassNotFoundException { return Class.forName("cz.novanadeje.app.planteda.domain.Gift"); }
+                                ClassLoader loader;
+                                Module module;
+                                StackWalker walker;
+                                System.Logger logger;
+                            }
+                            """),
+                    planted("planteda.domain.HandleGift", "public class HandleGift { Object lookup() { return java.lang.invoke.MethodHandles.lookup(); } }"),
+                    planted("planteda.domain.ValueGift", """
+                            public final class ValueGift implements Comparable<ValueGift>, Iterable<Character> {
+                                private final byte[] bytes;
+                                private final String text;
+                                public ValueGift(byte[] bytes, String text) {
+                                    if (text == null || text.isBlank()) {
+                                        throw new IllegalArgumentException("A gift has a text");
+                                    }
+                                    this.bytes = new byte[bytes.length];
+                                    System.arraycopy(bytes, 0, this.bytes, 0, bytes.length);
+                                    this.text = text;
+                                }
+                                long checked() { return Math.addExact(Integer.parseInt(text), Long.valueOf(bytes.length)); }
+                                String upper() { return new StringBuilder().append(Character.toUpperCase(text.charAt(0))).append(Boolean.TRUE).toString(); }
+                                String kind(Object value) {
+                                    return switch (value) {
+                                        case Integer number -> "number " + number;
+                                        case CharSequence chars -> "text " + chars.length();
+                                        default -> "other";
+                                    };
+                                }
+                                @Override
+                                public int compareTo(ValueGift other) { return text.compareTo(other.text); }
+                                @Override
+                                public java.util.Iterator<Character> iterator() { return text.chars().mapToObj(each -> (char) each).iterator(); }
+                                @Override
+                                public boolean equals(Object other) { return other != null && getClass() == other.getClass() && text.equals(((ValueGift) other).text); }
+                                @Override
+                                public int hashCode() { return text.hashCode(); }
+                                String[] parts() { return text.split(","); }
+                                ValueGift[] pair() { return new ValueGift[] {this, this}; }
+                            }
+                            """),
+                    planted("planteda.domain.ValueKind", """
+                            public enum ValueKind {
+                                GIFT;
+                                static ValueKind of(String text) { return valueOf(text); }
+                                static int count() { return values().length; }
+                            }
+                            """),
+                    planted("planteda.domain.ValuePart", "public record ValuePart(String text) {}"),
                     planted("planteda.domain.StreamedGift", """
                             public class StreamedGift {
                                 byte[] read() throws java.io.IOException {
@@ -426,6 +522,42 @@ class DddLayeringRulesTest {
         }
 
         @Test
+        @DisplayName("when the domain rule checks domain classes on the runtime, threads, thread and scoped values, an array of threads, processes, class loading, modules, stack walking, the system logger and method handles, then each is reported and a value class on strings, boxes, maths, characters, records, enums and exceptions is not")
+        void should_report_every_side_effecting_part_of_java_lang_when_checked_given_planted_domain_classes() {
+            assertThat(reportOf(domain_must_not_depend_on_frameworks))
+                    .anySatisfy(detail -> assertThat(detail).contains("ExitingGift").contains("<java.lang.Runtime"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ThreadedGift").contains("<java.lang.Thread."))
+                    .anySatisfy(detail -> assertThat(detail).contains("ThreadedGift").contains("<java.lang.ThreadLocal>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ThreadedGift").contains("<java.lang.InheritableThreadLocal>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ThreadedGift").contains("<java.lang.ScopedValue>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ThreadedGift").contains("<[Ljava.lang.Thread;>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ProcessGift").contains("<java.lang.ProcessBuilder>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ProcessGift").contains("<java.lang.ProcessHandle>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.Class.forName"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.ClassLoader>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.Module>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.StackWalker>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.System$Logger>"))
+                    .anySatisfy(detail -> assertThat(detail).contains("HandleGift").contains("java.lang.invoke.MethodHandles"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValueGift"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValueKind"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValuePart"));
+        }
+
+        @Test
+        @DisplayName("when the system rule checks domain classes that read the environment, a system property or the clock, print, exit by a call or a method reference and copy an array, then each but the copy is reported")
+        void should_report_every_system_member_but_the_array_copy_when_checked_given_planted_domain_classes() {
+            assertThat(reportOf(domain_uses_system_only_to_copy_arrays))
+                    .anySatisfy(detail -> assertThat(detail).contains("EnvironmentGift.token()").contains("java.lang.System.getenv"))
+                    .anySatisfy(detail -> assertThat(detail).contains("EnvironmentGift.home()").contains("java.lang.System.getProperty"))
+                    .anySatisfy(detail -> assertThat(detail).contains("EnvironmentGift.ticks()").contains("java.lang.System.nanoTime"))
+                    .anySatisfy(detail -> assertThat(detail).contains("EnvironmentGift.print()").contains("java.lang.System.out"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ExitingGift.stop()").contains("java.lang.System.exit"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ExitingGift.stopper()").contains("java.lang.System.exit"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValueGift"));
+        }
+
+        @Test
         @DisplayName("when the resource rule checks domain classes that read a classpath resource by a call, through the class loader, by a method reference, as a resource bundle, through a subclass of one and through a service loader, then each is reported and a class that reads none is not")
         void should_report_every_resource_read_when_checked_given_planted_domain_classes() {
             assertThat(reportOf(domain_must_not_read_classpath_resources))
@@ -510,6 +642,11 @@ class DddLayeringRulesTest {
         private static List<String> reportOf(ArchRule rule) {
             return rule.evaluate(planted).getFailureReport().getDetails();
         }
+    }
+
+    private static boolean isWhatTheDomainMayUse(JavaClass type) {
+        JavaClass element = type.isArray() ? type.getBaseComponentType() : type;
+        return element.isPrimitive() || THE_DOMAIN_MAY_USE_AS_A_TYPE.test(element);
     }
 
     private static Optional<String> layerOf(JavaClass type) {
