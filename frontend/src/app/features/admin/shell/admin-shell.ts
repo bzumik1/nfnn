@@ -29,10 +29,19 @@ import { SuspendsDialogs } from '../../../shared/ui/dialog/dialog-suspension';
 import { SideNav } from '../../../shared/ui/side-nav/side-nav';
 import { ADMIN_SECTIONS } from './admin-sections';
 import { ADMINISTRATION_LOCK } from './administration-lock';
+import { FirstDownloadNotice } from './first-download-notice/first-download-notice';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [AlertsOffer, AppHeader, NgComponentOutlet, RouterOutlet, SideNav, SuspendsDialogs],
+  imports: [
+    AlertsOffer,
+    AppHeader,
+    FirstDownloadNotice,
+    NgComponentOutlet,
+    RouterOutlet,
+    SideNav,
+    SuspendsDialogs,
+  ],
   providers: [{ provide: DIALOG_PRESENTATION, useValue: 'sheet' }],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss',

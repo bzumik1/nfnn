@@ -6,6 +6,7 @@ import { userHandleOf } from '../../../core/auth/session-device';
 import type { CopyContents, StoredChunk } from '../../../core/device/store/account-store';
 import { DeviceVault, type OpenedCopy } from '../../../core/device/store/device-vault';
 import { ErrorReporter } from '../../../core/errors/error-reporter';
+import type { FirstDownloadEnd } from '../shell/administration-lock';
 import { canonicalRows, rowsSha256 } from '../../donations/sync/canonical-rows';
 import {
   type AdministrationChunk,
@@ -45,6 +46,7 @@ export class AdministrationCopyDownload {
   private readonly writes = inject(AdministrationWrites);
   private started: { readonly copy: OpenedCopy; readonly writes: number } | null = null;
   private readonly progress = signal<DownloadProgress | null>(null);
+  private readonly ending = signal<FirstDownloadEnd | null>(null);
   private readonly checked = signal<string | null>(null);
   private running: {
     readonly copy: OpenedCopy;
@@ -56,12 +58,14 @@ export class AdministrationCopyDownload {
   } | null = null;
 
   readonly firstDownload = this.progress.asReadonly();
+  readonly firstDownloadEnd = this.ending.asReadonly();
   readonly checkedAt = this.checked.asReadonly();
 
   constructor() {
     effect(() => {
       const opened = this.vault.administration();
       this.checked.set(null);
+      this.ending.set(null);
       if (opened !== null) {
         untracked(() => void this.synced(opened));
       }
@@ -111,8 +115,10 @@ export class AdministrationCopyDownload {
   private async download(opened: OpenedCopy): Promise<AdministrationDownloadOutcome> {
     const store = opened.store;
     const first = opened.reason === 'empty';
+    let shown = false;
+    let outcome: AdministrationDownloadOutcome = 'failed';
     try {
-      return await this.vault.withCopyLock(store, async () => {
+      outcome = await this.vault.withCopyLock(store, async () => {
         if (first && this.vault.stores(store)) {
           try {
             await firstValueFrom(this.api.recordStoredCopy());
@@ -121,6 +127,8 @@ export class AdministrationCopyDownload {
           }
         }
         if (first) {
+          shown = true;
+          this.ending.set(null);
           this.progress.set({ done: 0, total: 0 });
         }
         for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
@@ -155,12 +163,16 @@ export class AdministrationCopyDownload {
         return 'mismatch';
       });
     } catch {
-      return 'failed';
+      outcome = 'failed';
     } finally {
       if (first) {
         this.progress.set(null);
       }
+      if (shown && this.vault.administration() === opened) {
+        this.ending.set(endingOf(outcome));
+      }
     }
+    return outcome;
   }
 
   private checkedNow(opened: OpenedCopy): void {
@@ -258,6 +270,20 @@ export class AdministrationCopyDownload {
       }
     }
     return { chunks, summary: { donations: summary }, storedAt: new Date().toISOString() };
+  }
+}
+
+function endingOf(outcome: AdministrationDownloadOutcome): FirstDownloadEnd | null {
+  switch (outcome) {
+    case 'stored':
+    case 'unchanged':
+      return 'stored';
+    case 'failed':
+    case 'rate-limited':
+    case 'mismatch':
+      return 'failed';
+    default:
+      return null;
   }
 }
 

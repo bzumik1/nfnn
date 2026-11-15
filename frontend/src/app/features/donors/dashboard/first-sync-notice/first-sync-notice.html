@@ -14,5 +14,21 @@
         </p>
       </div>
     }
+    @case ('failed') {
+      <div #bar class="ui-notice ui-notice--warning ui-notice--floating first-sync">
+        <p class="ui-notice__text" i18n="@@donor.dashboard.firstSync.failed">
+          Přehled vašich darů se do tohoto zařízení teď nepodařilo uložit. Online vše funguje dál.
+        </p>
+        <button
+          type="button"
+          class="ui-button ui-button--small"
+          appNeedsConnection
+          (click)="retry()"
+          i18n="@@donor.dashboard.firstSync.retry"
+        >
+          Uložit znovu
+        </button>
+      </div>
+    }
   }
 </div>

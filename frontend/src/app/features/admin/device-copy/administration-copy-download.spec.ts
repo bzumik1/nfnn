@@ -207,6 +207,106 @@ describe('Given the download of the administration into its copy on this device'
     });
   });
 
+  describe('when an empty copy is downloaded for the first time after its record', () => {
+    beforeEach(async () => {
+      vault.open('empty');
+      await flush();
+      http
+        .expectOne('/api/admin/donors/devices/current/administration-copy')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await flush();
+    });
+
+    it('and it is stored, then the first download ends by saying so', async () => {
+      expect(download.firstDownloadEnd()).toBeNull();
+      await manifests();
+      await chunks();
+
+      expect(download.firstDownload()).toBeNull();
+      expect(download.firstDownloadEnd()).toBe('stored');
+    });
+
+    it('and a manifest fails, then it ends by saying it failed, and asking again shows the bar again without the failure', async () => {
+      http
+        .expectOne('/api/admin/donations/sync')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await flush();
+      expect(download.firstDownload()).toBeNull();
+      expect(download.firstDownloadEnd()).toBe('failed');
+
+      const again = download.refresh();
+      await flush();
+      http
+        .expectOne('/api/admin/donors/devices/current/administration-copy')
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await flush();
+      expect(download.firstDownload()).toEqual({ done: 0, total: 0 });
+      expect(download.firstDownloadEnd()).toBeNull();
+
+      await manifests();
+      await chunks();
+      expect(await again).toBe('stored');
+      expect(download.firstDownloadEnd()).toBe('stored');
+    });
+
+    it('and the server refuses as too many requests, then it ends by saying it failed', async () => {
+      http
+        .expectOne('/api/admin/donations/sync')
+        .flush(null, { status: 429, statusText: 'Too Many Requests' });
+      await flush();
+
+      expect(download.firstDownloadEnd()).toBe('failed');
+    });
+
+    it('and a chunk does not match its digest twice, then it ends by saying it failed', async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await manifests();
+        await answer('/api/admin/donations/sync/chunks', {
+          subject: ADMIN_ID,
+          administrator: true,
+          summary: SUMMARY,
+          chunks: [{ id: 'payments:2026-11', rowsSha256: 'f'.repeat(64), count: 1, rows: [] }],
+          missing: [],
+        });
+      }
+
+      expect(download.firstDownloadEnd()).toBe('failed');
+    });
+
+    it('and the server says the account is no longer an administrator, then it ends without a word', async () => {
+      await manifests(false);
+
+      expect(download.firstDownload()).toBeNull();
+      expect(download.firstDownloadEnd()).toBeNull();
+    });
+
+    it('and another copy opens after it failed, then the failure goes with the copy it was about', async () => {
+      http
+        .expectOne('/api/admin/donations/sync')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await flush();
+
+      vault.opened.set(null);
+      await flush();
+
+      expect(download.firstDownloadEnd()).toBeNull();
+    });
+  });
+
+  describe('when the record of an empty copy fails', () => {
+    it('then nothing is said, since no download was shown', async () => {
+      vault.open('empty');
+      await flush();
+      http
+        .expectOne('/api/admin/donors/devices/current/administration-copy')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await flush();
+
+      expect(download.firstDownload()).toBeNull();
+      expect(download.firstDownloadEnd()).toBeNull();
+    });
+  });
+
   describe('when a copy already stored opens again after unlocking', () => {
     beforeEach(async () => {
       vault.open('unlocked');
@@ -236,6 +336,15 @@ describe('Given the download of the administration into its copy on this device'
 
       expect(vault.stored).toEqual([]);
       expect(reporter.report).toHaveBeenCalledWith('device-copy-mismatch', 'global');
+    });
+
+    it('and the refresh fails, then no first-download ending is said, since no bar was shown', async () => {
+      http
+        .expectOne('/api/admin/donations/sync')
+        .flush(null, { status: 503, statusText: 'Unavailable' });
+      await flush();
+
+      expect(download.firstDownloadEnd()).toBeNull();
     });
 
     it('and the server refuses with 403, then the copy is kept as it is', async () => {

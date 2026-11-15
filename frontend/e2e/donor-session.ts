@@ -589,6 +589,15 @@ export function administrationCopyGift(
 }
 
 const ADMINISTRATION_FIRST_DOWNLOAD = 'Ukládáme správu do zařízení';
+const ADMINISTRATION_FIRST_DOWNLOAD_STORED = 'Správa je uložená v tomto zařízení.';
+const FIRST_DOWNLOAD_STORED_WAIT_MS = 10_000;
+
+async function administrationFirstDownloadEnded(page: Page): Promise<void> {
+  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
+  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD_STORED)).toBeHidden({
+    timeout: FIRST_DOWNLOAD_STORED_WAIT_MS,
+  });
+}
 
 export function whenAdministrationCopied(page: Page): () => Promise<void> {
   const synced = page.waitForResponse(
@@ -598,7 +607,7 @@ export function whenAdministrationCopied(page: Page): () => Promise<void> {
   return async () => {
     await expect(page.locator('.admin-page h1')).toBeVisible();
     await synced;
-    await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
+    await administrationFirstDownloadEnded(page);
   };
 }
 
@@ -616,5 +625,5 @@ export async function openUnlockedAdministrationPage(
       { timeout: 10_000 },
     ),
   ]);
-  await expect(page.getByText(ADMINISTRATION_FIRST_DOWNLOAD, { exact: true })).toBeHidden();
+  await administrationFirstDownloadEnded(page);
 }
