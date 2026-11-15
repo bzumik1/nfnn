@@ -110,11 +110,27 @@ class DomainMutatorRulesTest {
     }
 
     private static boolean isEntity(JavaClass type) {
-        return !type.isInterface() && !type.isEnum() && type.getAllFields().stream()
+        return !type.isInterface() && !type.isEnum() && (holdsItsOwnId(type) || isStoredByARepository(type));
+    }
+
+    private static boolean holdsItsOwnId(JavaClass type) {
+        return type.getAllFields().stream()
                 .filter(field -> !field.getModifiers().contains(JavaModifier.STATIC) && field.getName().equals("id"))
                 .map(JavaField::getRawType)
-                .anyMatch(idType -> idType.isRecord() && isDomain(idType)
-                        && (idType.getSimpleName().endsWith("Id") || idType.getSimpleName().endsWith("Reference")));
+                .anyMatch(DomainMutatorRulesTest::isIdRecord);
+    }
+
+    private static boolean isStoredByARepository(JavaClass type) {
+        return !isIdRecord(type) && type.getDirectDependenciesToSelf().stream()
+                .map(dependency -> dependency.getOriginClass())
+                .filter(origin -> origin.isInterface() && isDomain(origin) && origin.getSimpleName().endsWith("Repository"))
+                .anyMatch(repository -> repository.getMethods().stream().anyMatch(method -> method.getParameterTypes().stream()
+                        .anyMatch(parameter -> parameter.getAllInvolvedRawTypes().contains(type)))
+                        && repository.getMethods().stream().anyMatch(method -> method.getReturnType().getAllInvolvedRawTypes().contains(type)));
+    }
+
+    private static boolean isIdRecord(JavaClass type) {
+        return type.isRecord() && isDomain(type) && (type.getSimpleName().endsWith("Id") || type.getSimpleName().endsWith("Reference"));
     }
 
     private static Optional<String> firstWriteReachedFrom(JavaMethod start, Set<JavaClass> reachable) {
@@ -211,18 +227,22 @@ class DomainMutatorRulesTest {
 
         @Test
         @DisplayName("when the mutators are found, then a change by a field write, through a field's object, through a held set and map, an "
-                + "entity's transition and a record aggregate's transition are among them, and a copy, a filtered list and an accessor are not")
+                + "entity's transition, a record aggregate's, an aggregate's without an id field and the known over-report of a read that adds a "
+                + "held list's element to a local on the same line are among them, and a copy, a filtered list and an accessor are not")
         void should_find_the_known_state_changes_when_found_given_todays_domain() {
-            assertThat(Map.of(
-                    "cz.novanadeje.app.donors.domain.Donor.changeEmail", true,
-                    "cz.novanadeje.app.donors.domain.Donor.grantFirstAdministration", true,
-                    "cz.novanadeje.app.donations.domain.donor.DonorRecord.learnSenderAccountFrom", true,
-                    "cz.novanadeje.app.donations.domain.donor.DonorRecord.reconnectSenderAccount", true,
-                    "cz.novanadeje.app.donations.domain.donation.Donation.withoutPairingSources", true,
-                    "cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey.withdrawn", true,
-                    "cz.novanadeje.app.donors.domain.Donor.sessionRoles", false,
-                    "cz.novanadeje.app.donations.domain.donation.DonationList.inYear", false,
-                    "cz.novanadeje.app.donors.domain.Donor.email", false))
+            assertThat(Map.ofEntries(
+                    Map.entry("cz.novanadeje.app.donors.domain.Donor.changeEmail", true),
+                    Map.entry("cz.novanadeje.app.donors.domain.Donor.grantFirstAdministration", true),
+                    Map.entry("cz.novanadeje.app.donations.domain.donor.DonorRecord.learnSenderAccountFrom", true),
+                    Map.entry("cz.novanadeje.app.donations.domain.donor.DonorRecord.reconnectSenderAccount", true),
+                    Map.entry("cz.novanadeje.app.donations.domain.donation.Donation.withoutPairingSources", true),
+                    Map.entry("cz.novanadeje.app.donations.domain.signing.ReceiptSigningKey.withdrawn", true),
+                    Map.entry("cz.novanadeje.app.content.domain.about.AboutSection.show", true),
+                    Map.entry("cz.novanadeje.app.operations.domain.alerts.OperationalAlert.resolvedAt", true),
+                    Map.entry("cz.novanadeje.app.operations.domain.backup.BackupKey.words", true),
+                    Map.entry("cz.novanadeje.app.donors.domain.Donor.sessionRoles", false),
+                    Map.entry("cz.novanadeje.app.donations.domain.donation.DonationList.inYear", false),
+                    Map.entry("cz.novanadeje.app.donors.domain.Donor.email", false)))
                     .allSatisfy((method, mutator) -> assertThat(changeMadeBy(methodNamed(method)))
                             .as(method).matches(change -> change.isPresent() == mutator));
         }
@@ -230,7 +250,9 @@ class DomainMutatorRulesTest {
         private static JavaMethod methodNamed(String fullName) {
             String owner = fullName.substring(0, fullName.lastIndexOf('.'));
             String name = fullName.substring(fullName.lastIndexOf('.') + 1);
-            return SITE.get(owner).getMethods().stream().filter(method -> method.getName().equals(name)).findFirst().orElseThrow();
+            List<JavaMethod> named = SITE.get(owner).getMethods().stream().filter(method -> method.getName().equals(name)).toList();
+            assertThat(named).as(fullName + " names one method").hasSize(1);
+            return named.getFirst();
         }
     }
 
@@ -278,6 +300,13 @@ class DomainMutatorRulesTest {
                                 public GiftNote copied() { return new GiftNote(id); }
                             }
                             """),
+                    planted("planteda.domain.Banner", "public record Banner(boolean shown) { public Banner show() { return new Banner(true); } }"),
+                    planted("planteda.domain.Label", "public record Label(String text) { public Label trimmed() { return new Label(text.trim()); } }"),
+                    planted("planteda.domain.BannerRepository", "public interface BannerRepository { Banner load(); void save(Banner banner); boolean has(Label label); Notice latestNotice(); "
+                            + "BannerId lastId(); boolean exists(BannerId id); }"),
+                    planted("planteda.domain.Notice", "public record Notice(String text) { public Notice dismissed() { return new Notice(\"\"); } }"),
+                    planted("planteda.domain.BannerId",
+                            "public record BannerId(java.util.UUID value) { public BannerId successor() { return new BannerId(java.util.UUID.randomUUID()); } }"),
                     planted("planteda.domain.GiftPolicy", """
                             public final class GiftPolicy {
                                 public void close(Gift gift) { gift.rename("closed"); }
@@ -355,6 +384,7 @@ class DomainMutatorRulesTest {
                                 void retagging(cz.novanadeje.app.planteda.domain.Gift gift) { gift.retag(); }
                                 void touchingTag(cz.novanadeje.app.planteda.domain.Item item) { item.touchTag(); }
                                 String granting(cz.novanadeje.app.planteda.domain.Wish wish) { return wish.granted().text(); }
+                                boolean showing(cz.novanadeje.app.planteda.domain.Banner banner) { return banner.show().shown(); }
                                 int withdrawing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.withdrawn().amount(); }
                                 boolean renewing(cz.novanadeje.app.planteda.domain.Pledge pledge) { return pledge.renewed().isPresent(); }
                                 char stepping(cz.novanadeje.app.planteda.domain.GiftCursor cursor) { return cursor.next(); }
@@ -365,6 +395,9 @@ class DomainMutatorRulesTest {
                                             + new cz.novanadeje.app.planteda.domain.Pledge(1).amount()
                                             + gift.tagsWith("label")
                                             + new cz.novanadeje.app.planteda.domain.GiftNote("note").copied()
+                                            + new cz.novanadeje.app.planteda.domain.Label(" label ").trimmed()
+                                            + new cz.novanadeje.app.planteda.domain.Notice("notice").dismissed()
+                                            + new cz.novanadeje.app.planteda.domain.BannerId(java.util.UUID.randomUUID()).successor()
                                             + new cz.novanadeje.app.planteda.domain.WishView(new cz.novanadeje.app.planteda.domain.WishId(java.util.UUID.randomUUID()), "wish").retitled()
                                             + new cz.novanadeje.app.planteda.domain.PledgeList(java.util.List.of()).large()
                                             + cz.novanadeje.app.planteda.domain.GiftKind.ONE.next()
@@ -379,7 +412,8 @@ class DomainMutatorRulesTest {
         @DisplayName("when the rule checks the controller, then each change of a domain object is reported: a direct write, one through another "
                 + "method, in a lambda, through a static method on its parameter, through another domain class, through an override of an abstract "
                 + "method and of an interface, by a method reference, by writing a field, in a held set, in the object of a field, of a subclass's "
-                + "field, and a transition of an entity class or record (one with its own id) returning its own kind, alone and in an Optional")
+                + "field, and a transition of an entity class or record (one with its own id, or one a repository stores and loads) returning its own kind, "
+                + "alone and in an Optional")
         void should_report_every_change_when_checked_given_a_controller_that_changes_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.renaming(").contains("Gift.rename("))
@@ -397,12 +431,14 @@ class DomainMutatorRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.labelling(").contains("changes a collection or map"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.retagging(").contains("GiftTag.label"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController.touchingTag(").contains("GiftTag.label"))
-                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.granting(").contains("returns its own kind"));
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.granting(").contains("returns its own kind"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController.showing(").contains("returns its own kind"));
         }
 
         @Test
         @DisplayName("when the rule checks the controller, then reading accessors, a public field and a domain service's check, a record's copy, "
-                + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, an enum's next value, a filtered copy of a list that "
+                + "a copy of a held set changed on its own line, a record holding another's id, a class whose id is no id record, a value a "
+                + "repository only takes, a view it only returns, an id it takes and returns, an enum's next value, a filtered copy of a list that "
                 + "is no entity, creating domain objects, a parser that changes only what it creates and a static counter is not reported")
         void should_report_no_read_when_checked_given_a_controller_that_reads_and_creates_domain_objects() {
             assertThat(reportOf(controllers_change_no_domain_object)).noneSatisfy(detail -> assertThat(detail).contains("GiftController.reading("));
