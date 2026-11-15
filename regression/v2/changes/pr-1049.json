@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.DddLayeringRulesTest$GivenPlantedViolations > when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements, the audit trail's included, is reported, and a persistence adapter, an adapter on a port persistence does not implement and a reviewed reader are not",
+    "reason": "#1049: the persistence port is one shared definition (architecture/PersistencePorts), so the planted adapters now also cover ports named …Repository, @Repository and JDBC classes outside the persistence packages, decorators and library interfaces persistence implements",
+    "replacement": "architecture.DddLayeringRulesTest$GivenPlantedViolations > when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements (the audit trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages and from a decorator that implements the port, a @Repository one included, and from a @Repository class that implements a port of the persistence packages, a port below one or a library interface they implement, or extends one of their adapters, and a @Repository or JDBC class that only implements or extends a port of its own, an adapter on a port persistence does not implement and a reviewed reader are not",
+    "contract": "docs/api-contract.md, ArchUnit"
+  },
+  {
+    "kind": "retired",
+    "suite": "backend-junit",
+    "test": "architecture.DddLayeringRulesTest$GivenPlantedViolations > when the port rule checks a controller on a port that persistence implements, then it is reported whatever the port is called",
+    "reason": "#1049: the controller rule reads the shared persistence port definition, so the planted controllers now also cover the audit trail's port, an abstract port, the shared lock's adapter and a library interface persistence implements",
+    "replacement": "architecture.DddLayeringRulesTest$GivenPlantedViolations > when the port rule checks controllers on persistence ports, then a port persistence implements whatever it is called, the audit trail's port, an abstract port, a concrete adapter of the shared lock and a library interface persistence implements are each reported",
+    "contract": "docs/api-contract.md, ArchUnit"
+  }
+]
