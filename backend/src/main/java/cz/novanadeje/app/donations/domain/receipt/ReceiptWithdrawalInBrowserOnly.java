@@ -6,8 +6,7 @@ public class ReceiptWithdrawalInBrowserOnly extends AccessDenied {
 
     public static final String CODE = "donations/receipt-withdrawal-in-browser-only";
 
-    public ReceiptWithdrawalInBrowserOnly(ReceiptNumber active) {
-        super(CODE, "Unpairing this donation would withdraw receipt " + active
-                + ", which only the administration in a browser does, never a connected application");
+    public ReceiptWithdrawalInBrowserOnly() {
+        super(CODE, "Unpairing this donation would withdraw its receipt, which only the administration in a browser does, never a connected application");
     }
 }

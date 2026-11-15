@@ -14,7 +14,7 @@ public record Slug(String value) {
 
     public Slug {
         if (value == null || value.length() > MAX_LENGTH || !SHAPE.matcher(value).matches()) {
-            throw new IllegalArgumentException("A slug is 1 to " + MAX_LENGTH + " lower-case letters, digits and single hyphens: " + value);
+            throw new IllegalArgumentException("A slug is 1 to " + MAX_LENGTH + " lower-case letters, digits and single hyphens");
         }
     }
 

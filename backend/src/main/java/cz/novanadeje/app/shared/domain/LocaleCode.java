@@ -29,6 +29,6 @@ public enum LocaleCode {
                 return code;
             }
         }
-        throw new IllegalArgumentException("Unsupported locale: " + tag);
+        throw new IllegalArgumentException("Unsupported locale");
     }
 }

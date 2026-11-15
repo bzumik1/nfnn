@@ -15,7 +15,7 @@ public final class ReceiptProofMessage {
 
     public static byte[] of(String foundationCompanyIdentifier, byte[] body) {
         if (foundationCompanyIdentifier == null || !COMPANY_IDENTIFIER.matcher(foundationCompanyIdentifier).matches()) {
-            throw new IllegalArgumentException("The foundation's company identifier is eight digits: " + foundationCompanyIdentifier);
+            throw new IllegalArgumentException("The foundation's company identifier is eight digits");
         }
         ByteArrayOutputStream message = new ByteArrayOutputStream();
         message.writeBytes(DOMAIN_TAG.getBytes(StandardCharsets.US_ASCII));

@@ -51,7 +51,7 @@ public class PublicProjectService {
         Project project = projects.findBySlug(slug)
                 .or(() -> formerSlugs.project(slug).flatMap(projects::findById))
                 .filter(found -> found.isVisibleOn(today))
-                .orElseThrow(() -> new ProjectNotFound(slug));
+                .orElseThrow(ProjectNotFound::new);
         return views.of(project, today);
     }
 

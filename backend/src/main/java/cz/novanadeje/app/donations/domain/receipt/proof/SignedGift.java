@@ -9,7 +9,7 @@ public record SignedGift(LocalDate receivedOn, long amountMinor) {
             throw new IllegalArgumentException("A signed gift names the day it was received");
         }
         if (amountMinor < 1) {
-            throw new IllegalArgumentException("A signed gift has a positive amount: " + amountMinor);
+            throw new IllegalArgumentException("A signed gift has a positive amount");
         }
     }
 }

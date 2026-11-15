@@ -78,7 +78,7 @@ public class ReceiptSigningKeyWithdrawal {
 
     private DomainException recordedRefusal(UUID adminId, ReceiptSigningKeyId keyId, DomainException refused, Instant now) {
         if (withdrawnByNow(keyId)) {
-            return new ReceiptSigningKeyAlreadyWithdrawn(keyId);
+            return new ReceiptSigningKeyAlreadyWithdrawn();
         }
         refusals.record(adminId, keyId, now);
         return refused;
@@ -102,12 +102,12 @@ public class ReceiptSigningKeyWithdrawal {
     }
 
     private ReceiptSigningKey published(ReceiptSigningKeyId keyId, Optional<ReceiptSigningKey> row) {
-        return row.filter(published::publishable).orElseThrow(() -> new ReceiptSigningKeyNotFound(keyId));
+        return row.filter(published::publishable).orElseThrow(ReceiptSigningKeyNotFound::new);
     }
 
     private static ReceiptSigningKey refuseUnlessWithdrawable(ReceiptSigningKey key) {
         if (key.isWithdrawn()) {
-            throw new ReceiptSigningKeyAlreadyWithdrawn(key.id());
+            throw new ReceiptSigningKeyAlreadyWithdrawn();
         }
         return key;
     }

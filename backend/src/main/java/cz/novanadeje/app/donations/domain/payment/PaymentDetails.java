@@ -23,13 +23,16 @@ public record PaymentDetails(BankAccount account, Currency currency, SpaydText r
             throw new IllegalArgumentException("Payment details need the account, the currency, the recipient, both messages and the verification amount");
         }
         if (recipientName.value().length() > SpaydText.RECIPIENT_NAME_LENGTH) {
-            throw new IllegalArgumentException("The recipient's SPAYD text holds at most " + SpaydText.RECIPIENT_NAME_LENGTH + " characters: " + recipientName);
+            throw new IllegalArgumentException("The recipient's SPAYD text holds at most " + SpaydText.RECIPIENT_NAME_LENGTH + " characters");
         }
         if (donationMessage.isEmpty() || accountVerificationMessage.isEmpty()) {
             throw new IllegalArgumentException("Payment details need a donation message and an account verification message that are not empty");
         }
-        if (!accountVerificationAmount.isPositive() || accountVerificationAmount.currency() != currency) {
-            throw new IllegalArgumentException("The verification amount must be positive and in the payments' currency: " + accountVerificationAmount);
+        if (!accountVerificationAmount.isPositive()) {
+            throw new IllegalArgumentException("The verification amount must be positive");
+        }
+        if (accountVerificationAmount.currency() != currency) {
+            throw new IllegalArgumentException("The verification amount must be in " + currency.name() + ", the payments' currency");
         }
     }
 

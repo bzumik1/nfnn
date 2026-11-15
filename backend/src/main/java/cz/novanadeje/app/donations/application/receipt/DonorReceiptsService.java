@@ -36,8 +36,8 @@ public class DonorReceiptsService {
 
     public StoredReceiptImage imageOf(DonorReference donor, ContentDigest digest) {
         if (!receipts.showsImage(donor, digest)) {
-            throw new ReceiptImageNotFound(digest);
+            throw new ReceiptImageNotFound();
         }
-        return images.find(digest).orElseThrow(() -> new ReceiptImageNotFound(digest));
+        return images.find(digest).orElseThrow(ReceiptImageNotFound::new);
     }
 }

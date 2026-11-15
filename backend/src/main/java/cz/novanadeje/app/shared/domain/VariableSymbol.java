@@ -14,7 +14,7 @@ public record VariableSymbol(String value) {
             throw new IllegalArgumentException("Variable symbol is required");
         }
         if (!SHAPE.matcher(value).matches()) {
-            throw new IllegalArgumentException("Variable symbol must be one to ten digits: " + value);
+            throw new IllegalArgumentException("Variable symbol must be one to ten digits");
         }
     }
 

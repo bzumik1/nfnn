@@ -48,7 +48,7 @@ public class ReceiptProofs {
         ReceiptProofReader.ReadProof read = ReceiptProofReader.read(proof.text(), foundation.companyIdentifier(),
                 keyId -> Optional.of(own).filter(key -> key.id().equals(keyId)), signer);
         if (!read.receipt().equals(receipt)) {
-            throw new IllegalStateException("The proof of receipt " + receipt.number() + " does not read back as the receipt it was made from");
+            throw new IllegalStateException("The proof of a receipt does not read back as the receipt it was made from");
         }
         return proof;
     }

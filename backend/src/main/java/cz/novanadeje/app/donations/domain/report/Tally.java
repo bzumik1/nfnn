@@ -12,7 +12,7 @@ public record Tally(int count, Money total) {
             throw new IllegalArgumentException("A tally counts zero or more items: " + count);
         }
         if (total == null || total.isNegative()) {
-            throw new IllegalArgumentException("A tally has a total of zero or more: " + total);
+            throw new IllegalArgumentException("A tally has a total of zero or more");
         }
     }
 

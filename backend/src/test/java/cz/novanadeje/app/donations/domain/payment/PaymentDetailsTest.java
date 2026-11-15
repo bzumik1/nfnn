@@ -87,7 +87,8 @@ class PaymentDetailsTest {
     @DisplayName("Given a verification amount that is not positive, when the payment details are created, then they are refused")
     void should_refuse_when_created_given_a_verification_amount_that_is_not_positive() {
         assertThatIllegalArgumentException().isThrownBy(() -> new PaymentDetails(FOUNDATION, Currency.CZK, details.recipientName(),
-                details.donationMessage(), details.accountVerificationMessage(), Money.zero(Currency.CZK)));
+                details.donationMessage(), details.accountVerificationMessage(), Money.zero(Currency.CZK)))
+                .withMessage("The verification amount must be positive");
     }
 
     @Test

@@ -96,7 +96,7 @@ public class AuthorizationServerService {
         CodeChallenge challenge = new CodeChallenge(decision.codeChallenge(), decision.codeChallengeMethod());
         Set<OAuthScope> scopes = OAuthScope.parse(decision.scope());
         if (!properties.mcpResource().equals(decision.resource())) {
-            throw new InvalidAuthorizationRequest("resource must be " + properties.mcpResource());
+            throw new InvalidAuthorizationRequest("resource must be the connector's address");
         }
         freshSecondFactor.require(donorId, decision.proof());
         Instant now = clock.instant();
@@ -135,7 +135,7 @@ public class AuthorizationServerService {
             throw new InvalidGrant("the code verifier does not match");
         }
         if (exchange.resource() != null && !exchange.resource().equals(code.resource())) {
-            throw new InvalidTarget(exchange.resource());
+            throw new InvalidTarget();
         }
         Donor donor = donors.findById(code.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         if (!donor.isAdministrator()) {
@@ -212,7 +212,7 @@ public class AuthorizationServerService {
     @Transactional(readOnly = true)
     public ExchangedAccessToken exchangeToken(String subjectToken, String resource) {
         if (!properties.apiResource().equals(resource)) {
-            throw new InvalidTarget(resource);
+            throw new InvalidTarget();
         }
         VerifiedAccessToken subject = accessTokenVerifier.verify(subjectToken);
         if (!subject.audiences().contains(properties.mcpResource())) {
