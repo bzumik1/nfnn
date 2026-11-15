@@ -5,11 +5,14 @@ import com.tngtech.archunit.core.domain.AccessTarget.CodeUnitAccessTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.ConstructorCallTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.ConstructorReferenceTarget;
 import com.tngtech.archunit.core.domain.AccessTarget.FieldAccessTarget;
-import com.tngtech.archunit.core.domain.AccessTarget.MethodReferenceTarget;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.domain.JavaParameterizedType;
+import com.tngtech.archunit.core.domain.JavaType;
+import com.tngtech.archunit.core.domain.JavaWildcardType;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -57,7 +60,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 )
 class EventPublisherRulesTest {
 
-    private static final String APPLICATION = "..application..";
+    private static final String SITE = "cz.novanadeje.app.";
+    private static final String APPLICATION = "cz.novanadeje.app.*.application..";
     private static final String STORED_DATA_CHANGED = "a live hint that says only which feed to read again, no business fact: the persistence adapters "
             + "that save or delete what a feed shows publish it, so every writer of those tables, present or future, hints, and the import "
             + "scheduler when a run ends, after its in-progress flags are cleared (docs/system-overview.md, Live updates)";
@@ -147,7 +151,10 @@ class EventPublisherRulesTest {
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaOrders", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaPayments", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
                 "cz.novanadeje.app.planteda.infrastructure.persistence.JpaRefunds", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
-                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"));
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaLambdaAnnouncements", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"),
+                "cz.novanadeje.app.planteda.infrastructure.persistence.JpaQuietGifts", Set.of("cz.novanadeje.app.planteda.application.event.GiftsChanged"));
 
         private static JavaClasses planted;
 
@@ -172,11 +179,33 @@ class EventPublisherRulesTest {
                                 public static void announce(java.util.function.Consumer<Object> publish) {
                                     publish.accept(paired());
                                 }
+                                public static void announceTyped(java.util.function.Consumer<cz.novanadeje.app.planteda.application.event.GiftPaired> publish) {
+                                    publish.accept(paired());
+                                }
+                                public static void announceThrough(Announcer announcer) {
+                                    announcer.announce(paired());
+                                }
+                                public static <T> void store(Iterable<? extends T> rows) {
+                                }
+                                public static void storeAll(Iterable<?> rows) {
+                                }
+                                public static void storeObjects(Iterable<? extends Object> rows) {
+                                }
+                                public static void announceWider(java.util.function.Consumer<? super cz.novanadeje.app.planteda.application.event.GiftPaired> publish) {
+                                    publish.accept(paired());
+                                }
+                                @SuppressWarnings("rawtypes")
+                                public static void rank(Comparable rank) {
+                                }
+                                public static void count(java.util.function.IntConsumer counted) {
+                                    counted.accept(1);
+                                }
                                 public static java.util.Optional<cz.novanadeje.app.planteda.application.event.GiftPaired> maybePaired() {
                                     return java.util.Optional.of(paired());
                                 }
                             }
                             """),
+                    planted("planteda.application.Announcer", "public interface Announcer { void announce(Object event); }"),
                     planted("planteda.application.PairingService", """
                             public class PairingService {
                                 private final org.springframework.context.ApplicationEventPublisher events;
@@ -259,6 +288,46 @@ class EventPublisherRulesTest {
                                     events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null));
                                     cz.novanadeje.app.planteda.application.GiftEvents.announce(events::publishEvent);
                                 }
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.JpaLambdaAnnouncements", """
+                            public class JpaLambdaAnnouncements {
+                                private final org.springframework.context.ApplicationEventPublisher events;
+                                public JpaLambdaAnnouncements(org.springframework.context.ApplicationEventPublisher events) { this.events = events; }
+                                public void save() {
+                                    events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announce(event -> events.publishEvent(event));
+                                }
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.JpaTypedAnnouncements", """
+                            public class JpaTypedAnnouncements {
+                                private final org.springframework.context.ApplicationEventPublisher events;
+                                public JpaTypedAnnouncements(org.springframework.context.ApplicationEventPublisher events) { this.events = events; }
+                                public void save() {
+                                    events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announceTyped(paired -> events.publishEvent(paired));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announceThrough(events::publishEvent);
+                                    cz.novanadeje.app.planteda.application.GiftEvents.announceWider(paired -> events.publishEvent(paired));
+                                }
+                            }
+                            """),
+                    planted("planteda.infrastructure.persistence.JpaQuietGifts", """
+                            public class JpaQuietGifts {
+                                private final org.springframework.context.ApplicationEventPublisher events;
+                                public JpaQuietGifts(org.springframework.context.ApplicationEventPublisher events) { this.events = events; }
+                                public void save(java.util.List<cz.novanadeje.app.planteda.application.event.GiftsChanged> changes) {
+                                    changes.forEach(events::publishEvent);
+                                    cz.novanadeje.app.planteda.application.GiftEvents.count(count -> {});
+                                    cz.novanadeje.app.planteda.application.GiftEvents.store(java.util.List.of("row"));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.storeAll(java.util.List.of("row"));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.storeObjects(java.util.List.of("row"));
+                                    cz.novanadeje.app.planteda.application.GiftEvents.rank("first");
+                                    relayLater(events::publishEvent);
+                                    later(() -> events.publishEvent(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null)));
+                                }
+                                private void later(Runnable task) { task.run(); }
+                                private void relayLater(java.util.function.Consumer<Object> relay) { relay.accept(cz.novanadeje.app.planteda.application.event.GiftsChanged.of(null)); }
                             }
                             """),
                     planted("planteda.infrastructure.persistence.JpaRefunds", """
@@ -362,8 +431,9 @@ class EventPublisherRulesTest {
         @Test
         @DisplayName("when the publish rule checks them, then an unlisted adapter publishing through the publisher, the application context, a method "
                 + "reference and the multicaster is reported, a listed adapter that handles an event it is not listed for, as a parameter, inside an "
-                + "Optional or by building it, is reported, a listed adapter handing a method reference of the publisher to the application is reported, "
-                + "and a listed adapter's own event and the application are not")
+                + "Optional or by building it, is reported, a listed adapter handing the application a callback of an Object or an event, by a "
+                + "method reference, a lambda or an interface of the site, is reported, and a listed adapter's own event, its own publishing through a list, an Optional or a "
+                + "private helper, a callback of a number or to its own method, rows of a type variable or a wildcard, a raw library interface and the application are not")
         void should_report_every_unlisted_publisher_when_checked_given_planted_relays() {
             List<String> details = eventsPublishedOutsideApplicationOnlyBy(PLANTED_PUBLISHERS).evaluate(planted).getFailureReport().getDetails();
 
@@ -378,9 +448,18 @@ class EventPublisherRulesTest {
                             .contains("GiftPaired").contains("JpaRefunds.relay("))
                     .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaOrders publishes and depends on")
                             .contains("GiftPaired"))
-                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements hands publishing on")
-                            .contains("JpaAnnouncements.save()").contains("publishEvent"))
-                    .noneSatisfy(detail -> assertThat(detail).contains("JpaAnnouncements publishes"))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaAnnouncements publishes and hands")
+                            .contains("GiftEvents.announce("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaLambdaAnnouncements publishes and hands")
+                            .contains("GiftEvents.announce("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
+                            .contains("GiftEvents.announceTyped("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
+                            .contains("GiftEvents.announceThrough("))
+                    .anySatisfy(detail -> assertThat(detail).startsWith("cz.novanadeje.app.planteda.infrastructure.persistence.JpaTypedAnnouncements publishes and hands")
+                            .contains("GiftEvents.announceWider("))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JpaQuietGifts"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JpaRefunds publishes and hands"))
                     .noneSatisfy(detail -> assertThat(detail).contains("JpaGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("GiftsChanged,"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingService"));
@@ -433,16 +512,17 @@ class EventPublisherRulesTest {
     }
 
     private static ArchCondition<JavaClass> publishOnlyIfListedAndHandleNoOtherEvent(Map<String, Set<String>> eventsByPublisher) {
-        return new ArchCondition<>("publish only when listed, by a call and never by a method reference that would let other code publish, "
-                + "and then depend on no event but the listed ones (as a parameter, a field, a return value or a type argument such as an Optional of one)") {
+        return new ArchCondition<>("publish only when listed, hand no other class a callback that takes an Object or an event "
+                + "(which could publish what that class built), and depend on no event but the listed ones (as a parameter, a field, a return value "
+                + "or a type argument such as an Optional of one)") {
             @Override
             public void check(JavaClass type, ConditionEvents events) {
                 List<JavaAccess<?>> publishing = type.getAccessesFromSelf().stream().filter(PUBLISHING).toList();
-                publishing.stream().filter(access -> access.getTarget() instanceof MethodReferenceTarget).forEach(access -> events.add(
-                        SimpleConditionEvent.violated(type, type.getName() + " hands publishing on by a method reference in " + access.getDescription())));
                 if (publishing.isEmpty()) {
                     return;
                 }
+                type.getAccessesFromSelf().stream().filter(access -> handsOnACallbackOfAnObjectOrAnEvent(access, type)).forEach(access -> events.add(
+                        SimpleConditionEvent.violated(type, type.getName() + " publishes and hands another class a callback in " + access.getDescription())));
                 Set<String> listed = eventsByPublisher.get(type.getName());
                 if (listed == null) {
                     publishing.forEach(access -> events.add(SimpleConditionEvent.violated(type, type.getName() + " publishes in " + access.getDescription())));
@@ -454,6 +534,48 @@ class EventPublisherRulesTest {
                                 + dependency.getTargetClass().getName() + ", which it is not listed for, in " + dependency.getDescription())));
             }
         };
+    }
+
+    private static boolean handsOnACallbackOfAnObjectOrAnEvent(JavaAccess<?> access, JavaClass publisher) {
+        if (!(access.getTarget() instanceof CodeUnitAccessTarget target) || topLevelOf(access.getTargetOwner()).equals(topLevelOf(publisher))) {
+            return false;
+        }
+        return target.resolveMember().stream()
+                .flatMap(codeUnit -> codeUnit.getParameterTypes().stream())
+                .anyMatch(EventPublisherRulesTest::isACallbackOfAnObjectOrAnEvent);
+    }
+
+    private static boolean isACallbackOfAnObjectOrAnEvent(JavaType parameter) {
+        JavaClass raw = parameter.toErasure();
+        if (!raw.isInterface()) {
+            return false;
+        }
+        if (parameter instanceof JavaParameterizedType parameterized) {
+            return parameterized.getActualTypeArguments().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent);
+        }
+        return raw.getPackageName().startsWith(SITE) && raw.getAllMethods().stream()
+                .filter(method -> method.getModifiers().contains(JavaModifier.ABSTRACT))
+                .anyMatch(method -> method.getRawParameterTypes().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent));
+    }
+
+    private static boolean namesAnObjectOrAnEvent(JavaType type) {
+        if (type instanceof JavaClass named) {
+            return named.isEquivalentTo(Object.class) || EVENT.test(named);
+        }
+        if (type instanceof JavaParameterizedType parameterized) {
+            return namesAnObjectOrAnEvent(parameterized.toErasure())
+                    || parameterized.getActualTypeArguments().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent);
+        }
+        if (type instanceof JavaWildcardType wildcard) {
+            return wildcard.getLowerBounds().stream().anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent)
+                    || wildcard.getUpperBounds().stream().filter(bound -> !bound.toErasure().isEquivalentTo(Object.class))
+                    .anyMatch(EventPublisherRulesTest::namesAnObjectOrAnEvent);
+        }
+        return false;
+    }
+
+    private static JavaClass topLevelOf(JavaClass type) {
+        return type.getEnclosingClass().map(EventPublisherRulesTest::topLevelOf).orElse(type);
     }
 
     private static ArchCondition<JavaClass> buildOnlyTheEventsListedFor(Map<String, Set<String>> eventsByPublisher) {
