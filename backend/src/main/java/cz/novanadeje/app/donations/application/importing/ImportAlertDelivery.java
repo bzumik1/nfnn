@@ -1,9 +1,9 @@
 package cz.novanadeje.app.donations.application.importing;
 
+import cz.novanadeje.app.donations.application.report.ReportSettingsService;
 import cz.novanadeje.app.donations.domain.importing.ImportAlertRepository;
 import cz.novanadeje.app.donations.domain.importing.WaitingImportAlert;
 import cz.novanadeje.app.donations.domain.report.ReportRecipients;
-import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,12 +18,12 @@ public class ImportAlertDelivery {
     private static final Logger log = LoggerFactory.getLogger(ImportAlertDelivery.class);
 
     private final ImportAlertRepository alerts;
-    private final ReportSettingsRepository reportSettings;
+    private final ReportSettingsService reportSettings;
     private final ImportAlertSender sender;
     private final TransactionOperations transactions;
     private final Clock clock;
 
-    public ImportAlertDelivery(ImportAlertRepository alerts, ReportSettingsRepository reportSettings, ImportAlertSender sender,
+    public ImportAlertDelivery(ImportAlertRepository alerts, ReportSettingsService reportSettings, ImportAlertSender sender,
                                TransactionOperations transactions, Clock clock) {
         this.alerts = alerts;
         this.reportSettings = reportSettings;
@@ -37,7 +37,7 @@ public class ImportAlertDelivery {
         if (waiting.isEmpty()) {
             return;
         }
-        ReportRecipients recipients = transactions.execute(status -> reportSettings.current().recipients());
+        ReportRecipients recipients = reportSettings.recipients();
         for (WaitingImportAlert alert : waiting) {
             if (!sender.send(alert.alert(), recipients)) {
                 log.warn("Fio import alert {} was not delivered; it is sent again after the next import", alert.id());
