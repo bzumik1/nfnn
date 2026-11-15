@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="023-clear-pending-second-factor-steps" author="nfnn" runAlways="true">
+        <sql>update donor_second_factor set last_used_step = null where confirmed_at is null and last_used_step is not null</sql>
+    </changeSet>
+</databaseChangeLog>
