@@ -34,9 +34,7 @@ public class AdministratorActivityService {
     }
 
     public AdministratorActivity list(Optional<AdminActionCursor> before, int limit) {
-        if (limit < 1 || limit > AdministratorActivityPage.MAX_SIZE) {
-            throw new IllegalArgumentException("The page size is between 1 and " + AdministratorActivityPage.MAX_SIZE);
-        }
+        AdministratorActivityPage.check(limit);
         List<AdminActionEntry> entries = before
                 .map(cursor -> cursor.beforeId()
                         .map(id -> trail.findPerformedBefore(cursor.before(), id, limit + 1))

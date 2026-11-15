@@ -6,4 +6,10 @@ public final class DonorSearchPage {
 
     private DonorSearchPage() {
     }
+
+    public static void check(int page, int limit) {
+        if (page < 0 || limit < 1 || limit > MAX_LIMIT) {
+            throw new IllegalArgumentException("A donor search page starts at zero and holds 1 to " + MAX_LIMIT + " donors");
+        }
+    }
 }

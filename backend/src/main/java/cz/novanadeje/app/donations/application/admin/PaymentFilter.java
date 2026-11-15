@@ -24,14 +24,14 @@ public record PaymentFilter(String text, LocalDate from, LocalDate to, DonorRefe
 
     public PaymentFilter {
         text = text == null || text.isBlank() ? null : plain(text.trim());
-        if (text != null && text.length() > BankPaymentSearch.MAX_TEXT_LENGTH) {
-            throw new IllegalArgumentException("A payment filter text is at most " + BankPaymentSearch.MAX_TEXT_LENGTH + " characters");
+        if (text != null) {
+            BankPaymentSearch.checkText(text);
         }
         if (offset < 0) {
             throw new IllegalArgumentException("A payment filter offset is not negative");
         }
-        if (limit != null && (limit < 1 || limit > BankPaymentSearch.MAX_LIMIT)) {
-            throw new IllegalArgumentException("A payment filter limit is between 1 and " + BankPaymentSearch.MAX_LIMIT);
+        if (limit != null) {
+            BankPaymentSearch.checkLimit(limit);
         }
     }
 

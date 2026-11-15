@@ -34,9 +34,7 @@ public class PublicProjectService {
     }
 
     public ProjectPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > PublicListPage.MAX_SIZE) {
-            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + PublicListPage.MAX_SIZE);
-        }
+        PublicListPage.check(page, size);
         LocalDate today = today();
         if (beyondEveryOffset(page, size)) {
             return new ProjectPage(List.of(), page, size, projects.countVisible(today));

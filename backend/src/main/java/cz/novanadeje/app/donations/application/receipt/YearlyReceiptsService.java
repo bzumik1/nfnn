@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceipt;
 import cz.novanadeje.app.donations.domain.receipt.ActiveYearlyReceipt;
+import cz.novanadeje.app.donations.domain.receipt.BulkYearlyReceipts;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.donations.domain.receipt.FirstReceiptYear;
 import cz.novanadeje.app.donations.domain.receipt.ReceiptCalendar;
@@ -78,6 +79,7 @@ public class YearlyReceiptsService {
     }
 
     public YearlyReceiptsRun issue(UUID adminId, AdministrationChannel channel, Year year, List<DonorReference> donors) {
+        BulkYearlyReceipts.check(donors.size());
         LocalDate today = FoundationCalendar.today(clock);
         firstYear.requireYearlyReceiptFor(year, today);
         List<YearlyReceiptResult> results = new ArrayList<>();

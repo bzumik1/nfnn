@@ -30,9 +30,7 @@ public class DonorAdministrationService {
     }
 
     public DonorSearchResult search(String query, int page, int limit) {
-        if (page < 0 || limit < 1 || limit > DonorSearchPage.MAX_LIMIT) {
-            throw new IllegalArgumentException("A donor search page starts at zero and holds 1 to " + DonorSearchPage.MAX_LIMIT + " donors");
-        }
+        DonorSearchPage.check(page, limit);
         String trimmed = query == null ? "" : query.trim();
         List<Donor> found = donors.search(trimmed, page * limit, limit + 1);
         List<Donor> shown = found.stream().limit(limit).toList();

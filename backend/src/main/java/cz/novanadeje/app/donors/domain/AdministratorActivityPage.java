@@ -6,4 +6,10 @@ public final class AdministratorActivityPage {
 
     private AdministratorActivityPage() {
     }
+
+    public static void check(int size) {
+        if (size < 1 || size > MAX_SIZE) {
+            throw new IllegalArgumentException("The page size is between 1 and " + MAX_SIZE);
+        }
+    }
 }
