@@ -150,6 +150,13 @@ class DddLayeringRulesTest {
             .because(LAYERS);
 
     @ArchTest
+    static final ArchRule interfaces_hold_only_the_rest_package = classes()
+            .that().resideInAPackage("cz.novanadeje.app.*.interfaces..")
+            .should().resideInAPackage("cz.novanadeje.app.*.interfaces.rest")
+            .because(LAYERS + ": interfaces/rest holds the HTTP adapter (controllers, requests, responses, problem handlers, filters and "
+                    + "argument resolvers); a scheduler or any other entry point that is not HTTP lives in infrastructure");
+
+    @ArchTest
     static final ArchRule bounded_contexts_must_not_depend_on_each_other = slices()
             .matching("cz.novanadeje.app.(*)..")
             .namingSlices("Bounded context: $1")
@@ -478,7 +485,11 @@ class DddLayeringRulesTest {
                     planted("plantedb.domain.Reader", "public class Reader { cz.novanadeje.app.planteda.domain.Gift gift; }"),
                     planted("shared.domain.PlantedKernel", "public class PlantedKernel { cz.novanadeje.app.planteda.domain.Gift gift; }"),
                     planted("shared.infrastructure.persistence.KernelRow", "public class KernelRow {}"),
-                    planted("shared.infrastructure.security.Guard", "public class Guard {}")));
+                    planted("shared.infrastructure.security.Guard", "public class Guard {}"),
+                    planted("planteda.interfaces.LooseHandler", "public class LooseHandler {}"),
+                    planted("planteda.interfaces.web.GiftPage", "public class GiftPage {}"),
+                    planted("planteda.interfaces.rest.admin.AdminGiftController", "public class AdminGiftController {}"),
+                    planted("shared.interfaces.web.KernelPage", "public class KernelPage {}")));
         }
 
         @Test
@@ -491,6 +502,18 @@ class DddLayeringRulesTest {
         @DisplayName("when the layer rule checks a class outside every layer, then it is reported")
         void should_report_class_outside_the_layers_when_checked_given_a_config_package() {
             assertThat(reportOf(every_class_lives_in_a_layer_of_a_context)).anySatisfy(detail -> assertThat(detail).contains("planteda.config.LooseSettings"));
+        }
+
+        @Test
+        @DisplayName("when the interfaces rule checks classes directly in interfaces, in another package beside rest, below rest and in the "
+                + "shared kernel's interfaces, then each is reported and a controller in rest is not")
+        void should_report_every_interfaces_package_but_rest_when_checked_given_planted_classes() {
+            assertThat(reportOf(interfaces_hold_only_the_rest_package))
+                    .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.LooseHandler"))
+                    .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.web.GiftPage"))
+                    .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.rest.admin.AdminGiftController"))
+                    .anySatisfy(detail -> assertThat(detail).contains("shared.interfaces.web.KernelPage"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("planteda.interfaces.rest.GiftController"));
         }
 
         @Test
