@@ -5,12 +5,14 @@ import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.conditions.ArchConditions;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.repository.Repository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -97,9 +100,19 @@ class DddLayeringRulesTest {
             "read a classpath resource, a resource bundle or a service loader",
             access -> RESOURCE_READS_BY_OWNER.entrySet().stream()
                     .anyMatch(owner -> access.getTargetOwner().isAssignableTo(owner.getKey()) && owner.getValue().matcher(access.getName()).matches()));
-    private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_IMPLEMENTS = DescribedPredicate.describe(
-            "a port that persistence implements",
-            type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAPackage("..infrastructure.persistence..")::test));
+    private static final DescribedPredicate<JavaClass> DRIVEN_PORTS = DescribedPredicate.describe(
+            "a driven port (an interface or abstract class of an application or domain package that a class of an infrastructure package implements "
+                    + "or a @Bean method of one provides)",
+            type -> layerOf(type).filter(layer -> "application".equals(layer) || "domain".equals(layer)).isPresent()
+                    && (type.isInterface() || type.getModifiers().contains(JavaModifier.ABSTRACT))
+                    && (type.getAllSubclasses().stream().anyMatch(DddLayeringRulesTest::isInInfrastructure)
+                    || type.getMethodsWithReturnTypeOfSelf().stream().anyMatch(method -> isInInfrastructure(method.getOwner())
+                    && (method.isAnnotatedWith(Bean.class) || method.isMetaAnnotatedWith(Bean.class)))));
+    private static final DescribedPredicate<Dependency> NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS = DescribedPredicate.describe(
+            "target no persistence port, except that a persistence adapter outside the persistence packages implements or extends one that "
+                    + "no class of those packages implements and that is no persistence adapter itself, calling the constructor of the port it extends",
+            dependency -> !PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(dependency.getTargetClass())
+                    || PersistencePorts.PERSISTENCE_ADAPTERS.test(dependency.getOriginClass()) && isInheritanceOfItsOwnPort(dependency));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
@@ -117,10 +130,6 @@ class DddLayeringRulesTest {
             "pending #959: hands the carried settings key repository to SettingsKeyRecordSeals until that reads through the service");
     private static final DescribedPredicate<JavaClass> REVIEWED_PERSISTENCE_PORT_READERS_APART = DescribedPredicate.describe(
             "are not one of the persistence port readers #959 empties", type -> !PERSISTENCE_PORT_READERS.containsKey(type.getName()));
-
-    private static final DescribedPredicate<JavaClass> PORTS_THAT_PERSISTENCE_ADAPTERS_IMPLEMENT = DescribedPredicate.describe(
-            "a port that a persistence adapter implements",
-            type -> type.isInterface() && type.getAllSubclasses().stream().anyMatch(resideInAnyPackage(AdapterLibraryRulesTest.persistenceAdapters())::test));
     private static final DescribedPredicate<JavaClass> DRIVEN_ADAPTERS = DescribedPredicate.describe(
             "implement a port of their own context (an interface or abstract class of its application or domain, or a shared port its application "
                     + "or domain uses), the reviewed driving port implementers apart",
@@ -208,18 +217,24 @@ class DddLayeringRulesTest {
     @ArchTest
     static final ArchRule rest_controllers_must_not_use_persistence_ports = noClasses()
             .that().resideInAPackage("..interfaces..")
-            .should().dependOnClassesThat(PORTS_THAT_PERSISTENCE_IMPLEMENTS)
+            .should().dependOnClassesThat(PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT)
             .because(LAYERS);
+
+    @ArchTest
+    static final ArchRule rest_controllers_must_not_use_driven_ports = noClasses()
+            .that().resideInAPackage("..interfaces..")
+            .should().dependOnClassesThat(DRIVEN_PORTS)
+            .because(LAYERS + ": a controller drives a use case through an application service, which reads and writes through the driven ports");
 
     @ArchTest
     static final ArchRule only_persistence_adapters_use_persistence_ports = onlyPersistenceAdaptersUsePersistencePorts(REVIEWED_PERSISTENCE_PORT_READERS_APART);
 
     private static ArchRule onlyPersistenceAdaptersUsePersistencePorts(DescribedPredicate<JavaClass> readersApart) {
-        return noClasses()
+        return classes()
             .that().resideInAPackage("..infrastructure..")
             .and().resideOutsideOfPackages(AdapterLibraryRulesTest.persistenceAdapters())
             .and(readersApart)
-            .should().dependOnClassesThat(PORTS_THAT_PERSISTENCE_ADAPTERS_IMPLEMENT)
+            .should(ArchConditions.onlyHaveDependenciesWhere(NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS))
             .because("backend.md, Application: an adapter that is not a persistence adapter renders, sends or drives; what it needs from the "
                     + "database an application service reads inside its transaction and hands it, so no rule hides in a mail or other adapter");
     }
@@ -481,6 +496,101 @@ class DddLayeringRulesTest {
                                 cz.novanadeje.app.shared.infrastructure.security.Guard guard;
                             }
                             """),
+                    planted("planteda.interfaces.rest.GiftLogController", "public class GiftLogController { cz.novanadeje.app.planteda.domain.GiftLog log; }"),
+                    planted("planteda.domain.Ledger", "public abstract class Ledger {}"),
+                    planted("planteda.infrastructure.persistence.JpaLedger", "public class JpaLedger extends cz.novanadeje.app.planteda.domain.Ledger {}"),
+                    planted("planteda.interfaces.rest.LedgerController", "public class LedgerController { cz.novanadeje.app.planteda.domain.Ledger ledger; }"),
+                    planted("shared.infrastructure.lock.PlantedLock", "public class PlantedLock {}"),
+                    planted("planteda.interfaces.rest.LockController", "public class LockController { cz.novanadeje.app.shared.infrastructure.lock.PlantedLock lock; }"),
+                    planted("planteda.domain.Archive", "public interface Archive {}"),
+                    planted("planteda.infrastructure.archive.AnnotatedArchive",
+                            "@org.springframework.stereotype.Repository public class AnnotatedArchive implements cz.novanadeje.app.planteda.domain.Archive {}"),
+                    planted("planteda.domain.Shelf", "public interface Shelf {}"),
+                    planted("planteda.infrastructure.archive.SqlShelf",
+                            "public class SqlShelf implements cz.novanadeje.app.planteda.domain.Shelf { javax.sql.DataSource source; }"),
+                    planted("planteda.domain.PaperRepository", "public interface PaperRepository {}"),
+                    planted("planteda.infrastructure.mail.ArchiveMailer", "public class ArchiveMailer { cz.novanadeje.app.planteda.domain.Archive archive; }"),
+                    planted("planteda.infrastructure.mail.ShelfMailer", "public class ShelfMailer { cz.novanadeje.app.planteda.domain.Shelf shelf; }"),
+                    planted("planteda.infrastructure.mail.PaperMailer", "public class PaperMailer { cz.novanadeje.app.planteda.domain.PaperRepository papers; }"),
+                    planted("planteda.infrastructure.mail.AnnotatedMailer",
+                            "@org.springframework.stereotype.Repository public class AnnotatedMailer { cz.novanadeje.app.planteda.domain.Gifts gifts; }"),
+                    planted("planteda.infrastructure.archive.JdbcShelfReader", """
+                            public class JdbcShelfReader implements cz.novanadeje.app.planteda.domain.Shelf {
+                                javax.sql.DataSource source;
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.infrastructure.mail.GiftsDecorator", """
+                            public class GiftsDecorator implements cz.novanadeje.app.planteda.domain.Gifts {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.domain.GiftReads", "public interface GiftReads {}"),
+                    planted("planteda.domain.ReadableGifts", "public interface ReadableGifts extends GiftReads {}"),
+                    planted("planteda.infrastructure.persistence.JpaReadableGifts",
+                            "public class JpaReadableGifts implements cz.novanadeje.app.planteda.domain.ReadableGifts {}"),
+                    planted("planteda.infrastructure.mail.RepositoryDecorator", """
+                            @org.springframework.stereotype.Repository
+                            public class RepositoryDecorator implements cz.novanadeje.app.planteda.domain.Gifts {
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.infrastructure.mail.ReadsDecorator", """
+                            @org.springframework.stereotype.Repository
+                            public class ReadsDecorator implements cz.novanadeje.app.planteda.domain.ReadableGifts {
+                                cz.novanadeje.app.planteda.domain.GiftReads reads;
+                            }
+                            """),
+                    planted("planteda.domain.Book", "public abstract class Book {}"),
+                    planted("planteda.infrastructure.archive.SqlLedger", """
+                            public class SqlLedger extends cz.novanadeje.app.planteda.domain.Book {
+                                javax.sql.DataSource source;
+                            }
+                            """),
+                    planted("planteda.infrastructure.mail.InheritingMailer",
+                            "@org.springframework.stereotype.Repository public class InheritingMailer extends cz.novanadeje.app.planteda.infrastructure.persistence.JpaGifts {}"),
+                    planted("planteda.infrastructure.cache.RepositoryCache",
+                            "@org.springframework.stereotype.Repository public class RepositoryCache implements cz.novanadeje.app.planteda.domain.Gifts {}"),
+                    planted("planteda.infrastructure.persistence.JpaCount",
+                            "public class JpaCount implements java.util.function.IntSupplier { public int getAsInt() { return 0; } }"),
+                    planted("planteda.infrastructure.mail.CountMailer", "public class CountMailer { java.util.function.IntSupplier count; }"),
+                    planted("planteda.interfaces.rest.CountController", "public class CountController { java.util.function.IntSupplier count; }"),
+                    planted("planteda.domain.Rack", "public interface Rack extends Gifts {}"),
+                    planted("planteda.infrastructure.cache.RackCache",
+                            "@org.springframework.stereotype.Repository public class RackCache implements cz.novanadeje.app.planteda.domain.Rack {}"),
+                    planted("planteda.domain.Crate", "public abstract class Crate implements Gifts {}"),
+                    planted("planteda.infrastructure.cache.CrateCache",
+                            "@org.springframework.stereotype.Repository public class CrateCache extends cz.novanadeje.app.planteda.domain.Crate {}"),
+                    planted("planteda.application.SeedList", "public interface SeedList { int size(); }"),
+                    planted("planteda.infrastructure.config.SeedConfiguration", """
+                            public class SeedConfiguration {
+                                @org.springframework.context.annotation.Bean
+                                cz.novanadeje.app.planteda.application.SeedList seeds() { return () -> 1; }
+                            }
+                            """),
+                    planted("planteda.interfaces.rest.SeedController", "public class SeedController { cz.novanadeje.app.planteda.application.SeedList seeds; }"),
+                    planted("planteda.application.GiftLabels", "public interface GiftLabels { String label(); }"),
+                    planted("planteda.infrastructure.config.LabelHelper", """
+                            public class LabelHelper {
+                                cz.novanadeje.app.planteda.application.GiftLabels labels() { return () -> "gift"; }
+                            }
+                            """),
+                    planted("planteda.interfaces.rest.LabelController", "public class LabelController { cz.novanadeje.app.planteda.application.GiftLabels labels; }"),
+                    planted("planteda.infrastructure.mail.JpaGiftsMailer",
+                            "public class JpaGiftsMailer { cz.novanadeje.app.planteda.infrastructure.persistence.JpaGifts gifts; }"),
+                    planted("planteda.interfaces.rest.PairingController", "public class PairingController { cz.novanadeje.app.planteda.application.GiftPairing pairing; }"),
+                    planted("planteda.interfaces.rest.AbstractPairingController",
+                            "public class AbstractPairingController { cz.novanadeje.app.planteda.application.AbstractGiftPairing pairing; }"),
+                    planted("planteda.interfaces.rest.KernelPortController",
+                            "public class KernelPortController { cz.novanadeje.app.shared.application.account.KernelPort port; }"),
+                    planted("planteda.application.GiftQueries", "public interface GiftQueries { int count(); }"),
+                    planted("planteda.application.GiftQueryService", "public class GiftQueryService implements GiftQueries { public int count() { return 0; } }"),
+                    planted("planteda.interfaces.rest.QueryController", """
+                            public class QueryController {
+                                cz.novanadeje.app.planteda.application.GiftQueries queries;
+                                cz.novanadeje.app.planteda.application.PairingService service;
+                            }
+                            """),
                     planted("planteda.config.LooseSettings", "public class LooseSettings {}"),
                     planted("plantedb.domain.Reader", "public class Reader { cz.novanadeje.app.planteda.domain.Gift gift; }"),
                     planted("shared.domain.PlantedKernel", "public class PlantedKernel { cz.novanadeje.app.planteda.domain.Gift gift; }"),
@@ -617,20 +727,66 @@ class DddLayeringRulesTest {
         }
 
         @Test
-        @DisplayName("when the port rule checks a controller on a port that persistence implements, then it is reported whatever the port is called")
-        void should_report_controller_on_a_persistence_port_when_checked_given_a_port_without_the_repository_suffix() {
+        @DisplayName("when the port rule checks controllers on persistence ports, then a port persistence implements whatever it is called, the audit "
+                + "trail's port, an abstract port, a concrete adapter of the shared lock and a library interface persistence implements are each "
+                + "reported")
+        void should_report_controller_on_a_persistence_port_when_checked_given_planted_ports() {
             assertThat(reportOf(rest_controllers_must_not_use_persistence_ports))
-                    .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"));
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftLogController").contains("planteda.domain.GiftLog"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LedgerController").contains("planteda.domain.Ledger"))
+                    .anySatisfy(detail -> assertThat(detail).contains("LockController").contains("shared.infrastructure.lock.PlantedLock"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CountController").contains("java.util.function.IntSupplier"));
         }
 
         @Test
-        @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements, the audit "
-                + "trail's included, is reported, and a "
-                + "persistence adapter, an adapter on a port persistence does not implement and a reviewed reader are not")
+        @DisplayName("when the driven port rule checks controllers, then a controller on a domain or application interface, an abstract application "
+                + "class or a shared port that infrastructure implements, or an interface an infrastructure @Bean method provides as a lambda, is "
+                + "reported, and one on an application service, a port only the application implements or an interface an infrastructure method "
+                + "that is no @Bean returns is not")
+        void should_report_controller_on_a_driven_port_when_checked_given_planted_controllers() {
+            assertThat(reportOf(rest_controllers_must_not_use_driven_ports))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("PairingController").contains("planteda.application.GiftPairing"))
+                    .anySatisfy(detail -> assertThat(detail).contains("AbstractPairingController").contains("planteda.application.AbstractGiftPairing"))
+                    .anySatisfy(detail -> assertThat(detail).contains("KernelPortController").contains("shared.application.account.KernelPort"))
+                    .anySatisfy(detail -> assertThat(detail).contains("SeedController").contains("planteda.application.SeedList"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("QueryController"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("LabelController"));
+        }
+
+        @Test
+        @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements (the audit "
+                + "trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a "
+                + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages and from a "
+                + "decorator that implements the port, a @Repository one included, and from a @Repository class that implements a port of the "
+                + "persistence packages, a port below one or a library interface they implement, or extends one of their adapters, and a "
+                + "@Repository or JDBC class that only implements or extends a port of its own, an adapter on a port persistence does not implement and a reviewed reader are not")
         void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
             assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftLogMailer").contains("planteda.domain.GiftLog"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ArchiveMailer").contains("planteda.domain.Archive"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ShelfMailer").contains("planteda.domain.Shelf"))
+                    .anySatisfy(detail -> assertThat(detail).contains("PaperMailer").contains("planteda.domain.PaperRepository"))
+                    .anySatisfy(detail -> assertThat(detail).contains("JpaGiftsMailer").contains("planteda.infrastructure.persistence.JpaGifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("AnnotatedMailer").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator").contains("implements").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("GiftsDecorator.gifts").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RepositoryDecorator.gifts").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ReadsDecorator.reads").contains("planteda.domain.GiftReads"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RepositoryDecorator").contains("implements"))
+                    .anySatisfy(detail -> assertThat(detail).contains("ReadsDecorator").contains("implements"))
+                    .anySatisfy(detail -> assertThat(detail).contains("InheritingMailer").contains("extends").contains("JpaGifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RepositoryCache").contains("implements").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CountMailer").contains("java.util.function.IntSupplier"))
+                    .anySatisfy(detail -> assertThat(detail).contains("RackCache").contains("implements").contains("planteda.domain.Rack"))
+                    .anySatisfy(detail -> assertThat(detail).contains("CrateCache").contains("extends").contains("planteda.domain.Crate"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("SqlLedger"))
+                    .anySatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Gifts"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Shelf"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("AnnotatedArchive"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("SqlShelf"))
                     .noneSatisfy(detail -> assertThat(detail).contains("CachingGifts"))
                     .noneSatisfy(detail -> assertThat(detail).contains("PairingMailer"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AccountEmailsAdapter"));
@@ -670,6 +826,30 @@ class DddLayeringRulesTest {
     private static boolean isWhatTheDomainMayUse(JavaClass type) {
         JavaClass element = type.isArray() ? type.getBaseComponentType() : type;
         return element.isPrimitive() || THE_DOMAIN_MAY_USE_AS_A_TYPE.test(element);
+    }
+
+    private static boolean isInheritanceOfItsOwnPort(Dependency dependency) {
+        JavaClass origin = dependency.getOriginClass();
+        JavaClass port = dependency.getTargetClass();
+        String description = dependency.getDescription();
+        boolean implemented = origin.getRawInterfaces().contains(port)
+                && description.startsWith("Class <" + origin.getName() + "> implements interface <" + port.getName() + ">");
+        boolean extended = origin.getRawSuperclass().filter(port::equals).isPresent()
+                && (description.startsWith("Class <" + origin.getName() + "> extends class <" + port.getName() + ">")
+                || description.startsWith("Constructor <" + origin.getName() + ".<init>(") && description.contains("> calls constructor <" + port.getName() + ".<init>("));
+        return (implemented || extended) && isOnlyAPortOutsideThePersistencePackages(port);
+    }
+
+    private static boolean isOnlyAPortOutsideThePersistencePackages(JavaClass port) {
+        return Stream.of(Stream.of(port), port.getAllRawSuperclasses().stream(), port.getAllRawInterfaces().stream())
+                .flatMap(types -> types)
+                .filter(type -> type.equals(port) || PersistencePorts.PERSISTENCE_PORTS_AND_THE_LIBRARY_INTERFACES_THEY_IMPLEMENT.test(type))
+                .allMatch(type -> !PersistencePorts.PERSISTENCE_ADAPTERS.test(type)
+                        && type.getAllSubclasses().stream().noneMatch(resideInAnyPackage(AdapterLibraryRulesTest.persistenceAdapters())::test));
+    }
+
+    private static boolean isInInfrastructure(JavaClass type) {
+        return layerOf(type).filter("infrastructure"::equals).isPresent();
     }
 
     private static Optional<String> layerOf(JavaClass type) {
