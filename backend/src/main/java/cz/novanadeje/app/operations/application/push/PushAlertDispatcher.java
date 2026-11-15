@@ -41,11 +41,11 @@ public class PushAlertDispatcher {
     }
 
     public void alertChanged(MonitoredArea area, boolean opened, long changes, int openCount) {
-        attempt(area, changes, new PushMessage(PushMessageKind.of(area, opened), openCount), 1, Optional.empty());
+        attempt(area, opened, changes, openCount, 1, Optional.empty());
     }
 
-    void attempt(MonitoredArea area, long changes, PushMessage message, int attempt, Optional<Set<PushSubscriptionId>> only) {
-        PushMessageKind kind = message.kind();
+    void attempt(MonitoredArea area, boolean opened, long changes, int openCount, int attempt, Optional<Set<PushSubscriptionId>> only) {
+        PushMessageKind kind = PushMessageKind.of(area, opened);
         try {
             if (!alerts.unchangedSince(area, changes)) {
                 return;
@@ -55,12 +55,12 @@ public class PushAlertDispatcher {
             if (recipients.isEmpty()) {
                 return;
             }
-            PushAttempt sent = sender.toAdministrators(recipients, message);
+            PushAttempt sent = sender.toAdministrators(recipients, new PushMessage(kind, openCount));
             log.info("Push alert {} attempt {}: {} delivered, {} failed, {} removed", kind, attempt, sent.report().delivered(),
                     sent.report().failed(), sent.report().removed());
             if (!sent.failed().isEmpty() && attempt <= RETRY_DELAYS.size()) {
                 Set<PushSubscriptionId> failed = new HashSet<>(sent.failed());
-                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), PushPace.AT_ONCE, () -> attempt(area, changes, message, attempt + 1, Optional.of(failed)));
+                timer.at(clock.instant().plus(RETRY_DELAYS.get(attempt - 1)), PushPace.AT_ONCE, () -> attempt(area, opened, changes, openCount, attempt + 1, Optional.of(failed)));
             }
         } catch (RuntimeException failure) {
             log.warn("Push alert {} attempt {} could not be sent: {}", kind, attempt, failure.getClass().getSimpleName());

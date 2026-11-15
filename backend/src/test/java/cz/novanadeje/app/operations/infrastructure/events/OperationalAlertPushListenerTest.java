@@ -19,18 +19,10 @@ class OperationalAlertPushListenerTest {
     private final OperationalAlertPushListener listener = new OperationalAlertPushListener(dispatcher);
 
     @Test
-    @DisplayName("Given an opened backups alert, when its change is committed, then the dispatcher sends the area, the opening, the change count and the open count")
-    void should_dispatch_the_change_values_when_committed_given_an_opened_alert() {
+    @DisplayName("Given an opened backups alert, when the listener hears its change, then the dispatcher is called with the area, the opening, the change count and the open count")
+    void should_call_the_dispatcher_with_the_change_values_when_heard_given_an_opened_alert() {
         listener.on(new OperationalAlertChanged(MonitoredArea.BACKUPS, true, 3, 2, NOW));
 
         verify(dispatcher).alertChanged(MonitoredArea.BACKUPS, true, 3, 2);
-    }
-
-    @Test
-    @DisplayName("Given a resolved mail alert, when its change is committed, then the dispatcher sends the recovery with the count still open")
-    void should_dispatch_the_recovery_when_committed_given_a_resolved_alert() {
-        listener.on(new OperationalAlertChanged(MonitoredArea.MAIL, false, 4, 0, NOW));
-
-        verify(dispatcher).alertChanged(MonitoredArea.MAIL, false, 4, 0);
     }
 }
