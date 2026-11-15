@@ -2,15 +2,14 @@ package cz.novanadeje.app.architecture;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaAccess;
-import com.tngtech.archunit.core.domain.JavaConstructorCall;
+import com.tngtech.archunit.core.domain.JavaCodeUnitAccess;
+import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
-import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
-import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -46,7 +45,6 @@ import static java.util.Map.entry;
 import static com.tngtech.archunit.lang.conditions.ArchConditions.beMetaAnnotatedWith;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noCodeUnits;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @AnalyzeClasses(
@@ -64,7 +62,7 @@ class TransactionRulesTest {
     private static final String DONATION = "cz.novanadeje.app.donations.domain.donation.DonationId";
     private static final String CHANNEL = "cz.novanadeje.app.shared.application.administration.AdministrationChannel";
     private static final String ONE_ISSUE = "one issue numbers, freezes and signs a receipt and commits it on its own, even if a caller holds a transaction";
-    private static final String MAIL_WATCH = "cz.novanadeje.app.operations.application.alerts.MailWatch";
+    private static final String MAIL_ALERT_RECORDER = "cz.novanadeje.app.operations.application.alerts.MailAlertRecorder";
     private static final Map<String, String> SEPARATE_TRANSACTIONS = Map.ofEntries(
             entry(RECEIPT_ISSUER + ".issueForDonation(" + DONOR + ", " + DONATION + ", java.time.LocalDate)", ONE_ISSUE),
             entry(RECEIPT_ISSUER + ".issueForYear(" + DONOR + ", java.time.Year, java.time.LocalDate)", ONE_ISSUE),
@@ -78,10 +76,8 @@ class TransactionRulesTest {
                     "pairing called from an AFTER_COMMIT listener, while the registration's committed transaction is still bound to the thread"),
             entry("cz.novanadeje.app.donations.application.report.MonthlyReportFigures.compile(cz.novanadeje.app.donations.domain.report.ReportMonth)",
                     "a REPEATABLE READ snapshot inside the READ COMMITTED sending transaction"),
-            entry(MAIL_WATCH + ".<init>(cz.novanadeje.app.operations.application.alerts.OperationalAlertService, "
-                    + "org.springframework.transaction.PlatformTransactionManager)", "it sets up the template the mail outage is recorded in"),
-            entry(MAIL_WATCH + ".open()", "it reads the mail alert in that template, so a read never marks the caller's transaction rollback-only"),
-            entry(MAIL_WATCH + ".record(boolean, java.time.Instant)", "the mail outage outlives a send that rolls its transaction back"),
+            entry(MAIL_ALERT_RECORDER + ".open()", "the mail watch reads the alert apart, so a read never marks the caller's transaction rollback-only"),
+            entry(MAIL_ALERT_RECORDER + ".record(boolean, java.time.Instant)", "the mail outage outlives a send that rolls its transaction back"),
             entry("cz.novanadeje.app.operations.application.backup.BackupKeyRevealRefusals.record(java.util.UUID, java.time.Instant)",
                     "the audit of a refused reveal outlives the reveal"));
     private static final Set<String> SEPARATING_PROPAGATIONS = Set.of(Propagation.REQUIRES_NEW.name(), Propagation.NOT_SUPPORTED.name());
@@ -90,9 +86,6 @@ class TransactionRulesTest {
     private static final DescribedPredicate<JavaAccess<?>> A_PROPAGATION_CHOICE = describe(
             "a choice of propagation in code (Propagation.REQUIRES_NEW or NOT_SUPPORTED, setPropagationBehavior…, a DefaultTransactionDefinition with a propagation)",
             access -> isSeparatingConstant(access) || isPropagationSetter(access) || isDefinitionWithAPropagation(access));
-    private static final DescribedPredicate<JavaAccess<?>> A_NEW_TRANSACTION_IN_CODE = describe(
-            A_PROPAGATION_CHOICE.getDescription() + " or a read of a template or definition field of a class that makes such a choice",
-            access -> A_PROPAGATION_CHOICE.test(access) || readsATemplateWithAChosenPropagation(access));
     private static final DescribedPredicate<JavaAnnotation<?>> OWN_TRANSACTION = describe("@Transactional that does not require a running transaction",
             annotation -> annotation.getRawType().isEquivalentTo(Transactional.class) && !joinsARunningTransaction(annotation));
 
@@ -117,6 +110,12 @@ class TransactionRulesTest {
     static final ArchRule new_transactions_are_opened_only_where_backend_md_names_them = newTransactionsOpenedOnlyIn(SEPARATE_TRANSACTIONS.keySet());
 
     @ArchTest
+    static final ArchRule propagation_is_chosen_only_by_annotation = noCodeUnits()
+            .should(chooseAPropagationInCode())
+            .because(SEPARATE + ", named per annotated method; a template or definition whose propagation is chosen in code opens a new transaction "
+                    + "wherever it is used or handed on, which no list of methods can follow");
+
+    @ArchTest
     static final ArchRule no_class_opens_a_new_transaction_for_all_its_methods = noClasses()
             .should(beMetaAnnotatedWith(A_NEW_TRANSACTION))
             .because(SEPARATE + ", named per method, so a class-level one would admit every method the class ever gets");
@@ -127,15 +126,6 @@ class TransactionRulesTest {
             .should(ArchCondition.from(describe("declare an attribute that aliases the propagation of @Transactional",
                     TransactionRulesTest::aliasesThePropagation)))
             .because(SEPARATE + ", and a composed annotation whose propagation is an alias carries its REQUIRES_NEW where the rule cannot read it");
-
-    @ArchTest
-    static final ArchRule no_method_hands_out_a_template_with_a_chosen_propagation = noMethods()
-            .should(ArchCondition.from(describe("hand out a template or definition of a transaction whose propagation they choose",
-                    method -> !method.getModifiers().contains(JavaModifier.PRIVATE)
-                            && (method.getRawReturnType().isAssignableTo(TransactionOperations.class)
-                            || method.getRawReturnType().isAssignableTo(TransactionDefinition.class))
-                            && method.getAccessesFromSelf().stream().anyMatch(A_PROPAGATION_CHOICE))))
-            .because(SEPARATE + ", and a template handed to another class would open a new transaction wherever it is used, unlisted");
 
     @ArchTest
     static final ArchRule no_class_defines_a_transaction_of_its_own = noClasses()
@@ -151,7 +141,7 @@ class TransactionRulesTest {
             .because(BOUNDARY + ", so an adapter or a controller never opens a transaction the MANDATORY rule cannot see");
 
     @Test
-    @DisplayName("Given the methods named as opening a transaction of their own, when they are read, then each exists and still opens one or chooses a propagation in code, so the list names no method that is gone or plainly joins")
+    @DisplayName("Given the methods named as opening a transaction of their own, when they are read, then each exists and still opens one, so the list names no method that is gone or joins")
     void should_find_every_named_method_opening_a_new_transaction_when_read_given_the_separate_transactions() {
         JavaClasses owners = new ClassFileImporter().importClasses(SEPARATE_TRANSACTIONS.keySet().stream().map(TransactionRulesTest::ownerOf).distinct().toList());
         Map<String, JavaCodeUnit> codeUnits = owners.stream().flatMap(owner -> owner.getCodeUnits().stream())
@@ -163,7 +153,7 @@ class TransactionRulesTest {
     }
 
     @Test
-    @DisplayName("Given a planted service that opens a new transaction by annotation, by its enum and by a programmatic template, and an adapter with a template, when the rules check them, then each is reported and a plain service is not")
+    @DisplayName("Given a planted service that opens a new transaction by annotation and chooses a propagation in code in every way, and adapters with a template, when the rules check them, then each is reported and a joining template is not")
     void should_report_every_new_transaction_when_checked_given_planted_classes(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, Map.of("cz.novanadeje.app.planteda.application.PlantedSeparately", """
                 package cz.novanadeje.app.planteda.application;
@@ -193,6 +183,28 @@ class TransactionRulesTest {
 
                     DefaultTransactionDefinition byDefinition() {
                         return new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    }
+
+                    Propagation bySuspending() {
+                        return Propagation.NOT_SUPPORTED;
+                    }
+
+                    TransactionTemplate byName(PlatformTransactionManager transactions) {
+                        TransactionTemplate template = new TransactionTemplate(transactions);
+                        template.setPropagationBehaviorName("PROPAGATION_REQUIRES_NEW");
+                        return template;
+                    }
+
+                    java.util.function.IntConsumer bySetterReference(TransactionTemplate template) {
+                        return template::setPropagationBehavior;
+                    }
+
+                    java.util.function.IntFunction<DefaultTransactionDefinition> byConstructorReference() {
+                        return DefaultTransactionDefinition::new;
+                    }
+
+                    TransactionTemplate joiningTemplate(PlatformTransactionManager transactions) {
+                        return new TransactionTemplate(transactions);
                     }
 
                     @Transactional
@@ -226,11 +238,16 @@ class TransactionRulesTest {
                 """));
 
         assertThat(new_transactions_are_opened_only_where_backend_md_names_them.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(4)
-                .anySatisfy(detail -> assertThat(detail).contains("byAnnotation"))
+                .singleElement().satisfies(detail -> assertThat(detail).contains("byAnnotation"));
+        assertThat(propagation_is_chosen_only_by_annotation.evaluate(planted).getFailureReport().getDetails())
+                .hasSize(7)
                 .anySatisfy(detail -> assertThat(detail).contains("byEnum"))
                 .anySatisfy(detail -> assertThat(detail).contains("byTemplate"))
-                .anySatisfy(detail -> assertThat(detail).contains("byDefinition"));
+                .anySatisfy(detail -> assertThat(detail).contains("byDefinition"))
+                .anySatisfy(detail -> assertThat(detail).contains("bySuspending"))
+                .anySatisfy(detail -> assertThat(detail).contains("byName"))
+                .anySatisfy(detail -> assertThat(detail).contains("bySetterReference"))
+                .anySatisfy(detail -> assertThat(detail).contains("byConstructorReference"));
         assertThat(programmatic_transactions_belong_to_the_application.evaluate(planted).getFailureReport().getDetails())
                 .isNotEmpty()
                 .allSatisfy(detail -> assertThat(detail).containsAnyOf("PlantedTemplateRows", "PlantedManagerRows"))
@@ -239,7 +256,7 @@ class TransactionRulesTest {
     }
 
     @Test
-    @DisplayName("Given planted methods that open a new transaction or suspend the caller's by annotation, a meta-annotation, an alias or a shared template, and classes that do so for every method, when only some methods are named, then every other method and every class is reported")
+    @DisplayName("Given planted methods that open a new transaction or suspend the caller's by annotation or a meta-annotation, aliases of the propagation, a definition of its own and classes that do so for every method, when only some methods are named, then every other method, alias, definition and class is reported")
     void should_report_every_unnamed_method_and_every_class_when_checked_given_some_named_methods_of_planted_classes(@TempDir Path folder) throws IOException {
         JavaClasses planted = PlantedClasses.compiled(folder, sourcesByName("cz.novanadeje.app.planteda.application.PlantedIssuer", """
                 package cz.novanadeje.app.planteda.application;
@@ -267,6 +284,10 @@ class TransactionRulesTest {
 
                     @SeparateWrite
                     void byMetaAnnotation() {
+                    }
+
+                    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+                    void alsoNamed() {
                     }
                 }
                 """, "cz.novanadeje.app.planteda.application.SeparateWrite", """
@@ -334,107 +355,6 @@ class TransactionRulesTest {
                 @SeparateWrite
                 class PlantedMetaSeparateClass {
                 }
-                """, "cz.novanadeje.app.planteda.application.PlantedWatch", """
-                package cz.novanadeje.app.planteda.application;
-
-                import org.springframework.transaction.PlatformTransactionManager;
-                import org.springframework.transaction.TransactionDefinition;
-                import org.springframework.transaction.support.TransactionTemplate;
-
-                class PlantedWatch {
-
-                    private final TransactionTemplate separately;
-
-                    PlantedWatch(PlatformTransactionManager transactions) {
-                        this.separately = new TransactionTemplate(transactions);
-                        this.separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-                    }
-
-                    void named() {
-                        separately.executeWithoutResult(status -> {
-                        });
-                    }
-
-                    void unnamedUse() {
-                        separately.executeWithoutResult(status -> {
-                        });
-                    }
-
-                    TransactionTemplate byItsName(PlatformTransactionManager transactions) {
-                        TransactionTemplate template = new TransactionTemplate(transactions);
-                        template.setPropagationBehaviorName("PROPAGATION_REQUIRES_NEW");
-                        return template;
-                    }
-                }
-                """, "cz.novanadeje.app.planteda.application.PlantedHelperWatch", """
-                package cz.novanadeje.app.planteda.application;
-
-                import org.springframework.transaction.PlatformTransactionManager;
-                import org.springframework.transaction.TransactionDefinition;
-                import org.springframework.transaction.support.DefaultTransactionDefinition;
-                import org.springframework.transaction.support.TransactionTemplate;
-
-                class PlantedHelperWatch {
-
-                    private final TransactionTemplate separately;
-                    private final DefaultTransactionDefinition definition;
-                    private final PlatformTransactionManager transactions;
-
-                    PlantedHelperWatch(PlatformTransactionManager transactions) {
-                        this.separately = separateTemplate(transactions);
-                        this.definition = new DefaultTransactionDefinition();
-                        this.transactions = transactions;
-                    }
-
-                    private static TransactionTemplate separateTemplate(PlatformTransactionManager transactions) {
-                        TransactionTemplate template = new TransactionTemplate(transactions);
-                        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-                        return template;
-                    }
-
-                    void named() {
-                        separately.executeWithoutResult(status -> {
-                        });
-                    }
-
-                    void unnamedUse() {
-                        separately.executeWithoutResult(status -> {
-                        });
-                    }
-
-                    void unnamedDefinitionUse() {
-                        transactions.getTransaction(definition);
-                    }
-
-                    public TransactionTemplate handedOut() {
-                        TransactionTemplate template = new TransactionTemplate(transactions);
-                        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-                        return template;
-                    }
-                }
-                """, "cz.novanadeje.app.planteda.application.PlantedPlainTemplate", """
-                package cz.novanadeje.app.planteda.application;
-
-                import org.springframework.transaction.PlatformTransactionManager;
-                import org.springframework.transaction.support.TransactionTemplate;
-
-                class PlantedPlainTemplate {
-
-                    private final TransactionTemplate joining;
-
-                    PlantedPlainTemplate(PlatformTransactionManager transactions) {
-                        this.joining = new TransactionTemplate(transactions);
-                    }
-
-                    void joins() {
-                        joining.executeWithoutResult(status -> {
-                        });
-                    }
-
-                    public TransactionTemplate handedOutPlainly() {
-                        return joining;
-                    }
-                }
                 """, "cz.novanadeje.app.planteda.application.ReadingWrite", """
                 package cz.novanadeje.app.planteda.application;
 
@@ -492,22 +412,14 @@ class TransactionRulesTest {
                 """));
 
         assertThat(newTransactionsOpenedOnlyIn(Set.of("cz.novanadeje.app.planteda.application.PlantedIssuer.named(java.lang.String)",
-                "cz.novanadeje.app.planteda.application.PlantedWatch.<init>(org.springframework.transaction.PlatformTransactionManager)",
-                "cz.novanadeje.app.planteda.application.PlantedWatch.named()",
-                "cz.novanadeje.app.planteda.application.PlantedHelperWatch.separateTemplate(org.springframework.transaction.PlatformTransactionManager)",
-                "cz.novanadeje.app.planteda.application.PlantedHelperWatch.named()",
-                "cz.novanadeje.app.planteda.application.PlantedHelperWatch.handedOut()"))
+                "cz.novanadeje.app.planteda.application.PlantedIssuer.alsoNamed()"))
                 .evaluate(planted).getFailureReport().getDetails())
-                .hasSize(8)
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedHelperWatch.unnamedUse()"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedHelperWatch.unnamedDefinitionUse()"))
-                .noneSatisfy(detail -> assertThat(detail).contains("PlantedPlainTemplate"))
+                .hasSize(4)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.named(int)"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.unnamed()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.suspends()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedIssuer.byMetaAnnotation()"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedWatch.unnamedUse()"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedWatch.byItsName("));
+                .noneSatisfy(detail -> assertThat(detail).contains("alsoNamed"));
         assertThat(no_class_opens_a_new_transaction_for_all_its_methods.evaluate(planted).getFailureReport().getDetails())
                 .hasSize(3)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedSeparateClass"))
@@ -517,10 +429,6 @@ class TransactionRulesTest {
                 .hasSize(2)
                 .anySatisfy(detail -> assertThat(detail).contains("application.AliasedWrite"))
                 .anySatisfy(detail -> assertThat(detail).contains("application.ImplicitlyAliasedWrite"));
-        assertThat(no_method_hands_out_a_template_with_a_chosen_propagation.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(2)
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedHelperWatch.handedOut()"))
-                .anySatisfy(detail -> assertThat(detail).contains("PlantedWatch.byItsName("));
         assertThat(no_class_defines_a_transaction_of_its_own.evaluate(planted).getFailureReport().getDetails())
                 .singleElement().satisfies(detail -> assertThat(detail).contains("PlantedDefinition"));
     }
@@ -587,7 +495,6 @@ class TransactionRulesTest {
         return noCodeUnits()
                 .that(describe("are not named in backend.md as opening a transaction of their own", codeUnit -> !namedCodeUnits.contains(codeUnit.getFullName())))
                 .should(beMetaAnnotatedWith(A_NEW_TRANSACTION))
-                .orShould(chooseAPropagationInCode())
                 .because(SEPARATE);
     }
 
@@ -597,20 +504,7 @@ class TransactionRulesTest {
     }
 
     private static boolean opensANewTransaction(JavaCodeUnit codeUnit) {
-        return codeUnit.isMetaAnnotatedWith(A_NEW_TRANSACTION) || codeUnit.getAccessesFromSelf().stream().anyMatch(A_NEW_TRANSACTION_IN_CODE);
-    }
-
-    private static boolean readsATemplateWithAChosenPropagation(JavaAccess<?> access) {
-        return access instanceof JavaFieldAccess read && read.getAccessType() == JavaFieldAccess.AccessType.GET
-                && read.getTarget().resolveMember()
-                .filter(TransactionRulesTest::holdsATransactionDefinition)
-                .filter(field -> field.getOwner().getCodeUnits().stream()
-                        .anyMatch(codeUnit -> codeUnit.getAccessesFromSelf().stream().anyMatch(A_PROPAGATION_CHOICE)))
-                .isPresent();
-    }
-
-    private static boolean holdsATransactionDefinition(JavaField field) {
-        return field.getRawType().isAssignableTo(TransactionOperations.class) || field.getRawType().isAssignableTo(TransactionDefinition.class);
+        return codeUnit.isMetaAnnotatedWith(A_NEW_TRANSACTION);
     }
 
     private static boolean aliasesThePropagation(JavaClass annotationType) {
@@ -632,11 +526,11 @@ class TransactionRulesTest {
     }
 
     private static ArchCondition<JavaCodeUnit> chooseAPropagationInCode() {
-        return new ArchCondition<>("make " + A_NEW_TRANSACTION_IN_CODE.getDescription()) {
+        return new ArchCondition<>("make " + A_PROPAGATION_CHOICE.getDescription()) {
             @Override
             public void check(JavaCodeUnit codeUnit, ConditionEvents events) {
                 codeUnit.getAccessesFromSelf().stream()
-                        .filter(A_NEW_TRANSACTION_IN_CODE)
+                        .filter(A_PROPAGATION_CHOICE)
                         .forEach(access -> events.add(SimpleConditionEvent.satisfied(codeUnit, codeUnit.getFullName() + " " + access.getDescription())));
             }
         };
@@ -656,12 +550,13 @@ class TransactionRulesTest {
     }
 
     private static boolean isPropagationSetter(JavaAccess<?> access) {
-        return access instanceof JavaMethodCall call && call.getTarget().getName().startsWith("setPropagationBehavior")
+        return access instanceof JavaCodeUnitAccess<?> call && call.getTarget().getName().startsWith("setPropagationBehavior")
                 && call.getTargetOwner().isAssignableTo(DefaultTransactionDefinition.class);
     }
 
     private static boolean isDefinitionWithAPropagation(JavaAccess<?> access) {
-        return access instanceof JavaConstructorCall call && call.getTargetOwner().isAssignableTo(DefaultTransactionDefinition.class)
+        return access instanceof JavaCodeUnitAccess<?> call && call.getTarget().getName().equals(JavaConstructor.CONSTRUCTOR_NAME)
+                && call.getTargetOwner().isAssignableTo(DefaultTransactionDefinition.class)
                 && call.getTarget().getRawParameterTypes().stream().anyMatch(type -> type.isEquivalentTo(int.class));
     }
 }

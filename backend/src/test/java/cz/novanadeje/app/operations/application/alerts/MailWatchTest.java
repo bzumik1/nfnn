@@ -4,8 +4,6 @@ import cz.novanadeje.app.operations.application.event.OperationalAlertChanged;
 import cz.novanadeje.app.operations.domain.alerts.MonitoredArea;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -13,10 +11,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MailWatchTest {
@@ -25,17 +23,14 @@ class MailWatchTest {
 
     private final InMemoryOperationalAlerts alerts = new InMemoryOperationalAlerts();
     private final List<Object> published = new ArrayList<>();
-    private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
-    private final MailWatch watch = new MailWatch(new OperationalAlertService(alerts, published::add), transactions);
+    private final MailWatch watch = new MailWatch(new MailAlertRecorder(new OperationalAlertService(alerts, published::add)));
 
     @Test
-    @DisplayName("Given working mail, when a send fails, then the mail alert opens in a transaction of its own, so a refused send that rolls back its caller still counts")
-    void should_open_alert_in_own_transaction_when_send_fails_given_working_mail() {
+    @DisplayName("Given working mail, when a send fails, then the mail alert opens")
+    void should_open_alert_when_send_fails_given_working_mail() {
         watch.failed(NOW);
 
         assertThat(published).containsExactly(new OperationalAlertChanged(MonitoredArea.MAIL, true, 1, 1, NOW));
-        verify(transactions, atLeastOnce()).getTransaction(argThat(definition ->
-                definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW));
     }
 
     @Test
@@ -63,12 +58,14 @@ class MailWatchTest {
     @Test
     @DisplayName("Given a database that cannot be reached, when a send fails or succeeds, then the watch swallows it, so the sender of the mail never sees it")
     void should_swallow_failures_when_recorded_given_unreachable_database() {
-        when(transactions.getTransaction(argThat(definition -> true))).thenThrow(new IllegalStateException("no connection"));
+        MailAlertRecorder unreachable = mock(MailAlertRecorder.class);
+        when(unreachable.open()).thenThrow(new IllegalStateException("no connection"));
+        doThrow(new IllegalStateException("no connection")).when(unreachable).record(anyBoolean(), any());
+        MailWatch watchOverUnreachable = new MailWatch(unreachable);
 
         assertThatCode(() -> {
-            watch.failed(NOW);
-            watch.succeeded(NOW);
+            watchOverUnreachable.failed(NOW);
+            watchOverUnreachable.succeeded(NOW);
         }).doesNotThrowAnyException();
-        assertThat(published).isEmpty();
     }
 }
