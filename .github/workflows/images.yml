@@ -1,16 +1,10 @@
 name: Publish Docker images
 
 on:
-  push:
+  workflow_run:
+    workflows: [PR check]
+    types: [completed]
     branches: [main]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "deploy/backup/**"
-      - "deploy/postgres/**"
-      - "mcp/**"
-      - "scripts/release-version.mjs"
-      - ".github/workflows/images.yml"
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
@@ -21,24 +15,50 @@ concurrency:
 
 jobs:
   version:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      actions: read
       contents: write
     outputs:
+      sha: ${{ steps.commit.outputs.sha }}
       release: ${{ steps.number.outputs.release }}
       inputs: ${{ steps.inputs.outputs.inputs }}
       code-changed: ${{ steps.inputs.outputs.code-changed }}
     steps:
+      - name: Choose the commit of main whose PR check passed
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECKED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            sha=$CHECKED_SHA
+          else
+            sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pr-check.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""')
+          fi
+          echo "$sha" | grep -qxE '[0-9a-f]{40}' || { echo "::error::no commit of main has a green PR check run of its push (got '$sha'), so nothing is published"; exit 1; }
+          echo "::notice::the PR check of $sha on main passed"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ steps.commit.outputs.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Compare what the images are built from with the latest release
         id: inputs
+        env:
+          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -euo pipefail
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "::error::$SHA is not a commit of main"; exit 1; }
           bases=$(node scripts/release-version.mjs bases backend/Dockerfile frontend/Dockerfile mcp/Dockerfile deploy/backup/Dockerfile deploy/postgres/Dockerfile)
           digests=$(while read -r image; do
             digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest)
@@ -46,7 +66,11 @@ jobs:
             echo "$image $digest"
           done <<< "$bases")
           echo "$digests"
-          inputs=$(printf '%s\n%s\n' "$GITHUB_SHA" "$digests" | sha256sum | cut -d ' ' -f 1)
+          sources=$(for path in backend frontend mcp deploy/backup deploy/postgres scripts/release-version.mjs .github/workflows/images.yml; do
+            echo "$path $(git rev-parse "$SHA:$path")"
+          done)
+          echo "$sources"
+          inputs=$(printf '%s\n%s\n' "$sources" "$digests" | sha256sum | cut -d ' ' -f 1)
           latest="ghcr.io/${GITHUB_REPOSITORY,,}-mcp:latest"
           previous_inputs=
           previous_revision=
@@ -54,14 +78,21 @@ jobs:
             previous_inputs=$(docker inspect -f '{{index .Config.Labels "cz.novanadeje.build.inputs"}}' "$latest")
             previous_revision=$(docker inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$latest")
           fi
-          if [ "$inputs" = "$previous_inputs" ]; then
-            echo "::notice::the commit and every base image are those of the latest release, so nothing is published"
+          if [ -n "$previous_revision" ] && ! git cat-file -e "$previous_revision^{commit}" 2> /dev/null; then
+            echo "::error::$latest names the revision '$previous_revision', which is no commit of this repository"
+            exit 1
+          fi
+          if [ -n "$previous_revision" ] && ! git merge-base --is-ancestor "$previous_revision" "$SHA"; then
+            echo "::notice::$SHA does not contain $previous_revision, the commit of the latest release, so latest stays where it is"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif [ "$inputs" = "$previous_inputs" ]; then
+            echo "::notice::the image sources and every base image are those of the latest release, so nothing is published"
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
           echo "inputs=$inputs" >> "$GITHUB_OUTPUT"
-          if [ "$previous_revision" = "$GITHUB_SHA" ]; then
+          if [ "$previous_revision" = "$SHA" ]; then
             echo "code-changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "code-changed=true" >> "$GITHUB_OUTPUT"
@@ -72,11 +103,12 @@ jobs:
         if: steps.inputs.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.commit.outputs.sha }}
         run: |
           set -euo pipefail
           release=$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY" | node scripts/release-version.mjs next)
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$release" -f sha="$GITHUB_SHA" > /dev/null
-          echo "::notice::release $release of $GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$release" -f sha="$SHA" > /dev/null
+          echo "::notice::release $release of $SHA"
           echo "release=$release" >> "$GITHUB_OUTPUT"
 
   images:
@@ -90,11 +122,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.version.outputs.sha }}
           persist-credentials: false
 
       - name: Build and push images
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ needs.version.outputs.sha }}
           RELEASE: ${{ needs.version.outputs.release }}
           INPUTS: ${{ needs.version.outputs.inputs }}
         run: |
@@ -128,8 +162,8 @@ jobs:
             fi
             previous=$(docker inspect -f '{{index .RepoDigests 0}}' "$prefix-$app:latest")
             echo "$previous" | grep -qxE "$prefix-$app@sha256:[0-9a-f]{64}" || { echo "::error::$prefix-$app:latest has no readable digest (got $previous)" >&2; exit 1; }
-            docker buildx imagetools create --prefer-index=false -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$previous"
-            echo "::notice::$context is unchanged since $prefix-$app:latest, so its image ${previous#*@} only gets the tags ${GITHUB_SHA::7} and $RELEASE and the server keeps its container"
+            docker buildx imagetools create --prefer-index=false -t "$prefix-$app:${SHA::7}" -t "$prefix-$app:$RELEASE" "$previous"
+            echo "::notice::$context is unchanged since $prefix-$app:latest, so its image ${previous#*@} only gets the tags ${SHA::7} and $RELEASE and the server keeps its container"
             reused="$reused $app"
           done
           for image in $images; do
@@ -139,14 +173,14 @@ jobs:
               *" $app "*) continue ;;
             esac
             docker build \
-              --build-arg REVISION="${GITHUB_SHA::7}" \
+              --build-arg REVISION="${SHA::7}" \
               --build-arg VERSION="$RELEASE" \
               --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY" \
-              --label org.opencontainers.image.revision="$GITHUB_SHA" \
+              --label org.opencontainers.image.revision="$SHA" \
               --label org.opencontainers.image.version="$RELEASE" \
               --label cz.novanadeje.build.inputs="$INPUTS" \
               --label cz.novanadeje.build.context="$(git rev-parse "HEAD:$context")" \
-              -t "$prefix-$app:latest" -t "$prefix-$app:${GITHUB_SHA::7}" -t "$prefix-$app:$RELEASE" "$context"
+              -t "$prefix-$app:latest" -t "$prefix-$app:${SHA::7}" -t "$prefix-$app:$RELEASE" "$context"
             docker push --all-tags "$prefix-$app"
           done
 

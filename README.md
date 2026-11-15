@@ -197,7 +197,7 @@ On top of that, [`pr-check.yml`](.github/workflows/pr-check.yml) compares every 
 
 ## Deployment
 
-A merge to `main` that changes an image publishes it to `ghcr.io/bzumik1/nfnn-*`, tagged `latest` and with the short commit. The foundation's server runs them on ZimaOS from [`deploy/compose.yml`](deploy/compose.yml), behind Nginx Proxy Manager and Cloudflare; deploying a new version is a manual step. Installation, settings, backups and restores, logs and the domain are in [`deploy/README.md`](deploy/README.md) (Czech).
+A merge to `main` that changes an image publishes it to `ghcr.io/bzumik1/nfnn-*` once its PR check on `main` is green, tagged `latest` and with the short commit. The foundation's server runs them on ZimaOS from [`deploy/compose.yml`](deploy/compose.yml), behind Nginx Proxy Manager and Cloudflare; deploying a new version is a manual step. Installation, settings, backups and restores, logs and the domain are in [`deploy/README.md`](deploy/README.md) (Czech).
 
 ## Documentation
 
