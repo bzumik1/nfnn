@@ -1,5 +1,9 @@
 package cz.novanadeje.app.shared.infrastructure.audit;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import cz.novanadeje.app.IntegrationTest;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
@@ -7,13 +11,16 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -32,6 +39,8 @@ class JpaAdminActionTrailTest {
     private TransactionTemplate transactions;
     @Autowired
     private AdminActionTrail trail;
+    @Autowired
+    private JdbcClient jdbc;
 
     private UUID admin;
     private UUID subject;
@@ -124,5 +133,58 @@ class JpaAdminActionTrailTest {
         assertThat(entries).extracting(AdminActionEntry::details).containsExactly("third", "second", "first");
         assertThat(entries).extracting(AdminActionEntry::id).doesNotContainNull().doesNotHaveDuplicates();
         assertThat(entries).extracting(AdminActionEntry::client).containsOnly(Optional.empty());
+    }
+
+    @Test
+    @DisplayName("Given an action stored with facts beside actions without, when the trail is read by every finder, then the facts come back with their action only")
+    void should_read_facts_back_when_read_by_every_finder_given_an_action_with_facts() {
+        AdminActionPerformed.Facts facts = AdminActionPerformed.Facts.of("REMOVE_BANK_LOGO", Map.of("bank", "0100"));
+        Instant later = AT.plusSeconds(180);
+        transactions.executeWithoutResult(status ->
+                events.publishEvent(new AdminActionPerformed(admin, "REMOVE_BANK_LOGO", Optional.empty(), "Logo banky 0100 odebráno", facts, later)));
+
+        List<List<AdminActionEntry>> reads = List.of(
+                trail.findPerformedBefore(later.plusSeconds(1), 200),
+                trail.findPerformedBefore(later.plusSeconds(1), new UUID(-1, -1), 200),
+                trail.findAllNewestFirst(),
+                trail.findByActions(Set.of("REMOVE_BANK_LOGO", "PAIR_PAYMENT", "UNPAIR_PAYMENT", "GRANT_ADMINISTRATION")));
+
+        for (List<AdminActionEntry> read : reads) {
+            List<AdminActionEntry> mine = read.stream().filter(entry -> entry.adminId().equals(admin)).toList();
+            assertThat(mine).hasSize(4);
+            assertThat(mine).filteredOn(entry -> entry.action().equals("REMOVE_BANK_LOGO")).extracting(AdminActionEntry::facts).containsExactly(Optional.of(facts));
+            assertThat(mine).filteredOn(entry -> !entry.action().equals("REMOVE_BANK_LOGO")).extracting(AdminActionEntry::facts).containsOnly(Optional.empty());
+        }
+    }
+
+    @Test
+    @DisplayName("Given a stored row whose facts no longer read as facts, when the trail is read, then the row comes without facts instead of failing the read")
+    void should_read_no_facts_when_read_given_facts_that_do_not_read() {
+        UUID id = UUID.randomUUID();
+        Instant later = AT.plusSeconds(240);
+        jdbc.sql("""
+                        insert into admin_action (id, admin_id, action, subject_id, details, performed_at, facts)
+                        values (?, ?, 'REMOVE_BANK_LOGO', null, 'Logo banky 0100 odebráno', ?, cast(? as jsonb))""")
+                .params(id, admin, java.sql.Timestamp.from(later), "{\"summaryKey\": \"remove bank logo\", \"values\": {\"bank\": 100}}").update();
+
+        ListAppender<ILoggingEvent> lines = new ListAppender<>();
+        lines.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(AdminActionFactsColumn.class);
+        logger.addAppender(lines);
+        try {
+            assertThat(trail.findPerformedBefore(later.plusSeconds(1), 200)).filteredOn(entry -> entry.id().equals(id))
+                    .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
+            assertThat(trail.findAllNewestFirst()).filteredOn(entry -> entry.id().equals(id))
+                    .extracting(AdminActionEntry::facts).containsExactly(Optional.empty());
+        } finally {
+            logger.detachAppender(lines);
+        }
+
+        assertThat(lines.list).filteredOn(line -> line.getFormattedMessage().contains(id.toString())).hasSize(2).allSatisfy(line -> {
+            assertThat(line.getLevel()).isEqualTo(Level.WARN);
+            assertThat(line.getFormattedMessage())
+                    .isEqualTo("The facts of admin action " + id + " could not be read: not an object of a summary key and text values")
+                    .doesNotContain("remove bank logo");
+        });
     }
 }

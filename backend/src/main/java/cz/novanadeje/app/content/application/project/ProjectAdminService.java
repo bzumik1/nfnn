@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -41,6 +43,7 @@ public class ProjectAdminService {
     static final String PUBLISH_ACTION = "PUBLISH_PROJECT";
     static final String UNPUBLISH_ACTION = "UNPUBLISH_PROJECT";
     static final String DELETE_ACTION = "DELETE_PROJECT";
+    private static final String WITH_TITLE = ".withTitle";
 
     private static final Logger log = LoggerFactory.getLogger(ProjectAdminService.class);
 
@@ -106,7 +109,8 @@ public class ProjectAdminService {
         Instant now = clock.instant();
         Project published = stored.publish(on, now);
         projects.save(published);
-        audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, now);
+        audit(adminId, PUBLISH_ACTION, published, "Projekt " + id + " „" + published.slug() + "“ zveřejněn od " + on, PUBLISH_ACTION + WITH_TITLE,
+                Map.of("on", on.toString()), now);
         return versioned(published, today(now));
     }
 
@@ -171,8 +175,16 @@ public class ProjectAdminService {
     }
 
     private void audit(UUID adminId, String action, Project article, String details, Instant now) {
+        audit(adminId, action, article, details, action + WITH_TITLE, Map.of(), now);
+    }
+
+    private void audit(UUID adminId, String action, Project article, String details, String summaryKey, Map<String, String> facts, Instant now) {
         String titled = details + "; titulek „" + article.content().title() + "“";
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled, now));
+        Map<String, String> values = new HashMap<>(facts);
+        values.put("slug", article.slug().value());
+        values.put("title", article.content().title());
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled,
+                AdminActionPerformed.Facts.of(summaryKey, values), now));
         log.info("{} on project {} by admin {}", action, article.id(), adminId);
     }
 }

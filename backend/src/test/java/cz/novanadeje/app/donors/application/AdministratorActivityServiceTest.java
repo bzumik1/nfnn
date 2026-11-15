@@ -6,6 +6,7 @@ import cz.novanadeje.app.donors.domain.DonorRepository;
 import cz.novanadeje.app.donors.domain.PasswordHash;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.EmailAddress;
@@ -23,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -78,7 +80,7 @@ class AdministratorActivityServiceTest {
     void should_carry_facts_and_donor_when_listed_given_action_on_donor() {
         DonorId petrId = DonorId.newId(NOW.minusSeconds(200));
         AdminActionEntry grant = new AdminActionEntry(UUID.randomUUID(), JANA.value(), "GRANT_ADMINISTRATION", Optional.of(petrId.value()),
-                "Administrator role granted to donor " + petrId, NOW.minusSeconds(10), Optional.empty());
+                "Administrator role granted to donor " + petrId, Optional.empty(), NOW.minusSeconds(10), Optional.empty());
         when(trail.findPerformedBefore(NOW.plusSeconds(1), 51)).thenReturn(List.of(grant));
         Donor jana = donor(JANA, "Jana Nováková");
         Donor petr = donor(petrId, "Petr Svoboda");
@@ -90,6 +92,38 @@ class AdministratorActivityServiceTest {
         assertThat(view.donorId()).contains(petrId.value());
         assertThat(view.donor()).contains(petr);
         assertThat(view.admin()).contains(jana);
+    }
+
+    @Test
+    @DisplayName("Given an action stored with facts, when the trail is listed, then it carries the stored facts and their donor, whatever its details say")
+    void should_carry_stored_facts_and_donor_when_listed_given_action_with_facts() {
+        DonorId petrId = DonorId.newId(NOW.minusSeconds(200));
+        AdminActionPerformed.Facts stored = AdminActionPerformed.Facts.of("REVOKE_ADMINISTRATION", Map.of("donor", petrId.value().toString()));
+        AdminActionEntry revoke = new AdminActionEntry(UUID.randomUUID(), JANA.value(), "REVOKE_ADMINISTRATION", Optional.of(petrId.value()),
+                "Wording no shape knows", Optional.of(stored), NOW.minusSeconds(10), Optional.empty());
+        when(trail.findPerformedBefore(NOW.plusSeconds(1), 51)).thenReturn(List.of(revoke));
+        Donor petr = donor(petrId, "Petr Svoboda");
+        when(donors.findByIds(List.of(JANA, petrId))).thenReturn(List.of(donor(JANA, "Jana Nováková"), petr));
+
+        AdminActionView view = service.list(Optional.empty(), 50).items().getFirst();
+
+        assertThat(view.facts()).hasValueSatisfying(facts -> assertThat(facts.summaryKey()).isEqualTo("REVOKE_ADMINISTRATION"));
+        assertThat(view.donor()).contains(petr);
+    }
+
+    @Test
+    @DisplayName("Given stored facts whose donor is not an id, when the trail is listed, then the action names no donor")
+    void should_name_no_donor_when_listed_given_stored_facts_without_a_donor_id() {
+        AdminActionPerformed.Facts stored = AdminActionPerformed.Facts.of("REVOKE_ADMINISTRATION", Map.of("donor", "Petr"));
+        AdminActionEntry revoke = new AdminActionEntry(UUID.randomUUID(), JANA.value(), "REVOKE_ADMINISTRATION", Optional.empty(),
+                "Wording no shape knows", Optional.of(stored), NOW.minusSeconds(10), Optional.empty());
+        when(trail.findPerformedBefore(NOW.plusSeconds(1), 51)).thenReturn(List.of(revoke));
+        when(donors.findByIds(List.of(JANA))).thenReturn(List.of(donor(JANA, "Jana Nováková")));
+
+        AdminActionView view = service.list(Optional.empty(), 50).items().getFirst();
+
+        assertThat(view.donorId()).isEmpty();
+        assertThat(view.donor()).isEmpty();
     }
 
     @Test
@@ -158,7 +192,7 @@ class AdministratorActivityServiceTest {
     }
 
     private static AdminActionEntry entry(UUID adminId, String action, Instant at) {
-        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.of(SUBJECT), "details of " + action, at, Optional.empty());
+        return new AdminActionEntry(UUID.randomUUID(), adminId, action, Optional.of(SUBJECT), "details of " + action, Optional.empty(), at, Optional.empty());
     }
 
     private static Donor donor(DonorId id, String name) {

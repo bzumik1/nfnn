@@ -2,6 +2,7 @@ package cz.novanadeje.app.operations.application.backup;
 
 import cz.novanadeje.app.shared.application.audit.AdminActionTrail;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +49,7 @@ class BackupKeyRevealRefusalsTest {
 
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().action()).isEqualTo(BackupKeyRevealRefusals.REFUSED_ACTION);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().performedAt()).isEqualTo(NOW);

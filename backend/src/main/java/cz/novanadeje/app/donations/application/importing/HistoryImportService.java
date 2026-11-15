@@ -17,6 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,7 +66,8 @@ public class HistoryImportService {
                     .filter(now::isBefore)
                     .orElse(now);
             transaction.executeWithoutResult(status -> events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(),
-                    "Vyžádáno načtení starších plateb z banky od " + start.from(), now)));
+                    "Vyžádáno načtení starších plateb z banky od " + start.from(), AdminActionPerformed.Facts.of(ACTION, Map.of("on", start.from().toString())),
+                    now)));
             HistoryImportRun run = tracker.queue(plan.period(), plan.needsUnlockedHistory(), now, startsAt);
             try {
                 imports.requestHistoryImport(run);

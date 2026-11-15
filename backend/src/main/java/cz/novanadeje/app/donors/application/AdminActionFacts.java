@@ -1,16 +1,22 @@
 package cz.novanadeje.app.donors.application;
 
+import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public record AdminActionFacts(String summaryKey, Map<String, String> values) {
 
@@ -43,16 +49,33 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
             "settings", settings -> String.join(",", settings.split(",\\s*")));
 
     private static final Map<String, List<Shape>> SHAPES = shapes();
+    private static final Pattern DONOR_SHAPE = Pattern.compile(UUID_PATTERN);
 
     public AdminActionFacts {
         values = Map.copyOf(values);
     }
 
-    public static Optional<AdminActionFacts> read(String action, String details) {
+    public static Optional<AdminActionFacts> of(AdminActionEntry entry) {
+        return entry.facts()
+                .map(stored -> new AdminActionFacts(stored.summaryKey(), stored.values()))
+                .or(() -> read(entry.action(), entry.details()));
+    }
+
+    static Optional<AdminActionFacts> read(String action, String details) {
         return SHAPES.getOrDefault(action, List.of()).stream()
                 .map(shape -> shape.read(action, details))
                 .flatMap(Optional::stream)
                 .findFirst();
+    }
+
+    static List<String> frozenShapes() {
+        Stream<String> shapes = SHAPES.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .flatMap(byAction -> byAction.getValue().stream().map(shape -> byAction.getKey() + " " + shape.variant() + " " + shape.pattern().pattern()));
+        Stream<String> sections = new TreeMap<>(SECTION_CODES).entrySet().stream().map(section -> "section " + section.getKey() + " " + section.getValue());
+        Stream<String> inherited = INHERITED_WORDS.stream().map(word -> "inherited " + word);
+        Stream<String> normalized = new TreeSet<>(NORMALIZERS.keySet()).stream().map(name -> "normalized " + name);
+        return Stream.of(shapes, sections, inherited, normalized).flatMap(Function.identity()).toList();
     }
 
     public Optional<String> value(String name) {
@@ -60,7 +83,7 @@ public record AdminActionFacts(String summaryKey, Map<String, String> values) {
     }
 
     public Optional<UUID> donor() {
-        return value(DONOR).map(UUID::fromString);
+        return value(DONOR).filter(DONOR_SHAPE.asMatchPredicate()).map(UUID::fromString);
     }
 
     public AdminActionFacts onADevice() {

@@ -199,6 +199,6 @@ public class PeopleAdminService {
     }
 
     private void publish(UUID adminId, String action, String details, Instant now) {
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, now));
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, AdminActionPerformed.Facts.of(action), now));
     }
 }

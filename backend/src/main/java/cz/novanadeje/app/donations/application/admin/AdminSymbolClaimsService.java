@@ -93,7 +93,9 @@ public class AdminSymbolClaimsService {
         claims.save(reversed);
         events.publishEvent(new AdminActionPerformed(adminId, REVERSE_ACTION, Optional.of(claimId.value()),
                 "Odpověď Ano " + claimId + " dárce " + claim.donor() + " u symbolu " + claim.symbol().value()
-                        + " změněna na Ne; smazané dary spárované přes ni: " + paired.size(), now));
+                        + " změněna na Ne; smazané dary spárované přes ni: " + paired.size(),
+                AdminActionPerformed.Facts.of(REVERSE_ACTION, Map.of("donor", claim.donor().toString(), "symbol", claim.symbol().value(),
+                        "count", Integer.toString(paired.size()))), now));
         log.info("Admin {} reversed symbol claim {} of donor {}: {} donations deleted", adminId, claimId, claim.donor(), paired.size());
     }
 
@@ -106,7 +108,8 @@ public class AdminSymbolClaimsService {
         claims.delete(claimId);
         events.publishEvent(new AdminActionPerformed(adminId, RESET_ACTION, Optional.of(claimId.value()),
                 "Odpověď Ne " + claimId + " dárce " + claim.donor() + " u symbolu " + claim.symbol().value()
-                        + " smazána; účet se dárce může zeptat znovu", now));
+                        + " smazána; účet se dárce může zeptat znovu",
+                AdminActionPerformed.Facts.of(RESET_ACTION, Map.of("donor", claim.donor().toString(), "symbol", claim.symbol().value())), now));
         log.info("Admin {} deleted declined symbol claim {} of donor {}", adminId, claimId, claim.donor());
     }
 

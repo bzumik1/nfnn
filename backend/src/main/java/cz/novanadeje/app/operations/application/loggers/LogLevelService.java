@@ -28,6 +28,7 @@ public class LogLevelService {
 
     static final String CHANGE_ACTION = "CHANGE_LOG_LEVEL";
     static final String RESET_ACTION = "RESET_LOG_LEVEL";
+    private static final String INHERITED_FACT = "INHERITED";
     static final List<String> WATCHED_LOGGERS = List.of(LoggerName.ROOT, "cz.novanadeje.app", "io.github.bzumik1.fio",
             "org.springframework.web", "org.springframework.security", "org.hibernate.SQL", "liquibase", "org.springframework.mail");
 
@@ -72,7 +73,9 @@ public class LogLevelService {
         timer.at(override.until(), () -> expire(override));
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
                 "Logger " + logger.value() + " nastaven na " + level + " do " + override.until() + " (předtím: "
-                        + configuredBefore.map(Enum::name).orElse("zděděná úroveň") + ")", now));
+                        + configuredBefore.map(Enum::name).orElse("zděděná úroveň") + ")",
+                AdminActionPerformed.Facts.of(CHANGE_ACTION, Map.of("logger", logger.value(), "level", level.name(), "until", override.until().toString(),
+                        "previous", configuredBefore.map(Enum::name).orElse(INHERITED_FACT))), now));
         log.info("Admin {} set the logger {} to {} until {}", adminId, logger.value(), level, override.until());
         return override;
     }
@@ -87,7 +90,8 @@ public class LogLevelService {
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, RESET_ACTION, Optional.empty(),
                 "Logger " + logger.value() + " vrácen na " + removed.configuredBefore().map(Enum::name).orElse("zděděnou úroveň")
-                        + " před koncem dočasné změny", now));
+                        + " před koncem dočasné změny",
+                AdminActionPerformed.Facts.of(RESET_ACTION, Map.of("logger", logger.value(), "previous", removed.configuredBefore().map(Enum::name).orElse(INHERITED_FACT))), now));
         log.info("Admin {} reset the logger {} to {}", adminId, logger.value(), removed.configuredBefore().map(Enum::name).orElse("inherited"));
         return true;
     }

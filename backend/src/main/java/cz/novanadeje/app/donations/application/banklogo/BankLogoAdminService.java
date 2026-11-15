@@ -76,7 +76,8 @@ public class BankLogoAdminService {
             BankLogo locked = current.orElseGet(() -> createAndLock(source, precondition));
             Instant now = clock.instant();
             BankLogo changed = imageChanges.apply(locked, source, fetched, now);
-            audit(adminId, SET_ACTION, "Logo banky " + source.bank().value() + " nastaveno z " + source.host() + ", obrázek " + fetched.sha256(), now);
+            audit(adminId, SET_ACTION, "Logo banky " + source.bank().value() + " nastaveno z " + source.host() + ", obrázek " + fetched.sha256(),
+                    Map.of("bank", String.valueOf(source.bank().value()), "host", String.valueOf(source.host()), "image", String.valueOf(fetched.sha256())), now);
             return row(changed, bankNames());
         });
     }
@@ -94,7 +95,8 @@ public class BankLogoAdminService {
             }
             Instant now = clock.instant();
             BankLogo changed = imageChanges.apply(locked, locked.source(), fetched, now);
-            audit(adminId, REFRESH_ACTION, "Logo banky " + code.value() + " znovu staženo z " + locked.source().host() + ", obrázek " + fetched.sha256(), now);
+            audit(adminId, REFRESH_ACTION, "Logo banky " + code.value() + " znovu staženo z " + locked.source().host() + ", obrázek " + fetched.sha256(),
+                    Map.of("bank", String.valueOf(code.value()), "host", String.valueOf(locked.source().host()), "image", String.valueOf(fetched.sha256())), now);
             return row(changed, bankNames());
         });
     }
@@ -105,7 +107,7 @@ public class BankLogoAdminService {
         requireVersion(locked, expected);
         logos.delete(code);
         locked.image().map(StoredBankLogoImage::id).ifPresent(logos::deleteImage);
-        audit(adminId, REMOVE_ACTION, "Logo banky " + code.value() + " odebráno", clock.instant());
+        audit(adminId, REMOVE_ACTION, "Logo banky " + code.value() + " odebráno", Map.of("bank", String.valueOf(code.value())), clock.instant());
     }
 
     private BankLogo createAndLock(BankLogoSource source, WritePrecondition precondition) {
@@ -138,8 +140,8 @@ public class BankLogoAdminService {
         return new StaleWriteRefusal(new ChangedMeanwhile(versions.of(current)), row(current, bankNames()));
     }
 
-    private void audit(UUID adminId, String action, String details, Instant at) {
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, at));
+    private void audit(UUID adminId, String action, String details, Map<String, String> facts, Instant at) {
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, AdminActionPerformed.Facts.of(action, facts), at));
     }
 
     private BankLogoAdminRow row(BankLogo logo, Map<BankCode, BankName> names) {

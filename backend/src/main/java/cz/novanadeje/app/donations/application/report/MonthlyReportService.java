@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -75,7 +76,9 @@ public class MonthlyReportService {
         reportLog.recordSending(month, now);
         deliver(month, current, now, true);
         events.publishEvent(new AdminActionPerformed(adminId, SEND_ACTION, Optional.empty(),
-                "Měsíční přehled za " + month + " ručně odeslán, počet příjemců " + current.recipients().count(), now));
+                "Měsíční přehled za " + month + " ručně odeslán, počet příjemců " + current.recipients().count(),
+                AdminActionPerformed.Facts.of(SEND_ACTION + ".recipientCount", Map.of("month", month.toString(),
+                        "recipientCount", Integer.toString(current.recipients().count()))), now));
         log.info("Admin {} sent the monthly report for {} by hand to {} recipient(s)", adminId, month, current.recipients().count());
         return new ManualReportDelivery(month, current.recipients(), now);
     }

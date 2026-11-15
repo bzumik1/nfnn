@@ -19,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -69,7 +70,9 @@ public class AdministrationDeviceService {
         String details = device.session()
                 .map(session -> "Kopie správy uložena do zařízení " + described + " (zařízení " + session.value() + ")")
                 .orElse("Kopie správy uložena do zařízení " + described);
-        events.publishEvent(new AdminActionPerformed(adminId.value(), STORE_ADMINISTRATION_COPY_ACTION, Optional.empty(), details, now));
+        AdminActionPerformed.Facts facts = AdminActionPerformed.Facts.of(STORE_ADMINISTRATION_COPY_ACTION, Map.of("platform", device.description().platform().name(),
+                "browser", device.description().browser().name()));
+        events.publishEvent(new AdminActionPerformed(adminId.value(), STORE_ADMINISTRATION_COPY_ACTION, Optional.empty(), details, facts, now));
     }
 
     private Donor load(DonorId adminId) {

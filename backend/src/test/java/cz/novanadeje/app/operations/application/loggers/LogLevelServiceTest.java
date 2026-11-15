@@ -5,6 +5,7 @@ import cz.novanadeje.app.operations.domain.loggers.LogLevelOverride;
 import cz.novanadeje.app.operations.domain.loggers.LoggerName;
 import cz.novanadeje.app.operations.domain.loggers.ProtectedLogger;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -64,6 +65,7 @@ class LogLevelServiceTest {
         verify(timer).at(eq(NOW.plus(Duration.ofMinutes(10))), any(Runnable.class));
         ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(action.capture());
+        action.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(action.getValue().action()).isEqualTo("CHANGE_LOG_LEVEL");
         assertThat(action.getValue().details()).contains("Logger cz.novanadeje.app nastaven na DEBUG").contains("(předtím: INFO)");
         assertThat(service.view().loggers()).anySatisfy(logger -> {
@@ -115,6 +117,7 @@ class LogLevelServiceTest {
         verify(levels).setLevel(APP, Optional.of(LogLevel.WARN));
         ArgumentCaptor<AdminActionPerformed> actions = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, org.mockito.Mockito.times(2)).publishEvent(actions.capture());
+        actions.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(actions.getAllValues().getLast().action()).isEqualTo("RESET_LOG_LEVEL");
     }
 

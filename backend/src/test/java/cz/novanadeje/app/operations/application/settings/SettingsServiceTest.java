@@ -16,6 +16,7 @@ import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.operations.domain.settings.SettingsChangedMeanwhile;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -83,6 +84,7 @@ class SettingsServiceTest {
 
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().action()).isEqualTo(SettingsService.CHANGE_ACTION);
         assertThat(audit.getValue().details()).contains("FIO_TOKEN", "RECEIPT_FIRST_YEAR").doesNotContain("secret-token", "2025");
@@ -178,6 +180,7 @@ class SettingsServiceTest {
         assertThat(result).isEqualTo(new TestEmailResult(TestEmailOutcome.SENDER_REFUSED, "jana@example.cz"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        assertThat(audit.getValue().facts()).isEmpty();
         assertThat(audit.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audit.getValue().action()).isEqualTo(SettingsService.TEST_EMAIL_ACTION);
         assertThat(audit.getValue().performedAt()).isEqualTo(NOW);

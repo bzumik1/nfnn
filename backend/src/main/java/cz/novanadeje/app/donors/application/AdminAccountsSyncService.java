@@ -45,7 +45,7 @@ public class AdminAccountsSyncService {
                 .map(donor -> new DonorAccountView(donor, enabled.contains(donor.id()), counts.getOrDefault(donor.id(), 0)))
                 .toList();
         List<AdminActionView> actions = trail.findAllNewestFirst().stream()
-                .map(entry -> AdminActionView.of(entry, AdminActionFacts.read(entry.action(), entry.details()), donorsById))
+                .map(entry -> AdminActionView.of(entry, AdminActionFacts.of(entry), donorsById))
                 .toList();
         return new AdminAccountsSyncSnapshot(subject, true, accounts, actions);
     }

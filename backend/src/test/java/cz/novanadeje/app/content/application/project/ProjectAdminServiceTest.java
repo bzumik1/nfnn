@@ -20,6 +20,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -97,6 +98,7 @@ class ProjectAdminServiceTest {
         assertThat(saved.getValue().id()).isEqualTo(view.id());
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("CREATE_PROJECT");
         assertThat(audit.getValue().subjectId()).contains(view.id().value());
         assertThat(audit.getValue().details()).endsWith("„pomohli-jsme-dominikovi“ napsán; titulek „Pomohli jsme Dominikovi“");
@@ -140,6 +142,7 @@ class ProjectAdminServiceTest {
         verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("UPDATE_PROJECT");
     }
 
@@ -205,6 +208,7 @@ class ProjectAdminServiceTest {
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-23"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("PUBLISH_PROJECT");
         assertThat(audit.getValue().details()).endsWith("„dominik“ zveřejněn od 2026-10-23; titulek „Dominik“");
     }
@@ -221,6 +225,7 @@ class ProjectAdminServiceTest {
         verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("DELETE_PROJECT");
         assertThat(audit.getValue().details()).endsWith("„dominik“ smazán; titulek „Dominik“");
     }

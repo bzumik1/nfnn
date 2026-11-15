@@ -9,6 +9,7 @@ import cz.novanadeje.app.operations.domain.backup.BackupRequestPending;
 import cz.novanadeje.app.operations.domain.backup.BackupRun;
 import cz.novanadeje.app.operations.domain.backup.RunOutcome;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -148,6 +149,7 @@ class BackupAdministrationServiceTest {
     private AdminActionPerformed publishedAction() {
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events).publishEvent(published.capture());
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails((AdminActionPerformed) published.getValue());
         return (AdminActionPerformed) published.getValue();
     }
 

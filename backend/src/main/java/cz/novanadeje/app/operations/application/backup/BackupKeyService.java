@@ -84,7 +84,7 @@ public class BackupKeyService {
             throw refused;
         }
         events.publishEvent(new AdminActionPerformed(adminId, VIEW_BACKUP_KEY_ACTION, Optional.empty(),
-                "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", now));
+                "Zobrazen klíč k zálohám (ověřeno druhým faktorem)", AdminActionPerformed.Facts.of(VIEW_BACKUP_KEY_ACTION), now));
         events.publishEvent(new BackupKeyRevealed(adminId, now));
         log.info("Admin {} viewed the backup key after a fresh second-factor check", adminId);
         return new RevealedBackupKey(key, challenges.issue(adminId, now));

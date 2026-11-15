@@ -36,7 +36,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Year;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -147,9 +149,22 @@ public class DonationReceiptIssuer {
         AdministratorIssue issue = new AdministratorIssue(issueNew(request, fingerprint, active, singles), active);
         if (issue.tookNewNumber()) {
             events.publishEvent(new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.of(issue.receipt().id().value()), auditDetails(issue.receipt()),
-                    issue.receipt().issuedAt()));
+                    auditFacts(issue.receipt()), issue.receipt().issuedAt()));
         }
         return issue;
+    }
+
+    private static AdminActionPerformed.Facts auditFacts(DonationReceipt receipt) {
+        Map<String, String> values = new HashMap<>();
+        values.put("number", receipt.number().toString());
+        values.put("donor", receipt.donor().toString());
+        receipt.year().ifPresent(year -> values.put("year", year.toString()));
+        Optional<ReplacedReceipt> replaced = receipt.frozen().document().replaces();
+        replaced.ifPresent(old -> values.put("replaced", old.number().toString()));
+        String variant = receipt.year().isPresent()
+                ? replaced.isPresent() ? ".yearlyReplacing" : ".yearly"
+                : replaced.isPresent() ? ".replacing" : "";
+        return AdminActionPerformed.Facts.of(ISSUE_ACTION + variant, values);
     }
 
     private static String auditDetails(DonationReceipt receipt) {

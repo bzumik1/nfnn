@@ -27,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -42,6 +44,7 @@ public class NewsAdminService {
     static final String UNPUBLISH_ACTION = "UNPUBLISH_NEWS";
     static final String DELETE_ACTION = "DELETE_NEWS";
     static final String LOOK_BACK_ACTION = "CHANGE_NEWS_LOOK_BACK_YEAR";
+    private static final String WITH_TITLE = ".withTitle";
 
     private static final Logger log = LoggerFactory.getLogger(NewsAdminService.class);
 
@@ -111,7 +114,8 @@ public class NewsAdminService {
         Instant now = clock.instant();
         NewsArticle published = stored.publish(on, now);
         news.save(published);
-        audit(adminId, PUBLISH_ACTION, published, "Aktualita " + id + " „" + published.slug() + "“ zveřejněna od " + on, now);
+        audit(adminId, PUBLISH_ACTION, published, "Aktualita " + id + " „" + published.slug() + "“ zveřejněna od " + on, PUBLISH_ACTION + WITH_TITLE,
+                Map.of("on", on.toString()), now);
         return versioned(published, today(now));
     }
 
@@ -139,7 +143,10 @@ public class NewsAdminService {
 
     private void auditLookBack(UUID adminId, NewsArticle article, Optional<Integer> year, Instant now) {
         String looking = year.map(chosen -> "se ohlíží za rokem " + chosen).orElse("se už neohlíží za žádným rokem");
-        audit(adminId, LOOK_BACK_ACTION, article, "Aktualita " + article.id() + " „" + article.slug() + "“ " + looking, now);
+        String details = "Aktualita " + article.id() + " „" + article.slug() + "“ " + looking;
+        year.ifPresentOrElse(
+                chosen -> audit(adminId, LOOK_BACK_ACTION, article, details, LOOK_BACK_ACTION, Map.of("year", chosen.toString()), now),
+                () -> audit(adminId, LOOK_BACK_ACTION, article, details, LOOK_BACK_ACTION + ".removed", Map.of(), now));
     }
 
     public void delete(UUID adminId, NewsArticleId id, ExpectedVersion expected) {
@@ -207,8 +214,16 @@ public class NewsAdminService {
     }
 
     private void audit(UUID adminId, String action, NewsArticle article, String details, Instant now) {
+        audit(adminId, action, article, details, action + WITH_TITLE, Map.of(), now);
+    }
+
+    private void audit(UUID adminId, String action, NewsArticle article, String details, String summaryKey, Map<String, String> facts, Instant now) {
         String titled = details + "; titulek „" + article.content().title() + "“";
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled, now));
+        Map<String, String> values = new HashMap<>(facts);
+        values.put("slug", article.slug().value());
+        values.put("title", article.content().title());
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.of(article.id().value()), titled,
+                AdminActionPerformed.Facts.of(summaryKey, values), now));
         log.info("{} on news article {} by admin {}", action, article.id(), adminId);
     }
 }

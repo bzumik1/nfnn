@@ -17,6 +17,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorChallengeRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRecoveryRepository;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.application.event.DonorErased;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
@@ -120,6 +121,7 @@ class DonorErasureServiceTest {
         List<Object> all = published.getAllValues();
         assertThat(all.get(0)).isEqualTo(new DonorErased(PETR.value(), NOW));
         AdminActionPerformed action = (AdminActionPerformed) all.get(1);
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("ERASE_DONOR");
         assertThat(action.subjectId()).contains(PETR.value());

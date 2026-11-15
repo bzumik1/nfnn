@@ -88,8 +88,8 @@ class AdminAccountsSyncServiceTest {
         admin.grantAdministration(true);
         Donor jana = donor("jana@example.cz", "4821937561");
         AdminActionEntry granted = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "GRANT_ADMINISTRATION", Optional.of(jana.id().value()),
-                "Role správce udělena dárci " + jana.id().value(), NOW, Optional.empty());
-        AdminActionEntry unknown = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "SOMETHING_NEW", Optional.empty(), "Něco se stalo", NOW,
+                "Role správce udělena dárci " + jana.id().value(), Optional.empty(), NOW, Optional.empty());
+        AdminActionEntry unknown = new AdminActionEntry(UUID.randomUUID(), admin.id().value(), "SOMETHING_NEW", Optional.empty(), "Něco se stalo", Optional.empty(), NOW,
                 Optional.of("claude.ai"));
         when(donors.findById(admin.id())).thenReturn(Optional.of(admin));
         when(donors.findAll()).thenReturn(List.of(admin, jana));

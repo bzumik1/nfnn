@@ -26,6 +26,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,6 +97,7 @@ class NewsAdminServiceTest {
         assertThat(saved.getValue().id()).isEqualTo(view.id());
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("CREATE_NEWS");
         assertThat(audit.getValue().subjectId()).contains(view.id().value());
         assertThat(audit.getValue().details()).endsWith("„pomohli-jsme-dominikovi“ napsána; titulek „Pomohli jsme Dominikovi“");
@@ -139,6 +141,7 @@ class NewsAdminServiceTest {
         verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("UPDATE_NEWS");
     }
 
@@ -204,6 +207,7 @@ class NewsAdminServiceTest {
         assertThat(view.publishedOn()).contains(LocalDate.parse("2026-10-23"));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("PUBLISH_NEWS");
         assertThat(audit.getValue().details()).endsWith("„dominik“ zveřejněna od 2026-10-23; titulek „Dominik“");
     }
@@ -220,6 +224,7 @@ class NewsAdminServiceTest {
         verify(media).deleteIfUnused(IMAGE);
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("DELETE_NEWS");
         assertThat(audit.getValue().details()).endsWith("„dominik“ smazána; titulek „Dominik“");
     }
@@ -419,6 +424,7 @@ class NewsAdminServiceTest {
         assertThat(changed.version()).isEqualTo(versions().of(saved.getValue()));
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().action()).isEqualTo("CHANGE_NEWS_LOOK_BACK_YEAR");
         assertThat(audit.getValue().subjectId()).contains(article.id().value());
         assertThat(audit.getValue().details()).isEqualTo("Aktualita " + article.id() + " „ohlednuti“ se ohlíží za rokem 2025; titulek „Dominik“");
@@ -435,6 +441,7 @@ class NewsAdminServiceTest {
         assertThat(changed.view().lookBackYear()).isEmpty();
         ArgumentCaptor<AdminActionPerformed> audit = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audit.capture());
+        audit.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audit.getValue().details()).isEqualTo("Aktualita " + article.id() + " „ohlednuti“ se už neohlíží za žádným rokem; titulek „Dominik“");
     }
 

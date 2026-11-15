@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -64,7 +65,7 @@ public class BackupAdministrationService {
         store.request(kind, id);
         String action = kind == BackupRequestKind.BACKUP ? REQUEST_BACKUP_ACTION : REQUEST_TEST_RESTORE_ACTION;
         String what = kind == BackupRequestKind.BACKUP ? "Záloha databáze vyžádána" : "Zkušební obnova nejnovější zálohy vyžádána";
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), what + " (požadavek " + id + ")", now));
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), what + " (požadavek " + id + ")", AdminActionPerformed.Facts.of(action), now));
         log.info("Admin {} requested {} as request {}", adminId, kind, id);
         return new BackupRequest(id, kind, now);
     }
@@ -77,7 +78,8 @@ public class BackupAdministrationService {
         BackupDownload download = store.open(fileName).orElseThrow(BackupNotFound::new);
         Instant now = clock.instant();
         events.publishEvent(new AdminActionPerformed(adminId, DOWNLOAD_BACKUP_ACTION, Optional.empty(),
-                "Záloha " + fileName + " (" + download.file().sizeBytes() + " B) stažena", now));
+                "Záloha " + fileName + " (" + download.file().sizeBytes() + " B) stažena",
+                AdminActionPerformed.Facts.of(DOWNLOAD_BACKUP_ACTION, Map.of("file", fileName, "bytes", String.valueOf(download.file().sizeBytes()))), now));
         log.info("Admin {} downloaded the backup {}", adminId, fileName);
         return download;
     }

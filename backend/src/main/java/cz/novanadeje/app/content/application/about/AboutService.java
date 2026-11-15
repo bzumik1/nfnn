@@ -64,15 +64,17 @@ public class AboutService {
     private void audit(UUID adminId, Optional<MediaId> before, Optional<MediaId> after, Instant now) {
         if (after.isEmpty()) {
             MediaId removed = before.orElseThrow();
-            publish(adminId, REMOVE_ACTION, "Fotka " + removed + " v sekci O nás odebrána", now);
+            publish(adminId, REMOVE_ACTION, "Fotka " + removed + " v sekci O nás odebrána", AdminActionPerformed.Facts.of(REMOVE_ACTION), now);
             return;
         }
         MediaId shown = after.get();
-        String verb = before.equals(after) ? "upravena" : "nastavena";
-        publish(adminId, CHANGE_ACTION, "Fotka " + shown + " v sekci O nás " + verb, now);
+        boolean edited = before.equals(after);
+        String verb = edited ? "upravena" : "nastavena";
+        AdminActionPerformed.Facts facts = AdminActionPerformed.Facts.of(edited ? CHANGE_ACTION + ".edited" : CHANGE_ACTION);
+        publish(adminId, CHANGE_ACTION, "Fotka " + shown + " v sekci O nás " + verb, facts, now);
     }
 
-    private void publish(UUID adminId, String action, String details, Instant now) {
-        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, now));
+    private void publish(UUID adminId, String action, String details, AdminActionPerformed.Facts facts, Instant now) {
+        events.publishEvent(new AdminActionPerformed(adminId, action, Optional.empty(), details, facts, now));
     }
 }

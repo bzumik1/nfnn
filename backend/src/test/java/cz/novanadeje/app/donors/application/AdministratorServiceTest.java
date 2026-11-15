@@ -23,6 +23,7 @@ import cz.novanadeje.app.donors.domain.SecondFactorNotEnabled;
 import cz.novanadeje.app.donors.domain.SecondFactorRepository;
 import cz.novanadeje.app.donors.domain.TotpSecret;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.application.event.AdministrationRevoked;
 import cz.novanadeje.app.shared.application.account.AdministratorContact;
 import cz.novanadeje.app.shared.domain.DonorName;
@@ -140,6 +141,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getValue();
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("GRANT_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
@@ -226,6 +228,7 @@ class AdministratorServiceTest {
         verify(events, times(2)).publishEvent(published.capture());
         assertThat(published.getAllValues().getFirst()).isEqualTo(new AdministrationRevoked(PETR.value(), NOW));
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getLast();
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REVOKE_ADMINISTRATION");
         assertThat(action.subjectId()).contains(PETR.value());
@@ -360,6 +363,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("RESET_SECOND_FACTOR");
         assertThat(action.subjectId()).contains(PETR.value());
@@ -403,6 +407,7 @@ class AdministratorServiceTest {
         ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
         verify(events, times(2)).publishEvent(published.capture());
         AdminActionPerformed action = (AdminActionPerformed) published.getAllValues().getFirst();
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
         assertThat(action.adminId()).isEqualTo(JANA.value());
         assertThat(action.action()).isEqualTo("REMOVE_PASSKEYS");
         assertThat(action.subjectId()).contains(PETR.value());

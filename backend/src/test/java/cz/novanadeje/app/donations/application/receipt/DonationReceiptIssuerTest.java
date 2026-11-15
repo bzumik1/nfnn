@@ -67,6 +67,7 @@ import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -738,7 +739,8 @@ class DonationReceiptIssuerTest {
             order.verify(donorRecords, atLeastOnce()).findById(JANA);
             order.verify(receipts).save(issued);
             order.verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
-                    "Potvrzení 2027-000001 za rok 2026 vystaveno dárci " + JANA.value(), NOW));
+                    "Potvrzení 2027-000001 za rok 2026 vystaveno dárci " + JANA.value(),
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearly", Map.of("number", "2027-000001", "year", "2026", "donor", JANA.value().toString())), NOW));
             assertThat(issued.year()).contains(YEAR_2026);
             assertThat(issued.donor()).isEqualTo(JANA);
         }
@@ -754,7 +756,8 @@ class DonationReceiptIssuerTest {
             DonationReceipt issued = issuer.issueForDonationByAdministrator(petr, BROWSER, JANA, MARCH.id(), TODAY);
 
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
-                    "Potvrzení 2027-000004 za dar " + MARCH.id().value() + " vystaveno dárci " + JANA.value(), NOW));
+                    "Potvrzení 2027-000004 za dar " + MARCH.id().value() + " vystaveno dárci " + JANA.value(),
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT", Map.of("number", "2027-000004", "donor", JANA.value().toString())), NOW));
         }
 
         @Test
@@ -770,7 +773,8 @@ class DonationReceiptIssuerTest {
 
             assertThat(issued.supersedes()).contains(active.id());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
-                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001",
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearlyReplacing", Map.of("number", "2027-000002", "year", "2026", "donor", JANA.value().toString(), "replaced", "2027-000001")), NOW));
         }
 
         @Test
@@ -788,7 +792,8 @@ class DonationReceiptIssuerTest {
 
             assertThat(issued.supersedes()).contains(outdated.id());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issued.id().value()),
-                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001",
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearlyReplacing", Map.of("number", "2027-000002", "year", "2026", "donor", JANA.value().toString(), "replaced", "2027-000001")), NOW));
         }
 
         @Test
@@ -837,7 +842,8 @@ class DonationReceiptIssuerTest {
             assertThat(issue.tookNewNumber()).isTrue();
             assertThat(issue.replacedActive()).contains(active.number());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issue.receipt().id().value()),
-                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001", NOW));
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value() + "; nahrazuje potvrzení 2027-000001",
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearlyReplacing", Map.of("number", "2027-000002", "year", "2026", "donor", JANA.value().toString(), "replaced", "2027-000001")), NOW));
         }
 
         @Test
@@ -977,7 +983,8 @@ class DonationReceiptIssuerTest {
             assertThat(issue.tookNewNumber()).isTrue();
             assertThat(issue.replacedActive()).isEmpty();
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(issue.receipt().id().value()),
-                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value(), NOW));
+                    "Potvrzení 2027-000002 za rok 2026 vystaveno dárci " + JANA.value(),
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT.yearly", Map.of("number", "2027-000002", "year", "2026", "donor", JANA.value().toString())), NOW));
         }
 
         @Test
@@ -1024,7 +1031,8 @@ class DonationReceiptIssuerTest {
             assertThat(first.supersedes()).isEmpty();
             verify(receipts, times(1)).save(any());
             verify(events).publishEvent(new AdminActionPerformed(petr, "ISSUE_RECEIPT", Optional.of(first.id().value()),
-                    "Potvrzení 2027-000002 za dar " + JUNE.id().value() + " vystaveno dárci " + JANA.value(), NOW));
+                    "Potvrzení 2027-000002 za dar " + JUNE.id().value() + " vystaveno dárci " + JANA.value(),
+                    AdminActionPerformed.Facts.of("ISSUE_RECEIPT", Map.of("number", "2027-000002", "donor", JANA.value().toString())), NOW));
         }
     }
 

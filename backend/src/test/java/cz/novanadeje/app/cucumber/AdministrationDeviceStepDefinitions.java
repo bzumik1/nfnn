@@ -8,6 +8,7 @@ import cz.novanadeje.app.operations.infrastructure.backup.CzechBackupKeyWords;
 import cz.novanadeje.app.shared.domain.FoundationZone;
 import cz.novanadeje.app.shared.infrastructure.json.CanonicalRows;
 import cz.novanadeje.app.shared.infrastructure.security.JwtProperties;
+import cz.novanadeje.app.support.OlderAuditEntries;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -706,11 +707,12 @@ public class AdministrationDeviceStepDefinitions {
 
     private List<String> personalValuesOfTheTrail() {
         List<String> values = new ArrayList<>();
-        jdbc.sql("select action, details from admin_action").query((row, index) -> AdminActionFacts.read(row.getString("action"), row.getString("details")))
+        jdbc.sql("select action, details from admin_action").query((row, index) -> OlderAuditEntries.factsOf(row.getString("action"), row.getString("details")))
                 .list().stream().flatMap(Optional::stream).forEach(facts -> {
                     facts.value(AdminActionFacts.ACCOUNT).ifPresent(values::add);
                     facts.value(AdminActionFacts.RECIPIENTS).ifPresent(recipients -> values.addAll(Arrays.asList(recipients.split(",\\s*"))));
                 });
+        values.addAll(jdbc.sql("select facts -> 'values' ->> 'account' from admin_action where facts -> 'values' ->> 'account' is not null").query(String.class).list());
         return values.stream().filter(value -> value.strip().length() >= PERSONAL_VALUE_MINIMUM_LENGTH).toList();
     }
 

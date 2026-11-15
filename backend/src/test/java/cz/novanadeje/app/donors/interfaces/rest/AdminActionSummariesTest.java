@@ -14,6 +14,7 @@ import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.OlderAuditEntries;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -392,7 +393,7 @@ class AdminActionSummariesTest {
 
     private static AdminActionView view(String action, String details, Optional<Donor> donor) {
         return new AdminActionView(UUID.randomUUID(), UUID.randomUUID(), Optional.empty(), action, Optional.empty(), details, NOW, Optional.empty(),
-                AdminActionFacts.read(action, details), donor);
+                OlderAuditEntries.factsOf(action, details), donor);
     }
 
     private static Donor petr() {

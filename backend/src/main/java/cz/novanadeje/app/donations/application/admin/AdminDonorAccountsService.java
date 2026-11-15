@@ -99,7 +99,8 @@ public class AdminDonorAccountsService {
         SenderAccountLink link = record.disconnectSenderAccount(linkId, FoundationCalendar.today(clock), now);
         donorRecords.saveSenderAccountLink(donor, link);
         events.publishEvent(new AdminActionPerformed(adminId, DISCONNECT_ACTION, Optional.of(donor.value()),
-                "Párování z účtu " + link.account().display() + " (propojení " + linkId + ") dárce " + donor + " vypnuto", now));
+                "Párování z účtu " + link.account().display() + " (propojení " + linkId + ") dárce " + donor + " vypnuto",
+                AdminActionPerformed.Facts.of(DISCONNECT_ACTION, Map.of("account", link.account().display(), "donor", donor.toString())), now));
         log.info("Admin {} disconnected sender account link {} of donor {}", adminId, linkId, donor);
     }
 
@@ -114,7 +115,8 @@ public class AdminDonorAccountsService {
         }
         events.publishEvent(new AdminActionPerformed(adminId, RECONNECT_ACTION, Optional.of(donor.value()),
                 "Párování z účtu " + awaiting.account().display() + " (propojení " + linkId + ") dárce " + donor
-                        + " znovu zapnuto jako propojení " + awaiting.id() + ", čeká na platbu se symbolem", now));
+                        + " znovu zapnuto jako propojení " + awaiting.id() + ", čeká na platbu se symbolem",
+                AdminActionPerformed.Facts.of(RECONNECT_ACTION, Map.of("account", awaiting.account().display(), "donor", donor.toString())), now));
         log.info("Admin {} asked to reconnect sender account link {} of donor {} as {}", adminId, linkId, donor, awaiting.id());
     }
 
@@ -135,7 +137,9 @@ public class AdminDonorAccountsService {
         donorRecords.deleteSenderAccountLink(donor, linkId);
         events.publishEvent(new AdminActionPerformed(adminId, REMOVE_ACTION, Optional.of(donor.value()),
                 "Účet " + link.account().display() + " (propojení " + linkId + ", " + link.status() + ") odebrán dárci " + donor + "; smazané dary spárované přes něj: "
-                        + paired.size() + ", smazané odpovědi o starších symbolech: " + answers.size(), now));
+                        + paired.size() + ", smazané odpovědi o starších symbolech: " + answers.size(),
+                AdminActionPerformed.Facts.of(REMOVE_ACTION, Map.of("account", link.account().display(), "donor", donor.toString(),
+                        "donations", Integer.toString(paired.size()), "answers", Integer.toString(answers.size()))), now));
         log.info("Admin {} removed sender account link {} of donor {}: {} donations and {} symbol claims deleted", adminId, linkId, donor,
                 paired.size(), answers.size());
     }

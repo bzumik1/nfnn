@@ -39,6 +39,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -91,7 +92,9 @@ public class ManualPairingService {
         donations.save(donation);
         events.publishEvent(new AdminActionPerformed(adminId, PAIR_ACTION, Optional.of(paymentId.value()),
                 "Platba " + payment.transactionId() + " (" + payment.amount() + ", zaúčtována " + payment.bookedOn() + ") ručně přiřazena dárci "
-                        + donor.id() + " jako dar " + donation.id(), now));
+                        + donor.id() + " jako dar " + donation.id(),
+                AdminActionPerformed.Facts.of(PAIR_ACTION, Map.of("transaction", payment.transactionId().toString(),
+                        "amount", Long.toString(payment.amount().amountMinor()), "booked", payment.bookedOn().toString(), "donor", donor.id().toString())), now));
         log.info("Admin {} paired bank payment {} with donor {} by hand", adminId, payment.transactionId(), donor.id());
         return new ManualPairingResult(donation.id(), changedYearlyReceipts(donor.id(), donation.receivedYear()));
     }
@@ -122,10 +125,14 @@ public class ManualPairingService {
         payments.save(payment.unpairedByAdmin(now));
         events.publishEvent(new AdminActionPerformed(adminId, UNPAIR_ACTION, Optional.of(paymentId.value()),
                 "Dar " + donation.id() + " dárce " + donation.donor() + " (spárován podle " + donation.pairedBy().orElseThrow()
-                        + ") odebrán z platby " + payment.transactionId() + "; platba se od teď páruje jen ručně", now));
+                        + ") odebrán z platby " + payment.transactionId() + "; platba se od teď páruje jen ručně",
+                AdminActionPerformed.Facts.of(UNPAIR_ACTION, Map.of("donor", donation.donor().toString(), "method", donation.pairedBy().orElseThrow().name(),
+                        "transaction", payment.transactionId().toString())), now));
         withdrawn.ifPresent(yearly -> events.publishEvent(new AdminActionPerformed(adminId, WITHDRAW_RECEIPT_ACTION, Optional.of(yearly.id().value()),
                 "Potvrzení " + yearly.number() + " za rok " + donation.receivedYear() + " dárce " + donation.donor()
-                        + " zrušeno, protože z něj byl odebrán dar " + donation.id() + " platby " + payment.transactionId(), now)));
+                        + " zrušeno, protože z něj byl odebrán dar " + donation.id() + " platby " + payment.transactionId(),
+                AdminActionPerformed.Facts.of(WITHDRAW_RECEIPT_ACTION, Map.of("number", yearly.number().toString(), "year", donation.receivedYear().toString(),
+                        "donor", donation.donor().toString(), "transaction", payment.transactionId().toString())), now)));
         log.info("Admin {} unpaired bank payment {} from donor {}", adminId, payment.transactionId(), donation.donor());
         return withdrawn.map(yearly -> List.of(donation.receivedYear())).orElse(List.of());
     }

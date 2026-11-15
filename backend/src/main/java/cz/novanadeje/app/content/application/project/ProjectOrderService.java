@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,7 +42,8 @@ public class ProjectOrderService {
         Instant now = clock.instant();
         orders.save(chosen, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
-                "Řazení projektů na webu změněno z " + previous + " na " + chosen, now));
+                "Řazení projektů na webu změněno z " + previous + " na " + chosen,
+                AdminActionPerformed.Facts.of(CHANGE_ACTION, Map.of("fromOrder", previous.name(), "toOrder", chosen.name())), now));
         return chosen;
     }
 }

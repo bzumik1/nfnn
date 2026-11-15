@@ -15,6 +15,7 @@ import cz.novanadeje.app.shared.application.people.FoundationPeople;
 import cz.novanadeje.app.shared.application.people.FoundationPerson;
 import cz.novanadeje.app.shared.application.people.PrintPortrait;
 import cz.novanadeje.app.shared.application.people.PrintSignature;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,6 +108,7 @@ class ReceiptSignatoryServiceTest {
         verify(signatories).choose(new ReceiptSignatory(CHAIR, "předseda správní rady", NOW));
         ArgumentCaptor<AdminActionPerformed> published = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(published.capture());
+        published.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(published.getValue().action()).isEqualTo("CHOOSE_RECEIPT_SIGNATORY");
         assertThat(published.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(published.getValue().details())

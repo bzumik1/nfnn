@@ -12,6 +12,7 @@ import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.application.restore.FinishedRestore;
 import cz.novanadeje.app.shared.application.seal.RecordSeals;
 import cz.novanadeje.app.shared.application.seal.SealVerdict;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -96,6 +97,7 @@ class ReceiptSigningKeyRegistrationTest {
         });
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().adminId()).isEqualTo(AdminActionPerformed.SERVER);
         assertThat(audited.getValue().action()).isEqualTo(ReceiptSigningKeyRegistration.ACTION);
         assertThat(audited.getValue().details()).isEqualTo("Server zaregistroval svůj klíč k ověřovacím QR na potvrzeních o daru: 21fe31df");
@@ -108,6 +110,7 @@ class ReceiptSigningKeyRegistrationTest {
 
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(audited.getValue())), Set.of()).recorded())
                 .containsExactly(new ReceiptSigningKeyId("21fe31df"));
     }
@@ -154,6 +157,7 @@ class ReceiptSigningKeyRegistrationTest {
         assertThat(keys.adoptions).containsExactly(RESTORE);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, times(2)).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getAllValues()).filteredOn(action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION)).singleElement()
                 .satisfies(action -> {
                     assertThat(action.adminId()).isEqualTo(AdminActionPerformed.SERVER);
@@ -176,6 +180,7 @@ class ReceiptSigningKeyRegistrationTest {
 
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, times(2)).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         AdminActionPerformed adoption = audited.getAllValues().stream().filter(action -> action.action().equals(ReceiptSigningKeyRegistration.ADOPT_ACTION))
                 .findFirst().orElseThrow();
         assertThat(ReceiptSigningKeyHistory.of(List.of(ReceiptSigningKeyHistoryTest.entryOf(adoption)), Set.of()).recorded())
