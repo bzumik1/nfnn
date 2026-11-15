@@ -8,6 +8,7 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodReference;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.domain.properties.HasAnnotations;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -62,10 +63,11 @@ class SelfInvocationRulesTest {
                 import java.util.function.Supplier;
                 import org.springframework.scheduling.annotation.Async;
                 import org.springframework.transaction.annotation.Propagation;
-                import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+                import org.springframework.transaction.annotation.Transactional;
 
                 class PlantedMethods {
+
+                    private PlantedMethods self;
 
                     public void plainCallsTransactional() {
                         transactional();
@@ -101,6 +103,42 @@ import org.springframework.transaction.annotation.Transactional;
                     @Transactional(propagation = Propagation.REQUIRES_NEW)
                     public void newOneCallsNewOne() {
                         separately();
+                    }
+
+                    @Transactional
+                    public Supplier<Integer> transactionalReferencesTheSame() {
+                        return this::counted;
+                    }
+
+                    @Transactional(propagation = Propagation.SUPPORTS)
+                    public void supportsCallsSupports() {
+                        supporting();
+                    }
+
+                    @Transactional(propagation = Propagation.MANDATORY)
+                    public void mandatoryCallsMandatory() {
+                        joining();
+                    }
+
+                    @Transactional(propagation = Propagation.NESTED)
+                    public void nestedCallsNested() {
+                        nested();
+                    }
+
+                    @Transactional(propagation = Propagation.SUPPORTS)
+                    public void supporting() {
+                    }
+
+                    @Transactional(propagation = Propagation.MANDATORY)
+                    public void joining() {
+                    }
+
+                    @Transactional(propagation = Propagation.NESTED)
+                    public void nested() {
+                    }
+
+                    public void plainCallsThroughAFieldOfItsOwnType() {
+                        self.transactional();
                     }
 
                     @Async
@@ -162,8 +200,7 @@ import org.springframework.transaction.annotation.Transactional;
 
                 import java.lang.annotation.Retention;
                 import java.lang.annotation.RetentionPolicy;
-                import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+                import org.springframework.transaction.annotation.Transactional;
 
                 @Retention(RetentionPolicy.RUNTIME)
                 @Transactional
@@ -172,8 +209,7 @@ import org.springframework.transaction.annotation.Transactional;
                 """, "cz.novanadeje.app.planteda.application.PlantedReadingClass", """
                 package cz.novanadeje.app.planteda.application;
 
-                import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+                import org.springframework.transaction.annotation.Transactional;
 
                 @Transactional(readOnly = true)
                 class PlantedReadingClass {
@@ -253,7 +289,7 @@ import org.springframework.transaction.annotation.Transactional;
                 """));
 
         assertThat(calls_within_a_class_never_rely_on_a_proxy_attribute.evaluate(planted).getFailureReport().getDetails())
-                .hasSize(15)
+                .hasSize(18)
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.plainCallsTransactional()").contains("transactional()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.plainCallsThisAsync()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.plainCallsMetaTransactional()"))
@@ -262,6 +298,9 @@ import org.springframework.transaction.annotation.Transactional;
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.transactionalCallsNewOne()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.newOneCallsNewOne()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.asyncCallsAsync()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.transactionalReferencesTheSame()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.nestedCallsNested()"))
+                .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods.plainCallsThroughAFieldOfItsOwnType()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods$Inner.innerCallsOuter()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods$Inner.transactionalInnerCallsOuter()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedMethods$1.run()"))
@@ -269,7 +308,8 @@ import org.springframework.transaction.annotation.Transactional;
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedReadingClass.writeCallsRead()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedReadingClass.helperCallsRead()"))
                 .anySatisfy(detail -> assertThat(detail).contains("PlantedAsyncClass.first()"))
-                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("transactionalCallsTheSame", "plainCallsPlain", "readsAgain",
+                .noneSatisfy(detail -> assertThat(detail).containsAnyOf("transactionalCallsTheSame", "supportsCallsSupports", "mandatoryCallsMandatory",
+                        "plainCallsPlain", "readsAgain",
                         "helperCallsStatic", "callsHelper", "PlantedCaller"));
     }
 
@@ -280,14 +320,14 @@ import org.springframework.transaction.annotation.Transactional;
                 Set<JavaClass> ownClasses = ownClassesOf(caller.getOwner());
                 Stream.<JavaAccess<?>>concat(caller.getMethodCallsFromSelf().stream(), caller.getMethodReferencesFromSelf().stream())
                         .filter(access -> ownClasses.contains(access.getTargetOwner()))
-                        .forEach(access -> bypassedAttributeOf(caller, access).ifPresent(attribute -> events.add(SimpleConditionEvent.satisfied(caller,
+                        .forEach(access -> bypassedAttributeOf(caller, access, access instanceof JavaMethodReference).ifPresent(attribute -> events.add(SimpleConditionEvent.satisfied(caller,
                                 caller.getFullName() + " calls " + ((CodeUnitAccessTarget) access.getTarget()).getFullName() + " of its own class, "
                                         + "bypassing its " + attribute + " " + access.getSourceCodeLocation()))));
             }
         };
     }
 
-    private static Optional<String> bypassedAttributeOf(JavaCodeUnit caller, JavaAccess<?> access) {
+    private static Optional<String> bypassedAttributeOf(JavaCodeUnit caller, JavaAccess<?> access, boolean runsLater) {
         Optional<JavaMethod> target = ((CodeUnitAccessTarget) access.getTarget()).resolveMember().filter(JavaMethod.class::isInstance).map(JavaMethod.class::cast);
         if (target.isEmpty()) {
             return Optional.empty();
@@ -296,7 +336,7 @@ import org.springframework.transaction.annotation.Transactional;
             return Optional.of("@Async");
         }
         Optional<JavaAnnotation<?>> transactional = attributeOf(target.get(), Transactional.class);
-        boolean underTheSameTransaction = transactional.filter(SelfInvocationRulesTest::joinsARunningTransaction).isPresent()
+        boolean underTheSameTransaction = !runsLater && transactional.filter(SelfInvocationRulesTest::joinsARunningTransaction).isPresent()
                 && caller.getOwner().equals(target.get().getOwner())
                 && attributeOf(caller, Transactional.class).filter(own -> sameProperties(own, transactional.get())).isPresent();
         return transactional.filter(any -> !underTheSameTransaction).map(any -> "@Transactional");
