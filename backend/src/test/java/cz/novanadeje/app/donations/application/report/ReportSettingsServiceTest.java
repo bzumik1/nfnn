@@ -20,6 +20,7 @@ import cz.novanadeje.app.donations.domain.report.ReportSettingsRepository;
 import cz.novanadeje.app.donations.domain.report.SentReport;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.EmailAddress;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -111,6 +112,7 @@ class ReportSettingsServiceTest {
         verify(settings).save(CHANGED, NOW);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("CHANGE_REPORT_SETTINGS");
         assertThat(audited.getValue().subjectId()).isEmpty();

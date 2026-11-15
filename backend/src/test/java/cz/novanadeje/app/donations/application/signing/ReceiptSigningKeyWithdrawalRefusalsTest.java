@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,7 +68,8 @@ class ReceiptSigningKeyWithdrawalRefusalsTest {
         refusals.record(ADMIN, new ReceiptSigningKeyId("21fe31df"), NOW);
 
         verify(events).publishEvent(new AdminActionPerformed(ADMIN, "WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED", Optional.empty(),
-                "Klíč k ověřovacím QR 21fe31df se nezneplatnil: druhý faktor nesouhlasil", NOW));
+                "Klíč k ověřovacím QR 21fe31df se nezneplatnil: druhý faktor nesouhlasil",
+                AdminActionPerformed.Facts.of("WITHDRAW_RECEIPT_SIGNING_KEY_REFUSED", Map.of("key", "21fe31df")), NOW));
         assertThat(lines.list).singleElement().satisfies(line -> {
             assertThat(line.getLevel()).isEqualTo(Level.WARN);
             assertThat(line.getFormattedMessage())

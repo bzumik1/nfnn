@@ -26,6 +26,7 @@ import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -77,7 +78,8 @@ class YearlyReceiptsServiceTest {
                 new YearlyReceiptResult(JANA, YearlyReceiptOutcome.ISSUED, Optional.of(issued), Optional.empty(), Optional.empty()),
                 YearlyReceiptResult.skipped(ACME, DonorRecordErased.CODE));
         verify(events).publishEvent(new AdminActionPerformed(PETR, "ISSUE_RECEIPTS", Optional.empty(),
-                "Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 0, přeskočená 1", NOW));
+                "Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 0, přeskočená 1",
+                AdminActionPerformed.Facts.of("ISSUE_RECEIPTS", Map.of("year", "2026", "issued", "1", "replaced", "0", "unchanged", "0", "skipped", "1")), NOW));
     }
 
     @Test
@@ -116,7 +118,8 @@ class YearlyReceiptsServiceTest {
         assertThatThrownBy(() -> service.issue(PETR, BROWSER, YEAR_2026, List.of(JANA, ACME))).isInstanceOf(ReceiptSigningPaused.class);
 
         verify(events).publishEvent(new AdminActionPerformed(PETR, "ISSUE_RECEIPTS", Optional.empty(),
-                "Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 0, přeskočená 0", NOW));
+                "Hromadně vystavena roční potvrzení za rok 2026: nová 1, nahrazená 0, beze změny 0, přeskočená 0",
+                AdminActionPerformed.Facts.of("ISSUE_RECEIPTS", Map.of("year", "2026", "issued", "1", "replaced", "0", "unchanged", "0", "skipped", "0")), NOW));
     }
 
     @Test

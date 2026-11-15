@@ -28,6 +28,7 @@ import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.UuidV7;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -135,6 +136,7 @@ class AdminSymbolClaimsServiceTest {
         assertThat(saved.getValue().answeredAt()).isEqualTo(NOW);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         order.verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("REVERSE_SYMBOL_CLAIM");
         assertThat(audited.getValue().subjectId()).contains(confirmed.id().value());
@@ -198,6 +200,7 @@ class AdminSymbolClaimsServiceTest {
         order.verify(claims).delete(declined.id());
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         order.verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().action()).isEqualTo("RESET_SYMBOL_CLAIM");
         assertThat(audited.getValue().subjectId()).contains(declined.id().value());
         assertThat(audited.getValue().details()).contains(declined.id().toString(), "5123456789").doesNotContain("Jana");

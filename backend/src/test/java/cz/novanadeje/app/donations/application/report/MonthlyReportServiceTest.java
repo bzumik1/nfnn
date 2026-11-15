@@ -21,6 +21,7 @@ import cz.novanadeje.app.donations.domain.report.Tally;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 import cz.novanadeje.app.shared.domain.EmailAddress;
 import cz.novanadeje.app.shared.domain.Money;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -198,6 +199,7 @@ class MonthlyReportServiceTest {
         assertThat(sentReport().month()).isEqualTo(SEPTEMBER);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("SEND_MONTHLY_REPORT");
         assertThat(audited.getValue().subjectId()).isEmpty();

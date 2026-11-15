@@ -8,6 +8,7 @@ import cz.novanadeje.app.donations.domain.importing.HistoryStartTooEarly;
 import cz.novanadeje.app.donations.domain.importing.ImportFailureKind;
 import cz.novanadeje.app.donations.domain.importing.ImportPeriod;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.support.MutableClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -82,8 +84,10 @@ class HistoryImportServiceTest {
         verify(imports).requestHistoryImport(run);
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getValue()).isEqualTo(new AdminActionPerformed(ADMIN, "REQUEST_HISTORY_IMPORT", Optional.empty(),
-                "Vyžádáno načtení starších plateb z banky od 2026-01-01", NOW));
+                "Vyžádáno načtení starších plateb z banky od 2026-01-01",
+                AdminActionPerformed.Facts.of("REQUEST_HISTORY_IMPORT", Map.of("on", "2026-01-01")), NOW));
         assertThat(tracker.last()).contains(run);
     }
 
@@ -174,6 +178,7 @@ class HistoryImportServiceTest {
         assertThat(run.needsUnlockedHistory()).isTrue();
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events, times(2)).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(audited.getAllValues().getLast().details()).isEqualTo("Vyžádáno načtení starších plateb z banky od 2026-10-01");
     }
 

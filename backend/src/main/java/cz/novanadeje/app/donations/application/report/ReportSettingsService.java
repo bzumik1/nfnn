@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -85,10 +86,30 @@ public class ReportSettingsService {
         settings.save(changed, now);
         events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(),
                 "Nastavení měsíčního přehledu změněno: počet příjemců " + changed.recipients().count()
-                        + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()), now));
+                        + "; odesílá se " + changed.sendDay() + ". den v měsíci v " + changed.sendHour() + ":00; části " + czechSections(changed.sections()),
+                AdminActionPerformed.Facts.of(CHANGE_ACTION + ".recipientCount", Map.of("recipientCount", Integer.toString(changed.recipients().count()),
+                        "day", String.valueOf(changed.sendDay()), "hour", String.valueOf(changed.sendHour()), "sections", sectionCodes(changed.sections()))),
+                now));
         log.info("Admin {} changed the monthly report settings: {} recipient(s), day {} at {}:00, sections {}", adminId, changed.recipients().count(),
                 changed.sendDay(), changed.sendHour(), changed.sections().names());
         return new SavedReportSettings(changed, now, rows.reportSettingsVersion(new StoredReportSettings(changed, Optional.of(now))));
+    }
+
+    private static String sectionCodes(ReportSections sections) {
+        List<String> codes = new ArrayList<>();
+        if (sections.donors()) {
+            codes.add("DONORS");
+        }
+        if (sections.donations()) {
+            codes.add("DONATIONS");
+        }
+        if (sections.unpairedPayments()) {
+            codes.add("UNPAIRED_PAYMENTS");
+        }
+        if (sections.bankImport()) {
+            codes.add("BANK_IMPORT");
+        }
+        return String.join(",", codes);
     }
 
     private static String czechSections(ReportSections sections) {

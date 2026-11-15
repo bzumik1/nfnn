@@ -30,6 +30,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.receipt.DonationReceiptRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.domain.LocaleCode;
 import cz.novanadeje.app.shared.domain.PostalAddress;
 import cz.novanadeje.app.shared.domain.UuidV7;
@@ -48,6 +49,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -57,6 +59,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -131,6 +134,40 @@ class AdminDonorAccountsServiceTest {
         assertThat(action.subjectId()).contains(PETR.value());
         assertThat(action.details()).contains("2900233333/2010").contains("smazané dary spárované přes něj: 2").contains("smazané odpovědi o starších symbolech: 1");
         assertThat(action.performedAt()).isEqualTo(NOW);
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(action);
+    }
+
+    @Test
+    @DisplayName("Given a learned account, when an administrator disconnects it, then the action is recorded with the account and the donor as facts")
+    void should_record_account_and_donor_as_facts_when_disconnected_given_learned_account() {
+        DonorRecord petr = record();
+        SenderAccountLink link = learn(petr);
+        when(donorRecords.findById(PETR)).thenReturn(Optional.of(petr));
+
+        service.disconnect(ADMIN, PETR, link.id(), ExpectedVersion.none());
+
+        ArgumentCaptor<AdminActionPerformed> published = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().facts()).contains(AdminActionPerformed.Facts.of("DISCONNECT_SENDER_ACCOUNT",
+                Map.of("account", "2900233333/2010", "donor", PETR.value().toString())));
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(published.getValue());
+    }
+
+    @Test
+    @DisplayName("Given a disconnected account, when an administrator reconnects it, then the action is recorded with the account and the donor as facts")
+    void should_record_account_and_donor_as_facts_when_reconnected_given_disconnected_account() {
+        DonorRecord petr = record();
+        SenderAccountLink disconnected = petr.disconnectSenderAccount(learn(petr).id(), NOW.atZone(ZoneOffset.UTC).toLocalDate(), NOW.minusSeconds(100));
+        when(donorRecords.findById(PETR)).thenReturn(Optional.of(petr));
+        when(donorRecords.saveSenderAccountLink(eq(PETR), any())).thenReturn(true);
+
+        service.reconnect(ADMIN, PETR, disconnected.id(), ExpectedVersion.none());
+
+        ArgumentCaptor<AdminActionPerformed> published = ArgumentCaptor.forClass(AdminActionPerformed.class);
+        verify(events).publishEvent(published.capture());
+        assertThat(published.getValue().facts()).contains(AdminActionPerformed.Facts.of("RECONNECT_SENDER_ACCOUNT",
+                Map.of("account", "2900233333/2010", "donor", PETR.value().toString())));
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(published.getValue());
     }
 
     @Test

@@ -61,7 +61,7 @@ public class ReceiptSignatoryService {
         ReceiptSignatory chosen = new ReceiptSignatory(person, receiptRole, now);
         signatories.choose(chosen);
         events.publishEvent(new AdminActionPerformed(adminId, CHOOSE_ACTION, Optional.empty(),
-                "Potvrzení o daru podepisuje osoba " + person, now));
+                "Potvrzení o daru podepisuje osoba " + person, AdminActionPerformed.Facts.of(CHOOSE_ACTION), now));
         afterCommit.run(() -> log.info("Admin {} chose person {} to sign the receipts", adminId, person));
         return view(chosen, known);
     }

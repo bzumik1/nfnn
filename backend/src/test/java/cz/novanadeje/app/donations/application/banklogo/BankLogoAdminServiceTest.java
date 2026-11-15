@@ -15,6 +15,7 @@ import cz.novanadeje.app.donations.domain.banklogo.BankLogoSource;
 import cz.novanadeje.app.donations.domain.banklogo.BankLogoSourceInvalid;
 import cz.novanadeje.app.donations.domain.banklogo.StoredBankLogoImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.application.version.WritePrecondition;
@@ -74,6 +75,7 @@ class BankLogoAdminServiceTest {
         assertThat(row.bankName()).isEqualTo("Česká spořitelna, a.s.");
         assertThat(row.version()).isEqualTo(versions.of(stored));
         assertThat(events).singleElement().isInstanceOfSatisfying(AdminActionPerformed.class, event -> {
+            AdminActionFactsAgreement.assertFactsAgreeWithDetails(event);
             assertThat(event.action()).isEqualTo("SET_BANK_LOGO_SOURCE");
             assertThat(event.adminId()).isEqualTo(ADMIN);
             assertThat(event.details()).isEqualTo("Logo banky 0800 nastaveno z is1-ssl.mzstatic.com, obrázek " + FetchedBankLogo.of(NEW_WEBP).sha256())
@@ -249,6 +251,7 @@ class BankLogoAdminServiceTest {
         assertThat(row.checkedAt()).isEqualTo(NOW);
         assertThat(logos.images()).containsOnlyKeys(OLD_IMAGE.id());
         assertThat(events).singleElement().isInstanceOfSatisfying(AdminActionPerformed.class, event -> {
+            AdminActionFactsAgreement.assertFactsAgreeWithDetails(event);
             assertThat(event.action()).isEqualTo("REFRESH_BANK_LOGO");
             assertThat(event.details()).isEqualTo("Logo banky 0800 znovu staženo z is1-ssl.mzstatic.com, obrázek " + OLD_IMAGE.sha256());
         });
@@ -276,6 +279,7 @@ class BankLogoAdminServiceTest {
         assertThat(logos.find(CSAS)).isEmpty();
         assertThat(logos.images()).isEmpty();
         assertThat(events).singleElement().isInstanceOfSatisfying(AdminActionPerformed.class, event -> {
+            AdminActionFactsAgreement.assertFactsAgreeWithDetails(event);
             assertThat(event.action()).isEqualTo("REMOVE_BANK_LOGO");
             assertThat(event.details()).isEqualTo("Logo banky 0800 odebráno");
         });

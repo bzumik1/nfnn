@@ -36,6 +36,7 @@ import cz.novanadeje.app.shared.application.version.ExpectedVersion;
 import cz.novanadeje.app.shared.application.version.StaleWriteRefusal;
 import cz.novanadeje.app.shared.infrastructure.json.RowVersionsFixture;
 import cz.novanadeje.app.shared.domain.UuidV7;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -110,6 +111,7 @@ class ManualPairingServiceTest {
         order.verify(donations).save(stored.capture());
         ArgumentCaptor<AdminActionPerformed> audited = ArgumentCaptor.forClass(AdminActionPerformed.class);
         order.verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         Donation donation = stored.getValue();
         assertThat(donation.donor()).isEqualTo(janaId);
         assertThat(donation.bankPayment()).contains(unknownSymbol.id());
@@ -203,6 +205,7 @@ class ManualPairingServiceTest {
         order.verify(donations).delete(paired.id());
         order.verify(payments).save(held.capture());
         order.verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(held.getValue().id()).isEqualTo(unknownSymbol.id());
         assertThat(held.getValue().unpairedByAdminAt()).contains(NOW);
         assertThat(changed).isEmpty();
@@ -228,6 +231,7 @@ class ManualPairingServiceTest {
         order.verify(receipts).save(saved.capture());
         order.verify(donations).delete(paired.id());
         verify(events, times(2)).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(changed).containsExactly(Year.of(2026));
         assertThat(saved.getValue().id()).isEqualTo(yearly.id());
         assertThat(saved.getValue().status()).isEqualTo(ReceiptStatus.WITHDRAWN);

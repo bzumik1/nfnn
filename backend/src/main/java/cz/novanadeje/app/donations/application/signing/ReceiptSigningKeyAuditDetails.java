@@ -2,6 +2,7 @@ package cz.novanadeje.app.donations.application.signing;
 
 import cz.novanadeje.app.donations.domain.signing.ReceiptSigningKeyId;
 import cz.novanadeje.app.shared.application.audit.AdminActionEntry;
+import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
 
 import java.util.Map;
 import java.util.Optional;
@@ -18,6 +19,7 @@ public final class ReceiptSigningKeyAuditDetails {
     private static final String WITHDRAWN_BEFORE_RENAME = "Stažen klíč k ověřovacím QR ";
     private static final String WITHDRAWN_END = " (ověřeno druhým faktorem)";
 
+    private static final String KEY_FACT = "key";
     private static final String KEY = "(?<key>[0-9a-f]{8})";
     private static final Map<String, Pattern> SHAPES = Map.of(
             ReceiptSigningKeyRegistration.ACTION, Pattern.compile(Pattern.quote(REGISTERED) + KEY),
@@ -39,6 +41,22 @@ public final class ReceiptSigningKeyAuditDetails {
 
     public static String withdrawn(ReceiptSigningKeyId key) {
         return WITHDRAWN + key + WITHDRAWN_END;
+    }
+
+    public static AdminActionPerformed.Facts registeredFacts(ReceiptSigningKeyId key) {
+        return AdminActionPerformed.Facts.of(ReceiptSigningKeyRegistration.ACTION, Map.of(KEY_FACT, key.value()));
+    }
+
+    public static AdminActionPerformed.Facts adoptedFacts(ReceiptSigningKeyId key, String restoreId) {
+        return AdminActionPerformed.Facts.of(ReceiptSigningKeyRegistration.ADOPT_ACTION, Map.of(KEY_FACT, key.value(), "restore", restoreId));
+    }
+
+    public static AdminActionPerformed.Facts withdrawnFacts(ReceiptSigningKeyId key) {
+        return AdminActionPerformed.Facts.of(ReceiptSigningKeyWithdrawal.ACTION, Map.of(KEY_FACT, key.value()));
+    }
+
+    public static AdminActionPerformed.Facts refusedFacts(ReceiptSigningKeyId key) {
+        return AdminActionPerformed.Facts.of(ReceiptSigningKeyWithdrawalRefusals.REFUSED_ACTION, Map.of(KEY_FACT, key.value()));
     }
 
     static Optional<ReceiptSigningKeyId> keyOf(AdminActionEntry entry) {

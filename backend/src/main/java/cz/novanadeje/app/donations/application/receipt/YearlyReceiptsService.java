@@ -96,7 +96,7 @@ public class YearlyReceiptsService {
     private void audit(UUID adminId, YearlyReceiptsRun run) {
         if (run.tookNewNumbers()) {
             transaction.executeWithoutResult(status -> events.publishEvent(
-                    new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.empty(), auditDetails(run), clock.instant())));
+                    new AdminActionPerformed(adminId, ISSUE_ACTION, Optional.empty(), auditDetails(run), auditFacts(run), clock.instant())));
         }
     }
 
@@ -136,6 +136,12 @@ public class YearlyReceiptsService {
     private static YearlyReceiptCandidate candidate(DonorRecord record, Collection<Donation> gifts, Optional<ActiveYearlyReceipt> receipt) {
         return new YearlyReceiptCandidate(record.id(), record.name().value(), record.type(), gifts.size(),
                 gifts.stream().mapToLong(gift -> gift.amount().amountMinor()).sum(), receipt);
+    }
+
+    private static AdminActionPerformed.Facts auditFacts(YearlyReceiptsRun run) {
+        return AdminActionPerformed.Facts.of(ISSUE_ACTION, Map.of("year", run.year().toString(),
+                "issued", Long.toString(run.count(YearlyReceiptOutcome.ISSUED)), "replaced", Long.toString(run.count(YearlyReceiptOutcome.REPLACED)),
+                "unchanged", Long.toString(run.count(YearlyReceiptOutcome.UNCHANGED)), "skipped", Long.toString(run.count(YearlyReceiptOutcome.SKIPPED))));
     }
 
     private static String auditDetails(YearlyReceiptsRun run) {
