@@ -153,8 +153,8 @@ class DddLayeringRulesTest {
     static final ArchRule interfaces_hold_only_the_rest_package = classes()
             .that().resideInAPackage("cz.novanadeje.app.*.interfaces..")
             .should().resideInAPackage("cz.novanadeje.app.*.interfaces.rest")
-            .because(LAYERS + ": interfaces holds a context's REST controllers with their requests, responses and handlers, all in "
-                    + "interfaces/rest; a scheduler or another driving adapter lives in infrastructure");
+            .because(LAYERS + ": interfaces/rest holds the HTTP adapter (controllers, requests, responses, problem handlers, filters and "
+                    + "argument resolvers); a scheduler or any other entry point that is not HTTP lives in infrastructure");
 
     @ArchTest
     static final ArchRule bounded_contexts_must_not_depend_on_each_other = slices()
