@@ -12,6 +12,7 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.conditions.ArchConditions;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import cz.novanadeje.app.AppApplication;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.repository.Repository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -99,10 +101,17 @@ class DddLayeringRulesTest {
             access -> RESOURCE_READS_BY_OWNER.entrySet().stream()
                     .anyMatch(owner -> access.getTargetOwner().isAssignableTo(owner.getKey()) && owner.getValue().matcher(access.getName()).matches()));
     private static final DescribedPredicate<JavaClass> DRIVEN_PORTS = DescribedPredicate.describe(
-            "a driven port (an interface or abstract class of an application or domain package that a class of an infrastructure package implements)",
+            "a driven port (an interface or abstract class of an application or domain package that a class of an infrastructure package implements "
+                    + "or a @Bean method of one provides)",
             type -> layerOf(type).filter(layer -> "application".equals(layer) || "domain".equals(layer)).isPresent()
                     && (type.isInterface() || type.getModifiers().contains(JavaModifier.ABSTRACT))
-                    && type.getAllSubclasses().stream().anyMatch(subclass -> layerOf(subclass).filter("infrastructure"::equals).isPresent()));
+                    && (type.getAllSubclasses().stream().anyMatch(DddLayeringRulesTest::isInInfrastructure)
+                    || type.getMethodsWithReturnTypeOfSelf().stream().anyMatch(method -> isInInfrastructure(method.getOwner())
+                    && (method.isAnnotatedWith(Bean.class) || method.isMetaAnnotatedWith(Bean.class)))));
+    private static final DescribedPredicate<Dependency> NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS = DescribedPredicate.describe(
+            "target no persistence port, except one the class itself implements",
+            dependency -> !PersistencePorts.PERSISTENCE_PORTS.test(dependency.getTargetClass())
+                    || dependency.getOriginClass().isAssignableTo(dependency.getTargetClass().getName()));
     private static final Pattern CONTEXT_OF_PACKAGE = Pattern.compile("^cz\\.novanadeje\\.app\\.([^.]+)\\.(domain|application|infrastructure)(\\..*)?$");
     private static final Map<String, String> DRIVING_PORT_IMPLEMENTERS = Map.of(
             "cz.novanadeje.app.donations.infrastructure.fio.FioImportScheduler",
@@ -220,11 +229,11 @@ class DddLayeringRulesTest {
     static final ArchRule only_persistence_adapters_use_persistence_ports = onlyPersistenceAdaptersUsePersistencePorts(REVIEWED_PERSISTENCE_PORT_READERS_APART);
 
     private static ArchRule onlyPersistenceAdaptersUsePersistencePorts(DescribedPredicate<JavaClass> readersApart) {
-        return noClasses()
+        return classes()
             .that().resideInAPackage("..infrastructure..")
-            .and(not(PersistencePorts.PERSISTENCE_ADAPTERS))
+            .and().resideOutsideOfPackages(AdapterLibraryRulesTest.persistenceAdapters())
             .and(readersApart)
-            .should().dependOnClassesThat(PersistencePorts.PERSISTENCE_PORTS)
+            .should(ArchConditions.onlyHaveDependenciesWhere(NOT_ON_A_PERSISTENCE_PORT_BUT_ONE_IT_IMPLEMENTS))
             .because("backend.md, Application: an adapter that is not a persistence adapter renders, sends or drives; what it needs from the "
                     + "database an application service reads inside its transaction and hands it, so no rule hides in a mail or other adapter");
     }
@@ -502,6 +511,29 @@ class DddLayeringRulesTest {
                     planted("planteda.infrastructure.mail.ArchiveMailer", "public class ArchiveMailer { cz.novanadeje.app.planteda.domain.Archive archive; }"),
                     planted("planteda.infrastructure.mail.ShelfMailer", "public class ShelfMailer { cz.novanadeje.app.planteda.domain.Shelf shelf; }"),
                     planted("planteda.infrastructure.mail.PaperMailer", "public class PaperMailer { cz.novanadeje.app.planteda.domain.PaperRepository papers; }"),
+                    planted("planteda.infrastructure.mail.AnnotatedMailer",
+                            "@org.springframework.stereotype.Repository public class AnnotatedMailer { cz.novanadeje.app.planteda.domain.Gifts gifts; }"),
+                    planted("planteda.infrastructure.archive.JdbcShelfReader", """
+                            public class JdbcShelfReader implements cz.novanadeje.app.planteda.domain.Shelf {
+                                javax.sql.DataSource source;
+                                cz.novanadeje.app.planteda.domain.Gifts gifts;
+                            }
+                            """),
+                    planted("planteda.application.SeedList", "public interface SeedList { int size(); }"),
+                    planted("planteda.infrastructure.config.SeedConfiguration", """
+                            public class SeedConfiguration {
+                                @org.springframework.context.annotation.Bean
+                                cz.novanadeje.app.planteda.application.SeedList seeds() { return () -> 1; }
+                            }
+                            """),
+                    planted("planteda.interfaces.rest.SeedController", "public class SeedController { cz.novanadeje.app.planteda.application.SeedList seeds; }"),
+                    planted("planteda.application.GiftLabels", "public interface GiftLabels { String label(); }"),
+                    planted("planteda.infrastructure.config.LabelHelper", """
+                            public class LabelHelper {
+                                cz.novanadeje.app.planteda.application.GiftLabels labels() { return () -> "gift"; }
+                            }
+                            """),
+                    planted("planteda.interfaces.rest.LabelController", "public class LabelController { cz.novanadeje.app.planteda.application.GiftLabels labels; }"),
                     planted("planteda.infrastructure.mail.JpaGiftsMailer",
                             "public class JpaGiftsMailer { cz.novanadeje.app.planteda.infrastructure.persistence.JpaGifts gifts; }"),
                     planted("planteda.interfaces.rest.PairingController", "public class PairingController { cz.novanadeje.app.planteda.application.GiftPairing pairing; }"),
@@ -655,7 +687,7 @@ class DddLayeringRulesTest {
         @Test
         @DisplayName("when the port rule checks controllers on persistence ports, then a port persistence implements whatever it is called, the audit "
                 + "trail's port, an abstract port and a concrete adapter of the shared lock are each reported")
-        void should_report_controller_on_a_persistence_port_when_checked_given_a_port_without_the_repository_suffix() {
+        void should_report_controller_on_a_persistence_port_when_checked_given_planted_ports() {
             assertThat(reportOf(rest_controllers_must_not_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftLogController").contains("planteda.domain.GiftLog"))
@@ -665,22 +697,26 @@ class DddLayeringRulesTest {
 
         @Test
         @DisplayName("when the driven port rule checks controllers, then a controller on a domain or application interface, an abstract application "
-                + "class or a shared port that infrastructure implements is reported, and one on an application service or a port only the "
-                + "application implements is not")
+                + "class or a shared port that infrastructure implements, or an interface an infrastructure @Bean method provides as a lambda, is "
+                + "reported, and one on an application service, a port only the application implements or an interface an infrastructure method "
+                + "that is no @Bean returns is not")
         void should_report_controller_on_a_driven_port_when_checked_given_planted_controllers() {
             assertThat(reportOf(rest_controllers_must_not_use_driven_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftController").contains("planteda.domain.Gifts"))
                     .anySatisfy(detail -> assertThat(detail).contains("PairingController").contains("planteda.application.GiftPairing"))
                     .anySatisfy(detail -> assertThat(detail).contains("AbstractPairingController").contains("planteda.application.AbstractGiftPairing"))
                     .anySatisfy(detail -> assertThat(detail).contains("KernelPortController").contains("shared.application.account.KernelPort"))
-                    .noneSatisfy(detail -> assertThat(detail).contains("QueryController"));
+                    .anySatisfy(detail -> assertThat(detail).contains("SeedController").contains("planteda.application.SeedList"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("QueryController"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("LabelController"));
         }
 
         @Test
         @DisplayName("when the persistence port rule checks adapters on ports, then a mail adapter on a port a persistence adapter implements (the audit "
                 + "trail's, a @Repository's outside the persistence packages and a JDBC adapter's included), on a port named …Repository and on a "
-                + "persistence adapter itself is reported, and a persistence adapter wherever it lives, an adapter on a port persistence does not "
-                + "implement and a reviewed reader are not")
+                + "persistence adapter itself is reported, also from a @Repository or JDBC class outside the persistence packages, and a "
+                + "persistence adapter on its own port wherever it lives, an adapter on a port persistence does not implement and a reviewed reader "
+                + "are not")
         void should_report_only_a_non_persistence_adapter_on_a_persistence_port_when_checked_given_planted_adapters() {
             assertThat(reportOf(only_persistence_adapters_use_persistence_ports))
                     .anySatisfy(detail -> assertThat(detail).contains("GiftRecipientsMailer").contains("planteda.domain.Gifts"))
@@ -689,6 +725,9 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("ShelfMailer").contains("planteda.domain.Shelf"))
                     .anySatisfy(detail -> assertThat(detail).contains("PaperMailer").contains("planteda.domain.PaperRepository"))
                     .anySatisfy(detail -> assertThat(detail).contains("JpaGiftsMailer").contains("planteda.infrastructure.persistence.JpaGifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("AnnotatedMailer").contains("planteda.domain.Gifts"))
+                    .anySatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Gifts"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("JdbcShelfReader").contains("planteda.domain.Shelf"))
                     .noneSatisfy(detail -> assertThat(detail).contains("AnnotatedArchive"))
                     .noneSatisfy(detail -> assertThat(detail).contains("SqlShelf"))
                     .noneSatisfy(detail -> assertThat(detail).contains("CachingGifts"))
@@ -730,6 +769,10 @@ class DddLayeringRulesTest {
     private static boolean isWhatTheDomainMayUse(JavaClass type) {
         JavaClass element = type.isArray() ? type.getBaseComponentType() : type;
         return element.isPrimitive() || THE_DOMAIN_MAY_USE_AS_A_TYPE.test(element);
+    }
+
+    private static boolean isInInfrastructure(JavaClass type) {
+        return layerOf(type).filter("infrastructure"::equals).isPresent();
     }
 
     private static Optional<String> layerOf(JavaClass type) {
