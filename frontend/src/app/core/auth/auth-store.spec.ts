@@ -51,6 +51,7 @@ describe('Given the auth store', () => {
       ],
     });
     store = TestBed.inject(AuthStore);
+    TestBed.tick();
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -255,6 +256,29 @@ describe('Given the auth store', () => {
     expect(localStorage.getItem(SESSION_HINT_KEY)).toBeNull();
     expect(store.signOutPending()).toBe(true);
     expect(localStorage.getItem(SIGN_OUT_PENDING_KEY)).toBe('1');
+  });
+
+  it('when the sign-out fails while the app is online, then it is not sent again until the connection comes back', () => {
+    const connectivity = TestBed.inject(Connectivity);
+    signIn();
+
+    store.logout().subscribe();
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 503, statusText: 'Service Unavailable' });
+    TestBed.tick();
+
+    http.expectNone('/api/donors/auth/logout');
+    window.dispatchEvent(new Event('offline'));
+    http.expectOne(PROBE_PATH).flush({});
+    TestBed.tick();
+    http.expectNone('/api/donors/auth/logout');
+    connectivity.answered({ status: 200, headers: new HttpHeaders(), fromNetwork: true });
+    TestBed.tick();
+    http
+      .expectOne('/api/donors/auth/logout')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    expect(store.signOutPending()).toBe(false);
   });
 
   it('when the server answers the sign-out, or refuses it as a request it understood, then no sign-out is left pending', () => {
@@ -486,6 +510,7 @@ describe('Given the auth store in one of several tabs of the browser', () => {
       ],
     });
     store = TestBed.inject(AuthStore);
+    TestBed.tick();
     http = TestBed.inject(HttpTestingController);
   });
 

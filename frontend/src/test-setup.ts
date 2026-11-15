@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+
 if (
   typeof HTMLDialogElement !== 'undefined' &&
   typeof HTMLDialogElement.prototype.showModal !== 'function'
@@ -45,4 +47,14 @@ afterEach(() => {
   } catch {
     return;
   }
+});
+
+beforeEach(() => {
+  try {
+    globalThis.localStorage?.clear();
+  } catch {
+    TestBed.resetTestingModule();
+    return;
+  }
+  TestBed.resetTestingModule();
 });
