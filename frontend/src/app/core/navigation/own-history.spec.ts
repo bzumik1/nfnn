@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import {
+  forgetOwnHistory,
   installOwnHistory,
   installOwnHistoryIn,
   OWN_HISTORY_KEY,
@@ -120,6 +121,24 @@ describe('Given the site keeping its own history', () => {
 
     expect(listener).not.toHaveBeenCalled();
     expect(path()).toBe('/a');
+  });
+
+  it('when entries are forgotten, then the current one stays, a step back skips the others and the kept copy no longer names them', async () => {
+    window.history.pushState({ page: 1 }, '', '/a');
+    window.history.pushState({ page: 2 }, '', '/sprava/darci?q=novak');
+    window.history.pushState({ page: 3 }, '', '/b');
+    window.history.pushState({ page: 4 }, '', '/sprava/darci/7');
+
+    forgetOwnHistory(window, (url) => url.pathname.startsWith('/sprava'));
+
+    expect(path()).toBe('/sprava/darci/7');
+    expect(storage.getItem(OWN_HISTORY_KEY)).not.toContain('novak');
+    const event = popped();
+    window.history.back();
+    expect((await event).state).toEqual({ page: 3 });
+    const before = popped();
+    window.history.back();
+    expect((await before).state).toEqual({ page: 1 });
   });
 
   it('when the app opens more pages than it keeps, then it keeps the latest ones', async () => {

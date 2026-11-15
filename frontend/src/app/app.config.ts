@@ -35,6 +35,7 @@ import { KEPT_PAGES_OWNER } from './core/navigation/kept-tab-pages';
 import { NavigationPreview } from './core/navigation/navigation-preview';
 import { PreviewingReuse } from './core/navigation/previewing-reuse';
 import { TabPagesPreloading } from './core/navigation/tab-preloading';
+import { SignedOutHistory } from './core/navigation/signed-out-history';
 import { TabMemory } from './core/navigation/tab-memory';
 import { CanonicalLink } from './core/seo/canonical-link';
 import { Connectivity } from './core/connectivity/connectivity';
@@ -142,6 +143,7 @@ export const connectivityAtStart: EnvironmentProviders = provideAppInitializer((
 export const navigationAtStart: EnvironmentProviders = provideAppInitializer(() => {
   inject(BackTarget);
   inject(TabMemory);
+  inject(SignedOutHistory);
 });
 
 export const appConfig: ApplicationConfig = {
