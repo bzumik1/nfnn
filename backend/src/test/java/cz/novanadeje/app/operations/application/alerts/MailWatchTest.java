@@ -13,8 +13,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MailWatchTest {
@@ -67,5 +70,6 @@ class MailWatchTest {
             watchOverUnreachable.failed(NOW);
             watchOverUnreachable.succeeded(NOW);
         }).doesNotThrowAnyException();
+        verify(unreachable, never()).record(eq(false), any());
     }
 }
