@@ -332,8 +332,18 @@ class DddLayeringRulesTest {
                                 public boolean equals(Object other) { return other != null && getClass() == other.getClass() && text.equals(((ValueGift) other).text); }
                                 @Override
                                 public int hashCode() { return text.hashCode(); }
+                                String[] parts() { return text.split(","); }
+                                ValueGift[] pair() { return new ValueGift[] {this, this}; }
                             }
                             """),
+                    planted("planteda.domain.ValueKind", """
+                            public enum ValueKind {
+                                GIFT;
+                                static ValueKind of(String text) { return valueOf(text); }
+                                static int count() { return values().length; }
+                            }
+                            """),
+                    planted("planteda.domain.ValuePart", "public record ValuePart(String text) {}"),
                     planted("planteda.domain.StreamedGift", """
                             public class StreamedGift {
                                 byte[] read() throws java.io.IOException {
@@ -529,7 +539,9 @@ class DddLayeringRulesTest {
                     .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.StackWalker>"))
                     .anySatisfy(detail -> assertThat(detail).contains("LoadingGift").contains("<java.lang.System$Logger>"))
                     .anySatisfy(detail -> assertThat(detail).contains("HandleGift").contains("java.lang.invoke.MethodHandles"))
-                    .noneSatisfy(detail -> assertThat(detail).contains("ValueGift"));
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValueGift"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValueKind"))
+                    .noneSatisfy(detail -> assertThat(detail).contains("ValuePart"));
         }
 
         @Test
