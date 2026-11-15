@@ -33,6 +33,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -224,7 +225,7 @@ public class AuthorizationServerService {
         Donor donor = donors.findById(subject.donorId()).filter(found -> !found.isErased()).orElseThrow(() -> new InvalidGrant("unknown donor"));
         Instant now = clock.instant();
         IssuedAccessToken issued = accessTokens.issue(new AccessTokenGrant(donor.id(), donor.sessionRoles(true), properties.apiResource(),
-                subject.scopes(), now, subject.expiresAt(), subject.client()));
+                subject.scopes(), now, Optional.ofNullable(subject.expiresAt()), subject.connectedClient(), Optional.empty()));
         log.info("The connector exchanged a token of donor {} for an API token", donor.id());
         return new ExchangedAccessToken(issued.token(), issued.expiresAt(), subject.scopes());
     }
@@ -232,7 +233,7 @@ public class AuthorizationServerService {
     private IssuedClientTokens issue(Donor donor, ClientId clientId, Set<OAuthScope> scopes, String audience, boolean secondFactorVerified,
                                      Instant grantedAt, Instant now) {
         IssuedAccessToken access = accessTokens.issue(new AccessTokenGrant(donor.id(), donor.sessionRoles(secondFactorVerified), audience, scopes, now,
-                null, clientId.host()));
+                Optional.empty(), Optional.of(clientId.host()), Optional.empty()));
         RefreshTokenSecret secret = RefreshTokenSecret.generate();
         RefreshToken refresh = RefreshToken.issueForClient(secret, donor.id(), clientId, scopes, grantedAt, now, sessionProperties.refreshTokenTtl());
         refreshTokens.save(refresh);

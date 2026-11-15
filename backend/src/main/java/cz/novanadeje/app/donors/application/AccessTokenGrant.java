@@ -6,26 +6,21 @@ import cz.novanadeje.app.donors.domain.OAuthScope;
 import cz.novanadeje.app.donors.domain.Role;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt, Instant notAfter,
-                               String client, DeviceId device) {
+public record AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt,
+                               Optional<Instant> latestExpiry, Optional<String> connectedClient, Optional<DeviceId> session) {
 
-    public AccessTokenGrant(DonorId donorId, Set<Role> roles, String audience, Set<OAuthScope> scopes, Instant issuedAt, Instant notAfter,
-                            String client) {
-        this(donorId, roles, audience, scopes, issuedAt, notAfter, client, null);
-    }
-
-    public Optional<Instant> latestExpiry() {
-        return Optional.ofNullable(notAfter);
-    }
-
-    public Optional<String> connectedClient() {
-        return Optional.ofNullable(client);
-    }
-
-    public Optional<DeviceId> session() {
-        return Optional.ofNullable(device);
+    public AccessTokenGrant {
+        Objects.requireNonNull(donorId, "donorId");
+        Objects.requireNonNull(roles, "roles");
+        Objects.requireNonNull(audience, "audience");
+        Objects.requireNonNull(scopes, "scopes");
+        Objects.requireNonNull(issuedAt, "issuedAt");
+        Objects.requireNonNull(latestExpiry, "latestExpiry");
+        Objects.requireNonNull(connectedClient, "connectedClient");
+        Objects.requireNonNull(session, "session");
     }
 }
