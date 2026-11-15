@@ -858,7 +858,7 @@ class DddLayeringRulesTest {
         return matcher.matches() ? Optional.of(matcher.group(2)) : Optional.empty();
     }
 
-    private static Stream<JavaClass> portsOf(JavaClass type) {
+    static Stream<JavaClass> portsOf(JavaClass type) {
         return Stream.concat(type.getAllRawInterfaces().stream(), type.getAllRawSuperclasses().stream());
     }
 
