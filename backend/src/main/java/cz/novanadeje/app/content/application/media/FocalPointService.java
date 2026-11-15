@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,9 +44,15 @@ public class FocalPointService {
         Optional<FocalPoint> current = Optional.ofNullable(media.findFocalPoints(List.of(id)).get(id));
         if (!current.equals(point)) {
             media.placeFocalPoint(id, point);
-            events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), details(id, point), clock.instant()));
+            events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.empty(), details(id, point), facts(point), clock.instant()));
         }
         return new PhotoView(id, size.width(), size.height(), point);
+    }
+
+    private static AdminActionPerformed.Facts facts(Optional<FocalPoint> point) {
+        return point
+                .map(placed -> AdminActionPerformed.Facts.of(ACTION, Map.of("x", Integer.toString(placed.x()), "y", Integer.toString(placed.y()))))
+                .orElseGet(() -> AdminActionPerformed.Facts.of(ACTION + ".removed"));
     }
 
     private static String details(MediaId id, Optional<FocalPoint> point) {

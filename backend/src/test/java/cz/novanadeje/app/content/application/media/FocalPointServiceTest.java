@@ -8,6 +8,7 @@ import cz.novanadeje.app.content.domain.media.FocalPointOnPersonImage;
 import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.content.domain.people.PersonRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,6 +63,7 @@ class FocalPointServiceTest {
         verify(media).placeFocalPoint(PHOTO, Optional.of(new FocalPoint(42, 18)));
         ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(action.capture());
+        action.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(action.getValue().action()).isEqualTo("CHANGE_PHOTO_FOCAL_POINT");
         assertThat(action.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(action.getValue().details()).isEqualTo("Bod výřezu fotky " + PHOTO + " nastaven na 42 % zleva a 18 % shora");
@@ -80,6 +82,7 @@ class FocalPointServiceTest {
         verify(media).placeFocalPoint(PHOTO, Optional.empty());
         ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(action.capture());
+        action.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(action.getValue().details()).isEqualTo("Bod výřezu fotky " + PHOTO + " zrušen, fotka se ořezává kolem středu");
     }
 

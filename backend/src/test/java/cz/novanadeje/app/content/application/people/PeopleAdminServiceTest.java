@@ -18,6 +18,7 @@ import cz.novanadeje.app.content.domain.people.ReceiptSignatoryNameInBrowserOnly
 import cz.novanadeje.app.content.domain.people.SignatoryNameUnprintable;
 import cz.novanadeje.app.shared.application.account.AccountEmails;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import cz.novanadeje.app.shared.application.event.FoundationPersonRemoved;
 import cz.novanadeje.app.content.application.event.ReceiptSignatureChanged;
 import cz.novanadeje.app.shared.application.people.ReceiptSignatoryLookup;
@@ -482,6 +483,7 @@ class PeopleAdminServiceTest {
         assertThat(actions).hasSize(1);
         assertThat(actions.getFirst().adminId()).isEqualTo(ADMIN);
         assertThat(actions.getFirst().performedAt()).isEqualTo(NOW);
+        AdminActionFactsAgreement.assertFactsAgreeWithDetails(actions.getFirst());
         return actions.getFirst();
     }
 

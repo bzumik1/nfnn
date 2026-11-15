@@ -3,6 +3,7 @@ package cz.novanadeje.app.content.application.project;
 import cz.novanadeje.app.content.domain.project.ProjectOrder;
 import cz.novanadeje.app.content.domain.project.ProjectOrderRepository;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,8 +51,10 @@ class ProjectOrderServiceTest {
         verify(orders).save(ProjectOrder.YEAR, NOW);
         ArgumentCaptor<AdminActionPerformed> event = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(event.capture());
+        event.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(event.getValue()).isEqualTo(new AdminActionPerformed(ADMIN, "CHANGE_PROJECT_ORDER", Optional.empty(),
-                "Řazení projektů na webu změněno z YEAR_THEN_CATEGORY na YEAR", NOW));
+                "Řazení projektů na webu změněno z YEAR_THEN_CATEGORY na YEAR",
+                AdminActionPerformed.Facts.of("CHANGE_PROJECT_ORDER", Map.of("fromOrder", "YEAR_THEN_CATEGORY", "toOrder", "YEAR")), NOW));
     }
 
     @Test

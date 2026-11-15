@@ -55,7 +55,8 @@ public class PeopleFootnoteService {
         }
         footnotes.save(next);
         String details = next.text().isPresent() ? "Řádek pod správní radou upraven" : "Řádek pod správní radou odebrán";
-        events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details, now));
+        AdminActionPerformed.Facts facts = AdminActionPerformed.Facts.of(next.text().isPresent() ? CHANGE_ACTION : CHANGE_ACTION + ".removed");
+        events.publishEvent(new AdminActionPerformed(adminId, CHANGE_ACTION, Optional.empty(), details, facts, now));
         return new Versioned<>(next.text(), versions.ofFootnote(Optional.of(next)));
     }
 }

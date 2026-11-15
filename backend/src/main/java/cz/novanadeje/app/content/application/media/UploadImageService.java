@@ -43,7 +43,8 @@ public class UploadImageService {
         MediaImage image = new MediaImage(MediaId.newId(now), processed.width(), processed.height(), processed.variants(), now);
         transaction.executeWithoutResult(status -> {
             media.save(image);
-            events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.of(image.id().value()), "Fotka " + image.id() + " nahrána", now));
+            events.publishEvent(new AdminActionPerformed(adminId, ACTION, Optional.of(image.id().value()), "Fotka " + image.id() + " nahrána",
+                    AdminActionPerformed.Facts.of(ACTION), now));
         });
         log.info("Image {} stored: {}x{} as {} variants", image.id(), image.width(), image.height(), image.variants().size());
         return new UploadedImage(image.id(), image.width(), image.height());

@@ -9,6 +9,7 @@ import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaNotFound;
 import cz.novanadeje.app.content.domain.media.MediaSize;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -166,6 +167,7 @@ class DonateBandServiceTest {
     private AdminActionPerformed audited() {
         ArgumentCaptor<AdminActionPerformed> action = ArgumentCaptor.forClass(AdminActionPerformed.class);
         verify(events).publishEvent(action.capture());
+        action.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(action.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(action.getValue().performedAt()).isEqualTo(NOW);
         return action.getValue();

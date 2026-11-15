@@ -5,6 +5,7 @@ import cz.novanadeje.app.content.domain.media.MediaImageRepository;
 import cz.novanadeje.app.content.domain.media.MediaVariant;
 import cz.novanadeje.app.content.domain.media.UnsupportedImage;
 import cz.novanadeje.app.shared.application.event.AdminActionPerformed;
+import cz.novanadeje.app.support.AdminActionFactsAgreement;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,7 @@ class UploadImageServiceTest {
         InOrder order = inOrder(media, events);
         order.verify(media).save(stored.capture());
         order.verify(events).publishEvent(audited.capture());
+        audited.getAllValues().forEach(AdminActionFactsAgreement::assertFactsAgreeWithDetails);
         assertThat(stored.getValue().id()).isEqualTo(uploaded.id());
         assertThat(audited.getValue().adminId()).isEqualTo(ADMIN);
         assertThat(audited.getValue().action()).isEqualTo("UPLOAD_IMAGE");
