@@ -1,7 +1,15 @@
 [
   {
     "path": "GET /api/admin/donations/receipt-signing-keys",
-    "scenario": "donations/admin_receipt_signing_key*",
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "field": "$.unreadableAuditEntries",
+    "reason": "#994 (Phase 2 gate, backend M1): an entry of the three key actions whose details match no wording the cross-check reads is no longer dropped silently but listed in unreadableAuditEntries, so /sprava, the key card and nfnn_status raise the alarm; the scenarios show the field, empty unless they plant such an entry",
+    "contract": "docs/api-contract.md, Receipt verification proof and signing keys; docs/security-overview.md, Receipt signing key"
+  },
+  {
+    "path": "GET /api/admin/donations/receipt-signing-keys",
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
     "kind": "added",
     "field": "$.unreadableAuditEntries",
     "reason": "#994 (Phase 2 gate, backend M1): an entry of the three key actions whose details match no wording the cross-check reads is no longer dropped silently but listed in unreadableAuditEntries, so /sprava, the key card and nfnn_status raise the alarm; the scenarios show the field, empty unless they plant such an entry",
