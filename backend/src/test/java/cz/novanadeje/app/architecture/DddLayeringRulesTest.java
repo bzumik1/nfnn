@@ -153,8 +153,8 @@ class DddLayeringRulesTest {
     static final ArchRule interfaces_hold_only_the_rest_package = classes()
             .that().resideInAPackage("cz.novanadeje.app.*.interfaces..")
             .should().resideInAPackage("cz.novanadeje.app.*.interfaces.rest")
-            .because(LAYERS + ": the driving adapters of a context are its REST controllers with their requests, responses and handlers in "
-                    + "interfaces/rest; a scheduler, listener or other driving adapter lives in infrastructure");
+            .because(LAYERS + ": interfaces holds a context's REST controllers with their requests, responses and handlers, all in "
+                    + "interfaces/rest; a scheduler or another driving adapter lives in infrastructure");
 
     @ArchTest
     static final ArchRule bounded_contexts_must_not_depend_on_each_other = slices()
@@ -488,7 +488,8 @@ class DddLayeringRulesTest {
                     planted("shared.infrastructure.security.Guard", "public class Guard {}"),
                     planted("planteda.interfaces.LooseHandler", "public class LooseHandler {}"),
                     planted("planteda.interfaces.web.GiftPage", "public class GiftPage {}"),
-                    planted("planteda.interfaces.rest.admin.AdminGiftController", "public class AdminGiftController {}")));
+                    planted("planteda.interfaces.rest.admin.AdminGiftController", "public class AdminGiftController {}"),
+                    planted("shared.interfaces.web.KernelPage", "public class KernelPage {}")));
         }
 
         @Test
@@ -504,13 +505,14 @@ class DddLayeringRulesTest {
         }
 
         @Test
-        @DisplayName("when the interfaces rule checks classes directly in interfaces, in another package beside rest and below rest, then each "
-                + "is reported and a controller in rest is not")
+        @DisplayName("when the interfaces rule checks classes directly in interfaces, in another package beside rest, below rest and in the "
+                + "shared kernel's interfaces, then each is reported and a controller in rest is not")
         void should_report_every_interfaces_package_but_rest_when_checked_given_planted_classes() {
             assertThat(reportOf(interfaces_hold_only_the_rest_package))
                     .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.LooseHandler"))
                     .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.web.GiftPage"))
                     .anySatisfy(detail -> assertThat(detail).contains("planteda.interfaces.rest.admin.AdminGiftController"))
+                    .anySatisfy(detail -> assertThat(detail).contains("shared.interfaces.web.KernelPage"))
                     .noneSatisfy(detail -> assertThat(detail).contains("planteda.interfaces.rest.GiftController"));
         }
 
