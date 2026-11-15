@@ -213,6 +213,8 @@ class PushSenderTest {
         donors.all().forEach(unwritable::save);
 
         assertThat(sender(administrators, unwritable).toDonors(List.of(phone), DONOR_TEST).report()).isEqualTo(new PushDeliveryReport(1, 0, 0));
+        assertThat(log.list).singleElement().extracting(ILoggingEvent::getFormattedMessage)
+                .isEqualTo("Push outcome DELIVERED of subscription " + phone.id().value() + " could not be recorded: IllegalStateException");
     }
 
     @Test
