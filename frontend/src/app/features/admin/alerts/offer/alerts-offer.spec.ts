@@ -203,7 +203,7 @@ describe('Given an administrator in the administration', () => {
 
       expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Upozornění jsou zapnutá');
       expect(sheetText()).toContain('Poslali jsme zkušební upozornění');
-      expect(await marks.ownedBy(JANA)).toBe(true);
+      await vi.waitFor(async () => expect(await marks.ownedBy(JANA)).toBe(true));
       expect(button('Hotovo')).toBeTruthy();
     });
 
@@ -368,12 +368,13 @@ describe('Given an administrator in the administration', () => {
     await start();
     await answerPush();
 
-    expect(sheet()).toBeNull();
-    expect(push.requestPermission).not.toHaveBeenCalled();
+    const subscribe = await vi.waitFor(() =>
+      http.expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` }),
+    );
     expect(push.requestSubscription).toHaveBeenCalledWith(PUSH_PUBLIC_KEY);
-    http
-      .expectOne({ method: 'POST', url: `${PUSH_URL}/subscriptions` })
-      .flush(pushSubscription(), { status: 201, statusText: 'Created' });
+    expect(push.requestPermission).not.toHaveBeenCalled();
+    expect(sheet()).toBeNull();
+    subscribe.flush(pushSubscription(), { status: 201, statusText: 'Created' });
     await settle();
     http.expectNone(`${PUSH_URL}/test`);
   });
@@ -385,7 +386,10 @@ describe('Given an administrator in the administration', () => {
     await start();
     await answerPush();
 
+    await vi.waitFor(async () => {
+      await settle();
+      expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Zapnout upozornění?');
+    });
     expect(push.requestSubscription).not.toHaveBeenCalled();
-    expect(sheet()?.querySelector('h2')?.textContent?.trim()).toBe('Zapnout upozornění?');
   });
 });
