@@ -32,10 +32,13 @@ public class PublicNewsService {
     }
 
     public NewsPage list(int page, int size) {
-        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE || page > Integer.MAX_VALUE / size) {
-            throw new IllegalArgumentException("The page is 0 or more, the size 1 to " + MAX_PAGE_SIZE + " and the page's offset within an int");
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("The page is 0 or more and the size 1 to " + MAX_PAGE_SIZE);
         }
         LocalDate today = today();
+        if (beyondEveryOffset(page, size)) {
+            return new NewsPage(List.of(), page, size, news.countVisible(today));
+        }
         List<NewsArticleView> items = signers.views(news.findVisibleNewestFirst(today, page * size, size), today);
         return new NewsPage(items, page, size, news.countVisible(today));
     }
@@ -47,6 +50,10 @@ public class PublicNewsService {
                 .filter(found -> found.isVisibleOn(today))
                 .orElseThrow(() -> new NewsArticleNotFound(slug));
         return signers.view(article, today);
+    }
+
+    private static boolean beyondEveryOffset(int page, int size) {
+        return (long) page * size > Integer.MAX_VALUE;
     }
 
     private LocalDate today() {

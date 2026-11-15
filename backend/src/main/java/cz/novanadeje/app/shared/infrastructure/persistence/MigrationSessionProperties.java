@@ -9,7 +9,7 @@ public record MigrationSessionProperties(Duration lockTimeout) {
 
     public MigrationSessionProperties {
         if (lockTimeout == null || lockTimeout.isNegative() || lockTimeout.isZero()) {
-            throw new IllegalStateException("app.database.migration.lock-timeout must be a positive duration");
+            throw new IllegalArgumentException("app.database.migration.lock-timeout must be a positive duration");
         }
     }
 
