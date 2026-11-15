@@ -45,6 +45,10 @@ describe('Given an nginx snippet of security headers', () => {
 describe('Given the security headers the frontend nginx sends', () => {
   const policy = cspDirectives(readSecurityHeaders()['Content-Security-Policy']);
 
+  it('when the site is reached over HTTPS, then the browser keeps to HTTPS for two years and leaves the other hosts of the domain alone, whatever the proxy in front sets', () => {
+    assert.equal(readSecurityHeaders()['Strict-Transport-Security'], 'max-age=63072000');
+  });
+
   it('when a page assigns a string to a script sink, then Trusted Types refuse it', () => {
     assert.deepEqual(policy.get('require-trusted-types-for'), ["'script'"]);
   });
