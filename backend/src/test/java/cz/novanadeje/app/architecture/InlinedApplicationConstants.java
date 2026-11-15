@@ -5,10 +5,10 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.ImportTree;
 import com.sun.source.tree.MemberSelectTree;
-import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
+import cz.novanadeje.app.support.AttributedSources;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -16,22 +16,11 @@ import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.util.Elements;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -42,28 +31,17 @@ final class InlinedApplicationConstants {
     private final Trees trees;
     private final Elements elements;
 
-    private InlinedApplicationConstants(JavacTask task) {
-        this.trees = Trees.instance(task);
-        this.elements = task.getElements();
+    private InlinedApplicationConstants(AttributedSources sources) {
+        this.trees = sources.trees();
+        this.elements = sources.elements();
     }
 
     static Set<String> readsIn(List<Path> sources) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new IllegalStateException("The rule needs javac of the JDK toolchain");
-        }
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-        try (StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, Locale.ROOT, StandardCharsets.UTF_8)) {
-            List<String> options = List.of("-proc:none", "-classpath", System.getProperty("java.class.path"));
-            JavacTask task = (JavacTask) compiler.getTask(null, files, diagnostics, options, null, files.getJavaFileObjectsFromPaths(sources));
-            List<CompilationUnitTree> units = new ArrayList<>();
-            task.parse().forEach(units::add);
-            task.analyze();
-            refuseCompilationErrors(diagnostics);
-            return new InlinedApplicationConstants(task).readsOf(units);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return AttributedSources.read(sources, InlinedApplicationConstants::readsIn);
+    }
+
+    static Set<String> readsIn(AttributedSources sources) {
+        return new InlinedApplicationConstants(sources).readsOf(sources.units());
     }
 
     private Set<String> readsOf(List<CompilationUnitTree> units) {
@@ -78,16 +56,6 @@ final class InlinedApplicationConstants {
 
     private static boolean isIn(String packageName, Set<String> layers) {
         return Arrays.stream(packageName.split("\\.")).anyMatch(layers::contains);
-    }
-
-    private static void refuseCompilationErrors(DiagnosticCollector<JavaFileObject> diagnostics) {
-        List<String> errors = diagnostics.getDiagnostics().stream()
-                .filter(diagnostic -> diagnostic.getKind() == Diagnostic.Kind.ERROR)
-                .map(diagnostic -> diagnostic.getMessage(Locale.ROOT))
-                .toList();
-        if (!errors.isEmpty()) {
-            throw new IllegalStateException("The sources do not compile, so the rule would see no constants: " + errors);
-        }
     }
 
     private final class Reads extends TreePathScanner<Void, Void> {

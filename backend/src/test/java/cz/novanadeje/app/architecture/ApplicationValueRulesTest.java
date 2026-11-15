@@ -11,6 +11,8 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import cz.novanadeje.app.AppApplication;
+import cz.novanadeje.app.support.AttributedSources;
+import cz.novanadeje.app.support.PlantedSources;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Named;
@@ -21,14 +23,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,8 +57,6 @@ class ApplicationValueRulesTest {
                     && !call.getTarget().getRawReturnType().equals(call.getTargetOwner())
                     && !(call.getTargetOwner().isEnum() && ENUM_LOOKUPS.contains(call.getName()))
                     && call.getTarget().resolveMember().map(method -> method.getModifiers().contains(JavaModifier.STATIC)).orElse(false));
-
-    private static final Path MAIN_SOURCES = Path.of("src", "main", "java");
 
     private static final String PORT_VALUE = "a bound the value record of a port checks in its own constructor; the adapter that implements the "
             + "port produces or accepts values within it, so the bound is the port's contract, not a rule the adapter keeps";
@@ -96,8 +92,6 @@ class ApplicationValueRulesTest {
             Map.entry("cz.novanadeje.app.donors.interfaces.rest.AdminActionSummaries reads cz.novanadeje.app.donors.application.AdminActionFacts.DONOR",
                     "the key of a fact AdminActionFacts reads from the audit details, which the summaries fill with the donor's name; one spelling "
                             + "of one key on both sides, not a value of a rule"));
-
-    private static final Pattern PLANTED_TYPE = Pattern.compile("(?:class|record|interface|enum|@interface) (\\w+)");
 
     private static JavaClasses planted;
 
@@ -176,7 +170,7 @@ class ApplicationValueRulesTest {
 
     private static Set<String> mainSourceReads() {
         if (mainReads == null) {
-            mainReads = InlinedApplicationConstants.readsIn(ExceptionMessageValues.javaSources(MAIN_SOURCES));
+            mainReads = InlinedApplicationConstants.readsIn(AttributedSources.ofMainSources());
         }
         return mainReads;
     }
@@ -373,16 +367,8 @@ class ApplicationValueRulesTest {
             """);
 
     @BeforeAll
-    static void readPlantedConstantReads(@TempDir Path folder) throws IOException {
-        List<Path> sources = new ArrayList<>();
-        for (String source : PLANTED_SOURCES) {
-            String packageName = source.lines().findFirst().orElseThrow().replace("package ", "").replace(";", "").strip();
-            Matcher type = PLANTED_TYPE.matcher(source);
-            assertThat(type.find()).as("a planted source declares its type").isTrue();
-            Path file = Files.createDirectories(folder.resolve(packageName.replace('.', '/'))).resolve(type.group(1) + ".java");
-            sources.add(Files.writeString(file, source));
-        }
-        plantedReads = InlinedApplicationConstants.readsIn(sources);
+    static void readPlantedConstantReads(@TempDir Path folder) {
+        plantedReads = InlinedApplicationConstants.readsIn(PlantedSources.written(folder, PLANTED_SOURCES));
     }
 
     static Stream<PlantedClass> plantedClasses() {
