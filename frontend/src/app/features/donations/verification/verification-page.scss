@@ -51,9 +51,15 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
 }
 
 @include bp.up(wide) {
+  :host(:not(.verify-embedded)) .container {
+    max-width: calc($intro-measure + 2 * var(--space-8));
+    margin-inline: calc((100% - var(--content-max-wide)) / 2) auto;
+    padding-inline: var(--space-8);
+  }
+
   :host(:not(.verify-embedded)) .container:has(> app-proof-input) {
     max-width: var(--content-max-wide);
-    padding-inline: var(--space-8);
+    margin-inline: auto;
   }
 
   .verify-intro,
