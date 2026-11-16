@@ -166,7 +166,10 @@
                   <li
                     class="grid-item"
                     [class.grid-item--large]="tile.size === 'large'"
-                    [class.grid-item--split]="tile.size === 'split'"
+                    [class.grid-item--split]="tile.size === 'split' && tile.rest === null"
+                    [class.grid-item--rest-2]="tile.rest === 2"
+                    [class.grid-item--rest-3]="tile.rest === 3"
+                    [class.grid-item--rest-4]="tile.rest === 4"
                   >
                     <app-story-tile [item]="tile.item" [size]="tile.size" />
                   </li>

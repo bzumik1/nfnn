@@ -330,6 +330,18 @@
     grid-column: 1 / -1;
   }
 
+  .grid-item--rest-2 {
+    grid-column: span 2;
+  }
+
+  .grid-item--rest-3 {
+    grid-column: span 3;
+  }
+
+  .grid-item--rest-4 {
+    grid-column: 1 / -1;
+  }
+
   app-donate-band {
     padding-top: var(--space-20);
   }

@@ -269,6 +269,48 @@ describe('Given the Pomáháme tab', () => {
     ).toEqual(['Děti s rakovinou', 'Sofinka', 'Michal, profesionální hasič']);
   });
 
+  describe('when a computer shows a year of more stories', () => {
+    function yearOf(count: number): ProjectResponse[] {
+      return Array.from({ length: count }, (_, index) =>
+        project({ id: `y${index}`, slug: `y${index}`, title: `Y ${index}`, year: 2022 }),
+      );
+    }
+
+    async function lastTile(count: number): Promise<{ rest: string[]; split: boolean }> {
+      const page = await open('/projekty', yearOf(count));
+      const items = [...page.querySelectorAll('.grid-item')];
+      const rest = items.flatMap((item) =>
+        [...item.classList].filter((name) => name.startsWith('grid-item--rest')),
+      );
+      return { rest, split: items.at(-1)!.querySelector('.tile--split') !== null };
+    }
+
+    it('then a last tile alone in its row spans the whole row as a split card', async () => {
+      expect(await lastTile(6)).toEqual({ rest: ['grid-item--rest-4'], split: true });
+    });
+
+    it('then a last tile with two in its row spans the other three as a split card', async () => {
+      expect(await lastTile(7)).toEqual({ rest: ['grid-item--rest-3'], split: true });
+    });
+
+    it('then a last tile with three in its row, or beside the large one, spans the last two', async () => {
+      expect(await lastTile(8)).toEqual({ rest: ['grid-item--rest-2'], split: false });
+    });
+
+    it('then a full last row spans nothing', async () => {
+      expect(await lastTile(5)).toEqual({ rest: [], split: false });
+    });
+
+    it('then four stories end beside the large one with the last spanning two', async () => {
+      expect(await lastTile(4)).toEqual({ rest: ['grid-item--rest-2'], split: false });
+    });
+
+    it('then a phone keeps every tile in its usual place', async () => {
+      compact.set(true);
+      expect(await lastTile(6)).toEqual({ rest: [], split: false });
+    });
+  });
+
   it('when a chip is chosen, then the address names the year without moving the page, and the new count is announced', async () => {
     const page = await open('/projekty');
     const router = TestBed.inject(Router);
