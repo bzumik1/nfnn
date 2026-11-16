@@ -23,7 +23,6 @@
 
 .list-state-loading {
   @include motion.appear;
-  animation-delay: var(--delay-loading);
 }
 
 .lead--appears,

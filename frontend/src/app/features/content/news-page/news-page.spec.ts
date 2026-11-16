@@ -562,55 +562,124 @@ describe('Given a visitor opening Aktuality', () => {
     expect(link(root, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
   });
 
-  describe('while the news are on their way', () => {
+  describe.each([
+    ['with motion', false],
+    ['with reduced motion', true],
+  ])('while the news are on their way %s', (_, reduced) => {
     beforeEach(async () => {
-      ({ fixture, http } = await setUp());
-      root = fixture.nativeElement;
+      vi.useFakeTimers();
+      document.documentElement.style.setProperty('--delay-loading', '0.3s');
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: reduced && query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }));
     });
 
-    it('then the status line holds the loading text from the start, shown only after the loading delay', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      document.documentElement.style.removeProperty('--delay-loading');
+      vi.useRealTimers();
+    });
+
+    async function openNews(query: Record<string, string> = {}): Promise<void> {
+      ({ fixture, http } = await setUp(query));
+      root = fixture.nativeElement;
+    }
+
+    async function wait(ms: number): Promise<void> {
+      await vi.advanceTimersByTimeAsync(ms);
+      fixture.detectChanges();
+    }
+
+    it('then the status line is there from the start and stays empty until the loading delay is over', async () => {
+      await openNews();
       const status = root.querySelector('[role="status"]') as HTMLElement;
       expect(status.classList).toContain('list-state');
+      expect(text(status, '.list-state')).toBe('');
+
+      await wait(299);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+
+      await wait(1);
+
       expect(text(status, '.list-state-loading')).toBe('Načítáme aktuality…');
       http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
     });
 
-    it('and they arrive before the loading text showed, then the news stand at once without moving in', async () => {
+    it('and they arrive before the loading delay is over, then no loading text shows and the news stand at once without moving in', async () => {
+      await openNews();
+      await wait(100);
       http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
-      await settle(fixture);
+      await wait(0);
 
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+      expect(root.querySelector('.lead')?.classList).not.toContain('lead--appears');
+
+      await wait(1000);
+
+      expect(root.querySelector('.list-state-loading')).toBeNull();
       expect(root.querySelector('.lead')?.classList).not.toContain('lead--appears');
     });
 
     it('and they arrive after the loading text showed, then the news move in in its place', async () => {
-      root.querySelector('.list-state-loading')!.dispatchEvent(new Event('animationstart'));
+      await openNews();
+      await wait(300);
+      expect(text(root, '.list-state')).toBe('Načítáme aktuality…');
+
       http.expectOne(NEWS(0)).flush(page([lookBack2025], 0, 1));
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
-      await settle(fixture);
+      await wait(0);
 
+      expect(root.querySelector('.list-state-loading')).toBeNull();
       expect(root.querySelector('.lead')?.classList).toContain('lead--appears');
     });
 
+    it('and a later page arrives after the loading text showed, then its list moves in in its place', async () => {
+      await openNews({ strana: '2' });
+      await wait(300);
+      http.expectOne(NEWS(1)).flush(page([lookBack2024], 1, 25));
+      await wait(0);
+
+      expect(root.querySelector('.older')?.classList).toContain('older--appears');
+    });
+
     it('and nothing is published, then the empty state is not held back like the loading text', async () => {
+      await openNews();
       http.expectOne(NEWS(0)).flush(page([], 0, 0));
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
-      await settle(fixture);
+      await wait(0);
 
       expect(root.querySelector('.list-state-loading')).toBeNull();
       expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
     });
-  });
 
-  it('when a later page arrives after the loading text showed, then its list moves in in its place', async () => {
-    ({ fixture, http } = await setUp({ strana: '2' }));
-    root = fixture.nativeElement;
-    root.querySelector('.list-state-loading')!.dispatchEvent(new Event('animationstart'));
-    http.expectOne(NEWS(1)).flush(page([lookBack2024], 1, 25));
-    await settle(fixture);
+    it('and they fail, then the alert is not held back like the loading text', async () => {
+      await openNews();
+      http.expectOne(NEWS(0)).flush(null, { status: 500, statusText: 'Error' });
+      http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
+      await wait(0);
 
-    expect(root.querySelector('.older')?.classList).toContain('older--appears');
+      expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
+      await wait(1000);
+      expect(root.querySelector('.list-state-loading')).toBeNull();
+    });
+
+    it('and the visitor leaves, then the loading delay is cancelled', async () => {
+      await openNews({ strana: '2' });
+      answerHome(http);
+      const news = http.expectOne(NEWS(1));
+      const pending = vi.getTimerCount();
+
+      fixture.destroy();
+
+      expect(vi.getTimerCount()).toBe(pending - 1);
+      expect(news.cancelled).toBe(true);
+    });
   });
 
   it('when the news fail, then an alert offers to try again and the retry loads them', async () => {

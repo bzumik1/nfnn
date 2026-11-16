@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  DOCUMENT,
   effect,
   ElementRef,
   inject,
@@ -59,6 +60,8 @@ export class NewsPage {
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private readonly listState = viewChild.required<ElementRef<HTMLElement>>('listState');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private loadingDelay: ReturnType<typeof setTimeout> | undefined;
   private newsLoad = Subscription.EMPTY;
   private projectsLoad = Subscription.EMPTY;
   private storiesKept = false;
@@ -115,6 +118,7 @@ export class NewsPage {
     this.destroyRef.onDestroy(() => {
       this.newsLoad.unsubscribe();
       this.projectsLoad.unsubscribe();
+      this.stopLoadingDelay();
     });
     inject(HomeApi)
       .load()
@@ -124,6 +128,11 @@ export class NewsPage {
         error: () => this.bandPhoto.set(null),
       });
     afterNextRender(() => this.heading()?.nativeElement.focus(), { injector: this.injector });
+    effect(() => {
+      if (this.state() !== 'loading') {
+        this.stopLoadingDelay();
+      }
+    });
     effect(() => {
       const state = this.state();
       if (state === 'loading' || !this.focusAfterRetry) {
@@ -154,8 +163,8 @@ export class NewsPage {
   private load(quietly = false): void {
     this.newsLoad.unsubscribe();
     if (!quietly) {
-      this.loadingShown.set(false);
       this.newsState.set('loading');
+      this.showLoadingAfterDelay();
     }
     this.newsLoad = this.newsApi.publishedWithLatest(this.pageNumber() - 1, PAGE_SIZE).subscribe({
       next: (page) => {
@@ -173,6 +182,39 @@ export class NewsPage {
     if (this.pageNumber() === 1) {
       this.loadStories(quietly);
     }
+  }
+
+  private showLoadingAfterDelay(): void {
+    this.stopLoadingDelay();
+    const delay = this.loadingDelayMs();
+    this.loadingShown.set(delay <= 0);
+    if (delay <= 0) {
+      return;
+    }
+    this.loadingDelay = setTimeout(() => {
+      this.loadingDelay = undefined;
+      if (this.state() === 'loading') {
+        this.loadingShown.set(true);
+      }
+    }, delay);
+  }
+
+  private stopLoadingDelay(): void {
+    clearTimeout(this.loadingDelay);
+    this.loadingDelay = undefined;
+  }
+
+  private loadingDelayMs(): number {
+    const token =
+      this.document.defaultView
+        ?.getComputedStyle(this.document.documentElement)
+        .getPropertyValue('--delay-loading')
+        .trim() ?? '';
+    const value = Number.parseFloat(token);
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return token.endsWith('ms') ? value : value * 1000;
   }
 
   private loadStories(quietly: boolean): void {

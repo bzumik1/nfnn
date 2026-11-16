@@ -13,12 +13,11 @@
   <div class="content ui-container">
     <p #listState class="list-state" role="status" tabindex="-1">
       @if (state() === 'loading') {
-        <span
-          class="list-state-loading"
-          (animationstart)="loadingShown.set(true)"
-          i18n="@@content.list.news.loading"
-          >Načítáme aktuality…</span
-        >
+        @if (loadingShown()) {
+          <span class="list-state-loading" i18n="@@content.list.news.loading"
+            >Načítáme aktuality…</span
+          >
+        }
       } @else if (state() === 'ready' && empty()) {
         @if (pastLastPage()) {
           <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
