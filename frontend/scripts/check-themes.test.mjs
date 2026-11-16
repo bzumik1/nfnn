@@ -7,7 +7,9 @@ import {
   barContrastProblems,
   launchIconProblems,
   manifestProblems,
+  motionProblems,
   receiptTokensOutsideRoot,
+  springPairingProblems,
   themeAssetProblems,
 } from './check-themes.mjs';
 
@@ -709,6 +711,94 @@ describe('Given the launch icon of a theme', () => {
 
     assert.deepEqual(launchIconProblems({ theme: 'control', svg: tiled }), [
       'theme control: assets/launch-icon.svg paints its corners, so a tile would stand around the star on the dark launch screen',
+    ]);
+  });
+});
+
+describe('Given the motion tokens of a theme', () => {
+  const motionTheme = (reduced) => `
+    :root {
+      --motion-rise: 8px;
+      --motion-rise-reveal: 12px;
+      --motion-lift: 2px;
+      --motion-scale-enter: 0.96;
+      --pressed-scale: 0.97;
+      --duration-stagger: 0.05s;
+    }
+    ${reduced}
+  `;
+  const everyMotionStill = `
+    @media (prefers-reduced-motion: reduce) {
+      :root {
+        --motion-rise: 0px;
+        --motion-rise-reveal: 0px;
+        --motion-lift: 0px;
+        --motion-scale-enter: 1;
+        --pressed-scale: 1;
+        --duration-stagger: 0s;
+      }
+    }
+  `;
+
+  it('when its reduced motion block stills every distance, scale and stagger, then nothing is reported', () => {
+    assert.deepEqual(motionProblems('calm', motionTheme(everyMotionStill)), []);
+  });
+
+  it('when it has no reduced motion block, then every moving token is reported', () => {
+    const problems = motionProblems('restless', motionTheme(''));
+
+    assert.equal(problems.length, 6);
+    assert.match(
+      problems[0],
+      /theme restless keeps --motion-rise at 8px under prefers-reduced-motion/,
+    );
+  });
+
+  it('when its reduced motion block leaves a distance, a scale or the stagger moving, then each is reported', () => {
+    const problems = motionProblems(
+      'half',
+      motionTheme(`
+        @media (prefers-reduced-motion: reduce) {
+          :root {
+            --motion-rise: 0px;
+            --motion-rise-reveal: 4px;
+            --motion-lift: 0px;
+            --motion-scale-enter: 0.98;
+            --pressed-scale: 1;
+          }
+        }
+      `),
+    );
+
+    assert.deepEqual(problems, [
+      'theme half keeps --motion-rise-reveal at 4px under prefers-reduced-motion, where it must be 0px',
+      'theme half keeps --motion-scale-enter at 0.98 under prefers-reduced-motion, where it must be 1',
+      'theme half keeps --duration-stagger at 0.05s under prefers-reduced-motion, where it must be 0s',
+    ]);
+  });
+});
+
+describe('Given a style that uses the bouncy spring', () => {
+  it('when the same rule names the duration the spring was drawn for, then nothing is reported', () => {
+    const style = `
+      .done-icon {
+        transition: scale var(--duration-done) var(--ease-spring-bouncy);
+      }
+    `;
+
+    assert.deepEqual(springPairingProblems('done.scss', style), []);
+  });
+
+  it('when the rule moves it over another duration, then the rule is reported', () => {
+    const style = `
+      .thumb {
+        transition-duration: var(--duration-base);
+        transition-timing-function: var(--ease-spring-bouncy);
+      }
+    `;
+
+    assert.deepEqual(springPairingProblems('thumb.scss', style), [
+      'thumb.scss uses --ease-spring-bouncy without --duration-done in the same rule, so the spring is cut short or drawn out',
     ]);
   });
 });

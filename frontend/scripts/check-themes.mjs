@@ -536,6 +536,51 @@ function servesAtRoot(assets, folder) {
   );
 }
 
+const REDUCED_MOTION = '@media (prefers-reduced-motion: reduce)';
+const STILL_MOTION = [
+  { pattern: /^--motion-(rise|lift)/, still: '0px', holds: /^0(px|rem)?$/ },
+  { pattern: /^--motion-scale-|^--pressed-scale/, still: '1', holds: /^1$/ },
+  { pattern: /^--duration-stagger$/, still: '0s', holds: /^0m?s$/ },
+];
+
+export function motionProblems(theme, source) {
+  const declarations = declarationsByBlock(source);
+  const reduced = new Map(
+    declarations
+      .filter(
+        ({ chain }) => chain.length === 2 && chain[0] === REDUCED_MOTION && chain[1] === ':root',
+      )
+      .map(({ name, value }) => [name, value]),
+  );
+  return declarations
+    .filter(({ chain }) => chain.length === 1 && chain[0] === ':root')
+    .flatMap(({ name, value }) => {
+      const rule = STILL_MOTION.find(({ pattern }) => pattern.test(name));
+      if (rule === undefined) {
+        return [];
+      }
+      const kept = reduced.get(name) ?? value;
+      return rule.holds.test(kept)
+        ? []
+        : [
+            `theme ${theme} keeps ${name} at ${kept} under prefers-reduced-motion, where it must be ${rule.still}`,
+          ];
+    });
+}
+
+const SPRING_DURATIONS = new Map([['--ease-spring-bouncy', '--duration-done']]);
+
+export function springPairingProblems(file, source) {
+  const rules = source.replace(/\/\*[\s\S]*?\*\//g, '').match(/[^{}]*(?=\})/g) ?? [];
+  return [...SPRING_DURATIONS].flatMap(([spring, duration]) =>
+    rules.some((rule) => rule.includes(`var(${spring})`) && !rule.includes(`var(${duration})`))
+      ? [
+          `${file} uses ${spring} without ${duration} in the same rule, so the spring is cut short or drawn out`,
+        ]
+      : [],
+  );
+}
+
 export function themeAssetProblems({ reference, assets, publicFiles, angular }) {
   const problems = [];
   const expected = new Set(assets.get(reference) ?? []);
@@ -741,6 +786,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const themes = new Map(themeNames.map((name) => [name, declared(sources.get(name))]));
 
   const needed = new Map();
+  const springProblems = [];
   for (const file of scssFiles(join(root, 'src'))) {
     const source = readFileSync(file, 'utf8');
     const local = declared(source);
@@ -749,6 +795,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         needed.set(token, relative(root, file));
       }
     }
+    springProblems.push(...springPairingProblems(relative(root, file), source));
   }
 
   const receiptStyle = 'src/app/features/donations/receipt-pdf/receipt-style.ts';
@@ -780,7 +827,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return 1.05 / (luminance(hex) + 0.05);
   }
 
-  const problems = [];
+  const problems = [...springProblems];
   for (const theme of themes.keys()) {
     const folder = join(themesDir, theme, 'receipt');
     const tokens = values(sources.get(theme));
@@ -839,6 +886,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const [theme, source] of sources) {
     problems.push(...barContrastProblems(theme, source));
     problems.push(...appearanceProblems(theme, source));
+    problems.push(...motionProblems(theme, source));
     const assetsDir = join(themesDir, theme, 'assets');
     problems.push(
       ...manifestProblems({

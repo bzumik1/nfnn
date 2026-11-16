@@ -1,0 +1,62 @@
+@keyframes motion-appear {
+  from {
+    opacity: 0;
+    translate: 0 var(--motion-rise);
+  }
+
+  60% {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-leave {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-done {
+  from {
+    opacity: 0;
+    scale: var(--motion-scale-done);
+  }
+}
+
+@keyframes motion-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@keyframes motion-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.motion-reveal {
+  --reveal-order: 0;
+  opacity: 0;
+  translate: 0 var(--motion-rise-reveal);
+}
+
+.motion-reveal--shown {
+  opacity: 1;
+  translate: none;
+  transition:
+    opacity var(--duration-slow) var(--ease-out),
+    translate var(--duration-reveal) var(--ease-out);
+  transition-delay: calc(var(--reveal-order, 0) * var(--duration-stagger));
+}
+
+.page-transition__scroller .motion-reveal {
+  opacity: 1;
+  translate: none;
+}
+
+@media print {
+  .motion-reveal {
+    opacity: 1;
+    translate: none;
+  }
+}
