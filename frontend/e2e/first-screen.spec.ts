@@ -10,6 +10,12 @@ interface Box {
 }
 
 const FACE_IN_HERO_PHOTO: Box = { left: 0.43, right: 0.59, top: 0.19, bottom: 0.52 };
+const FACE_DOWN_TO_THE_MOUTH: Box = { ...FACE_IN_HERO_PHOTO, bottom: 0.45 };
+const COMPUTER_FROM_WIDTH = 900;
+
+function faceOn(screen: { width: number }): Box {
+  return screen.width >= COMPUTER_FROM_WIDTH ? FACE_IN_HERO_PHOTO : FACE_DOWN_TO_THE_MOUTH;
+}
 
 const DESKTOP_SCREENS = [
   { name: 'a MacBook', width: 1440, height: 900 },
@@ -202,7 +208,7 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         await page.goto('/');
         await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
 
-        const layout = await heroLayout(page, FACE_IN_HERO_PHOTO);
+        const layout = await heroLayout(page, faceOn(screen));
 
         expect(layout.scrolls, 'the landing page scrolls').toBe(false);
         expect(layout.shown.map(({ text }) => text)).toContain('Nová naděje');
