@@ -20,8 +20,12 @@
       <app-account-section [path]="item.path" />
     </div>
   } @else {
-    <div class="account-head" [class.account-head--centered]="presentation() === 'centered'">
-      <h2 id="account-sheet-title" class="account-title">
+    <div
+      class="account-head"
+      [class.account-head--centered]="presentation() === 'centered'"
+      [class.account-head--without-logo]="!showsLogo()"
+    >
+      <h2 id="account-sheet-title" class="account-title" [class.visually-hidden]="!showsLogo()">
         @if (showsLogo()) {
           <img
             class="account-logo"

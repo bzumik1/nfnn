@@ -31,6 +31,12 @@
   }
 }
 
+.account-head--without-logo + .account-profile {
+  margin-top: calc(
+    var(--dialog-close-inset) + var(--dialog-close-size) + var(--sheet-group-gap) - var(--space-9)
+  );
+}
+
 .account-appearance {
   position: relative;
 }
