@@ -29,7 +29,11 @@ type PageState = 'loading' | 'ready' | 'error';
 })
 class Page {
   readonly state = signal<PageState>('loading');
-  readonly view = loadingView(this.state, (state) => state === 'loading');
+  readonly view = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state === 'error',
+  );
 }
 
 describe('Given a page that loads its data behind a skeleton', () => {
@@ -138,15 +142,27 @@ describe('Given a page that loads its data behind a skeleton', () => {
     expect(element('.content')?.classList).toContain('appears');
   });
 
-  it('when a failure follows a shown skeleton, then the failure waits for the same minimum', async () => {
+  it('when a failure follows a shown skeleton, then the failure shows at once without the minimum', async () => {
     await open();
     await wait(300);
 
     await answer('error');
-    expect(element('.failure')).toBeNull();
 
-    await wait(400);
+    expect(element('.skeleton')).toBeNull();
     expect(element('.failure')).not.toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('when the page loads again after a failure that followed a skeleton, then fast content shows without appearing', async () => {
+    await open();
+    await wait(300);
+    await answer('error');
+
+    await answer('loading');
+    await wait(100);
+    await answer('ready');
+
+    expect(element('.content')?.classList).not.toContain('appears');
   });
 
   it('when the app is offline as the loading ends, then the offline state shows at once', async () => {
