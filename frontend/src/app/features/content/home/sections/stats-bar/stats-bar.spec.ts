@@ -8,6 +8,7 @@ type Sighting = (
 class FakeIntersectionObserver {
   static all: FakeIntersectionObserver[] = [];
   observed: Element[] = [];
+  disconnected = false;
 
   constructor(
     readonly sighting: Sighting,
@@ -20,7 +21,9 @@ class FakeIntersectionObserver {
     this.observed.push(element);
   }
 
-  disconnect(): void {}
+  disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 interface Count {
