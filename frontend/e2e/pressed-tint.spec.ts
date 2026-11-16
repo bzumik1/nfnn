@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { mockDonorApi, rememberedDonorSession } from './donor-session';
 import { expect, test } from './fixtures';
 
-const NO_TINT = 'rgba(0, 0, 0, 0)';
+const NO_TINT = '0%';
 
 interface TintWatch {
   tintTransitions: string[];

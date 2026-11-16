@@ -30,9 +30,9 @@
 @use 'styles/ui/skeleton';
 
 @property --pressed-tint {
-  syntax: '<color>';
+  syntax: '<percentage>';
   inherits: false;
-  initial-value: transparent;
+  initial-value: 0%;
 }
 
 *,

@@ -4,7 +4,7 @@
   }
 
   @media (forced-colors: active) {
-    --pressed-tint: transparent;
+    --pressed-tint: 0%;
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }
@@ -13,7 +13,10 @@
 $_at-once: 0s;
 
 @mixin tint-layer {
-  background-image: linear-gradient(var(--pressed-tint), var(--pressed-tint));
+  background-image: linear-gradient(
+    color-mix(in srgb, currentColor var(--pressed-tint), transparent),
+    color-mix(in srgb, currentColor var(--pressed-tint), transparent)
+  );
 }
 
 @mixin fades-tint-back {
@@ -34,8 +37,11 @@ $_at-once: 0s;
 }
 
 @mixin tints {
-  --pressed-tint: var(--color-pressed);
-  background-image: linear-gradient(var(--color-pressed), var(--color-pressed));
+  --pressed-tint: var(--pressed-tint-amount);
+  background-image: linear-gradient(
+    color-mix(in srgb, currentColor var(--pressed-tint-amount), transparent),
+    color-mix(in srgb, currentColor var(--pressed-tint-amount), transparent)
+  );
 }
 
 @mixin darkens {

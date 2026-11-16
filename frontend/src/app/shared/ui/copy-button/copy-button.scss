@@ -4,6 +4,10 @@
   display: inline-flex;
 }
 
+.ui-pill-button {
+  max-inline-size: 100%;
+}
+
 .copy-button__faces {
   display: inline-grid;
 }
@@ -17,6 +21,8 @@
 
 .copy-button__done {
   opacity: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 
   &::after {
     content: attr(data-label) / '';

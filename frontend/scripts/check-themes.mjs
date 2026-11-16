@@ -321,7 +321,7 @@ const READABLE_PAIRS = [
   },
   {
     texts: ['--color-text', '--color-text-secondary', '--color-text-muted', '--color-accent'],
-    grounds: [{ pressedTintOf: '--color-pressed' }],
+    grounds: [{ pressedTintOf: '--pressed-tint-amount' }],
     minimum: 4.5,
   },
   {
@@ -429,11 +429,11 @@ function resolvedColour(tokens, name, seen = new Set()) {
   return { written: value, colour: value === undefined ? null : colourOf(value) };
 }
 
-const CURRENT_COLOUR_TINT = /^color-mix\(in srgb, currentColor (\d+(?:\.\d+)?)%, transparent\)$/;
+const TINT_AMOUNT = /^(\d+(?:\.\d+)?)%$/;
 
 function pressedTintPercent(values, token) {
   const written = values.get(token);
-  const tint = CURRENT_COLOUR_TINT.exec(written ?? '');
+  const tint = TINT_AMOUNT.exec(written ?? '');
   return tint === null ? null : Number(tint[1]);
 }
 
@@ -537,7 +537,7 @@ export function appearanceProblems(theme, source) {
           pressedTintPercent(tokens, ground.pressedTintOf) === null
         ) {
           problems.push(
-            `${label}: ${ground.pressedTintOf} is ${tokens.get(ground.pressedTintOf)}, not a mix of currentColor with transparent, so the label under it cannot be measured`,
+            `${label}: ${ground.pressedTintOf} is ${tokens.get(ground.pressedTintOf)}, not a percentage of the text colour, so the label under it cannot be measured`,
           );
           continue;
         }

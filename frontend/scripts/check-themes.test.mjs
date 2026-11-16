@@ -355,25 +355,25 @@ describe('Given the colours a theme sets for the light and the dark appearance',
 
   it('when the pressed tint is so strong that a label under it fades, then its contrast on its own pressed tint is reported', () => {
     const strong = NOVA_NADEJE.replace(
-      '  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);',
-      '  --color-pressed: color-mix(in srgb, currentColor 45%, transparent);',
+      '  --pressed-tint-amount: 8%;',
+      '  --pressed-tint-amount: 45%;',
     );
 
     assert.match(
       appearanceProblems('strong', strong).join('\n'),
-      /^theme strong in the light appearance: --color-text-muted on its own pressed tint \(45 % of --color-pressed\) is [0-9.]+:1, below 4.5:1$/m,
+      /^theme strong in the light appearance: --color-text-muted on its own pressed tint \(45 % of --pressed-tint-amount\) is [0-9.]+:1, below 4.5:1$/m,
     );
   });
 
-  it('when the pressed tint is not a mix of the current colour with transparent, then it is reported, because the label under it cannot be measured', () => {
+  it('when the pressed tint is not a percentage of the text colour, then it is reported, because the label under it cannot be measured', () => {
     const solid = NOVA_NADEJE.replace(
-      '  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);',
-      '  --color-pressed: #eeeeee;',
+      '  --pressed-tint-amount: 8%;',
+      '  --pressed-tint-amount: #eeeeee;',
     );
 
     assert.match(
       appearanceProblems('solid', solid).join('\n'),
-      /--color-pressed is #eeeeee, not a mix of currentColor with transparent/,
+      /--pressed-tint-amount is #eeeeee, not a percentage of the text colour/,
     );
   });
 
