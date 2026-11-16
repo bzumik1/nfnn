@@ -35,11 +35,14 @@ class FakeIntersectionObserver {
 
 @Component({
   imports: [Reveal],
-  template: `<section [appReveal]="order()"><a href="#kontakt">Kontakt</a></section>`,
+  template: `<section [appReveal]="order()" (revealed)="revealed.set(revealed() + 1)">
+    <a href="#kontakt">Kontakt</a>
+  </section>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class RevealHost {
   readonly order = signal(0);
+  readonly revealed = signal(0);
 }
 
 const VIEWPORT_HEIGHT = 800;
@@ -153,6 +156,29 @@ describe('Given a block of a public page that reveals itself', () => {
       expect(standsStill(fixture)).toBe(true);
     });
 
+    it('then it tells the page it is shown only once it has moved in, and only once', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
+      expect(fixture.componentInstance.revealed()).toBe(0);
+
+      await sight(fixture, VIEWPORT_HEIGHT * 0.85);
+      block(fixture).dispatchEvent(transitionEnd('opacity'));
+      expect(fixture.componentInstance.revealed()).toBe(0);
+
+      block(fixture).dispatchEvent(transitionEnd('translate'));
+      block(fixture).dispatchEvent(transitionEnd('translate'));
+      expect(fixture.componentInstance.revealed()).toBe(1);
+    });
+
+    it('then a jump that shows it at once tells the page it is shown', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
+
+      await sight(fixture, VIEWPORT_HEIGHT * 0.65);
+
+      expect(fixture.componentInstance.revealed()).toBe(1);
+    });
+
     it('then a jump that lands it in the upper two thirds of the screen shows it at once', async () => {
       allowMotion();
       const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
@@ -242,6 +268,7 @@ describe('Given a block of a public page that reveals itself', () => {
 
     expect(standsStill(fixture)).toBe(true);
     expect(FakeIntersectionObserver.all).toEqual([]);
+    expect(fixture.componentInstance.revealed()).toBe(1);
   });
 
   it('when the visitor asked for less motion, then nothing hides it', async () => {
@@ -250,6 +277,7 @@ describe('Given a block of a public page that reveals itself', () => {
     const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
 
     expect(standsStill(fixture)).toBe(true);
+    expect(fixture.componentInstance.revealed()).toBe(1);
   });
 
   it('when the browser cannot watch the screen, then nothing hides it', async () => {

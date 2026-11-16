@@ -11,10 +11,6 @@
   gap: var(--space-5) var(--space-6);
 }
 
-.stat {
-  --stat-order: 0;
-}
-
 .stat-value {
   color: var(--color-text);
   font-family: var(--font-display);
@@ -29,13 +25,6 @@
   color: var(--color-text-soft);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-}
-
-.stat:not(.is-waiting) {
-  transition:
-    opacity var(--duration-entrance) ease,
-    transform var(--duration-entrance) ease;
-  transition-delay: calc(var(--stat-order) * var(--duration-fast));
 }
 
 :host(.on-image) {
@@ -57,11 +46,6 @@
     color: var(--color-on-image);
     text-shadow: var(--shadow-text-on-image);
   }
-}
-
-.stat.is-waiting {
-  opacity: 0;
-  transform: translateY(var(--space-3));
 }
 
 @include bp.up(nav) {

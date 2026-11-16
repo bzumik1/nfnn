@@ -1,0 +1,66 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > then the figures wait at zero, hidden, until the bar scrolls into view",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures start below the screen > then they wait hidden, row by row, and nothing counts",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > then a screen reader hears the final figures all along",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures are on the screen from the start > then a screen reader hears the final figures all along",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > and the bar scrolls into view, then the figures appear and count up to their values",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures start below the screen > and they have moved in, then they count up to their values",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > and the bar is not in view yet, then nothing starts",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures start below the screen > and they scroll in, then nothing counts while they are still moving in",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > and the figures counted up once, when the bar is shown again in the same visit, then they stand at their values at once",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures are on the screen from the start > and they counted up once, when they are shown again in the same visit, then they stand at their values at once",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > and the page is left before the bar came into view, then it still counts up the next time",
+    "replacement": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed and the figures start below the screen > and the page is left before they came into view, then they still count up the next time",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/stats-bar/stats-bar.spec.ts > Given the stats bar > when motion is allowed > and the page is left, then the watch on the viewport stops",
+    "replacement": "src/app/shared/ui/reveal/reveal.spec.ts > Given a block of a public page that reveals itself > when it starts below the screen > then leaving the page stops watching it",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures scroll into view, then they count up from zero to their values",
+    "replacement": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures scroll into view, then they count up from 70 % of their values, and 100% never counts",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values instead of zero, and 100% never counts, so the journey states the new start",
+    "contract": "docs/frontend-overview.md, content"
+  }
+]

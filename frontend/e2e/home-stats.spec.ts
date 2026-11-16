@@ -3,16 +3,15 @@ import { expect, test } from './fixtures';
 test.describe('Given a visitor on the About page', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('when the figures scroll into view, then they count up from zero to their values', async ({
+  test('when the figures scroll into view, then they count up from 70 % of their values, and 100% never counts', async ({
     page,
   }) => {
     await page.goto('/o-nas');
     const figures = page.locator('app-stats-bar [aria-hidden="true"]');
-    await expect(figures).toHaveText(['0', '0+', '0%', '2005']);
+    await expect(figures).toHaveText([/^\d+$/, '140+', '100%', '2005']);
 
     await page.locator('app-stats-bar').scrollIntoViewIfNeeded();
 
-    await expect(figures.nth(1)).not.toHaveText('0+');
     await expect(figures.nth(1)).toHaveText('200+');
     await expect(figures).toHaveText([/^\d+$/, '200+', '100%', '2005']);
     await expect(page.locator('app-stats-bar .stat').first()).toHaveCSS('opacity', '1');
