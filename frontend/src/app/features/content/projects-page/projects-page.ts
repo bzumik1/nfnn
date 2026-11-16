@@ -27,18 +27,12 @@ export const ALL_YEARS = 'vse';
 
 type Choice = number | 'all';
 type LoadState = 'loading' | 'ready' | 'error';
-type Arrangement = 'compact' | 'single' | 'pair' | 'trio' | 'many';
+type Arrangement = 'single' | 'pair' | 'trio' | 'many';
 
 export interface YearTile {
   readonly item: ProjectResponse;
   readonly size: StoryTileSize;
-  readonly rest: number | null;
 }
-
-const GRID_COLUMNS = 4;
-const COLUMNS_BESIDE_LARGE = 2;
-const TILES_BESIDE_LARGE = 4;
-const SPLIT_FROM_COLUMNS = 3;
 
 export interface YearGroup {
   readonly year: number;
@@ -122,19 +116,11 @@ export class ProjectsPage {
     const years = choice === 'all' ? this.years() : [choice];
     return years.map((year) => {
       const items = this.projects().filter((item) => item.year === year);
-      const arrangement = this.compact() ? 'compact' : arrangementOf(items.length);
+      const arrangement = this.compact() ? 'many' : arrangementOf(items.length);
       return {
         year,
         items,
-        tiles: items.map((item, index) => {
-          const rest = index === items.length - 1 ? restOfLastRow(arrangement, items.length) : null;
-          return {
-            item,
-            size:
-              rest !== null && rest >= SPLIT_FROM_COLUMNS ? 'split' : tileSize(arrangement, index),
-            rest,
-          };
-        }),
+        tiles: items.map((item, index) => ({ item, size: tileSize(arrangement, index) })),
         arrangement,
         lookBack: lookBacks.find((lookBack) => lookBack.year === year)?.slug ?? null,
       };
@@ -218,19 +204,6 @@ function arrangementOf(count: number): Arrangement {
     default:
       return 'many';
   }
-}
-
-function restOfLastRow(arrangement: Arrangement, count: number): number | null {
-  if (arrangement !== 'many') {
-    return null;
-  }
-  const small = count - 1;
-  const besideLarge = small <= TILES_BESIDE_LARGE;
-  const columns = besideLarge ? COLUMNS_BESIDE_LARGE : GRID_COLUMNS;
-  const placed = besideLarge ? small : small - TILES_BESIDE_LARGE;
-  const inLastRow = ((placed - 1) % columns) + 1;
-  const rest = columns - inLastRow + 1;
-  return rest > 1 ? rest : null;
 }
 
 function tileSize(arrangement: Arrangement, index: number): StoryTileSize {
