@@ -25,6 +25,8 @@ import {
   AdministrationPageReads,
 } from '../device-copy/administration-page-reads';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -104,7 +106,7 @@ const SERVER_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 @Component({
   selector: 'app-admin-actions',
-  imports: [NeedsConnection, RouterLink],
+  imports: [Skeleton, NeedsConnection, RouterLink],
   templateUrl: './admin-actions.html',
   styleUrl: './admin-actions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -119,6 +121,7 @@ export class AdminActions {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly rows = inject(CompactLayout).listsAsRows;
   protected readonly items = signal<AdminActionResponse[]>([]);
   protected readonly hasMore = signal(false);

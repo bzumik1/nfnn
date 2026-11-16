@@ -7,15 +7,18 @@
       Vyberte, v jakém pořadí web ukazuje příběhy na úvodní stránce a v Pomáháme. Ve stejném pořadí
       jsou i v seznamu nahoře, jen koncepty v něm stojí vždy první.
     </p>
-    @switch (state()) {
+    @switch (loadView.state()) {
       @case ('loading') {
         <p
-          class="ui-load-state ui-load-state--inset"
+          class="ui-load-state visually-hidden ui-load-state--inset"
           role="status"
           i18n="@@admin.projects.order.loading"
         >
           Načítáme řazení…
         </p>
+        @if (loadView.skeleton()) {
+          <app-skeleton [rows]="4" [inset]="true" />
+        }
       }
       @case ('error') {
         <div class="ui-load-state ui-load-state--inset ui-load-state--error" role="alert">
@@ -32,7 +35,12 @@
         </div>
       }
       @case ('ready') {
-        <form class="order-form" (submit)="save($event)" novalidate>
+        <form
+          class="order-form"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          (submit)="save($event)"
+          novalidate
+        >
           <fieldset class="orders">
             <legend class="visually-hidden" i18n="@@admin.projects.order.legend">
               Pořadí příběhů na webu

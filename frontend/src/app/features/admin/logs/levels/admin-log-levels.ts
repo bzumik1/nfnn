@@ -19,6 +19,8 @@ import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { LiveNotice, Notice } from '../../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { RadioGroup } from '../../../../shared/ui/radio-group/radio-group';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatBankTime } from '../../../donations/donation-date';
 import { AdminApi, LogLevel, LoggerResponse } from '../../admin-api';
 import { LogPageAccess } from '../log-page-access';
@@ -45,6 +47,7 @@ const LOGGER_NAME = /^(ROOT|[A-Za-z0-9_$][A-Za-z0-9_$.]*)$/;
 @Component({
   selector: 'app-admin-log-levels',
   imports: [
+    Skeleton,
     Dialog,
     FocusFirstInvalid,
     FormControlDirective,
@@ -65,6 +68,7 @@ export class AdminLogLevels {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly loggers = signal<LoggerResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly resetting = signal<string | null>(null);

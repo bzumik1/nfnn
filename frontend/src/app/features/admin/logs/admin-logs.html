@@ -10,15 +10,18 @@
       <h2 id="logs-health-title" class="ui-card__title" i18n="@@admin.logs.health.title">
         Stav serveru
       </h2>
-      @switch (healthState()) {
+      @switch (healthView.state()) {
         @case ('loading') {
           <p
-            class="ui-load-state ui-load-state--inset"
+            class="ui-load-state visually-hidden ui-load-state--inset"
             role="status"
             i18n="@@admin.logs.health.loading"
           >
             Zjišťujeme stav serveru…
           </p>
+          @if (healthView.skeleton()) {
+            <app-skeleton [rows]="3" [inset]="true" />
+          }
         }
         @case ('error') {
           <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
@@ -36,7 +39,7 @@
         }
         @case ('ready') {
           @if (health(); as health) {
-            <ul class="ui-list">
+            <ul class="ui-list" [class.ui-skeleton-reveal]="healthView.appears()">
               <li>
                 <a class="ui-list__row" routerLink="/sprava/logy/stav">
                   <span class="ui-list__lead ui-list__glyph"
@@ -74,15 +77,18 @@
       <h2 id="logs-files-title" class="ui-card__title" i18n="@@admin.logs.files.title">
         Soubory logu
       </h2>
-      @switch (filesState()) {
+      @switch (filesView.state()) {
         @case ('loading') {
           <p
-            class="ui-load-state ui-load-state--inset"
+            class="ui-load-state visually-hidden ui-load-state--inset"
             role="status"
             i18n="@@admin.logs.files.loading"
           >
             Načítáme soubory…
           </p>
+          @if (filesView.skeleton()) {
+            <app-skeleton [rows]="3" [inset]="true" />
+          }
         }
         @case ('error') {
           <div class="ui-load-state ui-load-state--error ui-load-state--inset" role="alert">
@@ -100,7 +106,7 @@
         }
         @case ('ready') {
           @if (!available()) {
-            <div class="ui-card__body">
+            <div class="ui-card__body" [class.ui-skeleton-reveal]="filesView.appears()">
               <p
                 class="ui-callout ui-callout--danger"
                 role="alert"
@@ -111,9 +117,15 @@
               </p>
             </div>
           } @else if (files().length === 0) {
-            <p class="ui-card__empty" i18n="@@admin.logs.files.none">Složka logů je prázdná.</p>
+            <p
+              class="ui-card__empty"
+              [class.ui-skeleton-reveal]="filesView.appears()"
+              i18n="@@admin.logs.files.none"
+            >
+              Složka logů je prázdná.
+            </p>
           } @else {
-            <ul class="ui-list">
+            <ul class="ui-list" [class.ui-skeleton-reveal]="filesView.appears()">
               @for (file of current(); track file.name) {
                 <li>
                   <a class="ui-list__row" [routerLink]="filePath" [queryParams]="query(file)">

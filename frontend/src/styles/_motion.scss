@@ -83,7 +83,7 @@ $_never: (
   @include _fades-when-reduced(transition);
 
   @media (hover: hover) and (pointer: fine) {
-    &:hover {
+    &:hover:not([aria-disabled='true']) {
       transition-duration: var(--duration-fast);
       transition-timing-function: var(--ease-out);
       @content;

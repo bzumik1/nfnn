@@ -16,6 +16,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { problemTypeEndsWith } from '../../../../core/auth/api-problem';
 import { pluralCategory } from '../../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { formatBankTime, formatDonationDate } from '../../../donations/donation-date';
 import {
@@ -56,7 +58,7 @@ const NOT_FOUND = 'donations/sent-report-not-found';
 
 @Component({
   selector: 'app-admin-sent-report',
-  imports: [RouterLink, NeedsConnection],
+  imports: [Skeleton, RouterLink, NeedsConnection],
   templateUrl: './admin-sent-report.html',
   styleUrl: './admin-sent-report.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,6 +73,7 @@ export class AdminSentReport {
   protected readonly known = MONTH_SHAPE.test(this.month);
   protected readonly monthName = this.known ? formatReportMonth(this.month) : '';
   protected readonly state = signal<LoadState>(this.known ? 'loading' : 'not-found');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly report = signal<SentReportDetailResponse | null>(null);
   protected readonly blocks = computed(() => {
     const report = this.report();

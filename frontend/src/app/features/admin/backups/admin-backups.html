@@ -37,11 +37,14 @@
       </div>
     </section>
   } @else {
-    @switch (state()) {
+    @switch (loadView.state()) {
       @case ('loading') {
-        <p class="ui-load-state" role="status" i18n="@@admin.backups.loading">
+        <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.backups.loading">
           Načítáme stav záloh…
         </p>
+        @if (loadView.skeleton()) {
+          <app-skeleton [rows]="4" />
+        }
       }
       @case ('error') {
         <div class="ui-load-state ui-load-state--error" role="alert">
@@ -58,7 +61,11 @@
         </div>
       }
       @case ('ready') {
-        <section class="ui-card" aria-labelledby="backups-status-title">
+        <section
+          class="ui-card"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          aria-labelledby="backups-status-title"
+        >
           <h2 id="backups-status-title" class="ui-card__title" i18n="@@admin.backups.status.title">
             Stav záloh
           </h2>
@@ -195,7 +202,11 @@
           </div>
         </section>
 
-        <section class="ui-card" aria-labelledby="backups-list-title">
+        <section
+          class="ui-card"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          aria-labelledby="backups-list-title"
+        >
           <h2 id="backups-list-title" class="ui-card__title" i18n="@@admin.backups.list.title">
             Zálohy na serveru
           </h2>
@@ -259,11 +270,16 @@
         </section>
 
         @if (key(); as status) {
-          <app-backup-key-card [status]="status" (changed)="keyChanged($event)" />
+          <app-backup-key-card
+            [class.ui-skeleton-reveal]="loadView.appears()"
+            [status]="status"
+            (changed)="keyChanged($event)"
+          />
         }
 
         @if (schedule(); as plan) {
           <app-backup-schedule-card
+            [class.ui-skeleton-reveal]="loadView.appears()"
             [schedule]="plan"
             [disabled]="!available()"
             (saved)="scheduleSaved($event)"

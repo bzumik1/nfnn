@@ -174,7 +174,7 @@
               appNeedsConnection
               type="submit"
               class="ui-button ui-button--primary"
-              [disabled]="saving()"
+              [appBusy]="saving()"
             >
               @if (saving()) {
                 <span i18n="@@admin.report.settings.saving">Ukládáme…</span>

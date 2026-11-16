@@ -19,6 +19,8 @@ import { AdministrationPageReads } from '../device-copy/administration-page-read
 import { formatBankTime, formatDonationDate } from '../../donations/donation-date';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -27,7 +29,7 @@ const FORBIDDEN = 'auth/forbidden';
 
 @Component({
   selector: 'app-admin-news',
-  imports: [NeedsConnection, RouterLink, LiveNotice],
+  imports: [Skeleton, NeedsConnection, RouterLink, LiveNotice],
   templateUrl: './admin-news.html',
   styleUrl: './admin-news.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +44,7 @@ export class AdminNews {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly items = signal<NewsArticleResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
 

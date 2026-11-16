@@ -6,9 +6,14 @@
     Logy z předchozích dnů, uložené a zkomprimované zvlášť. Nejnovější jsou nahoře.
   </p>
 
-  @switch (state()) {
+  @switch (loadView.state()) {
     @case ('loading') {
-      <p class="ui-load-state" role="status" i18n="@@admin.logs.files.loading">Načítáme soubory…</p>
+      <p class="ui-load-state visually-hidden" role="status" i18n="@@admin.logs.files.loading">
+        Načítáme soubory…
+      </p>
+      @if (loadView.skeleton()) {
+        <app-skeleton [rows]="4" />
+      }
     }
     @case ('error') {
       <div class="ui-load-state ui-load-state--error" role="alert">
@@ -26,14 +31,25 @@
     }
     @case ('ready') {
       @if (!available()) {
-        <p class="ui-callout ui-callout--danger" role="alert" i18n="@@admin.logs.files.unavailable">
+        <p
+          class="ui-callout ui-callout--danger"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          role="alert"
+          i18n="@@admin.logs.files.unavailable"
+        >
           Backend nevidí složku logů. Zkontrolujte compose na serveru: backend má mít připojenou
           složku /DATA/AppData/nfnn/logs jako /logs.
         </p>
       } @else if (groups().length === 0) {
-        <p class="empty" i18n="@@admin.logs.files.older.none">Starší soubory zatím nejsou.</p>
+        <p
+          class="empty"
+          [class.ui-skeleton-reveal]="loadView.appears()"
+          i18n="@@admin.logs.files.older.none"
+        >
+          Starší soubory zatím nejsou.
+        </p>
       } @else {
-        <div class="cards">
+        <div class="cards" [class.ui-skeleton-reveal]="loadView.appears()">
           @for (group of groups(); track group.series) {
             <section class="ui-card" [attr.aria-labelledby]="'older-' + $index">
               <h2 class="ui-card__title" [id]="'older-' + $index">

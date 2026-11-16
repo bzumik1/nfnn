@@ -332,7 +332,7 @@
                   appNeedsConnection
                   type="button"
                   class="ui-button ui-button--primary"
-                  [disabled]="saving()"
+                  [appBusy]="saving()"
                   (click)="save()"
                 >
                   @if (saving()) {

@@ -12,6 +12,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../../shared/ui/skeleton/skeleton';
 import { AdminBackupsResponse, BackupFileResponse } from '../../admin-api';
 import { LogPageAccess } from '../../logs/log-page-access';
 import { backupDays } from '../backup-days';
@@ -26,7 +28,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 @Component({
   selector: 'app-admin-backup-history',
-  imports: [NeedsConnection, BackupSheet],
+  imports: [Skeleton, NeedsConnection, BackupSheet],
   templateUrl: './admin-backup-history.html',
   styleUrl: './admin-backup-history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +43,7 @@ export class AdminBackupHistory {
 
   protected readonly downloads = inject(BackupDownloads);
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly opened = signal<BackupFileResponse | null>(null);
   protected readonly days = computed(() => backupDays(this.view()?.backups ?? []));

@@ -30,6 +30,7 @@ import { ReceiptSignatory } from './receipt-signatory/receipt-signatory';
 import { ReceiptSigningKey } from './receipt-signing-key/receipt-signing-key';
 import { AdminApi, AdminSettingResponse, AdminTestEmailRequest } from '../admin-api';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
+import { BusyButton } from '../../../shared/ui/busy-button/busy-button';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
 import { formDraft } from '../../../core/drafts/form-draft';
 import {
@@ -201,6 +202,7 @@ const SETTINGS_RELOADED_TEXT = $localize`:@@admin.settings.draft.reloaded:Vaše 
 @Component({
   selector: 'app-admin-settings',
   imports: [
+    BusyButton,
     LiveNotice,
     FormsModule,
     NgTemplateOutlet,

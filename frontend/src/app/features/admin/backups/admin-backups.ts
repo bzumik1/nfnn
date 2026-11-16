@@ -44,6 +44,8 @@ import { ADMIN_BACKUP_HISTORY_PATH, RESTORE_STATE_KEY } from './backup-paths';
 import { LiveNotice, Notice } from '../../../shared/ui/live-notice/live-notice';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { loadingView } from '../../../shared/ui/skeleton/loading-view';
+import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { AdministrationPageReads } from '../device-copy/administration-page-reads';
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -78,6 +80,7 @@ function failedAt(at: string): string {
 @Component({
   selector: 'app-admin-backups',
   imports: [
+    Skeleton,
     NeedsConnection,
     LiveNotice,
     RestoreDialog,
@@ -109,6 +112,7 @@ export class AdminBackups {
   protected readonly historyPath = ADMIN_BACKUP_HISTORY_PATH;
 
   protected readonly state = signal<LoadState>('loading');
+  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly job = signal<RunningJob | null>(null);

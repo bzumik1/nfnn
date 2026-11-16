@@ -1,0 +1,8 @@
+<div class="ui-skeleton" [class.ui-card]="!inset()" [class.ui-skeleton--inset]="inset()">
+  @if (!inset()) {
+    <span class="ui-skeleton__line ui-skeleton__line--title"></span>
+  }
+  @for (line of lines(); track line) {
+    <span class="ui-skeleton__line"></span>
+  }
+</div>
