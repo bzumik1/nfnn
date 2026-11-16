@@ -46,6 +46,12 @@ describe('Given the scroller the router uses for links to a section', () => {
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }));
   });
 
+  it('when the visitor asks for less motion and the caller asks for a glide, then the page still jumps', () => {
+    scrollerWith(true).scrollToAnchor('kontakt', { behavior: 'smooth' });
+
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'instant' }));
+  });
+
   it('when the router restores a position, then the page jumps there', () => {
     scrollerWith(false).scrollToPosition([0, 120]);
 

@@ -32,8 +32,8 @@ export class SmoothAnchorScroller implements ViewportScroller {
     const box = target.getBoundingClientRect();
     const [offsetLeft, offsetTop] = this.offset();
     this.window.scrollTo({
-      behavior: this.lessMotion() ? 'instant' : 'smooth',
       ...options,
+      behavior: this.lessMotion() ? 'instant' : (options?.behavior ?? 'smooth'),
       left: box.left + this.window.scrollX - offsetLeft,
       top: box.top + this.window.scrollY - offsetTop,
     });
