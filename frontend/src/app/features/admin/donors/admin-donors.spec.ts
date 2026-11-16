@@ -253,7 +253,7 @@ describe('Given an administrator on the donors page', () => {
 
     const [row] = rows();
     expect((row.querySelector('td[data-label="Registrace"]')?.textContent ?? '').trim()).toBe(
-      '5.\u00a03.\u00a02026',
+      '5.\u00a03. 2026',
     );
   });
 

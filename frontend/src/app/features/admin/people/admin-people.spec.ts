@@ -983,7 +983,7 @@ describe('Given an administrator and the texts of the people page saved by someo
 
     const dialog = element(fixture, 'app-changed-meanwhile-dialog dialog');
     expect(dialog.textContent).toContain('Zatímco jste měli formulář otevřený');
-    expect(dialog.textContent).toContain('Novější verze je z 12.\u00a011.\u00a02026 9:05.');
+    expect(dialog.textContent).toContain('Novější verze je z 12.\u00a011. 2026 9:05.');
     expect(element<HTMLTextAreaElement>(fixture, '#founders-note').value).toBe(
       'Děkujeme všem dárcům.',
     );

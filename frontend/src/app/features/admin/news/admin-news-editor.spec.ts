@@ -991,7 +991,7 @@ describe('Given an administrator editing a published news article', () => {
 
     const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
     expect(sheet.textContent).toContain('vaše úpravy zůstávají ve formuláři');
-    expect(sheet.textContent).toContain('Novější verze je z 5.\u00a011.\u00a02026 16:20.');
+    expect(sheet.textContent).toContain('Novější verze je z 5.\u00a011. 2026 16:20.');
     expect(sheet.textContent).not.toContain('Uložit svou verzi místo novější');
     button(fixture, 'Nechat úpravy ve formuláři').click();
     await settle(fixture);

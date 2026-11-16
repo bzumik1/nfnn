@@ -47,5 +47,5 @@ function pragueParts(isoInstant: string): Record<string, string> {
 }
 
 function joinDate(day: string, month: string, year: string): string {
-  return `${Number(day)}.${NO_BREAK_SPACE}${Number(month)}.${NO_BREAK_SPACE}${year}`;
+  return `${Number(day)}.${NO_BREAK_SPACE}${Number(month)}. ${year}`;
 }

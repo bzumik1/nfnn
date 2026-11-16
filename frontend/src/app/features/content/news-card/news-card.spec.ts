@@ -33,7 +33,7 @@ describe('Given the card of a news article', () => {
       'Zahrada pro děti',
     );
     expect(fixture.nativeElement.querySelector('.news-date')?.textContent?.trim()).toBe(
-      '20.\u00a010.\u00a02026',
+      '20.\u00a010. 2026',
     );
   });
 
@@ -43,7 +43,7 @@ describe('Given the card of a news article', () => {
     const card = fixture.nativeElement as HTMLElement;
 
     expect(card.querySelector('.news-tag')?.textContent).toBe('Projekt');
-    expect(card.querySelector('.news-date')?.textContent).toBe('20.\u00a010.\u00a02026');
+    expect(card.querySelector('.news-date')?.textContent).toBe('20.\u00a010. 2026');
     expect(card.querySelector('.news-perex')?.textContent).toBe(newsArticle().perex);
     const image = card.querySelector('img') as HTMLImageElement;
     expect(image.getAttribute('src')).toBe(`/api/content/media/${IMAGE_ID}?w=480`);

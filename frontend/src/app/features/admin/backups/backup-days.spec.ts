@@ -11,9 +11,9 @@ describe('Given the backups on the server newest first', () => {
 
   it('when they are grouped, then each Prague day is a group with its weekday and date, newest first', () => {
     expect(backupDays(backups).map((day) => day.title)).toEqual([
-      'sobota 7.\u00a011.\u00a02026',
-      'pátek 6.\u00a011.\u00a02026',
-      'neděle 25.\u00a010.\u00a02026',
+      'sobota 7.\u00a011. 2026',
+      'pátek 6.\u00a011. 2026',
+      'neděle 25.\u00a010. 2026',
     ]);
   });
 

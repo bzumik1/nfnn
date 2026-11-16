@@ -509,9 +509,9 @@ describe('Given the sign-in dialog', () => {
           expect(recovery.textContent).toContain('5544332217/2010');
           expect(recovery.textContent).toContain('1\u00a0Kč');
           expect(recovery.textContent).toContain('OBNOVA K7MP4RXA');
-          expect(recovery.textContent).toContain('Platbu pošlete nejdříve 27.\u00a010.\u00a02026');
+          expect(recovery.textContent).toContain('Platbu pošlete nejdříve 27.\u00a010. 2026');
           expect(recovery.textContent).toContain(
-            'Zpráva pro příjemce platí do 31.\u00a010.\u00a02026 11:00',
+            'Zpráva pro příjemce platí do 31.\u00a010. 2026 11:00',
           );
           expect(
             [...recovery.querySelectorAll('app-copy-button button')].map((button) =>

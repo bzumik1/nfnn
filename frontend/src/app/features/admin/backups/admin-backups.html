@@ -207,7 +207,8 @@
                     >Nejnovější záloha</span
                   >
                   <span class="ui-list__meta"
-                    >{{ time(item.createdAt) }} · {{ kindName(item) }}</span
+                    ><span class="ui-date">{{ time(item.createdAt) }}</span> ·
+                    {{ kindName(item) }}</span
                   >
                   <span class="ui-list__value">{{ size(item.sizeBytes) }}</span>
                   <svg

@@ -224,7 +224,7 @@
                           }
                         </span>
                         <span class="ui-list__meta">
-                          {{ date(item.bookedOn) }} ·
+                          <span class="ui-date">{{ date(item.bookedOn) }}</span> ·
                           @if (item.variableSymbol) {
                             <ng-container i18n="@@admin.payments.row.symbol"
                               >VS {{ item.variableSymbol }}</ng-container
@@ -293,7 +293,7 @@
                 @for (item of items(); track item.id) {
                   <tr tabindex="-1" data-payment-row>
                     <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
-                      {{ date(item.bookedOn) }}
+                      <span class="ui-date">{{ date(item.bookedOn) }}</span>
                       @if (item.unpairedByAdminAt) {
                         <span class="held-tag" i18n="@@admin.payments.heldTag">jen ručně</span>
                         <span class="held-note" i18n="@@admin.payments.heldTag.title"

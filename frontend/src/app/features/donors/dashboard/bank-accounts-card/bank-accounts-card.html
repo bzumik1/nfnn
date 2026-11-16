@@ -62,7 +62,7 @@
                   }
                   @if (account.verifiedOn; as verifiedOn) {
                     <li i18n="@@donor.bankAccounts.verifiedOn">
-                      ověřeno {{ formatDate(verifiedOn) }}
+                      ověřeno <span class="ui-date">{{ formatDate(verifiedOn) }}</span>
                     </li>
                   }
                   @if (account.status === 'DISCONNECTED' && account.disconnectedOn) {
