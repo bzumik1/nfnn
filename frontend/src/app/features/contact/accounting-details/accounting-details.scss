@@ -25,7 +25,7 @@
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: first baseline;
     justify-content: space-between;
     gap: var(--space-1) var(--space-3);
   }
@@ -37,13 +37,13 @@
 }
 
 @include bp.up(nav) {
-  .accounting-value--iban {
-    white-space: nowrap;
+  .accounting-item dd {
+    flex-wrap: nowrap;
   }
-}
 
-.accounting-item app-copy-button {
-  margin-block: calc((1lh - 2rem) / 2);
+  .accounting-value {
+    min-width: 0;
+  }
 }
 
 .accounting-link {

@@ -886,3 +886,64 @@ for (const rootPx of [34, 53]) {
     }
   });
 }
+
+async function copyButtonsWithinFingerReachOfEachOther(card: Locator): Promise<string[]> {
+  return card.evaluate((element) => {
+    const reach = parseFloat(getComputedStyle(element).getPropertyValue('--touch-target-size'));
+    const areas = Array.from(element.querySelectorAll('app-copy-button button')).map((button) => {
+      const box = button.getBoundingClientRect();
+      const grow = Math.max(0, reach - box.height) / 2;
+      return { name: button.textContent!.trim(), top: box.top - grow, bottom: box.bottom + grow };
+    });
+    return areas
+      .slice(1)
+      .filter((area, index) => area.top < areas[index].bottom - 0.5)
+      .map((area, index) => `${areas[index].name} | ${area.name}`);
+  });
+}
+
+for (const { screen, viewport, rootPx } of [
+  { screen: 'a computer 1280 px wide', viewport: { width: 1280, height: 900 }, rootPx: null },
+  { screen: 'an iPad on its side', viewport: { width: 1180, height: 820 }, rootPx: 34 },
+  {
+    screen: 'an iPad on its side',
+    viewport: { width: 1180, height: 820 },
+    rootPx: LARGEST_SYSTEM_TEXT_PX,
+  },
+]) {
+  test.describe(`Given an accountant on ${screen} whose text is at ${rootPx ? `${rootPx} px` : 'its default size'}`, () => {
+    test.use({ viewport });
+
+    test('when they open Údaje pro účetní on O nás, then every value stays within the card, the copy buttons stand in one column and their touch areas never overlap', async ({
+      page,
+    }) => {
+      if (rootPx) {
+        await page.addInitScript((px) => {
+          document.addEventListener('DOMContentLoaded', () => {
+            const style = document.createElement('style');
+            style.textContent = `html { font-size: ${px}px; }`;
+            document.head.append(style);
+          });
+        }, rootPx);
+      }
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      const card = page.locator('app-accounting-details .accounting');
+      await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+      expect(await contentPastTheSides(card)).toEqual([]);
+      expect(await copyButtonsWithinFingerReachOfEachOther(card)).toEqual([]);
+      const rightEdges = await card
+        .locator('app-copy-button button')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => Math.round(button.getBoundingClientRect().right)),
+        );
+      expect(new Set(rightEdges).size).toBe(1);
+      if (!rootPx) {
+        expect(await linesOf(card.locator('.accounting-value').filter({ hasText: 'CZ26' }))).toBe(
+          1,
+        );
+      }
+    });
+  });
+}
