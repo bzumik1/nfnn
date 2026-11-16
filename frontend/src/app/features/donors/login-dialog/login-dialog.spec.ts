@@ -524,8 +524,8 @@ describe('Given the sign-in dialog', () => {
           await settle();
 
           const lead = element('.recovery .step-lead').textContent?.replace(/\s+/g, ' ').trim();
-          expect(lead).toContain(
-            'z bankovního účtu, ze kterého jste nám už poslali dar (obvykle ten, ze kterého nám platíte)',
+          expect(lead).toBe(
+            'Pošlete 1 Kč se zprávou níže z bankovního účtu vedeného na vaše jméno (u firmy na firmu), ze kterého jste nám už poslali dar. Platba z účtu někoho jiného, třeba partnera nebo rodičů, obnovu neodemkne; v tom případě nám napište. Jakmile platbu načteme, vypneme dvoufaktorové ověření, ukončíme všechna přihlášení a pošleme vám e‑mail. Pak se přihlásíte jen heslem.',
           );
           expect(lead).not.toContain('přehled');
         });
