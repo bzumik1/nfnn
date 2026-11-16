@@ -1,6 +1,13 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { GuardsCheckEnd, NavigationEnd, provideRouter, Router } from '@angular/router';
+import {
+  ActivationEnd,
+  GuardsCheckEnd,
+  NavigationEnd,
+  provideRouter,
+  Router,
+} from '@angular/router';
+import { EMPTY } from 'rxjs';
 import { CompactLayout } from '../layout/compact-layout';
 import { PAGE_FADE_CLASS, PAGE_FADE_HIDDEN_CLASS, PageFade } from './page-fade';
 import { PAGE_LAYER_CLASS, PAGE_TRANSITION_LONGEST_MS } from './page-transitions';
@@ -24,14 +31,22 @@ function computerWith(compact: boolean): void {
         {
           path: '',
           children: [
+            { path: '', pathMatch: 'full', component: Blank },
             { path: 'o-nas', component: Blank },
             { path: 'aktuality', component: Blank },
+            { path: 'zruseno', component: Blank, resolve: { nothing: () => EMPTY } },
           ],
         },
       ]),
       { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
     ],
   });
+}
+
+function dropFocusAsTheBrowserDoesFromInert(focused: HTMLElement): void {
+  if (focused.closest('[inert]') !== null) {
+    focused.blur();
+  }
 }
 
 function cover(): HTMLElement | null {
@@ -86,7 +101,9 @@ describe('Given a computer that animates, with O nás open', () => {
     vi.useRealTimers();
     document.querySelectorAll(`.${PAGE_FADE_CLASS}`).forEach((node) => node.remove());
     document.documentElement.classList.remove(PAGE_FADE_HIDDEN_CLASS);
+    document.body.style.backgroundColor = '';
     layer.remove();
+    vi.restoreAllMocks();
     delete (window as { matchMedia?: unknown }).matchMedia;
   });
 
@@ -154,6 +171,70 @@ describe('Given a computer that animates, with O nás open', () => {
       mainHidden: true,
     });
   });
+
+  it('when the home page darkens the ground as it arrives, then the old content keeps its own ground until it is gone', async () => {
+    document.body.style.backgroundColor = 'rgb(255, 255, 255)';
+    await start(false);
+    router.events.subscribe((event) => {
+      if (event instanceof ActivationEnd && event.snapshot.routeConfig?.pathMatch === 'full') {
+        document.body.style.backgroundColor = 'rgb(18, 24, 38)';
+      }
+    });
+
+    await router.navigateByUrl('/');
+
+    expect(seenAtGuards.at(-1)?.opaque).toBe(false);
+    expect(cover()?.style.backgroundColor).toBe('rgb(255, 255, 255)');
+  });
+
+  it('when the page layer starts below the top of the document, then the copy shows the old page where it stood', async () => {
+    await start(false);
+    Object.defineProperty(window, 'scrollY', { value: 500, configurable: true });
+    vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, -380, 1180, 2000));
+    const placed = vi.spyOn(Element.prototype, 'scrollTop', 'set');
+
+    await router.navigateByUrl('/aktuality');
+
+    expect(placed).toHaveBeenCalledWith(380);
+    expect(placed).not.toHaveBeenCalledWith(500);
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  });
+
+  it('when the navigation is cancelled after the cover went up, then the focus goes back where it was', async () => {
+    await start(false);
+    const link = document.createElement('a');
+    link.href = '/zruseno';
+    link.textContent = 'Zrušeno';
+    main.append(link);
+    link.focus();
+    router.events.subscribe((event) => {
+      if (event instanceof GuardsCheckEnd) {
+        dropFocusAsTheBrowserDoesFromInert(link);
+      }
+    });
+
+    await router.navigateByUrl('/zruseno');
+
+    expect(cover()).toBeNull();
+    expect(main.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(link);
+  });
+
+  for (const [name, happen] of [
+    ['the window is resized', () => window.dispatchEvent(new Event('resize'))],
+    ['the wheel turns', () => document.dispatchEvent(new WheelEvent('wheel', { bubbles: true }))],
+  ] as const) {
+    it(`when ${name} while the copy covers the page, then the new page shows at once`, async () => {
+      await start(false);
+      vi.useFakeTimers();
+      await router.navigateByUrl('/aktuality');
+
+      happen();
+
+      expect(cover()).toBeNull();
+      expect(document.documentElement.classList).not.toContain(PAGE_FADE_HIDDEN_CLASS);
+    });
+  }
 
   it('when only the query changes, then nothing covers the page', async () => {
     await start(false);

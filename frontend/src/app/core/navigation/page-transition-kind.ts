@@ -22,7 +22,7 @@ export interface NavigationFacts {
 
 export type PageFadeFacts = Pick<
   NavigationFacts,
-  'first' | 'reducedMotion' | 'compact' | 'dialogOpen' | 'trigger' | 'skipLocationChange'
+  'first' | 'reducedMotion' | 'compact' | 'dialogOpen' | 'trigger' | 'back' | 'skipLocationChange'
 > & {
   readonly from: string;
   readonly to: string;
@@ -35,6 +35,7 @@ export function pageFadeFor(facts: PageFadeFacts): boolean {
     !facts.compact &&
     !facts.dialogOpen &&
     facts.trigger === 'imperative' &&
+    !facts.back &&
     !facts.skipLocationChange &&
     pathOf(facts.from) !== pathOf(facts.to)
   );

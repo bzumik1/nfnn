@@ -12,6 +12,7 @@ interface FadeFrame {
   readonly header: string;
   readonly copyHeaderShown: boolean;
   readonly copyHidden: boolean;
+  readonly ground: string;
   readonly headingFocused: boolean;
   readonly top: number;
 }
@@ -33,6 +34,12 @@ async function watchFrames(page: Page): Promise<void> {
     window.nfnnFadeFrames = [];
     const opacityOf = (element: Element | null): number | null =>
       element === null ? null : Number(getComputedStyle(element).opacity);
+    const groundBehind = (overlay: Element | null): string => {
+      const own = overlay === null ? '' : getComputedStyle(overlay).backgroundColor;
+      return own !== '' && own !== 'rgba(0, 0, 0, 0)'
+        ? own
+        : getComputedStyle(document.body).backgroundColor;
+    };
     const sample = (): void => {
       const overlay = document.querySelector('.page-fade');
       const copy = overlay?.querySelector('.page-fade__copy') ?? null;
@@ -54,6 +61,7 @@ async function watchFrames(page: Page): Promise<void> {
         copyHidden:
           overlay === null ||
           (overlay.hasAttribute('inert') && overlay.getAttribute('aria-hidden') === 'true'),
+        ground: groundBehind(overlay),
         headingFocused: focused?.tagName === 'H1' && content?.contains(focused) === true,
         top: window.scrollY,
       });
@@ -228,6 +236,100 @@ test.describe('Given a visitor on a computer that animates', () => {
     expect(
       frames.filter((frame) => frame.copy !== null && frame.copy > 0 && frame.content > 0),
     ).toEqual([]);
+  });
+});
+
+test.describe('Given a visitor on a computer that animates, reading the news', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+
+  test.beforeEach(async ({ page }) => {
+    await mockPublicContent(page);
+    await mockDonorApi(page, donorWithDonations);
+  });
+
+  test('when they press Zpět on an article opened without a step before it, then the list shows at once, as Zpět never fades', async ({
+    page,
+  }) => {
+    await page.goto(`/aktuality/${article.slug}`);
+    await expect(page.getByRole('heading', { level: 1, name: article.title })).toBeVisible();
+    await watchFrames(page);
+
+    await page.getByRole('banner').getByRole('button', { name: 'Zpět' }).click();
+
+    await expectNoFade(page, '/aktuality');
+  });
+
+  test('when they go home by the logo from O nás, then the old content keeps its own ground until it is gone', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tab(page, 'O nás')).toHaveAttribute('aria-current', 'page');
+    const ground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    await slowAnimations(page);
+    await watchFrames(page);
+
+    await page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Nová naděje – nadační fond' })
+      .click();
+
+    const covering = (await settledOn(page, '/')).filter(
+      (frame) => frame.copy !== null && frame.copy > 0,
+    );
+    expect(covering.length).toBeGreaterThan(0);
+    expect(covering.filter((frame) => frame.ground !== ground)).toEqual([]);
+  });
+});
+
+test.describe('Given a visitor with an iPad on its side', () => {
+  test.use({
+    viewport: { width: 1180, height: 820 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await mockPublicContent(page);
+    await mockDonorApi(page, donorWithDonations);
+  });
+
+  test('when they tap Aktuality, then the content fades through, and a tap while it fades shows the new page at once', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas');
+    await expect(tab(page, 'O nás')).toHaveAttribute('aria-current', 'page');
+    await slowAnimations(page);
+
+    await tab(page, 'Aktuality').tap();
+    await expect(page.locator('.page-fade')).toHaveCount(1);
+    await tab(page, 'Aktuality').tap();
+
+    await expect(page).toHaveURL('/aktuality');
+    await expect(page.locator('.page-fade')).toHaveCount(0);
+    await expect(page.locator('main#obsah')).toHaveCSS('opacity', '1');
+  });
+});
+
+test.describe('Given a visitor with an iPad upright', () => {
+  test.use({
+    viewport: { width: 820, height: 1180 },
+    hasTouch: true,
+    reducedMotion: 'no-preference',
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await mockPublicContent(page);
+    await mockDonorApi(page, donorWithDonations);
+  });
+
+  test('when they tap Aktuality, then the pages swap without a fade', async ({ page }) => {
+    await page.goto('/o-nas');
+    await expect(tab(page, 'O nás')).toHaveAttribute('aria-current', 'page');
+    await watchFrames(page);
+
+    await tab(page, 'Aktuality').tap();
+
+    await expectNoFade(page, '/aktuality');
   });
 });
 

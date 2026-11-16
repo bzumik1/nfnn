@@ -18,6 +18,7 @@ import {
   Router,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
+import { BACK_NAVIGATION } from './back-target';
 import { NavigationPreview } from './navigation-preview';
 import { pageFadeFor } from './page-transition-kind';
 import {
@@ -35,13 +36,16 @@ export const PAGE_FADE_ARRIVING_CLASS = 'page-fade-arriving';
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const OPEN_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const CONTENT = 'main#obsah';
-const INTERRUPTIONS = ['pointerdown', 'keydown'] as const;
+const INTERRUPTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
 const RENDERED_AFTER_FRAMES = 2;
 
 interface Fading {
   readonly overlay: HTMLElement;
   readonly copy: HTMLElement;
   readonly left: HTMLElement | null;
+  readonly ground: string;
+  readonly focused: HTMLElement | null;
+  arrived: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -95,6 +99,7 @@ export class PageFade {
       compact: this.compact(),
       dialogOpen: this.document.querySelector(OPEN_DIALOG) !== null,
       trigger: navigation.trigger,
+      back: navigation.extras.info === BACK_NAVIGATION,
       skipLocationChange: navigation.extras.skipLocationChange === true,
       from: this.router.url,
       to: event.urlAfterRedirects,
@@ -109,22 +114,32 @@ export class PageFade {
     const copy = this.document.createElement('div');
     copy.className = `${PAGE_FADE_CLASS}__copy`;
     copy.style.width = `${this.document.documentElement.clientWidth}px`;
+    const ground = this.groundOf(layer, view);
     if (shellChanges(event, this.router)) {
-      overlay.style.backgroundColor = this.groundOf(layer, view);
+      overlay.style.backgroundColor = ground;
     }
     copy.append(stillCopyOf(layer));
     overlay.append(copy);
     this.document.body.append(overlay);
-    copy.scrollTop = view.scrollY;
+    copy.scrollTop = -layer.getBoundingClientRect().top;
     const left = this.document.querySelector<HTMLElement>(CONTENT);
+    const focused = this.document.activeElement;
     left?.setAttribute('aria-hidden', 'true');
     left?.setAttribute('inert', '');
     this.document.documentElement.classList.add(PAGE_FADE_HIDDEN_CLASS);
     this.scrollHold.hold();
     INTERRUPTIONS.forEach((type) =>
-      this.document.addEventListener(type, this.interrupt, { capture: true }),
+      this.document.addEventListener(type, this.interrupt, { capture: true, passive: true }),
     );
-    this.fading = { overlay, copy, left };
+    view.addEventListener('resize', this.interrupt);
+    this.fading = {
+      overlay,
+      copy,
+      left,
+      ground,
+      focused: focused instanceof HTMLElement && left?.contains(focused) === true ? focused : null,
+      arrived: false,
+    };
     this.limit = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
   }
 
@@ -134,9 +149,12 @@ export class PageFade {
     if (fading === null || view === null) {
       return;
     }
+    fading.arrived = true;
     unhide(fading.left);
+    this.keepGround(fading, view);
     afterFrames(view, RENDERED_AFTER_FRAMES, () => {
       if (this.fading === fading) {
+        this.keepGround(fading, view);
         fading.overlay.classList.add(`${PAGE_FADE_CLASS}--leaving`);
         this.whenStill(fading.copy, view, () => this.fadeIn(fading, view));
       }
@@ -181,12 +199,27 @@ export class PageFade {
     void Promise.allSettled(motions.map((motion) => motion.finished)).then(once);
   }
 
+  private keepGround(fading: Fading, view: Window): void {
+    const layer = this.document.querySelector<HTMLElement>(`.${PAGE_LAYER_CLASS}`);
+    const ground = layer === null ? fading.ground : this.groundOf(layer, view);
+    if (fading.ground !== '' && ground !== fading.ground) {
+      fading.overlay.style.backgroundColor = fading.ground;
+    }
+  }
+
   private groundOf(layer: HTMLElement, view: Window): string {
     return (
       [layer, this.document.body, this.document.documentElement]
         .map((element) => view.getComputedStyle(element).backgroundColor)
         .find((colour) => colour !== '' && colour !== 'transparent' && !isClear(colour)) ?? ''
     );
+  }
+
+  private giveFocusBack(focused: HTMLElement | null): void {
+    const active = this.document.activeElement;
+    if (focused?.isConnected === true && (active === null || active === this.document.body)) {
+      focused.focus({ preventScroll: true });
+    }
   }
 
   private finish(): void {
@@ -200,8 +233,12 @@ export class PageFade {
       INTERRUPTIONS.forEach((type) =>
         this.document.removeEventListener(type, this.interrupt, { capture: true }),
       );
+      this.document.defaultView?.removeEventListener('resize', this.interrupt);
       fading.overlay.remove();
       unhide(fading.left);
+      if (!fading.arrived) {
+        this.giveFocusBack(fading.focused);
+      }
     }
     this.document.documentElement.classList.remove(
       PAGE_FADE_HIDDEN_CLASS,

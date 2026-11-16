@@ -119,6 +119,7 @@ const ABOUT_TO_NEWS: PageFadeFacts = {
   compact: false,
   dialogOpen: false,
   trigger: 'imperative',
+  back: false,
   skipLocationChange: false,
   from: '/o-nas',
   to: '/aktuality',
@@ -153,6 +154,7 @@ describe('Given a navigation on a computer', () => {
     ['a dialog is open', { dialogOpen: true }],
     ['the browser steps back or forward', { trigger: 'popstate' }],
     ['the browser changes the fragment', { trigger: 'hashchange' }],
+    ['Zpět opens the page above without a step to go back to', { back: true }],
     ['the address does not change', { skipLocationChange: true }],
   ] as const) {
     it(`when ${name}, then pages switch at once`, () => {
