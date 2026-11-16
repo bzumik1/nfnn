@@ -9,6 +9,7 @@ import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkStatus;
+import cz.novanadeje.app.shared.domain.CompanyIdentifier;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -52,6 +53,50 @@ class SecondFactorRecoveryPolicyTest {
                 List.of(owner));
 
         assertThat(decision).contains(new RecoveryDecision.Recover(owner, CODE, ACCOUNT));
+    }
+
+    @Test
+    @DisplayName("Given 1 Kč with the code from the verified account under the donor's name as the bank writes it, when decided, then the second factor is recovered")
+    void should_recover_when_decided_given_the_payer_named_as_the_donor_in_another_form() {
+        DonorRecord owner = withLink(jana, ACCOUNT, SEVEN_DAYS_BEFORE, SenderAccountLinkStatus.ACTIVE);
+
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of("ING. NOVAKOVA JANA")), List.of(owner)))
+                .contains(new RecoveryDecision.Recover(owner, CODE, ACCOUNT));
+    }
+
+    @Test
+    @DisplayName("Given 1 Kč with the code from the verified account under another name, when decided, then the recovery is refused for the payer's name")
+    void should_refuse_for_the_payer_name_when_decided_given_another_name() {
+        DonorRecord owner = withLink(jana, ACCOUNT, SEVEN_DAYS_BEFORE, SenderAccountLinkStatus.ACTIVE);
+
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of("Karel Dvořák")), List.of(owner)))
+                .contains(new RecoveryDecision.Refuse(RecoveryRefusal.PAYER_NAME_MISMATCH));
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of("Jana Nováková Dvořáková")), List.of(owner)))
+                .contains(new RecoveryDecision.Refuse(RecoveryRefusal.PAYER_NAME_MISMATCH));
+    }
+
+    @Test
+    @DisplayName("Given 1 Kč with the code from the verified account without the payer's name, when decided, then the recovery is refused for the missing name")
+    void should_refuse_for_the_missing_name_when_decided_given_no_payer_name() {
+        DonorRecord owner = withLink(jana, ACCOUNT, SEVEN_DAYS_BEFORE, SenderAccountLinkStatus.ACTIVE);
+
+        assertThat(policy.decide(namedRecoveryPayment(Optional.empty()), List.of(owner)))
+                .contains(new RecoveryDecision.Refuse(RecoveryRefusal.NO_PAYER_NAME));
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of(" .,- ")), List.of(owner)))
+                .contains(new RecoveryDecision.Refuse(RecoveryRefusal.NO_PAYER_NAME));
+    }
+
+    @Test
+    @DisplayName("Given a company donor and 1 Kč with the code from its verified account, when decided, then the payer's name is compared with the company's name")
+    void should_compare_with_the_company_name_when_decided_given_a_company_donor() {
+        DonorRecord company = DonorRecord.reconstitute(new DonorReference(UuidV7.generate(NOW)), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."),
+                new CompanyIdentifier("45274649"), jana.address(), new VariableSymbol("5512340987"), LocaleCode.CS,
+                List.of(link(ACCOUNT, SEVEN_DAYS_BEFORE, SenderAccountLinkStatus.ACTIVE)), NOW, NOW, null);
+
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of("STAVBY NOVAK S R O")), List.of(company)))
+                .contains(new RecoveryDecision.Recover(company, CODE, ACCOUNT));
+        assertThat(policy.decide(namedRecoveryPayment(Optional.of("Stavby Novák a.s.")), List.of(company)))
+                .contains(new RecoveryDecision.Refuse(RecoveryRefusal.PAYER_NAME_MISMATCH));
     }
 
     @Test
@@ -123,6 +168,10 @@ class SecondFactorRecoveryPolicyTest {
 
     private static BankPayment recoveryPayment(Money amount, Optional<SenderAccount> sender, String message) {
         return payment(1, PAID_ON, amount, sender, null, message);
+    }
+
+    private static BankPayment namedRecoveryPayment(Optional<String> payerName) {
+        return payment(1, PAID_ON, Money.czk(100), Optional.of(ACCOUNT), null, CODE.message(), payerName);
     }
 
     private static DonorRecord donor(String name, String symbol) {
