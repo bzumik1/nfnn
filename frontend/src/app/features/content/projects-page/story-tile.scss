@@ -158,9 +158,17 @@
   grid-template-areas: 'tile';
   min-height: max(100%, 22rem);
   border: none;
-  outline: 1px solid var(--color-media-rim);
-  outline-offset: -1px;
   background: var(--color-surface-inverse);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border: 1px solid var(--color-media-rim);
+    border-radius: var(--radius-card);
+    pointer-events: none;
+  }
 
   .tile-media {
     grid-area: tile;

@@ -90,7 +90,7 @@ async function scrollToEnd(page: Page): Promise<void> {
 
 const REVEALING_STORIES = ['.year-head', '.grid-item', '.year-all', 'app-donate-band'];
 
-const REVEALING_ABOUT = ['.board-title', '.signer', 'app-donate-band', '.contact-left'];
+const REVEALING_ABOUT = ['.board-title', '.signer', 'app-donate-band'];
 
 test.describe('Given a visitor on a computer', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
@@ -158,7 +158,7 @@ test.describe('Given a visitor on a computer', () => {
     await expect(page.locator('.motion-reveal')).toHaveCount(0);
   });
 
-  test('when O nás opens, then the people, the Přispět band and the contact intro wait below the first window and move in when scrolled to', async ({
+  test('when O nás opens, then the people and the Přispět band wait below the first window and move in when scrolled to', async ({
     page,
   }) => {
     await page.goto('/o-nas');
@@ -167,7 +167,6 @@ test.describe('Given a visitor on a computer', () => {
 
     expect(await revealingInFirstWindow(page)).toEqual([]);
     expect(await waiting(page.locator('app-donate-band'))).toBe(true);
-    expect(await waiting(page.locator('.contact-left'))).toBe(true);
     const others = await page.evaluate(
       (selectors) =>
         [...document.querySelectorAll('.motion-reveal')].filter(
@@ -200,6 +199,55 @@ test.describe('Given a visitor on a computer', () => {
     await tile.getByRole('link').focus();
 
     expect(await liftAfterMotion(tile)).toBe(hovered);
+  });
+});
+
+async function watchContactIntro(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const seen = window as unknown as { contactIntroHidden: boolean };
+    seen.contactIntroHidden = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.contact-left.motion-reveal')) {
+        seen.contactIntroHidden = true;
+      }
+    }).observe(document, { subtree: true, attributes: true, childList: true });
+  });
+}
+
+function contactIntroWasHidden(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () => (window as unknown as { contactIntroHidden: boolean }).contactIntroHidden,
+  );
+}
+
+test.describe('Given a visitor on a computer who follows a link to the contact', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test.beforeEach(async ({ page }) => {
+    await mockDonorApi(page);
+    await watchContactIntro(page);
+  });
+
+  test('when O nás opens at #kontakt, then the contact intro is never hidden or waiting', async ({
+    page,
+  }) => {
+    await page.goto('/o-nas#kontakt');
+    await expect(page.locator('.contact-left')).toBeInViewport();
+    await page.waitForLoadState('networkidle');
+
+    expect(await contactIntroWasHidden(page)).toBe(false);
+  });
+
+  test('when the 404 page leads to Napište nám, then the contact intro is never hidden or waiting', async ({
+    page,
+  }) => {
+    await page.goto('/neexistujici-stranka');
+    await page.getByRole('link', { name: 'Napište nám' }).click();
+    await expect(page).toHaveURL('/o-nas#kontakt');
+    await expect(page.locator('.contact-left')).toBeInViewport();
+    await page.waitForLoadState('networkidle');
+
+    expect(await contactIntroWasHidden(page)).toBe(false);
   });
 });
 
