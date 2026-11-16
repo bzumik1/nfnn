@@ -280,7 +280,7 @@ test.describe('Given a visitor on a computer opening Aktuality', () => {
     await page.goto('/aktuality');
     const card = page.locator('app-news-card').first();
     await card.scrollIntoViewIfNeeded();
-    await settled(page);
+    await expect(page.locator('.older-item').first()).not.toHaveClass(/motion-reveal/);
     const resting = await liftAfterMotion(card);
 
     await card.locator('.news-title').hover();

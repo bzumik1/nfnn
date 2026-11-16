@@ -451,8 +451,8 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       { times: 1 },
     );
     await page.goto('/aktuality?strana=2');
-    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveText(
-      'Aktuality se nepodařilo načíst.',
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
     );
 
     expect(await violations(page)).toEqual([]);

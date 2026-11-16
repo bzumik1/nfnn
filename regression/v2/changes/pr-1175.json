@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when nothing is published yet, then the page says so and leads home",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when nothing is published yet, then a card in place of the leading news says so and leads home",
+    "reason": "Desktop polish P22 (#1174): the empty state is a ui-notice card in place of the leading news at its natural height",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when a page past the last one is asked for, then the page says it does not exist and leads to the first one",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when a page past the last one is asked for, then a card says the page does not exist and leads to the first one",
+    "reason": "Desktop polish P22 (#1174): a page past the last one is said in the same ui-notice card as the empty state",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the news fail, then an alert offers to try again and the retry loads them",
+    "replacement": "src/app/features/content/news-page/news-page.spec.ts > Given a visitor opening Aktuality > when the news fail, then an alert card offers to try again and the retry loads them and says so",
+    "reason": "Desktop polish P21 (#1174): a failed load is one ui-notice alert card with 'Aktuality se nepodařilo načíst. Zkuste to znovu.' and Zkusit znovu, and a retry that loads the news announces it in the status line",
+    "contract": "docs/frontend-overview.md, content"
+  }
+]

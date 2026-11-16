@@ -256,6 +256,52 @@ test.describe('Given a visitor whose browser shows text twice as large on a comp
   });
 });
 
+test.describe('Given a visitor whose browser shows text twice as large on a computer opening Aktuality', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+
+  test('when the older news show, then each card keeps its title and Kopírovat odkaz whole inside it', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    const items = Array.from({ length: 4 }, (_, index) => ({
+      id: `0199f3e0-0000-7000-8000-0000000e000${index}`,
+      slug: `aktualita-${index}`,
+      title: `Rehabilitační pobyt pro tři děti s pomůckami ${index}`,
+      tag: 'Projekt',
+      perex: 'Tři děti strávily týden na intenzivní rehabilitaci.',
+      body: 'Text.',
+      coverImage: null,
+      signer: null,
+      publishedOn: `2026-10-1${index}`,
+      createdAt: '2026-10-01T09:00:00Z',
+      updatedAt: '2026-10-01T09:00:00Z',
+    }));
+    await page.route(
+      (url) => url.pathname === '/api/content/news',
+      (route) =>
+        route.fulfill({ json: { items, page: 0, size: 10, total: items.length, hasMore: false } }),
+    );
+    await page.goto('/aktuality');
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+    const cards = page.locator('.older app-news-card');
+    await expect(cards).toHaveCount(3);
+
+    for (const card of await cards.all()) {
+      const box = (await card.boundingBox())!;
+      for (const part of [card.locator('.news-title'), card.getByRole('button')]) {
+        const inner = (await part.boundingBox())!;
+        expect(inner.x).toBeGreaterThanOrEqual(box.x);
+        expect(inner.x + inner.width).toBeLessThanOrEqual(box.x + box.width);
+        expect(inner.y + inner.height).toBeLessThanOrEqual(box.y + box.height);
+        expect(await part.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+          true,
+        );
+      }
+    }
+    expect(await widerThanScreen(page)).toBe(0);
+  });
+});
+
 async function splitWords(page: Page, selector: string): Promise<string[]> {
   return page.locator(selector).evaluateAll((elements) =>
     elements.flatMap((element) => {
