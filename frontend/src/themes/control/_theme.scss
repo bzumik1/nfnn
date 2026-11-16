@@ -34,7 +34,13 @@
     color-mix(in srgb, #000000 28%, transparent),
     transparent 22%
   );
-  --color-backdrop: rgb(20 32 27 / 0.65);
+  --color-backdrop-tint: #14201b;
+  --backdrop-strength: 65%;
+  --color-backdrop: color-mix(
+    in srgb,
+    var(--color-backdrop-tint) var(--backdrop-strength),
+    transparent
+  );
 
   --color-border: #d6d3c8;
   --color-border-field: #8a877c;
@@ -94,6 +100,9 @@
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
   --color-group-cell: var(--color-surface);
+  --color-grouped-alt: var(--color-surface-muted);
+  --color-group-divider: var(--color-divider);
+  --color-badge-accent-bg: var(--color-accent-bg);
   --color-sheet-text: var(--color-text);
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
@@ -265,6 +274,7 @@
 
   --content-max: 1140px;
   --content-max-wide: 1440px;
+  --measure-prose: 65ch;
   --header-height: 68px;
   --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
@@ -402,6 +412,10 @@
 
 @mixin dark-appearance {
   color-scheme: dark;
+  --color-group-cell: var(--color-surface-elevated);
+  --color-grouped-alt: var(--color-fill);
+  --color-group-divider: color-mix(in srgb, #ffffff 12%, transparent);
+  --color-badge-accent-bg: var(--color-accent-soft);
   --color-sheet-grouped: var(--color-surface-alt);
   --color-segment-thumb: var(--color-surface-muted);
   --color-accent: #5eead4;
@@ -428,7 +442,13 @@
   --color-surface-inverse-strong: #0a0d0c;
   --color-surface-quote: #1f3a31;
 
-  --color-backdrop: color-mix(in srgb, #0a0d0c 72%, transparent);
+  --color-backdrop-tint: #0a0d0c;
+  --backdrop-strength: 72%;
+  --color-backdrop: color-mix(
+    in srgb,
+    var(--color-backdrop-tint) var(--backdrop-strength),
+    transparent
+  );
 
   --color-border: #34403b;
   --color-border-field: #78827c;

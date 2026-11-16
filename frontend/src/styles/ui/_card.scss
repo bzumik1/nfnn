@@ -11,7 +11,8 @@
 }
 
 .ui-grouped {
-  --color-surface-alt: var(--color-surface-muted);
+  --color-surface-alt: var(--color-grouped-alt);
+  --color-divider: var(--color-group-divider);
 }
 
 .ui-grouped .ui-card:not(dialog .ui-card),
@@ -42,6 +43,7 @@
 
 .ui-card__intro {
   font-size: var(--text-sm);
+  max-inline-size: var(--measure-prose);
   color: var(--color-text-muted);
   line-height: var(--leading-normal);
 }
@@ -65,9 +67,18 @@
   }
 }
 
+:where(.ui-card--padded) > .ui-card__title {
+  margin-block-end: var(--space-3);
+}
+
+:where(.ui-card--padded) > :last-child,
+:where(.ui-card--padded) > .ui-notice:last-child {
+  margin-block-end: 0;
+}
+
 .ui-card__bar {
   padding: var(--space-5) var(--space-6);
-  border-bottom: 1px solid var(--color-separator);
+  border-bottom: 1px solid var(--color-divider);
 
   .ui-card__title {
     padding: 0;
@@ -104,14 +115,15 @@
 
 .ui-card__footer {
   padding: var(--space-4) var(--space-6) var(--space-5);
-  border-top: 1px solid var(--color-separator);
+  padding-inline-end: max(var(--space-6), 100% - var(--space-6) - var(--measure-prose));
+  border-top: 1px solid var(--color-divider);
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   color: var(--color-text-soft);
 }
 
 .ui-card__group + .ui-card__group {
-  border-top: 1px solid var(--color-separator);
+  border-top: 1px solid var(--color-divider);
 }
 
 .ui-card__bar + .ui-card__footer {

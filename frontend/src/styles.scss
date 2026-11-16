@@ -1,4 +1,5 @@
 @use 'theme';
+@use 'breakpoints' as bp;
 @use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
@@ -89,6 +90,42 @@ html.contact-in-view body {
 
 html.contact-in-view app-root {
   background: var(--color-surface);
+}
+
+@function under-backdrop($ground) {
+  @return color-mix(in srgb, var(--color-backdrop-tint) var(--backdrop-strength), $ground);
+}
+
+@mixin ground-under-backdrop($ground) {
+  background: under-backdrop($ground);
+  scrollbar-color: under-backdrop(var(--color-text-subtle)) under-backdrop($ground);
+}
+
+@include bp.up(nav) {
+  html:not(.landing-stage) {
+    scrollbar-gutter: stable;
+  }
+
+  html:has(.dialog:modal) {
+    @include ground-under-backdrop(var(--color-surface));
+  }
+
+  html:has(.dialog:modal):has(app-root .ui-grouped) {
+    @include ground-under-backdrop(var(--color-surface-grouped));
+  }
+
+  html.contact-in-view:has(.dialog:modal) {
+    @include ground-under-backdrop(var(--color-surface-inverse));
+  }
+
+  html:has(.dialog:modal):has(app-root app-landing) {
+    @include ground-under-backdrop(var(--color-image-shade));
+  }
+
+  html:has(.dialog--viewer:modal) {
+    background: var(--color-surface-inverse);
+    scrollbar-color: var(--color-text-subtle) var(--color-surface-inverse);
+  }
 }
 
 :focus-visible {
