@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, openSection, signIn } from './donor-session';
 
@@ -106,15 +107,39 @@ test.describe('Given a visitor on the About page', () => {
     expect(posted).toEqual([]);
   });
 
+  test('when they tab through the contact section on a computer, then the details for accountants in the left column come before the first form field', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/o-nas');
+    await expect(
+      page
+        .locator('#kontakt')
+        .getByRole('button', { name: /Kopírovat/ })
+        .first(),
+    ).toBeVisible();
+
+    expect(await tabOrderFromContactEmail(page)).toEqual(['copy', 'form']);
+  });
+
   test.describe('on a phone', () => {
     test.use({ viewport: { width: 390, height: 844 } });
+
+    test('when they tab through the contact section, then the form comes before the details for accountants, as it does on the screen', async ({
+      page,
+    }) => {
+      await page.goto('/o-nas');
+      await expect(page.locator('#contact-name')).toBeAttached();
+
+      expect(await tabOrderFromContactEmail(page)).toEqual(['form', 'copy']);
+    });
 
     test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({
       page,
     }) => {
       await page.goto('/o-nas');
 
-      await expect(page.getByRole('heading', { name: 'Kontaktujte nás' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Napište nám' })).toBeVisible();
       await expect(
         page.locator('#kontakt').getByRole('link', { name: 'info@nfnn.cz' }),
       ).toHaveAttribute('href', 'mailto:info@nfnn.cz');
@@ -163,3 +188,25 @@ test.describe('Given an accountant on the About page', () => {
     );
   });
 });
+
+async function tabOrderFromContactEmail(page: Page): Promise<string[]> {
+  await page.locator('#kontakt').getByRole('link', { name: 'info@nfnn.cz' }).focus();
+  const reached: string[] = [];
+  for (let step = 0; step < 30 && reached.length < 2; step++) {
+    await page.keyboard.press('Tab');
+    const kind = await page.evaluate(() => {
+      const focused = document.activeElement;
+      if (focused?.id === 'contact-name') {
+        return 'form';
+      }
+      return focused?.closest('app-accounting-details') &&
+        /Kopírovat/.test(focused.textContent ?? '')
+        ? 'copy'
+        : null;
+    });
+    if (kind && !reached.includes(kind)) {
+      reached.push(kind);
+    }
+  }
+  return reached;
+}

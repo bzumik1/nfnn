@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { authResponse, sampleDonor } from '../../../core/auth/testing/donor-fixtures';
 import { ContactForm } from './contact-form';
 import { foundationPaymentDetails } from '../../donations/testing/payment-details-fixtures';
@@ -169,7 +171,7 @@ describe('Given the contact form', () => {
     afterEach(() => fixture.nativeElement.remove());
 
     it('then the status region that was there before announces the thanks and where the reply goes', () => {
-      const status = element('[role="status"]');
+      const status = element('.contact-form-wrap > [role="status"]');
 
       expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
         'Zpráva odeslána! Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
@@ -513,15 +515,77 @@ describe('Given the contact section around the form', () => {
     expect(text(root)).not.toContain('Adresa');
   });
 
-  it('when it is shown, then the details for accountants follow the form, each fact once', () => {
+  it('when it is shown, then the details for accountants say each fact once', () => {
     const root = fixture.nativeElement as HTMLElement;
-    const details = root.querySelector('app-accounting-details')!;
 
-    expect(
-      root.querySelector('.contact-form-wrap')!.compareDocumentPosition(details) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
     expect(text(root).split('27278794')).toHaveLength(2);
     expect(text(root).split('Jiráskova 436')).toHaveLength(2);
+  });
+});
+
+describe('Given the contact section', () => {
+  let fixture: ComponentFixture<ContactForm>;
+  let http: HttpTestingController;
+
+  async function show(compact: boolean): Promise<void> {
+    await TestBed.configureTestingModule({
+      imports: [ContactForm],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(ContactForm);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  afterEach(() => {
+    answerAccountingDetails(http);
+    http.verify();
+  });
+
+  function blocksInOrder(): string[] {
+    const blocks = fixture.nativeElement.querySelectorAll('.contact-about, form');
+    return Array.from(blocks as NodeListOf<HTMLElement>).map((block) =>
+      block.matches('form') ? 'form' : 'accounting',
+    );
+  }
+
+  it('when it is shown, then it says Kontakt above the heading Napište nám and asks whether the visitor has a question', async () => {
+    await show(false);
+    const text = (selector: string) =>
+      (fixture.nativeElement.querySelector(selector) as HTMLElement).textContent?.trim();
+
+    expect(text('.ui-eyebrow')).toBe('Kontakt');
+    expect(text('h2')).toBe('Napište nám');
+    expect(text('.lead')).toBe('Máte dotaz nebo se chcete zapojit?');
+  });
+
+  it('when it is shown, then the form is named by the section heading and repeats no heading of its own', async () => {
+    await show(false);
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    const heading = fixture.nativeElement.querySelector(
+      `#${form.getAttribute('aria-labelledby')}`,
+    ) as HTMLElement;
+
+    expect(heading.tagName).toBe('H2');
+    expect(heading.textContent?.trim()).toBe('Napište nám');
+    expect(form.querySelector('h2, h3')).toBeNull();
+  });
+
+  it('when it is shown on a computer, then the details for accountants come before the form, as the left column comes first', async () => {
+    await show(false);
+
+    expect(blocksInOrder()).toEqual(['accounting', 'form']);
+  });
+
+  it('when it is shown on a phone, then the form comes before the details for accountants, as on the screen', async () => {
+    await show(true);
+
+    expect(blocksInOrder()).toEqual(['form', 'accounting']);
   });
 });

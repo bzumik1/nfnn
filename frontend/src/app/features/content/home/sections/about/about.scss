@@ -244,3 +244,83 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+@include bp.up(nav) {
+  .intro {
+    grid-template-areas: none;
+    row-gap: var(--space-12);
+    padding-bottom: 0;
+  }
+
+  .intro-head {
+    grid-area: 1 / 1;
+  }
+
+  .intro-rest {
+    grid-area: 2 / 1;
+    align-self: end;
+  }
+
+  .intro-figure {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-area: 1 / 2 / span 2;
+  }
+
+  .intro-figure:has(.intro-caption) {
+    grid-row-end: span 3;
+  }
+
+  .intro-frame {
+    grid-row: 1 / span 2;
+    align-self: stretch;
+    margin-bottom: 0;
+  }
+
+  .intro-zoom,
+  .intro-photo {
+    height: 100%;
+  }
+
+  .intro-caption {
+    grid-row: 3;
+    margin-top: 0;
+  }
+
+  .paragraph {
+    color: var(--color-text-muted);
+    font-size: var(--text-xl);
+  }
+
+  .figures {
+    margin-top: var(--space-12);
+  }
+
+  .founders {
+    margin-top: var(--space-20);
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .board-title {
+    margin-bottom: 0;
+  }
+
+  .signers,
+  .board-members {
+    margin-top: var(--space-12);
+  }
+
+  .signer-photo {
+    width: var(--space-27);
+    height: var(--space-27);
+  }
+
+  .signer-name {
+    font-size: var(--text-xl);
+  }
+
+  .signer-role {
+    font-size: var(--text-md);
+  }
+}

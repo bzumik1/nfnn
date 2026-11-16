@@ -72,7 +72,7 @@ describe('Given the about section', () => {
       ]);
     });
 
-    it('then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths', () => {
+    it('then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths, the larger for the bigger portrait on a computer', () => {
       const portraits = Array.from(founders().querySelectorAll('.signer img'));
 
       expect(portraits.map((portrait) => portrait.getAttribute('srcset'))).toEqual([
@@ -82,6 +82,8 @@ describe('Given the about section', () => {
       for (const portrait of portraits) {
         expect(portrait.getAttribute('alt')).toBe('');
         expect(portrait.getAttribute('loading')).toBe('lazy');
+        expect(portrait.getAttribute('sizes')).toBe('(min-width: 900px) 108px, 48px');
+        expect(portrait.getAttribute('width')).toBe('108');
       }
     });
   });

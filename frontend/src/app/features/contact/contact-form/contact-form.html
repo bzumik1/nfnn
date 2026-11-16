@@ -1,11 +1,11 @@
 <section #section id="kontakt" class="contact section-pad">
   <div class="two-col ui-container">
     <div class="contact-left">
-      <p class="ui-eyebrow ui-eyebrow--accent-on-inverse" i18n="@@home.contact.eyebrow">
-        Spojte se s námi
+      <p class="ui-eyebrow ui-eyebrow--accent-on-inverse" i18n="@@home.contact.sectionEyebrow">
+        Kontakt
       </p>
-      <h2 class="title" i18n="@@home.contact.title">Kontaktujte nás</h2>
-      <p class="lead" i18n="@@home.contact.lead">Máte dotaz nebo se chcete zapojit? Napište nám.</p>
+      <h2 id="contact-title" class="title" i18n="@@home.contact.heading">Napište nám</h2>
+      <p class="lead" i18n="@@home.contact.lead">Máte dotaz nebo se chcete zapojit?</p>
       <div class="contact-info">
         <div class="info-row">
           <div class="info-icon" aria-hidden="true">
@@ -30,6 +30,10 @@
         </div>
       </div>
     </div>
+
+    @if (!compact()) {
+      <ng-container [ngTemplateOutlet]="accounting" />
+    }
 
     <div class="contact-form-wrap">
       <div role="status">
@@ -62,9 +66,13 @@
           </button>
         </div>
       } @else {
-        <form #f="ngForm" appFocusFirstInvalid (ngSubmit)="submit(f)" novalidate>
-          <h3 class="form-title" i18n="@@home.contact.form.title">Napište nám</h3>
-
+        <form
+          #f="ngForm"
+          appFocusFirstInvalid
+          aria-labelledby="contact-title"
+          (ngSubmit)="submit(f)"
+          novalidate
+        >
           <app-form-field
             label="Jméno a příjmení"
             i18n-label="@@home.contact.form.name"
@@ -199,12 +207,18 @@
       }
     </div>
 
-    <div class="contact-about">
-      <app-accounting-details />
-      <p class="contact-legal ui-footnote ui-footnote--on-inverse" i18n="@@home.contact.legal">
-        Jak nakládáme s osobními údaji, popisují
-        <a routerLink="/zasady-ochrany-osobnich-udaju">zásady ochrany osobních údajů</a>.
-      </p>
-    </div>
+    @if (compact()) {
+      <ng-container [ngTemplateOutlet]="accounting" />
+    }
   </div>
 </section>
+
+<ng-template #accounting>
+  <div class="contact-about">
+    <app-accounting-details />
+    <p class="contact-legal ui-footnote ui-footnote--on-inverse" i18n="@@home.contact.legal">
+      Jak nakládáme s osobními údaji, popisují
+      <a routerLink="/zasady-ochrany-osobnich-udaju">zásady ochrany osobních údajů</a>.
+    </p>
+  </div>
+</ng-template>

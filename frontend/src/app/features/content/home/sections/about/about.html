@@ -92,7 +92,7 @@
                     class="signer-photo"
                     [name]="signature.name"
                     [src]="signature.portrait ? portraitSource(signature.portrait.id) : null"
-                    [size]="48"
+                    [size]="108"
                     loading="lazy"
                   />
                   <p class="signer-name">{{ signature.name }}</p>
@@ -132,8 +132,8 @@
               name="Pavel Znamenáček"
               src="/images/pavel-znamenacek-160.webp"
               srcset="/images/pavel-znamenacek-160.webp 160w, /images/pavel-znamenacek-320.webp 320w"
-              sizes="48px"
-              [size]="48"
+              sizes="(min-width: 900px) 108px, 48px"
+              [size]="108"
               loading="lazy"
             />
             <p class="signer-name" i18n="@@home.about.board.pavel.name">Pavel Znamenáček</p>
@@ -147,8 +147,8 @@
               name="Andrea Znamenáčková"
               src="/images/andrea-znamenackova-160.webp"
               srcset="/images/andrea-znamenackova-160.webp 160w, /images/andrea-znamenackova-320.webp 320w"
-              sizes="48px"
-              [size]="48"
+              sizes="(min-width: 900px) 108px, 48px"
+              [size]="108"
               loading="lazy"
             />
             <p class="signer-name" i18n="@@home.about.board.andrea.name">Andrea Znamenáčková</p>
@@ -174,7 +174,7 @@
               class="signer-photo"
               [name]="card.name"
               [src]="card.portrait ? portraitSource(card.portrait.id) : null"
-              [size]="48"
+              [size]="108"
               loading="lazy"
             />
             <p class="signer-name">{{ card.name }}</p>
