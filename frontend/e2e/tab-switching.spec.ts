@@ -123,7 +123,7 @@ async function framesWhile(
       new Promise<SwitchFrame[]>((done) => {
         const frames: SwitchFrame[] = [];
         const sample = (): void => {
-          if (location.pathname === target) {
+          if (location.pathname === target && document.querySelector('.page-fade') === null) {
             const seenBefore = Array.from(
               document.querySelectorAll<HTMLImageElement>('main img[data-seen-before]'),
             );

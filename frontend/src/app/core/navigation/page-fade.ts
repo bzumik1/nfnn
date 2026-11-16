@@ -9,12 +9,12 @@ import {
 } from '@angular/core';
 import {
   Event as RouterEvent,
-  GuardsCheckEnd,
   NavigationCancel,
   NavigationEnd,
   NavigationError,
   NavigationSkipped,
   NavigationStart,
+  ResolveEnd,
   Router,
 } from '@angular/router';
 import { CompactLayout } from '../layout/compact-layout';
@@ -37,15 +37,21 @@ const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 const OPEN_DIALOG = 'dialog[open]:not(.dialog--leaving)';
 const CONTENT = 'main#obsah';
 const INTERRUPTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
+const PRESS_ENDS = ['pointerup', 'pointercancel'] as const;
 const RENDERED_AFTER_FRAMES = 2;
+
+interface Prepared {
+  readonly layer: HTMLElement;
+  readonly offset: number;
+  readonly ground: string;
+  readonly shellChanges: boolean;
+  readonly width: number;
+}
 
 interface Fading {
   readonly overlay: HTMLElement;
   readonly copy: HTMLElement;
-  readonly left: HTMLElement | null;
   readonly ground: string;
-  readonly focused: HTMLElement | null;
-  arrived: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -55,7 +61,8 @@ export class PageFade {
   private readonly compact = inject(CompactLayout).isCompact;
   private readonly preview = inject(NavigationPreview);
   private readonly scrollHold = inject(ScrollHold);
-  private readonly interrupt = (): void => this.finish();
+  private readonly interrupt = (event: Event): void => this.finish(event.type === 'pointerdown');
+  private prepared: Prepared | null = null;
   private fading: Fading | null = null;
   private limit: number | null = null;
 
@@ -73,8 +80,8 @@ export class PageFade {
     }
     if (event instanceof NavigationStart) {
       this.finish();
-    } else if (event instanceof GuardsCheckEnd && event.shouldActivate) {
-      this.cover(event);
+    } else if (event instanceof ResolveEnd) {
+      this.prepare(event);
     } else if (event instanceof NavigationEnd) {
       this.arrived();
     } else if (
@@ -86,7 +93,7 @@ export class PageFade {
     }
   }
 
-  private cover(event: GuardsCheckEnd): void {
+  private prepare(event: ResolveEnd): void {
     const view = this.document.defaultView;
     const layer = this.document.querySelector<HTMLElement>(`.${PAGE_LAYER_CLASS}`);
     const navigation = untracked(this.router.currentNavigation);
@@ -107,56 +114,53 @@ export class PageFade {
     if (!fades) {
       return;
     }
+    this.prepared = {
+      layer: fadeCopyOf(layer, this.document),
+      offset: -layer.getBoundingClientRect().top,
+      ground: this.groundOf(layer, view),
+      shellChanges:
+        event.state.root.firstChild?.routeConfig !==
+        this.router.routerState.snapshot.root.firstChild?.routeConfig,
+      width: this.document.documentElement.clientWidth,
+    };
+    this.scrollHold.hold();
+  }
+
+  private arrived(): void {
+    const prepared = this.prepared;
+    const view = this.document.defaultView;
+    this.prepared = null;
+    if (prepared === null || view === null) {
+      return;
+    }
     const overlay = this.document.createElement('div');
     overlay.className = PAGE_FADE_CLASS;
     overlay.setAttribute('aria-hidden', 'true');
     overlay.setAttribute('inert', '');
+    if (prepared.shellChanges) {
+      overlay.style.backgroundColor = prepared.ground;
+    }
     const copy = this.document.createElement('div');
     copy.className = `${PAGE_FADE_CLASS}__copy`;
-    copy.style.width = `${this.document.documentElement.clientWidth}px`;
-    const ground = this.groundOf(layer, view);
-    if (shellChanges(event, this.router)) {
-      overlay.style.backgroundColor = ground;
-    }
-    copy.append(stillCopyOf(layer));
+    copy.style.width = `${prepared.width}px`;
+    copy.append(prepared.layer);
     overlay.append(copy);
     this.document.body.append(overlay);
-    copy.scrollTop = -layer.getBoundingClientRect().top;
-    const left = this.document.querySelector<HTMLElement>(CONTENT);
-    const focused = this.document.activeElement;
-    left?.setAttribute('aria-hidden', 'true');
-    left?.setAttribute('inert', '');
+    copy.scrollTop = prepared.offset;
     this.document.documentElement.classList.add(PAGE_FADE_HIDDEN_CLASS);
-    this.scrollHold.hold();
     INTERRUPTIONS.forEach((type) =>
       this.document.addEventListener(type, this.interrupt, { capture: true, passive: true }),
     );
     view.addEventListener('resize', this.interrupt);
-    this.fading = {
-      overlay,
-      copy,
-      left,
-      ground,
-      focused: focused instanceof HTMLElement && left?.contains(focused) === true ? focused : null,
-      arrived: false,
-    };
+    const fading: Fading = { overlay, copy, ground: prepared.ground };
+    this.fading = fading;
     this.limit = view.setTimeout(() => this.finish(), PAGE_COVER_LONGEST_MS);
-  }
-
-  private arrived(): void {
-    const fading = this.fading;
-    const view = this.document.defaultView;
-    if (fading === null || view === null) {
-      return;
-    }
-    fading.arrived = true;
-    unhide(fading.left);
     this.keepGround(fading, view);
     afterFrames(view, RENDERED_AFTER_FRAMES, () => {
       if (this.fading === fading) {
         this.keepGround(fading, view);
-        fading.overlay.classList.add(`${PAGE_FADE_CLASS}--leaving`);
-        this.whenStill(fading.copy, view, () => this.fadeIn(fading, view));
+        overlay.classList.add(`${PAGE_FADE_CLASS}--leaving`);
+        this.whenStill(copy, view, () => this.fadeIn(fading, view));
       }
     });
   }
@@ -215,53 +219,69 @@ export class PageFade {
     );
   }
 
-  private giveFocusBack(focused: HTMLElement | null): void {
-    const active = this.document.activeElement;
-    if (focused?.isConnected === true && (active === null || active === this.document.body)) {
-      focused.focus({ preventScroll: true });
-    }
+  private releaseScrollAfterPress(view: Window): void {
+    let fallback = 0;
+    const release = (): void => {
+      PRESS_ENDS.forEach((type) =>
+        this.document.removeEventListener(type, release, { capture: true }),
+      );
+      view.clearTimeout(fallback);
+      view.setTimeout(() => {
+        if (this.prepared === null && this.fading === null) {
+          this.scrollHold.release();
+        }
+      }, 0);
+    };
+    fallback = view.setTimeout(release, PAGE_TRANSITION_LONGEST_MS);
+    PRESS_ENDS.forEach((type) => this.document.addEventListener(type, release, { capture: true }));
   }
 
-  private finish(): void {
+  private finish(afterPress = false): void {
+    const view = this.document.defaultView;
     if (this.limit !== null) {
-      this.document.defaultView?.clearTimeout(this.limit);
+      view?.clearTimeout(this.limit);
       this.limit = null;
     }
+    this.prepared = null;
     const fading = this.fading;
     this.fading = null;
     if (fading !== null) {
       INTERRUPTIONS.forEach((type) =>
         this.document.removeEventListener(type, this.interrupt, { capture: true }),
       );
-      this.document.defaultView?.removeEventListener('resize', this.interrupt);
+      view?.removeEventListener('resize', this.interrupt);
       fading.overlay.remove();
-      unhide(fading.left);
-      if (!fading.arrived) {
-        this.giveFocusBack(fading.focused);
-      }
     }
     this.document.documentElement.classList.remove(
       PAGE_FADE_HIDDEN_CLASS,
       PAGE_FADE_ARRIVING_CLASS,
     );
-    this.scrollHold.release();
+    if (afterPress && view !== null) {
+      this.releaseScrollAfterPress(view);
+    } else {
+      this.scrollHold.release();
+    }
   }
 }
 
-function shellChanges(event: GuardsCheckEnd, router: Router): boolean {
-  return (
-    event.state.root.firstChild?.routeConfig !==
-    router.routerState.snapshot.root.firstChild?.routeConfig
+function fadeCopyOf(layer: HTMLElement, document: Document): HTMLElement {
+  const copy = stillCopyOf(layer);
+  copy.querySelectorAll('main').forEach((main) => main.replaceWith(contentOf(main, document)));
+  return copy;
+}
+
+function contentOf(main: HTMLElement, document: Document): HTMLElement {
+  const content = document.createElement('div');
+  Array.from(main.attributes).forEach((attribute) =>
+    content.setAttribute(attribute.name, attribute.value),
   );
+  content.classList.add(`${PAGE_FADE_CLASS}__main`);
+  content.append(...Array.from(main.childNodes));
+  return content;
 }
 
 function isClear(colour: string): boolean {
   return /^rgba\(.*,\s*0\)$/.test(colour);
-}
-
-function unhide(content: HTMLElement | null): void {
-  content?.removeAttribute('aria-hidden');
-  content?.removeAttribute('inert');
 }
 
 function afterFrames(view: Window, frames: number, then: () => void): void {

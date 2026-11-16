@@ -50,7 +50,7 @@ async function watchFrames(page: Page): Promise<void> {
       window.nfnnFadeFrames.push({
         path: location.pathname,
         copy: opacityOf(copy),
-        copyAt: copy?.querySelector('main')?.getBoundingClientRect().top ?? null,
+        copyAt: copy?.querySelector('.page-fade__main')?.getBoundingClientRect().top ?? null,
         content: opacityOf(content) ?? 0,
         header:
           header === null
@@ -102,6 +102,11 @@ function expectFadeThrough(frames: FadeFrame[], to: string): void {
   expect(
     leaving.filter((frame) => frame.path === to && frame.copy! < 1 && !frame.headingFocused),
   ).toEqual([]);
+}
+
+async function fadeOver(page: Page): Promise<void> {
+  await expect(page.locator('.page-fade')).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveClass(/page-fade-/);
 }
 
 async function expectNoFade(page: Page, path: string | RegExp): Promise<void> {
@@ -187,7 +192,7 @@ test.describe('Given a visitor on a computer that animates', () => {
     await page.goto('/aktuality');
     await page.getByRole('main').getByRole('link', { name: article.title }).first().click();
     await expect(page).toHaveURL(`/aktuality/${article.slug}`);
-    await expect(page.locator('.page-fade')).toHaveCount(0);
+    await fadeOver(page);
     await watchFrames(page);
 
     await stepBack(page);

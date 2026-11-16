@@ -1,13 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  ActivationEnd,
-  GuardsCheckEnd,
-  NavigationEnd,
-  provideRouter,
-  Router,
-} from '@angular/router';
-import { EMPTY } from 'rxjs';
+import { ActivationEnd, NavigationEnd, provideRouter, ResolveStart, Router } from '@angular/router';
+import { EMPTY, filter, firstValueFrom, Subject } from 'rxjs';
 import { CompactLayout } from '../layout/compact-layout';
 import { PAGE_FADE_CLASS, PAGE_FADE_HIDDEN_CLASS, PageFade } from './page-fade';
 import { PAGE_LAYER_CLASS, PAGE_TRANSITION_LONGEST_MS } from './page-transitions';
@@ -16,12 +10,15 @@ import { ScrollHold } from './scroll-hold';
 @Component({ template: '' })
 class Blank {}
 
-interface SeenAtGuards {
+interface SeenAtArrival {
   readonly covered: boolean;
   readonly opaque: boolean;
   readonly coverHidden: boolean;
-  readonly mainHidden: boolean;
+  readonly mains: number;
+  readonly contentHidden: boolean;
 }
+
+let slowPage: Subject<string>;
 
 function computerWith(compact: boolean): void {
   TestBed.configureTestingModule({
@@ -35,18 +32,13 @@ function computerWith(compact: boolean): void {
             { path: 'o-nas', component: Blank },
             { path: 'aktuality', component: Blank },
             { path: 'zruseno', component: Blank, resolve: { nothing: () => EMPTY } },
+            { path: 'pomalu', component: Blank, resolve: { later: () => slowPage } },
           ],
         },
       ]),
       { provide: CompactLayout, useValue: { isCompact: signal(compact).asReadonly() } },
     ],
   });
-}
-
-function dropFocusAsTheBrowserDoesFromInert(focused: HTMLElement): void {
-  if (focused.closest('[inert]') !== null) {
-    focused.blur();
-  }
 }
 
 function cover(): HTMLElement | null {
@@ -57,27 +49,24 @@ describe('Given a computer that animates, with O nás open', () => {
   let router: Router;
   let layer: HTMLElement;
   let main: HTMLElement;
-  let seenAtGuards: SeenAtGuards[];
-  let mainInertAtEnd: boolean[];
+  let seenAtArrival: SeenAtArrival[];
 
   function start(compact: boolean): Promise<boolean> {
     computerWith(compact);
     router = TestBed.inject(Router);
     TestBed.inject(PageFade);
-    seenAtGuards = [];
-    mainInertAtEnd = [];
+    seenAtArrival = [];
     router.events.subscribe((event) => {
-      if (event instanceof GuardsCheckEnd) {
+      if (event instanceof NavigationEnd) {
         const shown = cover();
-        seenAtGuards.push({
+        seenAtArrival.push({
           covered: shown !== null,
           opaque: (shown?.style.backgroundColor ?? '') !== '',
           coverHidden:
             shown?.hasAttribute('inert') === true && shown.getAttribute('aria-hidden') === 'true',
-          mainHidden: main.hasAttribute('inert') && main.getAttribute('aria-hidden') === 'true',
+          mains: document.querySelectorAll('main').length,
+          contentHidden: main.hasAttribute('inert') || main.hasAttribute('aria-hidden'),
         });
-      } else if (event instanceof NavigationEnd) {
-        mainInertAtEnd.push(main.hasAttribute('inert'));
       }
     });
     return router.navigateByUrl('/o-nas');
@@ -95,6 +84,7 @@ describe('Given a computer that animates, with O nás open', () => {
     main.textContent = 'O nás';
     layer.append(main);
     document.body.append(layer);
+    slowPage = new Subject<string>();
   });
 
   afterEach(() => {
@@ -107,27 +97,33 @@ describe('Given a computer that animates, with O nás open', () => {
     delete (window as { matchMedia?: unknown }).matchMedia;
   });
 
-  it('when Aktuality opens, then a still copy hidden from assistive technology covers the old content, which is inert and hidden too', async () => {
+  it('when Aktuality arrives, then an inert still copy of O nás hidden from assistive technology covers the screen, with no second main, and the new content can take the focus at once', async () => {
     await start(false);
 
     await router.navigateByUrl('/aktuality');
 
-    expect(seenAtGuards.at(-1)).toEqual({
+    expect(seenAtArrival.at(-1)).toEqual({
       covered: true,
       opaque: false,
       coverHidden: true,
-      mainHidden: true,
+      mains: 1,
+      contentHidden: false,
     });
-    expect(main.hasAttribute('inert')).toBe(false);
   });
 
-  it('when Aktuality arrives, then its content can take the focus before anything fades', async () => {
+  it('when the next page is still on its way, then O nás stays as it is, live and not covered', async () => {
     await start(false);
+    const resolving = firstValueFrom(router.events.pipe(filter((e) => e instanceof ResolveStart)));
+    const opening = router.navigateByUrl('/pomalu');
+    await resolving;
 
-    await router.navigateByUrl('/aktuality');
+    expect(cover()).toBeNull();
+    expect(main.hasAttribute('inert') || main.hasAttribute('aria-hidden')).toBe(false);
 
-    expect(mainInertAtEnd.at(-1)).toBe(false);
-    expect(main.hasAttribute('aria-hidden')).toBe(false);
+    slowPage.next('hotovo');
+    slowPage.complete();
+    await opening;
+    expect(seenAtArrival.at(-1)?.covered).toBe(true);
   });
 
   it('when the copy has faded, then it goes and the scroll the router asked for runs then', async () => {
@@ -141,6 +137,23 @@ describe('Given a computer that animates, with O nás open', () => {
     await vi.advanceTimersByTimeAsync(PAGE_TRANSITION_LONGEST_MS);
 
     expect(cover()).toBeNull();
+    expect(scrolled).toHaveBeenCalledOnce();
+  });
+
+  it('when a pointer is pressed while the copy covers the page, then the new page shows at once and moves only once the press has ended, so the press lands where it was aimed', async () => {
+    await start(false);
+    vi.useFakeTimers();
+    await router.navigateByUrl('/aktuality');
+    const scrolled = vi.fn();
+    TestBed.inject(ScrollHold).run(scrolled);
+
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(cover()).toBeNull();
+    expect(document.documentElement.classList).not.toContain(PAGE_FADE_HIDDEN_CLASS);
+    expect(scrolled).not.toHaveBeenCalled();
+
+    document.dispatchEvent(new Event('pointerup'));
+    await vi.advanceTimersByTimeAsync(0);
     expect(scrolled).toHaveBeenCalledOnce();
   });
 
@@ -164,12 +177,7 @@ describe('Given a computer that animates, with O nás open', () => {
 
     await router.navigateByUrl('/darce/prehled');
 
-    expect(seenAtGuards.at(-1)).toEqual({
-      covered: true,
-      opaque: true,
-      coverHidden: true,
-      mainHidden: true,
-    });
+    expect(seenAtArrival.at(-1)).toMatchObject({ covered: true, opaque: true });
   });
 
   it('when the home page darkens the ground as it arrives, then the old content keeps its own ground until it is gone', async () => {
@@ -183,7 +191,6 @@ describe('Given a computer that animates, with O nás open', () => {
 
     await router.navigateByUrl('/');
 
-    expect(seenAtGuards.at(-1)?.opaque).toBe(false);
     expect(cover()?.style.backgroundColor).toBe('rgb(255, 255, 255)');
   });
 
@@ -200,18 +207,13 @@ describe('Given a computer that animates, with O nás open', () => {
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
   });
 
-  it('when the navigation is cancelled after the cover went up, then the focus goes back where it was', async () => {
+  it('when the navigation is cancelled, then nothing was covered and the focus stays where it was', async () => {
     await start(false);
     const link = document.createElement('a');
     link.href = '/zruseno';
     link.textContent = 'Zrušeno';
     main.append(link);
     link.focus();
-    router.events.subscribe((event) => {
-      if (event instanceof GuardsCheckEnd) {
-        dropFocusAsTheBrowserDoesFromInert(link);
-      }
-    });
 
     await router.navigateByUrl('/zruseno');
 
@@ -241,12 +243,7 @@ describe('Given a computer that animates, with O nás open', () => {
 
     await router.navigateByUrl('/o-nas?rok=2025');
 
-    expect(seenAtGuards.at(-1)).toEqual({
-      covered: false,
-      opaque: false,
-      coverHidden: false,
-      mainHidden: false,
-    });
+    expect(seenAtArrival.at(-1)?.covered).toBe(false);
   });
 
   it('when the screen is a phone, then the phone transitions are left to themselves', async () => {
@@ -254,11 +251,6 @@ describe('Given a computer that animates, with O nás open', () => {
 
     await router.navigateByUrl('/aktuality');
 
-    expect(seenAtGuards.at(-1)).toEqual({
-      covered: false,
-      opaque: false,
-      coverHidden: false,
-      mainHidden: false,
-    });
+    expect(seenAtArrival.at(-1)?.covered).toBe(false);
   });
 });

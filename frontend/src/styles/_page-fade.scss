@@ -21,11 +21,11 @@
   overflow: hidden;
   scroll-behavior: auto;
 
-  :not(main, main *) {
+  :not(.page-fade__main, .page-fade__main *) {
     visibility: hidden !important;
   }
 
-  main {
+  .page-fade__main {
     visibility: visible;
   }
 
