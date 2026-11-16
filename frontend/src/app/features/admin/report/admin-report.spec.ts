@@ -21,6 +21,7 @@ import {
   textOf,
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 
 const REPORT_URL = '/api/admin/donations/report';
 const SETTINGS_URL = '/api/admin/donations/report/settings';
@@ -89,7 +90,7 @@ describe('Given an administrator on the monthly report page', () => {
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }
@@ -270,7 +271,11 @@ describe('Given an administrator on the monthly report page', () => {
       sendHour: 18,
       sections: { donors: false, donations: true, unpairedPayments: true, bankImport: true },
     });
-    expect(text('form.settings-form button[type="submit"]')).toBe('Ukládáme…');
+    expect(
+      accessibleText(
+        fixture.nativeElement.querySelector('form.settings-form button[type="submit"]'),
+      ),
+    ).toBe('Ukládáme…');
 
     request.flush({
       recipients: ['pavel@example.cz', 'jakub@example.cz'],
@@ -605,7 +610,7 @@ describe('Given an administrator changing the monthly report on a device that ke
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }

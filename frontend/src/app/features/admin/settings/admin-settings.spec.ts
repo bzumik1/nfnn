@@ -19,6 +19,7 @@ import {
   textOf,
   waitsForConnection,
 } from '../device-copy/testing/opened-copy';
+import { accessibleText } from '../../../shared/ui/busy-label/testing/accessible-text';
 
 const SETTINGS_URL = '/api/admin/operations/settings';
 const TEST_EMAIL_URL = '/api/admin/operations/settings/test-email';
@@ -80,7 +81,7 @@ describe('Given an administrator on the settings page', () => {
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }
@@ -557,7 +558,7 @@ describe('Given an administrator changing the settings on a device that keeps dr
   function button(name: string): HTMLButtonElement {
     const found = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((candidate) => candidate.textContent?.replace(/\s+/g, ' ').trim() === name);
+    ).find((candidate) => accessibleText(candidate) === name);
     if (found === undefined) {
       throw new Error(`No button ${name}`);
     }
