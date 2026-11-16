@@ -53,6 +53,37 @@ test.describe('Given a visitor at the contact form', () => {
   });
 });
 
+test.describe('Given a visitor reading the privacy policy on a computer', () => {
+  test('when they follow an entry of the contents, then the contents stays in view beside the text and marks the section they are reading', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/zasady-ochrany-osobnich-udaju');
+    const contents = page.getByRole('navigation', { name: 'Obsah' });
+
+    await contents.getByRole('link', { name: 'Vaše práva' }).click();
+
+    await expect(page.getByRole('heading', { level: 2, name: 'Vaše práva' })).toBeInViewport();
+    await expect(contents).toBeInViewport({ ratio: 1 });
+    await expect(contents.locator('a[aria-current="location"]')).toHaveText('Vaše práva');
+  });
+});
+
+test.describe('Given a visitor reading the privacy policy on a phone', () => {
+  test('when they follow an entry of the contents, then the contents stays at the top of the page', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/zasady-ochrany-osobnich-udaju');
+    const contents = page.getByRole('navigation', { name: 'Obsah' });
+
+    await contents.getByRole('link', { name: 'Vaše práva' }).click();
+
+    await expect(page.getByRole('heading', { level: 2, name: 'Vaše práva' })).toBeInViewport();
+    await expect(contents).not.toBeInViewport();
+  });
+});
+
 test.describe('Given a visitor with a direct link to the privacy policy', () => {
   test('when they open it, then the policy renders under its own tab title', async ({ page }) => {
     await page.goto('/zasady-ochrany-osobnich-udaju');

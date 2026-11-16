@@ -116,7 +116,8 @@ img.is-unavailable {
 
   [aria-pressed='true'],
   [aria-checked='true'],
-  [aria-current='page'] {
+  [aria-current='page'],
+  [aria-current='location'] {
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;

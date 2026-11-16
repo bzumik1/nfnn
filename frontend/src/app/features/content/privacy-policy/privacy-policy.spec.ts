@@ -477,3 +477,130 @@ describe('Given the privacy policy page', () => {
     expect(link.textContent!.trim()).toBe('kontaktní formulář');
   });
 });
+
+type SectionSighting = (entries: Partial<IntersectionObserverEntry>[]) => void;
+
+class FakeSectionObserver {
+  static latest: FakeSectionObserver | undefined;
+  observed: Element[] = [];
+  disconnected = false;
+
+  constructor(readonly sighting: SectionSighting) {
+    FakeSectionObserver.latest = this;
+  }
+
+  observe(element: Element): void {
+    this.observed.push(element);
+  }
+
+  disconnect(): void {
+    this.disconnected = true;
+  }
+}
+
+describe('Given the privacy policy page read in a browser that reports which section is in view', () => {
+  const band = { top: 120, bottom: 320 } as DOMRectReadOnly;
+  let fixture: ComponentFixture<PrivacyPolicy>;
+
+  beforeEach(async () => {
+    vi.stubGlobal('IntersectionObserver', FakeSectionObserver);
+    await TestBed.configureTestingModule({
+      imports: [PrivacyPolicy],
+      providers: [provideRouter([])],
+    }).compileComponents();
+    fixture = TestBed.createComponent(PrivacyPolicy);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    FakeSectionObserver.latest = undefined;
+  });
+
+  function section(id: string): Element {
+    return fixture.nativeElement.querySelector(`section#${id}`) as Element;
+  }
+
+  function sighting(id: string, isIntersecting: boolean, top: number) {
+    return {
+      target: section(id),
+      isIntersecting,
+      boundingClientRect: { top } as DOMRectReadOnly,
+      rootBounds: band,
+    };
+  }
+
+  const enters = (id: string) => sighting(id, true, band.top);
+  const leavesUpwards = (id: string) => sighting(id, false, band.top - 2000);
+  const leavesDownwards = (id: string) => sighting(id, false, band.bottom + 40);
+
+  async function sight(...entries: Partial<IntersectionObserverEntry>[]): Promise<void> {
+    FakeSectionObserver.latest!.sighting(entries);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function currentEntries(): string[] {
+    return Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('nav.toc a[aria-current="location"]'),
+    ).map((link) => link.textContent!.trim());
+  }
+
+  it('when it renders, then it watches every section of the policy', () => {
+    expect(FakeSectionObserver.latest!.observed.map((element) => element.id)).toEqual([
+      'spravce',
+      'udaje',
+      'emaily',
+      'uchovavani',
+      'prijemci',
+      'cookies',
+      'prava',
+      'kontakt',
+      'ucinnost',
+    ]);
+  });
+
+  it('when the reader has not reached the first section yet, then no entry of the contents is marked as the current one', () => {
+    expect(currentEntries()).toEqual([]);
+  });
+
+  it('when a section comes into view, then only its entry of the contents is marked as the current location', async () => {
+    await sight(enters('udaje'));
+
+    expect(currentEntries()).toEqual(['Jaké údaje zpracováváme a proč']);
+  });
+
+  it('when two sections are in view at once, then the earlier one is the current location', async () => {
+    await sight(enters('cookies'), enters('prava'));
+
+    expect(currentEntries()).toEqual(['Cookies']);
+  });
+
+  it('when the current section scrolls up out of view and the next one has not arrived yet, then it stays the current location', async () => {
+    await sight(enters('emaily'));
+    await sight(leavesUpwards('emaily'));
+
+    expect(currentEntries()).toEqual(['Jaké e‑maily posíláme']);
+  });
+
+  it('when the reader scrolls back up above the current section, then the section before it is the current location', async () => {
+    await sight(enters('prijemci'));
+    await sight(leavesDownwards('prijemci'));
+
+    expect(currentEntries()).toEqual(['Jak dlouho údaje uchováváme']);
+  });
+
+  it('when the reader scrolls back up above the first section, then no entry is marked', async () => {
+    await sight(enters('spravce'));
+    await sight(leavesDownwards('spravce'));
+
+    expect(currentEntries()).toEqual([]);
+  });
+
+  it('when the page is left, then it stops watching the sections', () => {
+    fixture.destroy();
+
+    expect(FakeSectionObserver.latest!.disconnected).toBe(true);
+  });
+});
