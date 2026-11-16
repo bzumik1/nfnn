@@ -81,6 +81,10 @@
   list-style: none;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+
+  a {
+    color: var(--color-accent);
+  }
 }
 
 .erase-title {
@@ -180,6 +184,10 @@
     font-size: var(--text-md);
     color: var(--color-text);
     overflow-wrap: anywhere;
+
+    a {
+      color: var(--color-accent);
+    }
   }
 }
 

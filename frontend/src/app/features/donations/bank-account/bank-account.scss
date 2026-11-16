@@ -1,9 +1,24 @@
+.account {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-3);
+  max-width: 100%;
+  clip-path: inset(-100vh -100vw -100vh 0);
+}
+
 .logo {
   margin-inline-end: var(--space-1-5);
 }
 
 .bank {
-  display: inline-block;
+  position: relative;
   color: var(--color-text-muted);
   font-weight: var(--weight-regular);
+}
+
+.separator {
+  position: absolute;
+  inset-inline-end: 100%;
+  white-space: pre;
 }

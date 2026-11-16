@@ -40,4 +40,8 @@
 .ui-crumbs {
   font-size: var(--text-md);
   margin-bottom: var(--space-3);
+
+  a {
+    color: var(--color-accent);
+  }
 }
