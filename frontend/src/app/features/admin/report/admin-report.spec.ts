@@ -236,11 +236,11 @@ describe('Given an administrator on the monthly report page', () => {
         href: row.getAttribute('href'),
       })),
     ).toEqual([
-      { month: 'září 2026', sentAt: 'Odesláno 5. 10. 2026 7:00', href: '/sprava/prehledy/2026-09' },
-      { month: 'srpen 2026', sentAt: 'Odesláno 1. 9. 2026 7:00', href: '/sprava/prehledy/2026-08' },
+      { month: 'září 2026', sentAt: 'Odesláno 5.\u00a010.\u00a02026 7:00', href: '/sprava/prehledy/2026-09' },
+      { month: 'srpen 2026', sentAt: 'Odesláno 1.\u00a09.\u00a02026 7:00', href: '/sprava/prehledy/2026-08' },
     ]);
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
-      'září 2026 (odesláno 5. 10. 2026)',
+      'září 2026 (odesláno 5.\u00a010.\u00a02026)',
     );
   });
 
@@ -384,7 +384,7 @@ describe('Given an administrator on the monthly report page', () => {
 
     it('then the sheet says the edits stay in the form and when the other version was saved', () => {
       expect(sheet().textContent).toContain('zůstávají ve formuláři');
-      expect(sheet().textContent).toContain('Novější verze je z 5. 11. 2026 16:21.');
+      expect(sheet().textContent).toContain('Novější verze je z 5.\u00a011.\u00a02026 16:21.');
       expect(element<HTMLTextAreaElement>('#report-recipients').value).toBe('pavel@example.cz');
     });
 

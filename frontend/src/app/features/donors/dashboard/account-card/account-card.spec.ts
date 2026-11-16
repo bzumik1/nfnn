@@ -707,7 +707,7 @@ describe('Given the sign-in and security card of the details page', () => {
       expect(card.element('.account-status').textContent).toContain(
         'Nový potvrzovací odkaz je na cestě. Předchozí odkaz už neplatí.',
       );
-      expect(card.element('.account-pending').textContent).toContain('19. 10. 2026 13:00');
+      expect(card.element('.account-pending').textContent).toContain('19.\u00a010.\u00a02026 13:00');
       expect(card.element<HTMLButtonElement>('.account-resend').disabled).toBe(false);
     });
 

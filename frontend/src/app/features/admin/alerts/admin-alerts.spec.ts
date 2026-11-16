@@ -213,7 +213,7 @@ describe('Given an administrator on the alerts page', () => {
 
       expect(rows).toEqual([
         ['Import plateb z banky', undefined, '/sprava'],
-        ['Zálohy', 'Nefunguje od 4. 11. 2026 6:15', '/sprava/zalohy'],
+        ['Zálohy', 'Nefunguje od 4.\u00a011.\u00a02026 6:15', '/sprava/zalohy'],
         ['Odesílání e-mailů', undefined, '/sprava/nastaveni'],
       ]);
     });
@@ -500,11 +500,11 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is opened, then a sheet shows its switches and its removal', async () => {
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
 
-      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe('Apple, zapnuto 30. 10. 2026');
+      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe('Apple, zapnuto 30.\u00a010.\u00a02026');
       expect(switches(sheet()).map((box) => box.checked)).toEqual([true, false, true]);
-      expect(button('Odebrat zařízení Apple, zapnuto 30. 10. 2026')).toBeTruthy();
+      expect(button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026')).toBeTruthy();
     });
 
     it('and a switch changes, then the three switches are put and the change confirmed', async () => {
@@ -542,7 +542,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and saving a switch fails, then the switch goes back and the failure is shown', async () => {
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
       const backups = switches(sheet())[1];
       backups.checked = true;
       backups.dispatchEvent(new Event('change'));
@@ -637,11 +637,11 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is being removed, then its button names the running removal', async () => {
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
-      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
+      button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026').click();
       await settle();
 
-      expect(button('Odebíráme zařízení Apple, zapnuto 30. 10. 2026').textContent?.trim()).toBe(
+      expect(button('Odebíráme zařízení Apple, zapnuto 30.\u00a010.\u00a02026').textContent?.trim()).toBe(
         'Odebíráme…',
       );
       http
@@ -652,7 +652,7 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and a switch of the other device is saved, then the line names that device', async () => {
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
       const bank = switches(sheet())[0];
       bank.checked = false;
       bank.dispatchEvent(new Event('change'));
@@ -674,8 +674,8 @@ describe('Given an administrator on the alerts page', () => {
     });
 
     it('and the other device is removed, then the sheet closes and it leaves the list', async () => {
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
-      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
+      button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026').click();
       await settle();
       http
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
@@ -873,8 +873,8 @@ describe('Given an administrator on the alerts page', () => {
 
     it('then a device removed before the refresh answers does not come back with that answer, and the list is asked for again', async () => {
       const refresh = http.expectOne({ method: 'GET', url: PUSH_URL });
-      await openOtherDevice('Apple, zapnuto 30. 10. 2026');
-      button('Odebrat zařízení Apple, zapnuto 30. 10. 2026').click();
+      await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
+      button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026').click();
       await settle();
       http
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })

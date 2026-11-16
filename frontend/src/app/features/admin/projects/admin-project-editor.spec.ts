@@ -682,7 +682,7 @@ describe('Given an administrator editing a draft project', () => {
     it('then the sheet keeps the edits in the form and names when the other version was saved', () => {
       const sheet = element<HTMLDialogElement>(fixture, 'app-changed-meanwhile-dialog dialog');
       expect(sheet.textContent).toContain('zůstávají ve formuláři');
-      expect(sheet.textContent).toContain('Novější verze je z 5. 11. 2026 16:20.');
+      expect(sheet.textContent).toContain('Novější verze je z 5.\u00a011.\u00a02026 16:20.');
       expect(element<HTMLTextAreaElement>(fixture, '#projects-body').value).toBe(
         'Opravený text o koncertu.',
       );

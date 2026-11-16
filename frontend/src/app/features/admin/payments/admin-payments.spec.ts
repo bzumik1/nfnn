@@ -279,7 +279,7 @@ describe('Given an administrator on the bank payments page', () => {
         'Dar 500 Kč zmizí z přehledu dárce Jana Nováková a platba se vrátí mezi čekající na přiřazení; web ji sám znovu nepřiřadí. Zrušit přiřazení?',
       );
       expect(element('.confirm').getAttribute('aria-label')).toBe(
-        'Zrušit přiřazení platby 500\u00a0Kč z 10. 10. 2026?',
+        'Zrušit přiřazení platby 500\u00a0Kč z 10.\u00a010.\u00a02026?',
       );
       expect(document.activeElement).toBe(button('Ponechat'));
       http.expectNone(`/api/admin/donations/payments/${PAYMENT_ID}/unpair`);
@@ -643,7 +643,7 @@ describe('Given an administrator on the bank payments page', () => {
     }
 
     it("then the dialog names the payment, searches by the first word of the sender's name at once and focuses the search", () => {
-      expect(dialog().textContent).toContain('500\u00a0Kč z 10. 10. 2026');
+      expect(dialog().textContent).toContain('500\u00a0Kč z 10.\u00a010.\u00a02026');
       expect(dialog().textContent).toContain('Nováková Jana');
       expect(rowText(dialog().querySelector('.pair-payment')!)).toContain(
         '2900233333/2010 · Fio banka',
