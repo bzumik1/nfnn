@@ -153,9 +153,9 @@ test.describe('Given a visitor on the Přispět page', () => {
           'Kopírovat číslo účtu',
           'Kopírovat částku',
           'Kopírovat IBAN',
-          'založíte účet',
           'Zvětšit: QR platba na účet Nadačního fondu Nová naděje',
           'Uložit QR kód',
+          'založíte účet',
         ];
     const reached: string[] = [];
     while (reached.length < expected.length) {

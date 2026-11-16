@@ -21,6 +21,7 @@ import { RouterLink } from '@angular/router';
 import { Connectivity } from '../../../core/connectivity/connectivity';
 import { formatDataDay } from '../../../core/connectivity/data-time';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { ShortViewport } from '../../../core/layout/short-viewport';
 import { CopyButton } from '../../../shared/ui/copy-button/copy-button';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
@@ -101,6 +102,7 @@ export type PaymentAccountState =
   templateUrl: './payment-panel.html',
   styleUrl: './payment-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.split]': "layout() === 'split'" },
 })
 export class PaymentPanel {
   private readonly store = inject(PaymentDetailsStore);
@@ -112,6 +114,7 @@ export class PaymentPanel {
   private readonly handOffs = inject(PaymentHandOffs);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly compact = inject(CompactLayout).isCompact;
+  private readonly short = inject(ShortViewport).isShort;
   private readonly bankLabel = viewChild<ElementRef<HTMLElement>>('bankLabel');
   private readonly qrBox = viewChild<ElementRef<HTMLElement>>('qrBox');
   private readonly bankApp = viewChild<ElementRef<HTMLElement>>('bankApp');
@@ -123,6 +126,7 @@ export class PaymentPanel {
 
   readonly variableSymbol = input<string | null>(null);
   readonly idPrefix = input('donate');
+  readonly layout = input<'stacked' | 'split'>('stacked');
 
   protected readonly presets: readonly AmountPreset[] = [
     { amount: 1000, label: $localize`:@@home.donate.amount.preset1000:1 000 Kč` },
@@ -238,6 +242,9 @@ export class PaymentPanel {
   );
 
   protected readonly bankAccount = computed(() => this.details()?.account ?? null);
+  protected readonly qrInBankDetails = computed(
+    () => this.layout() === 'split' && !this.compact() && !this.short(),
+  );
 
   protected readonly arrivalText = computed(() => {
     const arrival = this.giftArrival.arrival();

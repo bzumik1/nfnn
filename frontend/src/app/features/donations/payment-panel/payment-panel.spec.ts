@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { CompactLayout } from '../../../core/layout/compact-layout';
+import { ShortViewport } from '../../../core/layout/short-viewport';
 import { QrCode } from '../../../shared/ui/qr-code/qr-code';
 import { encodeText } from '../../../shared/ui/qr-code/qr-encoder';
 import { QrMatrix } from '../../../shared/ui/qr-code/qr-matrix';
@@ -745,6 +746,81 @@ describe('Given the payment panel on a computer', () => {
     expect(panel.querySelector('.bank-app-open')).toBeNull();
     expect(panel.querySelector('.bank-app-second')).toBeNull();
     expect(panel.querySelector('.other-device')).toBeNull();
+    expect(panel.querySelector('.bank .qr')).toBeNull();
+  });
+});
+
+describe('Given the payment panel split into two columns on a computer', () => {
+  let fixture: ComponentFixture<PaymentPanel>;
+  let http: HttpTestingController;
+  let compactLayout: WritableSignal<boolean>;
+  let shortViewport: WritableSignal<boolean>;
+
+  beforeEach(async () => {
+    compactLayout = signal(false);
+    shortViewport = signal(false);
+    await TestBed.configureTestingModule({
+      imports: [PaymentPanel],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: compactLayout.asReadonly() } },
+        { provide: ShortViewport, useValue: { isShort: shortViewport.asReadonly() } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(PaymentPanel);
+    fixture.componentRef.setInput('layout', 'split');
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  async function open(): Promise<HTMLElement> {
+    fixture.detectChanges();
+    http
+      .expectOne((request) => request.url === PAYMENT_DETAILS_URL)
+      .flush(foundationPaymentDetails());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('when it opens, then the amount starts the first column and the bank details the second', async () => {
+    const panel = await open();
+
+    expect(panel.querySelector('.pay-start .amount')).not.toBeNull();
+    expect(panel.querySelector('.pay-details .bank')).not.toBeNull();
+  });
+
+  it('when it opens, then the QR and Naskenujte a přispějte stand inside the bank details, under the rows', async () => {
+    const panel = await open();
+
+    const bank = panel.querySelector('.bank')!;
+    const qr = bank.querySelector('.qr');
+    expect(qr?.querySelector('.qr-code svg[role="img"]')).not.toBeNull();
+    expect(qr?.querySelector('.qr-title')?.textContent?.trim()).toBe('Naskenujte a přispějte');
+    expect(
+      bank.querySelector('.bank-rows')!.compareDocumentPosition(qr!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(panel.querySelectorAll('.qr')).toHaveLength(1);
+  });
+
+  it('when the screen is short, then the QR stays under the bank details as in one column', async () => {
+    shortViewport.set(true);
+    const panel = await open();
+
+    expect(panel.querySelector('.bank .qr')).toBeNull();
+    expect(panel.querySelector('.qr .qr-code svg[role="img"]')).not.toBeNull();
+  });
+
+  it('when the layout is compact, then the QR keeps its own folded region under the bank app buttons', async () => {
+    compactLayout.set(true);
+    const panel = await open();
+
+    expect(panel.querySelector('.bank .qr')).toBeNull();
+    expect(panel.querySelector('.qr[role="region"]')).not.toBeNull();
   });
 });
 

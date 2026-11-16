@@ -14,6 +14,39 @@
   border: 1px solid var(--color-border-accent);
 }
 
+.pay-after {
+  display: flow-root;
+}
+
+@include bp.up(tablet) {
+  :host(.split) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-20);
+    align-items: start;
+  }
+
+  :host(.split) .pay-details {
+    container: payment-panel / inline-size;
+  }
+}
+
+@include bp.height-down(short) {
+  :host(.split) {
+    display: block;
+  }
+
+  :host(.split) .pay-details {
+    container-type: normal;
+  }
+}
+
+.bank .qr {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-accent);
+}
+
 .bank-note {
   margin-top: var(--space-3-5);
   font-size: var(--text-sm);

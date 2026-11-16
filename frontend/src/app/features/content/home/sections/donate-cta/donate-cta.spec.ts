@@ -593,7 +593,7 @@ describe('Given the donate section', () => {
     expect(drawnMatrixIs(QR_OF_100)).toBe(true);
   });
 
-  it('when nobody is signed in, then right after the bank details one line says a receipt needs an account and opens the registration from there', async () => {
+  it('when nobody is signed in, then right after the card of the bank details and the QR one line says a receipt needs an account and opens the registration from there', async () => {
     await openWithQr();
 
     const note = element('.bank-receipt-note');
@@ -601,7 +601,7 @@ describe('Given the donate section', () => {
       'Potvrzení o daru k platbě bez přihlášení vystavíme, až si založíte účet a ověříte v něm bankovní účet, ze kterého jste platili.',
     );
     expect(element('.bank').compareDocumentPosition(note)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(note.compareDocumentPosition(element('.qr'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(element('.bank').contains(element('.qr'))).toBe(true);
 
     (note.querySelector('button') as HTMLButtonElement).click();
 
@@ -897,7 +897,7 @@ describe('Given the donate section', () => {
     await settle();
 
     expect(qrCode()).toBeNull();
-    expect(element('.bank')).toBeNull();
+    expect(element('.bank-rows')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('5544332217/2010');
     expect(text('.qr-error')).toContain('QR platbu se nepodařilo připravit');
     expect(button('Zkusit znovu')).not.toBeNull();

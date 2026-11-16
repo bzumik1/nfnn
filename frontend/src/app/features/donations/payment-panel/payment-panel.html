@@ -1,417 +1,447 @@
-<div class="amount" role="group" [attr.aria-labelledby]="amountLabelId()">
-  <p class="panel-label" [id]="amountLabelId()" i18n="@@home.donate.amount.label">Zvolte částku</p>
-  <div class="amount-options">
-    @for (preset of presets; track preset.amount) {
+<div class="pay-start">
+  <ng-content select="[beforeAmount]" />
+
+  <div class="amount" role="group" [attr.aria-labelledby]="amountLabelId()">
+    <p class="panel-label" [id]="amountLabelId()" i18n="@@home.donate.amount.label">
+      Zvolte částku
+    </p>
+    <div class="amount-options">
+      @for (preset of presets; track preset.amount) {
+        <button
+          type="button"
+          class="amount-option"
+          [class.active]="!customChosen() && presetAmount() === preset.amount"
+          [attr.aria-pressed]="!customChosen() && presetAmount() === preset.amount"
+          (click)="choosePreset(preset.amount)"
+        >
+          {{ preset.label }}
+        </button>
+      }
       <button
         type="button"
         class="amount-option"
-        [class.active]="!customChosen() && presetAmount() === preset.amount"
-        [attr.aria-pressed]="!customChosen() && presetAmount() === preset.amount"
-        (click)="choosePreset(preset.amount)"
+        [class.active]="customChosen()"
+        [attr.aria-pressed]="customChosen()"
+        (click)="chooseCustomAmount()"
+        i18n="@@home.donate.amount.other"
       >
-        {{ preset.label }}
+        Jiná částka
       </button>
+    </div>
+
+    @if (customChosen()) {
+      <div class="custom-amount">
+        <label
+          [for]="customAmountId()"
+          class="visually-hidden"
+          i18n="@@home.donate.amount.customLabel"
+          >Vlastní částka v korunách</label
+        >
+        <input
+          #customAmountField
+          [id]="customAmountId()"
+          type="text"
+          inputmode="numeric"
+          enterkeyhint="done"
+          autocomplete="off"
+          [value]="customText()"
+          [attr.aria-invalid]="showAmountHint()"
+          [attr.aria-describedby]="customAmountDescription()"
+          (input)="enterCustomAmount($event)"
+          (blur)="leaveCustomAmount()"
+          (keydown.enter)="finishCustomAmount()"
+        />
+        <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
+          >Kč</span
+        >
+        <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
+          >QR kód se překreslí, když přestanete psát.</span
+        >
+      </div>
+      @if (showAmountHint()) {
+        <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
+          Zadejte celou částku od 1 do 1 000 000 Kč.
+        </p>
+      }
     }
-    <button
-      type="button"
-      class="amount-option"
-      [class.active]="customChosen()"
-      [attr.aria-pressed]="customChosen()"
-      (click)="chooseCustomAmount()"
-      i18n="@@home.donate.amount.other"
-    >
-      Jiná částka
-    </button>
   </div>
 
-  @if (customChosen()) {
-    <div class="custom-amount">
-      <label
-        [for]="customAmountId()"
-        class="visually-hidden"
-        i18n="@@home.donate.amount.customLabel"
-        >Vlastní částka v korunách</label
-      >
-      <input
-        #customAmountField
-        [id]="customAmountId()"
-        type="text"
-        inputmode="numeric"
-        enterkeyhint="done"
-        autocomplete="off"
-        [value]="customText()"
-        [attr.aria-invalid]="showAmountHint()"
-        [attr.aria-describedby]="customAmountDescription()"
-        (input)="enterCustomAmount($event)"
-        (blur)="leaveCustomAmount()"
-        (keydown.enter)="finishCustomAmount()"
-      />
-      <span class="custom-amount-currency" aria-hidden="true" i18n="@@home.donate.amount.currency"
-        >Kč</span
-      >
-      <span class="visually-hidden" [id]="redrawHintId()" i18n="@@home.donate.qr.redrawHint"
-        >QR kód se překreslí, když přestanete psát.</span
-      >
-    </div>
-    @if (showAmountHint()) {
-      <p class="amount-hint" [id]="amountHintId()" i18n="@@home.donate.amount.invalid">
-        Zadejte celou částku od 1 do 1 000 000 Kč.
-      </p>
-    }
-  }
+  <ng-content />
+
+  <ng-content select="[afterPayStart]" />
 </div>
 
-<ng-content />
+<div class="pay-details">
+  <ng-content select="[beforeBankDetails]" />
 
-@if (bankAccount(); as account) {
-  <div class="bank">
-    <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
-      Bankovní spojení
-    </p>
-    <div class="bank-rows">
-      <div class="bank-row">
-        <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
-        <span class="bank-value-wrap">
-          <span class="bank-value ui-figures"
-            >{{ accountParts(account.number).head }}<wbr />{{
-              accountParts(account.number).bankCode
-            }}</span
-          >
-          <app-copy-button
-            [value]="account.number"
-            what="číslo účtu"
-            (copied)="noteIntentToPay()"
-            i18n-what="@@home.donate.bank.copyAccount"
-          />
-        </span>
-      </div>
-      @if (amount(); as chosen) {
-        <div class="bank-row">
-          <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
-          <span class="bank-value-wrap">
-            <span class="bank-value ui-figures"
-              >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
-                >Kč</ng-container
-              ></span
-            >
-            <app-copy-button
-              [value]="'' + chosen"
-              what="částku"
-              (copied)="noteIntentToPay()"
-              i18n-what="@@home.donate.bank.copyAmount"
-            />
-          </span>
+  @if (bankAccount() !== null || qrInBankDetails()) {
+    <div class="bank">
+      @if (bankAccount(); as account) {
+        <p #bankLabel class="panel-label" tabindex="-1" i18n="@@home.donate.bank.label">
+          Bankovní spojení
+        </p>
+        <div class="bank-rows">
+          <div class="bank-row">
+            <span class="bank-key" i18n="@@home.donate.bank.account">Číslo účtu</span>&ngsp;
+            <span class="bank-value-wrap">
+              <span class="bank-value ui-figures"
+                >{{ accountParts(account.number).head }}<wbr />{{
+                  accountParts(account.number).bankCode
+                }}</span
+              >
+              <app-copy-button
+                [value]="account.number"
+                what="číslo účtu"
+                (copied)="noteIntentToPay()"
+                i18n-what="@@home.donate.bank.copyAccount"
+              />
+            </span>
+          </div>
+          @if (amount(); as chosen) {
+            <div class="bank-row">
+              <span class="bank-key" i18n="@@home.donate.bank.amount">Částka</span>&ngsp;
+              <span class="bank-value-wrap">
+                <span class="bank-value ui-figures"
+                  >{{ crowns(chosen) }}&nbsp;<ng-container i18n="@@home.donate.amount.currency"
+                    >Kč</ng-container
+                  ></span
+                >
+                <app-copy-button
+                  [value]="'' + chosen"
+                  what="částku"
+                  (copied)="noteIntentToPay()"
+                  i18n-what="@@home.donate.bank.copyAmount"
+                />
+              </span>
+            </div>
+          }
+          @if (variableSymbol(); as symbol) {
+            <div class="bank-row">
+              <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
+              <span class="bank-value-wrap">
+                <span class="bank-value ui-figures">{{ symbol }}</span>
+                <app-copy-button
+                  [value]="symbol"
+                  what="variabilní symbol"
+                  (copied)="noteIntentToPay()"
+                  i18n-what="@@home.donate.bank.copyVs"
+                />
+              </span>
+            </div>
+          }
+          <div class="bank-row">
+            <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
+            <span class="bank-value-wrap">
+              <span class="bank-value ui-figures ui-figures--groups"
+                ><span class="iban-half">{{ ibanLines()[0] }}</span
+                >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
+              >
+              <app-copy-button
+                [value]="account.iban"
+                what="IBAN"
+                (copied)="noteIntentToPay()"
+                i18n-what="@@home.donate.bank.copyIban"
+              />
+            </span>
+          </div>
         </div>
+        @if (detailsAge(); as age) {
+          @if (age.day; as day) {
+            <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNote">
+              Údaje účtu z {{ day }} · nemusí být aktuální
+            </p>
+          } @else {
+            <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNoteUndated">
+              Údaje účtu nemusí být aktuální
+            </p>
+          }
+        }
       }
-      @if (variableSymbol(); as symbol) {
-        <div class="bank-row">
-          <span class="bank-key" i18n="@@home.donate.bank.vs">Variabilní symbol</span>&ngsp;
-          <span class="bank-value-wrap">
-            <span class="bank-value ui-figures">{{ symbol }}</span>
-            <app-copy-button
-              [value]="symbol"
-              what="variabilní symbol"
-              (copied)="noteIntentToPay()"
-              i18n-what="@@home.donate.bank.copyVs"
-            />
-          </span>
-        </div>
+      @if (qrInBankDetails()) {
+        <ng-container [ngTemplateOutlet]="qrBlock" />
       }
-      <div class="bank-row">
-        <span class="bank-key" i18n="@@home.donate.bank.iban">IBAN</span>&ngsp;
-        <span class="bank-value-wrap">
-          <span class="bank-value ui-figures ui-figures--groups"
-            ><span class="iban-half">{{ ibanLines()[0] }}</span
-            >&ngsp;<span class="iban-half">{{ ibanLines()[1] }}</span></span
-          >
-          <app-copy-button
-            [value]="account.iban"
-            what="IBAN"
-            (copied)="noteIntentToPay()"
-            i18n-what="@@home.donate.bank.copyIban"
-          />
-        </span>
-      </div>
     </div>
-    @if (detailsAge(); as age) {
-      @if (age.day; as day) {
-        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNote">
-          Údaje účtu z {{ day }} · nemusí být aktuální
-        </p>
-      } @else {
-        <p class="bank-note" role="note" i18n="@@home.donate.bank.keptNoteUndated">
-          Údaje účtu nemusí být aktuální
-        </p>
+  }
+
+  <ng-content select="[afterBankDetails]" />
+
+  <div
+    class="gift-arrival"
+    [class.ui-notice]="arrivalText() !== null"
+    [class.ui-notice--status]="arrivalText() !== null"
+  >
+    <p class="gift-arrival-text" role="status">
+      @if (arrivalText(); as text) {
+        <span>{{ text }}</span>
       }
+    </p>
+    @if (arrivalText() !== null) {
+      <div class="gift-arrival-actions">
+        @if (!arrivalListedHere) {
+          <a routerLink="/darce/prehled" i18n="@@home.donate.arrived.overview"
+            >Zobrazit v přehledu</a
+          >
+        }
+        <button
+          #arrivalClose
+          type="button"
+          class="ui-button ui-button--small gift-arrival-close"
+          (click)="closeThanks()"
+          i18n="@@home.donate.arrived.close"
+        >
+          Zavřít
+        </button>
+      </div>
     }
   </div>
-}
 
-<ng-content select="[afterBankDetails]" />
+  @if (compact()) {
+    <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
+      <div class="bank-app-failure">
+        <ng-container [ngTemplateOutlet]="failureNotice" />
+      </div>
+      <button
+        #bankAppOpen
+        type="button"
+        class="bank-app-open ui-button ui-button--primary ui-button--block"
+        [disabled]="!openReady()"
+        [attr.aria-disabled]="handingOff() || null"
+        (click)="openInBankApp()"
+      >
+        <svg
+          class="bank-app-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M3 10h18L12 4 3 10Z" />
+          <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
+        </svg>
+        <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
+      </button>
+      <div class="bank-app-status" role="status">
+        @switch (handoffStep()) {
+          @case ('sharing') {
+            <p class="bank-app-progress" i18n="@@home.donate.bankApp.sharing">
+              Otevíráme nabídku sdílení…
+            </p>
+          }
+          @case ('opening') {
+            <p class="bank-app-progress" i18n="@@home.donate.bankApp.opening">
+              Otevíráme platbu v aplikaci banky…
+            </p>
+          }
+          @case ('saving') {
+            <p class="bank-app-progress" i18n="@@home.donate.qr.saving">Připravujeme obrázek…</p>
+          }
+        }
+        @switch (handoffNotice()) {
+          @case ('imageSaved') {
+            <p class="ui-form-status">{{ savedQrText() }}</p>
+          }
+          @case ('spaydDownloaded') {
+            <p class="ui-callout bank-app-hint">
+              <span i18n="@@home.donate.bankApp.downloaded"
+                >Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho
+                otevření nabídnou platbu.</span
+              >&ngsp;<ng-container [ngTemplateOutlet]="notOpened" />
+            </p>
+          }
+          @case ('bankNotOpened') {
+            <p class="ui-callout bank-app-hint"><ng-container [ngTemplateOutlet]="notOpened" /></p>
+          }
+          @case ('imageNotShared') {
+            <p class="ui-callout bank-app-hint">
+              <span i18n="@@home.donate.bankApp.imageNotShared"
+                ><strong>Nenašli jste v nabídce svou banku?</strong> Klepněte znovu, zvolte Uložit
+                obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše
+                do bankovní aplikace.</span
+              >
+            </p>
+          }
+          @case ('fileNotShared') {
+            <p class="ui-callout bank-app-hint">
+              <span i18n="@@home.donate.bankApp.fileNotShared"
+                ><strong>Neotevřela se vám banka?</strong> Zkuste Otevřít v aplikaci banky, které
+                pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.</span
+              >
+            </p>
+          }
+        }
+      </div>
+      <button
+        type="button"
+        class="bank-app-second ui-button ui-button--block"
+        [disabled]="opensWithImage ? !handoffReady() : !imageReady()"
+        [attr.aria-disabled]="handingOff() || null"
+        (click)="opensWithImage ? sendPaymentFile() : sendQrImage()"
+      >
+        <svg
+          class="bank-app-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 15V3M7 8l5-5 5 5" />
+          <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+        </svg>
+        @if (opensWithImage) {
+          <span i18n="@@home.donate.bankApp.sendFile">Poslat jako soubor platby</span>
+        } @else if (sendsImages) {
+          <span i18n="@@home.donate.bankApp.sendImage">Poslat QR jako obrázek</span>
+        } @else {
+          <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
+        }
+      </button>
+      <button
+        type="button"
+        class="other-device"
+        [attr.aria-controls]="qrRegionId()"
+        [attr.aria-expanded]="qrShown()"
+        (click)="toggleQr()"
+      >
+        <span class="other-device-text">
+          <span
+            class="other-device-title"
+            [id]="otherDeviceId()"
+            i18n="@@home.donate.otherDevice.title"
+            >Platíte z jiného zařízení?</span
+          >&ngsp;
+          <span class="other-device-hint">
+            @if (qrShown()) {
+              <span i18n="@@home.donate.otherDevice.scan">Naskenujte kód aplikací banky</span>
+            } @else {
+              <span i18n="@@home.donate.otherDevice.show">Zobrazit QR kód ke skenování</span>
+            }
+          </span>
+        </span>
+        <svg
+          class="other-device-chevron"
+          [class.is-open]="qrShown()"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+    </div>
+  }
 
-<div
-  class="gift-arrival"
-  [class.ui-notice]="arrivalText() !== null"
-  [class.ui-notice--status]="arrivalText() !== null"
->
-  <p class="gift-arrival-text" role="status">
-    @if (arrivalText(); as text) {
-      <span>{{ text }}</span>
+  <ng-template #notOpened>
+    @if (sendsImages) {
+      <span i18n="@@home.donate.bankApp.notOpened"
+        ><strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
+        pošlete QR jako obrázek a v bance zvolte platbu z obrázku.</span
+      >
+    } @else {
+      <span i18n="@@home.donate.bankApp.notOpenedSave">
+        <strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
+        si uložte QR kód a v bance zvolte platbu z obrázku.</span
+      >
+    }
+  </ng-template>
+
+  @if (!qrInBankDetails()) {
+    <ng-container [ngTemplateOutlet]="qrBlock" />
+  }
+
+  <ng-template #qrBlock>
+    <div
+      class="qr"
+      [id]="qrRegionId()"
+      [attr.role]="compact() ? 'region' : null"
+      [attr.aria-labelledby]="compact() ? otherDeviceId() : null"
+      [hidden]="compact() && !qrShown()"
+    >
+      <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
+        @if (qrMatrix(); as matrix) {
+          <app-zoomable [content]="zoomedQr()!">
+            <app-qr-code
+              class="qr-image"
+              [class.qr-image-stale]="redrawing()"
+              [matrix]="matrix"
+              [label]="qrLabel"
+            />
+          </app-zoomable>
+        } @else {
+          <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
+            @switch (state().kind) {
+              @case ('loading') {
+                <span i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
+              }
+              @case ('amountInvalid') {
+                <span i18n="@@home.donate.qr.amountMissing">Nejprve zadejte částku</span>
+              }
+            }
+          </div>
+        }
+      </div>
+      @if (compact()) {
+        @if (qrMatrix()) {
+          <p class="qr-caption">
+            <ng-container i18n="@@home.donate.qr.caption"
+              >QR platba na účet Nadačního fondu Nová naděje,
+              {{ drawnCrowns() }}&nbsp;Kč.</ng-container
+            >
+          </p>
+        }
+      } @else {
+        <div class="qr-text">
+          <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
+          <p class="qr-desc" i18n="@@home.donate.qr.desc">
+            Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního
+            fondu. Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
+          </p>
+          @if (qrMatrix()) {
+            <button
+              type="button"
+              class="qr-save"
+              [disabled]="saving() || redrawing()"
+              (click)="saveQr()"
+            >
+              @if (saving()) {
+                <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
+              } @else {
+                <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
+              }
+            </button>
+          }
+          <p class="ui-form-status qr-saved" role="status">
+            @if (savedQrText(); as saved) {
+              <span>{{ saved }}</span>
+            }
+          </p>
+          <ng-container [ngTemplateOutlet]="failureNotice" />
+        </div>
+      }
+    </div>
+  </ng-template>
+
+  <p class="visually-hidden qr-announcement" role="status">
+    @if (announcedAmount(); as announced) {
+      <span i18n="@@home.donate.qr.ready"
+        >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
+      >
     }
   </p>
-  @if (arrivalText() !== null) {
-    <div class="gift-arrival-actions">
-      @if (!arrivalListedHere) {
-        <a routerLink="/darce/prehled" i18n="@@home.donate.arrived.overview">Zobrazit v přehledu</a>
-      }
-      <button
-        #arrivalClose
-        type="button"
-        class="ui-button ui-button--small gift-arrival-close"
-        (click)="closeThanks()"
-        i18n="@@home.donate.arrived.close"
-      >
-        Zavřít
-      </button>
-    </div>
-  }
-</div>
 
-@if (compact()) {
-  <div #bankApp class="bank-app" tabindex="-1" [attr.aria-busy]="busy()">
-    <div class="bank-app-failure">
-      <ng-container [ngTemplateOutlet]="failureNotice" />
-    </div>
-    <button
-      #bankAppOpen
-      type="button"
-      class="bank-app-open ui-button ui-button--primary ui-button--block"
-      [disabled]="!openReady()"
-      [attr.aria-disabled]="handingOff() || null"
-      (click)="openInBankApp()"
-    >
-      <svg
-        class="bank-app-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M3 10h18L12 4 3 10Z" />
-        <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" />
-      </svg>
-      <span i18n="@@home.donate.bankApp.open">Otevřít v aplikaci banky</span>
-    </button>
-    <div class="bank-app-status" role="status">
-      @switch (handoffStep()) {
-        @case ('sharing') {
-          <p class="bank-app-progress" i18n="@@home.donate.bankApp.sharing">
-            Otevíráme nabídku sdílení…
-          </p>
-        }
-        @case ('opening') {
-          <p class="bank-app-progress" i18n="@@home.donate.bankApp.opening">
-            Otevíráme platbu v aplikaci banky…
-          </p>
-        }
-        @case ('saving') {
-          <p class="bank-app-progress" i18n="@@home.donate.qr.saving">Připravujeme obrázek…</p>
-        }
-      }
-      @switch (handoffNotice()) {
-        @case ('imageSaved') {
-          <p class="ui-form-status">{{ savedQrText() }}</p>
-        }
-        @case ('spaydDownloaded') {
-          <p class="ui-callout bank-app-hint">
-            <span i18n="@@home.donate.bankApp.downloaded"
-              >Soubor platba.spayd je ve stažených souborech. Některé bankovní aplikace po jeho
-              otevření nabídnou platbu.</span
-            >&ngsp;<ng-container [ngTemplateOutlet]="notOpened" />
-          </p>
-        }
-        @case ('bankNotOpened') {
-          <p class="ui-callout bank-app-hint"><ng-container [ngTemplateOutlet]="notOpened" /></p>
-        }
-        @case ('imageNotShared') {
-          <p class="ui-callout bank-app-hint">
-            <span i18n="@@home.donate.bankApp.imageNotShared"
-              ><strong>Nenašli jste v nabídce svou banku?</strong> Klepněte znovu, zvolte Uložit
-              obrázek a v bankovní aplikaci načtěte QR platbu z Fotek. Nebo zkopírujte údaje výše do
-              bankovní aplikace.</span
-            >
-          </p>
-        }
-        @case ('fileNotShared') {
-          <p class="ui-callout bank-app-hint">
-            <span i18n="@@home.donate.bankApp.fileNotShared"
-              ><strong>Neotevřela se vám banka?</strong> Zkuste Otevřít v aplikaci banky, které
-              pošle QR jako obrázek, nebo zkopírujte údaje výše do bankovní aplikace.</span
-            >
-          </p>
-        }
-      }
-    </div>
-    <button
-      type="button"
-      class="bank-app-second ui-button ui-button--block"
-      [disabled]="opensWithImage ? !handoffReady() : !imageReady()"
-      [attr.aria-disabled]="handingOff() || null"
-      (click)="opensWithImage ? sendPaymentFile() : sendQrImage()"
-    >
-      <svg
-        class="bank-app-icon"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M12 15V3M7 8l5-5 5 5" />
-        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-      </svg>
-      @if (opensWithImage) {
-        <span i18n="@@home.donate.bankApp.sendFile">Poslat jako soubor platby</span>
-      } @else if (sendsImages) {
-        <span i18n="@@home.donate.bankApp.sendImage">Poslat QR jako obrázek</span>
-      } @else {
-        <span i18n="@@home.donate.qr.save">Uložit QR kód</span>
-      }
-    </button>
-    <button
-      type="button"
-      class="other-device"
-      [attr.aria-controls]="qrRegionId()"
-      [attr.aria-expanded]="qrShown()"
-      (click)="toggleQr()"
-    >
-      <span class="other-device-text">
-        <span
-          class="other-device-title"
-          [id]="otherDeviceId()"
-          i18n="@@home.donate.otherDevice.title"
-          >Platíte z jiného zařízení?</span
-        >&ngsp;
-        <span class="other-device-hint">
-          @if (qrShown()) {
-            <span i18n="@@home.donate.otherDevice.scan">Naskenujte kód aplikací banky</span>
-          } @else {
-            <span i18n="@@home.donate.otherDevice.show">Zobrazit QR kód ke skenování</span>
-          }
-        </span>
-      </span>
-      <svg
-        class="other-device-chevron"
-        [class.is-open]="qrShown()"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="m6 9 6 6 6-6" />
-      </svg>
-    </button>
+  <div class="pay-after">
+    <ng-content select="[afterPayment]" />
   </div>
-}
-
-<ng-template #notOpened>
-  @if (sendsImages) {
-    <span i18n="@@home.donate.bankApp.notOpened"
-      ><strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo
-      pošlete QR jako obrázek a v bance zvolte platbu z obrázku.</span
-    >
-  } @else {
-    <span i18n="@@home.donate.bankApp.notOpenedSave">
-      <strong>Neotevřela se vám banka?</strong> Zkopírujte údaje výše do bankovní aplikace, nebo si
-      uložte QR kód a v bance zvolte platbu z obrázku.</span
-    >
-  }
-</ng-template>
-
-<div
-  class="qr"
-  [id]="qrRegionId()"
-  [attr.role]="compact() ? 'region' : null"
-  [attr.aria-labelledby]="compact() ? otherDeviceId() : null"
-  [hidden]="compact() && !qrShown()"
->
-  <div #qrBox class="qr-code" tabindex="-1" [attr.aria-busy]="busy()">
-    @if (qrMatrix(); as matrix) {
-      <app-zoomable [content]="zoomedQr()!">
-        <app-qr-code
-          class="qr-image"
-          [class.qr-image-stale]="redrawing()"
-          [matrix]="matrix"
-          [label]="qrLabel"
-        />
-      </app-zoomable>
-    } @else {
-      <div class="qr-placeholder" [class.qr-placeholder-loading]="state().kind === 'loading'">
-        @switch (state().kind) {
-          @case ('loading') {
-            <span i18n="@@home.donate.qr.loading">Připravujeme QR kód…</span>
-          }
-          @case ('amountInvalid') {
-            <span i18n="@@home.donate.qr.amountMissing">Nejprve zadejte částku</span>
-          }
-        }
-      </div>
-    }
-  </div>
-  @if (compact()) {
-    @if (qrMatrix()) {
-      <p class="qr-caption">
-        <ng-container i18n="@@home.donate.qr.caption"
-          >QR platba na účet Nadačního fondu Nová naděje, {{ drawnCrowns() }}&nbsp;Kč.</ng-container
-        >
-      </p>
-    }
-  } @else {
-    <div class="qr-text">
-      <p class="qr-title" i18n="@@home.donate.qr.title">Naskenujte a přispějte</p>
-      <p class="qr-desc" i18n="@@home.donate.qr.desc">
-        Načtěte QR kód mobilní bankovní aplikací pro okamžitou platbu přímo na účet nadačního fondu.
-        Na telefonu si ho uložte a v bankovní aplikaci otevřete z galerie.
-      </p>
-      @if (qrMatrix()) {
-        <button
-          type="button"
-          class="qr-save"
-          [disabled]="saving() || redrawing()"
-          (click)="saveQr()"
-        >
-          @if (saving()) {
-            <ng-container i18n="@@home.donate.qr.saving">Připravujeme obrázek…</ng-container>
-          } @else {
-            <ng-container i18n="@@home.donate.qr.save">Uložit QR kód</ng-container>
-          }
-        </button>
-      }
-      <p class="ui-form-status qr-saved" role="status">
-        @if (savedQrText(); as saved) {
-          <span>{{ saved }}</span>
-        }
-      </p>
-      <ng-container [ngTemplateOutlet]="failureNotice" />
-    </div>
-  }
 </div>
-
-<p class="visually-hidden qr-announcement" role="status">
-  @if (announcedAmount(); as announced) {
-    <span i18n="@@home.donate.qr.ready"
-      >QR platba na {{ crowns(announced) }}&nbsp;Kč je připravená.</span
-    >
-  }
-</p>
 
 <ng-template #failureNotice>
   <div [attr.role]="failureAlerts() ? null : 'status'">
