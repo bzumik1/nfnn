@@ -310,6 +310,7 @@
   --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
 
   --content-max: 1200px;
+  --content-max-wide: 1440px;
   --header-height: 72px;
   --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
