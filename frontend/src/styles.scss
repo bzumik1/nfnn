@@ -1,5 +1,6 @@
 @use 'theme';
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'visually-hidden';
 @use 'styles/form-controls';
 @use 'styles/controls';
@@ -102,7 +103,24 @@ html.contact-in-view app-root {
 }
 
 @include bp.up(nav) {
-  html:not(.landing-stage) {
+  html {
+    background-color: var(--color-surface);
+    @include motion.state(background-color);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition-property: none;
+    }
+  }
+
+  html:has(app-root .ui-grouped) {
+    background-color: var(--color-surface-grouped);
+  }
+
+  html.contact-in-view {
+    background-color: var(--color-surface-inverse);
+  }
+
+  html:not(.landing-stage):not(:has(.launch-screen)) {
     scrollbar-gutter: stable;
   }
 

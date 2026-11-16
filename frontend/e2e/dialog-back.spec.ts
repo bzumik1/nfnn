@@ -5,6 +5,7 @@ import {
   administrator,
   mockDonorApi,
   openAccountItem,
+  openSignInDialog,
   session,
   whenAdministrationCopied,
 } from './donor-session';
@@ -667,5 +668,56 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
     await page.goBack();
 
     await expect(page).toHaveURL('about:blank');
+  });
+});
+
+const MAIN_LIGHT_BACKDROP_IN_HUNDREDTHS = [1000, 1500, 4000, 60];
+const MAIN_LIGHT_BACKDROP_HALF_PULLED_IN_HUNDREDTHS = [1000, 1500, 4000, 30];
+
+function channels(css: string): { red: number; green: number; blue: number; alpha: number } {
+  const srgb = css.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/);
+  if (srgb !== null) {
+    return {
+      red: Number(srgb[1]) * 255,
+      green: Number(srgb[2]) * 255,
+      blue: Number(srgb[3]) * 255,
+      alpha: srgb[4] === undefined ? 1 : Number(srgb[4]),
+    };
+  }
+  const rgb = css.match(/^rgba?\(([\d.]+),? ([\d.]+),? ([\d.]+)(?:(?:,| \/) ([\d.]+))?\)$/);
+  if (rgb !== null) {
+    return {
+      red: Number(rgb[1]),
+      green: Number(rgb[2]),
+      blue: Number(rgb[3]),
+      alpha: rgb[4] === undefined ? 1 : Number(rgb[4]),
+    };
+  }
+  throw new Error(`Unexpected colour ${css}`);
+}
+
+test.describe('Given the sign-in sheet open on a phone', () => {
+  test('when it rests and when it is pulled halfway, then its backdrop keeps the colour it had before the backdrop became a tint and a strength', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openSignInDialog(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sheet = page.locator('dialog.dialog--sheet[open]');
+    await expect(sheet).toBeVisible();
+    const backdrop = async () => {
+      const colour = channels(
+        await sheet.evaluate((element) => getComputedStyle(element).backgroundColor),
+      );
+      return [colour.red, colour.green, colour.blue, colour.alpha].map((value) =>
+        Math.round(value * 100),
+      );
+    };
+
+    await expect.poll(backdrop).toEqual(MAIN_LIGHT_BACKDROP_IN_HUNDREDTHS);
+
+    await sheet.evaluate((element) => element.style.setProperty('--dialog-pull', '0.5'));
+    await expect.poll(backdrop).toEqual(MAIN_LIGHT_BACKDROP_HALF_PULLED_IN_HUNDREDTHS);
   });
 });

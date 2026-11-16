@@ -109,6 +109,21 @@
       "state": "home-donate-qr-error",
       "since": "#540, #609, #602",
       "reason": "the empty placeholder of the QR in the failure state keeps the QR's 260 px square in its frame instead of collapsing to a small box (#540); and every tab and page under it on one ground with one large-title header and no label above the title, the dark band over articles, projects, the privacy policy and the 404 gone (experts' decision with Jakub's mandate, 2026-11-12, #609); and the site has no footer at any width (Jakub 2026-11-12, #602), and Přispět ends with a grey note linking the privacy policy"
+    },
+    {
+      "state": "about",
+      "since": "#1171",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22)"
+    },
+    {
+      "state": "receipt-verification",
+      "since": "#1171",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22)"
+    },
+    {
+      "state": "receipt-verification-yearly",
+      "since": "#1171",
+      "reason": "#1171 (Q5 of the desktop polish, both teams 12/12): from nav up html reserves the scrollbar's strip (scrollbar-gutter: stable), so on a runner with classic scrollbars the page is laid out 15 px narrower and its column sits 7.5 px further left, the QR and bank details too; the verification cards also take the card hairline --color-divider and the 65ch measure of ui-card__intro (Q2, Q22)"
     }
   ]
 }

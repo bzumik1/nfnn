@@ -83,7 +83,7 @@ async function valuesTouchingTheirTitle(page: Page): Promise<string[]> {
 }
 
 async function widerThanScreen(page: Page): Promise<number> {
-  return page.evaluate(() => document.body.scrollWidth - document.documentElement.clientWidth);
+  return page.evaluate(() => document.body.scrollWidth - document.body.clientWidth);
 }
 
 test.describe('Given a visitor who uses only the keyboard or a screen reader', () => {
