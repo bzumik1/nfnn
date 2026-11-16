@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and focus moves to the next sign-out",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the last row while another device stays, then focus moves to the button that signs out every other device",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out every other device, then only this one stays, the status says so and focus moves to the heading",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out every other device, then only this one stays, the status says so and takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when an administrator has this device and the iPhone signed in > and signs out the iPhone, the last other one, then focus moves to the heading",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when three devices are signed in > and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out an older one, then focus moves to the next older sign-out",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out an older one, then the row that opens them counts one less and the status takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out the last recent one while the older ones stay folded, then focus moves to the row that opens them",
+    "replacement": "src/app/features/donors/dashboard/devices-card/devices-card.spec.ts > Given a donor's signed-in devices card > when two devices were last used more than 30 days ago > and the donor signs out an older one, then the row that opens them counts one less and the status takes focus",
+    "reason": "PR #1294 (#1243, team Mobile + PWA 6/6): signing out another device or every other device asks first, and after the confirmed sign-out focus moves to the card's status line instead of the next sign-out, the row of older sign-ins, the button for every other device or the heading",
+    "contract": "docs/frontend-overview.md, Donor area (Přihlášená zařízení)"
+  }
+]

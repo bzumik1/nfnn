@@ -31,6 +31,10 @@ const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
 const ALL_OTHERS = 'others';
 
+function signOutButtonId(deviceId: string): string {
+  return `device-sign-out-${deviceId}`;
+}
+
 type DeviceShape = 'phone' | 'tablet' | 'computer' | 'other';
 
 const SHAPES: Record<DevicePlatform, DeviceShape> = {
@@ -59,9 +63,9 @@ export class DevicesCard {
   private readonly changes = new ListChanges(() => this.loadDevices(false, true));
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
-  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly status = viewChild.required<ElementRef<HTMLElement>>('status');
   private readonly othersButton = viewChild<ElementRef<HTMLButtonElement>>('othersButton');
-  private readonly olderToggle = viewChild<ElementRef<HTMLButtonElement>>('olderToggle');
+  private readonly confirmCancel = viewChild<ElementRef<HTMLButtonElement>>('confirmCancel');
 
   readonly sessionEnded = output<void>();
 
@@ -71,12 +75,14 @@ export class DevicesCard {
   protected readonly olderShown = signal(false);
   protected readonly groups = computed(() => groupDevices(this.devices() ?? []));
   protected readonly shown = computed(() => [...this.groups().current, ...this.groups().recent]);
+  protected readonly confirming = signal<string | null>(null);
   protected readonly signingOut = signal<string | null>(null);
   protected readonly signedOut = signal('');
   protected readonly hasOthers = computed(() =>
     (this.devices() ?? []).some((device) => !device.current),
   );
   protected readonly signingOutOthers = computed(() => this.signingOut() === ALL_OTHERS);
+  protected readonly confirmingOthers = computed(() => this.confirming() === ALL_OTHERS);
 
   constructor() {
     this.loadDevices(true);
@@ -108,6 +114,20 @@ export class DevicesCard {
     });
   }
 
+  askToSignOut(device: SignedInDevice): void {
+    this.ask(device.id);
+  }
+
+  askToSignOutOthers(): void {
+    this.ask(ALL_OTHERS);
+  }
+
+  cancelSignOut(): void {
+    const target = this.confirming();
+    this.confirming.set(null);
+    this.focusAfterRender(() => this.askingButton(target));
+  }
+
   signOut(device: SignedInDevice): void {
     if (this.signingOut() !== null) {
       return;
@@ -120,7 +140,7 @@ export class DevicesCard {
           this.removed(device);
           return;
         }
-        this.failed(failure, () => this.document.getElementById(this.signOutButtonId(device)));
+        this.failed(failure, () => this.askingButton(device.id));
       },
     });
   }
@@ -133,16 +153,17 @@ export class DevicesCard {
     this.authApi.signOutOtherDevices().subscribe({
       next: () => {
         this.signingOut.set(null);
+        this.confirming.set(null);
         this.devices.update((list) => (list ?? []).filter((device) => device.current));
         this.signedOut.set(
           this.auth.isAdmin()
             ? $localize`:@@donor.account.devices.othersSignedOutAdmin:Ostatní zařízení jsou odhlášená. Připojené aplikace zůstávají připojené; odpojíte je na kartě Připojené aplikace.`
             : $localize`:@@donor.account.devices.othersSignedOut:Ostatní zařízení jsou odhlášená.`,
         );
-        this.focusAfterRender(() => this.heading().nativeElement);
+        this.focusAfterRender(() => this.status().nativeElement);
         this.changes.changed();
       },
-      error: (failure: unknown) => this.failed(failure, () => this.othersButton()?.nativeElement),
+      error: (failure: unknown) => this.failed(failure, () => this.askingButton(ALL_OTHERS)),
     });
   }
 
@@ -166,15 +187,16 @@ export class DevicesCard {
     return SHAPES[device.platform];
   }
 
-  protected signOutLabel(device: SignedInDevice): string | null {
-    if (this.signingOut() === device.id) {
-      return null;
-    }
+  protected signOutLabel(device: SignedInDevice): string {
     return $localize`:@@donor.account.devices.signOutLabel:Odhlásit ${this.name(device)}:device:`;
   }
 
   protected signOutButtonId(device: SignedInDevice): string {
-    return `device-sign-out-${device.id}`;
+    return signOutButtonId(device.id);
+  }
+
+  protected confirmQuestionId(device: SignedInDevice): string {
+    return `device-sign-out-confirm-${device.id}`;
   }
 
   protected signedInOn(device: SignedInDevice): string {
@@ -187,25 +209,28 @@ export class DevicesCard {
 
   private removed(device: SignedInDevice): void {
     this.signingOut.set(null);
-    const visible = this.visibleDevices();
-    const position = visible.findIndex((other) => other.id === device.id);
-    const next = visible.slice(position + 1).find((other) => !other.current);
+    this.confirming.set(null);
     this.devices.update((list) => (list ?? []).filter((other) => other.id !== device.id));
     this.signedOut.set(
       $localize`:@@donor.account.devices.signedOut:Zařízení jsme odhlásili: ${this.name(device)}:device:. Pokud jste se na něm nepřihlásili vy, změňte si heslo.`,
     );
-    this.focusAfterRender(() =>
-      next
-        ? this.document.getElementById(this.signOutButtonId(next))
-        : (this.olderToggle()?.nativeElement ??
-          this.othersButton()?.nativeElement ??
-          this.heading().nativeElement),
-    );
+    this.focusAfterRender(() => this.status().nativeElement);
     this.changes.changed();
   }
 
-  private visibleDevices(): SignedInDevice[] {
-    return [...this.shown(), ...(this.olderShown() ? this.groups().older : [])];
+  private ask(target: string): void {
+    if (this.signingOut() !== null) {
+      return;
+    }
+    this.confirming.set(target);
+    this.focusAfterRender(() => this.confirmCancel()?.nativeElement);
+  }
+
+  private askingButton(target: string | null): HTMLElement | null | undefined {
+    if (target === ALL_OTHERS) {
+      return this.othersButton()?.nativeElement;
+    }
+    return target === null ? null : this.document.getElementById(signOutButtonId(target));
   }
 
   private focusAfterRender(target: () => HTMLElement | null | undefined): void {
@@ -221,6 +246,7 @@ export class DevicesCard {
 
   private failed(failure: unknown, pressed: () => HTMLElement | null | undefined): void {
     this.signingOut.set(null);
+    this.confirming.set(null);
     if (this.sessionLost(failure)) {
       return;
     }

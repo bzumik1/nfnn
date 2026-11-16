@@ -1,11 +1,5 @@
 <section class="ui-card devices" aria-labelledby="devices-title">
-  <h2
-    #heading
-    id="devices-title"
-    class="ui-card__title"
-    tabindex="-1"
-    i18n="@@donor.account.devices.title"
-  >
+  <h2 id="devices-title" class="ui-card__title" tabindex="-1" i18n="@@donor.account.devices.title">
     Přihlášená zařízení
   </h2>
   <p class="ui-card__intro devices-inset devices-intro" i18n="@@donor.account.devices.intro">
@@ -33,7 +27,6 @@
       @if (groups().older.length > 0) {
         <li>
           <button
-            #olderToggle
             type="button"
             class="ui-list__row devices-older-toggle"
             [attr.aria-expanded]="olderShown()"
@@ -91,22 +84,56 @@
     </ul>
     <div class="devices-inset devices-footer">
       @if (hasOthers()) {
-        <button
-          appNeedsConnection
-          #othersButton
-          type="button"
-          class="ui-button ui-button--danger-outline devices-sign-out-others"
-          [disabled]="signingOut() !== null"
-          (click)="signOutOthers()"
-        >
-          @if (signingOutOthers()) {
-            <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
-          } @else {
+        @if (confirmingOthers()) {
+          <div class="devices-confirm" role="group" aria-labelledby="devices-confirm-others">
+            <p
+              id="devices-confirm-others"
+              class="devices-confirm-text"
+              i18n="@@donor.account.devices.confirmOthers"
+            >
+              Odhlásit všechna ostatní zařízení?
+            </p>
+            <div class="devices-confirm-actions">
+              <button
+                appNeedsConnection
+                type="button"
+                class="ui-button ui-button--danger devices-confirm-yes"
+                [disabled]="signingOut() !== null"
+                [attr.aria-busy]="signingOutOthers()"
+                (click)="signOutOthers()"
+              >
+                @if (signingOutOthers()) {
+                  <span i18n="@@donor.account.devices.signingOut">Odhlašujeme…</span>
+                } @else {
+                  <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+                }
+              </button>
+              <button
+                #confirmCancel
+                type="button"
+                class="ui-button devices-confirm-no"
+                [disabled]="signingOut() !== null"
+                (click)="cancelSignOut()"
+                i18n="@@donor.account.cancel"
+              >
+                Zrušit
+              </button>
+            </div>
+          </div>
+        } @else {
+          <button
+            appNeedsConnection
+            #othersButton
+            type="button"
+            class="ui-button ui-button--danger-outline devices-sign-out-others"
+            [disabled]="signingOut() !== null"
+            (click)="askToSignOutOthers()"
+          >
             <span i18n="@@donor.account.devices.signOutOthers"
               >Odhlásit všechna ostatní zařízení</span
             >
-          }
-        </button>
+          </button>
+        }
       } @else {
         <p class="devices-empty" i18n="@@donor.account.devices.empty">Jinde přihlášení nejste.</p>
       }
@@ -121,7 +148,7 @@
     @if (actionError()) {
       <p class="ui-field-error" role="alert">{{ actionError() }}</p>
     }
-    <p class="ui-form-status devices-status" role="status">
+    <p #status class="ui-form-status devices-status" role="status" tabindex="-1">
       @if (signedOut(); as message) {
         <span>{{ message }}</span>
       }
@@ -194,7 +221,7 @@
           >
             Toto zařízení
           </span>
-        } @else {
+        } @else if (confirming() !== device.id) {
           <button
             appNeedsConnection
             type="button"
@@ -202,6 +229,33 @@
             [disabled]="signingOut() !== null"
             [id]="signOutButtonId(device)"
             [attr.aria-label]="signOutLabel(device)"
+            (click)="askToSignOut(device)"
+          >
+            <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
+          </button>
+        }
+      </span>
+    </div>
+    @if (confirming() === device.id) {
+      <div
+        class="devices-confirm device-confirm"
+        role="group"
+        [attr.aria-labelledby]="confirmQuestionId(device)"
+      >
+        <p
+          [id]="confirmQuestionId(device)"
+          class="devices-confirm-text"
+          i18n="@@donor.account.devices.confirm"
+        >
+          Odhlásit {{ name(device) }}?
+        </p>
+        <div class="devices-confirm-actions">
+          <button
+            appNeedsConnection
+            type="button"
+            class="ui-button ui-button--danger devices-confirm-yes"
+            [disabled]="signingOut() !== null"
+            [attr.aria-busy]="signingOut() === device.id"
             (click)="signOut(device)"
           >
             @if (signingOut() === device.id) {
@@ -210,8 +264,18 @@
               <span i18n="@@donor.account.devices.signOut">Odhlásit</span>
             }
           </button>
-        }
-      </span>
-    </div>
+          <button
+            #confirmCancel
+            type="button"
+            class="ui-button devices-confirm-no"
+            [disabled]="signingOut() !== null"
+            (click)="cancelSignOut()"
+            i18n="@@donor.account.cancel"
+          >
+            Zrušit
+          </button>
+        </div>
+      </div>
+    }
   </li>
 </ng-template>
