@@ -887,6 +887,26 @@ for (const rootPx of [34, 53]) {
   });
 }
 
+async function valuesUnderTheirCopyButtons(card: Locator): Promise<string[]> {
+  return card.evaluate((element) =>
+    Array.from(element.querySelectorAll('dd'))
+      .filter((field) => field.querySelector('app-copy-button button'))
+      .filter((field) => {
+        const value = field.querySelector<HTMLElement>('.accounting-value')!;
+        const box = value.getBoundingClientRect();
+        const right = box.left + Math.max(box.width, value.scrollWidth);
+        const button = field.querySelector('app-copy-button button')!.getBoundingClientRect();
+        return (
+          box.left < button.right &&
+          right > button.left + 0.5 &&
+          box.top < button.bottom &&
+          box.bottom > button.top + 0.5
+        );
+      })
+      .map((field) => field.querySelector('.accounting-value')!.textContent!.trim()),
+  );
+}
+
 async function copyButtonsWithinFingerReachOfEachOther(card: Locator): Promise<string[]> {
   return card.evaluate((element) => {
     const reach = parseFloat(getComputedStyle(element).getPropertyValue('--touch-target-size'));
@@ -914,7 +934,7 @@ for (const { screen, viewport, rootPx } of [
   test.describe(`Given an accountant on ${screen} whose text is at ${rootPx ? `${rootPx} px` : 'its default size'}`, () => {
     test.use({ viewport });
 
-    test('when they open Údaje pro účetní on O nás, then every value stays within the card, the copy buttons stand in one column and their touch areas never overlap', async ({
+    test('when they open Údaje pro účetní on O nás, then every value stays within the card and clear of its copy button, the copy buttons stand in one column and their touch areas never overlap', async ({
       page,
     }) => {
       if (rootPx) {
@@ -932,6 +952,7 @@ for (const { screen, viewport, rootPx } of [
       await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
 
       expect(await contentPastTheSides(card)).toEqual([]);
+      expect(await valuesUnderTheirCopyButtons(card)).toEqual([]);
       expect(await copyButtonsWithinFingerReachOfEachOther(card)).toEqual([]);
       const rightEdges = await card
         .locator('app-copy-button button')

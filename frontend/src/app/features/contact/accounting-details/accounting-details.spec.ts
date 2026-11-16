@@ -94,7 +94,7 @@ describe('Given the details an accountant needs in the contact section', () => {
 
     it('then a line under the details says how a company gets its receipt', () => {
       expect(text(root().querySelector('.accounting-note'))).toBe(
-        'Potvrzení o\u00a0daru na firmu získáte, když si při registraci zvolíte Firma a vyplníte\u00a0IČO.',
+        'Potvrzení o\u00a0daru na firmu získáte, když si při registraci zvolíte Firma a\u00a0vyplníte\u00a0IČO.',
       );
     });
   });

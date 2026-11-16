@@ -207,6 +207,30 @@ test.describe('Given an accountant on the About page', () => {
   });
 });
 
+test.describe('Given an accountant on a phone 390 px wide', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('when they read Údaje pro účetní on O nás, then every value starts the same distance under its label, with or without a copy button', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/o-nas');
+    const card = page.locator('app-accounting-details .accounting');
+    await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+    const distances = await card.locator('.accounting-item').evaluateAll((items) =>
+      items.map((item) => {
+        const label = item.querySelector('dt')!.getBoundingClientRect();
+        const value = item.querySelector('dd > :first-child')!.getBoundingClientRect();
+        return { label: item.querySelector('dt')!.textContent!.trim(), gap: value.top - label.top };
+      }),
+    );
+    const gaps = distances.map(({ gap }) => gap);
+
+    expect(Math.max(...gaps) - Math.min(...gaps), JSON.stringify(distances)).toBeLessThanOrEqual(1);
+  });
+});
+
 async function tabOrderFromContactEmail(page: Page): Promise<string[]> {
   await page.locator('#kontakt').getByRole('link', { name: 'info@nfnn.cz' }).focus();
   const reached: string[] = [];

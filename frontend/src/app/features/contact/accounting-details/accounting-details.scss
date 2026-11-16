@@ -25,7 +25,7 @@
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
-    align-items: first baseline;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-1) var(--space-3);
   }
@@ -44,6 +44,10 @@
   .accounting-value {
     min-width: 0;
   }
+}
+
+.accounting-item app-copy-button {
+  translate: 0 calc(0.5lh - 50%);
 }
 
 .accounting-link {
