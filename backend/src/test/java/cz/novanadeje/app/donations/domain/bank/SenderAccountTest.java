@@ -90,6 +90,14 @@ class SenderAccountTest {
     }
 
     @Test
+    @DisplayName("Given accounts with and without a prefix, when their last digits are asked, then at most the last four digits of the number remain")
+    void should_keep_at_most_the_last_four_digits_when_the_last_digits_are_asked() {
+        assertThat(new SenderAccount("2900233333", "2010").lastDigits()).isEqualTo("3333");
+        assertThat(new SenderAccount("19-2000145399", "0800").lastDigits()).isEqualTo("5399");
+        assertThat(new SenderAccount("29", "2010").lastDigits()).isEqualTo("29");
+    }
+
+    @Test
     @DisplayName("Given non-canonical values, when an account is created, then it is rejected")
     void should_reject_when_created_given_non_canonical_values() {
         assertThatIllegalArgumentException().isThrownBy(() -> new SenderAccount("0029", "2010"));

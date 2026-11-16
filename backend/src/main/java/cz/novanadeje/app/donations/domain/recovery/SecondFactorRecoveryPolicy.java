@@ -67,6 +67,13 @@ public final class SecondFactorRecoveryPolicy {
         if (usableFrom(owner.link()).isAfter(payment.bookedOn())) {
             return new RecoveryDecision.Refuse(RecoveryRefusal.ACCOUNT_TOO_NEW);
         }
+        Optional<NameWords> payer = payment.counterpartyName().flatMap(NameWords::of);
+        if (payer.isEmpty()) {
+            return new RecoveryDecision.Refuse(RecoveryRefusal.NO_PAYER_NAME);
+        }
+        if (!payer.equals(NameWords.of(owner.donor().name().value()))) {
+            return new RecoveryDecision.Refuse(RecoveryRefusal.PAYER_NAME_MISMATCH);
+        }
         return new RecoveryDecision.Recover(owner.donor(), code, sender.get());
     }
 

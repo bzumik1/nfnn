@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.application;
 import cz.novanadeje.app.donors.domain.DeviceSignOutReason;
 import cz.novanadeje.app.donors.application.event.AdministratorSecondFactorRecovered;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecovered;
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecoveryStarted;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -135,6 +136,7 @@ class SecondFactorRecoveryServiceTest {
         assertThat(instructions.toString()).doesNotContain(instructions.message());
         verify(challenges, never()).reserveAttempt(any(), any(), org.mockito.ArgumentMatchers.anyInt());
         verify(challenges, never()).markUsed(any(), any());
+        verify(events).publishEvent(new DonorSecondFactorRecoveryStarted(JANA.value(), new EmailAddress("jana@example.cz"), LocaleCode.CS));
     }
 
     @Test
@@ -172,6 +174,7 @@ class SecondFactorRecoveryServiceTest {
         assertThat(instructions.resumed()).isTrue();
         assertThat(instructions.paymentText()).isEqualTo(PAYMENT_TEXT);
         verify(recoveries, never()).replaceOpenOf(any(), any());
+        verifyNoInteractions(events);
     }
 
     @Test

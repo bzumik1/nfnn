@@ -21,8 +21,28 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     Then "Jana" has the second factor off
     And every session of "Jana" has ended
     And "Jana" gets an e-mail with the subject "Dvoufaktorové ověření jsme vypnuli podle vaší platby – Nová naděje"
+    And "Jana" gets 1 e-mails with the subject "Někdo zahájil obnovu přístupu k vašemu účtu – Nová naděje"
+    And "Jana" gets 1 e-mails with the subject "Zapamatovali jsme si nový bankovní účet – Nová naděje"
     When "Jana" signs in with the password alone
     Then the response status is 200
+
+  Scenario: Whoever pays with the donor's symbol from an own account teaches the site that account and the donor is told, but a recovery paid from it under another name changes nothing
+    When the bank account receives "200.00" with the variable symbol of "Jana" from "2900233333/2010" named "Karel Dvořák" today
+    And the hourly import runs
+    Then "Jana" gets 2 e-mails with the subject "Zapamatovali jsme si nový bankovní účet – Nová naděje"
+    Given 7 days pass
+    When "Jana" asks to recover the second factor by payment
+    Then the response status is 200
+    And "Jana" gets 1 e-mails with the subject "Někdo zahájil obnovu přístupu k vašemu účtu – Nová naděje"
+    When the bank account receives "1.00" with the recovery message from "2900233333/2010" named "Karel Dvořák" today
+    And the hourly import runs
+    Then "Jana" has the second factor on
+    When the bank account receives "1.00" with the recovery message from "2000145399/0800" named "Dvořák Karel" today
+    And the hourly import runs
+    Then "Jana" has the second factor on
+    When the bank account receives "1.00" with the recovery message from "2000145399/0800" named "ING. NOVAKOVA JANA" today
+    And the hourly import runs
+    Then "Jana" has the second factor off
 
   Scenario: A payment from an account verified less than seven days ago or of another amount changes nothing, and the seventh day works
     When "Jana" asks to recover the second factor by payment
@@ -61,6 +81,7 @@ Feature: A donor who lost the authenticator turns the second factor off by payin
     When "Jana" asks to recover the second factor by payment
     Then the response status is 200
     And the instructions repeat the open recovery started "2026-10-17T10:00:00Z"
+    And "Jana" gets 1 e-mails with the subject "Někdo zahájil obnovu přístupu k vašemu účtu – Nová naděje"
     And the instructions ask for 100 hellers to "5544332217/2010" with a recovery message, valid until "2026-10-31T10:00:00Z", from today
     And the instructions carry the SPAYD text of 1 Kč with the recovery message and no variable symbol, and no QR code
     When the bank account receives "1.00" with the recovery message from "2000145399/0800" today

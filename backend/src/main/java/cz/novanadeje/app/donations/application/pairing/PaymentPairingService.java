@@ -12,14 +12,17 @@ import cz.novanadeje.app.donations.domain.donor.DonorRecordRepository;
 import cz.novanadeje.app.donations.domain.donor.DonorReference;
 import cz.novanadeje.app.donations.domain.donor.ExcludedSenderAccounts;
 import cz.novanadeje.app.donations.domain.donor.SenderAccountLink;
+import cz.novanadeje.app.donations.domain.donor.SenderAccountLinkId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
 import cz.novanadeje.app.donations.domain.pairing.PairingDecision;
 import cz.novanadeje.app.donations.domain.pairing.PaymentPairingPolicy;
 import cz.novanadeje.app.donations.domain.pairing.UnpairedReason;
+import cz.novanadeje.app.shared.application.event.SenderAccountLearned;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -49,9 +53,10 @@ public class PaymentPairingService {
     private final PairingLock lock;
     private final ExcludedSenderAccounts excluded;
     private final PaymentPairingPolicy policy;
+    private final ApplicationEventPublisher events;
 
     public PaymentPairingService(BankPaymentRepository payments, DonorRecordRepository donorRecords, DonationRepository donations,
-                                 SymbolClaimRepository claims, PairingLock lock, ExcludedSenderAccounts excluded) {
+                                 SymbolClaimRepository claims, PairingLock lock, ExcludedSenderAccounts excluded, ApplicationEventPublisher events) {
         this.payments = payments;
         this.donorRecords = donorRecords;
         this.donations = donations;
@@ -59,6 +64,7 @@ public class PaymentPairingService {
         this.lock = lock;
         this.excluded = excluded;
         this.policy = new PaymentPairingPolicy(excluded);
+        this.events = events;
     }
 
     public PairingOutcome pairUnpaired(Instant now) {
@@ -174,11 +180,15 @@ public class PaymentPairingService {
                         .filter(other -> !other.id().equals(donor.id()))
                         .flatMap(other -> other.releasedSenderAccountOn(sender).stream())
                         .max(Comparator.naturalOrder()));
+        Set<SenderAccountLinkId> known = donor.senderAccountLinks().stream().map(SenderAccountLink::id).collect(Collectors.toSet());
         Optional<SenderAccountLink> learned = donor.learnSenderAccountFrom(payment, takenOverOn, excluded, now);
         learned.ifPresent(link -> {
             if (donorRecords.saveSenderAccountLink(donor.id(), link)) {
                 tally.accountsLearned++;
                 log.debug("Donor {} learned sender account link {} from bank payment {}", donor.id(), link.id(), payment.transactionId());
+                if (!known.contains(link.id())) {
+                    events.publishEvent(new SenderAccountLearned(donor.id().value(), link.account().lastDigits(), now));
+                }
             }
         });
         return learned;

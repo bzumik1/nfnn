@@ -19,6 +19,7 @@ import cz.novanadeje.app.donations.domain.importing.ImportTrigger;
 import cz.novanadeje.app.shared.domain.Currency;
 import cz.novanadeje.app.shared.domain.Money;
 import cz.novanadeje.app.shared.domain.VariableSymbol;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.FakeFioClient.RequestedPeriod;
 import cz.novanadeje.app.support.FioMovements;
@@ -70,11 +71,14 @@ public class FioImportStepDefinitions {
     private final MutableClock clock;
     private final JdbcClient jdbc;
     private final ScenarioDonors scenarioDonors;
+    private final AsyncTaskTracker asyncTasks;
     private final List<ImportReport> reports = new ArrayList<>();
     private ImportSettings settings = ImportSettings.defaults();
 
     public FioImportStepDefinitions(ImportBankPaymentsService importService, BankPaymentRepository payments, BankImportStateRepository states,
-                                    FakeFioClient fio, MutableClock clock, JdbcClient jdbc, ScenarioDonors scenarioDonors) {
+                                    FakeFioClient fio, MutableClock clock, JdbcClient jdbc, ScenarioDonors scenarioDonors,
+                                    AsyncTaskTracker asyncTasks) {
+        this.asyncTasks = asyncTasks;
         this.importService = importService;
         this.payments = payments;
         this.states = states;
@@ -292,6 +296,7 @@ public class FioImportStepDefinitions {
 
     private void runImport(ImportTrigger trigger) {
         reports.add(importService.importIncomingPayments(trigger, settings));
+        asyncTasks.awaitIdleAfter("the " + trigger + " import");
     }
 
     private ImportReport lastReport() {

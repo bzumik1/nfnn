@@ -123,6 +123,10 @@ public final class Donor {
         return emailVerifiedAt != null;
     }
 
+    public boolean receivesSecurityNotices() {
+        return erasedAt == null && emailVerifiedAt != null;
+    }
+
     public Optional<Instant> emailVerifiedAt() {
         return Optional.ofNullable(emailVerifiedAt);
     }
