@@ -1,0 +1,240 @@
+[
+  {
+    "scenario": "content/admin_content_sync: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_activity_since: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_device_sync: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_donor_accounts: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_donor_erasure: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_history_import: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_monthly_report: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_payments: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_receipt_signature: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_receipt_signing_key_withdrawal: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_receipt_signing_keys: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_receipts: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_sent_monthly_report: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_stale_writes: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_symbol_claims: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/admin_yearly_receipts: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/bank_check_on_demand: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donor_bank_accounts: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donor_device_sync: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donor_donations_overview: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donor_record_sync: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/monthly_report: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/payment_pairing: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/receipt_status: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/symbol_claims: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donors/connected_apps: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "operations/donor_gift_notifications: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "operations/donor_yearly_receipt_notifications: *",
+    "kind": "added",
+    "subject": "Zapamatovali jsme si nový bankovní účet – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donations/donation_receipts_frozen: *",
+    "kind": "added",
+    "subject": "We remembered a new bank account – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): a donor with a confirmed e-mail is told whenever the site learns a new sender account from a payment with the donor's variable symbol, by its last four digits only, because the symbol is public and anyone can make the site learn an own account",
+    "contract": "docs/api-contract.md, Recovery by payment; docs/system-overview.md, donations"
+  },
+  {
+    "scenario": "donors/admin_device_sync: *",
+    "kind": "added",
+    "subject": "Někdo zahájil obnovu přístupu k vašemu účtu – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): opening a new second-factor recovery by payment e-mails the donor that someone who knows the password started it",
+    "contract": "docs/api-contract.md, Recovery by payment"
+  },
+  {
+    "scenario": "donors/second_factor_recovery: *",
+    "kind": "added",
+    "subject": "Někdo zahájil obnovu přístupu k vašemu účtu – Nová naděje",
+    "reason": "PR #1146, Jakub 2026-11-16 (security audit #915, decision card \"Stejné jméno a e-maily\"): opening a new second-factor recovery by payment e-mails the donor that someone who knows the password started it",
+    "contract": "docs/api-contract.md, Recovery by payment"
+  }
+]
