@@ -984,7 +984,7 @@ describe('Given an administrator on a donor card', () => {
     );
   });
 
-  it('when the second factor is on, then its hint says the donor can also recover by a payment from an account in their name and the button serves a payment from an account of another person', async () => {
+  it('when the second factor is on, then its hint says the donor can also recover by a payment', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
     expect(sectionText('Přihlášení')).toContain(

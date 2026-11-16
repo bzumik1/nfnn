@@ -519,7 +519,7 @@ describe('Given the sign-in dialog', () => {
           expect(document.activeElement).toBe(element('.recovery-title'));
         });
 
-        it('then the lead asks for an account in the donor name, says an account of another person unlocks nothing and does not send the donor to the overview they cannot open', async () => {
+        it('then the lead names the account to pay from without sending the donor to the overview they cannot open', async () => {
           (await askForRecovery()).flush(instructions);
           await settle();
 
