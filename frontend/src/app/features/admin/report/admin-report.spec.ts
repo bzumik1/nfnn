@@ -236,8 +236,16 @@ describe('Given an administrator on the monthly report page', () => {
         href: row.getAttribute('href'),
       })),
     ).toEqual([
-      { month: 'září 2026', sentAt: 'Odesláno 5.\u00a010.\u00a02026 7:00', href: '/sprava/prehledy/2026-09' },
-      { month: 'srpen 2026', sentAt: 'Odesláno 1.\u00a09.\u00a02026 7:00', href: '/sprava/prehledy/2026-08' },
+      {
+        month: 'září 2026',
+        sentAt: 'Odesláno 5.\u00a010.\u00a02026 7:00',
+        href: '/sprava/prehledy/2026-09',
+      },
+      {
+        month: 'srpen 2026',
+        sentAt: 'Odesláno 1.\u00a09.\u00a02026 7:00',
+        href: '/sprava/prehledy/2026-08',
+      },
     ]);
     expect(element<HTMLSelectElement>('#report-month').options[0]?.textContent).toBe(
       'září 2026 (odesláno 5.\u00a010.\u00a02026)',

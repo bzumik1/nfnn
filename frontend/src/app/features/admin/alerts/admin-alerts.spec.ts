@@ -502,7 +502,9 @@ describe('Given an administrator on the alerts page', () => {
     it('and the other device is opened, then a sheet shows its switches and its removal', async () => {
       await openOtherDevice('Apple, zapnuto 30.\u00a010.\u00a02026');
 
-      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe('Apple, zapnuto 30.\u00a010.\u00a02026');
+      expect(sheet().querySelector('h2')?.textContent?.trim()).toBe(
+        'Apple, zapnuto 30.\u00a010.\u00a02026',
+      );
       expect(switches(sheet()).map((box) => box.checked)).toEqual([true, false, true]);
       expect(button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026')).toBeTruthy();
     });
@@ -641,9 +643,9 @@ describe('Given an administrator on the alerts page', () => {
       button('Odebrat zařízení Apple, zapnuto 30.\u00a010.\u00a02026').click();
       await settle();
 
-      expect(button('Odebíráme zařízení Apple, zapnuto 30.\u00a010.\u00a02026').textContent?.trim()).toBe(
-        'Odebíráme…',
-      );
+      expect(
+        button('Odebíráme zařízení Apple, zapnuto 30.\u00a010.\u00a02026').textContent?.trim(),
+      ).toBe('Odebíráme…');
       http
         .expectOne({ method: 'DELETE', url: `${PUSH_URL}/subscriptions/push-phone` })
         .flush(null, { status: 204, statusText: 'No Content' });

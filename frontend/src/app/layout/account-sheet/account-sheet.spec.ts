@@ -126,7 +126,9 @@ describe('Given the account sheet of a signed-in donor', () => {
 
       const row = faultRow(sheet)!;
       expect(row.querySelector('.ui-list__title')?.textContent?.trim()).toBe('Nefunguje: Zálohy');
-      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe('od 14.\u00a011.\u00a02026 3:00');
+      expect(row.querySelector('.ui-list__meta')?.textContent?.trim()).toBe(
+        'od 14.\u00a011.\u00a02026 3:00',
+      );
       expect(row.getAttribute('href')).toBe('/sprava/zalohy');
       expect(
         sheet
