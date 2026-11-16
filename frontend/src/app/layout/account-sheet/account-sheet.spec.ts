@@ -596,7 +596,7 @@ describe('Given the account sheet of a signed-in donor', () => {
       'info@nfnn.cz',
     );
     expect(foundation.textContent?.replace(/[^\S\u00a0]+/g, ' ')).toContain(
-      'Zapsán u\u00a0KS Ústí nad Labem, oddíl\u00a0N, vložka\u00a078 · IČO\u00a027278794',
+      'Zapsán u\u00a0KS Ústí\u00a0nad\u00a0Labem, oddíl\u00a0N, vložka\u00a078 · IČO\u00a027278794',
     );
     expect(foundation.querySelector('a[href="/o-nas#kontakt"]')?.textContent?.trim()).toBe(
       'Kontakt',

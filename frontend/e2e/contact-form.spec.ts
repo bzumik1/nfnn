@@ -19,7 +19,7 @@ test.describe('Given a visitor on the About page', () => {
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
     await expect(page.getByRole('status').filter({ hasText: 'Zpráva je odeslaná' })).toContainText(
-      'Odpovíme vám e-mailem na jana@example.cz.',
+      'Odpovíme vám e\u2011mailem na jana@example.cz.',
     );
     await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
     expect(posted).toEqual([

@@ -1,5 +1,6 @@
 @use 'breakpoints' as bp;
 @use 'motion';
+@use 'touch-target';
 
 :host {
   display: block;
@@ -202,12 +203,15 @@ app-form-field {
 }
 
 .form-success-text {
+  overflow-wrap: anywhere;
   color: var(--color-text-soft);
   font-size: var(--text-lg);
   line-height: var(--leading-relaxed);
 }
 
 .form-success-again {
+  @include touch-target.reaches-finger-size;
+
   margin-top: var(--space-6);
   background: var(--color-accent-fill);
   color: var(--color-on-accent);

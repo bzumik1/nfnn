@@ -68,10 +68,10 @@ describe('Given the details an accountant needs in the contact section', () => {
       expect(rows()).toEqual([
         ['Název', 'Nová naděje - nadační fond'],
         ['IČO', '27278794'],
-        ['Sídlo', 'Jiráskova 436, 473\u00a001 Nový Bor'],
+        ['Sídlo', 'Jiráskova 436, 473\u00a001 Nový\u00a0Bor'],
         [
           'Zápis',
-          'nadační rejstřík vedený Krajským soudem v\u00a0Ústí nad Labem, oddíl\u00a0N, vložka\u00a078',
+          'nadační rejstřík vedený Krajským soudem v\u00a0Ústí\u00a0nad\u00a0Labem, oddíl\u00a0N, vložka\u00a078',
         ],
         ['Číslo účtu', '5544332217/2010'],
         ['IBAN', 'CZ26 2010 0000 0055 4433 2217'],
@@ -94,7 +94,7 @@ describe('Given the details an accountant needs in the contact section', () => {
 
     it('then a line under the details says how a company gets its receipt', () => {
       expect(text(root().querySelector('.accounting-note'))).toBe(
-        'Potvrzení o daru na firmu získáte, když si při registraci zvolíte Firma a vyplníte IČO.',
+        'Potvrzení o\u00a0daru na firmu získáte, když si při registraci zvolíte Firma a vyplníte\u00a0IČO.',
       );
     });
   });

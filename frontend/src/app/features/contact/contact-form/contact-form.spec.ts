@@ -177,7 +177,7 @@ describe('Given the contact form', () => {
       const status = element('.contact-form-wrap > [role="status"]');
 
       expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
-        'Zpráva je odeslaná Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
+        'Zpráva je odeslaná Děkujeme za zprávu. Odpovíme vám e\u2011mailem na jana@example.cz.',
       );
     });
 
