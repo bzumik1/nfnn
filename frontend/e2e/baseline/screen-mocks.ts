@@ -679,6 +679,5 @@ export async function serveRecentDonors(page: RouteTarget): Promise<void> {
 
 export async function rememberedSession(page: Page, user = administrator): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) => route.fulfill(session(200, user)));
-  await page.goto('/');
-  await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
+  await page.addInitScript(() => localStorage.setItem('nfnn.donor-session', '1'));
 }

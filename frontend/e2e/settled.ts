@@ -65,8 +65,28 @@ export async function quietNetwork(
     await page.waitForLoadState('networkidle', { timeout: timeoutMs });
   } catch {
     const document = await page.evaluate(() => window.document.readyState).catch(() => 'gone');
+    const answered = await answeredInPage(page);
+    const named = open().map(
+      (request) =>
+        `${request} (${answered.has(request.slice(request.indexOf(' ') + 1)) ? 'the page has its answer' : 'the page has no answer'})`,
+    );
     throw new Error(
-      `the network did not go quiet within ${timeoutMs} ms (document ${document}); still open: ${open().join(', ') || 'nothing'}`,
+      `the network did not go quiet within ${timeoutMs} ms (document ${document}); still open: ${named.join(', ') || 'nothing'}`,
     );
   }
+}
+
+async function answeredInPage(page: Page): Promise<Set<string>> {
+  const addresses = await page
+    .evaluate(() =>
+      performance
+        .getEntriesByType('resource')
+        .filter((entry) => (entry as PerformanceResourceTiming).responseEnd > 0)
+        .map((entry) => {
+          const url = new URL(entry.name);
+          return `${url.origin}${url.pathname}`;
+        }),
+    )
+    .catch(() => []);
+  return new Set(addresses);
 }
