@@ -1,4 +1,4 @@
-<section id="uvod" class="hero">
+<section #hero id="uvod" class="hero">
   <img
     fetchpriority="high"
     srcset="/images/hero-1024.webp 1024w, /images/hero-1536.webp 1536w"
@@ -12,7 +12,9 @@
   <div class="hero-top-shade"></div>
   <div class="hero-overlay"></div>
 
-  <div class="hero-content">
+  <div #fullScreen class="hero-full-screen" aria-hidden="true"></div>
+
+  <div #content class="hero-content">
     <p class="hero-eyebrow" i18n="@@home.hero.eyebrow">nadační fond</p>
     <h1 class="hero-title" i18n="@@home.hero.title">Nová naděje</h1>
     <p class="hero-lead" i18n="@@home.hero.lead">

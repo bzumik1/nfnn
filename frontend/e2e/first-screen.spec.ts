@@ -142,6 +142,53 @@ async function heroLayout(page: Page, face: Box) {
   }, face);
 }
 
+async function leadShows(page: Page): Promise<boolean> {
+  return page.locator('#uvod .hero-lead').evaluate((lead) => {
+    const box = lead.getBoundingClientRect();
+    return box.width > 1 && box.height > 1;
+  });
+}
+
+async function expectHeroToSettleAt(
+  page: Page,
+  viewport: { width: number; height: number },
+): Promise<void> {
+  await page.setViewportSize(viewport);
+  await heroLayout(page, FACE_IN_HERO_PHOTO);
+  await page.evaluate(
+    () =>
+      new Promise<void>((settled) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => settled())),
+      ),
+  );
+  await page.evaluate(() => {
+    const changes = { count: 0 };
+    Object.assign(window, { heroChanges: changes });
+    new MutationObserver((records) => (changes.count += records.length)).observe(
+      document.querySelector('#uvod')!,
+      { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] },
+    );
+  });
+  await waitWhileNothingMayHappen(page, 400);
+
+  const changes = await page.evaluate(
+    () => (window as unknown as { heroChanges: { count: number } }).heroChanges.count,
+  );
+  expect(changes, `the hero kept switching at ${viewport.width} × ${viewport.height}`).toBe(0);
+}
+
+async function heroControlsInTabBarBand(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const tabBarTop = document.querySelector('app-tab-bar nav')!.getBoundingClientRect().top;
+    return [...document.querySelectorAll<HTMLElement>('#uvod a')]
+      .filter((control) => {
+        const box = control.getBoundingClientRect();
+        return box.bottom > tabBarTop && box.top < window.innerHeight;
+      })
+      .map((control) => control.textContent?.trim() ?? '');
+  });
+}
+
 async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
   const { color, lines } = await page.locator(selector).evaluate((element) => {
     const range = document.createRange();
@@ -388,6 +435,179 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
       await expect(donate).toBeInViewport();
     });
   });
+
+  for (const screen of [
+    { name: 'a computer', width: 1280, height: 748, root: '150%' },
+    { name: 'a computer', width: 1280, height: 748, root: '200%' },
+    { name: 'an iPad on its side', width: 1180, height: 820, root: '34px' },
+    { name: 'an iPhone SE', width: 375, height: 647, root: '53px' },
+  ]) {
+    test.describe(`when it opens on ${screen.name} of ${screen.width} × ${screen.height} with a root of ${screen.root}, where the hero no longer fits one screen and its buttons may rest partly behind the tab bar`, () => {
+      test.use({ viewport: { width: screen.width, height: screen.height } });
+
+      test.beforeEach(async ({ page }) => {
+        await page.goto('/');
+        await page.addStyleTag({ content: `html { font-size: ${screen.root}; }` });
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+      });
+
+      if (screen.height > 680) {
+        test('then its lead still shows', async ({ page }) => {
+          expect(await leadShows(page), 'the lead is hidden').toBe(true);
+        });
+      }
+
+      test('then, scrolled to the end of the page, no control of the hero reaches into the band of the tab bar', async ({
+        page,
+      }) => {
+        await page.evaluate(() =>
+          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }),
+        );
+
+        await expect.poll(() => heroControlsInTabBarBand(page)).toEqual([]);
+      });
+
+      test('then every control of the hero reached with Tab stands wholly above the tab bar', async ({
+        page,
+      }) => {
+        const names = await page
+          .locator('#uvod a')
+          .evaluateAll((controls) => controls.map((control) => control.textContent?.trim() ?? ''));
+        const reached = new Set<string>();
+
+        for (let press = 0; press < 40 && reached.size < names.length; press++) {
+          await page.keyboard.press('Tab');
+          const focused = await page.evaluate(() => {
+            const control = document.activeElement;
+            if (!(control instanceof HTMLAnchorElement) || !control.closest('#uvod')) {
+              return null;
+            }
+            return control.textContent?.trim() ?? '';
+          });
+          if (focused === null) {
+            continue;
+          }
+          reached.add(focused);
+          await expect
+            .poll(
+              () =>
+                page.evaluate(() => {
+                  const box = document.activeElement!.getBoundingClientRect();
+                  const tabBarTop = document
+                    .querySelector('app-tab-bar nav')!
+                    .getBoundingClientRect().top;
+                  return box.top >= 0 && box.bottom <= tabBarTop;
+                }),
+              { message: `"${focused}" is focused behind the tab bar` },
+            )
+            .toBe(true);
+        }
+
+        expect([...reached].sort()).toEqual([...names].sort());
+      });
+
+      test('then a tap on the part of a hero button above the tab bar presses the button, and a tap where both meet belongs to the tab bar', async ({
+        page,
+      }) => {
+        const points = await page.evaluate(() => {
+          const bar = document.querySelector('app-tab-bar nav')!.getBoundingClientRect();
+          return [...document.querySelectorAll<HTMLAnchorElement>('#uvod a')]
+            .map((control) => ({ control, box: control.getBoundingClientRect() }))
+            .filter(({ box }) => box.top < bar.top && box.bottom > bar.top)
+            .map(({ control, box }) => {
+              const above = { x: box.left + box.width / 2, y: (box.top + bar.top) / 2 };
+              const left = Math.max(box.left, bar.left);
+              const right = Math.min(box.right, bar.right);
+              const within =
+                left < right
+                  ? { x: (left + right) / 2, y: (bar.top + Math.min(box.bottom, bar.bottom)) / 2 }
+                  : null;
+              const at = (point: { x: number; y: number }) =>
+                document.elementFromPoint(point.x, point.y);
+              return {
+                path: new URL(control.href).pathname,
+                above,
+                aboveHitsButton: control.contains(at(above)),
+                withinHitsTabBar: within === null || !!at(within)?.closest('app-tab-bar'),
+              };
+            });
+        });
+
+        for (const point of points) {
+          expect(point.aboveHitsButton, `a tap above the bar misses ${point.path}`).toBe(true);
+          expect(point.withinHitsTabBar, `a tap on the bar reaches ${point.path}`).toBe(true);
+        }
+        const first = points.at(0);
+        if (first) {
+          await page.mouse.click(first.above.x, first.above.y);
+          await expect(page).toHaveURL(new RegExp(`${first.path}$`));
+        }
+      });
+    });
+  }
+
+  test.describe('when it opens on an iPhone SE with the largest system text (a root of 53 px), turns on its side and back, and Safari shows and hides its toolbar', () => {
+    test.use({ viewport: { width: 375, height: 647 } });
+
+    test('then the hero settles after every change instead of switching back and forth, and keeps its lead', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+      for (const viewport of [
+        { width: 647, height: 375 },
+        { width: 375, height: 647 },
+        { width: 375, height: 549 },
+        { width: 375, height: 647 },
+      ]) {
+        await expectHeroToSettleAt(page, viewport);
+        await expect(page.locator('#uvod .hero-lead')).toHaveText(
+          /Pomáháme zdravotně postiženým dětem/,
+        );
+      }
+    });
+  });
+
+  for (const screen of [
+    { name: 'an iPad Pro on its side', width: 1180, height: 820 },
+    { name: 'an iPad mini on its side', width: 1133, height: 744 },
+  ]) {
+    for (const textSize of ['150%', '200%']) {
+      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at ${textSize}, and Safari shows and hides its toolbar`, () => {
+        test.use({ viewport: { width: screen.width, height: screen.height } });
+
+        test('then the figures beside the buttons settle after every change instead of coming and going', async ({
+          page,
+        }) => {
+          await page.goto('/');
+          await page.addStyleTag({ content: `html { font-size: ${textSize}; }` });
+          await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+          await heroLayout(page, FACE_IN_HERO_PHOTO);
+          const figures = page.locator('#uvod app-stats-bar');
+          if (textSize === '200%') {
+            await expect(figures, 'the figures still crowd the buttons').toHaveCount(0);
+          }
+
+          for (const toolbar of [50, 0, 80, 0, 65, 0]) {
+            await expectHeroToSettleAt(page, {
+              width: screen.width,
+              height: screen.height - toolbar,
+            });
+            if (textSize === '200%') {
+              await expect(figures).toHaveCount(0);
+            }
+            await expect(page.locator('#uvod .hero-lead')).toHaveText(
+              /Pomáháme zdravotně postiženým dětem/,
+            );
+          }
+        });
+      });
+    }
+  }
 
   for (const screen of SCREENS.filter((each) => each.width < 480 && each.height > 500)) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {

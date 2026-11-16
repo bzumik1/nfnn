@@ -11,6 +11,16 @@
   align-items: flex-end;
 }
 
+.hero-full-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: var(--full-screen-height);
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .hero-img {
   position: absolute;
   inset: 0;
