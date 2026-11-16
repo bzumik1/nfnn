@@ -137,7 +137,7 @@ class SecondFactorRecoveryImportConcurrencyTest {
 
     private static IncomingMovement recoveryPayment(LocalDate bookedOn) {
         return IncomingMovement.of(new BankTransactionId(4243), bookedOn, Money.czk(100), Optional.of(ACCOUNT), Optional.of(ACCOUNT.accountNumber()),
-                Optional.of(ACCOUNT.bankCode()), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(CODE.message()),
+                Optional.of(ACCOUNT.bankCode()), Optional.of("SVOBODA PETR"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(CODE.message()),
                 "Bezhotovostní příjem");
     }
 
