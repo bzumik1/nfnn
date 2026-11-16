@@ -984,11 +984,11 @@ describe('Given an administrator on a donor card', () => {
     );
   });
 
-  it('when the second factor is on, then its hint says the donor can also recover by a payment', async () => {
+  it('when the second factor is on, then its hint says the donor can also recover by a payment from an account in their name and the button serves a payment from an account of another person', async () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
     expect(sectionText('Přihlášení')).toContain(
-      'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč ze svého účtu.',
+      'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč z účtu vedeného na jeho jméno. Platba z účtu někoho jiného nic nevypne, takovému dárci ho vypnete tímto tlačítkem.',
     );
   });
 
