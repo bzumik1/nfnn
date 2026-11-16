@@ -149,6 +149,34 @@ async function leadShows(page: Page): Promise<boolean> {
   });
 }
 
+async function expectHeroToSettleAt(
+  page: Page,
+  viewport: { width: number; height: number },
+): Promise<void> {
+  await page.setViewportSize(viewport);
+  await heroLayout(page, FACE_IN_HERO_PHOTO);
+  await page.evaluate(
+    () =>
+      new Promise<void>((settled) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => settled())),
+      ),
+  );
+  await page.evaluate(() => {
+    const changes = { count: 0 };
+    Object.assign(window, { heroChanges: changes });
+    new MutationObserver((records) => (changes.count += records.length)).observe(
+      document.querySelector('#uvod')!,
+      { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] },
+    );
+  });
+  await waitWhileNothingMayHappen(page, 400);
+
+  const changes = await page.evaluate(
+    () => (window as unknown as { heroChanges: { count: number } }).heroChanges.count,
+  );
+  expect(changes, `the hero kept switching at ${viewport.width} × ${viewport.height}`).toBe(0);
+}
+
 async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
   const { color, lines } = await page.locator(selector).evaluate((element) => {
     const range = document.createRange();
@@ -446,36 +474,50 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         { width: 375, height: 549 },
         { width: 375, height: 647 },
       ]) {
-        await page.setViewportSize(viewport);
-        await heroLayout(page, FACE_IN_HERO_PHOTO);
-        await page.evaluate(
-          () =>
-            new Promise<void>((settled) =>
-              requestAnimationFrame(() => requestAnimationFrame(() => settled())),
-            ),
-        );
-        await page.evaluate(() => {
-          const changes = { count: 0 };
-          Object.assign(window, { heroChanges: changes });
-          new MutationObserver((records) => (changes.count += records.length)).observe(
-            document.querySelector('#uvod')!,
-            { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] },
-          );
-        });
-        await waitWhileNothingMayHappen(page, 400);
-
-        const changes = await page.evaluate(
-          () => (window as unknown as { heroChanges: { count: number } }).heroChanges.count,
-        );
-        expect(changes, `the hero kept switching at ${viewport.width} × ${viewport.height}`).toBe(
-          0,
-        );
+        await expectHeroToSettleAt(page, viewport);
         await expect(page.locator('#uvod .hero-lead')).toHaveText(
           /Pomáháme zdravotně postiženým dětem/,
         );
       }
     });
   });
+
+  for (const screen of [
+    { name: 'an iPad Pro on its side', width: 1180, height: 820 },
+    { name: 'an iPad mini on its side', width: 1133, height: 744 },
+  ]) {
+    for (const textSize of ['150%', '200%']) {
+      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) with text at ${textSize}, and Safari shows and hides its toolbar`, () => {
+        test.use({ viewport: { width: screen.width, height: screen.height } });
+
+        test('then the figures beside the buttons settle after every change instead of coming and going', async ({
+          page,
+        }) => {
+          await page.goto('/');
+          await page.addStyleTag({ content: `html { font-size: ${textSize}; }` });
+          await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+          await heroLayout(page, FACE_IN_HERO_PHOTO);
+          const figures = page.locator('#uvod app-stats-bar');
+          if (textSize === '200%') {
+            await expect(figures, 'the figures still crowd the buttons').toHaveCount(0);
+          }
+
+          for (const toolbar of [50, 0, 80, 0, 65, 0]) {
+            await expectHeroToSettleAt(page, {
+              width: screen.width,
+              height: screen.height - toolbar,
+            });
+            if (textSize === '200%') {
+              await expect(figures).toHaveCount(0);
+            }
+            await expect(page.locator('#uvod .hero-lead')).toHaveText(
+              /Pomáháme zdravotně postiženým dětem/,
+            );
+          }
+        });
+      });
+    }
+  }
 
   for (const screen of SCREENS.filter((each) => each.width < 480 && each.height > 500)) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
