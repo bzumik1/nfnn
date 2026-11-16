@@ -328,6 +328,7 @@ describe('Given the Pomáháme tab', () => {
 
     const band = page.querySelector('app-donate-band')!;
     expect(text(band.querySelector('h2'))).toBe('Pomozte s dalším příběhem');
+    expect(band.querySelector('h2')?.textContent).toContain('s\u00a0dalším');
     expect([...band.querySelectorAll('a')].map(text)).toEqual(['Přispět']);
     expect(band.querySelector('.ui-container')?.classList).toContain('band-container--wide');
     expect(band.querySelector('img')?.getAttribute('src')).toBe(
