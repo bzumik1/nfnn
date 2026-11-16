@@ -526,6 +526,23 @@ const SCREENS_SINCE_V2: Screen[] = [
     ready: (page) => elementsShown(page, ['.accounts-list']),
   },
   {
+    name: 'donor-details-device-sign-out-confirm',
+    region: '.devices',
+    open: async (page) => {
+      await mockDonorApi(page, donorWithDonations);
+      await rememberedSession(page, donor);
+      await page.goto('/darce/udaje');
+      await page
+        .locator('.devices')
+        .getByRole('button', { name: 'Odhlásit iPhone · Safari' })
+        .click();
+    },
+    ready: (page) =>
+      expect(
+        page.locator('.devices').getByRole('group', { name: 'Odhlásit iPhone · Safari?' }),
+      ).toBeVisible(),
+  },
+  {
     name: 'admin-donors-recent',
     open: async (page) => {
       await openAdminPage(page, '/sprava/darci', serveRecentDonors);
