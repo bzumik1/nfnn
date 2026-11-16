@@ -108,7 +108,11 @@ async function heroLayout(page: Page, face: Box) {
       top: top + faceInPhoto.top * height,
       bottom: top + faceInPhoto.bottom * height,
     };
-    const shown = [...document.querySelectorAll<HTMLElement>('#uvod p, #uvod h1, #uvod a')]
+    const shown = [
+      ...document.querySelectorAll<HTMLElement>(
+        '#uvod p, #uvod h1, #uvod a, #uvod .stat-value, #uvod .stat-label',
+      ),
+    ]
       .filter((element) => {
         const own = element.getBoundingClientRect();
         return own.width > 1 && own.height > 1;
@@ -212,6 +216,11 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
 
         expect(layout.scrolls, 'the landing page scrolls').toBe(false);
         expect(layout.shown.map(({ text }) => text)).toContain('Nová naděje');
+        if (screen.width >= 900 && screen.height > 500) {
+          expect(layout.shown.map(({ text }) => text)).toEqual(
+            expect.arrayContaining(['let pomáháme', 'podpořených dětí', 'rok vzniku']),
+          );
+        }
         for (const { text, box } of layout.shown) {
           expect(overlaps(box, layout.face), `"${text}" lies over the child's face`).toBe(false);
           expect(box.top, `"${text}" runs under the header`).toBeGreaterThanOrEqual(

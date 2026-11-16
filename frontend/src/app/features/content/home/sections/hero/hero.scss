@@ -104,6 +104,27 @@
   }
 }
 
+.hero-content:has(> .hero-figures) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-10);
+  align-items: end;
+
+  > * {
+    grid-column: 1 / -1;
+  }
+
+  > .hero-btns {
+    grid-column: 1;
+  }
+
+  > .hero-figures {
+    grid-column: 2;
+    justify-self: end;
+    width: min(100%, 36rem);
+  }
+}
+
 @include bp.down(tablet) {
   .hero-content {
     padding-right: max(var(--space-5), env(safe-area-inset-right));

@@ -78,4 +78,38 @@ describe('Given the hero', () => {
       'Pomáháme zdravotně postiženým dětem k lepšímu životu.',
     );
   });
+  it('when the layout is wide, then the figures of O nás stand under its actions, read with their final values', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const figures = host.querySelector('.hero-btns + app-stats-bar');
+
+    expect(figures).not.toBeNull();
+    expect(
+      [...figures!.querySelectorAll('.stat')].map((stat) =>
+        [
+          stat.querySelector('.visually-hidden')?.textContent?.trim(),
+          stat.querySelector('.stat-label')?.textContent?.trim(),
+        ].join(' '),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^\d+ let pomáháme$/),
+        '200+ podpořených dětí',
+        '2005 rok vzniku',
+      ]),
+    );
+  });
+
+  it('when the layout is compact, then it shows no figures, because the first screen of a phone has no room for them', async () => {
+    compact.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-stats-bar')).toBeNull();
+  });
+
+  it('when the window is short, then it shows no figures either', async () => {
+    short.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-stats-bar')).toBeNull();
+  });
 });

@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { CompactLayout } from '../../../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../../../core/layout/short-viewport';
+import { StatsBar } from '../stats-bar/stats-bar';
 
 @Component({
   selector: 'app-hero',
-  imports: [RouterLink],
+  imports: [RouterLink, StatsBar],
   templateUrl: './hero.html',
   styleUrl: './hero.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,4 +16,5 @@ export class Hero {
   private readonly short = inject(ShortViewport).isShort;
   protected readonly showsDonate = computed(() => !this.short());
   protected readonly showsWhereWeHelp = computed(() => !this.compact() && !this.short());
+  protected readonly showsFigures = this.showsWhereWeHelp;
 }
