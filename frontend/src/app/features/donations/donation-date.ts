@@ -1,6 +1,8 @@
+const NO_BREAK_SPACE = '\u00a0';
+
 export function formatDonationDate(isoDate: string): string {
   const [year, month, day] = isoDate.slice(0, 10).split('-');
-  return `${Number(day)}. ${Number(month)}. ${year}`;
+  return joinDate(day, month, year);
 }
 
 const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
@@ -16,7 +18,7 @@ const BANK_TIME = new Intl.DateTimeFormat('cs-CZ', {
 
 export function formatBankTime(isoInstant: string): string {
   const parts = pragueParts(isoInstant);
-  return `${Number(parts['day'])}. ${Number(parts['month'])}. ${parts['year']} ${Number(parts['hour'])}:${parts['minute']}`;
+  return `${joinDate(parts['day'], parts['month'], parts['year'])} ${Number(parts['hour'])}:${parts['minute']}`;
 }
 
 export function formatPragueClock(isoInstant: string): string {
@@ -42,4 +44,8 @@ function pragueParts(isoInstant: string): Record<string, string> {
   return Object.fromEntries(
     BANK_TIME.formatToParts(new Date(isoInstant)).map((part) => [part.type, part.value]),
   );
+}
+
+function joinDate(day: string, month: string, year: string): string {
+  return `${Number(day)}.${NO_BREAK_SPACE}${Number(month)}.${NO_BREAK_SPACE}${year}`;
 }

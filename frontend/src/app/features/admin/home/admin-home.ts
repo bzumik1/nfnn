@@ -153,7 +153,7 @@ export class AdminHome {
   protected readonly coveredPeriod = computed(() => {
     const state = this.importState();
     return state?.coveredFrom && state.coveredTo
-      ? `${formatDonationDate(state.coveredFrom)} – ${formatDonationDate(state.coveredTo)}`
+      ? `${formatDonationDate(state.coveredFrom)}\u00a0– ${formatDonationDate(state.coveredTo)}`
       : null;
   });
   protected readonly balance = computed(() => {

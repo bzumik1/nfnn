@@ -125,8 +125,9 @@ describe('Given a receipt text with numbered placeholders', () => {
 });
 
 describe('Given a receipt date', () => {
-  it('when it is formatted, then it has day and month without leading zeros as everywhere on the site', () => {
+  it('when it is formatted, then it has day and month without leading zeros and keeps the ordinary spaces of the receipt text', () => {
     expect(formatReceiptDate('2026-03-05')).toBe('5. 3. 2026');
+    expect(formatReceiptDate('2026-10-15')).not.toContain('\u00a0');
   });
 });
 
