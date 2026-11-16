@@ -983,7 +983,9 @@
                   @for (item of year.items; track item.id) {
                     <li>
                       <div class="ui-list__row">
-                        <span class="ui-list__title">{{ day(item.receivedAt) }}</span>
+                        <span class="ui-list__title"
+                          ><span class="ui-date">{{ day(item.receivedAt) }}</span></span
+                        >
                         <span class="ui-list__meta">
                           {{ item.purpose }} · {{ pairingLabel(item) }}
                           @if (item.senderAccount) {
@@ -1043,7 +1045,9 @@
                       >
                         <span class="ui-date">{{ day(item.receivedAt) }}</span>
                         @if (item.status === 'REFUNDED') {
-                          <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
+                          &ngsp;<span
+                            class="tag tag--warn"
+                            i18n="@@admin.donorDetail.donations.refunded"
                             >vráceno</span
                           >
                         }
@@ -1208,8 +1212,8 @@
                       data-label="Vystaveno"
                       i18n-data-label="@@admin.donorDetail.receipts.col.issued"
                     >
-                      <span class="ui-date">{{ time(receipt.issuedAt) }}</span>
-                      <span class="muted">{{ receiptLocale(receipt) }}</span>
+                      <span class="ui-date">{{ time(receipt.issuedAt) }}</span
+                      >&ngsp;<span class="muted">{{ receiptLocale(receipt) }}</span>
                     </td>
                     <td data-label="Stav" i18n-data-label="@@admin.donorDetail.receipts.col.state">
                       @if (receipt.active) {

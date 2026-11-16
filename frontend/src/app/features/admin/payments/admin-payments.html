@@ -295,7 +295,9 @@
                     <td data-label="Datum" i18n-data-label="@@admin.payments.col.date">
                       <span class="ui-date">{{ date(item.bookedOn) }}</span>
                       @if (item.unpairedByAdminAt) {
-                        <span class="held-tag" i18n="@@admin.payments.heldTag">jen ručně</span>
+                        &ngsp;<span class="held-tag" i18n="@@admin.payments.heldTag"
+                          >jen ručně</span
+                        >
                         <span class="held-note" i18n="@@admin.payments.heldTag.title"
                           >Správce zrušil přiřazení, web ji proto sám nepřiřadí.</span
                         >

@@ -866,7 +866,14 @@ for (const rootPx of [34, 53]) {
       await rememberedSession(page);
     });
 
-    for (const path of [PETR_DETAIL_PATH, '/sprava', '/sprava/platby']) {
+    for (const path of [
+      `${PETR_DETAIL_PATH}/udaje`,
+      `${PETR_DETAIL_PATH}/bankovni-ucty`,
+      `${PETR_DETAIL_PATH}/dary`,
+      `${PETR_DETAIL_PATH}/potvrzeni`,
+      '/sprava',
+      '/sprava/platby',
+    ]) {
       test(`when they open ${path}, then every date of a short item stays within its cell`, async ({
         page,
       }) => {

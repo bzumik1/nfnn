@@ -12,7 +12,7 @@ import {
 const PAVEL = '01a18e56-bdb0-775a-bd0a-a6075683a002';
 const PETR = '01a18e56-bdb0-775a-bd0a-a6075683d002';
 
-const LAST_VISIT = String.raw`^Minulá návštěva na tomto zařízení byla \d{1,2}\. \d{1,2}\. \d{4} \d{1,2}:\d{2}\.`;
+const LAST_VISIT = String.raw`^Minulá návštěva na tomto zařízení byla \d{1,2}\.\s\d{1,2}\. \d{4} \d{1,2}:\d{2}\.`;
 
 function payment(id: string, bookedOn: string, amountMinor: number) {
   return {

@@ -108,7 +108,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await expect(watched.getByRole('link')).toHaveText([
       /Import plateb z banky\s*Bez poruchy/,
       /Zálohy\s*Bez poruchy/,
-      /Odesílání e-mailů\s*Nefunguje od 4\. 11\. 2026 6:15/,
+      /Odesílání e-mailů\s*Nefunguje od 4\.\s11\. 2026 6:15/,
     ]);
     await expect(watched.getByRole('link').nth(2)).toHaveAttribute('href', '/sprava/nastaveni');
     expect((await deviceRecord(page)).badges).toContain(1);
@@ -187,7 +187,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await page.goto('/sprava/upozorneni');
 
     const others = page.getByRole('region', { name: 'Další zařízení' });
-    const phoneRow = others.getByRole('button', { name: /^Apple, zapnuto 30\. 10\. 2026/ });
+    const phoneRow = others.getByRole('button', { name: /^Apple, zapnuto 30\.\s10\. 2026/ });
     await expect(phoneRow).toContainText('Naposledy doručeno 3. 11. 2026 10:05.');
     await expect(phoneRow).toContainText('Nedoručeno 2× po sobě.');
     await expect(phoneRow).toContainText('3 ze 3');
@@ -298,7 +298,7 @@ test.describe('Given an administrator on the alerts page of a device with a serv
     await account.click();
 
     const sheet = page.getByRole('dialog', { name: 'Účet' });
-    const fault = sheet.getByRole('link', { name: /^Nefunguje: Zálohy od 14\. 11\. 2026 3:00/ });
+    const fault = sheet.getByRole('link', { name: /^Nefunguje: Zálohy od 14\.\s11\. 2026 3:00/ });
     await expect(fault).toBeVisible();
     await fault.click();
 
