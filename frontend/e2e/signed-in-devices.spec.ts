@@ -35,6 +35,10 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
     await expect(devices.locator('.device-current')).toHaveText('Toto zařízení');
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    const question = devices.getByRole('group', { name: 'Odhlásit iPhone · Safari?' });
+    await expect(question.getByRole('button', { name: 'Zrušit' })).toBeFocused();
+    expect(deleted).toEqual([]);
+    await question.getByRole('button', { name: 'Odhlásit', exact: true }).click();
 
     await expect(devices.locator('.device-name')).toHaveText(['Mac · Safari']);
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toHaveText(
@@ -64,6 +68,10 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
 
     const devices = page.locator('.devices');
     await devices.getByRole('button', { name: 'Odhlásit všechna ostatní zařízení' }).click();
+    await devices
+      .getByRole('group', { name: 'Odhlásit všechna ostatní zařízení?' })
+      .getByRole('button', { name: 'Odhlásit', exact: true })
+      .click();
 
     await expect(devices.locator('.device')).toHaveCount(1);
     await expect(devices.getByText('Ostatní zařízení jsou odhlášená.')).toBeVisible();
@@ -106,10 +114,14 @@ test.describe('Given a donor signed in on a Mac and an iPhone', () => {
     ]);
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · aplikace' }).click();
+    await devices
+      .getByRole('group', { name: 'Odhlásit iPhone · aplikace?' })
+      .getByRole('button', { name: 'Odhlásit', exact: true })
+      .click();
 
     await expect(devices.locator('#devices-older .device-name')).toHaveText(['Windows · Edge']);
     await expect(devices.getByRole('button', { name: /Starší \(1\)/ })).toBeVisible();
-    await expect(devices.getByRole('button', { name: 'Odhlásit Windows · Edge' })).toBeFocused();
+    await expect(devices.locator('.devices-status')).toBeFocused();
     expect(deleted).toEqual([`DELETE /api/donors/me/devices/${longUnusedDevices[0].id}`]);
   });
 });

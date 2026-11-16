@@ -947,11 +947,21 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
 
     await devices.getByRole('button', { name: 'Odhlásit všechna ostatní zařízení' }).click();
+    const others = devices.getByRole('group', { name: 'Odhlásit všechna ostatní zařízení?' });
+    await expect(others).toBeVisible();
+
+    expect(await violations(page)).toEqual([]);
+
+    await others.getByRole('button', { name: 'Odhlásit', exact: true }).click();
     await expect(devices.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
     await devices.getByRole('button', { name: 'Odhlásit iPhone · Safari' }).click();
+    await devices
+      .getByRole('group', { name: 'Odhlásit iPhone · Safari?' })
+      .getByRole('button', { name: 'Odhlásit', exact: true })
+      .click();
     await expect(devices.getByRole('status').filter({ hasText: /\S/ })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);

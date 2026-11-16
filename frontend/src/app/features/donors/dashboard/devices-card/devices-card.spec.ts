@@ -190,9 +190,7 @@ describe("Given a donor's signed-in devices card", () => {
 
       const confirmation = rows()[1].querySelector<HTMLElement>('.devices-confirm');
       expect(confirmation?.getAttribute('role')).toBe('group');
-      const question = document.getElementById(
-        confirmation?.getAttribute('aria-labelledby') ?? '',
-      );
+      const question = document.getElementById(confirmation?.getAttribute('aria-labelledby') ?? '');
       expect(text(question)).toBe('Odhlásit iPhone · Safari?');
       expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(element('.devices-confirm-yes').classList).toContain('ui-button--danger');
@@ -238,9 +236,7 @@ describe("Given a donor's signed-in devices card", () => {
       await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
 
       const confirmation = element<HTMLElement>('.devices-footer .devices-confirm');
-      const question = document.getElementById(
-        confirmation?.getAttribute('aria-labelledby') ?? '',
-      );
+      const question = document.getElementById(confirmation?.getAttribute('aria-labelledby') ?? '');
       expect(text(question)).toBe('Odhlásit všechna ostatní zařízení?');
       expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
       expect(document.activeElement).toBe(element('.devices-confirm-no'));
