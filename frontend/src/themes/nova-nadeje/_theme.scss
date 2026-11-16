@@ -250,9 +250,54 @@
   --duration-slow: 0.3s;
   --duration-entrance: 0.9s;
   --duration-sheet: var(--duration-slow);
-  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-sheet: var(--ease-spring);
   --duration-page: 0.35s;
-  --ease-page: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-page: var(--ease-spring);
+  --duration-reveal: 0.5s;
+  --duration-stagger: 0.05s;
+  --duration-reduced: 0.15s;
+  --duration-spin: 0.9s;
+  --duration-pulse: 1.4s;
+  --delay-loading: 0.3s;
+  --duration-done: 0.4s;
+  --duration-done-hold: 2s;
+  --duration-count: 0.8s;
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring-bouncy: linear(
+    0,
+    0.064,
+    0.209,
+    0.383,
+    0.554,
+    0.703,
+    0.822,
+    0.91,
+    0.971,
+    1.009,
+    1.029,
+    1.038,
+    1.038,
+    1.034,
+    1.027,
+    1.021,
+    1.014,
+    1.009,
+    1.005,
+    1.002,
+    1,
+    0.999,
+    0.999,
+    0.999,
+    1
+  );
+  --motion-rise: 8px;
+  --motion-rise-reveal: 12px;
+  --motion-lift: 2px;
+  --motion-scale-enter: 0.96;
+  --motion-scale-done: 0.8;
   --page-parallax: -30%;
   --color-page-dim: color-mix(in srgb, #000000 10%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 12%, transparent);
@@ -260,6 +305,7 @@
   --color-pressed: color-mix(in srgb, currentColor 8%, transparent);
   --pressed-brightness: 0.92;
   --pressed-scale: 0.97;
+  --pressed-scale-surface: 0.99;
   --pressed-opacity: 0.35;
   --color-switch-on: var(--color-accent-fill);
   --color-switch-off: color-mix(in srgb, #787880 32%, transparent);
@@ -434,6 +480,21 @@
     --color-separator: #6b7280;
     --color-log-code: #1e3560;
     --color-log-warn: #92400e;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-entrance: var(--duration-reduced);
+    --duration-stagger: 0s;
+    --ease-spring-bouncy: var(--ease-standard);
+    --motion-rise: 0px;
+    --motion-rise-reveal: 0px;
+    --motion-lift: 0px;
+    --motion-scale-enter: 1;
+    --motion-scale-done: 1;
+    --pressed-scale: 1;
+    --pressed-scale-surface: 1;
   }
 }
 
