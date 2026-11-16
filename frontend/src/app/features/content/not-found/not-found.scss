@@ -1,7 +1,14 @@
 @use 'breakpoints' as bp;
+@use 'touch-target';
 
 :host {
   display: block;
+}
+
+.not-found {
+  display: grid;
+  align-content: safe center;
+  min-height: calc(var(--full-screen-height) - var(--tab-bar-clearance));
 }
 
 .actions {
@@ -9,6 +16,23 @@
   flex-wrap: wrap;
   gap: var(--space-4);
   margin-top: var(--space-10);
+}
+
+.more {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-6);
+  row-gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.more-link {
+  @include touch-target.reaches-finger-size;
+
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 @include bp.down(tablet) {
@@ -23,5 +47,20 @@
   .actions {
     margin-top: var(--space-6);
     gap: var(--space-3);
+  }
+
+  .more {
+    margin-top: var(--space-4);
+  }
+}
+
+@include bp.height-down(short) {
+  .not-found .ui-intro__lead {
+    grid-row: 1 / span 2;
+  }
+
+  .actions,
+  .more {
+    grid-column: 1 / -1;
   }
 }
