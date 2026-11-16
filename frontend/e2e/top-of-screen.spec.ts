@@ -43,6 +43,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`Given an iPhone in the ${colorScheme} appearance whose status bar takes the top ${STATUS_BAR} px`, () => {
     test.use({ viewport: { width: WIDTH, height: 844 }, colorScheme, reducedMotion: 'reduce' });
 
+    test('when a page opens, then nothing of the hidden skip link shows at the top, not even its shadow', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await underTheStatusBar(page);
+
+      const shown = await topStrip(page);
+      await page.addStyleTag({ content: '.skip-link { display: none !important; }' });
+      expect(shown.equals(await topStrip(page))).toBe(true);
+    });
+
     test('when a tab root scrolls its content under the clock, then nothing is drawn over the content at the top: no band, no blur and no fade', async ({
       page,
     }) => {
