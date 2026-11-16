@@ -1,5 +1,58 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
+  container: proof-input / inline-size;
+}
+
+@include bp.up(tablet) {
+  @include bp.container-up(proof-input, tablet) {
+    .proof-ways {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--space-5);
+      align-items: stretch;
+    }
+
+    .proof-ways > .ui-card {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0;
+    }
+
+    .proof-ways > .ui-card > .ui-list,
+    .proof-link-form .proof-link-submit {
+      margin-top: auto;
+    }
+
+    .proof-ways > .ui-card > .ui-list {
+      order: 1;
+      border-top: 1px solid var(--color-separator);
+    }
+
+    .proof-ways > .ui-card > .proof-status,
+    .proof-ways > .ui-card > .proof-problem {
+      order: 2;
+    }
+
+    .proof-ways > .ui-card > .ui-card__bar {
+      border-bottom: 0;
+    }
+
+    .proof-hint {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .proof-link-card {
+      padding-bottom: var(--space-3);
+    }
+
+    .proof-link-form {
+      flex-grow: 1;
+      grid-template-rows: auto 1fr;
+    }
+  }
 }
 
 .proof-video {

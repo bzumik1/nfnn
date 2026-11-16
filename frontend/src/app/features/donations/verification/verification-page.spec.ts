@@ -152,6 +152,16 @@ describe('Given the verification page', () => {
     expect(verifier.calls).toEqual([null]);
   });
 
+  it('when it opens without a code, then the note about the public address stands right under the intro, before any way to read a code', async () => {
+    await open('/overit');
+
+    const intro = root().querySelector('.verify-intro');
+    const note = root().querySelector('.verify-domain');
+    const ways = root().querySelector('app-proof-input');
+    expect(intro?.nextElementSibling).toBe(note);
+    expect(note?.compareDocumentPosition(ways as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   describe('when it opens without a code and the visitor pastes the link of a code', () => {
     beforeEach(async () => {
       await open('/overit');
