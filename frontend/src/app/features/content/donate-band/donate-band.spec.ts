@@ -71,6 +71,12 @@ describe('Given the Přispět band that ends a tab', () => {
     expect(image.style.objectPosition).toBe('50% 30%');
   });
 
+  it('when the browser picks a width, then it asks for the whole screen on a phone and for the right part of the band on a wider screen', async () => {
+    const image = (await render()).querySelector('img')!;
+
+    expect(image.getAttribute('sizes')).toBe('(max-width: 768px) 100vw, 720px');
+  });
+
   it('when the administration set a photo, then it shows it in the widths the site stores, described and cropped around its focal point', async () => {
     const image = (await render(donateBandPhoto({ width: 1600 }))).querySelector('img')!;
 

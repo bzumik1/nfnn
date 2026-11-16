@@ -9,6 +9,7 @@ $lead-width: 34rem;
 
 .band {
   --color-focus-ring: var(--color-tab-focus-ring-on-dark);
+  --band-photo-share: 60%;
   position: relative;
   display: grid;
   grid-template-areas: 'band';
@@ -55,10 +56,10 @@ $lead-width: 34rem;
   padding: var(--space-14) var(--space-16);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-surface-inverse) 94%, transparent) 0%,
+    var(--color-surface-inverse) calc(100% - var(--band-photo-share)),
     color-mix(in srgb, var(--color-surface-inverse) 78%, transparent)
-      max(42%, calc(var(--space-16) + #{$lead-width})),
-    transparent max(78%, calc(var(--space-16) + #{$lead-width} + 25%))
+      max(52%, calc(var(--space-16) + #{$lead-width})),
+    transparent max(72%, calc(var(--space-16) + #{$lead-width} + 15%))
   );
 }
 
@@ -85,6 +86,13 @@ $lead-width: 34rem;
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-8);
+}
+
+@include bp.up(tablet) {
+  .band-photo {
+    inset: 0 0 0 auto;
+    width: var(--band-photo-share);
+  }
 }
 
 @include bp.down(tablet) {
@@ -137,5 +145,9 @@ $lead-width: 34rem;
 @include bp.up(wide) {
   .band-container--wide {
     max-width: var(--content-max-wide);
+
+    .band {
+      --band-photo-share: 50%;
+    }
   }
 }
