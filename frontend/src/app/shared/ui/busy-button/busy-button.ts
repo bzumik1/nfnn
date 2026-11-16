@@ -1,16 +1,27 @@
-import { DestroyRef, Directive, DOCUMENT, ElementRef, inject, input } from '@angular/core';
+import { DestroyRef, Directive, DOCUMENT, effect, ElementRef, inject, input } from '@angular/core';
+
+import { NeedsConnection } from '../needs-connection/needs-connection';
 
 const ACTIVATION_KEYS = new Set(['Enter', ' ']);
 
-@Directive({
-  selector: 'button[appBusy]',
-  host: { '[attr.aria-disabled]': "appBusy() ? 'true' : null" },
-})
+@Directive({ selector: 'button[appBusy]' })
 export class BusyButton {
-  readonly appBusy = input.required<boolean>();
+  readonly appBusy = input(false);
   private readonly button: HTMLButtonElement = inject(ElementRef<HTMLButtonElement>).nativeElement;
 
   constructor() {
+    const needsConnection = inject(NeedsConnection, { optional: true, self: true });
+    if (needsConnection === null) {
+      effect(() => {
+        if (this.appBusy()) {
+          this.button.setAttribute('aria-disabled', 'true');
+        } else {
+          this.button.removeAttribute('aria-disabled');
+        }
+      });
+    } else {
+      needsConnection.alsoUnavailableWhile(this.appBusy);
+    }
     const document = inject(DOCUMENT);
     const ignoreWhileBusy = (event: Event) => {
       if (this.appBusy()) {

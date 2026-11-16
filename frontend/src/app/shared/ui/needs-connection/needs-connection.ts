@@ -1,6 +1,6 @@
 /// <reference types="@angular/localize" />
 
-import { DestroyRef, Directive, DOCUMENT, effect, ElementRef, inject } from '@angular/core';
+import { DestroyRef, Directive, DOCUMENT, effect, ElementRef, inject, signal } from '@angular/core';
 
 import { Connectivity } from '../../../core/connectivity/connectivity';
 
@@ -17,6 +17,8 @@ export class NeedsConnection {
   private readonly hintId = `needs-connection-${++nextHint}`;
   private hint: HTMLElement | null = null;
   private ariaDisabledBefore: string | null = null;
+  private markedUnavailable = false;
+  private readonly alsoUnavailable = signal<() => boolean>(() => false);
 
   constructor() {
     const swallowWhileOffline = (event: Event) => {
@@ -39,11 +41,16 @@ export class NeedsConnection {
         this.unblock();
       }
     });
+    effect(() => this.markUnavailable(this.connectivity.offline() || this.alsoUnavailable()()));
     inject(DestroyRef).onDestroy(() => {
       this.element.removeEventListener('click', swallowWhileOffline, { capture: true });
       this.document.removeEventListener('submit', swallowSubmitWhileOffline, { capture: true });
       this.hint?.remove();
     });
+  }
+
+  alsoUnavailableWhile(condition: () => boolean): void {
+    this.alsoUnavailable.set(condition);
   }
 
   private submittedForm(): HTMLFormElement | null {
@@ -55,8 +62,6 @@ export class NeedsConnection {
     if (this.hint !== null) {
       return;
     }
-    this.ariaDisabledBefore = this.element.getAttribute('aria-disabled');
-    this.element.setAttribute('aria-disabled', 'true');
     this.element.classList.add(BLOCKED_CLASS);
     this.setDescribedBy([...this.describedBy(), this.hintId]);
     const hint = this.document.createElement('span');
@@ -67,6 +72,21 @@ export class NeedsConnection {
     this.hint = hint;
   }
 
+  private markUnavailable(unavailable: boolean): void {
+    if (unavailable === this.markedUnavailable) {
+      return;
+    }
+    this.markedUnavailable = unavailable;
+    if (unavailable) {
+      this.ariaDisabledBefore = this.element.getAttribute('aria-disabled');
+      this.element.setAttribute('aria-disabled', 'true');
+    } else if (this.ariaDisabledBefore === null) {
+      this.element.removeAttribute('aria-disabled');
+    } else {
+      this.element.setAttribute('aria-disabled', this.ariaDisabledBefore);
+    }
+  }
+
   private unblock(): void {
     if (this.hint === null) {
       return;
@@ -74,11 +94,6 @@ export class NeedsConnection {
     this.hint.remove();
     this.hint = null;
     this.element.classList.remove(BLOCKED_CLASS);
-    if (this.ariaDisabledBefore === null) {
-      this.element.removeAttribute('aria-disabled');
-    } else {
-      this.element.setAttribute('aria-disabled', this.ariaDisabledBefore);
-    }
     this.setDescribedBy(this.describedBy().filter((id) => id !== this.hintId));
   }
 
