@@ -64,11 +64,13 @@ export class ContactForm {
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>('nameField');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly section = viewChild.required<ElementRef<HTMLElement>>('section');
+  private readonly formWrap = viewChild.required<ElementRef<HTMLElement>>('formWrap');
 
   protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly sent = signal(false);
   protected readonly sentTo = signal('');
   protected readonly sending = signal(false);
+  protected readonly heldHeight = signal<number | null>(null);
   protected readonly failure = signal<Failure | null>(null);
   protected model: ContactMessageRequest = emptyMessage();
 
@@ -126,6 +128,7 @@ export class ContactForm {
       next: () => {
         this.sending.set(false);
         this.sentTo.set(message.email);
+        this.heldHeight.set(this.formWrap().nativeElement.getBoundingClientRect().height);
         this.sent.set(true);
         this.focusAfterRender(() => this.successTitle()?.nativeElement);
       },
@@ -153,6 +156,7 @@ export class ContactForm {
     }
     this.failure.set(null);
     this.sent.set(false);
+    this.heldHeight.set(null);
     this.focusAfterRender(() => this.nameField()?.nativeElement);
   }
 

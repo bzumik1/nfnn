@@ -18,10 +18,10 @@ test.describe('Given a visitor on the About page', () => {
     await page.locator('#contact-message').fill('Mám dotaz k projektu.');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
-    await expect(page.getByRole('status').filter({ hasText: 'Zpráva odeslána!' })).toContainText(
+    await expect(page.getByRole('status').filter({ hasText: 'Zpráva je odeslaná' })).toContainText(
       'Odpovíme vám e-mailem na jana@example.cz.',
     );
-    await expect(page.getByRole('heading', { name: 'Zpráva odeslána!' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
     expect(posted).toEqual([
       {
         fullName: 'Jana Nováková',
@@ -132,6 +132,24 @@ test.describe('Given a visitor on the About page', () => {
       await expect(page.locator('#contact-name')).toBeAttached();
 
       expect(await tabOrderFromContactEmail(page)).toEqual(['form', 'copy']);
+    });
+
+    test('when they read the form, then the privacy line shows once, under the button, and the grey note under the details comes back after sending', async ({
+      page,
+    }) => {
+      await page.route('**/api/contact/messages', (route) => route.fulfill({ status: 202 }));
+      await page.goto('/o-nas');
+      const note = page.locator('.contact-legal');
+      await expect(page.locator('.form-privacy')).toBeVisible();
+      await expect(note).toBeHidden();
+
+      await page.locator('#contact-name').fill('Jana Nováková');
+      await page.locator('#contact-email').fill('jana@example.cz');
+      await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+      await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+      await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
+      await expect(note).toBeVisible();
     });
 
     test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({

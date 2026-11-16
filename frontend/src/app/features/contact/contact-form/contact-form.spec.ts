@@ -161,6 +161,9 @@ describe('Given the contact form', () => {
   describe('when a message is sent', () => {
     beforeEach(async () => {
       document.body.appendChild(fixture.nativeElement);
+      vi.spyOn(element('.contact-form-wrap'), 'getBoundingClientRect').mockReturnValue(
+        DOMRect.fromRect({ width: 360, height: 540 }),
+      );
       await fillInValidMessage();
       await submit();
       http.expectOne('/api/contact/messages').flush(null, { status: 202, statusText: 'Accepted' });
@@ -174,7 +177,7 @@ describe('Given the contact form', () => {
       const status = element('.contact-form-wrap > [role="status"]');
 
       expect(status.textContent?.replace(/\s+/g, ' ')).toContain(
-        'Zpráva odeslána! Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
+        'Zpráva je odeslaná Děkujeme za zprávu. Odpovíme vám e-mailem na jana@example.cz.',
       );
     });
 
@@ -182,6 +185,10 @@ describe('Given the contact form', () => {
       expect(element('.contact-legal a')?.getAttribute('href')).toBe(
         '/zasady-ochrany-osobnich-udaju',
       );
+    });
+
+    it('then the card keeps the height the form had, so nothing below it jumps up', () => {
+      expect(element('.contact-form-wrap').style.minHeight).toBe('540px');
     });
 
     it('then the focus moves to the thank-you heading', () => {
@@ -196,7 +203,12 @@ describe('Given the contact form', () => {
       expect(element<HTMLInputElement>('#contact-name').value).toBe('');
       expect(document.activeElement).toBe(element('#contact-name'));
       expect(element('[role="status"]').textContent?.trim()).toBe('');
+      expect(element('.contact-form-wrap').style.minHeight).toBe('');
     });
+  });
+
+  it('when it is shown, then the message field invites a question with a real ellipsis', () => {
+    expect(element('#contact-message').getAttribute('placeholder')).toBe('Napište nám svůj dotaz…');
   });
 
   it('when it is shown, then the name and e-mail fields carry no example values that could look filled in', () => {

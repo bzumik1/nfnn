@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 
 :host {
   display: block;
@@ -63,8 +64,8 @@
 }
 
 .info-icon {
-  width: 46px;
-  height: 46px;
+  width: 2.875em;
+  height: 2.875em;
   background: var(--color-accent-fill);
   border-radius: var(--radius-lg);
   display: flex;
@@ -72,6 +73,11 @@
   justify-content: center;
   color: var(--color-on-accent);
   flex-shrink: 0;
+
+  svg {
+    width: 1.25em;
+    height: 1.25em;
+  }
 }
 
 .info-label {
@@ -98,6 +104,9 @@ a.info-value {
 .contact-form-wrap {
   grid-area: form;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: var(--color-surface);
   border-radius: var(--radius-card);
   padding: var(--space-10);
@@ -117,6 +126,8 @@ app-form-field {
 }
 
 .form-error {
+  @include motion.appear;
+
   margin: 0 0 var(--space-4-5);
 
   a {
@@ -152,6 +163,11 @@ app-form-field {
   }
 }
 
+.form-success,
+.form-success-actions {
+  @include motion.appear;
+}
+
 .form-success {
   text-align: center;
   padding-top: var(--space-10);
@@ -163,8 +179,10 @@ app-form-field {
 }
 
 .form-success-icon {
-  width: 64px;
-  height: 64px;
+  @include motion.done;
+
+  width: 2.2857em;
+  height: 2.2857em;
   background: var(--color-accent-soft);
   border-radius: var(--radius-round);
   display: flex;
@@ -231,6 +249,20 @@ app-form-field {
 
   .lead {
     margin-bottom: var(--space-8);
+  }
+
+  .contact-form-wrap {
+    padding: var(--space-6);
+  }
+
+  .two-col:has(.form-privacy) .contact-legal {
+    display: none;
+  }
+}
+
+@include bp.down(nav) {
+  .two-col {
+    column-gap: var(--space-10);
   }
 }
 
