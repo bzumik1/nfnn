@@ -142,7 +142,7 @@
                   class="year-look-back"
                   [routerLink]="['/aktuality', slug]"
                   i18n="@@content.projects.year.lookBack"
-                  >Ohlédnutí za rokem {{ group.year }}<span aria-hidden="true"> →</span></a
+                  >Ohlédnutí za rokem {{ group.year }}<span aria-hidden="true">&nbsp;→</span></a
                 >
               }
             </div>
@@ -165,7 +165,7 @@
                         other {Všech {{ group.items.length }} příběhů z roku}
                       }
                       {{ group.year }}</span
-                    ><span aria-hidden="true"> →</span></a
+                    ><span aria-hidden="true">&nbsp;→</span></a
                   >
                 </li>
               </ul>
@@ -194,7 +194,7 @@
                   [queryParams]="{ rok: allYears }"
                   i18n="@@content.projects.year.all"
                   >Všechny roky<span class="year-all-detail">: všechny příběhy</span
-                  ><span aria-hidden="true"> →</span></a
+                  ><span aria-hidden="true">&nbsp;→</span></a
                 >
               }
             }

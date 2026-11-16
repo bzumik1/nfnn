@@ -1,9 +1,37 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'pressed';
 
+@mixin lifted {
+  translate: 0 calc(-1 * var(--motion-lift));
+
+  &::after {
+    opacity: 1;
+  }
+}
+
 :host {
+  position: relative;
   display: block;
   container: news-card / inline-size;
+  @include motion.hover(translate) {
+    @include lifted;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-hover);
+    opacity: 0;
+    pointer-events: none;
+    @include motion.state(opacity);
+  }
+}
+
+:host(:has(.news-link:focus-visible)) {
+  @include lifted;
 }
 
 .news-card {
@@ -15,17 +43,8 @@
   overflow: hidden;
   box-shadow: var(--shadow-card-quiet);
   border: 1px solid var(--color-border-soft);
-  transition:
-    box-shadow var(--duration-base),
-    transform var(--duration-base);
   cursor: pointer;
-
-  @media (hover: hover) {
-    &:hover {
-      box-shadow: var(--shadow-card-hover);
-      transform: translateY(-4px);
-    }
-  }
+  @include motion.move(transform);
 }
 
 .news-card:has(.news-link:active) {
@@ -34,13 +53,17 @@
   }
 }
 
-.news-image {
-  height: 156px;
-  overflow: hidden;
-
-  img {
-    object-position: center 30%;
+@include bp.container-down(news-card, phone) {
+  .news-card:has(.news-link:active) {
+    @include pressed.look {
+      @include pressed.shrinks(var(--pressed-scale-surface));
+    }
   }
+}
+
+.news-image {
+  aspect-ratio: 360 / 196;
+  overflow: hidden;
 }
 
 .news-body {
@@ -57,6 +80,7 @@
 
   .news-image {
     flex: 0 0 36%;
+    aspect-ratio: auto;
     height: auto;
     min-height: 100%;
   }

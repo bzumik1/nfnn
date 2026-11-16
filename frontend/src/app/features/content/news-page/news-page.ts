@@ -25,6 +25,7 @@ import { ProjectResponse, ProjectsApi } from '../projects-api';
 import { StoriesOfYear, storiesOfNewestYear, YearStories } from '../year-stories/year-stories';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { NEWS_PAGE_SIZE, PROJECTS_PAGE_SIZE } from '../content-page-sizes';
 
 export const PAGE_SIZE = NEWS_PAGE_SIZE;
@@ -43,7 +44,7 @@ type StoriesState = { kind: 'loading' } | { kind: 'settled'; stories: StoriesOfY
 
 @Component({
   selector: 'app-news-page',
-  imports: [NeedsConnection, RouterLink, NewsCard, FeaturedNews, YearStories, DonateBand],
+  imports: [NeedsConnection, Reveal, RouterLink, NewsCard, FeaturedNews, YearStories, DonateBand],
   templateUrl: './news-page.html',
   styleUrl: './news-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +57,8 @@ export class NewsPage {
   private readonly injector = inject(Injector);
   private readonly heading = viewChild<ElementRef<HTMLHeadingElement>>('heading');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private readonly listState = viewChild.required<ElementRef<HTMLElement>>('listState');
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private newsLoad = Subscription.EMPTY;
   private projectsLoad = Subscription.EMPTY;
   private storiesKept = false;
@@ -64,6 +67,7 @@ export class NewsPage {
   private readonly newsState = signal<LoadState>('loading');
   private readonly storiesState = signal<StoriesState>({ kind: 'loading' });
   protected readonly offline = signal(false);
+  protected readonly loadingShown = signal(false);
   protected readonly pageNumber = signal(1);
   protected readonly list = signal<NewsList>({ items: [], total: 0 });
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
@@ -126,21 +130,31 @@ export class NewsPage {
         return;
       }
       this.focusAfterRetry = false;
-      afterNextRender(
-        () => (state === 'error' ? this.retryButton() : this.heading())?.nativeElement.focus(),
-        { injector: this.injector },
-      );
+      afterNextRender(() => this.focusAfterRetryTarget(state), { injector: this.injector });
     });
   }
 
   protected retry(): void {
     this.focusAfterRetry = true;
+    this.listState().nativeElement.focus();
     this.load();
+  }
+
+  private focusAfterRetryTarget(state: Exclude<LoadState, 'loading'>): void {
+    if (state === 'error') {
+      this.retryButton()?.nativeElement.focus();
+      return;
+    }
+    const firstCard = this.host.nativeElement.querySelector<HTMLElement>(
+      '.content :is(app-featured-news, app-news-card) a[href]',
+    );
+    (firstCard ?? this.listState().nativeElement).focus();
   }
 
   private load(quietly = false): void {
     this.newsLoad.unsubscribe();
     if (!quietly) {
+      this.loadingShown.set(false);
       this.newsState.set('loading');
     }
     this.newsLoad = this.newsApi.publishedWithLatest(this.pageNumber() - 1, PAGE_SIZE).subscribe({
