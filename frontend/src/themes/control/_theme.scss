@@ -3,6 +3,7 @@
   --color-accent-fill: #0f766e;
   --color-accent-soft: #e6f4f1;
   --color-accent-bg: #ecfdf8;
+  --color-side-nav-active: var(--color-surface);
   --color-accent-on-inverse: #5eead4;
   --color-accent-2: #b45309;
   --color-accent-3: #7c3aed;
@@ -271,7 +272,6 @@
     (60vw - 1.2 * var(--space-5) - 2 * var(--space-4-5) - 3px) / 5.6
   );
   --text-account-number: min(var(--text-lg), 7vw);
-  --side-nav-layout-max: 1280px;
   --side-nav-width: 230px;
   --floating-notice-height: 0rem;
   --offline-pill-height: 0rem;
@@ -407,6 +407,7 @@
   --color-accent: #5eead4;
   --color-accent-soft: #133a35;
   --color-accent-bg: #10302b;
+  --color-side-nav-active: var(--color-accent-soft);
   --color-accent-2: #fbbf77;
   --color-accent-3: #c4b5fd;
 
