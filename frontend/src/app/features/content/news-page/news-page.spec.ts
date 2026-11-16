@@ -195,6 +195,12 @@ describe('Given a visitor opening Aktuality', () => {
       );
     });
 
+    it('then the lead photo beside the text on a wide screen asks for a 600 px wide 3:2 picture', () => {
+      const photo = root.querySelector('.featured img') as HTMLImageElement;
+      expect(photo.getAttribute('sizes')).toBe('(max-width: 768px) 100vw, 600px');
+      expect([photo.getAttribute('width'), photo.getAttribute('height')]).toEqual(['600', '400']);
+    });
+
     it('then the stories of the newest year with a project follow in the order the site keeps, each linking to its page', () => {
       const stories = root.querySelector('.stories') as HTMLElement;
       expect(text(stories, 'h2')).toBe('Příběhy z roku 2025');
