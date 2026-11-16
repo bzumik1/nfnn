@@ -1,5 +1,4 @@
 @use 'breakpoints' as bp;
-@use 'visually-hidden';
 
 .hero {
   --floating-room: 0rem;
@@ -10,6 +9,16 @@
   overflow: hidden;
   display: flex;
   align-items: flex-end;
+}
+
+.hero-full-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: var(--full-screen-height);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .hero-img {
@@ -240,9 +249,4 @@
         )
         top / 100% calc(var(--hero-top-shade-height) + var(--page-resting-scroll)) no-repeat;
   }
-}
-
-.hero-content.hides-lead > .hero-lead,
-.hero-content.hides-figures > .hero-figures {
-  @include visually-hidden.hides;
 }

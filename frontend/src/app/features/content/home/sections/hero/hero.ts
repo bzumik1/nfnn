@@ -14,8 +14,6 @@ import { CompactLayout } from '../../../../../core/layout/compact-layout';
 import { ShortViewport } from '../../../../../core/layout/short-viewport';
 import { StatsBar } from '../stats-bar/stats-bar';
 
-const HIDDEN_BY_CROWDING = [[], ['hides-lead'], ['hides-lead', 'hides-figures']] as const;
-const MOST_CROWDED = HIDDEN_BY_CROWDING.length - 1;
 const RETURN_HYSTERESIS_PX = 24;
 
 @Component({
@@ -30,36 +28,38 @@ export class Hero {
   private readonly short = inject(ShortViewport).isShort;
   private readonly hero = viewChild.required<ElementRef<HTMLElement>>('hero');
   private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
-  private readonly crowding = signal(0);
+  private readonly fullScreen = viewChild.required<ElementRef<HTMLElement>>('fullScreen');
+  private readonly crowded = signal(false);
+  private figuresRowGrowth = 0;
   protected readonly showsDonate = computed(() => !this.short());
   protected readonly showsWhereWeHelp = computed(() => !this.compact() && !this.short());
-  protected readonly showsFigures = this.showsWhereWeHelp;
-  protected readonly hidesLead = computed(() => this.crowding() >= 1);
-  protected readonly hidesFigures = computed(() => this.crowding() >= 2);
+  protected readonly showsFigures = computed(() => this.showsWhereWeHelp() && !this.crowded());
 
   constructor() {
     let release: (() => void) | undefined;
     afterNextRender(() => {
-      release = this.keepContentAboveTabBar();
+      release = this.keepButtonsAboveTabBar();
     });
     inject(DestroyRef).onDestroy(() => release?.());
   }
 
-  private keepContentAboveTabBar(): () => void {
+  private keepButtonsAboveTabBar(): () => void {
     const content = this.content().nativeElement;
     const view = content.ownerDocument.defaultView;
     if (!view) {
       return () => undefined;
     }
-    this.fitAboveTabBar(view);
     let frame = 0;
     const refit = () => {
       view.cancelAnimationFrame(frame);
-      frame = view.requestAnimationFrame(() => this.fitAboveTabBar(view));
+      frame = view.requestAnimationFrame(() => this.fitAboveTabBar());
     };
     const observer = view.ResizeObserver ? new view.ResizeObserver(refit) : null;
-    observer?.observe(content);
+    for (const observed of [content, this.hero().nativeElement, this.fullScreen().nativeElement]) {
+      observer?.observe(observed, { box: 'border-box' });
+    }
     view.addEventListener('resize', refit);
+    this.fitAboveTabBar();
     return () => {
       view.cancelAnimationFrame(frame);
       observer?.disconnect();
@@ -67,36 +67,23 @@ export class Hero {
     };
   }
 
-  private fitAboveTabBar(view: Window): void {
+  private fitAboveTabBar(): void {
     const content = this.content().nativeElement;
-    const room = this.roomAboveTabBar(view);
-    const current = this.crowding();
-    const heightAt = (crowding: number) => {
-      this.hideFor(content, crowding);
-      return content.offsetHeight;
-    };
-    let crowding = current;
-    while (crowding < MOST_CROWDED && heightAt(crowding) > room) {
-      crowding++;
-    }
-    if (crowding === current) {
-      while (crowding > 0 && heightAt(crowding - 1) <= room - RETURN_HYSTERESIS_PX) {
-        crowding--;
+    const room = this.fullScreen().nativeElement.offsetHeight;
+    const figures = content.querySelector<HTMLElement>(':scope > .hero-figures');
+    if (figures) {
+      const buttons = content.querySelector<HTMLElement>(':scope > .hero-btns');
+      this.figuresRowGrowth = Math.max(0, figures.offsetHeight - (buttons?.offsetHeight ?? 0));
+      if (content.offsetHeight > room) {
+        this.crowded.set(true);
       }
+      return;
     }
-    this.hideFor(content, current);
-    this.crowding.set(crowding);
-  }
-
-  private roomAboveTabBar(view: Window): number {
-    const fullScreen = parseFloat(view.getComputedStyle(this.hero().nativeElement).minHeight);
-    return Number.isFinite(fullScreen) && fullScreen > 0 ? fullScreen : view.innerHeight;
-  }
-
-  private hideFor(content: HTMLElement, crowding: number): void {
-    const hidden: readonly string[] = HIDDEN_BY_CROWDING[crowding];
-    for (const name of HIDDEN_BY_CROWDING[MOST_CROWDED]) {
-      content.classList.toggle(name, hidden.includes(name));
+    if (
+      this.crowded() &&
+      content.offsetHeight + this.figuresRowGrowth <= room - RETURN_HYSTERESIS_PX
+    ) {
+      this.crowded.set(false);
     }
   }
 }

@@ -12,12 +12,9 @@
   <div class="hero-top-shade"></div>
   <div class="hero-overlay"></div>
 
-  <div
-    #content
-    class="hero-content"
-    [class.hides-lead]="hidesLead()"
-    [class.hides-figures]="hidesFigures()"
-  >
+  <div #fullScreen class="hero-full-screen" aria-hidden="true"></div>
+
+  <div #content class="hero-content">
     <p class="hero-eyebrow" i18n="@@home.hero.eyebrow">nadační fond</p>
     <h1 class="hero-title" i18n="@@home.hero.title">Nová naděje</h1>
     <p class="hero-lead" i18n="@@home.hero.lead">
