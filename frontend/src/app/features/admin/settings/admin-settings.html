@@ -335,13 +335,10 @@
                   [appBusy]="saving()"
                   (click)="save()"
                 >
-                  @if (saving()) {
-                    <ng-container i18n="@@admin.settings.saving">Ukládáme…</ng-container>
-                  } @else {
-                    <ng-container i18n="@@admin.settings.confirm.yes"
-                      >Uložit a restartovat</ng-container
-                    >
-                  }
+                  <app-busy-label [busy]="saving()">
+                    <span when-idle i18n="@@admin.settings.confirm.yes">Uložit a restartovat</span>
+                    <span when-busy i18n="@@admin.settings.saving">Ukládáme…</span>
+                  </app-busy-label>
                 </button>
                 <button
                   #confirmCancel

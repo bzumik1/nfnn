@@ -176,11 +176,10 @@
               class="ui-button ui-button--primary"
               [appBusy]="saving()"
             >
-              @if (saving()) {
-                <span i18n="@@admin.report.settings.saving">Ukládáme…</span>
-              } @else {
-                <span i18n="@@admin.report.settings.save">Uložit nastavení</span>
-              }
+              <app-busy-label [busy]="saving()">
+                <span when-idle i18n="@@admin.report.settings.save">Uložit nastavení</span>
+                <span when-busy i18n="@@admin.report.settings.saving">Ukládáme…</span>
+              </app-busy-label>
             </button>
             <p class="ui-form-status" role="status">
               @if (settingsStatus(); as status) {
