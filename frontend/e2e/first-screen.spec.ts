@@ -389,6 +389,38 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     });
   });
 
+  for (const textSize of ['150%', '200%']) {
+    test.describe(`when it opens on a computer of 1280 × 748 with text at ${textSize}, where the hero's text no longer fits one screen`, () => {
+      test.use({ viewport: { width: 1280, height: 748 } });
+
+      test('then no control of the hero reaches partly under the tab bar, and every one under the window lies wholly below it', async ({
+        page,
+      }) => {
+        await page.goto('/');
+        await page.addStyleTag({ content: `html { font-size: ${textSize}; }` });
+        await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+        await expect
+          .poll(() =>
+            page.evaluate(() => {
+              const tabBarTop = document
+                .querySelector('app-tab-bar nav')!
+                .getBoundingClientRect().top;
+              return [...document.querySelectorAll<HTMLElement>('#uvod a')]
+                .map((control) => ({
+                  name: control.textContent?.trim() ?? '',
+                  box: control.getBoundingClientRect(),
+                }))
+                .filter(({ box }) => box.bottom > tabBarTop && box.top < window.innerHeight)
+                .map(({ name }) => name);
+            }),
+          )
+          .toEqual([]);
+      });
+    });
+  }
+
   for (const screen of SCREENS.filter((each) => each.width < 480 && each.height > 500)) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
       test.use({ viewport: { width: screen.width, height: screen.height } });
