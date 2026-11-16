@@ -146,6 +146,17 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     );
   });
 
+  test('when a signed-in donor taps near the edge of the link button Jak nastavit trvalý příkaz on Moje dary, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
+    page,
+  }) => {
+    await mockDonorApi(page, twoGifts);
+    await rememberedDonorSession(page);
+    await page.goto('/darce/dary');
+    const main = page.getByRole('main');
+
+    await expectFingerSized(main.getByRole('button', { name: 'Jak nastavit trvalý příkaz' }));
+  });
+
   test('when a signed-in donor taps near the edge of Jak přiřazujeme platby? on Bankovní účty, then a finger-sized area around it still reaches it, or the control beside it, never empty space', async ({
     page,
   }) => {

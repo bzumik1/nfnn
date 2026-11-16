@@ -67,7 +67,9 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await page.keyboard.press('Enter');
 
     await expect(yearlyLine(page)).toHaveText('Připravujeme údaje potvrzení…');
-    await expect(yearlyButton(page).locator('.pdf-button__ring')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__ring'),
+    ).toBeVisible();
     await expect(page.locator('.year-row progress')).toHaveCount(0);
     await expect(yearlyButton(page)).toHaveAttribute('aria-disabled', 'true');
     await expect(yearlyButton(page)).toHaveCSS('opacity', '1');
@@ -83,7 +85,9 @@ test.describe('Given a signed-in donor who downloads a receipt', () => {
     await expect(yearlyLine(page)).toHaveText(
       'Potvrzení potvrzeni-o-darech-2025.pdf je stažené. Najdete ho ve stažených souborech.',
     );
-    await expect(yearlyButton(page).locator('.pdf-button__download')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__download'),
+    ).toBeVisible();
     await expect(yearlyButton(page)).toBeFocused();
     expect(await buttonBox()).toEqual(idleButton);
     expect(await lineRoom()).toEqual(idleLine);
@@ -163,7 +167,9 @@ test.describe('Given a signed-in donor on an iPhone, whose browser shares files'
       'Potvrzení potvrzeni-o-darech-2025.pdf je připravené. Otevřete ho tlačítkem Otevřít potvrzení.',
     );
     await expect(yearlyButton(page)).toHaveText('Otevřít potvrzení za rok 2025 (PDF)');
-    await expect(yearlyButton(page).locator('.pdf-button__share')).toBeVisible();
+    await expect(
+      yearlyButton(page).locator('.pdf-button__layer--current .pdf-button__share'),
+    ).toBeVisible();
     await expect(yearlyLine(page).locator('.pdf-progress__brief')).toHaveAttribute(
       'data-brief',
       'PDF je připravené',

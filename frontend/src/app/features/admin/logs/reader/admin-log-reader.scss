@@ -78,7 +78,7 @@
   min-height: var(--list-row-min-height);
   padding-block: var(--space-3);
   border: 0;
-  background: transparent;
+  background-color: transparent;
   color: var(--color-text);
   font: inherit;
   text-align: start;
@@ -93,7 +93,7 @@
   }
 
   &.is-focused {
-    background: var(--color-accent-bg);
+    background-color: var(--color-accent-bg);
   }
 }
 

@@ -31,7 +31,9 @@ describe('Given the face of a PDF button', () => {
 
   const button = () => fixture.nativeElement.querySelector('button') as HTMLButtonElement;
   const text = () => (button().textContent ?? '').replace(/\s+/g, ' ').trim();
-  const icon = () => button().querySelector('.pdf-button__icon') as HTMLElement;
+  const current = () => button().querySelector('.pdf-button__layer--current') as HTMLElement;
+  const icon = () => current().querySelector('.pdf-button__icon') as HTMLElement;
+  const layers = () => Array.from(button().querySelectorAll<HTMLElement>('.pdf-button__layer'));
   const reserves = () =>
     Array.from(button().querySelectorAll<HTMLElement>('.pdf-button__reserve')).map(
       (reserve) => reserve.dataset['label'],
@@ -46,6 +48,26 @@ describe('Given the face of a PDF button', () => {
     expect(text()).toBe('Stáhnout PDF, dar z 10. 1. 2026');
     expect(icon().getAttribute('aria-hidden')).toBe('true');
     expect(icon().querySelector('.pdf-button__download')).not.toBeNull();
+  });
+
+  it('when it waits, then each state is one layer of icon and label in the same cell and only the current one is heard', () => {
+    expect(layers().map((layer) => layer.getAttribute('aria-hidden'))).toEqual([
+      null,
+      'true',
+      'true',
+      'true',
+    ]);
+    for (const layer of layers()) {
+      expect(layer.querySelector('.pdf-button__icon')).not.toBeNull();
+    }
+  });
+
+  it('when it changes state, then the new state takes the current layer and the old one stays to fade', () => {
+    show('running');
+
+    expect(layers()).toHaveLength(4);
+    expect(current().querySelector('.pdf-button__ring')).not.toBeNull();
+    expect(layers()[0].getAttribute('aria-hidden')).toBe('true');
   });
 
   it('when it waits, then it reserves the room of every other label without saying them', () => {

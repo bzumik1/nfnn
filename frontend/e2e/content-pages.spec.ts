@@ -515,7 +515,11 @@ test.describe('Given a visitor in a browser that cannot share', () => {
 
     await page.getByRole('button', { name: 'Kopírovat odkaz' }).click();
 
-    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'Odkaz je zkopírovaný, můžete ho vložit do zprávy.' }),
+    ).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Sdílet' })).toHaveCount(0);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       `https://nfnn.cz/aktuality/${article.slug}`,
@@ -531,7 +535,11 @@ test.describe('Given a visitor in a browser that cannot share', () => {
       .getByRole('button', { name: `Kopírovat odkaz ${article.title}`, exact: true })
       .click();
 
-    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'Odkaz je zkopírovaný, můžete ho vložit do zprávy.' }),
+    ).toHaveCount(1);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       `https://nfnn.cz/aktuality/${article.slug}`,
     );
@@ -545,7 +553,11 @@ test.describe('Given a visitor in a browser that cannot share', () => {
 
     await page.getByRole('button', { name: 'Kopírovat odkaz' }).click();
 
-    await expect(page.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'Odkaz je zkopírovaný, můžete ho vložit do zprávy.' }),
+    ).toHaveCount(1);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       `https://nfnn.cz/projekty/${project.slug}`,
     );

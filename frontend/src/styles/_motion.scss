@@ -1,5 +1,6 @@
 @use 'sass:list';
 @use 'sass:map';
+@use 'sass:string';
 
 $_durations: (
   fast: var(--duration-fast),
@@ -38,12 +39,30 @@ $_never: (
   outline
 );
 
+$_at-once: 0s;
+
 @function _transition($properties, $duration, $ease) {
   $parts: ();
   @each $property in $properties {
     $parts: list.append($parts, $property $duration $ease, $separator: comma);
   }
-  @return $parts;
+  @return list.append(
+    $parts,
+    --pressed-tint var(--duration-base) var(--ease-standard),
+    $separator: comma
+  );
+}
+
+@mixin _tint-at-once($properties, $duration) {
+  @if not string.index('#{&}', '::') {
+    &:active {
+      $durations: ();
+      @each $property in $properties {
+        $durations: list.append($durations, $duration, $separator: comma);
+      }
+      transition-duration: list.append($durations, $_at-once, $separator: comma);
+    }
+  }
 }
 
 @mixin _refuse($properties, $refused, $why) {
@@ -69,6 +88,7 @@ $_never: (
   );
   @include _refuse($properties, $_moving, 'moves: use motion.move');
   transition: _transition($properties, var(--duration-base), var(--ease-standard));
+  @include _tint-at-once($properties, var(--duration-base));
   @include _fades-when-reduced(transition);
 }
 
@@ -89,6 +109,8 @@ $_never: (
       @content;
     }
   }
+
+  @include _tint-at-once($properties, var(--duration-base));
 }
 
 @mixin move($properties, $duration: base, $ease: spring) {
@@ -106,11 +128,14 @@ $_never: (
     @supports (transition-timing-function: linear(0, 1)) {
       transition: _transition($properties, var(--duration-done), var(--ease-spring-bouncy));
     }
+
+    @include _tint-at-once($properties, var(--duration-done));
   } @else {
     @if not map.has-key($_durations, $duration) or not map.has-key($_eases, $ease) {
       @error 'motion.move takes a duration of #{map.keys($_durations)} and an ease of #{map.keys($_eases)}';
     }
     transition: _transition($properties, map.get($_durations, $duration), map.get($_eases, $ease));
+    @include _tint-at-once($properties, map.get($_durations, $duration));
   }
 }
 

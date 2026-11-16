@@ -1,9 +1,10 @@
 @use 'motion';
 @use 'pressed';
+@use 'touch-target';
 
 .ui-button {
   display: inline-block;
-  border: none;
+  border: 1.5px solid transparent;
   border-radius: var(--radius-pill);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -15,6 +16,7 @@
   background: var(--color-accent-soft);
   color: var(--color-accent);
   @include motion.state(opacity);
+  @include touch-target.reaches-finger-size;
 
   &:disabled,
   &[aria-disabled='true'] {
@@ -27,7 +29,7 @@
   }
 
   @media (forced-colors: active) {
-    border: 1px solid ButtonText;
+    border-color: ButtonText;
 
     &[aria-disabled='true'] {
       border-color: GrayText;
@@ -43,6 +45,12 @@
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   box-shadow: var(--shadow-button-sm);
+
+  @include motion.hover(background-color) {
+    &:not(:disabled, [aria-disabled='true']) {
+      background-color: var(--color-accent-fill-hover);
+    }
+  }
 }
 
 .ui-button--large {
@@ -57,7 +65,7 @@
 
 .ui-button--quiet {
   background: none;
-  border: 1.5px solid var(--color-border);
+  border-color: var(--color-border);
   color: var(--color-text-muted);
 }
 
@@ -73,12 +81,12 @@
 
 .ui-button--danger-outline {
   background: none;
-  border: 1px solid var(--color-danger-border);
+  border-color: var(--color-danger-border);
   color: var(--color-danger);
 }
 
 .ui-link-button {
-  background: none;
+  background-color: transparent;
   border: none;
   color: var(--color-accent);
   font-family: var(--font-sans);
@@ -86,6 +94,7 @@
   font-weight: var(--weight-semibold);
   cursor: pointer;
   padding: var(--space-1-5) var(--space-2);
+  @include touch-target.reaches-finger-size;
 
   &:disabled {
     cursor: progress;
@@ -113,17 +122,15 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: var(--color-accent);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
   border: 1.5px solid var(--color-border-accent);
   border-radius: var(--radius-pill);
   padding: var(--space-1-5) var(--space-3-5);
   min-height: 32px;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    background var(--duration-base),
-    border-color var(--duration-base),
-    color var(--duration-base);
+  @include motion.state(background-color, border-color, color);
+  @include touch-target.reaches-finger-size;
 
   @media (hover: hover) {
     &:hover {

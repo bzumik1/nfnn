@@ -33,7 +33,7 @@ $inline-start: max(
   padding: 0;
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-sheet-close);
+  background-color: var(--color-sheet-close);
   box-shadow: var(--shadow-sheet-close);
   color: var(--color-on-sheet-close);
   cursor: pointer;

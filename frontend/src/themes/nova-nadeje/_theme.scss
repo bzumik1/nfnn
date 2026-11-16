@@ -70,6 +70,7 @@
 :root {
   --color-accent: #1d5fc9;
   --color-accent-fill: #2563eb;
+  --color-accent-fill-hover: #1d4ed8;
   --color-accent-soft: #edf2fb;
   --color-accent-bg: #f1f5fc;
   --color-side-nav-active: var(--color-surface);
@@ -500,6 +501,7 @@
     --color-log-code: #1e3560;
     --color-log-warn: #92400e;
     --color-skeleton: color-mix(in srgb, #767680 24%, transparent);
+    --color-pressed: color-mix(in srgb, currentColor 14%, transparent);
   }
 }
 

@@ -29,6 +29,12 @@
 @use 'styles/ui/glass';
 @use 'styles/ui/skeleton';
 
+@property --pressed-tint {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
 *,
 *::before,
 *::after {

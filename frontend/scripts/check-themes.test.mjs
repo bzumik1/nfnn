@@ -353,6 +353,30 @@ describe('Given the colours a theme sets for the light and the dark appearance',
     );
   });
 
+  it('when the pressed tint is so strong that a label under it fades, then its contrast on its own pressed tint is reported', () => {
+    const strong = NOVA_NADEJE.replace(
+      '  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);',
+      '  --color-pressed: color-mix(in srgb, currentColor 45%, transparent);',
+    );
+
+    assert.match(
+      appearanceProblems('strong', strong).join('\n'),
+      /^theme strong in the light appearance: --color-text-muted on its own pressed tint \(45 % of --color-pressed\) is [0-9.]+:1, below 4.5:1$/m,
+    );
+  });
+
+  it('when the pressed tint is not a mix of the current colour with transparent, then it is reported, because the label under it cannot be measured', () => {
+    const solid = NOVA_NADEJE.replace(
+      '  --color-pressed: color-mix(in srgb, currentColor 8%, transparent);',
+      '  --color-pressed: #eeeeee;',
+    );
+
+    assert.match(
+      appearanceProblems('solid', solid).join('\n'),
+      /--color-pressed is #eeeeee, not a mix of currentColor with transparent/,
+    );
+  });
+
   it('when the soft text is too light for a sheet in the dark, then its contrast on the elevated surface is reported', () => {
     const dim = NOVA_NADEJE.replace(
       '  --color-text-soft: #9aa3b2;',

@@ -1398,7 +1398,11 @@ describe('Given an administrator on a donor card', () => {
       expect(receiptEnvironment.workers).toEqual([]);
       expect(downloadButton('2027-000001').getAttribute('aria-disabled')).toBeNull();
       expect(buttonText('2027-000001')).toBe('Zkusit znovu potvrzení 2027-000001');
-      expect(downloadButton('2027-000001').querySelector('.pdf-button__warning')).not.toBeNull();
+      expect(
+        downloadButton('2027-000001').querySelector(
+          '.pdf-button__layer--current .pdf-button__warning',
+        ),
+      ).not.toBeNull();
     });
 
     it('then drawing tools that do not load are named at the row with what to do', async () => {

@@ -33,13 +33,27 @@ describe('Given a copy button for an account number', () => {
     expect(status()).toBe('');
   });
 
-  it('when it is pressed, then the value is in the clipboard and the button says it is copied', async () => {
+  it('when it is pressed, then the value is in the clipboard and the status says it once', async () => {
     await press();
 
     expect(writeText).toHaveBeenCalledWith('5544332217/2010');
-    expect(button().textContent).toContain('Zkopírováno');
-    expect(button().textContent?.trim()).toBe('Zkopírováno');
     expect(status()).toBe('Zkopírováno.');
+  });
+
+  it('when it is pressed, then its accessible name stays and the visible Zkopírováno is hidden from a screen reader', async () => {
+    await press();
+
+    expect(button().textContent?.replace(/\s+/g, ' ').trim()).toBe('Kopírovat číslo účtu');
+    const shown = button().querySelector('[data-label="Zkopírováno"]') as HTMLElement;
+    expect(shown.getAttribute('aria-hidden')).toBe('true');
+    expect(button().classList).toContain('ui-pill-button--done');
+  });
+
+  it('when it renders, then the copied wording already holds its width hidden from a screen reader', () => {
+    const reserve = button().querySelector('[data-label="Zkopírováno"]') as HTMLElement;
+
+    expect(reserve.getAttribute('aria-hidden')).toBe('true');
+    expect(reserve.textContent?.trim()).toBe('');
   });
 
   it('when it is pressed, then it reports the copy once it is in the clipboard', async () => {
@@ -101,6 +115,14 @@ describe('Given a copy button with a label of its own', () => {
     const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
 
     expect(button.textContent?.replace(/\s+/g, ' ').trim()).toBe('Zkopírovat zprávu pro technika');
+  });
+
+  it('when it renders, then the copied wording shares the cell of the longer label', () => {
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const faces = button.querySelector('.copy-button__faces') as HTMLElement;
+
+    expect(faces.querySelector('[data-label="Zkopírováno"]')).not.toBeNull();
+    expect(faces.textContent).toContain('Zkopírovat zprávu pro technika');
   });
 });
 
