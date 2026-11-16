@@ -5,3 +5,7 @@ export function restPillOn(bar: HTMLElement, pill: HTMLElement, tab: HTMLElement
   pill.style.height = `${tabBox.height}px`;
   pill.style.translate = `${tabBox.left - barBox.left - bar.clientLeft}px ${tabBox.top - barBox.top - bar.clientTop}px`;
 }
+
+export function settleStyle(pill: HTMLElement): void {
+  void pill.ownerDocument.defaultView?.getComputedStyle(pill).translate;
+}

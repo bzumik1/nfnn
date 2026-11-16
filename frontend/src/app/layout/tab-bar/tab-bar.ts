@@ -11,6 +11,7 @@ import {
   ElementRef,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { SoftKeyboard } from '../../core/layout/soft-keyboard';
@@ -20,7 +21,7 @@ import { RouteChrome } from '../../core/navigation/route-chrome';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { FOUNDATION_STAR } from '../../shared/ui/foundation-star/foundation-star';
 import { followFingerAcrossTabs } from './finger-across-tabs';
-import { restPillOn } from './pill-at-rest';
+import { restPillOn, settleStyle } from './pill-at-rest';
 import { keepRoomForTabBar } from './tab-bar-room';
 
 const CLICK_AFTER_DRAG_MS = 400;
@@ -115,8 +116,12 @@ export class TabBar {
       this.pillGlides.set(false);
       return;
     }
-    restPillOn(this.bar().nativeElement, this.pill().nativeElement, tab);
-    this.pillGlides.set(true);
+    const pill = this.pill().nativeElement;
+    restPillOn(this.bar().nativeElement, pill, tab);
+    if (!untracked(this.pillGlides)) {
+      settleStyle(pill);
+      this.pillGlides.set(true);
+    }
   }
 
   private keepPillOnResize(bar: HTMLElement): () => void {
