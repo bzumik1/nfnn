@@ -1,5 +1,8 @@
 @use 'breakpoints' as bp;
 
+$text-measure: 70ch;
+$contents-width: 20rem;
+
 :host {
   display: block;
   container: privacy-policy / inline-size;
@@ -50,7 +53,7 @@
 }
 
 .prose {
-  max-width: 70ch;
+  max-width: $text-measure;
 
   section + section {
     margin-top: var(--space-16);
@@ -154,10 +157,13 @@
     --toc-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-6));
 
     display: grid;
-    grid-template-columns: minmax(0, 70ch) minmax(0, 20rem);
-    justify-content: space-between;
+    grid-template-columns: minmax(0, $text-measure) minmax(0, $contents-width);
     align-items: start;
-    column-gap: var(--space-12);
+    column-gap: clamp(
+      var(--space-12),
+      100% - #{$text-measure} - #{$contents-width},
+      var(--space-20)
+    );
   }
 
   .prose {
