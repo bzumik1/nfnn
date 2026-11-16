@@ -44,7 +44,11 @@ export class AdminNews {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly items = signal<NewsArticleResponse[]>([]);
   protected readonly notice = signal<Notice | null>(null);
 

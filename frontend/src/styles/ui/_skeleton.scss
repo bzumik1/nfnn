@@ -11,6 +11,11 @@
   padding: var(--space-5) var(--space-6) var(--space-6);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
+  @include motion.state(opacity);
+
+  @starting-style {
+    opacity: 0;
+  }
 }
 
 .ui-skeleton--inset {
@@ -19,7 +24,7 @@
 
 .ui-skeleton__line {
   display: block;
-  block-size: 1lh;
+  block-size: 1em;
   inline-size: 100%;
   border-radius: var(--radius-sm);
   background-color: var(--color-skeleton);

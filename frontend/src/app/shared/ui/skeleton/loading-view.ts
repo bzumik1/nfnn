@@ -37,6 +37,7 @@ type Phase = 'idle' | 'delaying' | 'shown' | 'holding';
 export function loadingView<T>(
   source: Signal<T>,
   isLoading: (value: T) => boolean,
+  showsAtOnce: (value: T) => boolean,
 ): LoadingView<T> {
   const timings = inject(LOADING_TIMINGS);
   const connectivity = inject(Connectivity);
@@ -79,28 +80,25 @@ export function loadingView<T>(
         return;
     }
   };
-  const finish = () => {
-    switch (phase()) {
-      case 'delaying':
-        settle(false);
-        return;
-      case 'shown': {
-        if (connectivity.offline()) {
-          settle(false);
-          return;
-        }
-        const remaining = (timings()?.minimumMs ?? 0) - (Date.now() - shownAt);
-        if (remaining <= 0) {
-          settle(true);
-          return;
-        }
-        phase.set('holding');
-        timer = setTimeout(() => settle(true), remaining);
-        return;
-      }
-      default:
-        return;
+  const finish = (value: T) => {
+    const current = phase();
+    if (current === 'idle') {
+      return;
     }
+    if (current === 'delaying' || showsAtOnce(value) || connectivity.offline()) {
+      settle(false);
+      return;
+    }
+    if (current === 'holding') {
+      return;
+    }
+    const remaining = (timings()?.minimumMs ?? 0) - (Date.now() - shownAt);
+    if (remaining <= 0) {
+      settle(true);
+      return;
+    }
+    phase.set('holding');
+    timer = setTimeout(() => settle(true), remaining);
   };
 
   effect(() => {
@@ -110,7 +108,7 @@ export function loadingView<T>(
         loadingValue = value;
         start();
       } else {
-        finish();
+        finish(value);
       }
     });
   });

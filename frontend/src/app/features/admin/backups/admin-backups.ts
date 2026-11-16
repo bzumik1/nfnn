@@ -112,7 +112,11 @@ export class AdminBackups {
   protected readonly historyPath = ADMIN_BACKUP_HISTORY_PATH;
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly view = signal<AdminBackupsResponse | null>(null);
   protected readonly notice = signal<Notice | null>(null);
   protected readonly job = signal<RunningJob | null>(null);

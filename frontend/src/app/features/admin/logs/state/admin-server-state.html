@@ -7,7 +7,12 @@
         Zjišťujeme stav serveru…
       </p>
       @if (loadView.skeleton()) {
-        <app-skeleton [rows]="4" />
+        <div class="cards">
+          <app-skeleton [rows]="2" />
+          <app-skeleton [rows]="4" />
+          <app-skeleton [rows]="4" />
+          <app-skeleton [rows]="2" />
+        </div>
       }
     }
     @case ('error') {

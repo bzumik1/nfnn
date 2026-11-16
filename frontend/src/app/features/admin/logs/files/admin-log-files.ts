@@ -38,7 +38,11 @@ export class AdminLogFiles {
   protected readonly filePath = LOG_FILE_PATH;
   protected readonly query = (file: LogFileResponse) => logFileQuery(file.name);
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly available = signal(false);
   protected readonly files = signal<LogFileResponse[]>([]);
   protected readonly groups = computed(() => olderLogFileGroups(this.files()));

@@ -121,7 +121,11 @@ export class AdminActions {
   private readonly title = viewChild.required<ElementRef<HTMLHeadingElement>>('title');
 
   protected readonly state = signal<LoadState>('loading');
-  protected readonly loadView = loadingView(this.state, (state) => state === 'loading');
+  protected readonly loadView = loadingView(
+    this.state,
+    (state) => state === 'loading',
+    (state) => state !== 'ready',
+  );
   protected readonly rows = inject(CompactLayout).listsAsRows;
   protected readonly items = signal<AdminActionResponse[]>([]);
   protected readonly hasMore = signal(false);
