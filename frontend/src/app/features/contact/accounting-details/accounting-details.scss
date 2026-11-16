@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .accounting {
   margin: 0;
 }
@@ -32,6 +34,12 @@
 .accounting-value {
   flex: 1 1 10rem;
   text-wrap: balance;
+}
+
+@include bp.up(nav) {
+  .accounting-value--iban {
+    white-space: nowrap;
+  }
 }
 
 .accounting-item app-copy-button {

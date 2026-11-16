@@ -319,8 +319,11 @@
           >Kontakt</a
         >
       </p>
-      <p i18n="@@layout.footer.registry">
-        Zapsán u&nbsp;KS Ústí&nbsp;nad&nbsp;Labem, oddíl&nbsp;N, vložka&nbsp;78 · IČO&nbsp;27278794
+      <p class="registry" i18n="@@layout.footer.registry">
+        <span>Zapsán u&nbsp;KS Ústí&nbsp;nad&nbsp;Labem, oddíl&nbsp;N, vložka&nbsp;78</span
+        >&ngsp;<span class="registry-id"
+          ><span class="registry-separator">·&nbsp;</span>IČO&nbsp;27278794</span
+        >
       </p>
       <a [href]="privacyUrl" (click)="follow($event, privacyUrl)" i18n="@@layout.footer.privacy"
         >Zásady ochrany osobních údajů</a

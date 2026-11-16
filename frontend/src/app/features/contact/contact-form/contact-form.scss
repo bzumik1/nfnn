@@ -127,6 +127,7 @@ app-form-field {
 }
 
 .form-error {
+  --motion-rise: 0px;
   @include motion.appear;
 
   margin: 0 0 var(--space-4-5);
