@@ -3,6 +3,7 @@ package cz.novanadeje.app.donors.cucumber;
 import cz.novanadeje.app.cucumber.ApiClient;
 import cz.novanadeje.app.cucumber.ScenarioDonors;
 import cz.novanadeje.app.shared.domain.FoundationZone;
+import cz.novanadeje.app.support.AsyncTaskTracker;
 import cz.novanadeje.app.support.FakeFioClient;
 import cz.novanadeje.app.support.FioMovements;
 import cz.novanadeje.app.support.RecordingMailSender;
@@ -40,19 +41,21 @@ public class SecondFactorRecoveryStepDefinitions {
     private final RecordingMailSender mailSender;
     private final JdbcClient jdbc;
     private final Clock clock;
+    private final AsyncTaskTracker asyncTasks;
     private String challenge;
     private String recoveryMessage;
     private String previousRecoveryMessage;
     private long nextMovementId = FIRST_MOVEMENT_ID;
 
     public SecondFactorRecoveryStepDefinitions(ApiClient api, ScenarioDonors scenarioDonors, FakeFioClient fio, RecordingMailSender mailSender,
-                                               JdbcClient jdbc, Clock clock) {
+                                               JdbcClient jdbc, Clock clock, AsyncTaskTracker asyncTasks) {
         this.api = api;
         this.scenarioDonors = scenarioDonors;
         this.fio = fio;
         this.mailSender = mailSender;
         this.jdbc = jdbc;
         this.clock = clock;
+        this.asyncTasks = asyncTasks;
     }
 
     @Given("{string} signs in with the right password up to the code")
@@ -151,14 +154,36 @@ public class SecondFactorRecoveryStepDefinitions {
         receives(amount, account, recoveryMessage);
     }
 
-    private void receives(String amount, String account, String message) {
+    @When("the bank account receives {string} with the recovery message from {string} named {string} today")
+    public void theBankAccountReceivesWithTheRecoveryMessageFromNamedToday(String amount, String account, String payerName) {
+        receives(amount, account, payerName, recoveryMessage);
+    }
+
+    @When("the bank account receives {string} with the variable symbol of {string} from {string} named {string} today")
+    public void theBankAccountReceivesWithTheVariableSymbolOfFromNamedToday(String amount, String alias, String account, String payerName) {
         String[] numberAndBank = account.split("/");
-        LocalDate today = LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
-        fio.addMovement(FioMovements.incoming(nextMovementId++, today, amount)
+        fio.addMovement(FioMovements.incoming(nextMovementId++, today(), amount)
                 .from(numberAndBank[0], numberAndBank[1])
-                .named("Novakova Jana")
+                .named(payerName)
+                .withVariableSymbol(scenarioDonors.variableSymbolOf(alias).value())
+                .build());
+    }
+
+    private void receives(String amount, String account, String message) {
+        receives(amount, account, "Novakova Jana", message);
+    }
+
+    private void receives(String amount, String account, String payerName, String message) {
+        String[] numberAndBank = account.split("/");
+        fio.addMovement(FioMovements.incoming(nextMovementId++, today(), amount)
+                .from(numberAndBank[0], numberAndBank[1])
+                .named(payerName)
                 .withMessage(message)
                 .build());
+    }
+
+    private LocalDate today() {
+        return LocalDate.ofInstant(clock.instant(), FoundationZone.ZONE);
     }
 
     @Then("{string} has the second factor {onOff}")
@@ -183,6 +208,13 @@ public class SecondFactorRecoveryStepDefinitions {
         ScenarioDonors.Credentials credentials = scenarioDonors.credentialsOf(alias);
         api.forgetCredentials();
         api.post(LOGIN_PATH, Map.of("email", credentials.email(), "password", credentials.password()));
+    }
+
+    @Then("{string} gets {int} e-mails with the subject {string}")
+    public void getsEmailsWithTheSubject(String alias, int count, String subject) {
+        String address = scenarioDonors.credentialsOf(alias).email();
+        asyncTasks.awaitIdleAfter(count + " e-mails to " + alias);
+        assertThat(mailSender.sent()).filteredOn(sent -> isTo(sent, address, subject)).hasSize(count);
     }
 
     @Then("{string} gets an e-mail with the subject {string}")

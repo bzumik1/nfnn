@@ -84,7 +84,7 @@ UI „odpověď o starším symbolu“ · Code: `donations/domain/donor/SymbolCl
 The donor's recorded „Ano“ or „Ne“ to the older-symbol question; only an administrator corrects it, in a browser session.
 
 **Sender account**\
-UI „bankovní účet“ (page „Bankovní účty“) · Code: `SenderAccount`, the link `SenderAccountLink` (`donor_sender_account`, status `ACTIVE`, `AWAITING_PAYMENT`, `DISCONNECTED`); „learned account“ and „account link“ in docs.\
+UI „bankovní účet“ (page „Bankovní účty“) · Code: `SenderAccount`, the link `SenderAccountLink` (`donor_sender_account`, status `ACTIVE`, `AWAITING_PAYMENT`, `DISCONNECTED`), the event `SenderAccountLearned`; „learned account“ and „account link“ in docs.\
 A bank account a donor proved by a payment with their own symbol, from which payments without a symbol then pair to them; the donor never types it in.\
 _Avoid_: „účet“ alone (it is also the donor's account on the site)
 
@@ -239,7 +239,7 @@ A second factor confirmed again at the moment of a sensitive step (showing the b
 
 **Second factor recovery**\
 UI „Obnova přístupu“ (platba 1 Kč se zprávou „OBNOVA …“) · Code: `SecondFactorRecovery`, `SecondFactorRecoveryCode`, `SecondFactorRecoveryPaid`.\
-A donor turning off their own lost second factor with a 1 Kč payment carrying a one-time code from a bank account proven at least seven days earlier.\
+A donor turning off their own lost second factor with a 1 Kč payment carrying a one-time code from a bank account proven at least seven days earlier, under the donor's own name as the bank reports the payer (`NameWords`).\
 _Avoid_: „obnova“ alone (password reset and restore from a backup are also „obnova“)
 
 **Password reset**\
