@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/donations/receipt-format.spec.ts > Given a receipt date > when it is formatted, then it has day and month without leading zeros as everywhere on the site",
+    "replacement": "src/app/features/donations/receipt-format.spec.ts > Given a receipt date > when it is formatted, then it has day and month without leading zeros and keeps the ordinary spaces of the receipt text",
+    "reason": "Q13 (#1155): the web UI now joins the parts of a date with no-break spaces, so the receipt date is no longer formatted as everywhere on the site; it keeps its ordinary spaces through its own format, and the renamed test also checks that no no-break space enters it",
+    "contract": "docs/frontend-overview.md, receipt-format.ts"
+  }
+]
