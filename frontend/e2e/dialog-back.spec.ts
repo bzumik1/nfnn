@@ -671,29 +671,42 @@ test.describe('Given an administrator with the pairing dialog of a payment open'
   });
 });
 
-const MAIN_LIGHT_BACKDROP_IN_HUNDREDTHS = [1000, 1500, 4000, 60];
-const MAIN_LIGHT_BACKDROP_HALF_PULLED_IN_HUNDREDTHS = [1000, 1500, 4000, 30];
+const OVER_WHITE = (channel: number, alpha: number) => channel * alpha + 255 * (1 - alpha);
+const MAIN_LIGHT_BACKDROP = { red: 10, green: 15, blue: 40, alpha: 0.6 };
+const MAIN_LIGHT_BACKDROP_OVER_WHITE = [
+  MAIN_LIGHT_BACKDROP.red,
+  MAIN_LIGHT_BACKDROP.green,
+  MAIN_LIGHT_BACKDROP.blue,
+].map((channel) => OVER_WHITE(channel, MAIN_LIGHT_BACKDROP.alpha));
+const MAIN_LIGHT_BACKDROP_HALF_PULLED_OVER_WHITE = [
+  MAIN_LIGHT_BACKDROP.red,
+  MAIN_LIGHT_BACKDROP.green,
+  MAIN_LIGHT_BACKDROP.blue,
+].map((channel) => OVER_WHITE(channel, MAIN_LIGHT_BACKDROP.alpha / 2));
+const CANVAS_ROUNDING = 1;
 
-function channels(css: string): { red: number; green: number; blue: number; alpha: number } {
-  const srgb = css.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/);
-  if (srgb !== null) {
-    return {
-      red: Number(srgb[1]) * 255,
-      green: Number(srgb[2]) * 255,
-      blue: Number(srgb[3]) * 255,
-      alpha: srgb[4] === undefined ? 1 : Number(srgb[4]),
-    };
+async function backdropOverWhiteAtRest(sheet: Locator): Promise<number[] | null> {
+  return sheet.evaluate((element) => {
+    if (element.getAnimations().some((animation) => animation.playState === 'running')) {
+      return null;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, 1, 1);
+    context.fillStyle = getComputedStyle(element).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+  });
+}
+
+function farthestChannel(actual: number[] | null, expected: number[]): number {
+  if (actual === null) {
+    return Infinity;
   }
-  const rgb = css.match(/^rgba?\(([\d.]+),? ([\d.]+),? ([\d.]+)(?:(?:,| \/) ([\d.]+))?\)$/);
-  if (rgb !== null) {
-    return {
-      red: Number(rgb[1]),
-      green: Number(rgb[2]),
-      blue: Number(rgb[3]),
-      alpha: rgb[4] === undefined ? 1 : Number(rgb[4]),
-    };
-  }
-  throw new Error(`Unexpected colour ${css}`);
+  return Math.max(...expected.map((value, index) => Math.abs(actual[index] - value)));
 }
 
 test.describe('Given the sign-in sheet open on a phone', () => {
@@ -706,18 +719,21 @@ test.describe('Given the sign-in sheet open on a phone', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     const sheet = page.locator('dialog.dialog--sheet[open]');
     await expect(sheet).toBeVisible();
-    const backdrop = async () => {
-      const colour = channels(
-        await sheet.evaluate((element) => getComputedStyle(element).backgroundColor),
-      );
-      return [colour.red, colour.green, colour.blue, colour.alpha].map((value) =>
-        Math.round(value * 100),
-      );
-    };
 
-    await expect.poll(backdrop).toEqual(MAIN_LIGHT_BACKDROP_IN_HUNDREDTHS);
+    await expect
+      .poll(async () =>
+        farthestChannel(await backdropOverWhiteAtRest(sheet), MAIN_LIGHT_BACKDROP_OVER_WHITE),
+      )
+      .toBeLessThanOrEqual(CANVAS_ROUNDING);
 
     await sheet.evaluate((element) => element.style.setProperty('--dialog-pull', '0.5'));
-    await expect.poll(backdrop).toEqual(MAIN_LIGHT_BACKDROP_HALF_PULLED_IN_HUNDREDTHS);
+    await expect
+      .poll(async () =>
+        farthestChannel(
+          await backdropOverWhiteAtRest(sheet),
+          MAIN_LIGHT_BACKDROP_HALF_PULLED_OVER_WHITE,
+        ),
+      )
+      .toBeLessThanOrEqual(CANVAS_ROUNDING);
   });
 });
