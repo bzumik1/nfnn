@@ -269,6 +269,37 @@ describe('Given an administrator reading a log file', () => {
     ]);
   });
 
+  it('when they tap Hledat twice or press Enter again while the search runs, then one search is sent and the button keeps the focus, unavailable and named by the search line', async () => {
+    await openTail();
+    await page.type('#log-search', 'token');
+    const search = page.button('Hledat');
+    search.focus();
+
+    search.click();
+    await page.settle();
+    search.click();
+    await page.submit('form.search-form');
+
+    expect(search.getAttribute('aria-disabled')).toBe('true');
+    expect(search.disabled).toBe(false);
+    expect(document.activeElement).toBe(search);
+    expect(search.getAttribute('aria-describedby')).toBe('log-search-busy');
+    expect(page.text('#log-search-busy')).toBe('Hledáme…');
+    const sent = page.http.match((request) => request.url === `${LOGS_URL}/backend.log/search`);
+    expect(sent).toHaveLength(1);
+    sent[0].flush({
+      name: 'backend.log',
+      sizeBytes: 50000,
+      matches: [{ offset: 41500, line: TOKEN }],
+      moreOlder: false,
+      scannedFrom: 41500,
+    });
+    await page.settle();
+
+    expect(search.hasAttribute('aria-disabled')).toBe(false);
+    expect(page.texts('.entry')).toHaveLength(1);
+  });
+
   it('when the pattern is not a valid expression, then the problem is shown at the search and no stale results stay', async () => {
     await openTail();
 

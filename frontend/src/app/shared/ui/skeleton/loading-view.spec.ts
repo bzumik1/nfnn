@@ -8,20 +8,22 @@ type PageState = 'loading' | 'ready' | 'error';
 
 @Component({
   template: `
-    @switch (view.state()) {
-      @case ('loading') {
-        <p class="loading">Načítáme…</p>
-        @if (view.skeleton()) {
-          <div class="skeleton"></div>
+    <section class="card" [attr.aria-busy]="view.busy() ? 'true' : null">
+      @switch (view.state()) {
+        @case ('loading') {
+          <p class="loading">Načítáme…</p>
+          @if (view.skeleton()) {
+            <div class="skeleton"></div>
+          }
+        }
+        @case ('ready') {
+          <p class="content" [class.appears]="view.appears()">Obsah</p>
+        }
+        @case ('error') {
+          <p class="failure">Nepovedlo se.</p>
         }
       }
-      @case ('ready') {
-        <p class="content" [class.appears]="view.appears()">Obsah</p>
-      }
-      @case ('error') {
-        <p class="failure">Nepovedlo se.</p>
-      }
-    }
+    </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -84,6 +86,18 @@ describe('Given a page that loads its data behind a skeleton', () => {
     expect(element('.loading')).toBeNull();
     expect(element('.skeleton')).toBeNull();
     expect(element('.content')?.classList).not.toContain('appears');
+  });
+
+  it('when the page opens, then its card is busy at once and stops being busy once the content shows', async () => {
+    await open();
+    expect(element('.card')?.getAttribute('aria-busy')).toBe('true');
+
+    await wait(300);
+    await answer('ready');
+    expect(element('.card')?.getAttribute('aria-busy')).toBe('true');
+
+    await wait(400);
+    expect(element('.card')?.hasAttribute('aria-busy')).toBe(false);
   });
 
   it('when the loading lasts, then the skeleton shows only once the delay has passed', async () => {
