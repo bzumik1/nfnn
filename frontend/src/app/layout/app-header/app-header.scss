@@ -154,6 +154,10 @@
   align-items: center;
   gap: var(--space-3);
   min-height: var(--header-height);
+
+  @include bp.up(wide) {
+    max-width: var(--content-max-wide);
+  }
 }
 
 .brand {
@@ -196,6 +200,13 @@
   padding: 0;
   border-radius: var(--radius-pill);
   cursor: pointer;
+
+  @include bp.up(wide) {
+    left: max(
+      max(var(--space-8), env(safe-area-inset-left), var(--window-controls-inset-inline)),
+      calc((100% - var(--content-max-wide)) / 2 + var(--space-8))
+    );
+  }
 
   &:focus-visible {
     outline: 3px solid var(--color-tab-focus-ring);

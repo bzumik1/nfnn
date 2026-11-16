@@ -8,6 +8,7 @@ export const BREAKPOINTS = {
   cards: 640,
   tablet: 768,
   nav: 899,
+  wide: 1599,
 } as const;
 
 export const HEIGHTS = {
