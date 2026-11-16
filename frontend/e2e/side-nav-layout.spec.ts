@@ -60,6 +60,10 @@ async function right(locator: Locator): Promise<number> {
   return box!.x + box!.width;
 }
 
+function widthBesideTheScrollbar(page: Page): Promise<number> {
+  return page.evaluate(() => document.body.clientWidth);
+}
+
 function logo(page: Page): Locator {
   return page.getByRole('banner').getByRole('img', { name: LOGO });
 }
@@ -96,7 +100,7 @@ for (const area of AREAS) {
       await area.open(page);
       const contentRight = await right(page.locator('main .ui-card').first());
       expect(contentRight).toBeCloseTo(await right(avatar(page)), 0);
-      expect(WIDTH_WHERE_CONTENT_REACHES_THE_END - contentRight).toBeCloseTo(
+      expect((await widthBesideTheScrollbar(page)) - contentRight).toBeCloseTo(
         await left(logo(page)),
         0,
       );

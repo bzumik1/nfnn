@@ -103,7 +103,13 @@
     color-mix(in srgb, #000000 28%, transparent),
     transparent 22%
   );
-  --color-backdrop: rgb(10 15 40 / 0.6);
+  --color-backdrop-tint: #0a0f28;
+  --backdrop-strength: 60%;
+  --color-backdrop: color-mix(
+    in srgb,
+    var(--color-backdrop-tint) var(--backdrop-strength),
+    transparent
+  );
 
   --color-border: #e5e7eb;
   --color-border-field: #e5e7eb;
@@ -163,6 +169,9 @@
   --color-sheet-grouped: var(--color-surface-muted);
   --color-sheet-group: var(--color-surface);
   --color-group-cell: var(--color-surface);
+  --color-grouped-alt: var(--color-surface-muted);
+  --color-group-divider: var(--color-divider);
+  --color-badge-accent-bg: var(--color-accent-bg);
   --color-sheet-text: var(--color-text);
   --color-sheet-secondary: var(--color-text-muted);
   --color-sheet-separator: var(--color-border);
@@ -360,6 +369,7 @@
 
   --content-max: 1200px;
   --content-max-wide: 1440px;
+  --measure-prose: 65ch;
   --header-height: 72px;
   --page-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
   --text-header-action: min(
@@ -513,6 +523,10 @@
 
 @mixin dark-appearance {
   color-scheme: dark;
+  --color-group-cell: var(--color-surface-elevated);
+  --color-grouped-alt: var(--color-fill);
+  --color-group-divider: color-mix(in srgb, #ffffff 12%, transparent);
+  --color-badge-accent-bg: var(--color-accent-soft);
   --color-sheet-grouped: var(--color-surface);
   --color-sheet-group: var(--color-surface-muted);
   --color-segment-thumb: #3a4356;
@@ -549,7 +563,13 @@
   --color-surface-inverse-strong: #05070c;
   --color-surface-quote: #13213f;
 
-  --color-backdrop: color-mix(in srgb, #000000 70%, transparent);
+  --color-backdrop-tint: #000000;
+  --backdrop-strength: 70%;
+  --color-backdrop: color-mix(
+    in srgb,
+    var(--color-backdrop-tint) var(--backdrop-strength),
+    transparent
+  );
   --color-page-dim: color-mix(in srgb, #000000 22%, transparent);
   --shadow-page-edge: -8px 0 24px color-mix(in srgb, #000000 30%, transparent);
 
@@ -591,6 +611,7 @@
 }
 
 @mixin dark-appearance-more-contrast {
+  --color-group-divider: var(--color-divider);
   --color-text: #f8fafc;
   --color-text-secondary: #f1f3f8;
   --color-text-muted: #e5e7eb;

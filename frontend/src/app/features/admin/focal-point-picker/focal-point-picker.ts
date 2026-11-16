@@ -45,6 +45,8 @@ export class FocalPointPicker {
   protected readonly previews = computed(() =>
     this.shapes().map((preview) => ({ ...preview, ratio: PHOTO_SHAPES[preview.shape].ratio })),
   );
+  private lifted: { readonly x: number; readonly y: number } | null = null;
+
   protected readonly summary = computed(() => {
     const point = this.point();
     return point
@@ -52,7 +54,13 @@ export class FocalPointPicker {
       : $localize`:@@admin.focalPoint.summary.none:Bez bodu výřezu: web fotku ořízne jako dosud.`;
   });
 
+  protected noteLift(event: MouseEvent): void {
+    this.lifted = { x: event.clientX, y: event.clientY };
+  }
+
   protected choose(event: MouseEvent, photo: HTMLImageElement): void {
+    const at = this.lifted ?? { x: event.clientX, y: event.clientY };
+    this.lifted = null;
     if (event.detail === 0) {
       return;
     }
@@ -61,8 +69,8 @@ export class FocalPointPicker {
       return;
     }
     this.point.set({
-      x: percent((event.clientX - box.left) / box.width),
-      y: percent((event.clientY - box.top) / box.height),
+      x: percent((at.x - box.left) / box.width),
+      y: percent((at.y - box.top) / box.height),
     });
   }
 
