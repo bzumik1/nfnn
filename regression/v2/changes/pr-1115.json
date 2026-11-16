@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when nobody is signed in, then right after the bank details one line says a receipt needs an account and opens the registration from there",
+    "replacement": "src/app/features/content/home/sections/donate-cta/donate-cta.spec.ts > Given the donate section > when nobody is signed in, then right after the card of the bank details and the QR one line says a receipt needs an account and opens the registration from there",
+    "reason": "PR #1115 (#1113, Jakub's desktop improvements of the live site): on a computer the QR stands inside the bank details card, so the receipt note now follows the card that holds the QR",
+    "contract": "docs/frontend-overview.md, payment-panel"
+  }
+]
