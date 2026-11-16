@@ -1,18 +1,21 @@
-<article class="tile" [class.tile--large]="size() === 'large'" [class.tile--no-photo]="!image()">
+<article
+  class="tile"
+  [class.tile--large]="size() === 'large'"
+  [class.tile--split]="size() === 'split'"
+  [class.tile--no-photo]="!image()"
+>
   <div class="tile-media">
     @if (image(); as image) {
       <img
         loading="lazy"
         [src]="image.src"
         [srcset]="image.srcset"
-        [sizes]="
-          size() === 'large' ? '(max-width: 768px) 100vw, 600px' : '(max-width: 768px) 85vw, 300px'
-        "
+        [sizes]="image.sizes"
         width="480"
         height="300"
         [alt]="image.alt"
         [appFocalPoint]="image.focalPoint"
-        [focalShape]="size() === 'large' ? 'square' : 'projectCard'"
+        [focalShape]="image.shape"
       />
     } @else {
       <svg class="tile-heart" viewBox="0 0 24 24" aria-hidden="true">
@@ -29,7 +32,7 @@
     <h3 class="tile-title">
       <a class="tile-link" [routerLink]="['/projekty', item().slug]">{{ item().title }}</a>
     </h3>
-    @if (size() === 'large') {
+    @if (showsPerex()) {
       <p class="tile-perex">{{ item().perex }}</p>
     }
     <p class="tile-category">{{ category() }}</p>

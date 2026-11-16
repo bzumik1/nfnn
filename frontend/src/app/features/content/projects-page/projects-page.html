@@ -10,7 +10,7 @@
     </div>
     @if (state() === 'ready' && projects().length > 0) {
       <div class="summary">
-        <div class="summary-grid">
+        <div class="summary-grid" [class.summary-grid--total]="categories().length === 0">
           <p class="summary-tile summary-tile--total">
             <strong class="summary-number">{{ projects().length }}</strong
             >&ngsp;<span class="summary-label" i18n="@@content.projects.summary.total"
@@ -22,45 +22,49 @@
               od roku {{ firstYear() }}</span
             >
           </p>
-          <div class="summary-categories">
-            @for (entry of categories(); track entry.category) {
-              <p class="summary-tile">
-                <strong class="summary-number">{{ entry.count }}</strong
-                >&ngsp;<span class="summary-label">
-                  @switch (entry.category) {
-                    @case ('CHILDREN') {
-                      <ng-container i18n="@@content.projects.summary.children">{entry.count, plural,
-                        one {dítě}
-                        few {děti}
-                        other {dětí}
-                      }</ng-container>
+          @if (categories().length > 0) {
+            <div class="summary-categories">
+              @for (entry of categories(); track entry.category) {
+                <p class="summary-tile">
+                  <strong class="summary-number">{{ entry.count }}</strong
+                  >&ngsp;<span class="summary-label">
+                    @switch (entry.category) {
+                      @case ('CHILDREN') {
+                        <ng-container
+                          i18n="@@content.projects.summary.children"
+                          >{entry.count, plural, one {dítě} few {děti} other {dětí}}</ng-container
+                        >
+                      }
+                      @case ('ADULTS') {
+                        <ng-container i18n="@@content.projects.summary.adults">{entry.count, plural,
+                          one {dospělý}
+                          few {dospělí}
+                          other {dospělých}
+                        }</ng-container>
+                      }
+                      @case ('ANIMALS') {
+                        <ng-container
+                          i18n="@@content.projects.summary.animals"
+                          >{entry.count, plural,
+                            one {zvíře}
+                            few {zvířata}
+                            other {zvířat}
+                          }</ng-container
+                        >
+                      }
+                      @default {
+                        <ng-container i18n="@@content.projects.summary.other">{entry.count, plural,
+                          one {ostatní}
+                          few {ostatní}
+                          other {ostatních}
+                        }</ng-container>
+                      }
                     }
-                    @case ('ADULTS') {
-                      <ng-container i18n="@@content.projects.summary.adults">{entry.count, plural,
-                        one {dospělý}
-                        few {dospělí}
-                        other {dospělých}
-                      }</ng-container>
-                    }
-                    @case ('ANIMALS') {
-                      <ng-container i18n="@@content.projects.summary.animals">{entry.count, plural,
-                        one {zvíře}
-                        few {zvířata}
-                        other {zvířat}
-                      }</ng-container>
-                    }
-                    @default {
-                      <ng-container i18n="@@content.projects.summary.other">{entry.count, plural,
-                        one {ostatní}
-                        few {ostatní}
-                        other {ostatních}
-                      }</ng-container>
-                    }
-                  }
-                </span>
-              </p>
-            }
-          </div>
+                  </span>
+                </p>
+              }
+            </div>
+          }
         </div>
       </div>
     }
@@ -97,17 +101,19 @@
           >Zpět na úvodní stránku</a
         >
       } @else {
-        <nav class="chips" i18n-aria-label="@@content.projects.chips.label" aria-label="Roky">
-          @for (chip of chips(); track chip.label) {
-            <a
-              class="chip"
-              [href]="chip.href"
-              [attr.aria-current]="chip.choice === choice() ? 'true' : null"
-              (click)="choose($event, chip.choice)"
-              >{{ chip.label }}</a
-            >
-          }
-        </nav>
+        @if (years().length > 1) {
+          <nav class="chips" i18n-aria-label="@@content.projects.chips.label" aria-label="Roky">
+            @for (chip of chips(); track chip.label) {
+              <a
+                class="chip"
+                [href]="chip.href"
+                [attr.aria-current]="chip.choice === choice() ? 'true' : null"
+                (click)="choose($event, chip.choice)"
+                >{{ chip.label }}</a
+              >
+            }
+          </nav>
+        }
 
         @for (group of groups(); track group.year) {
           <section class="year" [attr.aria-labelledby]="'rok-' + group.year">
@@ -142,8 +148,8 @@
                     ><span i18n="@@content.projects.strip.all"
                       >{group.items.length, plural,
                         one {Celý rok}
-                        few {Všechny {{ group.items.length }} z roku}
-                        other {Všech {{ group.items.length }} z roku}
+                        few {Všechny {{ group.items.length }} příběhy z roku}
+                        other {Všech {{ group.items.length }} příběhů z roku}
                       }
                       {{ group.year }}</span
                     ><span aria-hidden="true"> →</span></a
@@ -151,13 +157,31 @@
                 </li>
               </ul>
             } @else {
-              <ul class="grid">
-                @for (item of group.items; track item.id; let first = $first) {
-                  <li class="grid-item" [class.grid-item--large]="first">
-                    <app-story-tile [item]="item" [size]="first ? 'large' : 'small'" />
+              <ul
+                class="grid"
+                [class.grid--pair]="group.arrangement === 'pair'"
+                [class.grid--trio]="group.arrangement === 'trio'"
+              >
+                @for (tile of group.tiles; track tile.item.id) {
+                  <li
+                    class="grid-item"
+                    [class.grid-item--large]="tile.size === 'large'"
+                    [class.grid-item--split]="tile.size === 'split'"
+                  >
+                    <app-story-tile [item]="tile.item" [size]="tile.size" />
                   </li>
                 }
               </ul>
+              @if (years().length > 1) {
+                <a
+                  class="year-all"
+                  routerLink="/projekty"
+                  [queryParams]="{ rok: allYears }"
+                  i18n="@@content.projects.year.all"
+                  >Všechny roky<span class="year-all-noun"> příběhů</span
+                  ><span aria-hidden="true"> →</span></a
+                >
+              }
             }
           </section>
         }
