@@ -13,7 +13,7 @@
 
   @include bp.up(nav) {
     max-width: var(--content-max);
-    padding-inline: var(--space-8);
+    padding-inline: var(--space-8) calc(var(--space-8) - var(--space-6));
   }
 
   @include bp.up(wide) {
