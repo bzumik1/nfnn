@@ -39,7 +39,7 @@ describe('Given an address the site does not know', () => {
 
   it('when the page opens for an unknown address, then it leads home and to the contact form, and quietly to the news and the projects', () => {
     expect(lead()).toBe(
-      'Odkaz je možná starý nebo v\u00a0adrese chybí písmenko. Zbytek webu je na\u00a0svém místě.',
+      'Odkaz je možná starý nebo v\u00a0adrese chybí písmenko. Zbytek webu je na\u00a0svém\u00a0místě.',
     );
     expect(links('.actions')).toEqual([
       ['/', 'Zpět na úvodní stránku'],

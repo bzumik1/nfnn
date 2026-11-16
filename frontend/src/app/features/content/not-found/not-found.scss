@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
 @use 'touch-target';
 
 :host {
@@ -9,6 +10,10 @@
   display: grid;
   align-content: safe center;
   min-height: calc(var(--full-screen-height) - var(--tab-bar-clearance));
+}
+
+.not-found > .ui-intro__head {
+  width: 100%;
 }
 
 .actions {
@@ -22,7 +27,7 @@
   display: flex;
   flex-wrap: wrap;
   column-gap: var(--space-6);
-  row-gap: var(--space-2);
+  row-gap: var(--space-4);
   margin-top: var(--space-6);
 }
 
@@ -33,6 +38,10 @@
   font-weight: var(--weight-semibold);
   text-decoration: underline;
   text-underline-offset: 0.2em;
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
 }
 
 @include bp.down(tablet) {
@@ -62,5 +71,11 @@
   .actions,
   .more {
     grid-column: 1 / -1;
+  }
+
+  .actions {
+    flex-direction: row;
+    align-items: center;
+    text-align: start;
   }
 }
