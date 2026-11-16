@@ -158,7 +158,7 @@
   grid-template-areas: 'tile';
   min-height: max(100%, 22rem);
   border: none;
-  background: var(--color-surface-inverse);
+  background: none;
 
   &::after {
     content: '';

@@ -187,12 +187,12 @@ html.has-window-controls {
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-accent);
-  box-shadow: var(--shadow-menu);
   font-weight: var(--weight-semibold);
   text-decoration: none;
   transform: translateY(-200%);
 
   &:focus-visible {
+    box-shadow: var(--shadow-menu);
     transform: none;
   }
 }
