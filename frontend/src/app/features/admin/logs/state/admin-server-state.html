@@ -36,7 +36,7 @@
                       {{ verdict(health.kind) }}
                     </h2>
                     <span class="ui-list__meta" i18n="@@admin.logs.state.asOf"
-                      >k {{ time(diagnostics.now) }}</span
+                      >k <span class="ui-date">{{ time(diagnostics.now) }}</span></span
                     >
                     @if (health.findings.length > 0) {
                       <ul class="ui-list__extra findings">
@@ -179,7 +179,9 @@
                   <span class="ui-list__title" i18n="@@admin.logs.diagnostics.startedAt"
                     >Běží od</span
                   >
-                  <span class="ui-list__meta">{{ time(diagnostics.jvm.startedAt) }}</span>
+                  <span class="ui-list__meta"
+                    ><span class="ui-date">{{ time(diagnostics.jvm.startedAt) }}</span></span
+                  >
                 </div>
               </li>
             </ul>
@@ -280,7 +282,7 @@
                     <div class="ui-list__row">
                       <span class="ui-list__title ui-mono">{{ override.logger }}</span>
                       <span class="ui-list__meta" i18n="@@admin.logs.state.overrideUntil"
-                        >do {{ time(override.until) }}</span
+                        >do <span class="ui-date">{{ time(override.until) }}</span></span
                       >
                       <span class="ui-list__value">{{ override.level }}</span>
                     </div>

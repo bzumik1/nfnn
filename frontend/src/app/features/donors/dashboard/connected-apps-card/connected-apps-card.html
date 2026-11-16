@@ -21,11 +21,13 @@
             <div class="connection-body">
               <span class="connection-client">{{ app.client }}</span>
               <span class="connection-dates">
-                <span i18n="@@donor.account.connections.since">připojeno</span>
-                {{ formatDate(app.grantedAt) }}
+                <span i18n="@@donor.account.connections.since">připojeno</span>&ngsp;<span
+                  class="ui-date"
+                  >{{ formatDate(app.grantedAt) }}</span
+                >
                 ·
-                <span i18n="@@donor.account.connections.lastUsed">naposledy použito</span>
-                {{ formatDate(app.lastUsedAt) }}
+                <span i18n="@@donor.account.connections.lastUsed">naposledy použito</span
+                >&ngsp;<span class="ui-date">{{ formatDate(app.lastUsedAt) }}</span>
               </span>
               <ul class="connection-scopes">
                 @for (scope of scopeLabels(app); track scope) {

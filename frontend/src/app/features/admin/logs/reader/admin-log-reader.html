@@ -256,7 +256,9 @@
       @if (entry.at) {
         <div>
           <dt i18n="@@admin.logs.reader.fact.when">Kdy</dt>
-          <dd>{{ when(entry) }}</dd>
+          <dd>
+            <span class="ui-date">{{ when(entry) }}</span>
+          </dd>
         </div>
       }
       @if (entry.thread) {

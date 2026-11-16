@@ -66,7 +66,7 @@
                   {{ balance.amount }}
                   <span class="balance-read-at">
                     <ng-container i18n="@@admin.home.import.balance.readAt"
-                      >k {{ balance.readAt }}</ng-container
+                      >k <span class="ui-date">{{ balance.readAt }}</span></ng-container
                     >
                     @if (balanceMayBeOutdated()) {
                       &ngsp;<ng-container i18n="@@admin.home.import.balance.outdated"
@@ -83,7 +83,9 @@
               <dt i18n="@@admin.home.import.covered">Stažené období</dt>
               <dd>
                 @if (coveredPeriod(); as period) {
-                  {{ period }}
+                  <span class="ui-date">{{ period.from }}</span
+                  >&nbsp;–
+                  <span class="ui-date">{{ period.to }}</span>
                 } @else {
                   <ng-container i18n="@@admin.home.import.covered.none">zatím nic</ng-container>
                 }
@@ -93,7 +95,7 @@
               <dt i18n="@@admin.home.import.lastSuccess">Poslední úspěšné stažení</dt>
               <dd>
                 @if (lastSuccess(); as at) {
-                  {{ at }}
+                  <span class="ui-date">{{ at }}</span>
                 } @else {
                   <ng-container i18n="@@admin.home.import.lastSuccess.none"
                     >zatím žádné</ng-container
@@ -105,7 +107,7 @@
               <dt i18n="@@admin.home.import.lastAttempt">Poslední pokus</dt>
               <dd>
                 @if (lastAttempt(); as at) {
-                  {{ at }}
+                  <span class="ui-date">{{ at }}</span>
                 } @else {
                   <ng-container i18n="@@admin.home.import.lastAttempt.none"
                     >zatím žádný</ng-container

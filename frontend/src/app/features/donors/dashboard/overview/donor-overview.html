@@ -131,7 +131,8 @@
       </h2>
       <p class="last-gift-main">
         <span class="last-gift-amount ui-figures">{{ crowns(gift.amountMinor) }}&nbsp;Kč</span
-        >&ngsp;<span class="last-gift-date">{{ formatDate(gift.receivedAt) }}</span
+        >&ngsp;<span class="last-gift-date"
+          ><span class="ui-date">{{ formatDate(gift.receivedAt) }}</span></span
         >&ngsp;<span
           class="ui-badge ui-badge--success last-gift-status"
           [class.last-gift-status--refunded]="gift.status === 'REFUNDED'"

@@ -342,7 +342,9 @@
                 </div>
                 <div>
                   <dt i18n="@@admin.donorDetail.account.registered">Registrace</dt>
-                  <dd>{{ time(account.registeredAt) }}</dd>
+                  <dd>
+                    <span class="ui-date">{{ time(account.registeredAt) }}</span>
+                  </dd>
                 </div>
                 <div>
                   <dt i18n="@@admin.donorDetail.account.role">Role</dt>
@@ -725,17 +727,24 @@
                         <span class="muted">
                           @if (item.verifiedOn) {
                             <ng-container i18n="@@admin.donorDetail.accounts.verifiedOn"
-                              >ověřen {{ day(item.verifiedOn) }}</ng-container
+                              >ověřen
+                              <span class="ui-date">{{ day(item.verifiedOn) }}</span></ng-container
                             >
                           }
                           @if (item.connectedFrom) {
                             <ng-container i18n="@@admin.donorDetail.accounts.connectedFrom"
-                              >&ngsp;· od {{ day(item.connectedFrom) }}</ng-container
+                              >&ngsp;· od
+                              <span class="ui-date">{{
+                                day(item.connectedFrom)
+                              }}</span></ng-container
                             >
                           }
                           @if (item.disconnectedOn) {
                             <ng-container i18n="@@admin.donorDetail.accounts.disconnectedOn"
-                              >&ngsp;· vypnuto {{ day(item.disconnectedOn) }}</ng-container
+                              >&ngsp;· vypnuto
+                              <span class="ui-date">{{
+                                day(item.disconnectedOn)
+                              }}</span></ng-container
                             >
                           }
                         </span>
@@ -752,7 +761,10 @@
                             >
                             @if (item.lastDonationOn) {
                               <ng-container i18n="@@admin.donorDetail.accounts.last"
-                                >&ngsp;· poslední {{ day(item.lastDonationOn) }}</ng-container
+                                >&ngsp;· poslední
+                                <span class="ui-date">{{
+                                  day(item.lastDonationOn)
+                                }}</span></ng-container
                               >
                             }
                           </span>
@@ -972,7 +984,9 @@
                   @for (item of year.items; track item.id) {
                     <li>
                       <div class="ui-list__row">
-                        <span class="ui-list__title">{{ day(item.receivedAt) }}</span>
+                        <span class="ui-list__title"
+                          ><span class="ui-date">{{ day(item.receivedAt) }}</span></span
+                        >
                         <span class="ui-list__meta">
                           {{ item.purpose }} · {{ pairingLabel(item) }}
                           @if (item.senderAccount) {
@@ -1030,9 +1044,11 @@
                         data-label="Přijato"
                         i18n-data-label="@@admin.donorDetail.donations.col.date"
                       >
-                        {{ day(item.receivedAt) }}
+                        <span class="ui-date">{{ day(item.receivedAt) }}</span>
                         @if (item.status === 'REFUNDED') {
-                          <span class="tag tag--warn" i18n="@@admin.donorDetail.donations.refunded"
+                          &ngsp;<span
+                            class="tag tag--warn"
+                            i18n="@@admin.donorDetail.donations.refunded"
                             >vráceno</span
                           >
                         }
@@ -1197,8 +1213,8 @@
                       data-label="Vystaveno"
                       i18n-data-label="@@admin.donorDetail.receipts.col.issued"
                     >
-                      {{ time(receipt.issuedAt) }}
-                      <span class="muted">{{ receiptLocale(receipt) }}</span>
+                      <span class="ui-date">{{ time(receipt.issuedAt) }}</span
+                      >&ngsp;<span class="muted">{{ receiptLocale(receipt) }}</span>
                     </td>
                     <td data-label="Stav" i18n-data-label="@@admin.donorDetail.receipts.col.state">
                       @if (receipt.active) {

@@ -403,7 +403,7 @@ test.describe('Given an administrator on the donors page', () => {
     const receiptsCard = page.getByRole('region', { name: 'Vydaná potvrzení' });
     const choice = receiptsCard.getByLabel('Potvrzení k vystavení');
     await expect(choice).toHaveValue(/dar-/);
-    await choice.selectOption({ label: 'Dar z 12. 10. 2026, 300\u00a0Kč' });
+    await choice.selectOption({ label: 'Dar z 12.\u00a010. 2026, 300\u00a0Kč' });
     await receiptsCard.getByRole('button', { name: 'Vystavit potvrzení' }).click();
 
     await expect(

@@ -118,7 +118,7 @@ test.describe('Given an administrator on the backups page', () => {
     await expect(page).toHaveTitle('Všechny zálohy | Správa | Nová naděje – nadační fond');
     await expect(page.getByRole('heading', { level: 1, name: 'Všechny zálohy' })).toBeFocused();
     await page
-      .getByRole('region', { name: /22\. 10\. 2026/ })
+      .getByRole('region', { name: /22\.\s10\. 2026/ })
       .getByRole('button', { name: /^3:00/ })
       .click();
     const sheet = page.getByRole('dialog');
@@ -308,7 +308,7 @@ test.describe('Given an administrator on the backups page', () => {
     await openUnlockedAdministrationPage(page, '/sprava/zalohy', 'Zálohy');
     await page.getByRole('link', { name: /^Všechny zálohy/ }).click();
     await page
-      .getByRole('region', { name: /22\. 10\. 2026/ })
+      .getByRole('region', { name: /22\.\s10\. 2026/ })
       .getByRole('button', { name: /^3:00/ })
       .click();
     await page

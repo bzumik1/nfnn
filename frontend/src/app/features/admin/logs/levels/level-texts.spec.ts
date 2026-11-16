@@ -5,13 +5,13 @@ describe('Given a temporary log level', () => {
 
   it('when minutes remain, then the countdown names them and when the level goes back', () => {
     expect(remainingText(until, Date.parse('2026-10-23T10:07:30Z'))).toBe(
-      'vrátí se samo za 23 min (23. 10. 2026 12:30)',
+      'vrátí se samo za 23 min (23.\u00a010. 2026 12:30)',
     );
   });
 
   it('when more than an hour remains, then the countdown names hours and minutes', () => {
     expect(remainingText(until, Date.parse('2026-10-23T08:20:00Z'))).toBe(
-      'vrátí se samo za 2 h 10 min (23. 10. 2026 12:30)',
+      'vrátí se samo za 2 h 10 min (23.\u00a010. 2026 12:30)',
     );
   });
 

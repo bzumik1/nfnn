@@ -1,5 +1,4 @@
 import { formatMinorUnits } from './donation-amount';
-import { formatDonationDate } from './donation-date';
 import type { SignedReceipt } from './verification/receipt-proof';
 
 export interface ReceiptDonorFields {
@@ -37,7 +36,8 @@ export function formatReceiptAmount(amountMinor: number): string {
 }
 
 export function formatReceiptDate(day: string): string {
-  return formatDonationDate(day);
+  const [year, month, dayOfMonth] = day.slice(0, 10).split('-');
+  return `${Number(dayOfMonth)}. ${Number(month)}. ${year}`;
 }
 
 export function formatReceiptDonor(donor: ReceiptDonorFields): ReceiptDonorLines {

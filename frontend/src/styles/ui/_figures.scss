@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .ui-figures {
   font-family: var(--font-figures);
   font-variant-numeric: var(--numeric-figures);
@@ -12,5 +14,11 @@
   > * {
     display: inline-block;
     white-space: nowrap;
+  }
+}
+
+.ui-date {
+  @include bp.up(nav) {
+    display: inline-block;
   }
 }

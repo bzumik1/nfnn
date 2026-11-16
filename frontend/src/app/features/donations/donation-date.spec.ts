@@ -9,24 +9,36 @@ import {
 
 describe('Given a date the donations API sends', () => {
   it('when it is formatted, then it reads as day, month and year without leading zeros', () => {
-    expect(formatDonationDate('2026-03-15')).toBe('15. 3. 2026');
-    expect(formatDonationDate('2025-11-05')).toBe('5. 11. 2025');
-    expect(formatDonationDate('2026-01-01')).toBe('1. 1. 2026');
+    expect(formatDonationDate('2026-03-15')).toBe('15.\u00a03. 2026');
+    expect(formatDonationDate('2025-11-05')).toBe('5.\u00a011. 2025');
+    expect(formatDonationDate('2026-01-01')).toBe('1.\u00a01. 2026');
+  });
+
+  it('when it is formatted, then a no-break space keeps the day and month together and the year may go to the next line', () => {
+    expect(formatDonationDate('2026-10-15').split(' ')).toEqual(['15.\u00a010.', '2026']);
   });
 
   it('when it is the last day of the year, then no time zone shifts it into the next year', () => {
-    expect(formatDonationDate('2025-12-31')).toBe('31. 12. 2025');
+    expect(formatDonationDate('2025-12-31')).toBe('31.\u00a012. 2025');
   });
 });
 
 describe('Given the time the bank data was last updated', () => {
   it('when it is formatted, then it reads as the Prague date and time without leading zeros but with two-digit minutes', () => {
-    expect(formatBankTime('2026-10-18T08:05:30Z')).toBe('18. 10. 2026 10:05');
-    expect(formatBankTime('2026-01-05T07:09:00.123456Z')).toBe('5. 1. 2026 8:09');
+    expect(formatBankTime('2026-10-18T08:05:30Z')).toBe('18.\u00a010. 2026 10:05');
+    expect(formatBankTime('2026-01-05T07:09:00.123456Z')).toBe('5.\u00a01. 2026 8:09');
+  });
+
+  it('when it is formatted, then a no-break space keeps the day and month together and the year and the time may go to the next line', () => {
+    expect(formatBankTime('2026-10-18T08:05:30Z').split(' ')).toEqual([
+      '18.\u00a010.',
+      '2026',
+      '10:05',
+    ]);
   });
 
   it('when it is just before midnight in UTC, then it reads as the next Prague day', () => {
-    expect(formatBankTime('2025-12-31T23:30:00Z')).toBe('1. 1. 2026 0:30');
+    expect(formatBankTime('2025-12-31T23:30:00Z')).toBe('1.\u00a01. 2026 0:30');
   });
 });
 

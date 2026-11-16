@@ -822,3 +822,67 @@ test.describe('Given an administrator on a phone 320 pt wide with the text at 20
     });
   }
 });
+
+async function datesPastTheirCells(scope: Locator): Promise<string[]> {
+  await scope.evaluate(() => document.fonts.ready);
+  return scope.evaluate((element) => {
+    const cellOf = (date: Element): HTMLElement => {
+      let cell = date.parentElement!;
+      while (/^(inline|contents)/.test(getComputedStyle(cell).display) && cell.parentElement) {
+        cell = cell.parentElement;
+      }
+      return cell;
+    };
+    return Array.from(element.querySelectorAll<HTMLElement>('.ui-date'))
+      .filter((date) => date.getClientRects().length > 0)
+      .filter((date) => {
+        const cell = cellOf(date);
+        const left = cell.getBoundingClientRect().left + cell.clientLeft;
+        const right = left + cell.clientWidth;
+        const box = date.getBoundingClientRect();
+        return box.left < left - 1 || box.right > right + 1;
+      })
+      .map((date) => {
+        const cell = cellOf(date);
+        return `"${(date.textContent ?? '').trim()}" ${Math.round(date.getBoundingClientRect().right)} past ${cell.tagName.toLowerCase()}.${cell.className} ending ${Math.round(cell.getBoundingClientRect().left + cell.clientLeft + cell.clientWidth)}`;
+      });
+  });
+}
+
+for (const rootPx of [34, 53]) {
+  test.describe(`Given an administrator in a window 1180 pt wide whose root text is ${rootPx} px`, () => {
+    test.use({ viewport: { width: 1180, height: 820 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((px) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${px}px; }`;
+          document.head.append(style);
+        });
+      }, rootPx);
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+    });
+
+    for (const path of [
+      `${PETR_DETAIL_PATH}/udaje`,
+      `${PETR_DETAIL_PATH}/bankovni-ucty`,
+      `${PETR_DETAIL_PATH}/dary`,
+      `${PETR_DETAIL_PATH}/potvrzeni`,
+      '/sprava',
+      '/sprava/platby',
+    ]) {
+      test(`when they open ${path}, then every date of a short item stays within its cell`, async ({
+        page,
+      }) => {
+        await page.goto(path);
+        const main = page.locator('main');
+        await expect(main.locator('.ui-date').first()).toBeVisible();
+
+        await expect.poll(() => datesPastTheirCells(main)).toEqual([]);
+      });
+    }
+  });
+}
