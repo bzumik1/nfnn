@@ -72,8 +72,8 @@
     },
     {
       "state": "sign-in-dialog",
-      "since": "#225, #228, #245, #248, #263, #267, #205, #226, #913",
-      "reason": "the dialog over the home page: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the sign-in fixes of the usability rounds (#205, #226); and on phones the dialog is the account sheet's tall grouped sheet with the logo top left, the round ×, an iOS segmented switch and the fields and buttons in grouped cards (Jakub 2026-11-14, #913)"
+      "since": "#225, #228, #245, #248, #263, #267, #205, #226, #913, #1138",
+      "reason": "the dialog over the home page: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the sign-in fixes of the usability rounds (#205, #226); and on phones the dialog is the account sheet's tall grouped sheet with the logo top left, the round ×, an iOS segmented switch and the fields and buttons in grouped cards (Jakub 2026-11-14, #913); and on a computer the tab bar behind the dialog has larger labels that keep the width of their bold form (P28 of the desktop team, #1138)"
     },
     {
       "state": "registration-dialog",
@@ -82,8 +82,8 @@
     },
     {
       "state": "sign-in-second-factor",
-      "since": "#225, #228, #245, #248, #263, #267, #205, #226, #913",
-      "reason": "the dialog over the home page: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the sign-in fixes of the usability rounds (#205, #226); and on phones the dialog is the account sheet's tall grouped sheet with the logo top left, the round ×, an iOS segmented switch and the fields and buttons in grouped cards (Jakub 2026-11-14, #913)"
+      "since": "#225, #228, #245, #248, #263, #267, #205, #226, #913, #1138",
+      "reason": "the dialog over the home page: the site header and footer since v2: the traced logo (#228), Založit účet beside Přihlásit se (#225), the projects named Kde pomáháme in the menus (#263, #267) and the strip that tints the iPhone status bar (#245, #248), plus the sign-in fixes of the usability rounds (#205, #226); and on phones the dialog is the account sheet's tall grouped sheet with the logo top left, the round ×, an iOS segmented switch and the fields and buttons in grouped cards (Jakub 2026-11-14, #913); and on a computer the tab bar behind the dialog has larger labels that keep the width of their bold form (P28 of the desktop team, #1138)"
     },
     {
       "state": "home-donate-1000",
