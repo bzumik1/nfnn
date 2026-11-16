@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when it stands for a news article that is gone, then it says so and leads to all the news first",
+    "replacement": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when it stands for a news article that is gone, then it says so, leads to all the news first and quietly to the projects",
+    "reason": "PR #1148 (#1147, team Mobile + PWA 6/6): the 404 page adds a quiet line of text links to Všechny aktuality and Kde pomáháme under its actions, leaving out the variant's own first link",
+    "contract": "docs/frontend-overview.md, Content (not-found)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when it stands for a project that is gone, then it says so and leads to all the projects first",
+    "replacement": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when it stands for a project that is gone, then it says so, leads to all the projects first and quietly to the news",
+    "reason": "PR #1148 (#1147, team Mobile + PWA 6/6): the 404 page adds a quiet line of text links to Všechny aktuality and Kde pomáháme under its actions, leaving out the variant's own first link",
+    "contract": "docs/frontend-overview.md, Content (not-found)"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when the page opens for an unknown address, then it offers no list of articles or projects",
+    "replacement": "src/app/features/content/not-found/not-found.spec.ts > Given an address the site does not know > when the page opens for an unknown address, then it leads home and to the contact form, and quietly to the news and the projects",
+    "reason": "PR #1148 (#1147, team Mobile + PWA 6/6): the 404 page adds a quiet line of text links to Všechny aktuality and Kde pomáháme under its actions, leaving out the variant's own first link",
+    "contract": "docs/frontend-overview.md, Content (not-found)"
+  }
+]
