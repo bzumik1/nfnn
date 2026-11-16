@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { AuthStore } from '../../../../core/auth/auth-store';
+import { CompactLayout } from '../../../../core/layout/compact-layout';
 import { formatMinorUnits } from '../../../donations/donation-amount';
 import { DonationItem } from '../../../donations/donations-api';
 import { BankCheck } from '../bank-check/bank-check';
@@ -53,6 +54,7 @@ interface GiftYear {
 export class DonorGifts {
   protected readonly donations = inject(DonorDonations);
   protected readonly donor = inject(AuthStore).donor;
+  protected readonly compact = inject(CompactLayout).isCompact;
 
   private readonly receiptAlert = viewChild<ElementRef<HTMLElement>>('receiptAlert');
 

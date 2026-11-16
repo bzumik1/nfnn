@@ -93,6 +93,7 @@ export class AccountSheet {
 
   private readonly compact = inject(CompactLayout).isCompact;
   protected readonly presentation = computed(() => (this.compact() ? 'sheet' : 'centered'));
+  protected readonly showsLogo = this.compact;
   protected readonly donor = this.auth.donor;
   protected readonly initials = computed(() => initialsOf(this.donor()?.name ?? ''));
   protected readonly sections = ACCOUNT_ITEMS.filter((item) => item.icon !== 'details');

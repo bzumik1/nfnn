@@ -236,6 +236,23 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await expect(account).toBeFocused();
   });
 
+  test('when a signed-in donor without a portrait opens the account on a computer, then the button is named Účet with the initials it shows and the sheet, still named Účet, leaves the logo to the header above it', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const account = page.getByRole('banner').getByRole('button', { name: 'Účet JN' });
+
+    await expect(account).toHaveAccessibleName('Účet JN');
+    await account.click();
+
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    await expect(sheet.getByRole('heading', { level: 2, name: 'Účet' })).toBeAttached();
+    await expect(sheet.getByRole('navigation', { name: 'Účet' })).toBeVisible();
+    await expect(sheet.locator('img.account-logo')).toHaveCount(0);
+    expect(await violations(page)).toEqual([]);
+  });
+
   test('when a signed-in donor opens each section inside the account sheet on a phone, then the sheet breaks no rule and Esc closes it with the focus back on the account button', async ({
     page,
   }) => {

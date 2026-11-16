@@ -93,7 +93,7 @@ test.describe('Given a signed-in donor', () => {
       '1 dar · 250 Kč',
     ]);
     await expect(page.locator('.gift-year').first().locator('.gift-year-note')).toHaveText(
-      'Roční potvrzení za rok 2026 stáhnete po skončení roku, od 1. ledna 2027.',
+      'Ke stažení od 1. ledna 2027',
     );
 
     await openDonorSection(page, 'Potvrzení o daru');

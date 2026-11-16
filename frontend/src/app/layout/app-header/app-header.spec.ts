@@ -90,7 +90,7 @@ describe('Given the header of the app', () => {
 
     expect(account.querySelector('.account-badge')?.textContent?.trim()).toBe('1');
     expect(account.querySelector('.account-badge')?.getAttribute('aria-hidden')).toBe('true');
-    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet 1 otázka čeká na odpověď');
+    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet JN 1 otázka čeká na odpověď');
 
     await TestBed.inject(Router).navigateByUrl('/darce/ucty');
     fixture.detectChanges();
@@ -119,7 +119,7 @@ describe('Given the header of the app', () => {
 
     expect(badge()?.textContent?.trim()).toBe('1');
     expect(badge()?.classList.contains('account-badge--fault')).toBe(true);
-    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet 1 porucha');
+    expect(account.textContent?.replace(/\s+/g, ' ')).toContain('Účet JN 1 porucha');
     expect(account.textContent).not.toContain('otázka');
 
     await TestBed.inject(Router).navigateByUrl('/sprava/upozorneni');
@@ -236,13 +236,16 @@ describe('Given the header of the app', () => {
     appearance.choose('auto');
   });
 
-  it('when a donor is signed in, then the initials of their name stand for a button named Účet that opens their account sheet', async () => {
+  it('when a donor is signed in, then the initials of their name stand for a button named Účet with those initials that opens their account sheet', async () => {
     donor.set(sampleDonor({ name: 'Jana Marie Nováková' }));
     const header = await openAt('/o-nas');
     const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
 
     expect(account.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Účet');
-    expect(account.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('JN');
+    const initials = account.querySelector('.account-initials')!;
+    expect(initials.textContent?.trim()).toBe('JN');
+    expect(initials.closest('[aria-hidden="true"]')).toBeNull();
+    expect(account.textContent?.replace(/\s+/g, ' ').trim()).toBe('Účet JN');
     expect(account.getAttribute('aria-haspopup')).toBe('dialog');
     expect(header.querySelector('button.sign-in')).toBeNull();
 
@@ -437,6 +440,6 @@ describe('Given the header of the app', () => {
 
     const account = header.querySelector<HTMLButtonElement>('button.account-button')!;
     expect(account.querySelector('img')).toBeNull();
-    expect(account.querySelector('[aria-hidden="true"]')?.textContent?.trim()).toBe('JN');
+    expect(account.querySelector('.account-initials')?.textContent?.trim()).toBe('JN');
   });
 });

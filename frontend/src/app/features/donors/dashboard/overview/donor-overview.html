@@ -108,13 +108,13 @@
     <app-missing-gift />
     <ol class="first-gift-steps">
       <li i18n="@@donor.overview.firstGift.chooseInCard">
-        Zvolte částku v kartě Poslat dar níže a pošlete dar na účet nadačního fondu, převodem nebo
+        Zvolte částku v kartě „Poslat dar“ níže a pošlete dar na účet nadačního fondu, převodem nebo
         QR kódem.
       </li>
       @if (donor()?.variableSymbol; as symbol) {
         <li i18n="@@donor.overview.firstGift.symbolInCard">
           Do platby uveďte svůj variabilní symbol <strong>{{ symbol }}</strong
-          >. Údaje i QR kód v kartě Poslat dar ho už obsahují.
+          >. Údaje i QR kód v kartě „Poslat dar“ ho už obsahují.
         </li>
       }
       <li i18n="@@donor.overview.firstGift.appears">

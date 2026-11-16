@@ -11,9 +11,9 @@
       </div>
       @if (donations.items().length > 0) {
         <p class="gifts-tax-note" i18n="@@donor.gifts.taxNote">
-          Potvrzení k jednotlivým darům stáhnete hned, roční potvrzení za celý rok od 1.&nbsp;ledna
-          dalšího roku a do daňového přiznání přiložíte buď jednotlivá, nebo roční, ne obojí,
-          protože roční obsahuje všechny dary roku.
+          Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1.&nbsp;ledna dalšího
+          roku. Do daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje
+          všechny dary roku.
         </p>
       }
       @if (receiptErrorAboveYears(); as message) {
@@ -68,10 +68,16 @@
                 </div>
               }
               @case ('after-year-end') {
-                <p class="gift-year-note" i18n="@@donor.gifts.year.afterYearEnd">
-                  Roční potvrzení za rok {{ group.year }} stáhnete po skončení roku, od
-                  1.&nbsp;ledna&nbsp;{{ group.year + 1 }}.
-                </p>
+                @if (compact()) {
+                  <p class="gift-year-note" i18n="@@donor.gifts.year.afterYearEnd">
+                    Roční potvrzení za rok {{ group.year }} stáhnete po skončení roku, od
+                    1.&nbsp;ledna&nbsp;{{ group.year + 1 }}.
+                  </p>
+                } @else {
+                  <p class="gift-year-note" i18n="@@donor.gifts.year.availableFrom">
+                    Ke stažení od 1.&nbsp;ledna&nbsp;{{ group.year + 1 }}
+                  </p>
+                }
               }
             }
             @if (donations.yearlyError(group.year); as message) {
@@ -106,9 +112,9 @@
       </div>
     }
     <div class="ui-card__footer">
-      <p class="bank-hint" i18n="@@donor.dashboard.bank.hint">
-        Nové platby hledáme v bance každou hodinu a také když otevřete tento přehled. Okamžitá
-        platba se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
+      <p class="bank-hint" i18n="@@donor.gifts.bank.hint">
+        Nové platby hledáme v bance každou hodinu a také když otevřete tuto stránku. Okamžitá platba
+        se tu obvykle objeví do minuty, běžný převod z jiné banky do dalšího pracovního dne.
       </p>
       @if (donor()?.variableSymbol; as symbol) {
         <app-standing-order class="gifts-standing" [variableSymbol]="symbol" />
