@@ -103,8 +103,10 @@ export async function openAboutThenLoseNewChunks(page: Page): Promise<LostChunks
 
 function privacyLinkOfContact(page: Page) {
   return page
-    .locator('#kontakt .contact-legal')
-    .getByRole('link', { name: 'zásady ochrany osobních údajů' });
+    .locator('#kontakt')
+    .getByRole('link', { name: 'zásady ochrany osobních údajů' })
+    .filter({ visible: true })
+    .first();
 }
 
 export async function openPolicyFromContact(page: Page): Promise<void> {
