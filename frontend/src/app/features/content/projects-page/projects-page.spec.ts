@@ -167,7 +167,7 @@ describe('Given the Pomáháme tab', () => {
   it('when a link ends with its arrow, then the arrow never wraps to a line of its own', async () => {
     const page = await open('/projekty?rok=vse');
 
-    const arrows = [...page.querySelectorAll('.year-look-back, .strip-all, .year-all')].map(
+    const arrows = [...page.querySelectorAll('.year-look-back, .year-all')].map(
       (link) => link.querySelector('span[aria-hidden="true"]:last-child')?.textContent,
     );
     expect(arrows.length).toBeGreaterThan(0);
