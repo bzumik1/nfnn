@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact section around the form > when it is shown, then the details for accountants follow the form, each fact once",
+    "replacement": "src/app/features/contact/contact-form/contact-form.spec.ts > Given the contact section around the form > when it is shown, then the details for accountants say each fact once",
+    "reason": "Desktop polish P14 (#1121): on a computer the details for accountants now come before the form so the Tab order matches the left column, while the phone keeps them after it; the order is checked by its own tests per layout, and this one keeps checking that each fact is said once",
+    "contract": "docs/frontend-overview.md, contact"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths",
+    "replacement": "src/app/features/content/home/sections/about/about.spec.ts > Given the about section > when it renders who runs the foundation without the administration > then their portraits stay out of the screen reader, since their names are beside them, and load late in two widths, the larger for the bigger portrait on a computer",
+    "reason": "Desktop polish P11 + C2 (#1121): portraits are 108 px on a computer, so their sizes ask for the larger variant there; the same test now also names that",
+    "contract": "docs/frontend-overview.md, content"
+  }
+]
