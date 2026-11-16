@@ -93,6 +93,7 @@
 
   @media (forced-colors: active) {
     border-inline-start: var(--space-0-75) solid Highlight;
+    padding-inline-start: calc(var(--space-3) - var(--space-0-75));
   }
 }
 
