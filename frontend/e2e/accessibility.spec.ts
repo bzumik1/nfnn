@@ -253,6 +253,30 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('when a signed-in donor opens the account on a computer, then the card of the donor stands right under the row of the controls, no farther than the gap between the groups of the sheet', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.getByRole('banner').getByRole('button', { name: 'Účet JN' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Účet' });
+    const profile = sheet.locator('a.account-profile');
+    await expect(profile).toBeVisible();
+
+    const controls = await Promise.all(
+      [sheet.locator('button.account-appearance'), sheet.locator('button.dialog-close')].map(
+        async (control) => (await control.boundingBox())!,
+      ),
+    );
+    const controlsBottom = Math.max(...controls.map((box) => box.y + box.height));
+    const card = (await profile.boundingBox())!;
+    const list = (await sheet.locator('nav ul').first().boundingBox())!;
+    const groupGap = list.y - (card.y + card.height);
+
+    expect(card.y).toBeGreaterThan(controlsBottom);
+    expect(card.y - controlsBottom).toBeLessThanOrEqual(groupGap + 1);
+  });
+
   test('when a signed-in donor opens each section inside the account sheet on a phone, then the sheet breaks no rule and Esc closes it with the focus back on the account button', async ({
     page,
   }) => {
