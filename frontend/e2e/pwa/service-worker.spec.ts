@@ -63,6 +63,14 @@ async function checkForUpdate(page: Page): Promise<UpdateCheck> {
   );
 }
 
+async function checkForUpdateLoadedAtOnce(page: Page): Promise<void> {
+  await checkForUpdate(page).catch((error: unknown) => {
+    if (!(error instanceof Error && error.message.includes('Execution context was destroyed'))) {
+      throw error;
+    }
+  });
+}
+
 async function marker(page: Page): Promise<string> {
   return page.evaluate(async (path) => (await (await fetch(path)).text()).trim(), MARKER);
 }
@@ -559,7 +567,7 @@ test.describe('Given a visitor who has not touched the page yet', () => {
     await markThisDocument(page);
 
     site.switchTo('b');
-    await checkForUpdate(page);
+    await checkForUpdateLoadedAtOnce(page);
 
     await expect.poll(() => sameDocument(page).catch(() => false)).toBe(false);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
