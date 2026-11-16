@@ -15,6 +15,7 @@ import { Connectivity } from '../../../core/connectivity/connectivity';
 export interface LoadingTimings {
   readonly delayMs: number;
   readonly minimumMs: number;
+  readonly appearMs: number;
 }
 
 export const LOADING_TIMINGS = new InjectionToken<() => LoadingTimings | null>('LOADING_TIMINGS', {
@@ -55,11 +56,18 @@ export function loadingView<T>(
     stopTimer();
     phase.set('idle');
     appears.set(revealsContent);
+    if (revealsContent) {
+      timer = setTimeout(() => {
+        timer = undefined;
+        appears.set(false);
+      }, timings()?.appearMs ?? 0);
+    }
   };
   const start = () => {
     switch (phase()) {
       case 'idle': {
         const current = timings();
+        stopTimer();
         appears.set(false);
         if (current === null) {
           return;
@@ -135,7 +143,10 @@ function themeTimings(document: Document): LoadingTimings | null {
   const style = view.getComputedStyle(document.documentElement);
   const delayMs = milliseconds(style.getPropertyValue('--delay-loading'));
   const minimumMs = milliseconds(style.getPropertyValue('--duration-loading-min'));
-  return delayMs === null || minimumMs === null ? null : { delayMs, minimumMs };
+  const appearMs = milliseconds(style.getPropertyValue('--duration-slow'));
+  return delayMs === null || minimumMs === null || appearMs === null
+    ? null
+    : { delayMs, minimumMs, appearMs };
 }
 
 function milliseconds(token: string): number | null {

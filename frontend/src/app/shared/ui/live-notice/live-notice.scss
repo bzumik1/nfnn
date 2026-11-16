@@ -7,7 +7,3 @@
 p {
   @include motion.appear($rises: false);
 }
-
-.ui-notice {
-  min-block-size: 1lh;
-}
