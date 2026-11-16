@@ -1,11 +1,13 @@
 @use 'motion';
 
 :host {
-  --motion-rise: 0px;
   display: block;
 }
 
 p {
+  @include motion.appear($rises: false);
+}
+
+.ui-notice {
   min-block-size: 1lh;
-  @include motion.appear;
 }

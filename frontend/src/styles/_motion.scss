@@ -114,7 +114,10 @@ $_never: (
   }
 }
 
-@mixin appear {
+@mixin appear($rises: true) {
+  @if not $rises {
+    --motion-rise: 0px;
+  }
   animation: motion-appear var(--duration-slow) var(--ease-out) backwards;
   @include _fades-when-reduced(animation);
 }

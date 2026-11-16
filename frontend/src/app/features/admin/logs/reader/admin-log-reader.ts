@@ -197,6 +197,9 @@ export class AdminLogReader {
   }
 
   protected find(): void {
+    if (this.searching()) {
+      return;
+    }
     this.appliedQuery.set(this.query.trim());
     this.refreshResults();
   }

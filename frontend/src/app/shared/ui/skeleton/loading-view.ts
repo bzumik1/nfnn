@@ -27,6 +27,7 @@ export const LOADING_TIMINGS = new InjectionToken<() => LoadingTimings | null>('
 
 export interface LoadingView<T> {
   readonly state: Signal<T>;
+  readonly busy: Signal<boolean>;
   readonly skeleton: Signal<boolean>;
   readonly appears: Signal<boolean>;
 }
@@ -116,11 +117,13 @@ export function loadingView<T>(
   inject(DestroyRef).onDestroy(stopTimer);
 
   const holds = computed(() => phase() === 'shown' || phase() === 'holding');
+  const state = computed(() => {
+    const value = source();
+    return holds() && !isLoading(value) ? loadingValue : value;
+  });
   return {
-    state: computed(() => {
-      const value = source();
-      return holds() && !isLoading(value) ? loadingValue : value;
-    }),
+    state,
+    busy: computed(() => isLoading(state())),
     skeleton: holds,
     appears: appears.asReadonly(),
   };

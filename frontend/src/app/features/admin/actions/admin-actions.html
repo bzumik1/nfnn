@@ -5,7 +5,11 @@
     podrobnosti s identifikátory se hodí, když je potřeba změnu dohledat.
   </p>
 
-  <section class="ui-card" aria-labelledby="actions-title">
+  <section
+    class="ui-card"
+    aria-labelledby="actions-title"
+    [attr.aria-busy]="loadView.busy() ? 'true' : null"
+  >
     <h2 id="actions-title" class="ui-card__title" i18n="@@admin.actions.list.title">
       Co správci udělali
     </h2>

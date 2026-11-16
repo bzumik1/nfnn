@@ -6,7 +6,11 @@
   </p>
 
   <div class="cards">
-    <section class="ui-card health" aria-labelledby="logs-health-title">
+    <section
+      class="ui-card health"
+      aria-labelledby="logs-health-title"
+      [attr.aria-busy]="healthView.busy() ? 'true' : null"
+    >
       <h2 id="logs-health-title" class="ui-card__title" i18n="@@admin.logs.health.title">
         Stav serveru
       </h2>
@@ -73,7 +77,11 @@
       <app-logs-today [today]="today()" />
     }
 
-    <section class="ui-card files" aria-labelledby="logs-files-title">
+    <section
+      class="ui-card files"
+      aria-labelledby="logs-files-title"
+      [attr.aria-busy]="filesView.busy() ? 'true' : null"
+    >
       <h2 id="logs-files-title" class="ui-card__title" i18n="@@admin.logs.files.title">
         Soubory logu
       </h2>

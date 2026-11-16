@@ -1,4 +1,8 @@
-<section class="ui-card" aria-labelledby="project-order-title">
+<section
+  class="ui-card"
+  aria-labelledby="project-order-title"
+  [attr.aria-busy]="loadView.busy() ? 'true' : null"
+>
   <h2 id="project-order-title" class="ui-card__title" i18n="@@admin.projects.order.title">
     Řazení na webu
   </h2>

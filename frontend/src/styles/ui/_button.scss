@@ -28,6 +28,11 @@
 
   @media (forced-colors: active) {
     border: 1px solid ButtonText;
+
+    &[aria-disabled='true'] {
+      border-color: GrayText;
+      color: GrayText;
+    }
   }
 }
 
