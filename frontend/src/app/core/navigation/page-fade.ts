@@ -110,7 +110,7 @@ export class PageFade {
     copy.className = `${PAGE_FADE_CLASS}__copy`;
     copy.style.width = `${this.document.documentElement.clientWidth}px`;
     if (shellChanges(event, this.router)) {
-      copy.style.backgroundColor = this.groundOf(layer, view);
+      overlay.style.backgroundColor = this.groundOf(layer, view);
     }
     copy.append(stillCopyOf(layer));
     overlay.append(copy);

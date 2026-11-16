@@ -56,9 +56,7 @@ describe('Given a computer that animates, with O nás open', () => {
         const shown = cover();
         seenAtGuards.push({
           covered: shown !== null,
-          opaque:
-            (shown?.querySelector<HTMLElement>(`.${PAGE_FADE_CLASS}__copy`)?.style
-              .backgroundColor ?? '') !== '',
+          opaque: (shown?.style.backgroundColor ?? '') !== '',
           coverHidden:
             shown?.hasAttribute('inert') === true && shown.getAttribute('aria-hidden') === 'true',
           mainHidden: main.hasAttribute('inert') && main.getAttribute('aria-hidden') === 'true',
