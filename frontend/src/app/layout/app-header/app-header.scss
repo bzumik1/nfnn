@@ -178,6 +178,10 @@
     width: 115px;
     max-width: 100%;
     height: auto;
+
+    @include bp.up(wide) {
+      width: var(--header-logo-width-wide);
+    }
   }
 }
 

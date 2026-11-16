@@ -20,6 +20,16 @@ $lead-width: 34rem;
   box-shadow: var(--shadow-media);
 }
 
+.band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 1px solid var(--color-media-rim);
+  border-radius: var(--radius-media);
+  pointer-events: none;
+}
+
 .band-photo {
   position: absolute;
   inset: 0;

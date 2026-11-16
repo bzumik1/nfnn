@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when the stories cannot be read, then it says what to do and loads again on request",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when the retry loads the stories, then the year shown is announced and the focus goes to the title",
+    "reason": "Desktop polish P21 (#1142): a failed load of the stories is one ui-notice alert card with Zkusit znovu and an offline variant, and the retry announces its result and moves the focus; the failure, offline and second-failure cases have tests of their own",
+    "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when there is no story yet, then it says so, leads home and offers no years",
+    "replacement": "src/app/features/content/projects-page/projects-page.spec.ts > Given the Pomáháme tab > when there is no story yet, then a card in place of the stories says so, leads home and offers no years",
+    "reason": "Desktop polish P22 (#1142): the empty state is a ui-notice card in place of the stories at its natural height",
+    "contract": "docs/frontend-overview.md, content"
+  }
+]

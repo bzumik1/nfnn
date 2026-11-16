@@ -32,9 +32,9 @@
   transition: none;
 }
 
-@mixin shrinks {
+@mixin shrinks($scale: var(--pressed-scale)) {
   background-image: none;
-  transform: scale(var(--pressed-scale));
+  transform: scale($scale);
   transition-duration: var(--duration-fast);
 
   @media (prefers-reduced-motion: reduce) {

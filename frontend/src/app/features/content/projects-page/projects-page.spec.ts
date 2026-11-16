@@ -335,56 +335,93 @@ describe('Given the Pomáháme tab', () => {
     );
   });
 
-  it('when there is no story yet, then it says so, leads home and offers no years', async () => {
+  it('when there is no story yet, then a card in place of the stories says so, leads home and offers no years', async () => {
     const page = await open('/projekty', []);
 
-    expect(text(page.querySelector('.stories-empty'))).toBe('Zatím tu žádný příběh není.');
-    expect(text(page.querySelector('.stories-body a[href="/"]'))).toBe('Zpět na úvodní stránku');
+    const notice = page.querySelector('.stories-notice.ui-notice');
+    expect(text(notice?.querySelector('.ui-notice__text') ?? null)).toBe(
+      'Zatím tu žádný příběh není.',
+    );
+    expect(text(notice?.querySelector('a[href="/"]') ?? null)).toBe('Zpět na úvodní stránku');
+    expect(notice?.getAttribute('role')).toBeNull();
     expect(page.querySelector('nav')).toBeNull();
     expect(page.querySelector('.summary')).toBeNull();
   });
 
-  it('when the stories cannot be read, then it says what to do and loads again on request', async () => {
-    const page = await open('/projekty', STORIES, false);
+  function failStories(status: number): void {
     http.match('/api/content/home').forEach((request) => request.flush({ news: [], projects: [] }));
     http
-      .expectOne((request) => request.url === '/api/content/news')
-      .flush(null, {
-        status: 503,
-        statusText: 'Down',
-      });
+      .match((request) => request.url === '/api/content/news')
+      .forEach((request) => request.flush(null, { status, statusText: 'Down' }));
     http
-      .expectOne((request) => request.url === '/api/content/projects')
-      .flush(null, {
-        status: 503,
-        statusText: 'Down',
-      });
+      .match((request) => request.url === '/api/content/projects')
+      .forEach((request) => request.flush(null, { status, statusText: 'Down' }));
+  }
+
+  function retryButton(page: HTMLElement): HTMLButtonElement {
+    return page.querySelector<HTMLButtonElement>('.stories-notice[role="alert"] button')!;
+  }
+
+  it('when the stories cannot be read, then one alert card says so and offers to try again', async () => {
+    const page = await open('/projekty', STORIES, false);
+    failStories(503);
     await harness.fixture.whenStable();
 
-    expect(text(page.querySelector('[role="alert"]'))).toContain('nepodařilo načíst');
-    (page.querySelector('.stories-error + button') as HTMLButtonElement).click();
-    http
-      .expectOne((request) => request.url === '/api/content/news')
-      .flush({
-        items: [],
-        page: 0,
-        size: 50,
-        total: 0,
-        hasMore: false,
-      });
-    http
-      .expectOne((request) => request.url === '/api/content/projects')
-      .flush({
-        items: STORIES,
-        page: 0,
-        size: 50,
-        total: 6,
-        hasMore: false,
-      });
+    const notice = page.querySelector('.stories-notice.ui-notice[role="alert"]');
+    expect(text(notice?.querySelector('.ui-notice__text') ?? null)).toBe(
+      'Příběhy se nepodařilo načíst. Zkuste to znovu.',
+    );
+    expect(text(retryButton(page))).toBe('Zkusit znovu');
+    expect(page.querySelectorAll('[role="alert"]').length).toBe(1);
+  });
+
+  it('when the stories cannot be read while the device is offline, then the card says the connection is missing', async () => {
+    const page = await open('/projekty', STORIES, false);
+    failStories(0);
+    await harness.fixture.whenStable();
+
+    expect(text(page.querySelector('.stories-notice[role="alert"] .ui-notice__text'))).toBe(
+      'Bez připojení se příběhy nenačetly. Až budete online, zkuste to znovu.',
+    );
+    expect(text(retryButton(page))).toBe('Zkusit znovu');
+  });
+
+  it('when the retry loads the stories, then the year shown is announced and the focus goes to the title', async () => {
+    const page = await open('/projekty', STORIES, false);
+    document.body.appendChild(page);
+    failStories(503);
+    await harness.fixture.whenStable();
+
+    retryButton(page).click();
+    await harness.fixture.whenStable();
+    expect(text(page.querySelector('[role="status"]'))).toBe('Načítáme příběhy…');
+    answerAll(STORIES);
     await harness.fixture.whenStable();
 
     expect(page.querySelector('[role="alert"]')).toBeNull();
     expect(page.querySelectorAll('app-story-tile').length).toBe(3);
+    expect(text(page.querySelector('[role="status"]'))).toBe('Rok 2025: 3 příběhy');
+    expect(document.activeElement).toBe(page.querySelector('h1'));
+    page.remove();
+  });
+
+  it('when the retry fails again, then the alert comes back and the focus returns to Zkusit znovu', async () => {
+    const page = await open('/projekty', STORIES, false);
+    document.body.appendChild(page);
+    failStories(503);
+    await harness.fixture.whenStable();
+
+    retryButton(page).click();
+    await harness.fixture.whenStable();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    failStories(503);
+    await harness.fixture.whenStable();
+
+    expect(text(page.querySelector('[role="alert"] .ui-notice__text'))).toBe(
+      'Příběhy se nepodařilo načíst. Zkuste to znovu.',
+    );
+    expect(document.activeElement).toBe(retryButton(page));
+    page.remove();
   });
 
   it('when the visitor comes back from a story, then the stories show at once from what the tab already read, so the link to that story can take the focus', async () => {

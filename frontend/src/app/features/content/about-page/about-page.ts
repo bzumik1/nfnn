@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
+import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { ContactForm } from '../../contact/contact-form/contact-form';
 import { HomeApi, HomeResponse } from '../home-api';
 import { About } from '../home/sections/about/about';
@@ -15,7 +16,7 @@ import { DonateBand } from '../donate-band/donate-band';
 
 @Component({
   selector: 'app-about-page',
-  imports: [About, DonateBand, ContactForm],
+  imports: [About, DonateBand, ContactForm, Reveal],
   templateUrl: './about-page.html',
   styleUrl: './about-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
