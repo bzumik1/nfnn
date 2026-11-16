@@ -210,7 +210,7 @@ describe('Given the Pomáháme tab', () => {
     const page = await open('/projekty');
 
     const every = page.querySelector<HTMLAnchorElement>('.grid + .year-all');
-    expect(text(every)).toBe('Všechny roky příběhů →');
+    expect(text(every)).toBe('Všechny roky: všechny příběhy →');
     expect(every?.getAttribute('href')).toBe('/projekty?rok=vse');
     expect(page.querySelector('.year-title')?.textContent).toContain('2025');
   });

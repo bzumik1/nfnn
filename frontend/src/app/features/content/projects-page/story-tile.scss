@@ -213,6 +213,20 @@
 }
 
 @include bp.up(nav) {
+  .tile:not(.tile--large, .tile--split) {
+    display: flex;
+    flex-direction: column;
+
+    .tile-media {
+      flex: 1 0 auto;
+
+      img {
+        position: absolute;
+        inset: 0;
+      }
+    }
+  }
+
   .tile--split {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
