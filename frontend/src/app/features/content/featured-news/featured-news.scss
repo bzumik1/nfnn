@@ -184,6 +184,36 @@
   content: ' →' / '';
 }
 
+@include bp.up(tablet) {
+  .featured {
+    min-height: 0;
+  }
+
+  .featured--photo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(37.5rem, 50%);
+    align-items: center;
+
+    &::before {
+      content: none;
+    }
+  }
+
+  .featured--photo .featured-photo {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: stretch;
+    min-height: 25rem;
+    border-radius: var(--radius-media);
+  }
+
+  .featured--photo .featured-text {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
 @include bp.down(phone) {
   .featured {
     min-height: 28rem;
