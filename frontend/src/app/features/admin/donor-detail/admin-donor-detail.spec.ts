@@ -988,7 +988,7 @@ describe('Given an administrator on a donor card', () => {
     await loaded(donorAccount({ secondFactorEnabled: true }));
 
     expect(sectionText('Přihlášení')).toContain(
-      'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč z účtu vedeného na jeho jméno. Platba z účtu někoho jiného nic nevypne, takovému dárci ho vypnete tímto tlačítkem.',
+      'Pro dárce, který přišel o telefon s ověřovací aplikací. Dárce to zvládne i sám: při přihlášení zvolí „Obnovit přístup platbou“ a pošle 1 Kč z účtu vedeného na jeho jméno. Platba z účtu někoho jiného nic nevypne, takovému dárci ověření vypnete tímto tlačítkem.',
     );
   });
 
