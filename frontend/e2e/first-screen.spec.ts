@@ -142,6 +142,13 @@ async function heroLayout(page: Page, face: Box) {
   }, face);
 }
 
+async function leadShows(page: Page): Promise<boolean> {
+  return page.locator('#uvod .hero-lead').evaluate((lead) => {
+    const box = lead.getBoundingClientRect();
+    return box.width > 1 && box.height > 1;
+  });
+}
+
 async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
   const { color, lines } = await page.locator(selector).evaluate((element) => {
     const range = document.createRange();
@@ -393,7 +400,7 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
     test.describe(`when it opens on a computer of 1280 × 748 with text at ${textSize}, where the hero's text no longer fits one screen`, () => {
       test.use({ viewport: { width: 1280, height: 748 } });
 
-      test('then no control of the hero reaches partly under the tab bar, and every one under the window lies wholly below it', async ({
+      test('then its lead still shows, and no control of the hero reaches partly into the band of the tab bar, while one wholly below the window may', async ({
         page,
       }) => {
         await page.goto('/');
@@ -401,6 +408,7 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
         await heroLayout(page, FACE_IN_HERO_PHOTO);
 
+        expect(await leadShows(page), 'the lead is hidden').toBe(true);
         await expect
           .poll(() =>
             page.evaluate(() => {
@@ -420,6 +428,54 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
       });
     });
   }
+
+  test.describe('when it opens on an iPhone SE with the largest system text (a root of 53 px), turns on its side and back, and Safari shows and hides its toolbar', () => {
+    test.use({ viewport: { width: 375, height: 647 } });
+
+    test('then the hero settles after every change instead of switching back and forth, and keeps its lead', async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await page.addStyleTag({ content: 'html { font-size: 53px; }' });
+      await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+      await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+      for (const viewport of [
+        { width: 647, height: 375 },
+        { width: 375, height: 647 },
+        { width: 375, height: 549 },
+        { width: 375, height: 647 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await heroLayout(page, FACE_IN_HERO_PHOTO);
+        await page.evaluate(
+          () =>
+            new Promise<void>((settled) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => settled())),
+            ),
+        );
+        await page.evaluate(() => {
+          const changes = { count: 0 };
+          Object.assign(window, { heroChanges: changes });
+          new MutationObserver((records) => (changes.count += records.length)).observe(
+            document.querySelector('#uvod')!,
+            { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] },
+          );
+        });
+        await waitWhileNothingMayHappen(page, 400);
+
+        const changes = await page.evaluate(
+          () => (window as unknown as { heroChanges: { count: number } }).heroChanges.count,
+        );
+        expect(changes, `the hero kept switching at ${viewport.width} × ${viewport.height}`).toBe(
+          0,
+        );
+        await expect(page.locator('#uvod .hero-lead')).toHaveText(
+          /Pomáháme zdravotně postiženým dětem/,
+        );
+      }
+    });
+  });
 
   for (const screen of SCREENS.filter((each) => each.width < 480 && each.height > 500)) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
