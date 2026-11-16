@@ -61,6 +61,10 @@
   &::backdrop {
     background: transparent;
   }
+
+  &.dialog--repainting {
+    visibility: hidden;
+  }
 }
 
 .dialog-panel {
