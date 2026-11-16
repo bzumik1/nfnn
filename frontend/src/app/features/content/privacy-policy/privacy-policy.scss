@@ -236,3 +236,9 @@
     }
   }
 }
+
+@include bp.up(wide) {
+  .ui-container {
+    max-width: var(--content-max-wide);
+  }
+}

@@ -15,7 +15,7 @@
             <img
               loading="lazy"
               [attr.srcset]="photoSet()"
-              sizes="(max-width: 768px) calc(100vw - 40px), 560px"
+              sizes="(max-width: 768px) calc(100vw - 40px), (min-width: 1600px) 640px, 560px"
               [src]="photoSource()"
               [attr.width]="photo.width"
               [attr.height]="photo.height"
@@ -29,7 +29,7 @@
           <img
             loading="lazy"
             srcset="/images/about-720.webp 720w, /images/about-1440.webp 1440w"
-            sizes="(max-width: 768px) calc(100vw - 40px), 560px"
+            sizes="(max-width: 768px) calc(100vw - 40px), (min-width: 1600px) 640px, 560px"
             src="/images/about-720.webp"
             width="720"
             height="480"

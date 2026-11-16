@@ -1,3 +1,8 @@
+@use 'breakpoints' as bp;
+
+$container-width: 960px;
+$intro-measure: calc($container-width - 2 * var(--space-6));
+
 :host {
   display: block;
   min-height: 100vh;
@@ -8,7 +13,7 @@
 }
 
 .container {
-  max-width: 960px;
+  max-width: $container-width;
   margin: 0 auto;
   padding: var(--space-8) var(--space-6) var(--space-12);
 }
@@ -43,4 +48,16 @@
   margin-bottom: 0;
   padding: 0;
   background: none;
+}
+
+@include bp.up(wide) {
+  :host(:not(.verify-embedded)) .container:has(> app-proof-input) {
+    max-width: var(--content-max-wide);
+    padding-inline: var(--space-8);
+  }
+
+  .verify-intro,
+  .verify-domain {
+    max-width: $intro-measure;
+  }
 }

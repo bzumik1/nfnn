@@ -239,3 +239,9 @@ app-form-field {
     row-gap: var(--space-12);
   }
 }
+
+@include bp.up(wide) {
+  .two-col {
+    max-width: var(--content-max-wide);
+  }
+}
