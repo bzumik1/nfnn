@@ -54,5 +54,13 @@
     "replacement": "src/app/shared/ui/reveal/reveal.spec.ts > Given a block of a public page that reveals itself > when it starts below the screen > then leaving the page stops watching it",
     "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values in --duration-count and enter row by row through the shared appReveal instead of their own observer, so the tests of their former entrance and count from zero are replaced by tests of the new one, split by whether the figures start on the screen or below it",
     "contract": "docs/frontend-overview.md, content"
+  },
+  {
+    "kind": "retired",
+    "suite": "frontend-playwright",
+    "test": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures scroll into view, then they count up from zero to their values",
+    "replacement": "e2e/home-stats.spec.ts > Given a visitor on the About page > when the figures scroll into view, then they count up from 70 % of their values, and 100% never counts",
+    "reason": "Desktop polish P13 (#1144): the figures count up from 70 % of their values instead of zero, and 100% never counts, so the journey states the new start",
+    "contract": "docs/frontend-overview.md, content"
   }
 ]
