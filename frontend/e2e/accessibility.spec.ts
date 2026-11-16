@@ -342,7 +342,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
       (url) => url.pathname === '/api/content/projects',
       (route) =>
         route.fulfill({ json: { items: [project], page: 0, size: 10, total: 1, hasMore: false } }),
-      { times: 2 },
+      { times: 3 },
     );
 
     await page.goto('/aktuality');
@@ -377,7 +377,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
 
     expect(await violations(page)).toEqual([]);
 
-    await page.getByRole('navigation', { name: 'Roky' }).getByRole('link', { name: 'Vše' }).click();
+    await page.goto('/projekty?rok=vse');
     await expect(page.locator('a.strip-all')).toHaveCount(1);
 
     expect(await violations(page)).toEqual([]);

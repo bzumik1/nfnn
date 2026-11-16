@@ -1,9 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouteReuseStrategy } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { KeptTabPages } from '../../../core/navigation/kept-tab-pages';
 import { ProjectResponse } from '../projects-api';
 import { donateBandPhoto, DONATE_BAND_PHOTO_ID } from '../testing/donate-band-fixtures';
@@ -33,11 +34,17 @@ const STORIES: ProjectResponse[] = [
 describe('Given the Pomáháme tab', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
+  const compact = signal(false);
 
   beforeEach(async () => {
+    compact.set(false);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
+        {
+          provide: CompactLayout,
+          useValue: { isCompact: compact.asReadonly(), listsAsRows: compact.asReadonly() },
+        },
         provideHttpClientTesting(),
         provideRouter([
           { path: 'projekty', component: ProjectsPage },
@@ -113,6 +120,20 @@ describe('Given the Pomáháme tab', () => {
     expect(page.querySelector('.summary a, .summary button')).toBeNull();
   });
 
+  it('when no story names its kind, then the summary is the one tile of the total, without an empty column beside it', async () => {
+    const unsorted = STORIES.map((story) => ({
+      ...story,
+      category: undefined as unknown as ProjectResponse['category'],
+    }));
+    const page = await open('/projekty', unsorted);
+
+    expect([...page.querySelectorAll('.summary-tile')].map(text)).toEqual([
+      '6 příběhů zveřejněných od roku 2023',
+    ]);
+    expect(page.querySelector('.summary-categories')).toBeNull();
+    expect(page.querySelector('.summary-grid')?.classList).toContain('summary-grid--total');
+  });
+
   it('when it opens without a year asked, then the newest year with a story is chosen and shown with its first story large', async () => {
     const page = await open('/projekty');
 
@@ -161,11 +182,91 @@ describe('Given the Pomáháme tab', () => {
     ]);
     const ends = [...page.querySelectorAll<HTMLAnchorElement>('.strip-all')];
     expect(ends.map((link) => [text(link), link.getAttribute('href')])).toEqual([
-      ['Všechny 3 z roku 2025 →', '/projekty?rok=2025'],
-      ['Všechny 2 z roku 2024 →', '/projekty?rok=2024'],
+      ['Všechny 3 příběhy z roku 2025 →', '/projekty?rok=2025'],
+      ['Všechny 2 příběhy z roku 2024 →', '/projekty?rok=2024'],
       ['Celý rok 2023 →', '/projekty?rok=2023'],
     ]);
     expect(page.querySelector('.grid')).toBeNull();
+  });
+
+  it('when a year has five stories or more, then its strip link counts them with the noun for many', async () => {
+    const many = Array.from({ length: 5 }, (_, index) =>
+      project({ id: `m${index}`, slug: `m${index}`, title: `M ${index}`, year: 2022 }),
+    );
+    const page = await open('/projekty?rok=vse', [...STORIES, ...many]);
+
+    expect(text(page.querySelectorAll('.strip-all')[3])).toBe('Všech 5 příběhů z roku 2022 →');
+  });
+
+  it('when only one year has stories, then no year filter and no way to every year is offered', async () => {
+    const page = await open('/projekty', STORIES.slice(0, 3));
+
+    expect(page.querySelector('nav[aria-label="Roky"]')).toBeNull();
+    expect(page.querySelector('a[href="/projekty?rok=vse"]')).toBeNull();
+    expect([...page.querySelectorAll('h2.year-title')].map(text)).toEqual(['2025 3 příběhy']);
+  });
+
+  it('when one year is shown out of more, then a link under its stories leads to every year and names what it shows', async () => {
+    const page = await open('/projekty');
+
+    const every = page.querySelector<HTMLAnchorElement>('.grid + .year-all');
+    expect(text(every)).toBe('Všechny roky: všechny příběhy →');
+    expect(every?.getAttribute('href')).toBe('/projekty?rok=vse');
+    expect(page.querySelector('.year-title')?.textContent).toContain('2025');
+  });
+
+  it('when every year is shown, then no link to every year is offered again', async () => {
+    const page = await open('/projekty?rok=vse');
+
+    expect(page.querySelector('.year-all')).toBeNull();
+  });
+
+  it('when a computer shows a year, then its small tiles carry their perex too, and a phone keeps them short', async () => {
+    const page = await open('/projekty');
+
+    const small = [...page.querySelectorAll('app-story-tile:not(.is-large)')];
+    expect(small.map((tile) => tile.querySelector('.tile-perex') !== null)).toEqual([true, true]);
+
+    compact.set(true);
+    await harness.fixture.whenStable();
+    expect(page.querySelector('app-story-tile:not(.is-large) .tile-perex')).toBeNull();
+  });
+
+  it('when a computer shows a year of one story, then the story is a split card of photo and text, and a phone keeps it large', async () => {
+    const page = await open('/projekty?rok=2023');
+
+    const tile = page.querySelector('app-story-tile')!;
+    expect(tile.querySelector('.tile--split')).not.toBeNull();
+    expect(tile.querySelector('.tile-perex')).not.toBeNull();
+    expect(page.querySelector('.grid-item--split')).not.toBeNull();
+
+    compact.set(true);
+    await harness.fixture.whenStable();
+    expect(tile.querySelector('.tile--split')).toBeNull();
+    expect(tile.classList).toContain('is-large');
+  });
+
+  it('when a computer shows a year of two stories, then both are large, and a phone keeps the second small', async () => {
+    const page = await open('/projekty?rok=2024');
+
+    const large = () =>
+      [...page.querySelectorAll('.grid-item')].map((item) =>
+        item.classList.contains('grid-item--large'),
+      );
+    expect(large()).toEqual([true, true]);
+
+    compact.set(true);
+    await harness.fixture.whenStable();
+    expect(large()).toEqual([true, false]);
+  });
+
+  it('when a computer shows a year of three stories, then the two small ones share the rest of the rows in the order the site keeps', async () => {
+    const page = await open('/projekty');
+
+    expect(page.querySelector('.grid')?.classList).toContain('grid--trio');
+    expect(
+      [...page.querySelectorAll('.grid-item')].map((item) => text(item.querySelector('h3'))),
+    ).toEqual(['Děti s rakovinou', 'Sofinka', 'Michal, profesionální hasič']);
   });
 
   it('when a chip is chosen, then the address names the year without moving the page, and the new count is announced', async () => {
@@ -228,6 +329,7 @@ describe('Given the Pomáháme tab', () => {
     const band = page.querySelector('app-donate-band')!;
     expect(text(band.querySelector('h2'))).toBe('Pomozte s dalším příběhem');
     expect([...band.querySelectorAll('a')].map(text)).toEqual(['Přispět']);
+    expect(band.querySelector('.ui-container')?.classList).toContain('band-container--wide');
     expect(band.querySelector('img')?.getAttribute('src')).toBe(
       `/api/content/media/${DONATE_BAND_PHOTO_ID}?w=480`,
     );

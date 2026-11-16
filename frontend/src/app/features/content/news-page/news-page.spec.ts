@@ -200,7 +200,7 @@ describe('Given a visitor opening Aktuality', () => {
       expect(text(stories, 'h2')).toBe('Příběhy z roku 2025');
       expect(texts(stories, 'h3')).toEqual(['Sofinka', 'Miki a jeho první krůčky', 'Nelinka']);
       expect(stories.querySelector('h3 a')?.getAttribute('href')).toBe('/projekty/sofinka');
-      const all = link(stories, 'Všechny 3 v Pomáháme');
+      const all = link(stories, 'Všechny 3 příběhy');
       expect(all?.getAttribute('href')).toBe('/projekty?rok=2025');
       expect(stories.querySelector('ul')?.hasAttribute('aria-label')).toBe(false);
     });
@@ -253,7 +253,7 @@ describe('Given a visitor opening Aktuality', () => {
     );
     await settle(fixture);
 
-    expect(link(root, 'Všech 8 v Pomáháme')).toBeDefined();
+    expect(link(root, 'Všech 8 příběhů')).toBeDefined();
   });
 
   it('when the news come before the projects, then the page waits for both, so nothing moves under the visitor', async () => {
@@ -341,7 +341,7 @@ describe('Given a visitor opening Aktuality', () => {
 
     http.expectNone(PROJECTS(MAX_PROJECT_PAGES));
     expect(text(root, '.stories h2')).toBe('Příběhy z roku 2025');
-    expect(link(root, `Všech ${MAX_PROJECT_PAGES} v Pomáháme`)).toBeDefined();
+    expect(link(root, `Všech ${MAX_PROJECT_PAGES} příběhů`)).toBeDefined();
   });
 
   it('when a project moves to the next page while the pages load, then its story shows once', async () => {

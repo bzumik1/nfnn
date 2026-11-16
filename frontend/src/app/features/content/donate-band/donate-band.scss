@@ -123,3 +123,9 @@ $lead-width: 34rem;
     }
   }
 }
+
+@include bp.up(wide) {
+  .band-container--wide {
+    max-width: var(--content-max-wide);
+  }
+}

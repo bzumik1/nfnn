@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'visually-hidden';
 
 :host {
   display: block;
@@ -27,6 +28,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 2fr);
   gap: var(--space-3);
+}
+
+.summary-grid--total {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .summary-categories {
@@ -157,7 +162,8 @@
   color: var(--color-text-soft);
 }
 
-.year-look-back {
+.year-look-back,
+.year-all {
   color: var(--color-accent);
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
@@ -168,6 +174,15 @@
       text-decoration: underline;
     }
   }
+}
+
+.year-all {
+  display: inline-block;
+  margin-top: var(--space-6);
+}
+
+.year-all-detail {
+  @include visually-hidden.hides;
 }
 
 .strip {
@@ -266,6 +281,10 @@
 }
 
 @include bp.container-down(summary, pair) {
+  .summary-grid--total {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .summary-categories {
     grid-auto-flow: row;
   }
@@ -274,5 +293,51 @@
 @include bp.down(tablet) {
   .year {
     padding: var(--space-6) 0;
+  }
+}
+
+@include bp.up(nav) {
+  .stories-head {
+    padding-bottom: var(--space-20);
+  }
+
+  .stories-body {
+    padding-bottom: 0;
+  }
+
+  .chips {
+    margin: 0 0 var(--space-12);
+  }
+
+  .year {
+    padding: var(--space-12) 0 0;
+  }
+
+  .year + .year {
+    margin-top: var(--space-20);
+  }
+
+  .year-all {
+    margin-top: var(--space-12);
+  }
+
+  .grid--pair .grid-item--large,
+  .grid--trio .grid-item--large {
+    grid-row: auto;
+  }
+
+  .grid-item--split {
+    grid-column: 1 / -1;
+  }
+
+  app-donate-band {
+    padding-top: var(--space-20);
+  }
+}
+
+@include bp.up(wide) {
+  .stories-head,
+  .stories-body {
+    max-width: var(--content-max-wide);
   }
 }

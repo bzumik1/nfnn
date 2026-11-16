@@ -12,6 +12,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map, Subscription } from 'rxjs';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
@@ -20,16 +21,24 @@ import { HomeApi } from '../home-api';
 import { DonateBandPhotoResponse } from '../donate-band-api';
 import { PROJECT_CATEGORIES, ProjectCategory, ProjectResponse } from '../projects-api';
 import { PublishedStoriesStore } from './published-stories';
-import { StoryTile } from './story-tile';
+import { StoryTile, StoryTileSize } from './story-tile';
 
 export const ALL_YEARS = 'vse';
 
 type Choice = number | 'all';
 type LoadState = 'loading' | 'ready' | 'error';
+type Arrangement = 'single' | 'pair' | 'trio' | 'many';
+
+export interface YearTile {
+  readonly item: ProjectResponse;
+  readonly size: StoryTileSize;
+}
 
 export interface YearGroup {
   readonly year: number;
   readonly items: readonly ProjectResponse[];
+  readonly tiles: readonly YearTile[];
+  readonly arrangement: Arrangement;
   readonly lookBack: string | null;
 }
 
@@ -55,9 +64,11 @@ export class ProjectsPage {
   private readonly store = inject(PublishedStoriesStore);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly compact = inject(CompactLayout).isCompact;
   private storiesLoad = Subscription.EMPTY;
 
   protected readonly state = signal<LoadState>(this.store.stories() ? 'ready' : 'loading');
+  protected readonly allYears = ALL_YEARS;
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
 
   private readonly asked = toSignal(
@@ -103,11 +114,17 @@ export class ProjectsPage {
     const choice = this.choice();
     const lookBacks = this.store.stories()?.lookBacks ?? [];
     const years = choice === 'all' ? this.years() : [choice];
-    return years.map((year) => ({
-      year,
-      items: this.projects().filter((item) => item.year === year),
-      lookBack: lookBacks.find((lookBack) => lookBack.year === year)?.slug ?? null,
-    }));
+    return years.map((year) => {
+      const items = this.projects().filter((item) => item.year === year);
+      const arrangement = this.compact() ? 'many' : arrangementOf(items.length);
+      return {
+        year,
+        items,
+        tiles: items.map((item, index) => ({ item, size: tileSize(arrangement, index) })),
+        arrangement,
+        lookBack: lookBacks.find((lookBack) => lookBack.year === year)?.slug ?? null,
+      };
+    });
   });
 
   constructor() {
@@ -174,6 +191,26 @@ export class ProjectsPage {
         error: () => this.state.set(this.store.stories() ? 'ready' : 'error'),
       });
   }
+}
+
+function arrangementOf(count: number): Arrangement {
+  switch (count) {
+    case 1:
+      return 'single';
+    case 2:
+      return 'pair';
+    case 3:
+      return 'trio';
+    default:
+      return 'many';
+  }
+}
+
+function tileSize(arrangement: Arrangement, index: number): StoryTileSize {
+  if (arrangement === 'single') {
+    return 'split';
+  }
+  return index === 0 || arrangement === 'pair' ? 'large' : 'small';
 }
 
 function choiceFrom(value: string | null): Choice | null {

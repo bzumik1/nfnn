@@ -124,14 +124,14 @@ test.describe('Given a visitor on the Pomáháme tab', () => {
     await years.getByRole('link', { name: '2024' }).click();
     await expect(page).toHaveURL('/projekty?rok=2024');
     await expect(page.locator('p[role="status"]')).toHaveText('Rok 2024: 2 příběhy');
-    await expect(page.locator('.grid-item--large')).toContainText('Natálka');
+    await expect(page.locator('.grid-item--large').first()).toContainText('Natálka');
 
     await years.getByRole('link', { name: 'Vše' }).click();
     await expect(page).toHaveURL('/projekty?rok=vse');
     await expect(page.locator('section.year h2')).toHaveText([/2025/, /2024/]);
     await expect(page.locator('ul.strip')).toHaveCount(2);
 
-    await page.getByRole('link', { name: /Všechny 3 z roku 2025/ }).click();
+    await page.getByRole('link', { name: /Všechny 3 příběhy z roku 2025/ }).click();
     await expect(page).toHaveURL('/projekty?rok=2025');
     await expect(page.locator('section.year')).toHaveCount(1);
   });
