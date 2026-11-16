@@ -22,6 +22,7 @@ import cz.novanadeje.app.donations.domain.donor.SymbolClaim;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimAnswer;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimId;
 import cz.novanadeje.app.donations.domain.donor.SymbolClaimRepository;
+import cz.novanadeje.app.shared.application.event.SenderAccountLearned;
 import cz.novanadeje.app.shared.domain.DonorName;
 import cz.novanadeje.app.shared.domain.DonorType;
 import cz.novanadeje.app.shared.domain.LocaleCode;
@@ -39,6 +40,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Instant;
@@ -80,6 +82,8 @@ class PaymentPairingServiceTest {
     private SymbolClaimRepository claims;
     @Mock
     private PairingLock lock;
+    @Mock
+    private ApplicationEventPublisher events;
 
     private PaymentPairingService service;
     private ListAppender<ILoggingEvent> logs;
@@ -91,7 +95,7 @@ class PaymentPairingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PaymentPairingService(payments, donorRecords, donations, claims, lock, ExcludedSenderAccounts.none());
+        service = new PaymentPairingService(payments, donorRecords, donations, claims, lock, ExcludedSenderAccounts.none(), events);
         logger = (Logger) LoggerFactory.getLogger(PaymentPairingService.class);
         logs = new ListAppender<>();
         logs.start();
@@ -229,6 +233,37 @@ class PaymentPairingServiceTest {
     }
 
     @Test
+    @DisplayName("Given a payment with the donor's symbol from an account the donor never paid from, when unpaired payments are paired, then the donor is told which account was learned by its last four digits only")
+    void should_announce_the_learned_account_when_unpaired_paired_given_a_new_account() {
+        when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(payment(1001, Optional.of(ACCOUNT), JANA_SYMBOL.value())));
+        when(donorRecords.findByVariableSymbol(JANA_SYMBOL)).thenReturn(Optional.of(jana));
+        when(donorRecords.saveSenderAccountLink(any(), any())).thenReturn(true);
+
+        service.pairUnpaired(NOW);
+
+        verify(events).publishEvent(new SenderAccountLearned(jana.id().value(), "3333", NOW));
+    }
+
+    @Test
+    @DisplayName("Given a payment that proves an account the donor reconnected, or a learned account another writer stored first, when unpaired payments are paired, then nobody is told about a new account")
+    void should_announce_nothing_when_unpaired_paired_given_a_reconnected_or_already_stored_account() {
+        SenderAccountLink awaiting = SenderAccountLink.awaitingPayment(SenderAccountLinkId.newId(NOW), ACCOUNT, LocalDate.of(2026, 10, 1), NOW);
+        DonorRecord reconnected = DonorRecord.reconstitute(jana.id(), DonorType.PERSON, jana.name(), null, jana.address(), jana.variableSymbol(),
+                jana.preferredLocale(), List.of(awaiting), jana.registeredAt(), NOW, null);
+        when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(payment(1001, Optional.of(ACCOUNT), JANA_SYMBOL.value()),
+                payment(1002, Optional.of(new SenderAccount("19-2000145399", "0800")), PETR_SYMBOL.value())));
+        when(donorRecords.findByVariableSymbol(JANA_SYMBOL)).thenReturn(Optional.of(reconnected));
+        when(donorRecords.findByVariableSymbol(PETR_SYMBOL)).thenReturn(Optional.of(petr));
+        when(donorRecords.saveSenderAccountLink(eq(jana.id()), any())).thenReturn(true);
+        when(donorRecords.saveSenderAccountLink(eq(petr.id()), any())).thenReturn(false);
+
+        service.pairUnpaired(NOW);
+
+        verify(donorRecords, times(2)).saveSenderAccountLink(any(), any());
+        verifyNoInteractions(events);
+    }
+
+    @Test
     @DisplayName("Given payments without a symbol and without a Czech sender, when unpaired payments are paired, then no owner is looked up and they stay unpaired")
     void should_leave_unpaired_when_unpaired_paired_given_no_identification() {
         when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(payment(1001, Optional.empty(), null)));
@@ -337,7 +372,7 @@ class PaymentPairingServiceTest {
     @DisplayName("Given a payment without a symbol from an excluded account, when unpaired payments are paired, then it stays unpaired and no owner is looked up for it")
     void should_leave_unpaired_when_unpaired_paired_given_excluded_account() {
         PaymentPairingService excluding = new PaymentPairingService(payments, donorRecords, donations, claims, lock,
-                new ExcludedSenderAccounts(Set.of(ACCOUNT)));
+                new ExcludedSenderAccounts(Set.of(ACCOUNT)), events);
         when(payments.findUnpairedOrderedByBooking()).thenReturn(List.of(payment(1001, Optional.of(ACCOUNT), null)));
         when(donorRecords.findBySenderAccount(ACCOUNT)).thenReturn(List.of(withAccount(jana)));
 

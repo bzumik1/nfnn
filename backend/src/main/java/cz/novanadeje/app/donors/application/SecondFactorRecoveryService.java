@@ -2,6 +2,7 @@ package cz.novanadeje.app.donors.application;
 
 import cz.novanadeje.app.donors.application.event.AdministratorSecondFactorRecovered;
 import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecovered;
+import cz.novanadeje.app.donors.application.event.DonorSecondFactorRecoveryStarted;
 import cz.novanadeje.app.donors.domain.Donor;
 import cz.novanadeje.app.donors.domain.DonorId;
 import cz.novanadeje.app.donors.domain.DonorRepository;
@@ -88,6 +89,7 @@ public class SecondFactorRecoveryService {
     private SecondFactorRecovery openNew(Donor donor, Instant now) {
         SecondFactorRecovery recovery = SecondFactorRecovery.open(donor.id(), SecondFactorRecoveryCode.generate(RANDOM), now, properties.recoveryTtl());
         recoveries.replaceOpenOf(donor.id(), recovery);
+        events.publishEvent(new DonorSecondFactorRecoveryStarted(donor.id().value(), donor.email(), donor.preferredLocale()));
         log.info("Donor {} started a second-factor recovery by payment, open until {}", donor.id(), recovery.expiresAt());
         return recovery;
     }

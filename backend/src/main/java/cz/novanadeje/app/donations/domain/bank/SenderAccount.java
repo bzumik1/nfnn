@@ -8,6 +8,7 @@ public record SenderAccount(String accountNumber, String bankCode) {
 
     public static final int MAX_ACCOUNT_NUMBER_LENGTH = 17;
     public static final int BANK_CODE_LENGTH = 4;
+    public static final int SHOWN_DIGITS = 4;
 
     private static final Pattern CANONICAL_NUMBER = Pattern.compile("([1-9]\\d{0,5}-)?[1-9]\\d{0,9}");
     private static final Pattern RAW_NUMBER = Pattern.compile("(?:(\\d{1,6})-)?(\\d{1,10})");
@@ -44,8 +45,12 @@ public record SenderAccount(String accountNumber, String bankCode) {
     }
 
     public String shortDisplay() {
+        return "…" + lastDigits() + "/" + bankCode;
+    }
+
+    public String lastDigits() {
         String number = accountNumber.substring(accountNumber.indexOf('-') + 1);
-        return "…" + number.substring(Math.max(0, number.length() - 4)) + "/" + bankCode;
+        return number.substring(Math.max(0, number.length() - SHOWN_DIGITS));
     }
 
     private static String withoutSpaces(String value) {

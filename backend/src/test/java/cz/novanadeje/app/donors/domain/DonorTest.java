@@ -125,6 +125,21 @@ class DonorTest {
     }
 
     @Test
+    @DisplayName("Given an unconfirmed, a confirmed and an erased donor, when asked who receives security notices, then only the confirmed one does")
+    void should_send_security_notices_only_to_a_confirmed_donor_when_asked_given_unconfirmed_confirmed_and_erased() {
+        Donor unconfirmed = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        Donor confirmed = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        confirmed.verifyEmail(NOW.plusSeconds(5));
+        Donor erased = Donor.register(DonorId.newId(NOW), DonorType.PERSON, new DonorName("Jana Nováková"), null, ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);
+        erased.verifyEmail(NOW.plusSeconds(5));
+        erased.erase(NOW.plusSeconds(10));
+
+        assertThat(unconfirmed.receivesSecurityNotices()).isFalse();
+        assertThat(confirmed.receivesSecurityNotices()).isTrue();
+        assertThat(erased.receivesSecurityNotices()).isFalse();
+    }
+
+    @Test
     @DisplayName("Given company data, when a donor registers, then the company identifier is kept")
     void should_keep_company_identifier_when_registered_given_company_data() {
         Donor donor = Donor.register(DonorId.newId(NOW), DonorType.COMPANY, new DonorName("Stavby Novák s.r.o."), new CompanyIdentifier("45274649"), ADDRESS, EMAIL, HASH, SYMBOL, LocaleCode.CS, NOW);

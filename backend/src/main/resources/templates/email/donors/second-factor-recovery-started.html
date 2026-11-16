@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.secondFactorRecoveryStarted.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="#{donors.secondFactorRecoveryStarted.email.intro}">po přihlášení správným heslem někdo zahájil obnovu přístupu k vašemu dárcovskému účtu Nová naděje platbou 1 Kč. Dvoufaktorové ověření se vypne, jen pokud na účet nadace dorazí platba 1 Kč s kódem pro obnovu přístupu z bankovního účtu, který od vás známe, a pod vaším jménem.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.secondFactorRecoveryStarted.email.action}">Pokud jste to byli vy, nemusíte nic dělat; bez té platby se nic nezmění.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.secondFactorRecoveryStarted.email.warning(${senderEmail})}">Pokud jste obnovu přístupu nezahájili, zná někdo vaše heslo. Změňte si ho prosím hned (tím se ukončí všechna ostatní přihlášení) a napište nám na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.secondFactorRecoveryStarted.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.secondFactorRecoveryStarted.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>

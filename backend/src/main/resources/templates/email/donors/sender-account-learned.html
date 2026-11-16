@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="cs" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+    <p style="margin: 0 0 16px;" th:text="#{donors.senderAccountLearned.email.greeting}">Dobrý den,</p>
+    <p style="margin: 0 0 16px;" th:text="#{donors.senderAccountLearned.email.intro(${accountLastDigits})}">zapamatovali jsme si nový bankovní účet …5399, ze kterého přišla platba s vaším variabilním symbolem. Další platby z něj přiřadíme k vašemu dárcovskému účtu Nová naděje i bez symbolu.</p>
+    <p style="margin: 0 0 28px;" th:text="#{donors.senderAccountLearned.email.action}">Pokud je to váš účet nebo účet někoho, kdo za vás posílá dary, nemusíte nic dělat. Účty, ze kterých vám dary přiřazujeme, najdete po přihlášení v části Bankovní účty.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px;">
+        <tr>
+            <td style="background: #fffbeb; border: 1px solid #d97706; border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #92400e;">
+                <span th:text="#{donors.senderAccountLearned.email.warning(${senderEmail})}">Pokud tento účet neznáte, změňte si prosím hned heslo (tím se ukončí všechna ostatní přihlášení) a napište nám na info@nfnn.cz.</span>
+            </td>
+        </tr>
+    </table>
+    <p style="margin: 0;">
+        <span th:text="#{donors.senderAccountLearned.email.regards}">S pozdravem</span><br>
+        <span style="font-family: 'Playfair Display', Georgia, serif; font-size: 17px; font-style: italic; color: #1a1a2e;" th:text="#{donors.senderAccountLearned.email.signature}">Nová naděje – nadační fond</span>
+    </p>
+</th:block>
+</body>
+</html>
