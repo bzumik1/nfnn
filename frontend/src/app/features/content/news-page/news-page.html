@@ -4,8 +4,8 @@
       <h1 #heading class="ui-intro__title" tabindex="-1" i18n="@@content.news.title">
         Co je u nás nového
       </h1>
-      <p class="ui-intro__lead" i18n="@@content.news.lead">
-        Zprávy o&nbsp;tom, komu jsme pomohli, co chystáme a&nbsp;jak naložíme s&nbsp;vašimi dary.
+      <p class="ui-intro__lead" i18n="@@content.news.lead.weWrite">
+        Píšeme o&nbsp;tom, komu jsme pomohli, co chystáme a&nbsp;jak naložíme s&nbsp;vašimi dary.
       </p>
     </div>
   </header>
@@ -18,49 +18,54 @@
             >Načítáme aktuality…</span
           >
         }
-      } @else if (state() === 'ready' && empty()) {
-        @if (pastLastPage()) {
-          <span i18n="@@content.list.pastEnd">Tato strana neexistuje.</span>
-        } @else {
-          <span i18n="@@content.list.news.empty">Zatím tu žádná aktualita není.</span>
-        }
+      } @else if (state() === 'ready' && reloaded()) {
+        <span i18n="@@content.news.reloaded">Aktuality jsou načtené.</span>
       }
     </p>
 
     @if (state() === 'ready' && empty()) {
-      <p class="next-step">
+      <div #emptyNotice class="news-notice news-notice--empty ui-notice" tabindex="-1">
         @if (pastLastPage()) {
+          <p class="ui-notice__text" i18n="@@content.list.pastEnd">Tato strana neexistuje.</p>
           <a class="ui-cta ui-cta--ghost" routerLink="/aktuality" i18n="@@content.list.firstPage"
             >Na první stranu</a
           >
         } @else {
+          <p class="ui-notice__text" i18n="@@content.list.news.empty">
+            Zatím tu žádná aktualita není.
+          </p>
           <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.list.home"
             >Zpět na úvodní stránku</a
           >
         }
-      </p>
+      </div>
     }
 
     @if (state() === 'error') {
-      <p class="list-error" role="alert">
-        @if (offline()) {
-          <ng-container i18n="@@content.news.offline"
-            >Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.</ng-container
-          >
-        } @else {
-          <ng-container i18n="@@content.news.error">Aktuality se nepodařilo načíst.</ng-container>
-        }
-      </p>
-      <button
-        appNeedsConnection
-        #retryButton
-        type="button"
-        class="retry ui-cta ui-cta--ghost"
-        (click)="retry()"
-        i18n="@@content.list.retry"
-      >
-        Zkusit znovu
-      </button>
+      <div class="news-notice ui-notice ui-notice--alert" role="alert">
+        <p class="ui-notice__text">
+          @if (offline()) {
+            <ng-container i18n="@@content.news.offline"
+              >Bez připojení se aktuality nenačetly. Až budete online, zkuste to
+              znovu.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@content.news.error.retry"
+              >Aktuality se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
+        </p>
+        <button
+          appNeedsConnection
+          #retryButton
+          type="button"
+          class="retry ui-cta ui-cta--ghost"
+          (click)="retry()"
+          i18n="@@content.list.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
     }
 
     @if (state() === 'ready') {
@@ -89,7 +94,7 @@
             </h2>
             <div class="grid">
               @for (item of older(); track item.id) {
-                <div class="grid-item" [appReveal]="$index + 1">
+                <div class="grid-item" [appReveal]="olderRow($index) + 1">
                   <app-news-card [item]="item" />
                 </div>
               }
@@ -165,11 +170,15 @@
     }
   </div>
 
-  <app-donate-band
-    i18n-heading="@@content.news.band.heading"
-    heading="Další ohlédnutí napíšeme i díky vám"
-    i18n-lead="@@content.news.band.lead"
-    lead="Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok."
-    [photo]="bandPhoto()"
-  />
+  @if (settledOnce()) {
+    <app-donate-band
+      appReveal
+      i18n-heading="@@content.news.band.heading.nextHelp"
+      heading="O další pomoci napíšeme i díky vám"
+      i18n-lead="@@content.news.band.lead"
+      lead="Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok."
+      [photo]="bandPhoto()"
+      [wide]="true"
+    />
+  }
 </section>

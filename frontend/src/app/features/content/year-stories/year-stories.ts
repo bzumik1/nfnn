@@ -1,6 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FocalPointCrop } from '../../../shared/ui/focal-point/focal-point';
+import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { mediaUrl, SMALL_MEDIA_WIDTH } from '../news-api';
 import { ProjectResponse } from '../projects-api';
 
@@ -10,15 +13,17 @@ export interface StoriesOfYear {
 }
 
 let nextId = 0;
+const STORIES_IN_ROW = 4;
 
 interface StoryTile {
   project: ProjectResponse;
   image: string | null;
+  row: number;
 }
 
 @Component({
   selector: 'app-year-stories',
-  imports: [RouterLink, FocalPointCrop],
+  imports: [NgTemplateOutlet, RouterLink, FocalPointCrop, Reveal],
   templateUrl: './year-stories.html',
   styleUrl: './year-stories.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,12 +31,14 @@ interface StoryTile {
 export class YearStories {
   readonly stories = input.required<StoriesOfYear>();
 
+  protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly titleId = `year-stories-title-${++nextId}`;
 
   protected readonly tiles = computed<StoryTile[]>(() =>
-    this.stories().projects.map((project) => ({
+    this.stories().projects.map((project, index) => ({
       project,
       image: project.coverImage ? mediaUrl(project.coverImage.id, SMALL_MEDIA_WIDTH) : null,
+      row: Math.floor(index / STORIES_IN_ROW),
     })),
   );
 }

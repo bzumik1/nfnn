@@ -43,7 +43,7 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(min(100%, 16rem), calc((100% - 3 * var(--space-4)) / 4));
   gap: var(--space-4);
-  margin: 0;
+  margin: 0 calc(-1 * var(--space-1));
   padding: var(--space-1) var(--space-1) var(--space-2);
   list-style: none;
   overflow-x: auto;
@@ -59,7 +59,7 @@
   min-width: 0;
   padding: var(--space-2);
   border-radius: var(--radius-card);
-  background: var(--color-surface-alt);
+  background: var(--color-story-tile);
   border: 1px solid var(--color-border-soft);
   scroll-snap-align: start;
 }

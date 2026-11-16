@@ -171,7 +171,7 @@ describe('Given a visitor opening Aktuality', () => {
     it('then the page is named and the newest news leads it, large, with its signer', () => {
       expect(text(root, 'h1')).toBe('Co je u nás nového');
       expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-        'Zprávy o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
+        'Píšeme o\u00a0tom, komu jsme pomohli, co chystáme a\u00a0jak naložíme s\u00a0vašimi dary.',
       );
       const featured = root.querySelector('.featured') as HTMLElement;
       expect(text(featured, 'h2')).toBe('Ohlédnutí za rokem 2025');
@@ -484,7 +484,8 @@ describe('Given a visitor opening Aktuality', () => {
         root.querySelector('nav.pages')!.compareDocumentPosition(band) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
-      expect(text(band, 'h2')).toBe('Další ohlédnutí napíšeme i díky vám');
+      expect(text(band, 'h2')).toBe('O další pomoci napíšeme i díky vám');
+      expect(band.querySelector('.band-container--wide')).not.toBeNull();
       expect(text(band, '.band-lead')).toBe(
         'Pravidelný příspěvek nám pomáhá plánovat pomoc na celý rok.',
       );
@@ -506,6 +507,7 @@ describe('Given a visitor opening Aktuality', () => {
     it('then it shows only that page as cards, without a leading article or stories', () => {
       expect(text(root, '.older h2')).toBe('Aktuality na straně 2');
       expect(root.querySelector('.featured')).toBeNull();
+      expect(text(root, '.older h2.visually-hidden')).toBe('Aktuality na straně 2');
       expect(root.querySelector('.stories')).toBeNull();
       expect(texts(root, '.older h3')).toEqual([
         'Ohlédnutí za rokem 2024',
@@ -541,25 +543,27 @@ describe('Given a visitor opening Aktuality', () => {
     expect(fixture.nativeElement.querySelector('nav.pages')).toBeNull();
   });
 
-  it('when nothing is published yet, then the page says so and leads home', async () => {
+  it('when nothing is published yet, then a card in place of the leading news says so and leads home', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     http.expectOne(NEWS(0)).flush(page([], 0, 0));
     http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
     await settle(fixture);
 
-    expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
-    expect(link(root, 'Zpět na úvodní stránku')?.getAttribute('href')).toBe('/');
+    const notice = root.querySelector('.news-notice.ui-notice') as HTMLElement;
+    expect(text(notice, '.ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
+    expect(link(notice, 'Zpět na úvodní stránku')?.getAttribute('href')).toBe('/');
   });
 
-  it('when a page past the last one is asked for, then the page says it does not exist and leads to the first one', async () => {
+  it('when a page past the last one is asked for, then a card says the page does not exist and leads to the first one', async () => {
     ({ fixture, http } = await setUp({ strana: '99' }));
     root = fixture.nativeElement;
     http.expectOne(NEWS(98)).flush(page([], 98, 12));
     await settle(fixture);
 
-    expect(text(root, '.list-state')).toBe('Tato strana neexistuje.');
-    expect(link(root, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
+    const notice = root.querySelector('.news-notice.ui-notice') as HTMLElement;
+    expect(text(notice, '.ui-notice__text')).toBe('Tato strana neexistuje.');
+    expect(link(notice, 'Na první stranu')?.getAttribute('href')).toBe('/aktuality');
   });
 
   describe.each([
@@ -655,7 +659,7 @@ describe('Given a visitor opening Aktuality', () => {
       await wait(0);
 
       expect(root.querySelector('.list-state-loading')).toBeNull();
-      expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+      expect(text(root, '.news-notice .ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
     });
 
     it('and they fail, then the alert is not held back like the loading text', async () => {
@@ -664,7 +668,9 @@ describe('Given a visitor opening Aktuality', () => {
       http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
       await wait(0);
 
-      expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
+      expect(text(root, '[role="alert"] .ui-notice__text')).toBe(
+        'Aktuality se nepodařilo načíst. Zkuste to znovu.',
+      );
       await wait(1000);
       expect(root.querySelector('.list-state-loading')).toBeNull();
     });
@@ -682,7 +688,7 @@ describe('Given a visitor opening Aktuality', () => {
     });
   });
 
-  it('when the news fail, then an alert offers to try again and the retry loads them', async () => {
+  it('when the news fail, then an alert card offers to try again and the retry loads them and says so', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     document.body.appendChild(root);
@@ -691,8 +697,12 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(PROJECTS(0)).flush(page([], 0, 0, 50));
     await settle(fixture);
 
-    expect(text(root, '[role="alert"]')).toBe('Aktuality se nepodařilo načíst.');
-    const retry = root.querySelector('.retry') as HTMLButtonElement;
+    const alert = root.querySelector('.news-notice.ui-notice--alert[role="alert"]') as HTMLElement;
+    expect(text(alert, '.ui-notice__text')).toBe(
+      'Aktuality se nepodařilo načíst. Zkuste to znovu.',
+    );
+    const retry = alert.querySelector('button.retry') as HTMLButtonElement;
+    expect(text(alert, 'button')).toBe('Zkusit znovu');
     retry.focus();
     expect(document.activeElement).toBe(retry);
     retry.click();
@@ -706,6 +716,7 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectNone(PROJECTS(0));
     expect(root.querySelector('[role="alert"]')).toBeNull();
     expect(text(root, '.featured h2')).toBe('Ohlédnutí za rokem 2025');
+    expect(text(root, '.list-state[role="status"]')).toBe('Aktuality jsou načtené.');
     expect(document.activeElement).toBe(link(root, 'Číst celé Ohlédnutí za rokem 2025'));
     root.remove();
   });
@@ -726,7 +737,7 @@ describe('Given a visitor opening Aktuality', () => {
     root.remove();
   });
 
-  it('when the retry finds nothing published, then the focus stays on the status line that says so', async () => {
+  it('when the retry finds nothing published, then the focus goes to the card that says so', async () => {
     ({ fixture, http } = await setUp());
     root = fixture.nativeElement;
     document.body.appendChild(root);
@@ -739,8 +750,10 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(NEWS(0)).flush(page([], 0, 0));
     await settle(fixture);
 
-    expect(document.activeElement).toBe(root.querySelector('.list-state'));
-    expect(text(root, '.list-state')).toBe('Zatím tu žádná aktualita není.');
+    const notice = root.querySelector('.news-notice') as HTMLElement;
+    expect(document.activeElement).toBe(notice);
+    expect(text(notice, '.ui-notice__text')).toBe('Zatím tu žádná aktualita není.');
+    expect(text(root, '.list-state')).toBe('');
     root.remove();
   });
 
@@ -769,9 +782,11 @@ describe('Given a visitor opening Aktuality', () => {
     http.expectOne(PROJECTS(0)).flush(null, { status: 0, statusText: 'Unknown Error' });
     await settle(fixture);
 
-    expect(text(root, '[role="alert"]')).toBe(
+    const alert = root.querySelector('.news-notice.ui-notice--alert[role="alert"]') as HTMLElement;
+    expect(text(alert, '.ui-notice__text')).toBe(
       'Bez připojení se aktuality nenačetly. Až budete online, zkuste to znovu.',
     );
+    expect(text(alert, 'button')).toBe('Zkusit znovu');
   });
 });
 

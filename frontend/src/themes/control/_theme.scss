@@ -20,6 +20,7 @@
   --color-surface-grouped: #efeee8;
   --color-surface-elevated: #fdfcf7;
   --color-surface-alt: #f6f5f0;
+  --color-story-tile: var(--color-surface-alt);
   --color-surface-muted: #ecebe4;
   --color-border-rule: #a39f8c;
   --color-surface-accent: #eef8f5;
@@ -455,6 +456,7 @@
   --color-surface-grouped: #0a0d0c;
   --color-surface-elevated: #1d2321;
   --color-surface-alt: #0e1110;
+  --color-story-tile: var(--color-surface-elevated);
   --color-surface-muted: #222826;
   --color-border-rule: #6b706a;
   --color-surface-accent: #12302b;
