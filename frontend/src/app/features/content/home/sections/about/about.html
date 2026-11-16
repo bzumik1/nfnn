@@ -108,7 +108,7 @@
         </section>
       } @else if (people.featured.length > 0) {
         <section class="quote" aria-labelledby="founders-title">
-          <h2 id="founders-title" class="board-title" i18n="@@home.about.board.title">
+          <h2 id="founders-title" class="board-title" appReveal i18n="@@home.about.board.title">
             Kdo fond vede
           </h2>
           <ng-container [ngTemplateOutlet]="featured" [ngTemplateOutletContext]="{ people }" />
@@ -122,11 +122,11 @@
       }
     } @else {
       <section class="quote" aria-labelledby="founders-title">
-        <h2 id="founders-title" class="board-title" i18n="@@home.about.board.title">
+        <h2 id="founders-title" class="board-title" appReveal i18n="@@home.about.board.title">
           Kdo fond vede
         </h2>
         <ul class="signers">
-          <li class="signer">
+          <li class="signer" [appReveal]="1">
             <app-avatar
               class="signer-photo"
               name="Pavel Znamenáček"
@@ -141,7 +141,7 @@
               Zakladatel a předseda správní rady
             </p>
           </li>
-          <li class="signer">
+          <li class="signer" [appReveal]="2">
             <app-avatar
               class="signer-photo"
               name="Andrea Znamenáčková"
@@ -169,7 +169,7 @@
     @if (people.featured.length > 0) {
       <ul class="signers">
         @for (card of people.featured; track $index) {
-          <li class="signer">
+          <li class="signer" [appReveal]="$index + 1">
             <app-avatar
               class="signer-photo"
               [name]="card.name"

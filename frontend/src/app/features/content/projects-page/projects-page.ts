@@ -1,13 +1,18 @@
 /// <reference types="@angular/localize" />
 
+import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
+  Injector,
   linkedSignal,
   signal,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -16,6 +21,7 @@ import { CompactLayout } from '../../../core/layout/compact-layout';
 import { whenShownAgain } from '../../../core/navigation/kept-tab-pages';
 import { pluralCategory } from '../../../core/i18n/plural-category';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { Reveal } from '../../../shared/ui/reveal/reveal';
 import { DonateBand } from '../donate-band/donate-band';
 import { HomeApi } from '../home-api';
 import { DonateBandPhotoResponse } from '../donate-band-api';
@@ -32,6 +38,7 @@ type Arrangement = 'single' | 'pair' | 'trio' | 'many';
 export interface YearTile {
   readonly item: ProjectResponse;
   readonly size: StoryTileSize;
+  readonly row: number;
 }
 
 export interface YearGroup {
@@ -55,7 +62,7 @@ interface YearChip {
 
 @Component({
   selector: 'app-projects-page',
-  imports: [NeedsConnection, RouterLink, StoryTile, DonateBand],
+  imports: [NeedsConnection, RouterLink, StoryTile, DonateBand, Reveal],
   templateUrl: './projects-page.html',
   styleUrl: './projects-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,10 +71,15 @@ export class ProjectsPage {
   private readonly store = inject(PublishedStoriesStore);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   private readonly compact = inject(CompactLayout).isCompact;
+  private readonly title = viewChild<ElementRef<HTMLElement>>('title');
+  private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private storiesLoad = Subscription.EMPTY;
 
   protected readonly state = signal<LoadState>(this.store.stories() ? 'ready' : 'loading');
+  protected readonly offline = signal(false);
+  protected readonly settledOnce = signal(this.state() === 'ready');
   protected readonly allYears = ALL_YEARS;
   protected readonly bandPhoto = signal<DonateBandPhotoResponse | null>(null);
 
@@ -120,7 +132,11 @@ export class ProjectsPage {
       return {
         year,
         items,
-        tiles: items.map((item, index) => ({ item, size: tileSize(arrangement, index) })),
+        tiles: items.map((item, index) => ({
+          item,
+          size: tileSize(arrangement, index),
+          row: this.compact() ? index : rowOf(arrangement, index),
+        })),
         arrangement,
         lookBack: lookBacks.find((lookBack) => lookBack.year === year)?.slug ?? null,
       };
@@ -145,7 +161,7 @@ export class ProjectsPage {
 
   protected retry(): void {
     this.state.set('loading');
-    this.load();
+    this.load(true);
   }
 
   protected choose(event: MouseEvent, choice: Choice): void {
@@ -181,15 +197,37 @@ export class ProjectsPage {
     );
   }
 
-  private load(): void {
+  private load(retried = false): void {
     this.storiesLoad.unsubscribe();
     this.storiesLoad = this.store
       .load()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.state.set('ready'),
-        error: () => this.state.set(this.store.stories() ? 'ready' : 'error'),
+        next: () => {
+          this.state.set('ready');
+          this.settledOnce.set(true);
+          if (retried) {
+            this.announcement.set(this.describe(this.choice()));
+            this.focusAfterRender(this.title);
+          }
+        },
+        error: (failure: unknown) => {
+          this.settledOnce.set(true);
+          if (this.store.stories()) {
+            this.state.set('ready');
+            return;
+          }
+          this.offline.set(failure instanceof HttpErrorResponse && failure.status === 0);
+          this.state.set('error');
+          if (retried) {
+            this.focusAfterRender(this.retryButton);
+          }
+        },
       });
+  }
+
+  private focusAfterRender(target: () => ElementRef<HTMLElement> | undefined): void {
+    afterNextRender(() => target()?.nativeElement.focus(), { injector: this.injector });
   }
 }
 
@@ -211,6 +249,20 @@ function tileSize(arrangement: Arrangement, index: number): StoryTileSize {
     return 'split';
   }
   return index === 0 || arrangement === 'pair' ? 'large' : 'small';
+}
+
+const LARGE_TILE_ROWS = 2;
+const SMALL_TILES_BESIDE_LARGE = 4;
+const SMALL_TILES_IN_ROW = 4;
+
+function rowOf(arrangement: Arrangement, index: number): number {
+  if (arrangement !== 'many') {
+    return 0;
+  }
+  if (index <= SMALL_TILES_BESIDE_LARGE) {
+    return index <= SMALL_TILES_BESIDE_LARGE / LARGE_TILE_ROWS ? 0 : 1;
+  }
+  return LARGE_TILE_ROWS + Math.floor((index - SMALL_TILES_BESIDE_LARGE - 1) / SMALL_TILES_IN_ROW);
 }
 
 function choiceFrom(value: string | null): Choice | null {

@@ -1,7 +1,7 @@
 <section class="stories">
   <header class="stories-head ui-intro ui-container">
     <div class="stories-intro ui-intro__head">
-      <h1 class="ui-intro__title" tabindex="-1" i18n="@@content.projects.title">
+      <h1 #title class="ui-intro__title" tabindex="-1" i18n="@@content.projects.title">
         Komu jsme pomohli
       </h1>
       <p class="ui-intro__lead" i18n="@@content.projects.lead">
@@ -80,26 +80,39 @@
     </p>
 
     @if (state() === 'error') {
-      <p class="stories-error" role="alert" i18n="@@content.projects.error">
-        Příběhy se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.
-      </p>
-      <button
-        appNeedsConnection
-        type="button"
-        class="ui-cta ui-cta--ghost"
-        (click)="retry()"
-        i18n="@@content.projects.retry"
-      >
-        Zkusit znovu
-      </button>
+      <div class="stories-notice ui-notice ui-notice--alert" role="alert">
+        <p class="ui-notice__text">
+          @if (offline()) {
+            <ng-container i18n="@@content.projects.offline"
+              >Bez připojení se příběhy nenačetly. Až budete online, zkuste to znovu.</ng-container
+            >
+          } @else {
+            <ng-container i18n="@@content.projects.error"
+              >Příběhy se nepodařilo načíst. Zkuste to znovu.</ng-container
+            >
+          }
+        </p>
+        <button
+          appNeedsConnection
+          #retryButton
+          type="button"
+          class="ui-cta ui-cta--ghost"
+          (click)="retry()"
+          i18n="@@content.projects.retry"
+        >
+          Zkusit znovu
+        </button>
+      </div>
     }
 
     @if (state() === 'ready') {
       @if (projects().length === 0) {
-        <p class="stories-empty" i18n="@@content.projects.empty">Zatím tu žádný příběh není.</p>
-        <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.projects.empty.home"
-          >Zpět na úvodní stránku</a
-        >
+        <div class="stories-notice stories-notice--empty ui-notice">
+          <p class="ui-notice__text" i18n="@@content.projects.empty">Zatím tu žádný příběh není.</p>
+          <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.projects.empty.home"
+            >Zpět na úvodní stránku</a
+          >
+        </div>
       } @else {
         @if (years().length > 1) {
           <nav class="chips" i18n-aria-label="@@content.projects.chips.label" aria-label="Roky">
@@ -117,7 +130,7 @@
 
         @for (group of groups(); track group.year) {
           <section class="year" [attr.aria-labelledby]="'rok-' + group.year">
-            <div class="year-head">
+            <div class="year-head" appReveal>
               <h2 class="year-title" [id]="'rok-' + group.year">
                 {{ group.year }}&ngsp;<span class="year-count" i18n="@@content.projects.year.count"
                   >{{ group.items.length }}
@@ -135,11 +148,11 @@
             </div>
 
             @if (group.items.length === 0) {
-              <p class="stories-empty" i18n="@@content.projects.year.empty">
+              <p class="stories-empty" [appReveal]="1" i18n="@@content.projects.year.empty">
                 Z tohoto roku tu zatím žádný příběh není.
               </p>
             } @else if (choice() === 'all') {
-              <ul class="strip">
+              <ul class="strip" [appReveal]="1">
                 @for (item of group.items; track item.id) {
                   <li class="strip-item"><app-story-tile [item]="item" /></li>
                 }
@@ -165,6 +178,7 @@
                 @for (tile of group.tiles; track tile.item.id) {
                   <li
                     class="grid-item"
+                    [appReveal]="tile.row + 1"
                     [class.grid-item--large]="tile.size === 'large'"
                     [class.grid-item--split]="tile.size === 'split'"
                   >
@@ -175,6 +189,7 @@
               @if (years().length > 1) {
                 <a
                   class="year-all"
+                  appReveal
                   routerLink="/projekty"
                   [queryParams]="{ rok: allYears }"
                   i18n="@@content.projects.year.all"
@@ -189,13 +204,16 @@
     }
   </div>
 
-  <app-donate-band
-    i18n-heading="@@content.projects.band.heading"
-    heading="Pomozte s dalším příběhem"
-    i18n-lead="@@content.projects.band.lead"
-    lead="Každý příspěvek jde do poslední koruny těm, kdo ho potřebují."
-    [photo]="bandPhoto()"
-    [showsProjects]="false"
-    [wide]="true"
-  />
+  @if (settledOnce()) {
+    <app-donate-band
+      appReveal
+      i18n-heading="@@content.projects.band.heading"
+      heading="Pomozte s dalším příběhem"
+      i18n-lead="@@content.projects.band.lead"
+      lead="Každý příspěvek jde do poslední koruny těm, kdo ho potřebují."
+      [photo]="bandPhoto()"
+      [showsProjects]="false"
+      [wide]="true"
+    />
+  }
 </section>

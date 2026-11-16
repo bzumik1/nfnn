@@ -125,20 +125,6 @@ app-form-field {
   }
 }
 
-.form-submit {
-  transition: transform var(--duration-base);
-
-  @media (hover: hover) {
-    &:hover {
-      transform: translateY(-1px);
-    }
-  }
-
-  &:disabled {
-    transform: none;
-  }
-}
-
 .form-privacy {
   margin-top: var(--space-3-5);
   font-size: var(--text-xs);

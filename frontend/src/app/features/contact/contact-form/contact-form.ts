@@ -30,6 +30,7 @@ import { placeServerErrors } from '../../../shared/ui/form-field/server-errors';
 import { AccountingDetails } from '../accounting-details/accounting-details';
 import { ContactApi, ContactMessageRequest } from '../contact-api';
 import { NeedsConnection } from '../../../shared/ui/needs-connection/needs-connection';
+import { Reveal } from '../../../shared/ui/reveal/reveal';
 
 const TOO_MANY_REQUESTS = 429;
 const CONTACT_IN_VIEW = 'contact-in-view';
@@ -50,6 +51,7 @@ const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
     FocusFirstInvalid,
     AccountingDetails,
     NeedsConnection,
+    Reveal,
   ],
   templateUrl: './contact-form.html',
   styleUrl: './contact-form.scss',
