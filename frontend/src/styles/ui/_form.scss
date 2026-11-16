@@ -1,3 +1,4 @@
+@use 'motion';
 @use 'touch-target';
 
 .ui-field-error {
@@ -16,18 +17,18 @@
     padding: var(--space-2-5);
     border-radius: var(--radius-lg);
     border: 1.5px solid var(--color-border);
-    background: var(--color-surface);
+    background-color: var(--color-surface);
     color: var(--color-text-soft);
     cursor: pointer;
     font-family: var(--font-sans);
     font-weight: var(--weight-semibold);
     font-size: var(--text-md);
-    transition: all var(--duration-base);
+    @include motion.state(border-color, background-color, color);
     @include touch-target.reaches-finger-size;
 
     &.is-active {
       border-color: var(--color-accent);
-      background: var(--color-accent-bg);
+      background-color: var(--color-accent-bg);
       color: var(--color-accent);
     }
   }
@@ -125,6 +126,31 @@
 
   app-form-field:has([aria-invalid='true']) .field-label {
     color: var(--color-danger);
+  }
+
+  > app-form-field:first-child {
+    border-start-start-radius: var(--radius-sheet-group);
+    border-start-end-radius: var(--radius-sheet-group);
+  }
+
+  > app-form-field:last-child {
+    border-end-start-radius: var(--radius-sheet-group);
+    border-end-end-radius: var(--radius-sheet-group);
+  }
+
+  @supports selector(:has(*)) {
+    .form-control:focus-visible {
+      outline: none;
+    }
+
+    app-form-field:has(.form-control:focus-visible) {
+      outline: 3px solid var(--color-focus-ring);
+      outline-offset: -3px;
+
+      @media (forced-colors: active) {
+        outline-color: Highlight;
+      }
+    }
   }
 
   .form-control {

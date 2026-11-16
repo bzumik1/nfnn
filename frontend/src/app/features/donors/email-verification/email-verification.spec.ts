@@ -135,7 +135,7 @@ describe('Given the page that confirms the e-mail from the registration link', (
       const request = http.expectOne('/api/donors/auth/email-verification/request');
       expect(request.request.body).toEqual({ email: 'jana@example.cz' });
       expect(element<HTMLButtonElement>('.ui-button--primary').disabled).toBe(true);
-      expect(element('.ui-button--primary').textContent).toContain('Odesílám…');
+      expect(element('.ui-button--primary').textContent).toContain('Odesíláme…');
       request.flush(null, { status: 202, statusText: 'Accepted' });
       await settle();
 

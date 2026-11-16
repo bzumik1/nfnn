@@ -33,7 +33,7 @@ async function missedEdges(control: Locator): Promise<string[]> {
     return edges
       .filter(([, px, py]) => {
         const hit = document.elementFromPoint(px, py);
-        return !hit?.closest('a[href], button, input, select, textarea, [role="button"]');
+        return !hit?.closest('a[href], button, input, label, select, textarea, [role="button"]');
       })
       .map(([edge]) => edge);
   }, FINGER_PX);
@@ -117,6 +117,9 @@ test.describe('Given a visitor tapping small controls on a phone', () => {
     await expectFingerSized(dialog.getByRole('button', { name: 'Přihlášení', exact: true }));
     await expectFingerSized(dialog.getByRole('button', { name: 'Registrace', exact: true }));
     await expectFingerSized(dialog.getByRole('button', { name: 'Zapomněli jste heslo?' }));
+    await expectFingerSized(
+      dialog.locator('label', { has: page.getByRole('checkbox', { name: 'Zapamatovat si mě' }) }),
+    );
   });
 
   test('when a signed-in donor taps near the edges of Zkontrolovat nové platby and Všechny dary on Můj přehled, then a finger-sized area around each still reaches it, or the control beside it, never empty space', async ({
