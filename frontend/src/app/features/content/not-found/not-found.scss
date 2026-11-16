@@ -12,6 +12,10 @@
   min-height: calc(var(--full-screen-height) - var(--tab-bar-clearance));
 }
 
+.not-found.ui-intro {
+  padding-bottom: 0;
+}
+
 .not-found > .ui-intro__head {
   width: 100%;
 }
