@@ -11,6 +11,7 @@
     [attr.aria-describedby]="hintId()"
     aria-label="Fotka, klepnutím nastavíte bod výřezu"
     i18n-aria-label="@@admin.focalPoint.frame"
+    (pointerup)="noteLift($event)"
     (click)="choose($event, photo)"
     (keydown)="move($event)"
   >
