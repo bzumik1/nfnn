@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { readPdf } from '../src/app/features/donations/receipt-pdf/testing/pdf-reader';
 import { expect, test } from './fixtures';
@@ -111,6 +111,31 @@ const petrDetail = {
     },
   ],
 };
+
+const ENLARGED_TEXT_PX = [24, 28, 32];
+
+interface SeparatorPlace {
+  sameLine: boolean;
+  separatorLeft: number;
+  separatorRight: number;
+  numberRight: number;
+  lineStart: number;
+}
+
+async function separatorPlace(account: Locator): Promise<SeparatorPlace> {
+  return account.evaluate((host) => {
+    const number = host.querySelector('.ui-figures')!.getBoundingClientRect();
+    const separator = host.querySelector('.separator')!.getBoundingClientRect();
+    const line = host.querySelector('.account')!.getBoundingClientRect();
+    return {
+      sameLine: separator.top < number.bottom && separator.bottom > number.top,
+      separatorLeft: separator.left,
+      separatorRight: separator.right,
+      numberRight: number.right,
+      lineStart: line.left,
+    };
+  });
+}
 
 async function rememberedSession(page: Page): Promise<void> {
   await page.route('**/api/donors/auth/refresh', (route) =>
@@ -505,6 +530,38 @@ test.describe('Given an administrator on the donors page', () => {
       }
     });
   }
+
+  test('when the text grows up to 200 % on a computer, then the separator before the bank never covers the account number and never starts a line', async ({
+    page,
+  }) => {
+    await page.route(
+      (url) => url.pathname === PETR_ACCOUNT,
+      (route) => route.fulfill({ json: petrAccount }),
+    );
+    await page.route(
+      (url) => url.pathname === PETR_DONATIONS,
+      (route) => route.fulfill({ json: petrDetail }),
+    );
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto(`/sprava/darci/${PETR_ID}`);
+    const account = page
+      .getByRole('region', { name: 'Bankovní účty' })
+      .locator('app-bank-account', { hasText: '2900233333/2010' });
+    await expect(account).toContainText('Fio banka');
+
+    let seenOnOneLine = false;
+    for (const px of ENLARGED_TEXT_PX) {
+      await page.addStyleTag({ content: `html { font-size: ${px}px; }` });
+      const place = await separatorPlace(account);
+      if (place.sameLine) {
+        seenOnOneLine = true;
+        expect(place.separatorLeft, `${px} px`).toBeGreaterThanOrEqual(place.numberRight);
+      } else {
+        expect(place.separatorRight, `${px} px`).toBeLessThanOrEqual(place.lineStart);
+      }
+    }
+    expect(seenOnOneLine).toBe(true);
+  });
 
   test('when removing an account is refused because of a receipt, then the alert shows the reason and the account stays', async ({
     page,
