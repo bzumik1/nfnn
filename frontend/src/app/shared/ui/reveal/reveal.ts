@@ -11,8 +11,10 @@ import {
 } from '@angular/core';
 
 const LONGEST_ROW = 6;
-const WATCHED_FROM = { rootMargin: '0px 0px -10% 0px', threshold: 0 };
-const SCROLLED_IN_BELOW = 0.5;
+const LINE = '0px 0px -10% 0px';
+const SCREEN = '0px';
+const SCROLLED_IN_BELOW = 0.7;
+const LAST_MOVING_PROPERTY = 'translate';
 
 type Showing = 'still' | 'waiting' | 'moving';
 type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
@@ -24,6 +26,8 @@ type HomeScreenNavigator = Navigator & { readonly standalone?: boolean };
     '[class.motion-reveal--shown]': "showing() === 'moving'",
     '[style.--reveal-order]': 'order()',
     '(focusin)': 'showAtOnce()',
+    '(transitionend)': 'settle($event)',
+    '(transitioncancel)': 'settle($event)',
   },
 })
 export class Reveal {
@@ -33,45 +37,84 @@ export class Reveal {
   });
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly view = inject(DOCUMENT).defaultView;
+  private readonly document = inject(DOCUMENT);
   protected readonly showing = signal<Showing>('still');
 
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
-      const view = this.view;
+      const view = this.document.defaultView;
       if (view === null || !mayMove(view) || this.startsInSight(view)) {
         return;
       }
       this.showing.set('waiting');
-      const observer = new IntersectionObserver((entries) => {
-        const sighted = entries.find((entry) => entry.isIntersecting);
-        if (sighted === undefined) {
-          return;
-        }
-        observer.disconnect();
-        this.showing.update((showing) =>
-          showing === 'waiting' && scrolledIn(sighted, view) ? 'moving' : 'still',
-        );
-      }, WATCHED_FROM);
-      observer.observe(this.host.nativeElement);
-      const showForPrint = () => this.showAtOnce();
-      view.addEventListener('beforeprint', showForPrint);
-      destroyRef.onDestroy(() => {
-        observer.disconnect();
+      let lateReveal: ReturnType<typeof setTimeout> | undefined;
+      const stopWatching = () => {
+        clearTimeout(lateReveal);
+        line.disconnect();
+        screen.disconnect();
         view.removeEventListener('beforeprint', showForPrint);
-      });
+      };
+      const line = new IntersectionObserver(
+        (entries) => {
+          const sighted = entries.find((entry) => entry.isIntersecting);
+          if (sighted !== undefined) {
+            stopWatching();
+            this.reveal(scrolledIn(sighted, view) ? 'moving' : 'still');
+          }
+        },
+        { rootMargin: LINE, threshold: 0 },
+      );
+      const screen = new IntersectionObserver(
+        (entries) => {
+          clearTimeout(lateReveal);
+          if (entries.some((entry) => entry.isIntersecting)) {
+            lateReveal = setTimeout(() => {
+              stopWatching();
+              this.reveal('moving');
+            }, this.revealMs(view));
+          }
+        },
+        { rootMargin: SCREEN, threshold: 0 },
+      );
+      const showForPrint = () => this.showAtOnce();
+      line.observe(this.host.nativeElement);
+      screen.observe(this.host.nativeElement);
+      view.addEventListener('beforeprint', showForPrint);
+      destroyRef.onDestroy(stopWatching);
     });
   }
 
   protected showAtOnce(): void {
-    if (this.showing() === 'waiting') {
+    this.reveal('still');
+  }
+
+  protected settle(event: TransitionEvent): void {
+    if (event.target === this.host.nativeElement && event.propertyName === LAST_MOVING_PROPERTY) {
       this.showing.set('still');
+    }
+  }
+
+  private reveal(showing: Exclude<Showing, 'waiting'>): void {
+    if (this.showing() === 'waiting') {
+      this.showing.set(showing);
     }
   }
 
   private startsInSight(view: Window): boolean {
     return this.host.nativeElement.getBoundingClientRect().top < view.innerHeight;
+  }
+
+  private revealMs(view: Window): number {
+    const token = view
+      .getComputedStyle(this.document.documentElement)
+      .getPropertyValue('--duration-reveal')
+      .trim();
+    const value = Number.parseFloat(token);
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return token.endsWith('ms') ? value : value * 1000;
   }
 }
 

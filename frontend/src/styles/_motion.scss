@@ -80,6 +80,8 @@ $_never: (
   );
   transition: _transition($properties, var(--duration-base), var(--ease-standard));
 
+  @include _fades-when-reduced(transition);
+
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       transition-duration: var(--duration-fast);

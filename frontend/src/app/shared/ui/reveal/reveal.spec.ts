@@ -7,7 +7,7 @@ type Sighting = (
 ) => void;
 
 class FakeIntersectionObserver {
-  static latest: FakeIntersectionObserver | undefined;
+  static all: FakeIntersectionObserver[] = [];
   observed: Element[] = [];
   disconnected = false;
 
@@ -15,7 +15,13 @@ class FakeIntersectionObserver {
     readonly sighting: Sighting,
     readonly options: IntersectionObserverInit,
   ) {
-    FakeIntersectionObserver.latest = this;
+    FakeIntersectionObserver.all.push(this);
+  }
+
+  static watching(rootMargin: string): FakeIntersectionObserver | undefined {
+    return FakeIntersectionObserver.all.find(
+      (observer) => observer.options.rootMargin === rootMargin,
+    );
   }
 
   observe(element: Element): void {
@@ -44,7 +50,9 @@ describe('Given a block of a public page that reveals itself', () => {
     vi.restoreAllMocks();
     delete (navigator as { standalone?: boolean }).standalone;
     delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
-    FakeIntersectionObserver.latest = undefined;
+    document.documentElement.style.removeProperty('--duration-reveal');
+    vi.useRealTimers();
+    FakeIntersectionObserver.all = [];
   });
 
   function allowMotion({
@@ -95,8 +103,15 @@ describe('Given a block of a public page that reveals itself', () => {
     return !block(fixture).classList.contains('motion-reveal');
   }
 
-  async function sight(fixture: ComponentFixture<RevealHost>, top: number): Promise<void> {
-    FakeIntersectionObserver.latest?.sighting([
+  const LINE = '0px 0px -10% 0px';
+  const SCREEN = '0px';
+
+  async function sight(
+    fixture: ComponentFixture<RevealHost>,
+    top: number,
+    rootMargin = LINE,
+  ): Promise<void> {
+    FakeIntersectionObserver.watching(rootMargin)?.sighting([
       { isIntersecting: true, boundingClientRect: rectAt(top) },
     ]);
     fixture.detectChanges();
@@ -110,11 +125,8 @@ describe('Given a block of a public page that reveals itself', () => {
       const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
 
       expect(waits(fixture)).toBe(true);
-      expect(FakeIntersectionObserver.latest?.observed).toEqual([block(fixture)]);
-      expect(FakeIntersectionObserver.latest?.options).toEqual({
-        rootMargin: '0px 0px -10% 0px',
-        threshold: 0,
-      });
+      expect(FakeIntersectionObserver.watching(LINE)?.observed).toEqual([block(fixture)]);
+      expect(FakeIntersectionObserver.watching(LINE)?.options.threshold).toBe(0);
     });
 
     it('then scrolling it in over the bottom edge moves it in once', async () => {
@@ -124,14 +136,60 @@ describe('Given a block of a public page that reveals itself', () => {
       await sight(fixture, VIEWPORT_HEIGHT * 0.85);
 
       expect(movesIn(fixture)).toBe(true);
-      expect(FakeIntersectionObserver.latest?.disconnected).toBe(true);
+      expect(FakeIntersectionObserver.all.every((observer) => observer.disconnected)).toBe(true);
     });
 
-    it('then a jump that lands it high on the screen shows it at once', async () => {
+    it('then once it has moved in, it stands still and leaves its transitions to the page', async () => {
+      allowMotion();
+      const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
+      await sight(fixture, VIEWPORT_HEIGHT * 0.85);
+
+      block(fixture).dispatchEvent(transitionEnd('opacity'));
+      fixture.detectChanges();
+      expect(movesIn(fixture)).toBe(true);
+
+      block(fixture).dispatchEvent(transitionEnd('translate'));
+      fixture.detectChanges();
+      expect(standsStill(fixture)).toBe(true);
+    });
+
+    it('then a jump that lands it in the upper two thirds of the screen shows it at once', async () => {
       allowMotion();
       const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
 
-      await sight(fixture, 120);
+      await sight(fixture, VIEWPORT_HEIGHT * 0.65);
+
+      expect(standsStill(fixture)).toBe(true);
+    });
+
+    it('then stopping in the last tenth of the screen, where the page ends, moves it in after the reveal time', async () => {
+      vi.useFakeTimers();
+      allowMotion();
+      document.documentElement.style.setProperty('--duration-reveal', '0.5s');
+      const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
+
+      await sight(fixture, VIEWPORT_HEIGHT * 0.95, SCREEN);
+      vi.advanceTimersByTime(499);
+      fixture.detectChanges();
+      expect(waits(fixture)).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(movesIn(fixture)).toBe(true);
+      expect(FakeIntersectionObserver.all.every((observer) => observer.disconnected)).toBe(true);
+    });
+
+    it('then passing the last tenth on its way up waits for the line, not for the time', async () => {
+      vi.useFakeTimers();
+      allowMotion();
+      document.documentElement.style.setProperty('--duration-reveal', '0.5s');
+      const fixture = await renderWithTopAt(VIEWPORT_HEIGHT + 200);
+
+      await sight(fixture, VIEWPORT_HEIGHT * 0.95, SCREEN);
+      await sight(fixture, VIEWPORT_HEIGHT * 0.88);
+      vi.advanceTimersByTime(500);
+      block(fixture).dispatchEvent(transitionEnd('translate'));
+      fixture.detectChanges();
 
       expect(standsStill(fixture)).toBe(true);
     });
@@ -166,7 +224,7 @@ describe('Given a block of a public page that reveals itself', () => {
 
       fixture.destroy();
 
-      expect(FakeIntersectionObserver.latest?.disconnected).toBe(true);
+      expect(FakeIntersectionObserver.all.every((observer) => observer.disconnected)).toBe(true);
     });
 
     it('then its place in a row delays it by that many steps, at most six', async () => {
@@ -183,7 +241,7 @@ describe('Given a block of a public page that reveals itself', () => {
     const fixture = await renderWithTopAt(300);
 
     expect(standsStill(fixture)).toBe(true);
-    expect(FakeIntersectionObserver.latest).toBeUndefined();
+    expect(FakeIntersectionObserver.all).toEqual([]);
   });
 
   it('when the visitor asked for less motion, then nothing hides it', async () => {
@@ -210,6 +268,12 @@ describe('Given a block of a public page that reveals itself', () => {
     expect(standsStill(fixture)).toBe(true);
   });
 });
+
+function transitionEnd(propertyName: string): Event {
+  const event = new Event('transitionend');
+  Object.defineProperty(event, 'propertyName', { value: propertyName });
+  return event;
+}
 
 function rectAt(top: number): DOMRect {
   return {
