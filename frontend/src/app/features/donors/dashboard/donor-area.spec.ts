@@ -3607,8 +3607,9 @@ describe('Given a signed-in donor in the donor area', () => {
       ]);
       const mail = element('.account-deletion a') as HTMLAnchorElement;
       expect(mail.getAttribute('href')).toBe(
-        'mailto:info@nfnn.cz?subject=Sma%C5%BE%C3%A1n%C3%AD%20%C3%BA%C4%8Dtu',
+        'mailto:info@nfnn.cz?subject=Smaz%C3%A1n%C3%AD%20%C3%BA%C4%8Dtu',
       );
+      expect(new URL(mail.href).searchParams.get('subject')).toBe('Smazání účtu');
       expect(normalized(mail.textContent ?? '')).toBe('info@nfnn.cz');
     });
   });

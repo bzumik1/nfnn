@@ -113,6 +113,21 @@ describe("Given a donor's signed-in devices card", () => {
     await settle();
   }
 
+  function signOutButton(row: HTMLElement): HTMLButtonElement | null {
+    return row.querySelector<HTMLButtonElement>('.device-sign-out');
+  }
+
+  async function ask(button: HTMLButtonElement | null): Promise<void> {
+    button?.focus();
+    button?.click();
+    await settle();
+  }
+
+  async function confirmSignOut(): Promise<void> {
+    element<HTMLButtonElement>('.devices-confirm-yes').click();
+    await settle();
+  }
+
   it('when the list is loading, then the card says so under its own heading and names browsers and apps', async () => {
     await signIn();
     expect(text(element('h2'))).toBe('Přihlášená zařízení');
@@ -170,10 +185,38 @@ describe("Given a donor's signed-in devices card", () => {
       );
     });
 
-    it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and focus moves to the next sign-out', async () => {
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
+    it('and the donor presses Odhlásit at the iPhone, then the card asks first, tells the API nothing yet and moves focus into the question', async () => {
+      await ask(signOutButton(rows()[1]));
+
+      const confirmation = rows()[1].querySelector<HTMLElement>('.devices-confirm');
+      expect(confirmation?.getAttribute('role')).toBe('group');
+      const question = document.getElementById(
+        confirmation?.getAttribute('aria-labelledby') ?? '',
+      );
+      expect(text(question)).toBe('Odhlásit iPhone · Safari?');
+      expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
+      expect(element('.devices-confirm-yes').classList).toContain('ui-button--danger');
+      expect(text(element('.devices-confirm-no'))).toBe('Zrušit');
+      expect(signOutButton(rows()[1])).toBeNull();
+      expect(document.activeElement).toBe(element('.devices-confirm-no'));
+      http.expectNone({ method: 'DELETE' });
+    });
+
+    it('and the donor cancels the question, then nothing is signed out and focus is back on the iPhone’s Odhlásit', async () => {
+      await ask(signOutButton(rows()[1]));
+      element<HTMLButtonElement>('.devices-confirm-no').click();
       await settle();
-      expect(text(rows()[1].querySelector('button'))).toBe('Odhlašujeme…');
+
+      expect(element('.devices-confirm')).toBeNull();
+      expect(rows()).toHaveLength(3);
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
+      http.expectNone({ method: 'DELETE' });
+    });
+
+    it('and the donor signs out the iPhone, then the API is told, the row disappears, the status says so and takes focus', async () => {
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
+      expect(text(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
       expect(element<HTMLButtonElement>('.devices-sign-out-others').disabled).toBe(true);
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
@@ -187,25 +230,33 @@ describe("Given a donor's signed-in devices card", () => {
       expect(text(element('.devices-status'))).toBe(
         'Zařízení jsme odhlásili: iPhone · Safari. Pokud jste se na něm nepřihlásili vy, změňte si heslo.',
       );
-      expect(document.activeElement).toBe(rows()[1].querySelector('button'));
+      expect(element('.devices-confirm')).toBeNull();
+      expect(document.activeElement).toBe(element('.devices-status'));
     });
 
-    it('and the donor signs out the last row while another device stays, then focus moves to the button that signs out every other device', async () => {
-      rows()[2].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
-      http
-        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${UNKNOWN.id}` })
-        .flush(null, { status: 204, statusText: 'No Content' });
+    it('and the donor presses Odhlásit všechna ostatní zařízení, then the card asks the same way and cancelling returns focus to that button', async () => {
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+
+      const confirmation = element<HTMLElement>('.devices-footer .devices-confirm');
+      const question = document.getElementById(
+        confirmation?.getAttribute('aria-labelledby') ?? '',
+      );
+      expect(text(question)).toBe('Odhlásit všechna ostatní zařízení?');
+      expect(text(element('.devices-confirm-yes'))).toBe('Odhlásit');
+      expect(document.activeElement).toBe(element('.devices-confirm-no'));
+      http.expectNone({ method: 'DELETE' });
+
+      element<HTMLButtonElement>('.devices-confirm-no').click();
       await settle();
 
-      expect(rows()).toHaveLength(2);
+      expect(element('.devices-confirm')).toBeNull();
       expect(document.activeElement).toBe(element('.devices-sign-out-others'));
     });
 
-    it('and the donor signs out every other device, then only this one stays, the status says so and focus moves to the heading', async () => {
-      element<HTMLButtonElement>('.devices-sign-out-others').click();
-      await settle();
-      expect(text(element('.devices-sign-out-others'))).toBe('Odhlašujeme…');
+    it('and the donor signs out every other device, then only this one stays, the status says so and takes focus', async () => {
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      await confirmSignOut();
+      expect(text(element('.devices-confirm-yes'))).toBe('Odhlašujeme…');
       http
         .expectOne({ method: 'DELETE', url: DEVICES_URL })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -214,14 +265,12 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(1);
       expect(element('.devices-sign-out-others')).toBeNull();
       expect(text(element('.devices-status'))).toBe('Ostatní zařízení jsou odhlášená.');
-      expect(document.activeElement).toBe(element('h2'));
+      expect(document.activeElement).toBe(element('.devices-status'));
     });
 
     it('and signing out fails, then the reason is shown, the row stays and focus is back on its button', async () => {
-      const button = rows()[1].querySelector<HTMLButtonElement>('button');
-      button?.focus();
-      button?.click();
-      await settle();
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
       element<HTMLElement>('h2')?.focus();
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
@@ -230,14 +279,13 @@ describe("Given a donor's signed-in devices card", () => {
 
       expect(text(element('[role="alert"]'))).toContain('Server neodpovídá');
       expect(rows()).toHaveLength(3);
-      expect(document.activeElement).toBe(rows()[1].querySelector('button'));
+      expect(element('.devices-confirm')).toBeNull();
+      expect(document.activeElement).toBe(signOutButton(rows()[1]));
     });
 
     it('and signing out every other device fails, then the reason is shown, every row stays and focus is back on the button', async () => {
-      const others = element<HTMLButtonElement>('.devices-sign-out-others');
-      others?.focus();
-      others?.click();
-      await settle();
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      await confirmSignOut();
       element<HTMLElement>('h2')?.focus();
       http
         .expectOne({ method: 'DELETE', url: DEVICES_URL })
@@ -250,8 +298,8 @@ describe("Given a donor's signed-in devices card", () => {
     });
 
     it('and the iPhone was already signed out elsewhere, then its row goes with the usual status and no alert', async () => {
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
         .flush(problem('donors/device-not-found', 'Zařízení nenalezeno'), {
@@ -274,20 +322,9 @@ describe("Given a donor's signed-in devices card", () => {
       await listed([THIS_MAC, IPHONE]);
     });
 
-    it('and signs out the iPhone, the last other one, then focus moves to the heading', async () => {
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
-      http
-        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
-        .flush(null, { status: 204, statusText: 'No Content' });
-      await settle();
-
-      expect(document.activeElement).toBe(element('h2'));
-    });
-
     it('and signs out every other device, then the status says the connected applications stay connected', async () => {
-      element<HTMLButtonElement>('.devices-sign-out-others').click();
-      await settle();
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      await confirmSignOut();
       http
         .expectOne({ method: 'DELETE', url: DEVICES_URL })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -348,34 +385,23 @@ describe("Given a donor's signed-in devices card", () => {
       expect(rows()).toHaveLength(2);
     });
 
-    it('and the donor signs out an older one, then focus moves to the next older sign-out', async () => {
+    it('and the donor signs out an older one, then the row that opens them counts one less and the status takes focus', async () => {
       toggle().click();
       await settle();
-      rows()[2].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
+      await ask(signOutButton(rows()[2]));
+      await confirmSignOut();
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${OLD_IPAD.id}` })
         .flush(null, { status: 204, statusText: 'No Content' });
       await settle();
 
       expect(text(toggle().querySelector('.ui-list__title'))).toBe('Starší (1)');
-      expect(document.activeElement).toBe(rows()[2].querySelector('button'));
-    });
-
-    it('and the donor signs out the last recent one while the older ones stay folded, then focus moves to the row that opens them', async () => {
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
-      http
-        .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
-        .flush(null, { status: 204, statusText: 'No Content' });
-      await settle();
-
-      expect(document.activeElement).toBe(toggle());
+      expect(document.activeElement).toBe(element('.devices-status'));
     });
 
     it('and the donor signs out every other device, then the older ones go too', async () => {
-      element<HTMLButtonElement>('.devices-sign-out-others').click();
-      await settle();
+      await ask(element<HTMLButtonElement>('.devices-sign-out-others'));
+      await confirmSignOut();
       http
         .expectOne({ method: 'DELETE', url: DEVICES_URL })
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -416,11 +442,9 @@ describe("Given a donor's signed-in devices card", () => {
   describe('when the card was shown once and is opened again', () => {
     async function signOut(device: SignedInDevice, status: 204 | 503): Promise<void> {
       const name = device === IPHONE ? 'iPhone · Safari' : 'Neznámé zařízení';
-      rows()
-        .find((row) => text(row.querySelector('.device-name')) === name)
-        ?.querySelector<HTMLButtonElement>('button')
-        ?.click();
-      await settle();
+      const row = rows().find((each) => text(each.querySelector('.device-name')) === name);
+      await ask(row ? signOutButton(row) : null);
+      await confirmSignOut();
       const request = http.expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${device.id}` });
       if (status === 204) {
         request.flush(null, { status: 204, statusText: 'No Content' });
@@ -455,8 +479,8 @@ describe("Given a donor's signed-in devices card", () => {
     it('then a device signed out before leaving does not come back for a moment', async () => {
       http.expectOne(DEVICES_URL).flush({ items: [THIS_MAC, IPHONE] });
       await settle();
-      rows()[1].querySelector<HTMLButtonElement>('button')?.click();
-      await settle();
+      await ask(signOutButton(rows()[1]));
+      await confirmSignOut();
       http
         .expectOne({ method: 'DELETE', url: `${DEVICES_URL}/${IPHONE.id}` })
         .flush(null, { status: 204, statusText: 'No Content' });
