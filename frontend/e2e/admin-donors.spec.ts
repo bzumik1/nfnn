@@ -112,7 +112,7 @@ const petrDetail = {
   ],
 };
 
-const ENLARGED_TEXT_PX = [24, 28, 32];
+const ENLARGED_TEXT_PX = [24, 28, 32, 53];
 
 interface SeparatorPlace {
   sameLine: boolean;
@@ -531,7 +531,7 @@ test.describe('Given an administrator on the donors page', () => {
     });
   }
 
-  test('when the text grows up to 200 % on a computer, then the separator before the bank never covers the account number and never starts a line', async ({
+  test('when the text grows up to 200 % on a computer, then the separator before the bank never covers the account number and never starts a line, up to the largest system text', async ({
     page,
   }) => {
     await page.route(
