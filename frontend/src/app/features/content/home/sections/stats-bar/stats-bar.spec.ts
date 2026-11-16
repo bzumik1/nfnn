@@ -56,7 +56,7 @@ const BELOW_THE_SCREEN = VIEWPORT_HEIGHT + 200;
 const FINAL = ['21', '200+', '100%', '2005'];
 const FROM_SEVENTY_PERCENT = ['15', '140+', '100%', '2005'];
 
-describe('Given the figures', () => {
+describe('Given the stats bar', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -306,7 +306,7 @@ describe('Given the figures', () => {
     });
   });
 
-  describe('when they enter together with what surrounds it, so they have no entrance of their own', () => {
+  describe('when it enters together with what surrounds it, so it has no entrance of its own', () => {
     let fixture: ComponentFixture<StatsBar>;
 
     beforeEach(async () => {
@@ -321,7 +321,7 @@ describe('Given the figures', () => {
       expect(counts).toEqual([]);
     });
 
-    it('and figures with their own entrance are shown later in the same visit, then those still count up', async () => {
+    it('and a bar with its own entrance is shown later in the same visit, then that one still counts up', async () => {
       const later = TestBed.createComponent(StatsBar);
       later.detectChanges();
       await later.whenStable();
@@ -331,12 +331,13 @@ describe('Given the figures', () => {
   });
 
   describe('when the visitor asks for reduced motion', () => {
-    it('then every figure stands at its value at once and nothing counts', async () => {
+    it('then every figure stands at its value at once without watching the viewport', async () => {
       allowMotion({ reduced: true });
       const fixture = await renderOn('2026-10-30T12:00:00Z', { top: BELOW_THE_SCREEN });
 
       expect(shown(fixture)).toEqual(FINAL);
       expect(hidden(fixture)).toEqual([false, false, false, false]);
+      expect(FakeIntersectionObserver.all).toEqual([]);
       expect(counts).toEqual([]);
     });
   });
