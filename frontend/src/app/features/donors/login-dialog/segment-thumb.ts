@@ -27,6 +27,28 @@ export function restThumbOn(group: HTMLElement, thumb: HTMLElement, selected: nu
   return true;
 }
 
+export function placeThumb(group: HTMLElement, selected: number, glides: boolean): void {
+  const thumb = group.querySelector<HTMLElement>(':scope > .segment-thumb');
+  if (thumb === null) {
+    return;
+  }
+  const classes = group.classList;
+  const restedAt = thumb.style.translate;
+  const rests = restThumbOn(group, thumb, selected);
+  classes.toggle(THUMB_RESTS, rests);
+  const movedBySize = !glides && thumb.style.translate !== restedAt;
+  if (!rests || movedBySize) {
+    classes.remove(THUMB_GLIDES);
+  }
+  if (!rests) {
+    return;
+  }
+  if (!classes.contains(THUMB_GLIDES)) {
+    void group.ownerDocument.defaultView?.getComputedStyle(thumb).translate;
+    classes.add(THUMB_GLIDES);
+  }
+}
+
 @Directive({
   selector: '[appSegmentThumb]',
 })
@@ -36,36 +58,17 @@ export class SegmentThumb {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    afterRenderEffect(() => this.place(this.selected(), true));
+    afterRenderEffect(() => placeThumb(this.group, this.selected(), true));
     afterNextRender(() => {
       const view = this.group.ownerDocument.defaultView;
       if (!view?.ResizeObserver) {
         return;
       }
-      const observer = new view.ResizeObserver(() => this.place(this.selected(), false));
+      const observer = new view.ResizeObserver(() =>
+        placeThumb(this.group, this.selected(), false),
+      );
       observer.observe(this.group);
       this.destroyRef.onDestroy(() => observer.disconnect());
     });
-  }
-
-  private place(selected: number, glides: boolean): void {
-    const thumb = this.group.querySelector<HTMLElement>(':scope > .segment-thumb');
-    if (thumb === null) {
-      return;
-    }
-    const classes = this.group.classList;
-    if (!glides) {
-      classes.remove(THUMB_GLIDES);
-    }
-    const rests = restThumbOn(this.group, thumb, selected);
-    classes.toggle(THUMB_RESTS, rests);
-    if (!rests) {
-      classes.remove(THUMB_GLIDES);
-      return;
-    }
-    if (!classes.contains(THUMB_GLIDES)) {
-      void this.group.ownerDocument.defaultView?.getComputedStyle(thumb).translate;
-      classes.add(THUMB_GLIDES);
-    }
   }
 }
