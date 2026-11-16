@@ -73,6 +73,17 @@ describe('Given a photo whose focal point the administrator sets', () => {
     expect(element.querySelector<HTMLElement>('.marker')?.style.left).toBe('42%');
   });
 
+  it('when a small photo sits on a half pixel, then the point comes from where the finger lifted, not from the click rounded to a whole pixel', async () => {
+    const { fixture, frame } = await render();
+    frame.querySelector('img')!.getBoundingClientRect = () => new DOMRect(353.5, 20, 4, 250);
+
+    frame.dispatchEvent(new MouseEvent('pointerup', { clientX: 355.5, clientY: 145 }));
+    frame.dispatchEvent(new MouseEvent('click', { clientX: 355, clientY: 145, detail: 1 }));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.point()).toEqual({ x: 50, y: 50 });
+  });
+
   it('when a tap lands on the very edge, then the point stays on the photo', async () => {
     const { fixture, frame } = await render();
 
