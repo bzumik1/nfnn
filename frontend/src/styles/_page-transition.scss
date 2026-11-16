@@ -27,7 +27,7 @@
   }
 }
 
-.page-transition__scroller :is(.back-button, .account-button) {
+.page-transition__scroller :is(.back-button, .account-button, .skip-link) {
   visibility: hidden;
 }
 

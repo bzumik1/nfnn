@@ -69,6 +69,10 @@ export class TabBar {
     });
   }
 
+  focusFirstTab(): void {
+    this.bar().nativeElement.querySelector<HTMLElement>('a')?.focus();
+  }
+
   protected hrefOf(tab: AppTab): string {
     return this.memory.urlFor(tab);
   }

@@ -35,7 +35,6 @@
 
 html {
   touch-action: manipulation;
-  scroll-behavior: smooth;
   scroll-padding-top: calc(var(--safe-area-top) + var(--header-height) + var(--space-4));
 }
 
@@ -63,7 +62,6 @@ html:has(app-root app-landing) {
 
 html.landing-stage {
   overflow: hidden;
-  scroll-behavior: auto;
 }
 
 html.landing-stage body {
@@ -132,10 +130,6 @@ img.is-unavailable {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
   *,
   *::before,
   *::after {

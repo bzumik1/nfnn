@@ -460,6 +460,85 @@ test.describe('Given a visitor on a phone who uses only the keyboard', () => {
   });
 });
 
+for (const width of [390, 1280]) {
+  test.describe(`Given a visitor ${width} px wide who moves through the site with the keyboard`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    test.beforeEach(async ({ page }) => {
+      await mockDonorApi(page);
+    });
+
+    test('when they press Tab twice from the top of a page, then Přeskočit na navigaci shows beside the first skip link and Enter takes them to the first tab, the address unchanged', async ({
+      page,
+    }) => {
+      await page.goto('/o-nas');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      const skipToNavigation = page.getByRole('link', { name: 'Přeskočit na navigaci' });
+
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('link', { name: 'Přeskočit na obsah' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(skipToNavigation).toBeFocused();
+      await expect(skipToNavigation).toBeInViewport();
+
+      await page.keyboard.press('Enter');
+
+      await expect(
+        page.getByRole('navigation', { name: 'Hlavní sekce' }).getByRole('link').first(),
+      ).toBeFocused();
+      await expect(page).toHaveURL(/\/o-nas$/);
+    });
+
+    test('when Tab moves the focus down the page, then the page does not glide, and a link to a section still brings the section into view', async ({
+      page,
+    }) => {
+      await page.goto('/zasady-ochrany-osobnich-udaju');
+
+      expect(
+        await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior),
+      ).toBe('auto');
+      await page.getByRole('link', { name: 'Cookies', exact: true }).click();
+
+      await expect(page.locator('#cookies')).toBeFocused();
+      await expect(page.locator('#cookies')).toBeInViewport();
+    });
+
+    test('when they Tab through the whole About page, then the tab bar never hides the focused control', async ({
+      page,
+    }) => {
+      await page.goto('/o-nas');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      const covered: string[] = [];
+
+      for (let step = 0; step < 120; step++) {
+        await page.keyboard.press('Tab');
+        const focus = await page.evaluate(() => {
+          const focused = document.activeElement;
+          const bar = document.querySelector('app-tab-bar nav');
+          if (focused === null || bar === null || bar.contains(focused)) {
+            return { inBar: true, hidden: false, name: '' };
+          }
+          const box = focused.getBoundingClientRect();
+          const barBox = bar.getBoundingClientRect();
+          return {
+            inBar: false,
+            hidden: box.height > 0 && box.bottom > barBox.top && box.top < barBox.bottom,
+            name: focused.textContent?.trim().slice(0, 40) ?? focused.tagName,
+          };
+        });
+        if (focus.inBar) {
+          break;
+        }
+        if (focus.hidden) {
+          covered.push(focus.name);
+        }
+      }
+
+      expect(covered).toEqual([]);
+    });
+  });
+}
+
 for (const width of [320, 390, 1280]) {
   test.describe(`Given a visitor ${width} px wide whose next page could not be loaded`, () => {
     test.use({ viewport: { width, height: 800 } });
