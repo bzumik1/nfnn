@@ -887,6 +887,28 @@ for (const rootPx of [34, 53]) {
   });
 }
 
+async function textLinesOf(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const lines = new Map<number, string>();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        if (text[index].trim() === '') {
+          continue;
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const top = Math.round(range.getBoundingClientRect().top);
+        lines.set(top, (lines.get(top) ?? '') + text[index]);
+      }
+    }
+    return [...lines.entries()].sort(([a], [b]) => a - b).map(([, characters]) => characters);
+  });
+}
+
 async function valuesUnderTheirCopyButtons(card: Locator): Promise<string[]> {
   return card.evaluate((element) =>
     Array.from(element.querySelectorAll('dd'))
@@ -934,7 +956,7 @@ for (const { screen, viewport, rootPx } of [
   test.describe(`Given an accountant on ${screen} whose text is at ${rootPx ? `${rootPx} px` : 'its default size'}`, () => {
     test.use({ viewport });
 
-    test('when they open Údaje pro účetní on O nás, then every value stays within the card and clear of its copy button, the copy buttons stand in one column and their touch areas never overlap', async ({
+    test('when they open Údaje pro účetní on O nás, then every value stays within the card and clear of its copy button, the copy buttons stand in one column, their touch areas never overlap and the IBAN breaks only between its groups of four', async ({
       page,
     }) => {
       if (rootPx) {
@@ -960,10 +982,10 @@ for (const { screen, viewport, rootPx } of [
           buttons.map((button) => Math.round(button.getBoundingClientRect().right)),
         );
       expect(new Set(rightEdges).size).toBe(1);
-      if (!rootPx) {
-        expect(await linesOf(card.locator('.accounting-value').filter({ hasText: 'CZ26' }))).toBe(
-          1,
-        );
+      for (const line of await textLinesOf(
+        card.locator('.accounting-value').filter({ hasText: 'CZ26' }),
+      )) {
+        expect(line).toMatch(/^([A-Z0-9]{4})+$/);
       }
     });
   });
