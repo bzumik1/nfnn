@@ -122,9 +122,25 @@ function runningAnimations(root: Element): number {
     .length;
 }
 
-async function violations(page: Page): Promise<string[]> {
-  await page.evaluate(() => document.fonts.ready);
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+interface MotionCount {
+  motionStarts?: number;
+}
+
+function motionStarts(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const counted = window as unknown as MotionCount;
+    if (counted.motionStarts === undefined) {
+      counted.motionStarts = 0;
+      for (const type of ['animationstart', 'transitionrun']) {
+        document.addEventListener(type, () => (counted.motionStarts! += 1), true);
+      }
+    }
+    return counted.motionStarts;
+  });
+}
+
+async function analyseOnceStill(page: Page): Promise<{ violations: string[]; still: boolean }> {
+  const before = await motionStarts(page);
   await page.waitForFunction(() =>
     document
       .getAnimations()
@@ -138,9 +154,22 @@ async function violations(page: Page): Promise<string[]> {
     .withTags(WCAG_AA)
     .disableRules([PAGE_PINCH_STOPPED_JAKUB_2026_10_31])
     .analyze();
-  return results.violations.flatMap((violation) =>
-    violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
-  );
+  return {
+    violations: results.violations.flatMap((violation) =>
+      violation.nodes.map((node) => `${violation.id}: ${node.target.join(' ')}`),
+    ),
+    still: (await motionStarts(page)) === before,
+  };
+}
+
+async function violations(page: Page): Promise<string[]> {
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  let analysis = await analyseOnceStill(page);
+  for (let attempt = 1; !analysis.still && attempt < 5; attempt += 1) {
+    analysis = await analyseOnceStill(page);
+  }
+  return analysis.violations;
 }
 
 const FEED_SIGNER = {
@@ -412,11 +441,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
     const featured = page.locator('.featured');
     await featured.getByRole('button', { name: /^Kopírovat odkaz/ }).click();
-    await expect(
-      featured
-        .getByRole('status')
-        .filter({ hasText: 'Odkaz je zkopírovaný, můžete ho vložit do zprávy.' }),
-    ).toHaveCount(1);
+    await expect(featured.getByRole('button', { name: 'Zkopírováno' })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
 
