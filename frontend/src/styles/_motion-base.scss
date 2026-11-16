@@ -9,6 +9,16 @@
   }
 }
 
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 1;
+  }
+}
+
 @keyframes motion-leave {
   to {
     opacity: 0;

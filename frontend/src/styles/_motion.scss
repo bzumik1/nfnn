@@ -115,10 +115,11 @@ $_never: (
 }
 
 @mixin appear($rises: true) {
+  $keyframes: motion-appear;
   @if not $rises {
-    --motion-rise: 0px;
+    $keyframes: motion-fade-in;
   }
-  animation: motion-appear var(--duration-slow) var(--ease-out) backwards;
+  animation: $keyframes var(--duration-slow) var(--ease-out) backwards;
   @include _fades-when-reduced(animation);
 }
 
