@@ -56,7 +56,7 @@
 }
 
 .hero-eyebrow {
-  color: color-mix(in srgb, var(--color-on-image) 65%, transparent);
+  color: var(--color-on-image);
   font-size: var(--text-xs);
   letter-spacing: var(--tracking-widest);
   text-transform: uppercase;
@@ -74,7 +74,7 @@
 }
 
 .hero-lead {
-  color: color-mix(in srgb, var(--color-on-image) 82%, transparent);
+  color: var(--color-on-image);
   font-size: var(--text-2xl);
   max-width: 500px;
   line-height: var(--leading-loose);
@@ -84,6 +84,24 @@
 .hero-btns {
   display: flex;
   gap: var(--space-4);
+}
+
+@include bp.up(nav) {
+  .hero-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-image-shade) 80%, transparent) 0%,
+      color-mix(in srgb, var(--color-image-shade) 60%, transparent) 25%,
+      transparent 45%
+    );
+  }
+
+  .hero-title {
+    width: min-content;
+  }
 }
 
 @include bp.down(tablet) {

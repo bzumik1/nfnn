@@ -9,7 +9,22 @@ interface Box {
   bottom: number;
 }
 
-const FACE_IN_HERO_PHOTO: Box = { left: 0.43, right: 0.59, top: 0.19, bottom: 0.45 };
+const FACE_IN_HERO_PHOTO: Box = { left: 0.43, right: 0.59, top: 0.19, bottom: 0.52 };
+const FACE_DOWN_TO_THE_MOUTH: Box = { ...FACE_IN_HERO_PHOTO, bottom: 0.45 };
+const COMPUTER_FROM_WIDTH = 900;
+
+function faceOn(screen: { width: number }): Box {
+  return screen.width >= COMPUTER_FROM_WIDTH ? FACE_IN_HERO_PHOTO : FACE_DOWN_TO_THE_MOUTH;
+}
+
+const DESKTOP_SCREENS = [
+  { name: 'a MacBook', width: 1440, height: 900 },
+  { name: 'a full HD monitor', width: 1920, height: 1080 },
+  { name: 'an ultrawide monitor', width: 2560, height: 1080 },
+  { name: 'a 1440p monitor', width: 2560, height: 1440 },
+];
+
+const NORMAL_TEXT_CONTRAST = 4.5;
 
 const SCREENS = [
   { name: 'an iPhone upright', width: 390, height: 844 },
@@ -26,6 +41,7 @@ const SCREENS = [
   { name: 'an iPad on its side', width: 1180, height: 820 },
   { name: 'a laptop', width: 1280, height: 900 },
   { name: 'a wide laptop', width: 1440, height: 800 },
+  ...DESKTOP_SCREENS,
 ];
 
 const SHORT_SCREENS = SCREENS.filter((screen) => screen.height <= 500);
@@ -122,6 +138,65 @@ async function heroLayout(page: Page, face: Box) {
   }, face);
 }
 
+async function lowestContrastOverPhoto(page: Page, selector: string): Promise<number> {
+  const { color, lines } = await page.locator(selector).evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return {
+      color: getComputedStyle(element).color,
+      lines: [...range.getClientRects()].map((rect) => ({
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      })),
+    };
+  });
+  await page.addStyleTag({ content: '#uvod .hero-content { visibility: hidden; }' });
+  const photo = await page.screenshot({ animations: 'disabled' });
+  await page.addStyleTag({ content: '#uvod .hero-content { visibility: visible; }' });
+  return page.evaluate(
+    async ({ base64, textColor, textLines }) => {
+      const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext('2d', { willReadFrequently: true })!;
+      context.fillStyle = textColor;
+      context.fillRect(0, 0, 1, 1);
+      const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+      const text = { red, green, blue, opacity: alpha / 255 };
+      context.clearRect(0, 0, 1, 1);
+      context.drawImage(bitmap, 0, 0);
+      const scale = bitmap.width / window.innerWidth;
+      const channel = (value: number) => {
+        const linear = value / 255;
+        return linear <= 0.04045 ? linear / 12.92 : ((linear + 0.055) / 1.055) ** 2.4;
+      };
+      const luminance = (r: number, g: number, b: number) =>
+        0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+      let lowest = Infinity;
+      for (const line of textLines) {
+        const x = Math.max(0, Math.floor(line.left * scale));
+        const y = Math.max(0, Math.floor(line.top * scale));
+        const width = Math.min(bitmap.width - x, Math.ceil(line.width * scale));
+        const height = Math.min(bitmap.height - y, Math.ceil(line.height * scale));
+        const pixels = context.getImageData(x, y, width, height).data;
+        for (let index = 0; index < pixels.length; index += 4) {
+          const [r, g, b] = [pixels[index], pixels[index + 1], pixels[index + 2]];
+          const shown = (own: number, behind: number) =>
+            own * text.opacity + behind * (1 - text.opacity);
+          const behind = luminance(r, g, b);
+          const front = luminance(shown(text.red, r), shown(text.green, g), shown(text.blue, b));
+          const contrast = (Math.max(front, behind) + 0.05) / (Math.min(front, behind) + 0.05);
+          lowest = Math.min(lowest, contrast);
+        }
+      }
+      return lowest;
+    },
+    { base64: photo.toString('base64'), textColor: color, textLines: lines },
+  );
+}
+
 test.describe('Given the landing page, whose photo shows a child looking at the visitor', () => {
   for (const screen of SCREENS) {
     test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height})`, () => {
@@ -133,7 +208,7 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         await page.goto('/');
         await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
 
-        const layout = await heroLayout(page, FACE_IN_HERO_PHOTO);
+        const layout = await heroLayout(page, faceOn(screen));
 
         expect(layout.scrolls, 'the landing page scrolls').toBe(false);
         expect(layout.shown.map(({ text }) => text)).toContain('Nová naděje');
@@ -150,6 +225,32 @@ test.describe('Given the landing page, whose photo shows a child looking at the 
         }
       });
     });
+  }
+
+  for (const screen of DESKTOP_SCREENS) {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      test.describe(`when it opens on ${screen.name} (${screen.width} × ${screen.height}) in the ${colorScheme} appearance`, () => {
+        test.use({ viewport: { width: screen.width, height: screen.height }, colorScheme });
+
+        test('then the eyebrow and the lead read against the brightest part of the photo behind them', async ({
+          page,
+        }) => {
+          await page.goto('/');
+          await expect(page.getByRole('heading', { level: 1, name: 'Nová naděje' })).toBeVisible();
+          await heroLayout(page, FACE_IN_HERO_PHOTO);
+
+          for (const [name, selector] of [
+            ['the eyebrow', '#uvod .hero-eyebrow'],
+            ['the lead', '#uvod .hero-lead'],
+          ]) {
+            expect(
+              await lowestContrastOverPhoto(page, selector),
+              `${name} falls below WCAG AA contrast over the photo`,
+            ).toBeGreaterThanOrEqual(NORMAL_TEXT_CONTRAST);
+          }
+        });
+      });
+    }
   }
 
   for (const screen of SCREENS.filter((each) => each.width < 768 && each.height > 500)) {
