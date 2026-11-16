@@ -65,12 +65,15 @@
   max-width: 15rem;
   padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-media);
-  background: var(--color-accent-fill);
-  color: var(--color-on-accent);
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  box-shadow: var(--shadow-card);
   pointer-events: none;
 }
 
 .about-badge-title {
+  color: var(--color-accent);
   font-family: var(--font-display);
   font-size: var(--text-4xl);
   font-weight: var(--weight-extrabold);
@@ -81,7 +84,6 @@
   margin-top: var(--space-1-5);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
-  opacity: 0.92;
 }
 
 .intro-caption {

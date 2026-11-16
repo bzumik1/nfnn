@@ -124,16 +124,9 @@
 }
 
 .account-register {
-  font-family: var(--font-sans);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  color: var(--color-on-accent);
-  background: var(--color-accent-fill);
-  border: none;
-  border-radius: var(--radius-pill);
   padding: var(--space-3) var(--space-7);
-  box-shadow: var(--shadow-button-sm);
-  cursor: pointer;
   transition: transform var(--duration-base);
 
   @media (hover: hover) {
