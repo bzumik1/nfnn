@@ -46,4 +46,12 @@ describe('Given the shell of the donor area and the administration', () => {
     expect(document.activeElement).toBe(host.querySelector('main'));
     host.remove();
   });
+
+  it('when it renders, then it offers no skip link to the navigation, because it shows no tab bar', async () => {
+    const host = await render();
+
+    expect(host.querySelectorAll('.skip-link')).toHaveLength(1);
+    expect(host.textContent).not.toContain('Přeskočit na navigaci');
+    host.remove();
+  });
 });

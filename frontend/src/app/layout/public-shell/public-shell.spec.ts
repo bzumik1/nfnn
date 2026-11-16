@@ -381,4 +381,38 @@ describe('Given the public shell around the pages of the tabs', () => {
 
     expect(shell.querySelector('nav[aria-label="Hlavní sekce"]')).toBeNull();
   });
+
+  it('when a keyboard starts on a page with the tab bar, then a second skip link right after the first leads to the navigation', async () => {
+    const shell = await openAt('/aktuality');
+
+    const links = Array.from(shell.querySelectorAll('a, button')).slice(0, 2);
+
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      'Přeskočit na obsah',
+      'Přeskočit na navigaci',
+    ]);
+    expect(links.every((link) => link.classList.contains('skip-link'))).toBe(true);
+  });
+
+  it('when the skip link to the navigation is activated, then the first tab takes the focus and the URL stays', async () => {
+    const shell = await openAt('/aktuality');
+    document.body.appendChild(shell);
+    const link = Array.from(shell.querySelectorAll<HTMLAnchorElement>('.skip-link')).find(
+      (candidate) => candidate.textContent?.trim() === 'Přeskočit na navigaci',
+    )!;
+
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(shell.querySelector('nav[aria-label="Hlavní sekce"] a'));
+    expect(TestBed.inject(Router).url).toBe('/aktuality');
+    shell.remove();
+  });
+
+  it('when a page asks for no tab bar, then there is no skip link to the navigation', async () => {
+    const shell = await openAt('/pripojeni');
+
+    expect(shell.textContent).not.toContain('Přeskočit na navigaci');
+  });
 });

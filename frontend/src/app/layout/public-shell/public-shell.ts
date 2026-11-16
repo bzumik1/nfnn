@@ -35,6 +35,7 @@ import { SetupRedirect } from '../../features/operations/setup/setup-redirect';
 })
 export class PublicShell {
   private readonly content = viewChild.required<ElementRef<HTMLElement>>('content');
+  private readonly tabs = viewChild(TabBar);
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
   private readonly pageFocus = inject(PageFocus);
@@ -62,6 +63,11 @@ export class PublicShell {
   skipToContent(event: Event): void {
     event.preventDefault();
     this.content().nativeElement.focus();
+  }
+
+  skipToNavigation(event: Event): void {
+    event.preventDefault();
+    this.tabs()?.focusFirstTab();
   }
 
   private followNavigation(fragment: string | null): void {

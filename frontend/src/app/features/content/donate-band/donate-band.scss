@@ -8,6 +8,7 @@ $lead-width: 34rem;
 }
 
 .band {
+  --color-focus-ring: var(--color-tab-focus-ring-on-dark);
   position: relative;
   display: grid;
   grid-template-areas: 'band';

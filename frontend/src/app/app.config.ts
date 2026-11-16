@@ -30,6 +30,7 @@ import { ChunkLoadRecovery } from './core/reload/chunk-load-recovery';
 import { BackTarget } from './core/navigation/back-target';
 import { edgeSwipeBackAtStart } from './core/navigation/edge-swipe-back';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
+import { provideSmoothAnchorScrolling } from './core/navigation/smooth-anchor-scroller';
 import { keptPublicAnswersInterceptor } from './core/navigation/kept-public-answers';
 import { KEPT_PAGES_OWNER } from './core/navigation/kept-tab-pages';
 import { NavigationPreview } from './core/navigation/navigation-preview';
@@ -152,6 +153,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     appErrorHandler,
     provideRouter(routes, inMemoryScrolling, chunkLoadRecoveryFeature, tabPagesPreloading),
+    provideSmoothAnchorScrolling(),
     keptTabPages,
     appHttpClient,
     provideAppServiceWorker(),

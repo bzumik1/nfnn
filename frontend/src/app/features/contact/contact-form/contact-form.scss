@@ -25,6 +25,11 @@
   align-items: start;
 }
 
+.contact-left,
+.contact-legal {
+  --color-focus-ring: var(--color-tab-focus-ring-on-dark);
+}
+
 .contact-left {
   grid-area: intro;
   color: var(--color-on-inverse);
