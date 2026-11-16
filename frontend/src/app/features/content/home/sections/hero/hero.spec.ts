@@ -99,6 +99,30 @@ describe('Given the hero', () => {
     );
   });
 
+  it('when motion is allowed, then the figures stand at their values at once, so they enter with the rest of the hero instead of on their own', async () => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        readonly observe = vi.fn();
+        readonly disconnect = vi.fn();
+      },
+    );
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    try {
+      const again = TestBed.createComponent(Hero);
+      again.detectChanges();
+      await again.whenStable();
+      const stats = [...(again.nativeElement as HTMLElement).querySelectorAll('.stat')];
+
+      expect(stats.map((stat) => stat.querySelector('[aria-hidden="true"]')?.textContent)).toEqual(
+        stats.map((stat) => stat.querySelector('.visually-hidden')?.textContent),
+      );
+      expect(stats.some((stat) => stat.classList.contains('is-waiting'))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('when the layout is compact, then it shows no figures, because the first screen of a phone has no room for them', async () => {
     compact.set(true);
     await fixture.whenStable();
