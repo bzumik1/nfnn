@@ -300,6 +300,10 @@ test.describe('Given a visitor switching between the tabs', () => {
     await page.goto('/aktuality');
     const article = page.getByRole('main').getByRole('link', { name: 'Zpráva 4' }).first();
     await article.scrollIntoViewIfNeeded();
+    const card = page
+      .getByRole('main')
+      .locator('.grid-item', { has: page.getByRole('link', { name: 'Zpráva 4' }) });
+    await expect(card).not.toHaveClass(/motion-reveal/);
     const listTop = await page.evaluate(() => Math.round(window.scrollY));
     await article.click();
     await expect(page.getByRole('heading', { level: 1, name: 'Zpráva 4' })).toBeVisible();
