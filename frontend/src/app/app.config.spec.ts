@@ -23,6 +23,7 @@ import { ShownAnswers } from './core/connectivity/shown-answers';
 import { DeviceStatusRetry } from './core/device/status/device-status-retry';
 import { UnseenPhotos } from './core/connectivity/unseen-photos';
 import { BackTarget } from './core/navigation/back-target';
+import { pageFadeAtStart } from './core/navigation/page-fade';
 import { pageTransitionsAtStart } from './core/navigation/page-transitions';
 import { KEPT_PAGES_OWNER } from './core/navigation/kept-tab-pages';
 import { PreviewingReuse } from './core/navigation/previewing-reuse';
@@ -158,6 +159,10 @@ describe('Given the transitions between pages', () => {
 
   it('when the app starts, then the transitions follow its navigations', () => {
     expect(appConfig.providers).toContain(pageTransitionsAtStart);
+  });
+
+  it('when the app starts, then the fade of the content on a computer follows its navigations', () => {
+    expect(appConfig.providers).toContain(pageFadeAtStart);
   });
 });
 

@@ -13,6 +13,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { APP_TABS, tabOf } from './app-tabs';
 import { KeptTabPages } from './kept-tab-pages';
 import { RELOAD_PLACE_KEY, ReloadPlace } from '../reload/reload-place';
+import { ScrollHold } from './scroll-hold';
 import { TabMemory } from './tab-memory';
 
 @Component({ template: '' })
@@ -217,6 +218,36 @@ describe('Given pages of the tabs kept while the visitor is away', () => {
     await navigateAndRender('/projekty');
 
     expect(scrolledTo).toEqual([{ top: 0, behavior: 'instant' }]);
+  });
+
+  it('when the content fades through on a computer, then a page that is not kept goes to its top only when the fade lets it', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    scrolledTo = [];
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+
+    await navigateAndRender('/projekty');
+    expect(scrolledTo).toEqual([]);
+    hold.release();
+
+    expect(scrolledTo).toEqual([{ top: 0, behavior: 'instant' }]);
+  });
+
+  it('when the content fades through to a kept page, then it is put back where it was left only when the fade lets it', async () => {
+    await harness.navigateByUrl('/aktuality');
+    scrolledBy(420);
+    await navigateAndRender('/o-nas');
+    scrolledBy(0);
+    scrolledTo = [];
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+
+    await navigateAndRender('/aktuality');
+    expect(scrolledTo).toEqual([]);
+    hold.release();
+
+    expect(scrolledTo).toEqual([{ top: 420, behavior: 'instant' }]);
   });
 
   it('when only the query of a page changes, such as the next page of a list, then it starts at its top at once too', async () => {

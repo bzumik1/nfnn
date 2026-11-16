@@ -1,5 +1,6 @@
 import { ViewportScroller } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { ScrollHold } from './scroll-hold';
 import { provideSmoothAnchorScrolling } from './smooth-anchor-scroller';
 
 function spyOnScrolling() {
@@ -60,6 +61,30 @@ describe('Given the scroller the router uses for links to a section', () => {
 
   it('when a link names no section on the page, then nothing scrolls', () => {
     scrollerWith(false).scrollToAnchor('nikde');
+
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('when the page fade holds the scroll, then the page moves only once the fade lets it go', () => {
+    const scroller = scrollerWith(false);
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+
+    scroller.scrollToPosition([0, 0]);
+    scroller.scrollToAnchor('kontakt');
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    hold.release();
+    expect(scrollTo).toHaveBeenCalledOnce();
+    expect(document.activeElement).toBe(section);
+  });
+
+  it('when the page fade lets go without a scroll held, then nothing scrolls', () => {
+    scrollerWith(false);
+    const hold = TestBed.inject(ScrollHold);
+    hold.hold();
+
+    hold.release();
 
     expect(scrollTo).not.toHaveBeenCalled();
   });

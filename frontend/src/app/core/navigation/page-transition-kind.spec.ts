@@ -1,4 +1,9 @@
-import { NavigationFacts, pageTransitionFor } from './page-transition-kind';
+import {
+  NavigationFacts,
+  PageFadeFacts,
+  pageFadeFor,
+  pageTransitionFor,
+} from './page-transition-kind';
 
 const ARTICLE_FROM_LIST: NavigationFacts = {
   first: false,
@@ -104,6 +109,54 @@ describe('Given a navigation on a phone', () => {
     it(`when ${name}, then pages switch without a slide`, () => {
       expect(pageTransitionFor({ ...ARTICLE_FROM_LIST, ...facts })).toBeNull();
       expect(pageTransitionFor({ ...LIST_FROM_ARTICLE, ...facts })).toBeNull();
+    });
+  }
+});
+
+const ABOUT_TO_NEWS: PageFadeFacts = {
+  first: false,
+  reducedMotion: false,
+  compact: false,
+  dialogOpen: false,
+  trigger: 'imperative',
+  skipLocationChange: false,
+  from: '/o-nas',
+  to: '/aktuality',
+};
+
+describe('Given a navigation on a computer', () => {
+  it('when another page opens from a link, then the content fades through to it', () => {
+    expect(pageFadeFor(ABOUT_TO_NEWS)).toBe(true);
+  });
+
+  it('when the account opens from a public page, then the content fades through to it too', () => {
+    expect(pageFadeFor({ ...ABOUT_TO_NEWS, to: '/darce/prehled' })).toBe(true);
+  });
+
+  it('when only the query or the fragment changes, then the page stays without a fade', () => {
+    expect(
+      pageFadeFor({ ...ABOUT_TO_NEWS, from: '/sprava/platby?q=1', to: '/sprava/platby?q=2' }),
+    ).toBe(false);
+    expect(
+      pageFadeFor({
+        ...ABOUT_TO_NEWS,
+        from: '/zasady-ochrany-osobnich-udaju',
+        to: '/zasady-ochrany-osobnich-udaju#udaje',
+      }),
+    ).toBe(false);
+  });
+
+  for (const [name, facts] of [
+    ['it is the first page of the visit', { first: true }],
+    ['the visitor asks for less motion', { reducedMotion: true }],
+    ['the screen is a phone', { compact: true }],
+    ['a dialog is open', { dialogOpen: true }],
+    ['the browser steps back or forward', { trigger: 'popstate' }],
+    ['the browser changes the fragment', { trigger: 'hashchange' }],
+    ['the address does not change', { skipLocationChange: true }],
+  ] as const) {
+    it(`when ${name}, then pages switch at once`, () => {
+      expect(pageFadeFor({ ...ABOUT_TO_NEWS, ...facts })).toBe(false);
     });
   }
 });
