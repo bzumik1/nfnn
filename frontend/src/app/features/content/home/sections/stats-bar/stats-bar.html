@@ -1,13 +1,23 @@
 <div class="stats">
   <div class="stats-grid">
     @for (stat of stats; track stat.label; let order = $index) {
-      <div class="stat" [class.is-waiting]="waiting()" [style.--stat-order]="order">
-        <div class="stat-value">
-          <span class="visually-hidden">{{ stat.final }}</span>
-          <span aria-hidden="true">{{ shown()[order] }}</span>
+      @if (ownEntrance()) {
+        <div class="stat" [appReveal]="row(order)" (revealed)="countUpOnce(order)">
+          <ng-container *ngTemplateOutlet="figure; context: { $implicit: stat, order }" />
         </div>
-        <div class="stat-label">{{ stat.label }}</div>
-      </div>
+      } @else {
+        <div class="stat">
+          <ng-container *ngTemplateOutlet="figure; context: { $implicit: stat, order }" />
+        </div>
+      }
     }
   </div>
 </div>
+
+<ng-template #figure let-stat let-order="order">
+  <div class="stat-value">
+    <span class="visually-hidden">{{ stat.final }}</span>
+    <span aria-hidden="true">{{ shown()[order] }}</span>
+  </div>
+  <div class="stat-label">{{ stat.label }}</div>
+</ng-template>

@@ -7,6 +7,7 @@ import {
   inject,
   input,
   numberAttribute,
+  output,
   signal,
 } from '@angular/core';
 
@@ -35,6 +36,7 @@ export class Reveal {
     alias: 'appReveal',
     transform: (value: unknown) => Math.min(numberAttribute(value, 0), LONGEST_ROW),
   });
+  readonly revealed = output();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
@@ -45,6 +47,7 @@ export class Reveal {
     afterNextRender(() => {
       const view = this.document.defaultView;
       if (view === null || !mayMove(view) || this.startsInSight(view)) {
+        this.revealed.emit();
         return;
       }
       this.showing.set('waiting');
@@ -90,14 +93,22 @@ export class Reveal {
   }
 
   protected settle(event: TransitionEvent): void {
-    if (event.target === this.host.nativeElement && event.propertyName === LAST_MOVING_PROPERTY) {
+    if (
+      this.showing() === 'moving' &&
+      event.target === this.host.nativeElement &&
+      event.propertyName === LAST_MOVING_PROPERTY
+    ) {
       this.showing.set('still');
+      this.revealed.emit();
     }
   }
 
   private reveal(showing: Exclude<Showing, 'waiting'>): void {
     if (this.showing() === 'waiting') {
       this.showing.set(showing);
+      if (showing === 'still') {
+        this.revealed.emit();
+      }
     }
   }
 
