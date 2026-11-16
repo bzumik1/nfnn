@@ -43,7 +43,7 @@ describe('Given a page that loads its data behind a skeleton', () => {
 
   beforeEach(() => {
     offline.set(false);
-    timings = { delayMs: 300, minimumMs: 400 };
+    timings = { delayMs: 300, minimumMs: 400, appearMs: 300 };
     TestBed.configureTestingModule({
       providers: [
         { provide: Connectivity, useValue: { offline } },
@@ -187,6 +187,29 @@ describe('Given a page that loads its data behind a skeleton', () => {
     await answer('ready');
 
     expect(element('.content')?.classList).not.toContain('appears');
+  });
+
+  it('when the content has stood as long as its appearance, then drawing it again does not appear again', async () => {
+    await open();
+    await wait(800);
+    await answer('ready');
+
+    await wait(299);
+    expect(element('.content')?.classList).toContain('appears');
+
+    await wait(1);
+    expect(element('.content')?.classList).not.toContain('appears');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('when the page is left while its content appears, then the appearance timer is cancelled', async () => {
+    await open();
+    await wait(800);
+    await answer('ready');
+
+    fixture.destroy();
+
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('when the page is left while the skeleton holds, then its timer is cancelled', async () => {
