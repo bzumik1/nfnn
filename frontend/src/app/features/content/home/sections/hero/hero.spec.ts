@@ -78,4 +78,62 @@ describe('Given the hero', () => {
       'Pomáháme zdravotně postiženým dětem k lepšímu životu.',
     );
   });
+  it('when the layout is wide, then the figures of O nás stand under its actions, read with their final values', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const figures = host.querySelector('.hero-btns + app-stats-bar');
+
+    expect(figures).not.toBeNull();
+    expect(
+      [...figures!.querySelectorAll('.stat')].map((stat) =>
+        [
+          stat.querySelector('.visually-hidden')?.textContent?.trim(),
+          stat.querySelector('.stat-label')?.textContent?.trim(),
+        ].join(' '),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^\d+ let pomáháme$/),
+        '200+ podpořených dětí',
+        '2005 rok vzniku',
+      ]),
+    );
+  });
+
+  it('when motion is allowed, then the figures stand at their values at once, so they enter with the rest of the hero instead of on their own', async () => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        readonly observe = vi.fn();
+        readonly disconnect = vi.fn();
+      },
+    );
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    try {
+      const again = TestBed.createComponent(Hero);
+      again.detectChanges();
+      await again.whenStable();
+      const stats = [...(again.nativeElement as HTMLElement).querySelectorAll('.stat')];
+
+      expect(stats.map((stat) => stat.querySelector('[aria-hidden="true"]')?.textContent)).toEqual(
+        stats.map((stat) => stat.querySelector('.visually-hidden')?.textContent),
+      );
+      expect(stats.some((stat) => stat.classList.contains('is-waiting'))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('when the layout is compact, then it shows no figures, because the first screen of a phone has no room for them', async () => {
+    compact.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-stats-bar')).toBeNull();
+  });
+
+  it('when the window is short, then it shows no figures either', async () => {
+    short.set(true);
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-stats-bar')).toBeNull();
+  });
 });

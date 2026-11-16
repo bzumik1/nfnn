@@ -38,6 +38,27 @@
   transition-delay: calc(var(--stat-order) * var(--duration-fast));
 }
 
+:host(.on-image) {
+  .stats {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr));
+  }
+
+  .stat-value {
+    font-size: var(--text-4xl);
+  }
+
+  .stat-value,
+  .stat-label {
+    color: var(--color-on-image);
+    text-shadow: var(--shadow-text-on-image);
+  }
+}
+
 .stat.is-waiting {
   opacity: 0;
   transform: translateY(var(--space-3));

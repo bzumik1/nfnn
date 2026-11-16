@@ -166,6 +166,35 @@ describe('Given the stats bar', () => {
     });
   });
 
+  describe('when it enters together with what surrounds it, so it has no entrance of its own', () => {
+    let fixture: ComponentFixture<StatsBar>;
+
+    beforeEach(async () => {
+      allowMotion(false);
+      vi.useFakeTimers({ toFake: ['Date', 'requestAnimationFrame', 'performance'] });
+      vi.setSystemTime(new Date('2026-10-30T12:00:00Z'));
+      await TestBed.configureTestingModule({ imports: [StatsBar] }).compileComponents();
+      fixture = TestBed.createComponent(StatsBar);
+      fixture.componentRef.setInput('ownEntrance', false);
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('then every figure stands at its value at once without watching the viewport', () => {
+      expect(shown(fixture)).toEqual(['21', '200+', '100%', '2005']);
+      expect(stats(fixture).every((stat) => !stat.classList.contains('is-waiting'))).toBe(true);
+      expect(FakeIntersectionObserver.latest).toBeUndefined();
+    });
+
+    it('and a bar with its own entrance is shown later in the same visit, then that one still counts up', async () => {
+      const later = TestBed.createComponent(StatsBar);
+      later.detectChanges();
+      await later.whenStable();
+
+      expect(shown(later)).toEqual(['0', '0+', '0%', '2005']);
+    });
+  });
+
   describe('when the visitor asks for reduced motion', () => {
     it('then every figure stands at its value at once without watching the viewport', async () => {
       allowMotion(true);

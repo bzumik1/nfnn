@@ -9,7 +9,8 @@ import {
   ElementRef,
   inject,
   Injectable,
-  signal,
+  input,
+  linkedSignal,
 } from '@angular/core';
 
 const FOUNDED = { year: 2005, monthIndex: 9, day: 28 };
@@ -38,8 +39,10 @@ export class StatsCountUp {
 export class StatsBar {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly countUp = inject(StatsCountUp);
-  private readonly animates = canAnimate() && !this.countUp.counted;
-  private readonly progress = signal(this.animates ? 0 : 1);
+  readonly ownEntrance = input(true);
+  private readonly motionAllowed = canAnimate() && !this.countUp.counted;
+  private readonly animates = computed(() => this.ownEntrance() && this.motionAllowed);
+  private readonly progress = linkedSignal<number>(() => (this.animates() ? 0 : 1));
 
   protected readonly stats: readonly Stat[] = [
     stat(fullYearsSinceFounding(new Date()), '', true, $localize`:@@home.stats.years:let pomáháme`),
@@ -47,7 +50,7 @@ export class StatsBar {
     stat(100, '%', true, $localize`:@@home.stats.transparent:transparentně`),
     stat(FOUNDED.year, '', false, $localize`:@@home.stats.founded:rok vzniku`),
   ];
-  protected readonly waiting = signal(this.animates);
+  protected readonly waiting = linkedSignal(() => this.animates());
   protected readonly shown = computed(() => {
     const eased = easeOut(this.progress());
     return this.stats.map((stat) =>
@@ -58,7 +61,7 @@ export class StatsBar {
   constructor() {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
-      if (!this.animates) {
+      if (!this.animates()) {
         return;
       }
       const observer = new IntersectionObserver(
