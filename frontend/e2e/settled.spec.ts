@@ -13,6 +13,23 @@ async function openPageFetching(page: Page, address: string): Promise<void> {
 }
 
 test.describe('Given a page that waits for the network to go quiet', () => {
+  test('when the page has an answer the test never saw finish, then the wait names it so', async ({
+    page,
+  }) => {
+    await page.route('https://example.test/answered', (route) => route.fulfill({ body: 'ok' }));
+    await openPageFetching(page, 'https://example.test/answered');
+    await expect
+      .poll(() => page.evaluate(() => performance.getEntriesByType('resource').length))
+      .toBe(1);
+    await page.route('https://example.test/never*', () => undefined);
+    await page.evaluate(() => void fetch('https://example.test/never'));
+    const seenOpen = () => ['GET https://example.test/answered', 'GET https://example.test/never'];
+
+    await expect(quietNetwork(page, seenOpen, 1_000)).rejects.toThrow(
+      'still open: GET https://example.test/answered (the page has its answer), GET https://example.test/never (the page has no answer)',
+    );
+  });
+
   test('when every request has answered, then the wait ends', async ({ page }) => {
     const open = openRequests(page);
     await page.route('https://example.test/answered', (route) => route.fulfill({ body: 'ok' }));
@@ -31,7 +48,7 @@ test.describe('Given a page that waits for the network to go quiet', () => {
     await openPageFetching(page, 'https://example.test/never?from=test');
 
     await expect(quietNetwork(page, open, 1_000)).rejects.toThrow(
-      'the network did not go quiet within 1000 ms (document complete); still open: GET https://example.test/never',
+      'the network did not go quiet within 1000 ms (document complete); still open: GET https://example.test/never (the page has no answer)',
     );
   });
 });
