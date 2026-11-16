@@ -1,3 +1,6 @@
+@use 'breakpoints' as bp;
+@use 'motion';
+
 :host {
   display: contents;
 }
@@ -124,8 +127,56 @@
   }
 }
 
+@include bp.up(nav) {
+  .tab {
+    font-size: var(--text-xs);
+  }
+
+  .tab:not(.tab--current) {
+    @include motion.hover(background-color) {
+      background-color: var(--color-tab-pill);
+    }
+  }
+
+  .tab-label {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+
+    &::after {
+      content: attr(data-label) / '';
+      height: 0;
+      overflow: hidden;
+      font-weight: var(--weight-bold);
+      visibility: hidden;
+    }
+  }
+
+  .tab-bar--pill-at-rest {
+    .tab-bar-pill {
+      visibility: visible;
+      scale: none;
+    }
+
+    .tab--current {
+      background: transparent;
+      border-color: transparent;
+    }
+  }
+
+  .tab-bar--pill-glides .tab-bar-pill {
+    @include motion.move(translate, slow, spring);
+  }
+
+  .tab-bar--dragging .tab-bar-pill {
+    scale: var(--tab-pill-drag-scale);
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tab-bar-pill {
+  .tab-bar-pill,
+  .tab-bar--dragging .tab-bar-pill {
     scale: none;
   }
 }

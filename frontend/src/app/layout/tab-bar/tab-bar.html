@@ -5,6 +5,8 @@
   [class.ui-glass--on-dark]="onDark()"
   [class.tab-bar--under-keyboard]="keyboard.isOpen()"
   [class.tab-bar--dragging]="dragging()"
+  [class.tab-bar--pill-at-rest]="shown() !== null"
+  [class.tab-bar--pill-glides]="pillGlides()"
   [attr.aria-label]="label"
 >
   <span #pill class="tab-bar-pill" aria-hidden="true"></span>
@@ -55,7 +57,7 @@
               </svg>
             }
           }
-          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-label" [attr.data-label]="tab.label">{{ tab.label }}</span>
         </a>
       </li>
     }

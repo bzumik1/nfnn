@@ -3,6 +3,7 @@
 import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -19,6 +20,7 @@ import { RouteChrome } from '../../core/navigation/route-chrome';
 import { TabMemory } from '../../core/navigation/tab-memory';
 import { FOUNDATION_STAR } from '../../shared/ui/foundation-star/foundation-star';
 import { followFingerAcrossTabs } from './finger-across-tabs';
+import { restPillOn } from './pill-at-rest';
 import { keepRoomForTabBar } from './tab-bar-room';
 
 const CLICK_AFTER_DRAG_MS = 400;
@@ -45,6 +47,7 @@ export class TabBar {
   protected readonly underFinger = signal<AppTabId | null>(null);
   private readonly chosen = signal<AppTabId | null>(null);
   protected readonly shown = computed(() => this.chosen() ?? this.current());
+  protected readonly pillGlides = signal(false);
   private draggedAt = Number.NEGATIVE_INFINITY;
   private readonly chrome = inject(RouteChrome).current;
   protected readonly onDark = computed(() => this.chrome().darkThroughout);
@@ -54,9 +57,12 @@ export class TabBar {
   constructor() {
     let release: (() => void) | null = null;
     let releaseFinger: (() => void) | null = null;
+    let releaseRest: (() => void) | null = null;
+    afterRenderEffect(() => this.restPill());
     afterNextRender(() => {
       const bar = this.bar().nativeElement;
       release = keepRoomForTabBar(this.document, bar);
+      releaseRest = this.keepPillOnResize(bar);
       releaseFinger = followFingerAcrossTabs(bar, this.pill().nativeElement, {
         started: () => this.dragging.set(true),
         moved: (index) => this.underFinger.set(this.tabs[index ?? -1]?.id ?? null),
@@ -66,6 +72,7 @@ export class TabBar {
     inject(DestroyRef).onDestroy(() => {
       release?.();
       releaseFinger?.();
+      releaseRest?.();
     });
   }
 
@@ -95,6 +102,31 @@ export class TabBar {
       return;
     }
     void this.memory.open(tab);
+  }
+
+  private restPill(): void {
+    const shown = this.shown();
+    if (this.dragging()) {
+      return;
+    }
+    const index = this.tabs.findIndex((tab) => tab.id === shown);
+    const tab = this.bar().nativeElement.querySelectorAll<HTMLElement>('.tab')[index];
+    if (tab === undefined) {
+      this.pillGlides.set(false);
+      return;
+    }
+    restPillOn(this.bar().nativeElement, this.pill().nativeElement, tab);
+    this.pillGlides.set(true);
+  }
+
+  private keepPillOnResize(bar: HTMLElement): () => void {
+    const view = this.window;
+    if (!view?.ResizeObserver) {
+      return () => undefined;
+    }
+    const observer = new view.ResizeObserver(() => this.restPill());
+    observer.observe(bar);
+    return () => observer.disconnect();
   }
 
   private letGo(index: number | null): void {
