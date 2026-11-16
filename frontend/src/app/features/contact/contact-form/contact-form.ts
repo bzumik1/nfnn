@@ -1,5 +1,6 @@
 /// <reference types="@angular/localize" />
 
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
@@ -21,6 +22,7 @@ import { problemOf, problemTypeEndsWith } from '../../../core/auth/api-problem';
 import { AuthStore } from '../../../core/auth/auth-store';
 import { UPDATE_REQUIRED } from '../../../core/version/version-interceptor';
 import { Donor } from '../../../core/auth/donor';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { FocusFirstInvalid } from '../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../shared/ui/form-field/form-field';
@@ -40,6 +42,7 @@ const MESSAGE_FIELDS: Readonly<Record<string, string>> = {
 @Component({
   selector: 'app-contact-form',
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     RouterLink,
     FormField,
@@ -62,6 +65,7 @@ export class ContactForm {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly section = viewChild.required<ElementRef<HTMLElement>>('section');
 
+  protected readonly compact = inject(CompactLayout).isCompact;
   protected readonly sent = signal(false);
   protected readonly sentTo = signal('');
   protected readonly sending = signal(false);

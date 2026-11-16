@@ -1,3 +1,17 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
+}
+
+@include bp.up(nav) {
+  :host {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-20);
+  }
+
+  app-donate-band {
+    padding-block: 0;
+  }
 }
