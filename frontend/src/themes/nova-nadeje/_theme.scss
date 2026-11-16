@@ -143,6 +143,7 @@
   --color-tab-bar: color-mix(in srgb, #ffffff 94%, transparent);
   --color-tab-bar-rim: color-mix(in srgb, #0f172a 10%, transparent);
   --color-tab-pill: color-mix(in srgb, #1d5fc9 10%, transparent);
+  --color-tab-hover: color-mix(in srgb, #1d5fc9 5%, transparent);
   --color-tab-pill-rim: transparent;
   --color-tab-active: #1d5fc9;
   --color-on-tab-bar: #1a1a2e;
@@ -150,6 +151,7 @@
   --color-tab-bar-on-dark: color-mix(in srgb, #1b2130 90%, transparent);
   --color-tab-bar-rim-on-dark: color-mix(in srgb, #ffffff 12%, transparent);
   --color-tab-pill-on-dark: color-mix(in srgb, #ffffff 8%, transparent);
+  --color-tab-hover-on-dark: color-mix(in srgb, #ffffff 4%, transparent);
   --color-tab-pill-rim-on-dark: transparent;
   --color-tab-active-on-dark: #93c5fd;
   --color-on-tab-bar-on-dark: #e6e8ee;
@@ -516,6 +518,7 @@
   --color-tab-bar: color-mix(in srgb, #1b2130 90%, transparent);
   --color-tab-bar-rim: color-mix(in srgb, #ffffff 12%, transparent);
   --color-tab-pill: color-mix(in srgb, #ffffff 8%, transparent);
+  --color-tab-hover: color-mix(in srgb, #ffffff 4%, transparent);
   --color-tab-active: #93c5fd;
   --color-on-tab-bar: #e6e8ee;
   --color-tab-focus-ring: #ffffff;
@@ -578,6 +581,7 @@
 @mixin dark-appearance-reduced-transparency {
   --color-tab-bar: #1a2232;
   --color-tab-pill: color-mix(in srgb, #ffffff 8%, transparent);
+  --color-tab-hover: color-mix(in srgb, #ffffff 4%, transparent);
   --color-tab-active: #93c5fd;
   --color-on-tab-bar: #e6e8ee;
   --color-tab-focus-ring: #ffffff;

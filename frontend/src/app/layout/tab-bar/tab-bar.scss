@@ -134,7 +134,7 @@
 
   .tab:not(.tab--current) {
     @include motion.hover(background-color) {
-      background-color: var(--color-tab-pill);
+      background-color: var(--color-tab-hover);
     }
   }
 
