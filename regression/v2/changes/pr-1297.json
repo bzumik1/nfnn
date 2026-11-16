@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "retired",
+    "suite": "frontend-vitest",
+    "test": "src/app/shared/ui/copy-button/copy-button.spec.ts > Given a copy button for an account number > when it is pressed, then the value is in the clipboard and the button says it is copied",
+    "replacement": "src/app/shared/ui/copy-button/copy-button.spec.ts > Given a copy button for an account number > when it is pressed, then its accessible name stays and the visible Zkopírováno is hidden from a screen reader",
+    "reason": "#1227 (motion system D10): the copy button's accessible name no longer changes to Zkopírováno; the visible Zkopírováno is aria-hidden in the reserved width and the status announces Zkopírováno. once, so the test that read Zkopírováno from the button's text is replaced by one that proves the name stays",
+    "contract": "docs/frontend-overview.md, shared/ui copy-button"
+  }
+]
