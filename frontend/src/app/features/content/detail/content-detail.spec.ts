@@ -159,7 +159,7 @@ describe('Given a visitor opening a news article', () => {
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
     expect(text(fixture, 'h1')).toBe('Tuhle stránku jsme nenašli');
-    expect(text(fixture, '.ui-intro__lead')).toBe('Tato aktualita už na webu není.');
+    expect(text(fixture, '.ui-intro__lead')).toBe('Tahle aktualita už na webu není.');
     expect(TestBed.inject(Title).getTitle()).toBe(
       'Stránka nenalezena | Nová naděje – nadační fond',
     );
@@ -218,7 +218,7 @@ describe('Given a visitor opening a project', () => {
     await settle(fixture);
 
     expect(fixture.nativeElement.querySelector('app-not-found')).not.toBeNull();
-    expect(text(fixture, 'app-not-found a')).toBe('Kde všude pomáháme');
+    expect(text(fixture, 'app-not-found a')).toBe('Kde pomáháme');
   });
 });
 

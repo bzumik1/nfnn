@@ -24,42 +24,69 @@ describe('Given an address the site does not know', () => {
     expect(root.querySelector('a')?.getAttribute('href')).toBe('/');
   });
 
-  it('when the page opens for an unknown address, then it offers no list of articles or projects', () => {
+  function links(selector: string): string[][] {
     const root = fixture.nativeElement as HTMLElement;
+    return Array.from(root.querySelectorAll(`${selector} a`)).map((link) => [
+      link.getAttribute('href') ?? '',
+      link.textContent?.trim() ?? '',
+    ]);
+  }
 
-    expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-      'Odkaz je možná starý nebo v adrese chybí písmenko. Zbytek webu je na svém místě.',
+  function lead(): string | undefined {
+    const root = fixture.nativeElement as HTMLElement;
+    return root.querySelector('.ui-intro__lead')?.textContent?.trim();
+  }
+
+  it('when the page opens for an unknown address, then it leads home and to the contact form, and quietly to the news and the projects', () => {
+    expect(lead()).toBe(
+      'Odkaz je možná starý nebo v\u00a0adrese chybí písmenko. Zbytek webu je na\u00a0svém\u00a0místě.',
     );
-    expect(root.querySelectorAll('a')).toHaveLength(2);
+    expect(links('.actions')).toEqual([
+      ['/', 'Zpět na úvodní stránku'],
+      ['/o-nas#kontakt', 'Napište nám'],
+    ]);
+    expect(links('.more')).toEqual([
+      ['/aktuality', 'Všechny aktuality'],
+      ['/projekty', 'Kde pomáháme'],
+    ]);
   });
 
-  it('when it stands for a news article that is gone, then it says so and leads to all the news first', () => {
+  it('when it stands for a news article that is gone, then it says so, leads to all the news first and quietly to the projects', () => {
     fixture.componentRef.setInput('missing', 'news');
     fixture.detectChanges();
-    const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-      'Tato aktualita už na webu není.',
-    );
-    const links = Array.from(root.querySelectorAll('a')).map((link) => [
-      link.getAttribute('href'),
-      link.textContent?.trim(),
+    expect(lead()).toBe('Tahle aktualita už na webu není.');
+    expect(links('.actions')).toEqual([
+      ['/aktuality', 'Všechny aktuality'],
+      ['/', 'Zpět na úvodní stránku'],
     ]);
-    expect(links[0]).toEqual(['/aktuality', 'Všechny aktuality']);
-    expect(links[1]).toEqual(['/', 'Zpět na úvodní stránku']);
+    expect(links('.more')).toEqual([['/projekty', 'Kde pomáháme']]);
   });
 
-  it('when it stands for a project that is gone, then it says so and leads to all the projects first', () => {
+  it('when it stands for a project that is gone, then it says so, leads to all the projects first and quietly to the news', () => {
     fixture.componentRef.setInput('missing', 'project');
     fixture.detectChanges();
-    const root = fixture.nativeElement as HTMLElement;
 
-    expect(root.querySelector('.ui-intro__lead')?.textContent?.trim()).toBe(
-      'Tento příběh už na webu není.',
-    );
-    expect(root.querySelector('a')?.getAttribute('href')).toBe('/projekty');
-    expect(root.querySelector('a')?.textContent?.trim()).toBe('Kde všude pomáháme');
+    expect(lead()).toBe('Tenhle příběh už na webu není.');
+    expect(links('.actions')).toEqual([
+      ['/projekty', 'Kde pomáháme'],
+      ['/', 'Zpět na úvodní stránku'],
+    ]);
+    expect(links('.more')).toEqual([['/aktuality', 'Všechny aktuality']]);
   });
+
+  it.each([null, 'news', 'project'] as const)(
+    'when it stands for %s, then the quiet line holds at most three links and repeats no action',
+    (missing) => {
+      fixture.componentRef.setInput('missing', missing);
+      fixture.detectChanges();
+
+      const actionTargets = links('.actions').map(([href]) => href);
+      const quietTargets = links('.more').map(([href]) => href);
+      expect(quietTargets.length).toBeLessThanOrEqual(3);
+      expect(quietTargets.filter((href) => actionTargets.includes(href))).toEqual([]);
+    },
+  );
 
   it('when the page opens, then search engines are asked not to index it, and leaving it lifts that', () => {
     const meta = TestBed.inject(Meta);

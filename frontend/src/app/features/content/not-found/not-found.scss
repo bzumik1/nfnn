@@ -1,7 +1,23 @@
 @use 'breakpoints' as bp;
+@use 'pressed';
+@use 'touch-target';
 
 :host {
   display: block;
+}
+
+.not-found {
+  display: grid;
+  align-content: safe center;
+  min-height: calc(var(--full-screen-height) - var(--tab-bar-clearance));
+}
+
+.not-found.ui-intro {
+  padding-bottom: 0;
+}
+
+.not-found > .ui-intro__head {
+  width: 100%;
 }
 
 .actions {
@@ -9,6 +25,27 @@
   flex-wrap: wrap;
   gap: var(--space-4);
   margin-top: var(--space-10);
+}
+
+.more {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-6);
+  row-gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.more-link {
+  @include touch-target.reaches-finger-size;
+
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+
+  @include pressed.when-pressed {
+    @include pressed.fades;
+  }
 }
 
 @include bp.down(tablet) {
@@ -23,5 +60,26 @@
   .actions {
     margin-top: var(--space-6);
     gap: var(--space-3);
+  }
+
+  .more {
+    margin-top: var(--space-4);
+  }
+}
+
+@include bp.height-down(short) {
+  .not-found .ui-intro__lead {
+    grid-row: 1 / span 2;
+  }
+
+  .actions,
+  .more {
+    grid-column: 1 / -1;
+  }
+
+  .actions {
+    flex-direction: row;
+    align-items: center;
+    text-align: start;
   }
 }

@@ -5,17 +5,18 @@
     @switch (missing()) {
       @case ('news') {
         <p class="ui-intro__lead" i18n="@@content.notFound.news.lead">
-          Tato aktualita už na webu není.
+          Tahle aktualita už na webu není.
         </p>
       }
       @case ('project') {
         <p class="ui-intro__lead" i18n="@@content.notFound.project.lead">
-          Tento příběh už na webu není.
+          Tenhle příběh už na webu není.
         </p>
       }
       @default {
         <p class="ui-intro__lead" i18n="@@content.notFound.lead">
-          Odkaz je možná starý nebo v adrese chybí písmenko. Zbytek webu je na svém místě.
+          Odkaz je možná starý nebo v&nbsp;adrese chybí písmenko. Zbytek webu je
+          na&nbsp;svém&nbsp;místě.
         </p>
       }
     }
@@ -31,7 +32,7 @@
         }
         @case ('project') {
           <a class="ui-cta" routerLink="/projekty" i18n="@@content.notFound.project.list"
-            >Kde všude pomáháme</a
+            >Kde pomáháme</a
           >
           <a class="ui-cta ui-cta--ghost" routerLink="/" i18n="@@content.notFound.home"
             >Zpět na úvodní stránku</a
@@ -49,5 +50,17 @@
         }
       }
     </div>
+    <p class="more">
+      @if (missing() !== 'news') {
+        <a class="more-link" routerLink="/aktuality" i18n="@@content.notFound.news.list"
+          >Všechny aktuality</a
+        >
+      }
+      @if (missing() !== 'project') {
+        <a class="more-link" routerLink="/projekty" i18n="@@content.notFound.project.list"
+          >Kde pomáháme</a
+        >
+      }
+    </p>
   </div>
 </section>
