@@ -20,6 +20,7 @@ export class DonateBand {
   readonly lead = input.required<string>();
   readonly photo = input<DonateBandPhotoResponse | null>(null);
   readonly showsProjects = input(true);
+  readonly wide = input(false);
 
   protected readonly source = computed(() => {
     const photo = this.photo();

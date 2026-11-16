@@ -50,6 +50,19 @@ describe('Given the Přispět band that ends a tab', () => {
     ]);
   });
 
+  it('when the page around it keeps the usual width, then the band keeps it too', async () => {
+    const band = await render();
+
+    expect(band.querySelector('.ui-container')?.classList).not.toContain('band-container--wide');
+  });
+
+  it('when the page around it widens on a wide screen, then the band takes the same wide width', async () => {
+    fixture.componentRef.setInput('wide', true);
+    const band = await render();
+
+    expect(band.querySelector('.ui-container')?.classList).toContain('band-container--wide');
+  });
+
   it('when the administration set no photo, then it shows the photo the site always had, as decoration', async () => {
     const image = (await render()).querySelector('img')!;
 
