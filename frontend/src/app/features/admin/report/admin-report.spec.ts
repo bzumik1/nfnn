@@ -404,7 +404,7 @@ describe('Given an administrator on the monthly report page', () => {
       expect(request.request.headers.get('If-Match')).toBe(`"${current}"`);
       expect(heldRecordOf(request.request.context)).toBeNull();
       expect(request.request.body.recipients).toEqual(['pavel@example.cz']);
-      expect(button('Ukládáme…').disabled).toBe(true);
+      expect(button('Ukládáme…').getAttribute('aria-disabled')).toBe('true');
       request.flush({});
       await settle();
       await respond(reportView());
