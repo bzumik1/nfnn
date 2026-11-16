@@ -19,81 +19,6 @@
   }
 }
 
-.app-header {
-  --scroll-edge-tone: var(--color-surface);
-  --status-bar-inset: max(var(--safe-area-top), var(--window-controls-inset-block));
-  --scroll-edge-height: min(
-    calc(var(--status-bar-inset) * 1000),
-    calc(var(--status-bar-inset) + var(--space-2) + var(--scroll-edge-fade))
-  );
-
-  &::before,
-  &::after {
-    content: '';
-    position: fixed;
-    inset: 0 0 auto;
-    z-index: -1;
-    height: var(--scroll-edge-height);
-    pointer-events: none;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-      opacity var(--duration-fast),
-      visibility var(--duration-fast);
-  }
-
-  &::before {
-    background: linear-gradient(
-      to bottom,
-      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade)),
-      transparent
-    );
-  }
-
-  &::after {
-    backdrop-filter: blur(var(--blur-bar));
-    mask-image: linear-gradient(
-      to bottom,
-      var(--scroll-edge-tone) calc(100% - var(--scroll-edge-fade) / 3),
-      transparent
-    );
-  }
-
-  &.app-header--scrolled::before,
-  &.app-header--scrolled::after {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  @media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {
-    &::before {
-      height: calc(var(--scroll-edge-height) - var(--scroll-edge-fade));
-      background: var(--scroll-edge-tone);
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    &::after {
-      display: none;
-    }
-  }
-
-  @media (forced-colors: active) {
-    &::before {
-      height: calc(var(--scroll-edge-height) - var(--scroll-edge-fade));
-      background: Canvas;
-      border-bottom: 1px solid CanvasText;
-    }
-
-    &::after {
-      display: none;
-    }
-  }
-}
-
-.app-header--deeper {
-  --scroll-edge-height: calc(var(--safe-area-top) + var(--header-height) + var(--scroll-edge-fade));
-}
-
 .edge-title {
   --edge-title-inset: calc(
     max(
@@ -125,10 +50,6 @@
 
 .edge-title--shown {
   opacity: 1;
-}
-
-.app-header--edge-dark .edge-title {
-  color: var(--color-on-inverse);
 }
 
 .edge-title-text {

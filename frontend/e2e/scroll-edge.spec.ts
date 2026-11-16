@@ -2,9 +2,6 @@ import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { mockDonorApi, signIn } from './donor-session';
 
-const IPAD_SCREEN = { width: 820, height: 1180 };
-const WINDOW_CONTROLS_ROOM = 52;
-
 const article = {
   id: '0199f3e0-0000-7000-8000-00000000c501',
   slug: 'dlouhy-clanek',
@@ -18,18 +15,6 @@ const article = {
   updatedAt: '2026-10-20T07:30:00Z',
 };
 
-interface Edge {
-  height: number;
-  opacity: number;
-}
-
-function edge(page: Page): Promise<Edge> {
-  return page.evaluate(() => {
-    const style = getComputedStyle(document.querySelector('header.app-header')!, '::before');
-    return { height: parseFloat(style.height) || 0, opacity: Number(style.opacity) };
-  });
-}
-
 async function scrollBy(page: Page, top: number): Promise<void> {
   await page.evaluate((top) => window.scrollTo({ top, behavior: 'instant' }), top);
 }
@@ -41,47 +26,8 @@ async function articleServed(page: Page): Promise<void> {
   );
 }
 
-test.describe('Given the app opened from the home screen of an iPad in a window smaller than the screen, whose controls float over the top of the page', () => {
-  test.use({ viewport: { width: 700, height: 900 } });
-
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript((screen) => {
-      Object.defineProperty(Navigator.prototype, 'standalone', { get: () => true });
-      Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
-      Object.defineProperty(Screen.prototype, 'width', { get: () => screen.width });
-      Object.defineProperty(Screen.prototype, 'height', { get: () => screen.height });
-      Object.defineProperty(globalThis, 'outerWidth', { get: () => innerWidth });
-      Object.defineProperty(globalThis, 'outerHeight', { get: () => innerHeight });
-    }, IPAD_SCREEN);
-  });
-
-  test('when a tab root scrolls, then an edge rises under the window controls, so no text runs under them', async ({
-    page,
-  }) => {
-    await mockDonorApi(page);
-    await page.goto('/o-nas');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    expect((await edge(page)).opacity).toBe(0);
-
-    await scrollBy(page, 600);
-
-    await expect.poll(async () => (await edge(page)).opacity).toBe(1);
-    expect((await edge(page)).height).toBeGreaterThanOrEqual(WINDOW_CONTROLS_ROOM);
-  });
-});
-
 test.describe('Given a visitor on a computer, where nothing covers the top of the window', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
-
-  test('when a tab root scrolls, then no edge covers the top of the page', async ({ page }) => {
-    await mockDonorApi(page);
-    await page.goto('/o-nas');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-
-    await scrollBy(page, 600);
-
-    await expect.poll(async () => (await edge(page)).height).toBe(0);
-  });
 
   test('when an article scrolls past its title, then the edge shows no title, as the window has room for the page', async ({
     page,

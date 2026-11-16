@@ -27,7 +27,6 @@ import { LoginDialogService } from '../../core/auth/login-dialog.service';
 import { CompactLayout } from '../../core/layout/compact-layout';
 import { BackTarget } from '../../core/navigation/back-target';
 import { RouteChrome } from '../../core/navigation/route-chrome';
-import { followScrollEdge } from './scroll-edge';
 import { followLargeTitle, LargeTitleWatch } from './large-title';
 import { initialsOf } from '../../core/auth/initials';
 import { AccountBadges } from '../../core/layout/account-badges';
@@ -90,16 +89,13 @@ export class AppHeader {
 
   constructor() {
     const document = inject(DOCUMENT);
-    let releaseScrollEdge: (() => void) | null = null;
     let largeTitle: LargeTitleWatch | null = null;
     afterNextRender(() => {
       const header = this.header().nativeElement;
-      releaseScrollEdge = followScrollEdge(document, header);
       largeTitle = followLargeTitle(document, header, (title) => this.showInEdge(title));
       largeTitle.check();
     });
     inject(DestroyRef).onDestroy(() => {
-      releaseScrollEdge?.();
       largeTitle?.release();
     });
     effect(() => {
