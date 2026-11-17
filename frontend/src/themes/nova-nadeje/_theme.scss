@@ -433,10 +433,11 @@
   --tab-bar-max-width: 420px;
   --tab-bar-home-indicator-overlap: 13px;
   --tab-icon-size: 1.5rem;
-  --text-tab-label: min(
-    var(--text-2xs),
+  --tab-label-fit: calc(
     (100cqi - 32px - 2 * var(--tab-bar-padding-inline) - 3 * var(--tab-bar-item-gap)) / 19
   );
+  --text-tab-label: min(var(--text-2xs), var(--tab-label-fit));
+  --text-tab-label-wide: min(var(--text-xs), var(--tab-label-fit));
   --back-icon-size: min(1.375rem, var(--back-button-size) * 0.68);
   --text-account-initials: min(var(--text-sm), var(--back-button-size) * 0.34);
   --list-chevron-size: 1rem;

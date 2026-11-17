@@ -112,6 +112,7 @@
   flex-direction: column;
   align-items: center;
   overflow-wrap: normal;
+  white-space: nowrap;
 
   &::after {
     content: attr(data-label) / '';
@@ -159,7 +160,7 @@
 
 @include bp.up(nav) {
   .tab {
-    font-size: var(--text-xs);
+    font-size: var(--text-tab-label-wide);
   }
 
   .tab:not(.tab--current) {
