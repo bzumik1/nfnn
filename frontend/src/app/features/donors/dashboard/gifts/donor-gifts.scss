@@ -15,12 +15,9 @@
   }
 }
 
-.gifts-tax-note {
-  max-inline-size: var(--measure-prose);
-  margin-top: var(--space-2);
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-  color: var(--color-text-soft);
+.gifts-tax-note,
+.receipts-from {
+  margin-bottom: var(--space-2);
 }
 
 .gift-year + .gift-year {

@@ -1,9 +1,4 @@
 <app-page-title i18n="@@donor.receipts.heading">Potvrzení o daru</app-page-title>
-<p class="receipts-intro" i18n="@@donor.receipts.intro">
-  Potvrzení k jednotlivým darům stáhnete hned, roční za celý rok od 1.&nbsp;ledna dalšího roku. Do
-  daňového přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje všechny dary roku.
-  Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové číslo a nahradí to dřívější.
-</p>
 
 @if (donations.state() === 'ready') {
   <section class="ui-card ui-card--padded yearly-card" aria-labelledby="yearly-title">
@@ -92,6 +87,16 @@
         Zatím tu není žádný dar. Jakmile dorazí platba s vaším variabilním symbolem, objeví se tady.
       </p>
       <app-missing-gift />
+    }
+    @if (rows().length > 0) {
+      <div class="ui-card__footer receipts-footer">
+        <p class="receipts-tax-note" i18n="@@donor.receipts.intro">
+          Potvrzení k jednotlivým darům stáhnete hned, roční od 1.&nbsp;ledna dalšího roku.
+          K&nbsp;daňovému přiznání přiložte buď jednotlivá, nebo roční, ne obojí: roční obsahuje
+          všechny dary roku. Když změníte jméno nebo adresu, nově stažené potvrzení dostane nové
+          číslo a nahradí to dřívější.
+        </p>
+      </div>
     }
   </section>
 

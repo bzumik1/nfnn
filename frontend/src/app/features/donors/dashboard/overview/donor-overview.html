@@ -179,8 +179,9 @@
         >&ngsp;<span class="last-gift-date"
           ><span class="ui-date">{{ formatDate(gift.receivedAt) }}</span></span
         >&ngsp;<span
-          class="ui-badge ui-badge--success last-gift-status"
-          [class.last-gift-status--refunded]="gift.status === 'REFUNDED'"
+          class="ui-badge last-gift-status"
+          [class.ui-badge--success]="gift.status !== 'REFUNDED'"
+          [class.ui-badge--neutral]="gift.status === 'REFUNDED'"
           >{{ statusLabel(gift.status) }}</span
         >
       </p>
