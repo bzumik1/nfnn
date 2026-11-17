@@ -57,11 +57,17 @@ $intro-measure: calc($container-width - 2 * var(--space-6));
   }
 }
 
-@include bp.up(wide) {
+@include bp.up(nav) {
   :host(:not(.verify-embedded)) .container {
     max-width: calc($intro-measure + 2 * var(--space-8));
-    margin-inline: calc((100% - var(--content-max-wide)) / 2) auto;
+    margin-inline: max(0%, (100% - var(--content-max)) / 2) auto;
     padding-inline: var(--space-8);
+  }
+}
+
+@include bp.up(wide) {
+  :host(:not(.verify-embedded)) .container {
+    margin-inline: calc((100% - var(--content-max-wide)) / 2) auto;
   }
 
   :host(:not(.verify-embedded)) .container:has(> app-proof-input) {
