@@ -1,6 +1,12 @@
 import { Route } from '@angular/router';
 import { adminRoutes } from './admin.routes';
-import { ADMIN_DAILY, ADMIN_OCCASIONAL, ADMIN_TECHNICAL } from './shell/admin-sections';
+import {
+  ADMIN_DAILY,
+  ADMIN_MORE_PATH,
+  ADMIN_OCCASIONAL,
+  ADMIN_SECTIONS,
+  ADMIN_TECHNICAL,
+} from './shell/admin-sections';
 
 describe('Given the pages of the administration', () => {
   const pages: readonly Route[] = adminRoutes[0].children ?? [];
@@ -65,5 +71,11 @@ describe('Given the pages of the administration', () => {
     expect(
       pages.filter((page) => page.path !== '' && parentOf(page.path ?? '') === undefined),
     ).toEqual([]);
+  });
+
+  it('when the side navigation lists the sections, then Občas a pro technika is not one of them, since the panel already lists its sections', () => {
+    expect(ADMIN_SECTIONS.flatMap((group) => group.items.map((item) => item.path))).not.toContain(
+      ADMIN_MORE_PATH,
+    );
   });
 });

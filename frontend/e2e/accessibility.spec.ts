@@ -2153,7 +2153,7 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     );
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('nfnn.donor-session', '1'));
-    await openUnlockedAdministrationPage(page, '/sprava/vice', 'Občas a pro technika');
+    await openUnlockedAdministrationPage(page, '/sprava', 'Správa');
     const nav = page.getByRole('navigation', { name: 'Správa' });
     for (const link of ['Nastavení', 'Historie změn', 'Zálohy', 'Pomáháme', 'Lidé fondu']) {
       await nav.getByRole('link', { name: link, exact: true }).click();

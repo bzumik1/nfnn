@@ -1,14 +1,21 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { CompactLayout } from '../../../core/layout/compact-layout';
 import { AdminMore } from './admin-more';
 
 describe('Given an administrator who opens the less frequent sections of the administration', () => {
   let fixture: ComponentFixture<AdminMore>;
+  const compact = signal(true);
 
   beforeEach(async () => {
+    compact.set(true);
     await TestBed.configureTestingModule({
       imports: [AdminMore],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: CompactLayout, useValue: { isCompact: compact.asReadonly() } },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(AdminMore);
     fixture.detectChanges();
@@ -82,5 +89,24 @@ describe('Given an administrator who opens the less frequent sections of the adm
         ],
       },
     ]);
+  });
+
+  it('when the window widens to a computer, then the overview takes its place, since the side navigation lists every section', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    compact.set(false);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/sprava', { replaceUrl: true });
+  });
+
+  it('when the window stays a phone, then the page stays', async () => {
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
