@@ -37,7 +37,7 @@
 .tile {
   position: relative;
   height: 100%;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-card);
   background: var(--color-surface-elevated);
@@ -105,6 +105,7 @@
 
 .tile-title {
   font-size: var(--text-md);
+  font-variant-numeric: var(--numeric-titles);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-snug);
   color: var(--color-text);
@@ -144,6 +145,10 @@
   color: var(--color-text-soft);
   font-size: var(--text-xs);
 
+  &:empty {
+    display: none;
+  }
+
   &::before {
     content: '';
     width: var(--space-1-5);
@@ -156,7 +161,8 @@
 .tile--large {
   display: grid;
   grid-template-areas: 'tile';
-  min-height: max(100%, 22rem);
+  height: 100%;
+  min-height: 22rem;
   border: none;
   background: none;
 
@@ -297,9 +303,24 @@
   }
 }
 
+@mixin large-tile-of-ratio($ratio) {
+  height: auto;
+  min-height: auto;
+  aspect-ratio: $ratio;
+}
+
+:host-context(.grid--compact) .tile--large {
+  @include large-tile-of-ratio(3 / 2);
+}
+
 @include bp.container-down(stories, tablet) {
   .tile--large {
-    min-height: 0;
-    aspect-ratio: 1;
+    @include large-tile-of-ratio(1);
+  }
+}
+
+@include bp.container-down(stories, cards) {
+  :host-context(.grid--compact) .tile--large {
+    @include large-tile-of-ratio(1);
   }
 }

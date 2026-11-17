@@ -72,7 +72,7 @@ export class ProjectsPage {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
-  private readonly compact = inject(CompactLayout).isCompact;
+  protected readonly compact = inject(CompactLayout).isCompact;
   private readonly title = viewChild<ElementRef<HTMLElement>>('title');
   private readonly retryButton = viewChild<ElementRef<HTMLButtonElement>>('retryButton');
   private storiesLoad = Subscription.EMPTY;
