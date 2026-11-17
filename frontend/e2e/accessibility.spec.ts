@@ -117,6 +117,12 @@ async function askAboutAnOlderSymbol(page: Page): Promise<void> {
   );
 }
 
+function runningAnimations(root: Element): number {
+  return root
+    .getAnimations({ subtree: true })
+    .filter((motion) => motion.playState === 'running').length;
+}
+
 async function violations(page: Page): Promise<string[]> {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -262,6 +268,16 @@ test.describe('Given a visitor who relies on WCAG 2.2 AA', () => {
     const sheet = page.getByRole('dialog', { name: 'Účet' });
     const profile = sheet.locator('a.account-profile');
     await expect(profile).toBeVisible();
+    await expect.poll(() => sheet.evaluate(runningAnimations)).toBe(0);
+    let previousBox = '';
+    await expect
+      .poll(async () => {
+        const box = JSON.stringify(await profile.boundingBox());
+        const still = box === previousBox;
+        previousBox = box;
+        return still;
+      })
+      .toBe(true);
 
     const controls = await Promise.all(
       [sheet.locator('button.account-appearance'), sheet.locator('button.dialog-close')].map(
