@@ -1806,7 +1806,27 @@ for (const textSize of ['100%', '200%']) {
       for (const name of await names.all()) {
         expect(await wordsBrokenInside(name)).toEqual([]);
       }
-      expect(await pastTheirCells(table, '.answer-tag, .admin-name')).toEqual([]);
+      expect(await pastTheirCells(table, '.answer-tag, .admin-name, app-bank-account')).toEqual([]);
+    });
+
+    test('when they open /sprava/starsi-symboly, then the bank logo and the account number of every row share one line', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/starsi-symboly');
+      const accounts = page.locator('main table app-bank-account');
+      await expect(accounts).toHaveCount(2);
+      await page.evaluate(() => document.fonts.ready);
+
+      const apart = await accounts.evaluateAll((elements) =>
+        elements
+          .filter((account) => {
+            const logo = account.querySelector('app-bank-logo')!.getBoundingClientRect();
+            const number = account.querySelector('.ui-figures')!.getBoundingClientRect();
+            return logo.bottom <= number.top || logo.top >= number.bottom;
+          })
+          .map((account) => (account.textContent ?? '').trim()),
+      );
+      expect(apart).toEqual([]);
     });
   });
 }
