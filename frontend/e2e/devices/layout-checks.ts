@@ -30,6 +30,7 @@ export interface Findings {
   smallTargets: string[];
   clippedText: string[];
   offCentreQr: string[];
+  tabBarEdge: string[];
 }
 
 export function collectFindings(limits: typeof LIMITS): Findings {
@@ -382,6 +383,34 @@ export function collectFindings(limits: typeof LIMITS): Findings {
         : [];
     });
 
+  const tabBarEdge: string[] = [];
+  const tabBar = document.getElementById('navigace');
+  if (tabBar && shown(tabBar)) {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position: fixed; bottom: 0; width: 0; height: env(safe-area-inset-bottom); visibility: hidden';
+    document.body.append(probe);
+    const homeIndicator = probe.getBoundingClientRect().height;
+    probe.remove();
+    const style = getComputedStyle(tabBar);
+    const overlap = parseFloat(style.getPropertyValue('--tab-bar-home-indicator-overlap')) || 0;
+    const gap = viewportHeight - tabBar.getBoundingClientRect().bottom;
+    const lift = homeIndicator - overlap;
+    if (gap < lift - 1) {
+      tabBarEdge.push(`${gap.toFixed(1)} px above the bottom, ${lift.toFixed(1)} px needed`);
+    }
+    const lengths = /(-?[\d.]+)px\s+(-?[\d.]+)px\s+([\d.]+)px(?:\s+(-?[\d.]+)px)?/g;
+    const reach = Math.max(
+      0,
+      ...[...style.boxShadow.matchAll(lengths)].map(
+        ([, , y, blur, spread]) => Number(y) + Number(blur) + Number(spread ?? 0),
+      ),
+    );
+    if (reach > gap + 1) {
+      tabBarEdge.push(`shadow reaches ${reach.toFixed(1)} px, ${gap.toFixed(1)} px to the bottom`);
+    }
+  }
+
   return {
     pageWidth,
     viewportWidth,
@@ -394,6 +423,7 @@ export function collectFindings(limits: typeof LIMITS): Findings {
     smallTargets,
     clippedText,
     offCentreQr,
+    tabBarEdge,
   };
 }
 
@@ -459,6 +489,11 @@ export function checksFrom(found: Findings, pageErrors: string[]): Check[] {
       name: 'every QR code in the middle of its frame',
       pass: found.offCentreQr.length === 0,
       detail: list(found.offCentreQr),
+    },
+    {
+      name: 'the tab bar above the home indicator, its shadow inside the gap',
+      pass: found.tabBarEdge.length === 0,
+      detail: list(found.tabBarEdge),
     },
   ];
 }
