@@ -998,10 +998,13 @@ test.describe('Given an administrator on a phone 390 pt wide opening the card of
         expect(await wordsBrokenInside(text)).toEqual([]);
       }
       const emailLabel = summary.locator('dt').nth(1);
-      const emailLabelLine = await emailLabel.evaluate((element) =>
-        parseFloat(getComputedStyle(element).lineHeight),
-      );
-      expect((await emailLabel.boundingBox())!.height).toBeLessThanOrEqual(emailLabelLine + 1);
+      await expect(emailLabel).toHaveText('E-mail');
+      const emailLabelLines = await emailLabel.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return new Set(Array.from(range.getClientRects()).map((rect) => Math.round(rect.top))).size;
+      });
+      expect(emailLabelLines).toBe(1);
 
       const pairs = await summaryPairs(summary);
       const axis = pairs[0].label.left;
