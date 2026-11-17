@@ -74,6 +74,52 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     );
   });
 
+  test('when they open the payments on a computer, then every cell of the row and the pairing button stand on the first line of its text', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route(
+      (url) => url.pathname === PAYMENTS,
+      (route) => route.fulfill({ json: { year: null, availableYears: [], items: [unpaired] } }),
+    );
+    await rememberedSession(page);
+    await page.goto('/sprava/platby');
+    const row = page.locator('tbody tr');
+    await expect(row).toHaveCount(1);
+    await page.evaluate(() => document.fonts.ready);
+
+    const offsets = await row.evaluate((element) => {
+      const firstLineCentre = (cell: Element): number => {
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = (node.textContent ?? '').search(/\S/);
+          if (start < 0) {
+            continue;
+          }
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, start + 1);
+          const box = range.getBoundingClientRect();
+          return (box.top + box.bottom) / 2;
+        }
+        throw new Error('A cell without text');
+      };
+      const pill = element.querySelector('td.action button')!.getBoundingClientRect();
+      const pillCentre = (pill.top + pill.bottom) / 2;
+      return Array.from(element.querySelectorAll('td:not(.action)')).map(
+        (cell) =>
+          `${cell.getAttribute('data-label')} ${Math.round(Math.abs(firstLineCentre(cell) - pillCentre))}`,
+      );
+    });
+
+    expect(offsets.map((offset) => offset.replace(/ [0-2]$/, ' 0'))).toEqual([
+      'Datum 0',
+      'Částka 0',
+      'Odesílatel 0',
+      'VS a zpráva 0',
+    ]);
+  });
+
   test('when they open the payments from the administration, search a donor and pair, then the list reloads and the success names both', async ({
     page,
   }) => {
@@ -147,6 +193,9 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await expect(row).toContainText('500 Kč');
     await expect(row).toContainText('Nováková Jana');
     await expect(row).toContainText('1111111111');
+    await expect(row.getByRole('button')).toHaveAccessibleName(
+      'Přiřadit dárci, 10. 10. 2026, 500 Kč',
+    );
 
     await page.getByRole('button', { name: 'Přiřadit dárci' }).click();
     const dialog = page.getByRole('dialog');
@@ -271,9 +320,15 @@ test.describe('Given an administrator with an unpaired bank payment', () => {
     await page.getByRole('button', { name: 'Přiřazené', exact: true }).click();
     await expect(page.locator('tbody tr')).toContainText('Jana Nováková');
     await expect(page).toHaveURL(/\/sprava\/platby\?stav=prirazene$/);
+    await expect(page.locator('tbody tr').getByRole('button')).toHaveAccessibleName(
+      'Zrušit přiřazení, 10. 10. 2026, 500 Kč',
+    );
 
     await page.getByRole('button', { name: 'Zrušit přiřazení' }).click();
     const question = page.getByRole('group', { name: /Zrušit přiřazení platby/ });
+    await expect(question.getByRole('button', { name: /^Zrušit/ })).toHaveAccessibleName(
+      'Zrušit přiřazení, 10. 10. 2026, 500 Kč',
+    );
     await expect(question).toContainText('zmizí z přehledu dárce Jana Nováková');
     await expect(question.getByRole('button', { name: 'Ponechat' })).toBeFocused();
     await question.getByRole('button', { name: 'Ponechat' }).click();

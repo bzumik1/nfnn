@@ -101,6 +101,9 @@ describe('Given an administrator on the bank payments page', () => {
     if (node.nodeType === Node.TEXT_NODE) {
       return node.textContent ?? '';
     }
+    if (node instanceof Element && node.classList.contains('visually-hidden')) {
+      return '';
+    }
     return Array.from(node.childNodes).map(joinedText).join(' ');
   }
 
@@ -114,11 +117,15 @@ describe('Given an administrator on the bank payments page', () => {
     ).map(rowText);
   }
 
+  function accessibleName(element: Element): string {
+    return (element.textContent ?? '').replace(/\s+/g, ' ').trim();
+  }
+
   function button(name: string): HTMLButtonElement {
     const buttons = Array.from(
       document.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     );
-    const found = buttons.find((candidate) => candidate.textContent?.trim() === name);
+    const found = buttons.find((candidate) => rowText(candidate) === name);
     if (!found) {
       throw new Error(`No button "${name}" among ${buttons.map((b) => b.textContent?.trim())}`);
     }
@@ -179,6 +186,29 @@ describe('Given an administrator on the bank payments page', () => {
     expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
     expect(element('.admin-tabs > .ui-segmented__thumb').getAttribute('aria-hidden')).toBe('true');
     expect(text('#payments-title')).toBe('Platby čekající na přiřazení');
+  });
+
+  it("when unpaired payments arrive, then each pairing button is named by its payment's date and amount after its own words", async () => {
+    await open();
+    await listResponds(
+      paymentList([
+        unpairedPayment(),
+        unpairedPayment({
+          id: 'p2',
+          bankTransactionId: 1003,
+          bookedOn: '2026-10-12',
+          amountMinor: 25050,
+        }),
+      ]),
+    );
+
+    const names = Array.from(
+      fixture.nativeElement.querySelectorAll('tbody td.action button') as NodeListOf<HTMLElement>,
+    ).map(accessibleName);
+    expect(names).toEqual([
+      'Přiřadit dárci, 10. 10. 2026, 500 Kč',
+      'Přiřadit dárci, 12. 10. 2026, 250,50 Kč',
+    ]);
   });
 
   it('when a 1 Kč account verification waits, then its row is marked as an account verification', async () => {
@@ -312,6 +342,39 @@ describe('Given an administrator on the bank payments page', () => {
         '/sprava/darci/01a18e56-bdb0-775a-bd0a-a60756831369',
       );
       expect(text('.admin-tabs')).toBe('Čekají na přiřazení (2) Přiřazené');
+    });
+
+    it("then each unpairing button, the confirming one too, is named by its payment's date and amount after its own words", async () => {
+      await listResponds(
+        paymentList(
+          [
+            unpairedPayment({ donation: pairedDonation() }),
+            unpairedPayment({
+              id: 'p2',
+              bankTransactionId: 1002,
+              bookedOn: '2025-09-01',
+              amountMinor: 120000,
+              donation: pairedDonation({ id: 'd2' }),
+            }),
+          ],
+          { availableYears: [2026, 2025] },
+        ),
+        PAIRED_PAGE,
+      );
+
+      const openers = Array.from(
+        fixture.nativeElement.querySelectorAll('tbody td.action button') as NodeListOf<HTMLElement>,
+      );
+      expect(openers.map(accessibleName)).toEqual([
+        'Zrušit přiřazení, 10. 10. 2026, 500 Kč',
+        'Zrušit přiřazení, 1. 9. 2025, 1 200 Kč',
+      ]);
+
+      openers[1].click();
+      await settle();
+      expect(accessibleName(element('.confirm .ui-button--danger'))).toBe(
+        'Zrušit přiřazení, 1. 9. 2025, 1 200 Kč',
+      );
     });
 
     it('then an unpairing names the version read and, when the payment changed meanwhile, the sheet offers to read it again', async () => {

@@ -1774,6 +1774,57 @@ for (const rootPx of [34, 53]) {
   });
 }
 
+for (const textSize of ['100%', '200%']) {
+  test.describe(`Given an administrator on a computer 1280 px wide with the text at ${textSize}`, () => {
+    test.use({ viewport: { width: 1280, height: 900 } });
+
+    test.beforeEach(async ({ page }) => {
+      await page.addInitScript((size) => {
+        document.addEventListener('DOMContentLoaded', () => {
+          const style = document.createElement('style');
+          style.textContent = `html { font-size: ${size}; }`;
+          document.head.append(style);
+        });
+      }, textSize);
+      await mockDonorApi(page, donorWithDonations);
+      await mockAdministration(page);
+      await rememberedSession(page);
+    });
+
+    test('when they open /sprava/starsi-symboly, then every answer stays on one line within its cell and every donor name breaks only between words within its cell', async ({
+      page,
+    }) => {
+      await page.goto('/sprava/starsi-symboly');
+      const table = page.locator('main table');
+      const answers = table.locator('.answer-tag');
+      await expect(answers).toHaveCount(2);
+
+      for (const answer of await answers.all()) {
+        expect(await textLinesOf(answer)).toHaveLength(1);
+      }
+      const names = table.locator('.admin-name');
+      for (const name of await names.all()) {
+        expect(await wordsBrokenInside(name)).toEqual([]);
+      }
+      expect(await pastTheirCells(table, '.answer-tag, .admin-name')).toEqual([]);
+    });
+  });
+}
+
+async function pastTheirCells(scope: Locator, selector: string): Promise<string[]> {
+  return scope.evaluate((element, wanted) => {
+    return Array.from(element.querySelectorAll<HTMLElement>(wanted))
+      .filter((item) => {
+        const cell = item.closest('td')!;
+        const left = cell.getBoundingClientRect().left + cell.clientLeft;
+        const right = left + cell.clientWidth;
+        const box = item.getBoundingClientRect();
+        return box.left < left - 1 || box.right > right + 1;
+      })
+      .map((item) => (item.textContent ?? '').trim());
+  }, selector);
+}
+
 async function textLinesOf(element: Locator): Promise<string[]> {
   await element.evaluate(() => document.fonts.ready);
   return element.evaluate((root) => {

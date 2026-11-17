@@ -387,7 +387,7 @@ async function pageUsableAgain(page: Page): Promise<void> {
 
 async function openPairing(page: Page): Promise<void> {
   await page
-    .getByRole('button', { name: /^(Přiřadit dárci|Nováková Jana .*)$/ })
+    .getByRole('button', { name: /^(Přiřadit dárci, |Nováková Jana )/ })
     .first()
     .click();
   await expect(page.getByRole('dialog')).toBeVisible();
