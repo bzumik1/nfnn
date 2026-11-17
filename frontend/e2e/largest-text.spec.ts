@@ -111,6 +111,28 @@ async function numbersSplitAcrossLines(element: Locator): Promise<string[]> {
   });
 }
 
+async function lettersPastTheirCircle(circle: Locator, letters: Locator): Promise<number> {
+  await circle.evaluate(() => document.fonts.ready);
+  const circleBox: DOMRect = await circle.evaluate((element) =>
+    element.getBoundingClientRect().toJSON(),
+  );
+  return letters.evaluate((element, frame) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const box = range.getBoundingClientRect();
+    const radius = frame.width / 2;
+    const centreX = frame.left + radius;
+    const centreY = frame.top + frame.height / 2;
+    const corners = [
+      [box.left, box.top],
+      [box.right, box.top],
+      [box.left, box.bottom],
+      [box.right, box.bottom],
+    ];
+    return Math.max(...corners.map(([x, y]) => Math.hypot(x - centreX, y - centreY) - radius));
+  }, circleBox);
+}
+
 async function headingsOffScreen(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     Array.from(document.querySelectorAll<HTMLElement>('main h1, main h2'))
@@ -210,6 +232,71 @@ for (const { width, height } of [
         expect(await headingsOffScreen(page)).toEqual([]);
       });
     }
+
+    test('when a signed-in donor looks at the account button and opens the account sheet, then the initials stay inside their circle at the largest text and at 200 %', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await page.setViewportSize({ width, height });
+      const button = page.getByRole('banner').getByRole('button', { name: 'Účet' });
+      const initials = button.locator('.account-initials');
+      await expect(initials).toHaveText('JN');
+
+      for (const textSize of ['largest', 'double']) {
+        if (textSize === 'double') {
+          await page.addStyleTag({ content: 'html { font-size: 32px; }' });
+        }
+        await expect
+          .poll(() => lettersPastTheirCircle(button, initials), textSize)
+          .toBeLessThanOrEqual(0);
+        await button.click();
+        const avatar = page.getByRole('dialog').locator('.account-profile .account-initials');
+        await expect(avatar).toHaveText('JN');
+        await expect
+          .poll(() => lettersPastTheirCircle(avatar, avatar), textSize)
+          .toBeLessThanOrEqual(0);
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+      }
+    });
+
+    test('when a signed-in donor scrolls Údaje a zabezpečení, whose title wraps, then the title shows in the bar once the first line of the large title passes the bottom of the bar and goes when it comes back below', async ({
+      page,
+    }) => {
+      await mockDonorApi(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await signIn(page);
+      await openDonorSection(page, 'Údaje a zabezpečení');
+      await page.setViewportSize({ width, height });
+      const heading = page.getByRole('heading', { level: 1, name: 'Údaje a zabezpečení' });
+      await expect(heading).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      expect(await linesOf(heading)).toBeGreaterThan(1);
+      const title = page.locator('.edge-title');
+      const firstLinePastTheBar = (): Promise<number> =>
+        heading.evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const bar = document.querySelector('header.app-header')!.getBoundingClientRect();
+          return range.getClientRects()[0].bottom - bar.height;
+        });
+      const scrollByPixels = (pixels: number): Promise<void> =>
+        page.evaluate((pixels) => window.scrollBy({ top: pixels, behavior: 'instant' }), pixels);
+
+      await scrollByPixels((await firstLinePastTheBar()) + 2);
+
+      await expect(title).toHaveClass(/edge-title--shown/);
+      await expect(title).toHaveText('Údaje a zabezpečení');
+      const bar = (await page.locator('header.app-header').boundingBox())!;
+      const large = (await heading.boundingBox())!;
+      expect(large.y + large.height).toBeGreaterThan(bar.height);
+
+      await scrollByPixels((await firstLinePastTheBar()) - 2);
+
+      await expect(title).not.toHaveClass(/edge-title--shown/);
+    });
 
     test('when a signed-in donor opens Bankovní účty, then every account number stays within its card beside or under the logo of its bank', async ({
       page,

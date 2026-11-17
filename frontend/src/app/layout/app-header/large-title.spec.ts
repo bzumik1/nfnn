@@ -2,6 +2,9 @@ import { followLargeTitle, LargeTitleWatch } from './large-title';
 
 describe('Given a page whose large title may scroll under the edge at the top', () => {
   const HEADER_HEIGHT = 92;
+  const LINE_HEIGHT = 40;
+  const rangeLines = Object.getOwnPropertyDescriptor(Range.prototype, 'getClientRects');
+  let lines: number;
   let header: HTMLElement;
   let main: HTMLElement;
   let heading: HTMLHeadingElement;
@@ -20,10 +23,35 @@ describe('Given a page whose large title may scroll under the edge at the top', 
   }
 
   function boxOf(bottom: () => number): () => DOMRect {
-    return () => ({ bottom: bottom(), top: bottom() - 40, height: 40 }) as DOMRect;
+    return () =>
+      ({
+        bottom: bottom(),
+        top: bottom() - LINE_HEIGHT * lines,
+        height: LINE_HEIGHT * lines,
+      }) as DOMRect;
+  }
+
+  function lineBoxesOf(element: HTMLElement): DOMRectList {
+    const top = element.getBoundingClientRect().top;
+    return Array.from(
+      { length: lines },
+      (_, line) =>
+        ({
+          top: top + LINE_HEIGHT * line,
+          bottom: top + LINE_HEIGHT * (line + 1),
+          height: LINE_HEIGHT,
+        }) as DOMRect,
+    ) as unknown as DOMRectList;
   }
 
   beforeEach(() => {
+    lines = 1;
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value(this: Range): DOMRectList {
+        return lineBoxesOf(this.startContainer as HTMLElement);
+      },
+    });
     header = document.createElement('header');
     header.getBoundingClientRect = () => ({ height: HEADER_HEIGHT }) as DOMRect;
     main = document.createElement('main');
@@ -43,6 +71,11 @@ describe('Given a page whose large title may scroll under the edge at the top', 
     header.remove();
     main.remove();
     delete (window as { scrollY?: number }).scrollY;
+    if (rangeLines) {
+      Object.defineProperty(Range.prototype, 'getClientRects', rangeLines);
+    } else {
+      delete (Range.prototype as { getClientRects?: unknown }).getClientRects;
+    }
   });
 
   it('when the page is at its top, then no title stands in the edge, since the large one is on screen', () => {
@@ -61,6 +94,35 @@ describe('Given a page whose large title may scroll under the edge at the top', 
     await nextFrame();
 
     expect(shown.at(-1) ?? null).toBeNull();
+  });
+
+  it('when a title on two lines scrolls so its first line passes the bottom of the bar while its second line is still below it, then its text stands in the edge', async () => {
+    lines = 2;
+
+    scrollTo(160, HEADER_HEIGHT + LINE_HEIGHT);
+    await nextFrame();
+
+    expect(shown.at(-1)).toBe('Moje dary');
+  });
+
+  it('when the bottom of the first line is still a pixel below the bottom of the bar, then no title stands in the edge', async () => {
+    lines = 2;
+
+    scrollTo(120, HEADER_HEIGHT + LINE_HEIGHT + 1);
+    await nextFrame();
+
+    expect(shown.at(-1) ?? null).toBeNull();
+  });
+
+  it('when the page scrolls back until the bottom of the first line is below the bar again, then the title leaves the edge at the same line it came at', async () => {
+    lines = 2;
+    scrollTo(160, HEADER_HEIGHT + LINE_HEIGHT);
+    await nextFrame();
+
+    scrollTo(159, HEADER_HEIGHT + LINE_HEIGHT + 1);
+    await nextFrame();
+
+    expect(shown).toEqual(['Moje dary', null]);
   });
 
   it('when the large title comes back, then the title leaves the edge again', async () => {
