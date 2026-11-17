@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'touch-target';
 
 .last-gift {
@@ -175,6 +176,19 @@
 
 .recent-hint {
   margin-top: var(--space-2);
+}
+
+.first-gift app-missing-gift {
+  margin-bottom: var(--space-6);
+}
+
+.overview-skeletons {
+  @include motion.state(opacity);
+}
+
+.overview-skeletons:not(.overview-skeletons--shown) {
+  visibility: hidden;
+  opacity: 0;
 }
 
 @include bp.down(cards) {

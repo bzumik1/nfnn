@@ -191,10 +191,14 @@
   <p class="visually-hidden overview-loading" role="status" i18n="@@donor.dashboard.loading">
     Načítáme vaše dary…
   </p>
-  @if (loadView.skeleton()) {
+  <div
+    class="overview-skeletons"
+    [class.overview-skeletons--shown]="loadView.skeleton()"
+    aria-hidden="true"
+  >
     <app-skeleton [rows]="1" />
     <app-skeleton [rows]="2" />
-  }
+  </div>
 } @else {
   <app-donations-pending />
 }
