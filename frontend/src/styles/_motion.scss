@@ -145,6 +145,35 @@ $_at-once: 0s;
   }
 }
 
+@mixin present($panel, $leaving, $from-opacity: 0, $from-scale: var(--motion-scale-enter)) {
+  transition: opacity var(--duration-slow) var(--ease-out);
+  @include _fades-when-reduced(transition);
+
+  @starting-style {
+    opacity: $from-opacity;
+  }
+
+  &#{$leaving} {
+    opacity: $from-opacity;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-in);
+  }
+
+  #{$panel} {
+    transition: scale var(--duration-slow) var(--ease-spring);
+
+    @starting-style {
+      scale: $from-scale;
+    }
+  }
+
+  &#{$leaving} #{$panel} {
+    scale: $from-scale;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-in);
+  }
+}
+
 @mixin appear($rises: true) {
   $keyframes: motion-appear;
   @if not $rises {

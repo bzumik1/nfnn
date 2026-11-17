@@ -243,6 +243,18 @@ describe('Given the card "Data v tomto zařízení"', () => {
       expect(vault.forget).not.toHaveBeenCalled();
     });
 
+    it('then the dialog is an alert whose buttons stand in the action row, the less destructive one asking for the focus', () => {
+      const dialog = document.querySelector('dialog')!;
+
+      expect(dialog.getAttribute('role')).toBe('alertdialog');
+      expect(
+        [...dialog.querySelectorAll('.ui-dialog__actions button')].map((action) =>
+          normalized(action.textContent),
+        ),
+      ).toEqual(['Smazat data a odhlásit', 'Zrušit']);
+      expect(button('Zrušit').hasAttribute('autofocus')).toBe(true);
+    });
+
     it('and cancels, then nothing is deleted and the dialog closes', async () => {
       button('Zrušit').click();
       await settle();

@@ -1,9 +1,30 @@
 @use 'breakpoints' as bp;
+@use 'motion';
 @use 'sheet';
 @use 'touch-target';
 
+@mixin _full-screen {
+  max-width: none;
+  max-block-size: none;
+  min-height: 100%;
+  overflow-y: visible;
+  border-radius: 0;
+  padding: calc(var(--space-14) + var(--safe-area-top))
+    max(var(--space-5), env(safe-area-inset-right))
+    calc(var(--space-8) + env(safe-area-inset-bottom))
+    max(var(--space-5), env(safe-area-inset-left));
+  box-shadow: none;
+
+  .dialog-close {
+    top: calc(var(--dialog-close-inset) + var(--safe-area-top));
+    right: max(var(--dialog-close-inset), env(safe-area-inset-right));
+  }
+}
+
 .dialog {
   --dialog-pull: 0;
+  --dialog-enter-opacity: 0;
+  --dialog-enter-scale: var(--motion-scale-enter);
   position: fixed;
   inset: 0;
   width: 100%;
@@ -19,7 +40,12 @@
   color: var(--color-text);
   overflow-y: auto;
   overscroll-behavior: contain;
-  animation: fadeIn var(--duration-base) ease both;
+  @include motion.present(
+    '.dialog-panel',
+    '.dialog--leaving',
+    var(--dialog-enter-opacity),
+    var(--dialog-enter-scale)
+  );
 
   &[open] {
     display: flex;
@@ -40,8 +66,6 @@
   width: 100%;
   max-width: var(--dialog-max-width);
   box-shadow: var(--shadow-dialog);
-  animation: fadeInUp var(--duration-slow) ease both;
-  transition: max-width var(--duration-base);
 
   &--wide {
     max-width: var(--dialog-max-width-wide);
@@ -74,15 +98,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background var(--duration-base),
-    color var(--duration-base);
 
-  @media (hover: hover) {
-    &:hover {
-      background: var(--color-accent-bg);
-      color: var(--color-accent);
-    }
+  @include motion.hover(background-color, color) {
+    background-color: var(--color-accent-bg);
+    color: var(--color-accent);
   }
 }
 
@@ -91,49 +110,86 @@
   display: none;
 }
 
+@include bp.up(phone) {
+  .dialog-panel {
+    max-block-size: calc(100dvh - 2 * var(--space-5));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 @include bp.down(phone) {
+  .dialog {
+    --dialog-enter-scale: 1;
+  }
+
   .dialog[open] {
     padding: 0;
     align-items: flex-start;
   }
 
   .dialog-panel {
-    max-width: none;
-    min-height: 100%;
-    border-radius: 0;
-    padding: var(--space-14) var(--space-5) var(--space-8);
-    box-shadow: none;
+    @include _full-screen;
   }
 }
 
 @include bp.down(nav) {
+  .dialog--full {
+    --dialog-enter-scale: 1;
+  }
+
   .dialog--full[open] {
     padding: 0;
     align-items: flex-start;
   }
 
   .dialog--full .dialog-panel {
-    max-width: none;
-    min-height: 100%;
-    border-radius: 0;
-    padding: var(--space-14) var(--space-5) calc(var(--space-8) + env(safe-area-inset-bottom));
-    box-shadow: none;
+    @include _full-screen;
+  }
+
+  .dialog--sheet {
+    --dialog-enter-opacity: 1;
+    --dialog-enter-scale: 1;
+    --dialog-sheet-away: 100%;
+
+    @media (prefers-reduced-motion: reduce) {
+      --dialog-enter-opacity: 0;
+    }
   }
 
   .dialog--sheet[open] {
     padding: 0;
     align-items: flex-end;
     overflow: clip;
-    background: color-mix(
+    background-color: color-mix(
       in srgb,
       var(--color-backdrop) calc((1 - var(--dialog-pull)) * 100%),
       transparent
     );
-    backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
-    -webkit-backdrop-filter: blur(calc(var(--blur-backdrop) * (1 - var(--dialog-pull))));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition:
-      background-color var(--duration-base) ease,
-      backdrop-filter var(--duration-base) ease;
+      opacity var(--duration-sheet) var(--ease-sheet),
+      background-color var(--duration-sheet) var(--ease-sheet);
+
+    @starting-style {
+      background-color: transparent;
+    }
+
+    &::backdrop {
+      backdrop-filter: blur(var(--blur-backdrop));
+      -webkit-backdrop-filter: blur(var(--blur-backdrop));
+      opacity: calc(1 - var(--dialog-pull));
+      transition: opacity var(--duration-sheet) var(--ease-sheet);
+
+      @starting-style {
+        opacity: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        transition-duration: var(--duration-reduced);
+      }
+    }
   }
 
   .dialog--sheet.dialog--leaving[open] {
@@ -151,16 +207,21 @@
     padding: var(--space-10) max(var(--space-5), env(safe-area-inset-right))
       calc(var(--space-8) + env(safe-area-inset-bottom))
       max(var(--space-5), env(safe-area-inset-left));
-    animation: sheetIn var(--duration-sheet) ease both;
-    transition: translate var(--duration-base) ease;
+    @include motion.move(translate, sheet, sheet);
+
+    @starting-style {
+      translate: 0 var(--dialog-sheet-away);
+    }
   }
 
   .dialog--sheet .dialog-panel--dragging {
     transition: none;
   }
 
-  .dialog--leaving .dialog-panel {
-    transition: translate var(--duration-sheet) var(--ease-sheet);
+  .dialog--sheet.dialog--leaving .dialog-panel {
+    translate: 0 var(--dialog-sheet-away);
+    transition-duration: var(--duration-sheet);
+    transition-timing-function: var(--ease-sheet);
   }
 
   .dialog--sheet .dialog-panel--tall {
@@ -183,6 +244,13 @@
     background: var(--color-sheet-close);
     box-shadow: var(--shadow-sheet-close);
     color: var(--color-on-sheet-close);
+
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not([aria-disabled='true']) {
+        background-color: var(--color-sheet-close);
+        color: var(--color-on-sheet-close);
+      }
+    }
   }
 
   .dialog--sheet .dialog-close {
@@ -225,9 +293,29 @@
   .dialog--sheet .dialog-panel--dragging .dialog-grabber {
     cursor: grabbing;
   }
+
+  @include bp.up(tablet) {
+    .dialog--sheet {
+      --dialog-sheet-away: calc(50dvh + 50%);
+    }
+
+    .dialog--sheet[open] {
+      align-items: safe center;
+    }
+
+    .dialog--sheet .dialog-panel {
+      border-radius: var(--radius-sheet);
+    }
+
+    .dialog--sheet .dialog-panel--tall {
+      height: auto;
+      max-height: calc(100dvh - var(--space-12));
+    }
+  }
 }
 
 .dialog--viewer {
+  --dialog-enter-scale: 1;
   padding: 0;
   background: color-mix(
     in srgb,
@@ -247,14 +335,15 @@
     display: flex;
     flex-direction: column;
     max-width: none;
+    max-block-size: none;
     min-height: 0;
     height: 100%;
+    overflow-y: visible;
     padding: var(--safe-area-top) 0 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
     color: var(--color-on-inverse);
-    animation: fadeIn var(--duration-base) ease both;
   }
 
   .dialog-close {
@@ -269,24 +358,6 @@
         color: var(--color-on-inverse);
       }
     }
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes sheetIn {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
   }
 }
 

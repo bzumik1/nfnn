@@ -1,3 +1,4 @@
+import { easingLeavingAt } from '../../../core/navigation/back-swipe';
 import { isTextEntry } from '../../../core/layout/soft-keyboard';
 
 export type SheetRelease = 'dismiss' | 'return';
@@ -31,6 +32,8 @@ export class SheetDrag {
   private lastTime = 0;
   private speed = 0;
   private resists = false;
+  private released: SheetRelease = 'return';
+  private releasedSpeed = 0;
 
   start(y: number, time: number, resists = false): void {
     this.startY = y;
@@ -61,19 +64,30 @@ export class SheetDrag {
   }
 
   end(height: number, time: number): SheetRelease {
-    const offset = this.offset;
     const dragging = this.startY !== null;
-    this.cancel();
-    if (!dragging) {
-      return 'return';
-    }
     const moving = time - this.lastTime <= FLICK_REST_MS;
+    this.releasedSpeed = dragging && moving ? this.speed : 0;
+    this.released = dragging ? this.releaseOf(height, moving) : 'return';
+    this.cancel();
+    return this.released;
+  }
+
+  settleEasing(distancePx: number, durationMs: number): string | null {
+    const towards = this.released === 'dismiss' ? this.releasedSpeed : -this.releasedSpeed;
+    if (towards <= 0 || distancePx <= 0 || !(durationMs > 0)) {
+      return null;
+    }
+    return easingLeavingAt((towards * durationMs) / distancePx);
+  }
+
+  private releaseOf(height: number, moving: boolean): SheetRelease {
     if (moving && this.speed <= -CHANGED_MIND_SPEED_PX_PER_MS) {
       return 'return';
     }
     const closingDistance = Math.max(MINIMUM_CLOSING_DISTANCE_PX, height * CLOSING_SHARE_OF_HEIGHT);
-    const flicked = moving && this.speed >= FLICK_SPEED_PX_PER_MS && offset >= FLICK_DISTANCE_PX;
-    return offset >= closingDistance || flicked ? 'dismiss' : 'return';
+    const flicked =
+      moving && this.speed >= FLICK_SPEED_PX_PER_MS && this.offset >= FLICK_DISTANCE_PX;
+    return this.offset >= closingDistance || flicked ? 'dismiss' : 'return';
   }
 }
 

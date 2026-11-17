@@ -1,5 +1,6 @@
 <app-dialog
   labelledBy="device-data-delete-title"
+  [alert]="true"
   [dismissible]="!deleting()"
   (dismissed)="cancelled.emit()"
 >
@@ -22,7 +23,7 @@
       >
     </p>
   }
-  <div class="device-data-dialog-actions">
+  <div class="ui-dialog__actions device-data-dialog-actions">
     <button
       type="button"
       #confirm

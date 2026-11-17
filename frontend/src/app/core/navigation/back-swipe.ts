@@ -108,7 +108,7 @@ export class BackSwipe {
   }
 }
 
-function easingLeavingAt(slope: number): string {
+export function easingLeavingAt(slope: number): string {
   const y1 = Math.min(1, slope * EASING_START_X);
   return `cubic-bezier(${EASING_START_X}, ${Math.round(y1 * 1000) / 1000}, ${EASING_START_X}, 1)`;
 }
