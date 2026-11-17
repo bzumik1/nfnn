@@ -78,7 +78,7 @@
           </button>
         </li>
         @if (olderShown()) {
-          <li class="devices-older" animate.leave="devices-older--closing">
+          <li class="devices-older" appDisclosure animate.leave="devices-older--closing">
             <div>
               <ul id="devices-older" class="ui-list device-list device-list--older">
                 @for (device of groups().older; track device.id) {
@@ -97,6 +97,7 @@
             class="devices-confirm"
             role="group"
             aria-labelledby="devices-confirm-others"
+            appDisclosure
             animate.leave="devices-confirm--closing"
           >
             <div>
@@ -266,6 +267,7 @@
             class="devices-confirm device-confirm"
             role="group"
             [attr.aria-labelledby]="confirmQuestionId(device)"
+            appDisclosure
             animate.leave="devices-confirm--closing"
           >
             <div>

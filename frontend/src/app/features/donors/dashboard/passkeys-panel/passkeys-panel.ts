@@ -33,16 +33,15 @@ import {
   neighbourAfterRowLeaves,
 } from '../../../../shared/ui/leaving-row/leaving-row';
 import { formatDonationDate } from '../../../donations/donation-date';
-import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
 import { FocusFirstInvalid } from '../../../../shared/ui/form-field/focus-first-invalid';
 import { FormControlDirective } from '../../../../shared/ui/form-field/form-control';
 import { FormField } from '../../../../shared/ui/form-field/form-field';
 import { AccountUsername } from '../../../../shared/ui/account-username/account-username';
 import { PasswordReveal } from '../../../../shared/ui/password-reveal/password-reveal';
-import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const PASSKEY_NAME_MAX_LENGTH = 64;
@@ -50,9 +49,8 @@ const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
 
 @Component({
   selector: 'app-passkeys-panel',
-  providers: [BusyAnnouncement],
   imports: [
-    BusyLabel,
+    Disclosure,
     FormsModule,
     FormField,
     FormControlDirective,
@@ -66,7 +64,6 @@ const RENAME_BUTTONS = '[id^="passkey-rename-button-"]';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasskeysPanel {
-  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);

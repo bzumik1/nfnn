@@ -53,7 +53,11 @@
                   </span>
                 </div>
                 @if (confirming() === passkey.id) {
-                  <div class="passkey-confirm" animate.leave="passkey-confirm--closing">
+                  <div
+                    class="passkey-confirm"
+                    appDisclosure
+                    animate.leave="passkey-confirm--closing"
+                  >
                     <div>
                       <p i18n="@@donor.passkeys.confirm">
                         Odebrat klíč {{ passkey.name }}? Přihlásit se jím pak nepůjde.

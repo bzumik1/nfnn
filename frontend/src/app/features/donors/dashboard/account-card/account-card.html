@@ -92,7 +92,12 @@
           </button>
         }
       </dd>
-      <dd id="account-email-panel" class="account-panel" [hidden]="panel() !== 'email'">
+      <dd
+        id="account-email-panel"
+        class="account-panel"
+        appDisclosure
+        [closed]="panel() !== 'email'"
+      >
         <div>
           <div class="account-panel-body">
             @if (panel() === 'email') {
@@ -237,7 +242,8 @@
       <dd
         id="account-password-panel"
         class="account-panel"
-        [hidden]="panel() !== 'password' && panel() !== 'password-remove'"
+        appDisclosure
+        [closed]="panel() !== 'password' && panel() !== 'password-remove'"
       >
         <div>
           <div class="account-panel-body">
@@ -503,7 +509,8 @@
       <dd
         id="account-second-factor-panel"
         class="account-panel"
-        [hidden]="panel() !== 'second-factor-on' && panel() !== 'second-factor-off'"
+        appDisclosure
+        [closed]="panel() !== 'second-factor-on' && panel() !== 'second-factor-off'"
       >
         <div>
           <div class="account-panel-body">
@@ -855,7 +862,12 @@
           >
         </button>
       </dd>
-      <dd id="account-passkeys-panel" class="account-panel" [hidden]="panel() !== 'passkeys'">
+      <dd
+        id="account-passkeys-panel"
+        class="account-panel"
+        appDisclosure
+        [closed]="panel() !== 'passkeys'"
+      >
         <div>
           <div class="account-panel-body">
             <app-passkeys-panel

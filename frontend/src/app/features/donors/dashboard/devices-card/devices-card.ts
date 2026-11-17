@@ -24,14 +24,13 @@ import { AuthApi } from '../../../../core/auth/auth-api';
 import { AuthStore } from '../../../../core/auth/auth-store';
 import { DevicePlatform, SignedInDevice } from '../../../../core/auth/donor';
 import { formatBankTime, formatDonationDate, pragueDay } from '../../../donations/donation-date';
-import { BusyAnnouncement } from '../../../../shared/ui/busy-label/busy-announcement';
-import { BusyLabel } from '../../../../shared/ui/busy-label/busy-label';
 import { NeedsConnection } from '../../../../shared/ui/needs-connection/needs-connection';
 import { ListChanges } from '../../../../core/kept/list-changes';
 import { KeptDonorAnswers } from '../kept-donor-answers';
 import { DonorNotifiedDevices } from '../../../operations/donor-notified-devices';
 import { groupDevices } from './device-groups';
 import { deviceName, deviceNameInSentence, sessionKindName } from './device-labels';
+import { Disclosure } from '../../../../shared/ui/disclosure/disclosure';
 
 const UNAUTHENTICATED = 'auth/unauthenticated';
 const DEVICE_NOT_FOUND = 'donors/device-not-found';
@@ -57,14 +56,12 @@ const SHAPES: Record<DevicePlatform, DeviceShape> = {
 
 @Component({
   selector: 'app-devices-card',
-  providers: [BusyAnnouncement],
-  imports: [BusyLabel, NeedsConnection, NgTemplateOutlet],
+  imports: [Disclosure, NeedsConnection, NgTemplateOutlet],
   templateUrl: './devices-card.html',
   styleUrl: './devices-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DevicesCard {
-  protected readonly busyAnnouncement = inject(BusyAnnouncement);
   private readonly auth = inject(AuthStore);
   private readonly authApi = inject(AuthApi);
   private readonly kept = inject(KeptDonorAnswers);

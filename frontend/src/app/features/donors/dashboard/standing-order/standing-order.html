@@ -15,7 +15,8 @@
   role="region"
   [id]="panelId"
   [attr.aria-labelledby]="toggleId"
-  [hidden]="!open()"
+  appDisclosure
+  [closed]="!open()"
   (keydown.escape)="close()"
 >
   <div>

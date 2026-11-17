@@ -3,7 +3,8 @@
   class="accounts-help-panel"
   role="region"
   aria-labelledby="accounts-help-title"
-  [hidden]="!open()"
+  appDisclosure
+  [closed]="!open()"
   (keydown.escape)="requestClose()"
 >
   <div>
