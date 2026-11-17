@@ -15,7 +15,8 @@ import { PaymentDetailsStore } from '../../donations/payment-details-store';
 })
 export class AccountingDetails {
   protected readonly companyId = '27278794';
-  protected readonly seat = $localize`:@@home.contact.accounting.seatValue:Jiráskova 436, 473 01 Nový Bor`;
+  protected readonly seat = $localize`:@@home.contact.accounting.seatValue:Jiráskova 436, 473\u00a001 Nový\u00a0Bor`;
+  protected readonly seatToCopy = this.seat.replaceAll('\u00a0', ' ');
   private readonly paymentDetails = inject(PaymentDetailsStore);
   protected readonly account = computed(() => {
     const state = this.paymentDetails.state();

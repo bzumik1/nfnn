@@ -18,10 +18,10 @@ test.describe('Given a visitor on the About page', () => {
     await page.locator('#contact-message').fill('Mám dotaz k projektu.');
     await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
 
-    await expect(page.getByRole('status').filter({ hasText: 'Zpráva odeslána!' })).toContainText(
-      'Odpovíme vám e-mailem na jana@example.cz.',
+    await expect(page.getByRole('status').filter({ hasText: 'Zpráva je odeslaná' })).toContainText(
+      'Odpovíme vám e\u2011mailem na jana@example.cz.',
     );
-    await expect(page.getByRole('heading', { name: 'Zpráva odeslána!' })).toBeFocused();
+    await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
     expect(posted).toEqual([
       {
         fullName: 'Jana Nováková',
@@ -134,6 +134,24 @@ test.describe('Given a visitor on the About page', () => {
       expect(await tabOrderFromContactEmail(page)).toEqual(['form', 'copy']);
     });
 
+    test('when they read the form, then the privacy line shows once, under the button, and the grey note under the details comes back after sending', async ({
+      page,
+    }) => {
+      await page.route('**/api/contact/messages', (route) => route.fulfill({ status: 202 }));
+      await page.goto('/o-nas');
+      const note = page.locator('.contact-legal');
+      await expect(page.locator('.form-privacy')).toBeVisible();
+      await expect(note).toBeHidden();
+
+      await page.locator('#contact-name').fill('Jana Nováková');
+      await page.locator('#contact-email').fill('jana@example.cz');
+      await page.locator('#contact-message').fill('Mám dotaz k projektu.');
+      await page.getByRole('button', { name: 'Odeslat zprávu' }).click();
+
+      await expect(page.getByRole('heading', { name: 'Zpráva je odeslaná' })).toBeFocused();
+      await expect(note).toBeVisible();
+    });
+
     test('when they reach the contact section, then the heading, the e-mail address and the address are there to read', async ({
       page,
     }) => {
@@ -186,6 +204,74 @@ test.describe('Given an accountant on the About page', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       'CZ2620100000005544332217',
     );
+  });
+});
+
+test.describe('Given an accountant on a phone 390 px wide', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('when they read Údaje pro účetní on O nás, then every value starts the same distance under its label, with or without a copy button', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/o-nas');
+    const card = page.locator('app-accounting-details .accounting');
+    await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+    const distances = await card.locator('.accounting-item').evaluateAll((items) =>
+      items.map((item) => {
+        const label = item.querySelector('dt')!.getBoundingClientRect();
+        const value = item.querySelector('dd > :first-child')!.getBoundingClientRect();
+        return { label: item.querySelector('dt')!.textContent!.trim(), gap: value.top - label.top };
+      }),
+    );
+    const gaps = distances.map(({ gap }) => gap);
+
+    expect(Math.max(...gaps) - Math.min(...gaps), JSON.stringify(distances)).toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe('Given an accountant on a computer 1280 px wide', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test('when they read Údaje pro účetní on O nás, then every one-line row takes the same height, with or without a copy button, and a wrapped value keeps its own line spacing', async ({
+    page,
+  }) => {
+    await mockDonorApi(page);
+    await page.goto('/o-nas');
+    const card = page.locator('app-accounting-details .accounting');
+    await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+    const rows = await card.locator('.accounting-item').evaluateAll((items) =>
+      items.map((item) => {
+        const value = item.querySelector('dd > :first-child')!;
+        const text = document.createRange();
+        text.selectNodeContents(value);
+        const lines = [
+          ...new Set(Array.from(text.getClientRects(), (box) => Math.round(box.top))),
+        ].sort((a, b) => a - b);
+        return {
+          label: item.querySelector('dt')!.textContent!.trim(),
+          top: value.getBoundingClientRect().top,
+          lines: lines.length,
+          lineGap: lines.length > 1 ? lines[1] - lines[0] : 0,
+          fontSize: parseFloat(getComputedStyle(value).fontSize),
+        };
+      }),
+    );
+    const steps = rows
+      .slice(0, -1)
+      .filter((row) => row.lines === 1)
+      .map((row) => ({ label: row.label, step: rows[rows.indexOf(row) + 1].top - row.top }));
+    const sizes = steps.map(({ step }) => step);
+
+    expect(steps.length).toBeGreaterThan(2);
+    expect(Math.max(...sizes) - Math.min(...sizes), JSON.stringify(steps)).toBeLessThanOrEqual(1);
+    const wrapped = rows.filter((row) => row.lines > 1);
+    expect(wrapped.length).toBeGreaterThan(0);
+    for (const row of wrapped) {
+      expect(row.lineGap, row.label).toBeLessThanOrEqual(row.fontSize * 1.6);
+    }
   });
 });
 

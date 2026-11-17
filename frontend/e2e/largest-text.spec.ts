@@ -886,3 +886,107 @@ for (const rootPx of [34, 53]) {
     }
   });
 }
+
+async function textLinesOf(element: Locator): Promise<string[]> {
+  await element.evaluate(() => document.fonts.ready);
+  return element.evaluate((root) => {
+    const lines = new Map<number, string>();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      for (let index = 0; index < text.length; index++) {
+        if (text[index].trim() === '') {
+          continue;
+        }
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+        const top = Math.round(range.getBoundingClientRect().top);
+        lines.set(top, (lines.get(top) ?? '') + text[index]);
+      }
+    }
+    return [...lines.entries()].sort(([a], [b]) => a - b).map(([, characters]) => characters);
+  });
+}
+
+async function valuesUnderTheirCopyButtons(card: Locator): Promise<string[]> {
+  return card.evaluate((element) =>
+    Array.from(element.querySelectorAll('dd'))
+      .filter((field) => field.querySelector('app-copy-button button'))
+      .filter((field) => {
+        const value = field.querySelector<HTMLElement>('.accounting-value')!;
+        const box = value.getBoundingClientRect();
+        const right = box.left + Math.max(box.width, value.scrollWidth);
+        const button = field.querySelector('app-copy-button button')!.getBoundingClientRect();
+        return (
+          box.left < button.right &&
+          right > button.left + 0.5 &&
+          box.top < button.bottom &&
+          box.bottom > button.top + 0.5
+        );
+      })
+      .map((field) => field.querySelector('.accounting-value')!.textContent!.trim()),
+  );
+}
+
+async function copyButtonsWithinFingerReachOfEachOther(card: Locator): Promise<string[]> {
+  return card.evaluate((element) => {
+    const reach = parseFloat(getComputedStyle(element).getPropertyValue('--touch-target-size'));
+    const areas = Array.from(element.querySelectorAll('app-copy-button button')).map((button) => {
+      const box = button.getBoundingClientRect();
+      const grow = Math.max(0, reach - box.height) / 2;
+      return { name: button.textContent!.trim(), top: box.top - grow, bottom: box.bottom + grow };
+    });
+    return areas
+      .slice(1)
+      .filter((area, index) => area.top < areas[index].bottom - 0.5)
+      .map((area, index) => `${areas[index].name} | ${area.name}`);
+  });
+}
+
+for (const { screen, viewport, rootPx } of [
+  { screen: 'a computer 1280 px wide', viewport: { width: 1280, height: 900 }, rootPx: null },
+  { screen: 'an iPad on its side', viewport: { width: 1180, height: 820 }, rootPx: 34 },
+  {
+    screen: 'an iPad on its side',
+    viewport: { width: 1180, height: 820 },
+    rootPx: LARGEST_SYSTEM_TEXT_PX,
+  },
+]) {
+  test.describe(`Given an accountant on ${screen} whose text is at ${rootPx ? `${rootPx} px` : 'its default size'}`, () => {
+    test.use({ viewport });
+
+    test('when they open Údaje pro účetní on O nás, then every value stays within the card and clear of its copy button, the copy buttons stand in one column, their touch areas never overlap and the IBAN breaks only between its groups of four', async ({
+      page,
+    }) => {
+      if (rootPx) {
+        await page.addInitScript((px) => {
+          document.addEventListener('DOMContentLoaded', () => {
+            const style = document.createElement('style');
+            style.textContent = `html { font-size: ${px}px; }`;
+            document.head.append(style);
+          });
+        }, rootPx);
+      }
+      await mockDonorApi(page);
+      await page.goto('/o-nas');
+      const card = page.locator('app-accounting-details .accounting');
+      await expect(card).toContainText('CZ26 2010 0000 0055 4433 2217');
+
+      expect(await contentPastTheSides(card)).toEqual([]);
+      expect(await valuesUnderTheirCopyButtons(card)).toEqual([]);
+      expect(await copyButtonsWithinFingerReachOfEachOther(card)).toEqual([]);
+      const rightEdges = await card
+        .locator('app-copy-button button')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => Math.round(button.getBoundingClientRect().right)),
+        );
+      expect(new Set(rightEdges).size).toBe(1);
+      for (const line of await textLinesOf(
+        card.locator('.accounting-value').filter({ hasText: 'CZ26' }),
+      )) {
+        expect(line).toMatch(/^([A-Z0-9]{4})+$/);
+      }
+    });
+  });
+}

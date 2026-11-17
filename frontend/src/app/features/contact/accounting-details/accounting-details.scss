@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .accounting {
   margin: 0;
 }
@@ -23,14 +25,41 @@
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-1) var(--space-3);
+  }
+
+  dd::after {
+    content: '\200b' / '';
+    flex: none;
+    width: 0;
+    min-height: 2rem;
+    margin-inline-start: calc(-1 * var(--space-3));
+    padding-block: var(--space-1-5);
+    border-block: calc(var(--space-unit) * 0.375) solid transparent;
+    font-size: var(--text-sm);
+    line-height: normal;
   }
 }
 
 .accounting-value {
-  flex: 1 1 15rem;
+  flex: 1 1 10rem;
+  text-wrap: balance;
+}
+
+@include bp.up(nav) {
+  .accounting-item dd {
+    flex-wrap: nowrap;
+  }
+
+  .accounting-value {
+    min-width: 0;
+  }
+}
+
+.accounting-item app-copy-button {
+  translate: 0 calc(0.5lh - 50%);
 }
 
 .accounting-link {
@@ -40,4 +69,5 @@
 
 .accounting .accounting-note {
   margin: var(--space-6) 0 0;
+  text-wrap: pretty;
 }

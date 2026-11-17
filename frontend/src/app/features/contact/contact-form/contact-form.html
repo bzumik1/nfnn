@@ -35,7 +35,7 @@
       <ng-container [ngTemplateOutlet]="accounting" />
     }
 
-    <div class="contact-form-wrap">
+    <div #formWrap class="contact-form-wrap" [style.min-height.px]="heldHeight()">
       <div role="status">
         @if (sent()) {
           <div class="form-success">
@@ -46,10 +46,10 @@
               tabindex="-1"
               i18n="@@home.contact.success.title"
             >
-              Zpráva odeslána!
+              Zpráva je odeslaná
             </h3>
             <p class="form-success-text" i18n="@@home.contact.success.text">
-              Děkujeme za zprávu. Odpovíme vám e-mailem na {{ sentTo() }}.
+              Děkujeme za zprávu. Odpovíme vám e&#8209;mailem na {{ sentTo() }}.
             </p>
           </div>
         }
@@ -123,7 +123,7 @@
               id="contact-message"
               name="message"
               rows="4"
-              placeholder="Napište nám váš dotaz..."
+              placeholder="Napište nám svůj dotaz…"
               i18n-placeholder="@@home.contact.form.messagePlaceholder"
               [(ngModel)]="model.message"
               required
